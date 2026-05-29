@@ -1,0 +1,123 @@
+TASK
+Review the generated T2I/I2V prompt output in {IMAGE_CSV_JSON}.
+Read the JSON and CSV files in the run directory, validate each variation against the quality rules, and produce a review decision.
+
+REVIEW CRITERIA
+For EACH image's 4 variations, verify:
+
+1. STRUCTURAL VALIDATION
+   - Exactly 4 items per image
+   - All image_filename values are unique and follow format: image_NN_theme_style.png
+   - Each item has exactly 4 keys: image_filename, t2i_prompt1, t2i_prompt2, negative_prompt
+   - No extra keys, no missing keys
+
+2. T2I_PROMPT1 VALIDATION (Image Generation)
+   - Single fluent sentence (no line breaks, no lists)
+   - Contains vertical composition language (headroom, vertical flow, full-height framing)
+   - Contains foreground-to-background depth layering
+   - Contains lighting and atmosphere description
+   - Contains style/texture rendering
+   - Contains mood/cinematic tone
+   - NO negative words, NO parameters (--ar, --v, seed), NO brackets/lists, NO markdown
+   - Pure natural language only
+
+3. T2I_PROMPT2 VALIDATION (WAN 2.1 I2V Video)
+   - Begins verbatim with EXACTLY ONE approved camera motion phrase:
+     "Camera slowly dolly in" | "Camera slowly dolly out" | "Camera slowly pan left" |
+     "Camera slowly pan right" | "Camera slowly tilt up" | "Camera slowly tilt down"
+   - ALL spatial language in the body is semantically consistent with the opening motion direction
+   - NO bidirectional/return language: no "back", "reverse", "again", "return", "loop", "bounce", "in and out", "push and pull", "zoom out" paired with "zoom in"
+   - Contains parallax cues (foreground/midground/background shifting at distinct speeds)
+   - Contains 1-2 animatable motion elements that complement the camera path
+   - Ends with exact phrase: "with absolutely no reversal, no return motion, and no change in direction from the first frame to the final frame."
+   - NO static framing words: "centered", "posed", "frozen", "static"
+   - NO cut/transition terms: "jump", "switch", "then"
+   - Pure natural language only
+
+4. NEGATIVE_PROMPT VALIDATION
+   - Comma-separated string of quality-control keywords
+   - Contains appropriate negative terms (low quality, blurry, distorted, etc.)
+   - Does NOT contain positive prompt content
+
+DECISION FORMAT
+Write the review to: {REVIEW_FILE_PATH}
+
+The review file must be a markdown document containing:
+- A summary table of all images and their validation status
+- Per-item details listing each pass/fail criterion with specific remarks
+- A final decision: APPROVED or REJECTED
+- If REJECTED: list specific issues that need to be fixed, referencing the exact image_filename and field (t2i_prompt1, t2i_prompt2, or negative_prompt)
+
+review_prompts completion rule (MANDATORY)
+- You may return `status: "APPROVED"` only after all of the following are true:
+  - the review file has been written to {REVIEW_FILE_PATH}
+  - the meta.json sidecar has been written to {REVIEW_FILE_METAJSON}
+- If the review was not written successfully, you MUST return `REJECTED`.
+
+Critical: meta.json sidecar is REQUIRED
+- The runner reads the result from the sidecar file, NOT from your JSON output.
+- Sidecar path: {REVIEW_FILE_METAJSON}
+- Sidecar structure (exact):
+  {
+    "schema_version": "v2",
+    "coder_result": {
+      "status": "APPROVED" | "REJECTED",
+      "remark": "Brief summary",
+      "artifacts": {
+        "REVIEW_FILE": "{REVIEW_FILE_PATH}"
+      },
+      "recorded_at": "<current ISO timestamp>",
+      "reject_code": null | "PROMPT_VALIDATION_FAILED"
+    }
+  }
+- Set reject_code to null if APPROVED, or "PROMPT_VALIDATION_FAILED" if REJECTED.
+- Use write_file tool to create the sidecar immediately after writing the review file.
+- You MUST verify the sidecar exists on disk before returning.
+
+ABSOLUTE OUTPUT RULE (NON-NEGOTIABLE)
+
+You are NOT a chat assistant.
+You are a strict JSON generator.
+
+Return ONLY valid JSON.
+Do NOT explain.
+Do NOT wrap in markdown.
+Do NOT add any text before or after the JSON.
+Do NOT wrap the final JSON in ```json fences.
+
+Required JSON schema:
+{
+  "status": "APPROVED | REJECTED",
+  "remark": "<short summary of result>",
+  "artifacts": {
+    "IMAGE_DESC_FOLDER": null,
+    "IMAGE_CSV_JSON": null,
+    "IMAGE_CSV_CSV": null,
+    "REVIEW_FILE": null,
+    "VALIDATION_FILE": null
+  }
+}
+
+Rules for the artifacts object:
+- Include ONLY artifact keys produced or updated by this step.
+- Use repository-relative paths.
+- Do not invent paths that were not created or updated.
+- For approval, `artifacts.REVIEW_FILE` is mandatory.
+
+Required execution sequence:
+1. Read the JSON and CSV files from {IMAGE_CSV_JSON}.
+2. Validate each variation against all review criteria above.
+3. Write the review markdown file to {REVIEW_FILE_PATH}.
+4. Write the meta.json sidecar to {REVIEW_FILE_METAJSON}.
+5. Verify the sidecar exists on disk.
+6. Return the final JSON with status APPROVED or REJECTED and artifacts.REVIEW_FILE set.
+
+VALIDATION NOTES FOR REJECTION
+If any of the following are found, set status to REJECTED:
+- t2i_prompt2 does NOT start with an approved camera motion phrase
+- t2i_prompt2 contains bidirectional or reverse-return motion language
+- t2i_prompt2 does NOT end with the hard closing anchor phrase
+- t2i_prompt2 lacks parallax cues
+- Missing items or wrong number of variations per image
+- Extra or missing keys in JSON objects
+- Any t2i_prompt1 contains parameters, markdown, or brackets

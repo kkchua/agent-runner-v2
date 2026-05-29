@@ -1,0 +1,8 @@
+{
+  "base_url": "https://personal-assistant-production-0c0d.up.railway.app",
+  "email_env": "COMFYUI_EMAIL",
+  "password_env": "COMFYUI_PASSWORD",
+  "delay_seconds": 5,
+  "test_mode": false,
+  "default_workflow_key": "QWEN/Image_QWEN_PA_Studio-540x960-01-dev"
+}

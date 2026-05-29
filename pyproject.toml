@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "agent-runner-v2"
+version = "0.1.0"
+description = "Standalone workflow runner extracted from UKBE"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.2.0",
+    "pytest-cov>=5.0.0",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["agent_runner_v2*"]
+
+[project.scripts]
+ukbe-run-agent = "agent_runner_v2.run_agent:main"
+
+[tool.setuptools.package-data]
+agent_runner_v2 = [
+    "*.json",
+    "*.md",
+    "prompts/*/*.txt",
+    "prompts/*/*.md",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]

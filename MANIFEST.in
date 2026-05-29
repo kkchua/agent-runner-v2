@@ -1,0 +1,4 @@
+include README.md
+include agent_runner_v2/*.json
+include agent_runner_v2/*.md
+recursive-include agent_runner_v2/prompts *.txt *.md
