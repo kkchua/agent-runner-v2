@@ -66,6 +66,7 @@ class InvocationResult:
 DEFAULT_CODER_TIMEOUT_SECONDS = 600
 SIDECAR_POLL_INTERVAL_SECONDS = 3.0
 SIDECAR_SETTLE_DELAY_SECONDS = 0.5
+SIDECAR_GRACE_PERIOD_SECONDS = 15.0  # How long to wait for coder to exit naturally after sidecar
 
 
 def _coder_timeout_seconds() -> int:
@@ -235,15 +236,29 @@ def _run_with_sidecar_poll(
                     and (sidecar_pre_mtime is None or current_mtime > sidecar_pre_mtime)
                 )
                 if is_new_sidecar and _is_valid_sidecar_json(sidecar_path):
-                    time.sleep(SIDECAR_SETTLE_DELAY_SECONDS)
-                    sidecar_triggered = True
+                    # Sidecar is valid — the coder has produced its result.
+                    # Wait for the process to exit naturally (it may still be
+                    # writing final events, closing sessions, etc.).
+                    # Only terminate if it doesn't exit within the grace period.
                     label = f" step={step}" if step else ""
-                    print(f"[coder_adapters] sidecar detected — terminating hung process early{label}", flush=True)
-                    proc.terminate()
-                    try:
-                        proc.wait(timeout=10)
-                    except subprocess.TimeoutExpired:
-                        proc.kill()
+                    grace_deadline = time.monotonic() + SIDECAR_GRACE_PERIOD_SECONDS
+                    while time.monotonic() < grace_deadline:
+                        if proc.poll() is not None:
+                            # Process exited on its own — clean exit.
+                            break
+                        time.sleep(SIDECAR_POLL_INTERVAL_SECONDS)
+
+                    if proc.poll() is None:
+                        # Still running after grace period — terminate it.
+                        print(f"[coder_adapters] sidecar detected — terminating hung process early{label}", flush=True)
+                        proc.terminate()
+                        try:
+                            proc.wait(timeout=10)
+                        except subprocess.TimeoutExpired:
+                            proc.kill()
+                    else:
+                        print(f"[coder_adapters] sidecar detected — process exited cleanly{label}", flush=True)
+                    sidecar_triggered = True
                     break
             time.sleep(SIDECAR_POLL_INTERVAL_SECONDS)
 
@@ -435,8 +450,7 @@ def _invoke_codex(*, step: str, prompt_text: str, cwd: Path, schema_path: Path, 
     command = [
         "codex",
         "exec",
-        "--sandbox",
-        "workspace-write",
+        "--dangerously-bypass-approvals-and-sandbox",
         "--cd",
         str(cwd),
         "--json",

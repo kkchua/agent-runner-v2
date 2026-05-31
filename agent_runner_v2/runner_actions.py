@@ -22,6 +22,7 @@ from typing import Callable
 from .action_result import ActionResult
 from .actions.submit_comfyui import submit_comfyui
 from .actions.validate_delivery_docs import validate_delivery_docs
+from .actions.archive_images import archive_images
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +34,7 @@ logger = logging.getLogger(__name__)
 ACTION_REGISTRY: dict[str, Callable] = {
     "submit_comfyui": submit_comfyui,
     "validate_delivery_docs": validate_delivery_docs,
+    "archive_images": archive_images,
 }
 
 

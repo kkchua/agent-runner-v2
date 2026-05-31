@@ -773,6 +773,25 @@ def build_context(
             ctx["IMAGE_CSV_SUBMIT_RESULT_PATH"] = ""
             ctx["IMAGE_CSV_SUBMIT_RESULT_METAJSON"] = ""
 
+    if "ARCHIVED_IMAGES" in produces:
+        # Archive directory mirrors the CSV run directory.
+        # Derive run_dir from IMAGE_CSV_RUN_DIR context or fall back to IMAGE_CSV_JSON artifact.
+        run_dir = ctx.get("IMAGE_CSV_RUN_DIR", "")
+        if not run_dir:
+            existing = artifacts.get("IMAGE_CSV_JSON", "")
+            if existing:
+                run_dir = existing.rstrip("/")
+        if run_dir:
+            run_dir_name = PurePath(run_dir).name
+            archive_rel = str(Path("archive") / run_dir_name)
+            ctx["ARCHIVED_IMAGES_PATH"] = archive_rel
+            ctx["ARCHIVED_IMAGES_METAJSON"] = str(Path(archive_rel) / "meta.json")
+            print(f"[step_runner] ARCHIVE PATH: {archive_rel}", flush=True)
+            print(f"[step_runner] ARCHIVE METAJSON PATH: {ctx['ARCHIVED_IMAGES_METAJSON']}", flush=True)
+        else:
+            ctx["ARCHIVED_IMAGES_PATH"] = ""
+            ctx["ARCHIVED_IMAGES_METAJSON"] = ""
+
     return ctx
 
 
