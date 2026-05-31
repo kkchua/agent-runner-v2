@@ -753,6 +753,34 @@ def build_context(
 
     # ComfyUI submission context
     produces = (step_cfg or {}).get("produces", [])
+    # Pre-compute paths for artifacts this step will produce.
+    # The generic loop above only sets METAJSON when the artifact already has a value.
+    # For NEW artifacts being produced, compute a default path from the step directory.
+    # CRITICAL: If a step produces an artifact that already exists (e.g. refine_sop produces
+    # DELIVERY_SOP which was already created by generate_sop), OVERRIDE the METAJSON to the
+    # current step dir so the coder writes its meta.json in the right place.
+    if produces:
+        # Compute step dir path (same logic as make_step_dir in job_state.py)
+        job_id = state.get("job_id", "")
+        template_group = state.get("template_group", "")
+        step_idx = 0
+        group_steps = getattr(bundle, "TEMPLATE_GROUPS", {}).get(template_group, {}).get("steps", [])
+        if step in group_steps:
+            step_idx = group_steps.index(step)
+        loop_ctx = state.get("loop_context", {})
+        loop_suffix = f"_iter{loop_ctx['loop_iteration']}" if loop_ctx.get("active") else ""
+        step_dir_rel = str(Path(f"{template_group}/{job_id}") / f"{step_idx:02d}_{step}{loop_suffix}")
+        
+        for key in produces:
+            # Always override METAJSON for produced artifacts — whether new or existing
+            if step_dir_rel:
+                default_metajson = str(Path(step_dir_rel) / "meta.json")
+                ctx[f"{key}_METAJSON"] = default_metajson
+                if not ctx.get(f"{key}_PATH"):
+                    ctx[f"{key}_PATH"] = str(Path(step_dir_rel) / f"{key.lower()}.json")
+                print(f"[step_runner][ctx] {key}_METAJSON = {default_metajson}", flush=True)
+
+    # --- Workflow-specific path overrides (for artifacts with special layouts) ---
     if "IMAGE_CSV_SUBMIT_RESULT" in produces:
         run_dir = ctx.get("IMAGE_CSV_RUN_DIR", "")
         if not run_dir:

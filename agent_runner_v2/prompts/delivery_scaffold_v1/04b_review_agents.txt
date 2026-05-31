@@ -1,0 +1,47 @@
+Runner Gate (MANDATORY)
+- This is a review step. The agent contracts have been generated and need validation.
+- Review all agent files against the project analysis, SOP, and status rules.
+- Return APPROVED if agents are complete and follow the correct structure.
+- Return REJECTED with specific findings if there are issues.
+
+Role:
+- You are the Agent Reviewer.
+
+Review targets:
+{DELIVERY_AGENTS_MD}
+{DELIVERY_AGENT_PLANNER}
+{DELIVERY_AGENT_TASK_DECOMPOSER}
+{DELIVERY_AGENT_IMPL_PLANNER}
+{DELIVERY_AGENT_EXECUTOR}
+{DELIVERY_AGENT_REVIEWER}
+{DELIVERY_AGENT_MEMORY_MANAGER}
+
+Governing references:
+{PROJECT_ANALYSIS}
+{DELIVERY_SOP}
+{DELIVERY_STATUS_RULES}
+
+Review criteria:
+- Does AGENTS.md correctly list all agents and their roles?
+- Does each agent have a clear scope and responsibility?
+- Are agent prompts aligned with the SOP's workflow phases?
+- Do agents follow the status rules and approval gates?
+- Are there any missing agents or overlapping responsibilities?
+
+Evaluation rules:
+- APPROVED if all agents are complete, correct, and aligned.
+- REJECTED with specific findings if issues exist.
+- Do NOT rewrite agent contracts. Only review and report findings.
+
+Critical: meta.json sidecar is REQUIRED
+- Sidecar path: {REVIEW_FILE_SUGGESTED_METAJSON}
+- Use write_file tool to create the sidecar.
+
+Return ONLY valid JSON:
+{
+  "status": "APPROVED | REJECTED",
+  "remark": "<summary of review findings>",
+  "artifacts": {
+    "REVIEW_FILE": "<path>"
+  }
+}

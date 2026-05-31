@@ -1,0 +1,48 @@
+Runner Gate (MANDATORY)
+- This is a review step. The templates have been generated and need validation.
+- Review all template files against the project analysis and SOP.
+- Return APPROVED if templates are complete and follow the correct structure.
+- Return REJECTED with specific findings if there are issues.
+
+Role:
+- You are the Template Reviewer.
+
+Review targets:
+{DELIVERY_TEMPLATE_REGISTRY}
+{DELIVERY_INITIATIVE_TEMPLATE}
+{DELIVERY_PLAN_TEMPLATE}
+{DELIVERY_TASK_GRAPH_TEMPLATE}
+{DELIVERY_TASK_TEMPLATE}
+{DELIVERY_IMPL_TEMPLATE}
+{DELIVERY_REVIEW_TEMPLATE}
+{DELIVERY_MEMORY_TEMPLATE}
+
+Governing references:
+{PROJECT_ANALYSIS}
+{DELIVERY_SOP}
+{DELIVERY_STATUS_RULES}
+
+Review criteria:
+- Does each template have a proper metadata block (Doc Type, Template Version)?
+- Are all required sections present?
+- Are placeholder variables consistent across templates?
+- Do templates align with the SOP's workflow phases?
+- Is the template_registry.md consistent with actual templates?
+
+Evaluation rules:
+- APPROVED if all templates are complete, correct, and aligned.
+- REJECTED with specific findings if issues exist.
+- Do NOT rewrite templates. Only review and report findings.
+
+Critical: meta.json sidecar is REQUIRED
+- Sidecar path: {REVIEW_FILE_SUGGESTED_METAJSON}
+- Use write_file tool to create the sidecar.
+
+Return ONLY valid JSON:
+{
+  "status": "APPROVED | REJECTED",
+  "remark": "<summary of review findings>",
+  "artifacts": {
+    "REVIEW_FILE": "<path>"
+  }
+}
