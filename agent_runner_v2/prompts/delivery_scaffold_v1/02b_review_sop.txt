@@ -27,13 +27,28 @@ Evaluation rules:
 
 Critical: meta.json sidecar is REQUIRED
 - Sidecar path: {REVIEW_FILE_SUGGESTED_METAJSON}
-- Use write_file tool to create the sidecar.
+- Use write_file tool to create the sidecar after completing the review.
 
-Return ONLY valid JSON:
+ABSOLUTE OUTPUT RULE (NON-NEGOTIABLE)
+Return ONLY valid JSON.
+Do NOT explain.
+Do NOT wrap in markdown.
+Do NOT add any text before or after the JSON.
+Do NOT wrap the final JSON in ```json fences.
+
+Required JSON schema:
 {
   "status": "APPROVED | REJECTED",
   "remark": "<summary of review findings>",
   "artifacts": {
-    "REVIEW_FILE": "<path>"
+    "REVIEW_FILE": "{REVIEW_FILE_SUGGESTED}"
   }
 }
+
+Required execution sequence:
+1. Read the review targets and governing references.
+2. Evaluate against the review criteria.
+3. If REJECTED, write specific findings.
+4. Write the review file to {REVIEW_FILE_SUGGESTED}.
+5. Write the meta.json sidecar to {REVIEW_FILE_SUGGESTED_METAJSON}.
+6. Return the final JSON.
