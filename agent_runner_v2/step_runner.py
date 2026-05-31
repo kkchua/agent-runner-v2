@@ -347,13 +347,20 @@ def _read_and_validate_meta_json(path: Path) -> dict:
     schema_v = str(meta.get("schema_version") or "").strip()
     sidecar_v = str(meta.get("sidecar_version") or "").strip()
     if schema_v not in ("v2",) and sidecar_v not in ("artifact_meta_v1",):
-        # Auto-convert legacy coder format (Qwen/Claude Write tool) to v2
+        # Auto-convert legacy coder format (Qwen/Codex Write tool) to v2
         if "status" in meta and isinstance(meta["status"], str):
             status = meta["status"]
             remark = meta.get("decision", meta.get("remark", meta.get("findings", "")))
             if isinstance(remark, dict):
                 remark = json.dumps(remark)
-            artifacts = meta.get("artifacts", {})
+            raw_artifacts = meta.get("artifacts", {})
+            # Flatten nested artifact objects: {key: {path, checksum}} → {key: path}
+            artifacts = {}
+            for k, v in raw_artifacts.items():
+                if isinstance(v, dict) and "path" in v:
+                    artifacts[k.upper()] = v["path"]
+                elif isinstance(v, str):
+                    artifacts[k.upper()] = v
             if not artifacts and "review_file" in meta:
                 artifacts["REVIEW_FILE"] = meta["review_file"]
             meta = {
@@ -378,6 +385,18 @@ def _read_and_validate_meta_json(path: Path) -> dict:
         raise MetaJsonInvalidError(
             f"meta.json at {path} is missing coder_result object"
         )
+
+    # Normalize artifacts: flatten {key: {path, checksum}} → {KEY: path}
+    raw_artifacts = coder_result.get("artifacts", {})
+    normalized = {}
+    for k, v in raw_artifacts.items():
+        if isinstance(v, dict) and "path" in v:
+            normalized[k.upper()] = v["path"]
+        elif isinstance(v, str):
+            normalized[k.upper()] = v
+        else:
+            normalized[k.upper()] = v
+    coder_result["artifacts"] = normalized
 
     status = str(coder_result.get("status") or "").strip().upper()
     if status not in ("APPROVED", "REJECTED"):
@@ -407,11 +426,13 @@ def _validate_artifact_files_exist(
     project_root: Path,
 ) -> None:
     """Raise ArtifactMissingError if any artifact path in the dict doesn't exist."""
-    missing = [
-        path_str
-        for path_str in artifacts.values()
-        if path_str and not (project_root / path_str).exists()
-    ]
+    missing = []
+    for path_str in artifacts.values():
+        # Handle nested artifact objects: {path, checksum, bytes}
+        if isinstance(path_str, dict) and "path" in path_str:
+            path_str = path_str["path"]
+        if path_str and not (project_root / path_str).exists():
+            missing.append(path_str)
     if missing:
         raise ArtifactMissingError(
             f"Artifact files claimed in meta.json do not exist on disk: {missing}",
