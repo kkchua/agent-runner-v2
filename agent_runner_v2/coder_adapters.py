@@ -543,8 +543,6 @@ def _invoke_claude(*, step: str, prompt_text: str, cwd: Path, schema_path: Path,
     schema_text = schema_path.read_text(encoding="utf-8")
     command = [
         "claude",
-        "--permission-mode",
-        "bypassPermissions",
         "--add-dir",
         str(cwd),
         "--print",

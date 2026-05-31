@@ -131,8 +131,35 @@ def run_step(
     _save_json_atomic(step_dir / "step_manifest.json", dataclass_dict(invocation.manifest))
     _write_raw_events_jsonl(step_dir / "raw_events.jsonl", invocation.raw_events)
 
-    # Read and validate meta.json — raises on failure (no fallbacks)
-    meta = _read_and_validate_meta_json(meta_path)
+    # Read and validate meta.json — raises on failure
+    # Fallback: if meta.json missing but coder returned structured_output, write it
+    meta = None
+    if not meta_path.exists():
+        # Try to extract structured_output from raw output (Claude case)
+        raw_output = invocation.stdout.strip()
+        if raw_output:
+            try:
+                output_data = json.loads(raw_output)
+                structured = output_data.get("structured_output")
+                if structured:
+                    # Claude returned structured output — write meta.json ourselves
+                    meta_content = {
+                        "schema_version": "v2",
+                        "coder_result": {
+                            "status": structured.get("status", "REJECTED"),
+                            "remark": structured.get("remark", ""),
+                            "artifacts": structured.get("artifacts", {}),
+                            "recorded_at": _now_iso(),
+                        },
+                    }
+                    meta_path.parent.mkdir(parents=True, exist_ok=True)
+                    meta_path.write_text(json.dumps(meta_content, indent=2) + "\n", encoding="utf-8")
+                    print(f"[step_runner] Wrote meta.json from structured_output (coder wrote via tool but lacked permissions)", flush=True)
+            except (json.JSONDecodeError, KeyError) as e:
+                print(f"[step_runner] Could not extract structured_output: {e}", flush=True)
+
+    if meta is None:
+        meta = _read_and_validate_meta_json(meta_path)
     coder_result = meta["coder_result"]
 
     # Validate artifact files exist on disk
