@@ -142,7 +142,7 @@ def run_step(
                 output_data = json.loads(raw_output)
                 structured = output_data.get("structured_output")
                 if structured:
-                    # Claude returned structured output — write meta.json ourselves
+                    # Coder returned structured output — write meta.json ourselves
                     meta_content = {
                         "schema_version": "v2",
                         "coder_result": {
@@ -154,7 +154,7 @@ def run_step(
                     }
                     meta_path.parent.mkdir(parents=True, exist_ok=True)
                     meta_path.write_text(json.dumps(meta_content, indent=2) + "\n", encoding="utf-8")
-                    print(f"[step_runner] Wrote meta.json from structured_output (coder wrote via tool but lacked permissions)", flush=True)
+                    print(f"[step_runner] Wrote meta.json from structured_output (coder lacked write permissions)", flush=True)
             except (json.JSONDecodeError, KeyError) as e:
                 print(f"[step_runner] Could not extract structured_output: {e}", flush=True)
 
@@ -347,11 +347,31 @@ def _read_and_validate_meta_json(path: Path) -> dict:
     schema_v = str(meta.get("schema_version") or "").strip()
     sidecar_v = str(meta.get("sidecar_version") or "").strip()
     if schema_v not in ("v2",) and sidecar_v not in ("artifact_meta_v1",):
-        raise MetaJsonInvalidError(
-            f"meta.json at {path} has unrecognised version: "
-            f"schema_version={schema_v!r}, sidecar_version={sidecar_v!r}. "
-            "Expected schema_version='v2' or sidecar_version='artifact_meta_v1'."
-        )
+        # Auto-convert legacy coder format (Qwen/Claude Write tool) to v2
+        if "status" in meta and isinstance(meta["status"], str):
+            status = meta["status"]
+            remark = meta.get("decision", meta.get("remark", meta.get("findings", "")))
+            if isinstance(remark, dict):
+                remark = json.dumps(remark)
+            artifacts = meta.get("artifacts", {})
+            if not artifacts and "review_file" in meta:
+                artifacts["REVIEW_FILE"] = meta["review_file"]
+            meta = {
+                "schema_version": "v2",
+                "coder_result": {
+                    "status": status,
+                    "remark": str(remark),
+                    "artifacts": artifacts,
+                    "recorded_at": meta.get("date", _now_iso()),
+                },
+            }
+            path.write_text(json.dumps(meta, indent=2) + "\n", encoding="utf-8")
+        else:
+            raise MetaJsonInvalidError(
+                f"meta.json at {path} has unrecognised version: "
+                f"schema_version={schema_v!r}, sidecar_version={sidecar_v!r}. "
+                "Expected schema_version='v2' or sidecar_version='artifact_meta_v1'."
+            )
 
     coder_result = meta.get("coder_result")
     if not isinstance(coder_result, dict):
