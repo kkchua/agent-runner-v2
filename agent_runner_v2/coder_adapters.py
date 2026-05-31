@@ -355,7 +355,7 @@ def invoke_coder(
     if coder == "codex":
         result = _invoke_codex(step=step, prompt_text=prompt_text, cwd=cwd, schema_path=schema_path, sidecar_path=sidecar_path)
     elif coder == "claude":
-        result = _invoke_claude(step=step, prompt_text=prompt_text, cwd=cwd, schema_path=schema_path, sidecar_path=sidecar_path)
+        result = _invoke_claude(step=step, prompt_text=prompt_text, cwd=cwd, schema_path=schema_path, sidecar_path=sidecar_path, coder_config=cc)
     elif coder == "qwen":
         result = _invoke_qwen(step=step, prompt_text=prompt_text, cwd=cwd, coder_config=cc, sidecar_path=sidecar_path)
     else:
@@ -539,10 +539,18 @@ def _extract_codex_error_from_events(lines: list[str]) -> str | None:
     return last_error
 
 
-def _invoke_claude(*, step: str, prompt_text: str, cwd: Path, schema_path: Path, sidecar_path: Path | None = None) -> dict[str, Any]:
+def _invoke_claude(*, step: str, prompt_text: str, cwd: Path, schema_path: Path, sidecar_path: Path | None = None, coder_config: dict[str, Any] | None = None) -> dict[str, Any]:
     schema_text = schema_path.read_text(encoding="utf-8")
-    command = [
-        "claude",
+    cc = coder_config or {}
+    command = ["claude"]
+    # Inject model flag when provided via model_mapping or step config
+    if cc.get("model"):
+        command.extend(["--model", cc["model"]])
+    # --permission-mode bypassPermissions converts to --dangerously-skip-permissions
+    # which is blocked for root in Docker. Only add it when not root.
+    if os.getuid() != 0:
+        command.extend(["--permission-mode", "bypassPermissions"])
+    command.extend([
         "--add-dir",
         str(cwd),
         "--print",
@@ -550,7 +558,7 @@ def _invoke_claude(*, step: str, prompt_text: str, cwd: Path, schema_path: Path,
         "json",
         "--json-schema",
         schema_text,
-    ]
+    ])
     timeout_seconds = _coder_timeout_seconds()
     try:
         return_code, stdout, stderr = _run_with_sidecar_poll(
