@@ -314,11 +314,11 @@ def _load_env_files() -> None:
     # Project root .env
     project_env = PROJECT_ROOT / ".env"
     if project_env.exists():
-        load_dotenv(dotenv_path=project_env)
+        load_dotenv(dotenv_path=project_env, override=True)
     # Runner root .env (fallback)
     runner_env = RUNNER_ROOT / ".env"
     if runner_env.exists():
-        load_dotenv(dotenv_path=runner_env)
+        load_dotenv(dotenv_path=runner_env, override=True)
 
 
 _env_loaded = False

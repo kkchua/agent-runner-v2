@@ -21,14 +21,14 @@
       "openai_api_key_env": "DEEPSEEK_API_KEY",
       "openai_base_url": "https://api.deepseek.com/v1"
     },
-	"gpt-5.4-nano": {
+    "gpt-5.4-nano": {
       "coder": "qwen",
       "model": "gpt-5.4-nano",
       "auth_type": "openai",
       "openai_api_key_env": "OPENAI_API_KEY",
       "openai_base_url": "https://api.openai.com/v1/"
     },
-	"qwen-claude": {
+    "qwen-claude": {
       "coder": "qwen",
       "model": "claude-3-5-sonnet",
       "auth_type": "anthropic"
@@ -39,12 +39,12 @@
       "auth_type": "gemini"
     },
     "claude": {
-      "coder": "claude",
+      "coder": "codex",
       "model": ""
     },
     "claude-sonnet-4-6": {
-      "coder": "claude",
-      "model": "claude-sonnet-4-6"
+      "coder": "codex",
+      "model": ""
     }
   }
 }
