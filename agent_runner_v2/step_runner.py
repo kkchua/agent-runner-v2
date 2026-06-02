@@ -716,6 +716,64 @@ def build_context(
     if produces:
         print(f"[step_runner] step={step} produces={produces}", flush=True)
 
+    # --- Scaffold workflow artifacts — canonical docs/delivery/ paths ---
+    if "DELIVERY_SOP" in produces and not artifacts.get("DELIVERY_SOP"):
+        sop_dir = ARTIFACT_ROOT / "docs/delivery/00_templates"
+        sop_path = str(sop_dir / "delivery_sop.json")
+        rules_path = str(sop_dir / "delivery_status_rules.json")
+        ctx["DELIVERY_SOP_PATH"] = sop_path
+        ctx["DELIVERY_STATUS_RULES_PATH"] = rules_path
+        ctx["DELIVERY_SOP_METAJSON"] = str(sop_dir / "delivery_sop.meta.json")
+        ctx["DELIVERY_STATUS_RULES_METAJSON"] = str(sop_dir / "delivery_status_rules.meta.json")
+        print(f"[step_runner][ctx] DELIVERY_SOP_PATH = {sop_path}", flush=True)
+        print(f"[step_runner][ctx] DELIVERY_STATUS_RULES_PATH = {rules_path}", flush=True)
+
+    if "DELIVERY_TEMPLATE_REGISTRY" in produces and not artifacts.get("DELIVERY_TEMPLATE_REGISTRY"):
+        tmpl_dir = ARTIFACT_ROOT / "docs/delivery/00_templates"
+        ctx["DELIVERY_TEMPLATE_REGISTRY_PATH"] = str(tmpl_dir / "template_registry.md")
+        ctx["DELIVERY_TEMPLATE_REGISTRY_METAJSON"] = str(tmpl_dir / "template_registry.meta.json")
+        print(f"[step_runner][ctx] DELIVERY_TEMPLATE_REGISTRY_PATH = {ctx['DELIVERY_TEMPLATE_REGISTRY_PATH']}", flush=True)
+
+    # Scaffold template files — write to docs/delivery/00_templates/
+    template_path_map = {
+        "DELIVERY_INITIATIVE_TEMPLATE": "01_initiative.template.md",
+        "DELIVERY_PLAN_TEMPLATE": "02_plan.template.md",
+        "DELIVERY_TASK_GRAPH_TEMPLATE": "02b_task_graph.template.md",
+        "DELIVERY_TASK_TEMPLATE": "03_task.template.md",
+        "DELIVERY_IMPL_TEMPLATE": "04_implementation_plan.template.md",
+        "DELIVERY_REVIEW_TEMPLATE": "04_review.template.md",
+        "DELIVERY_MEMORY_TEMPLATE": "06_memory.template.md",
+    }
+    for key, filename in template_path_map.items():
+        if key in produces and not artifacts.get(key):
+            tmpl_dir = ARTIFACT_ROOT / "docs/delivery/00_templates"
+            ctx[f"{key}_PATH"] = str(tmpl_dir / filename)
+            ctx[f"{key}_METAJSON"] = str(tmpl_dir / f"{filename}.meta.json")
+            print(f"[step_runner][ctx] {key}_PATH = {ctx[f'{key}_PATH']}", flush=True)
+
+    # Scaffold agent files — write to docs/delivery/08_agents/
+    agent_path_map = {
+        "DELIVERY_AGENT_PLANNER": "AGENT-planner.md",
+        "DELIVERY_AGENT_TASK_DECOMPOSER": "AGENT-task-decomposer.md",
+        "DELIVERY_AGENT_IMPL_PLANNER": "AGENT-implementation-planner.md",
+        "DELIVERY_AGENT_EXECUTOR": "AGENT-executor.md",
+        "DELIVERY_AGENT_REVIEWER": "AGENT-reviewer.md",
+        "DELIVERY_AGENT_MEMORY_MANAGER": "AGENT-memory-manager.md",
+    }
+    for key, filename in agent_path_map.items():
+        if key in produces and not artifacts.get(key):
+            agents_dir = ARTIFACT_ROOT / "docs/delivery/08_agents"
+            ctx[f"{key}_PATH"] = str(agents_dir / filename)
+            ctx[f"{key}_METAJSON"] = str(agents_dir / f"{filename}.meta.json")
+            print(f"[step_runner][ctx] {key}_PATH = {ctx[f'{key}_PATH']}", flush=True)
+
+    if "DELIVERY_AGENTS_MD" in produces and not artifacts.get("DELIVERY_AGENTS_MD"):
+        agents_dir = ARTIFACT_ROOT / "docs/delivery/08_agents"
+        ctx["DELIVERY_AGENTS_MD_PATH"] = str(agents_dir / "delivery_agents_md.json")
+        ctx["DELIVERY_AGENTS_MD_METAJSON"] = str(agents_dir / "delivery_agents_md.meta.json")
+        print(f"[step_runner][ctx] DELIVERY_AGENTS_MD_PATH = {ctx['DELIVERY_AGENTS_MD_PATH']}", flush=True)
+
+    # --- Standard workflow artifacts (initiative, plan, task graph, task, impl) ---
     if "PRE_INIT_FILE" in produces and not artifacts.get("PRE_INIT_FILE"):
         pre_init_path = _build_pre_init_file_path(state=state)
         if pre_init_path:
@@ -840,12 +898,13 @@ def build_context(
         step_dir_rel = str(Path(f"{template_group}/{job_id}") / f"{step_idx:02d}_{step}{loop_suffix}")
         
         for key in produces:
-            # Always override METAJSON for produced artifacts — whether new or existing
+            # Don't override paths that specific builders already set
+            if ctx.get(f"{key}_PATH") or ctx.get(f"{key}_METAJSON"):
+                continue
             if step_dir_rel:
                 default_metajson = str(Path(step_dir_rel) / "meta.json")
                 ctx[f"{key}_METAJSON"] = default_metajson
-                if not ctx.get(f"{key}_PATH"):
-                    ctx[f"{key}_PATH"] = str(Path(step_dir_rel) / f"{key.lower()}.json")
+                ctx[f"{key}_PATH"] = str(Path(step_dir_rel) / f"{key.lower()}.json")
                 print(f"[step_runner][ctx] {key}_METAJSON = {default_metajson}", flush=True)
 
     # --- Workflow-specific path overrides (for artifacts with special layouts) ---

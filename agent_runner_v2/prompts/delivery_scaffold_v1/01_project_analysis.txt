@@ -137,12 +137,16 @@ Do NOT wrap in markdown.
 Do NOT add any text before or after the JSON.
 Do NOT wrap the final JSON in ```json fences.
 
-Required JSON schema:
+Required JSON schema (MUST match sidecar coder_result structure):
 {
-  "status": "APPROVED | REJECTED",
-  "remark": "<short summary of result>",
-  "artifacts": {
-    "PROJECT_ANALYSIS": "<path if created>"
+  "schema_version": "v2",
+  "coder_result": {
+    "status": "APPROVED | REJECTED",
+    "remark": "<short summary of result>",
+    "artifacts": {
+      "PROJECT_ANALYSIS": "<path if created>"
+    },
+    "recorded_at": "<ISO-8601 timestamp>"
   }
 }
 

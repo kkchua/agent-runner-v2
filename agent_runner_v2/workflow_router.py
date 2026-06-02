@@ -364,7 +364,8 @@ def _route_loop_or_replan(
 
     review_file = artifacts.get("REVIEW_FILE")
     ctx = state.setdefault("loop_context", {})
-    iteration = int(ctx.get("loop_iteration", 0)) + 1
+    # Use reject_counts to track total rejections (loop_iteration gets reset after each refine)
+    iteration = int(reject_counts.get(step, 0)) + 1
     max_iter = int(on_reject_refine.get("max_iterations", 2))
 
     if iteration <= max_iter:

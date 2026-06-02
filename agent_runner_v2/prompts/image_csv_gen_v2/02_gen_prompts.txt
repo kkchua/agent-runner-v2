@@ -287,16 +287,20 @@ ABSOLUTE OUTPUT RULE
 
 Return ONLY valid JSON. No explanation. No markdown. No fences.
 
-Required schema:
+Required JSON schema:
 {
-  "status": "APPROVED | REJECTED",
-  "remark": "<short summary>",
-  "artifacts": {
-    "IMAGE_DESC_FOLDER": null,
-    "IMAGE_CSV_JSON": null,
-    "IMAGE_CSV_CSV": null,
-    "REVIEW_FILE": null,
-    "VALIDATION_FILE": null
+  "schema_version": "v2",
+  "coder_result": {
+    "status": "APPROVED | REJECTED",
+    "remark": "<short summary>",
+    "artifacts": {
+      "IMAGE_DESC_FOLDER": null,
+      "IMAGE_CSV_JSON": null,
+      "IMAGE_CSV_CSV": null,
+      "REVIEW_FILE": null,
+      "VALIDATION_FILE": null
+    },
+    "recorded_at": "<ISO-8601 timestamp>"
   }
 }
 

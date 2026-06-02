@@ -164,10 +164,14 @@ Required JSON return
 * After writing both files on disk, return ONLY this JSON:
 ```json
 {
-  "status": "APPROVED",
-  "remark": "<short summary of what was done>",
-  "artifacts": {
-    "TASK_FILE": "<exact path of the task file you wrote>"
+  "schema_version": "v2",
+  "coder_result": {
+    "status": "APPROVED",
+    "remark": "<short summary of what was done>",
+    "artifacts": {
+      "TASK_FILE": "<exact path of the task file you wrote>"
+    },
+    "recorded_at": "<ISO-8601 timestamp>"
   }
 }
 ```

@@ -445,28 +445,47 @@ def validate_delivery_docs(
     logger.info("[validate_delivery_docs] starting validation")
     print("[validate_delivery_docs] starting delivery docs validation", flush=True)
 
-    # Resolve artifact root: prefer state's artifact paths, fall back to docs/delivery
+    # Resolve artifact paths from state artifacts (works with any layout)
     artifacts = state.get("artifacts", {})
-    delivery_sop_path = artifacts.get("DELIVERY_SOP", "")
-    if delivery_sop_path:
-        # Artifact paths are already relative to project_root
-        # e.g. delivery_scaffold_v1/SCAFFOLD-GEN-20260601-002/01_generate_sop/delivery_sop.json
-        job_root = Path(delivery_sop_path).parent.parent  # delivery_scaffold_v1/SCAFFOLD-GEN-...
-        templates_dir = job_root / "05_generate_templates"
-        sop_path = job_root / "01_generate_sop" / "delivery_sop.json"
-        status_rules_path = job_root / "01_generate_sop" / "delivery_status_rules.json"
-        agents_dir = job_root / "09_generate_agents"
-        reviews_dir = Path("docs/delivery/05_reviews")
-        job_root_rel = job_root  # already relative to project_root
+
+    # Derive templates_dir from template artifacts (resolve to relative path)
+    template_path = artifacts.get("DELIVERY_TEMPLATE_REGISTRY", "") or artifacts.get("DELIVERY_SOP", "")
+    if template_path and Path(template_path).is_absolute():
+        templates_dir = Path(template_path).relative_to(project_root)
+    elif template_path:
+        templates_dir = Path(template_path).parent
     else:
-        # Legacy fallback: docs/delivery layout
-        job_root = Path("docs/delivery")
         templates_dir = Path("docs/delivery/00_templates")
-        sop_path = Path("docs/delivery/00_templates/WORKFLOW_SOP_v1.md")
-        status_rules_path = Path("docs/delivery/08_agents/DELIVERY_STATUS_RULES_v1.md")
+
+    # Derive sop/status_rules from DELIVERY_SOP artifact
+    sop_artifact = artifacts.get("DELIVERY_SOP", "")
+    if sop_artifact and Path(sop_artifact).is_absolute():
+        sop_path = str(Path(sop_artifact).relative_to(project_root))
+    elif sop_artifact:
+        sop_path = sop_artifact
+    else:
+        sop_path = str(templates_dir / "delivery_sop.json")
+
+    sr_artifact = artifacts.get("DELIVERY_STATUS_RULES", "")
+    if sr_artifact and Path(sr_artifact).is_absolute():
+        status_rules_path = str(Path(sr_artifact).relative_to(project_root))
+    elif sr_artifact:
+        status_rules_path = sr_artifact
+    else:
+        status_rules_path = str(templates_dir / "delivery_status_rules.json")
+
+    # Derive agents_dir from agent artifacts (resolve to relative path)
+    agent_path = artifacts.get("DELIVERY_AGENTS_MD", "") or artifacts.get("AGENTS_REGISTRY", "")
+    if agent_path:
+        if Path(agent_path).is_absolute():
+            agents_dir = Path(agent_path).relative_to(project_root)
+        else:
+            agents_dir = Path(agent_path).parent
+    else:
         agents_dir = Path("docs/delivery/08_agents")
-        reviews_dir = Path("docs/delivery/05_reviews")
-        job_root_rel = job_root
+
+    reviews_dir = Path("docs/delivery/05_reviews")
+    job_root_rel = templates_dir
 
     # Create delivery folder structure if needed for final output
     delivery_output_root = project_root / "docs" / "delivery"
@@ -564,34 +583,58 @@ def validate_delivery_docs(
                     "detail": f"{'found' if has else 'missing'}",
                 })
 
-    # 4. Check agent contracts
+    # 4. Check agent contracts (support both .md and .json formats)
     print("[validate_delivery_docs] checking agent contracts...", flush=True)
-    known_agent_files = [
-        "AGENT-planner.md", "AGENT-task-decomposer.md",
-        "AGENT-implementation-planner.md", "AGENT-executor.md",
-        "AGENT-reviewer.md", "AGENT-memory-manager.md", "AGENT-architect.md",
+    known_agent_bases = [
+        "AGENT-planner", "AGENT-task-decomposer",
+        "AGENT-implementation-planner", "AGENT-executor",
+        "AGENT-reviewer", "AGENT-memory-manager", "AGENT-architect",
     ]
-    for agent_file in known_agent_files:
-        agent_path = agents_dir / agent_file
-        rel = str(agent_path)  # already relative
-        ok, detail = _check_file_exists(project_root, rel)
-        all_checks.append({
-            "check": "agent_contract_exists",
-            "path": rel,
-            "ok": ok,
-            "detail": detail,
-        })
-        if ok:
-            agent_content = _read_file(project_root, rel)
-            if agent_content:
-                has_doc_type = _has_metadata_field(agent_content, "Doc Type")
-                has_agent_id = _has_metadata_field(agent_content, "Agent ID")
+    for agent_base in known_agent_bases:
+        found = False
+        for ext in [".md", ".json"]:
+            agent_file = agent_base + ext
+            agent_path = agents_dir / agent_file
+            rel = str(agent_path)
+            ok, detail = _check_file_exists(project_root, rel)
+            if ok:
+                found = True
                 all_checks.append({
-                    "check": "agent_contract_metadata",
+                    "check": "agent_contract_exists",
                     "path": rel,
-                    "ok": has_doc_type and has_agent_id,
-                    "detail": f"Doc Type: {'present' if has_doc_type else 'missing'}, Agent ID: {'present' if has_agent_id else 'missing'}",
+                    "ok": ok,
+                    "detail": detail,
                 })
+                agent_content = _read_file(project_root, rel)
+                if agent_content:
+                    # Support both markdown front-matter and JSON format
+                    is_json = rel.endswith(".json")
+                    if is_json:
+                        import json as _json
+                        try:
+                            agent_data = _json.loads(agent_content)
+                            has_doc_type = "document_type" in agent_data or "doc_type" in agent_data
+                            has_agent_id = "agent_id" in agent_data or "Agent ID" in agent_data
+                        except _json.JSONDecodeError:
+                            has_doc_type = _has_metadata_field(agent_content, "Doc Type")
+                            has_agent_id = _has_metadata_field(agent_content, "Agent ID")
+                    else:
+                        has_doc_type = _has_metadata_field(agent_content, "Doc Type")
+                        has_agent_id = _has_metadata_field(agent_content, "Agent ID")
+                    all_checks.append({
+                        "check": "agent_contract_metadata",
+                        "path": rel,
+                        "ok": has_doc_type and has_agent_id,
+                        "detail": f"Doc Type: {'present' if has_doc_type else 'missing'}, Agent ID: {'present' if has_agent_id else 'missing'}",
+                    })
+                break
+        if not found:
+            all_checks.append({
+                "check": "agent_contract_exists",
+                "path": str(agents_dir / (agent_base + ".md")),
+                "ok": False,
+                "detail": f"Agent contract {agent_base} not found (tried .md and .json)",
+            })
 
     # 5. Check AGENTS.md (delivery_agents_md.json)
     print("[validate_delivery_docs] checking agents registry...", flush=True)

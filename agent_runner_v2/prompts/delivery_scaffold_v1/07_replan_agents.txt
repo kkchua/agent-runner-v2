@@ -66,16 +66,20 @@ Do NOT wrap the final JSON in ```json fences.
 
 Required JSON schema:
 {
-  "status": "APPROVED | REJECTED",
-  "remark": "<short summary of regenerated agent contracts>",
-  "artifacts": {
-    "DELIVERY_AGENTS_MD": "<path if created>",
-    "DELIVERY_AGENT_PLANNER": "<path if created>",
-    "DELIVERY_AGENT_TASK_DECOMPOSER": "<path if created>",
-    "DELIVERY_AGENT_IMPL_PLANNER": "<path if created>",
-    "DELIVERY_AGENT_EXECUTOR": "<path if created>",
-    "DELIVERY_AGENT_REVIEWER": "<path if created>",
-    "DELIVERY_AGENT_MEMORY_MANAGER": "<path if created>"
+  "schema_version": "v2",
+  "coder_result": {
+    "status": "APPROVED | REJECTED",
+    "remark": "<short summary>",
+    "artifacts": {
+      "DELIVERY_AGENTS_MD": "<path if created>",
+      "DELIVERY_AGENT_PLANNER": "<path if created>",
+      "DELIVERY_AGENT_TASK_DECOMPOSER": "<path if created>",
+      "DELIVERY_AGENT_IMPL_PLANNER": "<path if created>",
+      "DELIVERY_AGENT_EXECUTOR": "<path if created>",
+      "DELIVERY_AGENT_REVIEWER": "<path if created>",
+      "DELIVERY_AGENT_MEMORY_MANAGER": "<path if created>"
+    },
+    "recorded_at": "<ISO-8601 timestamp>"
   }
 }
 

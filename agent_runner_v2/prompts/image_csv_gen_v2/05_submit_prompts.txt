@@ -72,15 +72,19 @@ Do NOT wrap the final JSON in ```json fences.
 
 Required JSON schema:
 {
-  "status": "APPROVED | REJECTED",
-  "remark": "<short summary of result>",
-  "artifacts": {
-    "IMAGE_DESC_FOLDER": null,
-    "IMAGE_CSV_JSON": null,
-    "IMAGE_CSV_CSV": null,
-    "IMAGE_CSV_SUBMIT_RESULT": null,
-    "REVIEW_FILE": null,
-    "VALIDATION_FILE": null
+  "schema_version": "v2",
+  "coder_result": {
+    "status": "APPROVED | REJECTED",
+    "remark": "<short summary of result>",
+    "artifacts": {
+      "IMAGE_DESC_FOLDER": null,
+      "IMAGE_CSV_JSON": null,
+      "IMAGE_CSV_CSV": null,
+      "IMAGE_CSV_SUBMIT_RESULT": null,
+      "REVIEW_FILE": null,
+      "VALIDATION_FILE": null
+    },
+    "recorded_at": "<ISO-8601 timestamp>"
   }
 }
 

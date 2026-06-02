@@ -76,10 +76,14 @@ Required JSON return
 * After writing both files on disk, return ONLY this JSON:
 ```json
 {
-  "status": "APPROVED",
-  "remark": "<short summary of what was executed and test results>",
-  "artifacts": {
-    "IMPL_FILE": "{IMPL_FILE}"
+  "schema_version": "v2",
+  "coder_result": {
+    "status": "APPROVED",
+    "remark": "<short summary of what was executed and test results>",
+    "artifacts": {
+      "IMPL_FILE": "{IMPL_FILE}"
+    },
+    "recorded_at": "<ISO-8601 timestamp>"
   }
 }
 ```

@@ -62,10 +62,14 @@ Required JSON return
 * After writing both files on disk, return ONLY this JSON:
 ```json
 {
-  "status": "APPROVED",
-  "remark": "<short summary>",
-  "artifacts": {
-    "VALIDATION_FILE": "{VALIDATION_FILE_PATH}"
+  "schema_version": "v2",
+  "coder_result": {
+    "status": "APPROVED",
+    "remark": "<short summary>",
+    "artifacts": {
+      "VALIDATION_FILE": "{VALIDATION_FILE_PATH}"
+    },
+    "recorded_at": "<ISO-8601 timestamp>"
   }
 }
 ```

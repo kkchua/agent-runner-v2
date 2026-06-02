@@ -84,9 +84,7 @@ Task:
 - Do not implement anything.
 - Do not expand scope.
 - Produce an explicit decision: approved or rejected.
-- Read the sidecar file for {PLAN_FILE}:
-  - Path: {PLAN_FILE}.sidecar.json
-  - Write review file to `{REVIEW_FILE_SUGGESTED}`, meta.json to `{REVIEW_FILE_SUGGESTED_METAJSON}`
+- Write review file to `{REVIEW_FILE_SUGGESTED}`, meta.json to `{REVIEW_FILE_SUGGESTED_METAJSON}`
 - You MUST write the REVIEW_FILE to that exact path.
   - This path is pre-calculated by the runner with collision handling.
   - Do NOT compute or substitute a different path.
@@ -96,8 +94,8 @@ Task:
 - The REVIEW_FILE must exist on disk before returning final JSON.
 - Return the REVIEW_FILE path in artifacts.REVIEW_FILE.
 
-Critical: Sidecar file is REQUIRED for review step
-- The runner reads review decision from the sidecar file.
+Critical: meta.json sidecar is REQUIRED
+- The runner reads review decision from the meta.json sidecar, NOT from your JSON output.
 - Sidecar path: `{REVIEW_FILE_SUGGESTED_METAJSON}`
 - Sidecar structure (exact):
   {
@@ -128,16 +126,20 @@ Do NOT add any text before or after the JSON.
 
 Required JSON schema:
 {
-  "status": "APPROVED | REJECTED",
-  "remark": "<short summary of result>",
-  "artifacts": {
-    "INIT_FILE": null,
-    "PLAN_FILE": null,
-    "TASK_GRAPH_FILE": null,
-    "TASK_FILE": null,
-    "IMPL_FILE": null,
-    "REVIEW_FILE": null,
-    "VALIDATION_FILE": null
+  "schema_version": "v2",
+  "coder_result": {
+    "status": "APPROVED | REJECTED",
+    "remark": "<short summary of result>",
+    "artifacts": {
+      "INIT_FILE": null,
+      "PLAN_FILE": null,
+      "TASK_GRAPH_FILE": null,
+      "TASK_FILE": null,
+      "IMPL_FILE": null,
+      "REVIEW_FILE": null,
+      "VALIDATION_FILE": null
+    },
+    "recorded_at": "<ISO-8601 timestamp>"
   }
 }
 

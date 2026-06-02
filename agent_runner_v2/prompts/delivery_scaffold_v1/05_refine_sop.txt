@@ -63,11 +63,15 @@ Do NOT wrap the final JSON in ```json fences.
 
 Required JSON schema:
 {
-  "status": "APPROVED | REJECTED",
-  "remark": "<short summary of changes made>",
-  "artifacts": {
-    "DELIVERY_SOP": "<path if updated>",
-    "DELIVERY_STATUS_RULES": "<path if updated>"
+  "schema_version": "v2",
+  "coder_result": {
+    "status": "APPROVED | REJECTED",
+    "remark": "<short summary>",
+    "artifacts": {
+      "DELIVERY_SOP": "<path if updated>",
+      "DELIVERY_STATUS_RULES": "<path if updated>"
+    },
+    "recorded_at": "<ISO-8601 timestamp>"
   }
 }
 

@@ -63,17 +63,21 @@ Do NOT wrap the final JSON in ```json fences.
 
 Required JSON schema:
 {
-  "status": "APPROVED | REJECTED",
-  "remark": "<short summary of regenerated templates>",
-  "artifacts": {
-    "DELIVERY_TEMPLATE_REGISTRY": "<path if created>",
-    "DELIVERY_INITIATIVE_TEMPLATE": "<path if created>",
-    "DELIVERY_PLAN_TEMPLATE": "<path if created>",
-    "DELIVERY_TASK_GRAPH_TEMPLATE": "<path if created>",
-    "DELIVERY_TASK_TEMPLATE": "<path if created>",
-    "DELIVERY_IMPL_TEMPLATE": "<path if created>",
-    "DELIVERY_REVIEW_TEMPLATE": "<path if created>",
-    "DELIVERY_MEMORY_TEMPLATE": "<path if created>"
+  "schema_version": "v2",
+  "coder_result": {
+    "status": "APPROVED | REJECTED",
+    "remark": "<short summary>",
+    "artifacts": {
+      "DELIVERY_TEMPLATE_REGISTRY": "<path if created>",
+      "DELIVERY_INITIATIVE_TEMPLATE": "<path if created>",
+      "DELIVERY_PLAN_TEMPLATE": "<path if created>",
+      "DELIVERY_TASK_GRAPH_TEMPLATE": "<path if created>",
+      "DELIVERY_TASK_TEMPLATE": "<path if created>",
+      "DELIVERY_IMPL_TEMPLATE": "<path if created>",
+      "DELIVERY_REVIEW_TEMPLATE": "<path if created>",
+      "DELIVERY_MEMORY_TEMPLATE": "<path if created>"
+    },
+    "recorded_at": "<ISO-8601 timestamp>"
   }
 }
 

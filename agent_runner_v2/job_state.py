@@ -20,7 +20,7 @@ from pathlib import Path
 from typing import Any
 
 from .exceptions import PreflightBlockedError
-from .runtime_context import JOBS_ROOT, PROJECT_ROOT, get_workflow_module
+from .runtime_context import JOBS_ROOT, PROJECT_ROOT, get_workflow_module, ARTIFACT_ROOT
 
 CURRENT_SCHEMA_VERSION = 6  # v2 bumps to 6 (adds runner_version)
 

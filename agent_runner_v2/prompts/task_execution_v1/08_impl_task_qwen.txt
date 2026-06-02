@@ -250,16 +250,20 @@ Do NOT add any text before or after the JSON.
 
 Required JSON schema:
 {
-  "status": "APPROVED | REJECTED",
-  "remark": "<short summary of result>",
-  "artifacts": {
-    "INIT_FILE": null,
-    "PLAN_FILE": null,
-    "TASK_GRAPH_FILE": null,
-    "TASK_FILE": null,
-    "IMPL_FILE": null,
-    "REVIEW_FILE": null,
-    "VALIDATION_FILE": null
+  "schema_version": "v2",
+  "coder_result": {
+    "status": "APPROVED | REJECTED",
+    "remark": "<short summary of result>",
+    "artifacts": {
+      "INIT_FILE": null,
+      "PLAN_FILE": null,
+      "TASK_GRAPH_FILE": null,
+      "TASK_FILE": null,
+      "IMPL_FILE": null,
+      "REVIEW_FILE": null,
+      "VALIDATION_FILE": null
+    },
+    "recorded_at": "<ISO-8601 timestamp>"
   }
 }
 

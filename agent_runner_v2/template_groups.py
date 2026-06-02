@@ -740,7 +740,7 @@ TEMPLATE_GROUPS: Dict[str, Dict[str, Any]] = {
                 "edit_mode": "in_place",
                 "loop_returns_to": "review_templates",
                 "result_meta_key": "DELIVERY_TEMPLATE_REGISTRY",
-                "coder": {"default": "qwen", "allowed": ["claude", "codex", "qwen"]},
+                "coder": {"default": "claude", "allowed": ["claude", "codex", "qwen"]},
             },
             "replan_templates": {
                 "prompt_file": _p("prompts", "delivery_scaffold_v1", "06_replan_templates.txt"),
