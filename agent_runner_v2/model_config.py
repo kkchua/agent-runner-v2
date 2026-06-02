@@ -29,6 +29,15 @@ def _mapping_path() -> Path:
     return _runner_root() / "model_mapping.json"
 
 
+def _project_mapping_path() -> Path:
+    """Project-level model_mapping.json — takes precedence over runner root."""
+    try:
+        from .runtime_context import PROJECT_ROOT
+        return PROJECT_ROOT / ".ukbe-runner" / "model_mapping.json"
+    except ImportError:
+        return _runner_root() / "model_mapping.json"
+
+
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
@@ -36,7 +45,11 @@ def _mapping_path() -> Path:
 def load_model_mapping(path: Path | str | None = None) -> dict[str, dict[str, Any]]:
     """Load the model mapping file.
 
-    If *path* is not given, reads ``model_mapping.json`` from the runner root.
+    Resolution order:
+    1. Explicit *path* argument (if given)
+    2. Project root: PROJECT_ROOT/.ukbe-runner/model_mapping.json
+    3. Runner root: RUNNER_ROOT/model_mapping.json (fallback)
+
     Results are cached for the lifetime of the process.
     """
     global _MAPPING, _MAPPING_PATH
@@ -44,7 +57,16 @@ def load_model_mapping(path: Path | str | None = None) -> dict[str, dict[str, An
     if _MAPPING is not None and _MAPPING_PATH is not None:
         return _MAPPING
 
-    resolved = Path(path) if path else _mapping_path()
+    if path:
+        resolved = Path(path)
+    else:
+        # Project-level first, runner-level fallback
+        project_path = _project_mapping_path()
+        if project_path.exists():
+            resolved = project_path
+        else:
+            resolved = _mapping_path()
+
     _MAPPING_PATH = resolved
 
     if not resolved.exists():

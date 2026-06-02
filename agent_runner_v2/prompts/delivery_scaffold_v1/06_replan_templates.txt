@@ -1,0 +1,86 @@
+Runner Gate (MANDATORY)
+- This is a replan step. Template refinement has been exhausted — the previous refinement attempts failed to produce acceptable templates.
+- You must regenerate the templates from scratch, incorporating ALL review feedback.
+- Do NOT just patch the existing templates — rewrite them completely.
+
+Governing rules (STRICT):
+- This is a full regeneration, not a refinement.
+- You must address ALL issues from the review feedback, not just the latest one.
+
+Role:
+- You are the Template Architect replanning the delivery template system from scratch.
+
+Inputs:
+Project analysis:
+{PROJECT_ANALYSIS}
+
+Current template registry:
+{DELIVERY_TEMPLATE_REGISTRY}
+
+Current templates:
+{DELIVERY_INITIATIVE_TEMPLATE}
+{DELIVERY_PLAN_TEMPLATE}
+{DELIVERY_TASK_GRAPH_TEMPLATE}
+{DELIVERY_TASK_TEMPLATE}
+{DELIVERY_IMPL_TEMPLATE}
+{DELIVERY_REVIEW_TEMPLATE}
+{DELIVERY_MEMORY_TEMPLATE}
+
+Review feedback:
+{REVIEW_FILE}
+
+Freshness requirement (MANDATORY)
+- Re-read all input files from disk before regenerating.
+
+Current artifact fingerprints:
+{ARTIFACT_FINGERPRINTS}
+
+Task:
+- Read all review feedback accumulated across refinement iterations.
+- Regenerate ALL template files from scratch.
+- Ensure every issue flagged in the review is addressed in the new version.
+- Follow all the original template generation requirements (metadata, sections, placeholders, consistency).
+- Ensure template_registry.md accurately lists all templates.
+
+Replan completion rule (MANDATORY)
+- You may return `status: "APPROVED"` only after:
+  - ALL template files have been regenerated
+  - the template registry has been updated
+  - the files exist on disk at their original paths
+  - the meta.json sidecar has been written
+
+Critical: meta.json sidecar is REQUIRED
+- Sidecar path: `{DELIVERY_TEMPLATE_REGISTRY_METAJSON}`
+- Use `write_file` tool to create the sidecar after writing the regenerated files.
+
+ABSOLUTE OUTPUT RULE (NON-NEGOTIABLE)
+
+Return ONLY valid JSON.
+Do NOT explain.
+Do NOT wrap in markdown.
+Do NOT add any text before or after the JSON.
+Do NOT wrap the final JSON in ```json fences.
+
+Required JSON schema:
+{
+  "status": "APPROVED | REJECTED",
+  "remark": "<short summary of regenerated templates>",
+  "artifacts": {
+    "DELIVERY_TEMPLATE_REGISTRY": "<path if created>",
+    "DELIVERY_INITIATIVE_TEMPLATE": "<path if created>",
+    "DELIVERY_PLAN_TEMPLATE": "<path if created>",
+    "DELIVERY_TASK_GRAPH_TEMPLATE": "<path if created>",
+    "DELIVERY_TASK_TEMPLATE": "<path if created>",
+    "DELIVERY_IMPL_TEMPLATE": "<path if created>",
+    "DELIVERY_REVIEW_TEMPLATE": "<path if created>",
+    "DELIVERY_MEMORY_TEMPLATE": "<path if created>"
+  }
+}
+
+Required execution sequence:
+1. Read all input files and review feedback.
+2. Regenerate each template file to its original path.
+3. Regenerate the template registry to reference all templates.
+4. Verify all files exist and address all review issues.
+5. Write the meta.json sidecar to `{DELIVERY_TEMPLATE_REGISTRY_METAJSON}`.
+6. Return the final JSON.

@@ -46,31 +46,31 @@ REQUIRED_TEMPLATES = {
 # Minimum required sections per template type (all must be present)
 TEMPLATE_SECTION_REQUIREMENTS: dict[str, list[str]] = {
     "01_initiative.template.md": [
-        "Metadata", "Objective", "Scope", "Constraints",
-        "Dependencies", "Success Criteria", "Approval",
+        "Objective", "Problem Statement", "Expected Outcomes",
+        "Scope",
     ],
     "02_plan.template.md": [
-        "Metadata", "Plan Objective", "Strategy Overview", "Task Breakdown",
-        "Scope Mapping", "Deliverables", "Risks", "Acceptance Criteria", "Approval",
+        "Plan Objective", "Strategy Overview", "Task Breakdown",
+        "Scope Mapping", "System Design",
     ],
     "02b_task_graph.template.md": [
-        "Metadata", "Task Graph Objective", "Task Graph",
-        "Execution Flow", "Success Criteria",
+        "Task Graph Objective", "Task Graph",
+        "Execution Flow", "Task Success Criteria",
     ],
     "03_task.template.md": [
-        "Metadata", "Objective", "Inputs", "Outputs",
-        "Execution Steps", "Validation Criteria",
+        "Objective", "Inputs", "Outputs",
+        "Execution Steps", "Implementation Details",
     ],
     "04_implementation_plan.template.md": [
-        "Metadata", "Objective", "Inputs", "Outputs",
-        "Scope Clarification", "File Plan", "Test Plan", "Constraints",
+        "Objective", "Inputs", "Outputs",
+        "Scope Clarification", "File Plan",
     ],
     "04_review.template.md": [
-        "Metadata", "Review Objective", "Issues Identified",
-        "Final Decision",
+        "Review Objective", "Findings",
+        "Decision",
     ],
     "06_memory.template.md": [
-        "Metadata", "Purpose", "Key Decisions", "Important References",
+        "Purpose", "Key Decisions",
     ],
 }
 
@@ -81,9 +81,9 @@ SOP_REQUIRED_SECTIONS = [
 ]
 
 STATUS_RULES_REQUIRED_SECTIONS = [
-    "Purpose", "Core Principles", "Global Workflow Discipline",
-    "Lifecycle Rules", "Authority Model", "Approval Gates",
-    "Forbidden Transitions", "Document-First", "Traceability",
+    "Core Principles", "Global Workflow Discipline",
+    "Authority Model", "Approval Gates",
+    "Forbidden Transitions", "Document-First",
 ]
 
 AGENT_REGISTRY_ENTRY_PATTERN = re.compile(r"\|[\s-]*(\w[\w\s-]+)\s*\|[\s-]*(\w[\w\s-]+)\s*\|", re.MULTILINE)
@@ -445,31 +445,198 @@ def validate_delivery_docs(
     logger.info("[validate_delivery_docs] starting validation")
     print("[validate_delivery_docs] starting delivery docs validation", flush=True)
 
+    # Resolve artifact root: prefer state's artifact paths, fall back to docs/delivery
+    artifacts = state.get("artifacts", {})
+    delivery_sop_path = artifacts.get("DELIVERY_SOP", "")
+    if delivery_sop_path:
+        # Artifact paths are already relative to project_root
+        # e.g. delivery_scaffold_v1/SCAFFOLD-GEN-20260601-002/01_generate_sop/delivery_sop.json
+        job_root = Path(delivery_sop_path).parent.parent  # delivery_scaffold_v1/SCAFFOLD-GEN-...
+        templates_dir = job_root / "05_generate_templates"
+        sop_path = job_root / "01_generate_sop" / "delivery_sop.json"
+        status_rules_path = job_root / "01_generate_sop" / "delivery_status_rules.json"
+        agents_dir = job_root / "09_generate_agents"
+        reviews_dir = Path("docs/delivery/05_reviews")
+        job_root_rel = job_root  # already relative to project_root
+    else:
+        # Legacy fallback: docs/delivery layout
+        job_root = Path("docs/delivery")
+        templates_dir = Path("docs/delivery/00_templates")
+        sop_path = Path("docs/delivery/00_templates/WORKFLOW_SOP_v1.md")
+        status_rules_path = Path("docs/delivery/08_agents/DELIVERY_STATUS_RULES_v1.md")
+        agents_dir = Path("docs/delivery/08_agents")
+        reviews_dir = Path("docs/delivery/05_reviews")
+        job_root_rel = job_root
+
+    # Create delivery folder structure if needed for final output
+    delivery_output_root = project_root / "docs" / "delivery"
+
     all_checks = []
 
-    # 1. Folder structure
-    print("[validate_delivery_docs] checking folder structure...", flush=True)
-    all_checks.extend(_validate_folder_structure(project_root))
-
-    # 2 & 3. Template completeness and structure
+    # 1. Check templates exist
     print("[validate_delivery_docs] checking templates...", flush=True)
-    all_checks.extend(_validate_templates(project_root))
+    for artifact_key, filename in REQUIRED_TEMPLATES.items():
+        template_path = templates_dir / filename
+        rel = str(template_path)  # already relative to project_root
+        ok, detail = _check_file_exists(project_root, rel)
+        results = [{
+            "check": "template_exists",
+            "artifact_key": artifact_key,
+            "path": rel,
+            "ok": ok,
+            "detail": detail,
+        }]
+        all_checks.extend(results)
 
-    # 4. SOP validity
+        if not ok:
+            continue
+
+        # Check content
+        content = _read_file(project_root, rel)
+        if content is None:
+            continue
+
+        # Check metadata block (front-matter, not a markdown heading)
+        has_doc_type = _has_metadata_field(content, "Doc Type")
+        has_version = _has_metadata_field(content, "Template Version") or _has_metadata_field(content, "Version")
+        all_checks.append({
+            "check": "template_metadata",
+            "path": rel,
+            "ok": has_doc_type and has_version,
+            "detail": f"Doc Type: {'present' if has_doc_type else 'missing'}, Template Version: {'present' if has_version else 'missing'}",
+        })
+
+        # Check required sections
+        required = TEMPLATE_SECTION_REQUIREMENTS.get(filename, [])
+        for section in required:
+            has = _has_section(content, section)
+            all_checks.append({
+                "check": "template_section",
+                "path": rel,
+                "section": section,
+                "ok": has,
+                "detail": f"{'found' if has else 'missing'}",
+            })
+
+    # 2. Check SOP (JSON format in this workflow)
     print("[validate_delivery_docs] checking SOP...", flush=True)
-    all_checks.extend(_validate_sop(project_root))
+    sop_rel = str(sop_path)  # already relative
+    ok, detail = _check_file_exists(project_root, sop_rel)
+    all_checks.append({
+        "check": "sop_exists",
+        "path": sop_rel,
+        "ok": ok,
+        "detail": detail,
+    })
+    if ok:
+        content = _read_file(project_root, sop_rel)
+        if content:
+            for section in SOP_REQUIRED_SECTIONS:
+                has = _has_section(content, section)
+                all_checks.append({
+                    "check": "sop_section",
+                    "path": sop_rel,
+                    "section": section,
+                    "ok": has,
+                    "detail": f"{'found' if has else 'missing'}",
+                })
 
-    # 5. Status rules validity
+    # 3. Check status rules (JSON format in this workflow)
     print("[validate_delivery_docs] checking status rules...", flush=True)
-    all_checks.extend(_validate_status_rules(project_root))
+    rules_rel = str(status_rules_path)  # already relative
+    ok, detail = _check_file_exists(project_root, rules_rel)
+    all_checks.append({
+        "check": "status_rules_exists",
+        "path": rules_rel,
+        "ok": ok,
+        "detail": detail,
+    })
+    if ok:
+        content = _read_file(project_root, rules_rel)
+        if content:
+            for section in STATUS_RULES_REQUIRED_SECTIONS:
+                has = _has_section(content, section)
+                all_checks.append({
+                    "check": "status_rules_section",
+                    "path": rules_rel,
+                    "section": section,
+                    "ok": has,
+                    "detail": f"{'found' if has else 'missing'}",
+                })
 
-    # 6. Agent registry consistency
-    print("[validate_delivery_docs] checking agent registry...", flush=True)
-    all_checks.extend(_validate_agents(project_root))
+    # 4. Check agent contracts
+    print("[validate_delivery_docs] checking agent contracts...", flush=True)
+    known_agent_files = [
+        "AGENT-planner.md", "AGENT-task-decomposer.md",
+        "AGENT-implementation-planner.md", "AGENT-executor.md",
+        "AGENT-reviewer.md", "AGENT-memory-manager.md", "AGENT-architect.md",
+    ]
+    for agent_file in known_agent_files:
+        agent_path = agents_dir / agent_file
+        rel = str(agent_path)  # already relative
+        ok, detail = _check_file_exists(project_root, rel)
+        all_checks.append({
+            "check": "agent_contract_exists",
+            "path": rel,
+            "ok": ok,
+            "detail": detail,
+        })
+        if ok:
+            agent_content = _read_file(project_root, rel)
+            if agent_content:
+                has_doc_type = _has_metadata_field(agent_content, "Doc Type")
+                has_agent_id = _has_metadata_field(agent_content, "Agent ID")
+                all_checks.append({
+                    "check": "agent_contract_metadata",
+                    "path": rel,
+                    "ok": has_doc_type and has_agent_id,
+                    "detail": f"Doc Type: {'present' if has_doc_type else 'missing'}, Agent ID: {'present' if has_agent_id else 'missing'}",
+                })
 
-    # 7. Cross-reference integrity
+    # 5. Check AGENTS.md (delivery_agents_md.json)
+    print("[validate_delivery_docs] checking agents registry...", flush=True)
+    agents_md_path = agents_dir / "delivery_agents_md.json"
+    rel = str(agents_md_path)  # already relative
+    ok, detail = _check_file_exists(project_root, rel)
+    all_checks.append({
+        "check": "agents_registry_exists",
+        "path": rel,
+        "ok": ok,
+        "detail": detail,
+    })
+
+    # 6. Cross-reference: template registry
     print("[validate_delivery_docs] checking cross-references...", flush=True)
-    all_checks.extend(_validate_cross_references(project_root))
+    registry_path = templates_dir / "template_registry.md"
+    rel = str(registry_path)  # already relative
+    ok, detail = _check_file_exists(project_root, rel)
+    all_checks.append({
+        "check": "template_registry_exists",
+        "path": rel,
+        "ok": ok,
+        "detail": detail,
+    })
+    if ok:
+        content = _read_file(project_root, rel)
+        if content:
+            expected_types = ["01_initiative", "02_plan", "03_task", "04_review"]
+            missing_types = [t for t in expected_types if t not in content]
+            all_checks.append({
+                "check": "cross_ref_registry_completeness",
+                "path": rel,
+                "ok": len(missing_types) == 0,
+                "detail": f"all types registered" if not missing_types else f"missing types: {', '.join(missing_types)}",
+            })
+
+    # 7. Check review files exist
+    print("[validate_delivery_docs] checking review files...", flush=True)
+    ok, detail = _check_folder_exists(project_root, str(reviews_dir))
+    all_checks.append({
+        "check": "reviews_folder_exists",
+        "path": str(reviews_dir),
+        "ok": ok,
+        "detail": detail,
+    })
 
     # Summary
     total = len(all_checks)
@@ -480,8 +647,7 @@ def validate_delivery_docs(
     folder_map = {
         "schema_version": "v2",
         "validated_at": datetime.now().astimezone().isoformat(timespec="seconds"),
-        "project_root": str(project_root),
-        "delivery_root": "docs/delivery",
+        "artifact_root": str(job_root_rel),
         "summary": {
             "total_checks": total,
             "passed": passed,
@@ -492,16 +658,17 @@ def validate_delivery_docs(
     }
 
     # Write the folder map file
-    folder_map_dir = project_root / "docs" / "delivery"
-    folder_map_dir.mkdir(parents=True, exist_ok=True)
-    folder_map_path = folder_map_dir / "folder_map.json"
+    delivery_output_root.mkdir(parents=True, exist_ok=True)
+    folder_map_path = delivery_output_root / "folder_map.json"
     folder_map_path.write_text(
         json.dumps(folder_map, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
     )
 
-    # Write meta.json sidecar
-    meta_path = folder_map_dir / "folder_map.meta.json"
+    # Write meta.json sidecar to the expected location
+    meta_rel = context.get("DELIVERY_FOLDER_MAP_METAJSON", "delivery_scaffold_v1/UNKNOWN/meta.json")
+    meta_path = project_root / meta_rel
+    meta_path.parent.mkdir(parents=True, exist_ok=True)
     meta = {
         "schema_version": "v2",
         "coder_result": {

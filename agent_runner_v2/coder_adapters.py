@@ -63,7 +63,7 @@ class InvocationResult:
     raw_events: list[str]
 
 
-DEFAULT_CODER_TIMEOUT_SECONDS = 600
+DEFAULT_CODER_TIMEOUT_SECONDS = 900
 SIDECAR_POLL_INTERVAL_SECONDS = 3.0
 SIDECAR_SETTLE_DELAY_SECONDS = 0.5
 SIDECAR_GRACE_PERIOD_SECONDS = 15.0  # How long to wait for coder to exit naturally after sidecar
