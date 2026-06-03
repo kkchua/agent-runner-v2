@@ -131,6 +131,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
                    help="Print a formatted summary of job status.")
     p.add_argument("--workflow-key", default="",
                    help="Override ComfyUI workflow key for submit_prompts step.")
+    p.add_argument("--single-step", action="store_true",
+                   help="Run exactly the step specified by --job, ignoring auto-resolve logic. "
+                        "Intended for backend worker integration. Outputs structured JSON for the worker to parse.")
     ns = p.parse_args(raw[1:] if command == "run" else raw)
     ns.command = "run"
     return ns
@@ -190,6 +193,37 @@ def main(argv: list[str] | None = None) -> int:
             raise ValueError("--task-graph-id and --task-node-id must be provided together.")
 
         # --- Admin commands ---
+        if args.single_step:
+            if not args.job_id:
+                raise ValueError("--single-step requires --job-id")
+            if not args.job:
+                raise ValueError("--single-step requires --job <step_name>")
+            # Single-step mode: load job, force the step, run it, output structured result
+            state = ensure_backward_compatible_state(load_job(args.template_group, args.job_id))
+            state = migrate_job_state(state)
+            state = reconcile_job_state(state, group_cfg)
+            step = args.job.strip()
+            step_cfg = group_cfg["step_configs"].get(step)
+            if not step_cfg:
+                raise ValueError(f"Step {step!r} is not defined for template group {args.template_group!r}")
+            # Reset loop/replan context for a clean step execution
+            state["loop_context"] = {
+                "active": False, "loop_step": None, "refine_step": None,
+                "loop_target_artifact": None, "loop_source_review": None,
+                "loop_iteration": 0, "pre_refine_checksum": None,
+            }
+            state["replan_context"] = {
+                "active": False, "source_review_step": None, "replan_step": None,
+                "target_artifact": None, "source_review_file": None, "replan_attempt": 0,
+                "pre_replan_checksum": None, "trigger_reason": None, "blocking_issues": [],
+                "previous_blocking_issue_count": 0, "previous_blocking_issue_severity": 0,
+            }
+            state["current_step"] = step
+            state.setdefault("reject_counts", {})[step] = state.get("reject_counts", {}).get(step, 0)
+            save_job(args.template_group, state["job_id"], state)
+            # Fall through to normal execution — the CLI will run the step and exit
+            # The structured JSON output will be parsed by the worker
+
         if args.show_job:
             if not args.job_id:
                 raise ValueError("--show-job requires --job-id")
