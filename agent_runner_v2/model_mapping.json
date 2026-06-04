@@ -1,58 +1,78 @@
 {
-  "coder_aliases": {
-    "deepseek-chat": {
-      "coder": "qwen",
-      "model": "deepseek-chat",
-      "auth_type": "openai",
-      "openai_api_key_env": "DEEPSEEK_API_KEY",
-      "openai_base_url": "https://api.deepseek.com/v1"
-    },
-    "deepseek-reasoner": {
-      "coder": "qwen",
-      "model": "deepseek-reasoner",
-      "auth_type": "openai",
-      "openai_api_key_env": "DEEPSEEK_API_KEY",
-      "openai_base_url": "https://api.deepseek.com/v1"
-    },
-    "deepseek-coder": {
-      "coder": "qwen",
-      "model": "deepseek-coder",
-      "auth_type": "openai",
-      "openai_api_key_env": "DEEPSEEK_API_KEY",
-      "openai_base_url": "https://api.deepseek.com/v1"
-    },
-    "gpt-5.4-nano": {
-      "coder": "qwen",
-      "model": "gpt-5.4-nano",
-      "auth_type": "openai",
-      "openai_api_key_env": "OPENAI_API_KEY",
-      "openai_base_url": "https://api.openai.com/v1/"
-    },
-    "qwen-claude": {
-      "coder": "qwen",
-      "model": "claude-3-5-sonnet",
-      "auth_type": "anthropic"
-    },
-    "qwen-gemini": {
-      "coder": "qwen",
-      "model": "gemini-2.0-flash",
-      "auth_type": "gemini"
-    },
-    "claude-direct": {
-      "coder": "claude",
-      "model": ""
-    },
-    "claude-sonnet-4-6": {
-      "coder": "codex",
-      "model": ""
-    },
-    "claude": {
-      "coder": "claude",
-      "model": ""
-    },
-    "codex": {
-      "coder": "codex",
-      "model": ""
+    "coder_aliases": {
+        "deepseek-chat": {
+            "coder": "qwen",
+            "model": "deepseek-chat",
+            "auth_type": "openai",
+            "openai_api_key_env": "DEEPSEEK_API_KEY",
+            "openai_base_url": "https://api.deepseek.com/v1"
+        },
+        "deepseek-reasoner": {
+            "coder": "qwen",
+            "model": "deepseek-reasoner",
+            "auth_type": "openai",
+            "openai_api_key_env": "DEEPSEEK_API_KEY",
+            "openai_base_url": "https://api.deepseek.com/v1"
+        },
+        "deepseek-coder": {
+            "coder": "qwen",
+            "model": "deepseek-coder",
+            "auth_type": "openai",
+            "openai_api_key_env": "DEEPSEEK_API_KEY",
+            "openai_base_url": "https://api.deepseek.com/v1"
+        },
+        "gpt-5.4-nano": {
+            "coder": "qwen",
+            "model": "gpt-5.4-nano",
+            "auth_type": "openai",
+            "openai_api_key_env": "OPENAI_API_KEY",
+            "openai_base_url": "https://api.openai.com/v1/"
+        },
+        "qwen-claude": {
+            "coder": "qwen",
+            "model": "claude-3-5-sonnet",
+            "auth_type": "anthropic"
+        },
+        "qwen-gemini": {
+            "coder": "qwen",
+            "model": "gemini-2.0-flash",
+            "auth_type": "gemini"
+        },
+        "claude-direct": {
+            "coder": "claude",
+            "model": ""
+        },
+        "claude-sonnet-4-6": {
+            "coder": "codex",
+            "model": ""
+        },
+        "claude": {
+            "coder": "claude",
+            "model": ""
+        },
+        "codex": {
+            "coder": "codex",
+            "model": ""
+        },
+        "qwen-review": {
+            "coder": "qwen",
+            "model": "glm-4.7",
+            "auth_type": "default"
+        },
+        "claude-review": {
+            "coder": "claude",
+            "model": "",
+            "auth_type": "anthropic"
+        },
+        "codex-review": {
+            "coder": "codex",
+            "model": "",
+            "auth_type": "anthropic"
+        },
+        "qwen-validate": {
+            "coder": "qwen",
+            "model": "qwen3-coder-plus",
+            "auth_type": "default"
+        }
     }
-  }
 }

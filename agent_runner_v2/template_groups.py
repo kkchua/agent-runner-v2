@@ -636,8 +636,8 @@ TEMPLATE_GROUPS: Dict[str, Dict[str, Any]] = {
                 "requires_human_approval_after": True,
                 "result_meta_key_from_context": "REVIEW_FILE_SUGGESTED",
                 "coder": {
-                    "default": "claude",
-                    "allowed": ["claude", "codex", "qwen"],
+                    "default": "codex-review",
+                    "allowed": ["claude-review", "codex-review", "qwen-review"],
                     "must_differ_from_previous_step": False,
                 },
             },
@@ -649,7 +649,7 @@ TEMPLATE_GROUPS: Dict[str, Dict[str, Any]] = {
                 "edit_mode": "in_place",
                 "loop_returns_to": "review_sop",
                 "result_meta_key": "DELIVERY_SOP",
-                "coder": {"default": "claude", "allowed": ["claude", "codex", "qwen"]},
+                "coder": {"default": "claude-sonnet-4-6", "allowed": ["claude-sonnet-4-6", "claude-review", "codex-review"]},
             },
             "replan_sop": {
                 "prompt_file": _p("prompts", "delivery_scaffold_v1", "05_replan_sop.txt"),
@@ -659,7 +659,7 @@ TEMPLATE_GROUPS: Dict[str, Dict[str, Any]] = {
                 "edit_mode": "in_place",
                 "replan_returns_to": "review_sop",
                 "result_meta_key": "DELIVERY_SOP",
-                "coder": {"default": "claude", "allowed": ["claude", "codex", "qwen"]},
+                "coder": {"default": "claude-review", "allowed": ["claude-review", "codex-review", "qwen-review"]},
             },
             "generate_templates": {
                 "prompt_file": _p("prompts", "delivery_scaffold_v1", "03_generate_templates.txt"),
@@ -707,8 +707,8 @@ TEMPLATE_GROUPS: Dict[str, Dict[str, Any]] = {
                 "requires_human_approval_after": True,
                 "result_meta_key_from_context": "REVIEW_FILE_SUGGESTED",
                 "coder": {
-                    "default": "claude",
-                    "allowed": ["claude", "codex", "qwen"],
+                    "default": "codex-review",
+                    "allowed": ["claude-review", "codex-review", "qwen-review"],
                     "must_differ_from_previous_step": False,
                 },
             },
@@ -740,7 +740,7 @@ TEMPLATE_GROUPS: Dict[str, Dict[str, Any]] = {
                 "edit_mode": "in_place",
                 "loop_returns_to": "review_templates",
                 "result_meta_key": "DELIVERY_TEMPLATE_REGISTRY",
-                "coder": {"default": "claude", "allowed": ["claude", "codex", "qwen"]},
+                "coder": {"default": "claude-sonnet-4-6", "allowed": ["claude-sonnet-4-6", "claude-review", "codex-review"]},
             },
             "replan_templates": {
                 "prompt_file": _p("prompts", "delivery_scaffold_v1", "06_replan_templates.txt"),
@@ -770,7 +770,7 @@ TEMPLATE_GROUPS: Dict[str, Dict[str, Any]] = {
                 "edit_mode": "in_place",
                 "replan_returns_to": "review_templates",
                 "result_meta_key": "DELIVERY_TEMPLATE_REGISTRY",
-                "coder": {"default": "qwen", "allowed": ["claude", "codex", "qwen"]},
+                "coder": {"default": "claude-review", "allowed": ["claude-review", "codex-review", "qwen-review"]},
             },
             "generate_agents": {
                 "prompt_file": _p("prompts", "delivery_scaffold_v1", "04_generate_agents.txt"),
@@ -818,8 +818,8 @@ TEMPLATE_GROUPS: Dict[str, Dict[str, Any]] = {
                 "requires_human_approval_after": True,
                 "result_meta_key_from_context": "REVIEW_FILE_SUGGESTED",
                 "coder": {
-                    "default": "claude",
-                    "allowed": ["claude", "codex", "qwen"],
+                    "default": "codex-review",
+                    "allowed": ["claude-review", "codex-review", "qwen-review"],
                     "must_differ_from_previous_step": False,
                 },
             },
@@ -851,7 +851,7 @@ TEMPLATE_GROUPS: Dict[str, Dict[str, Any]] = {
                 "edit_mode": "in_place",
                 "loop_returns_to": "review_agents",
                 "result_meta_key": "DELIVERY_AGENTS_MD",
-                "coder": {"default": "claude", "allowed": ["claude", "codex", "qwen"]},
+                "coder": {"default": "claude-sonnet-4-6", "allowed": ["claude-sonnet-4-6", "claude-review", "codex-review"]},
             },
             "replan_agents": {
                 "prompt_file": _p("prompts", "delivery_scaffold_v1", "07_replan_agents.txt"),
@@ -881,7 +881,7 @@ TEMPLATE_GROUPS: Dict[str, Dict[str, Any]] = {
                 "edit_mode": "in_place",
                 "replan_returns_to": "review_agents",
                 "result_meta_key": "DELIVERY_AGENTS_MD",
-                "coder": {"default": "claude", "allowed": ["claude", "codex", "qwen"]},
+                "coder": {"default": "claude-review", "allowed": ["claude-review", "codex-review", "qwen-review"]},
             },
             "validate_delivery_docs": {
                 "required_inputs": [
@@ -906,6 +906,7 @@ TEMPLATE_GROUPS: Dict[str, Dict[str, Any]] = {
                 "produces": ["DELIVERY_FOLDER_MAP"],
                 "result_meta_key": "DELIVERY_FOLDER_MAP",
                 "action": "validate_delivery_docs",
+                "coder": {"default": "qwen-validate", "allowed": ["qwen-validate", "codex-review"]},
             },
         },
     },
