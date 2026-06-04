@@ -1,0 +1,20 @@
+{
+  "schema_version": "v2",
+  "coder_result": {
+    "status": "REJECTED",
+    "remark": "Rejected: task-graph and validation lifecycle values remain broader than the governed status rules, the task dependency example can emit a self-dependency, and the registered validation template has incomplete traceability and incorrect generation ownership wording.",
+    "artifacts": {
+      "REVIEW_FILE": "docs/delivery/05_reviews/REV-260602-09_rtempl_R-0000-00_template-registry.md"
+    },
+    "recorded_at": "2026-06-02T04:23:02Z"
+  },
+  "runner_data": {
+    "step": "review_templates",
+    "coder_used": "codex",
+    "invoked_at": "2026-06-02T04:22:06",
+    "finished_at": "2026-06-02T04:23:42",
+    "prompt_checksum": "sha256:cb71cd9be0fbd977471b242c47ffac97b653532c002d26e99807a76b96b38f98",
+    "enriched_at": "2026-06-02T04:23:42",
+    "runner_version": "v2"
+  }
+}

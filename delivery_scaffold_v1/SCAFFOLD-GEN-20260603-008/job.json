@@ -1,0 +1,13 @@
+{
+  "job_id": "SCAFFOLD-GEN-20260603-008",
+  "template_group": "delivery_scaffold_v1",
+  "current_step": "review_sop",
+  "status": "IN_PROGRESS",
+  "artifacts": {
+    "DELIVERY_SOP": "/workspace/projects/agent-runner-v2/docs/delivery/00_templates/delivery_sop.json",
+    "DELIVERY_STATUS_RULES": "/workspace/projects/agent-runner-v2/docs/delivery/00_templates/delivery_status_rules.json",
+    "REVIEW_FILE": "/workspace/projects/agent-runner-v2/docs/delivery/05_reviews/REV-260604-02_rsop_R-0000-00_delivery-sop.md"
+  },
+  "loop_context": {},
+  "review_state": {}
+}

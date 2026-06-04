@@ -778,8 +778,9 @@ def _validate_static_reference_files(workspace_root: Path, group_cfg: dict | Non
     # Scaffold workflows generate the delivery docs — they don't need pre-existing reference files
     if template_group.startswith("delivery_scaffold"):
         return
-    bundle = get_workflow_module() or __import__(__package__ + ".template_groups", fromlist=["REFERENCE_FILES"])
-    reference_files = bundle.REFERENCE_FILES
+    # Always load REFERENCE_FILES from the installed package, never from seeded bundles
+    reference_files = __import__(__package__ + ".template_groups", fromlist=["REFERENCE_FILES"]).REFERENCE_FILES
+    # Allow bundle override via group_cfg reference_files for backwards compat
     if group_cfg is not None and "reference_files" in group_cfg:
         reference_files = group_cfg.get("reference_files") or {}
     missing = [f"{k}: {workspace_root / v}" for k, v in reference_files.items()

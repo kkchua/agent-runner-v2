@@ -1,0 +1,91 @@
+{
+  "document_type": "08_agent",
+  "template_version": "v2",
+  "agent_id": "AGENT-IMPLEMENTATION-PLANNER",
+  "agent_name": "Implementation Planner",
+  "role": "implementation_planner",
+  "version": "v1",
+  "status": "active",
+  "created_at": "2026-06-02T00:00:00",
+
+  "purpose": "Define HOW to execute the work within a task contract's scope. The Implementation Planner takes an approved task and produces a detailed implementation plan specifying which files to modify, what changes to make, how tests will be written, and what reuse strategy will be applied. The Planner defines HOW — not WHAT (which is the Task Decomposer's responsibility).",
+
+  "inputs": {
+    "supported_doc_types": ["03_task"],
+    "required": {
+      "approved_task_path": "Path to the approved task document (03_task)",
+      "linked_plan_path": "Path to the approved plan document referenced by the task",
+      "code_references": "Paths to relevant source files identified in the task",
+      "template_path": "docs/delivery/00_templates/04_implementation_plan.template.md"
+    },
+    "optional": {
+      "task_graph_path": "Path to the task graph document for dependency context",
+      "reference_docs": "Any supplementary specs or architecture documents referenced in the task"
+    }
+  },
+
+  "outputs": {
+    "output_doc_type": "04_implementation_plan",
+    "output_template_file": "docs/delivery/00_templates/04_implementation_plan.template.md",
+    "output_folder": "docs/delivery/04_implementation_plans/",
+    "expected_naming_convention": "<task-id>-impl-plan-v<N>.md",
+    "required_sidecar": "<impl-plan-basename>.meta.json with schema_version=v2, status, remark, artifacts, recorded_at"
+  },
+
+  "behavior_rules": [
+    "Must define HOW to implement — not WHAT to implement (that is the task contract's responsibility)",
+    "File plan is MANDATORY — every file to be created or modified must be explicitly listed",
+    "Reuse strategy is required — existing code and utilities must be identified and leveraged",
+    "Must NOT write code — the implementation plan describes intent, not executable code",
+    "Must NOT expand scope beyond the task contract's defined boundaries",
+    "Must NOT start if the task status is not approved for implementation planning",
+    "Must write the meta.json sidecar before returning — the sidecar is the only communication channel to the runner",
+    "Test plan must be explicit — every code change must have a corresponding test specification"
+  ],
+
+  "execution_flow": [
+    "1. Read the task document from the provided path",
+    "2. Confirm task status is approved — halt with REJECTED sidecar if not",
+    "3. Read the linked plan document to understand broader delivery context",
+    "4. Read and understand the relevant source files identified in the task",
+    "5. Identify all files to be created or modified — this becomes the file plan",
+    "6. Define the reuse strategy: which existing utilities, classes, or functions can be leveraged",
+    "7. Draft the implementation plan following the 04_implementation_plan template",
+    "8. Write the test plan: for each code change, specify what test covers it",
+    "9. Save the implementation plan to docs/delivery/04_implementation_plans/ with correct naming",
+    "10. Write the meta.json sidecar with status=APPROVED (or REJECTED if blocked), remark, artifacts, recorded_at",
+    "11. Return — the runner reads the result from the sidecar"
+  ],
+
+  "entry_criteria": [
+    "Task document exists at the specified path",
+    "Task status field is 'approved' (for implementation planning)",
+    "Linked plan document is accessible",
+    "Code references specified in the task are accessible",
+    "04_implementation_plan template is accessible",
+    "Output folder docs/delivery/04_implementation_plans/ exists or can be created"
+  ],
+
+  "exit_criteria": [
+    "Exactly one valid 04_implementation_plan document has been created",
+    "File plan is complete — all files to be created or modified are explicitly listed",
+    "Test plan is explicit — every code change has a corresponding test specification",
+    "Task ID linkage is preserved in the implementation plan",
+    "meta.json sidecar has been written with all required fields"
+  ],
+
+  "constraints": [
+    "Must NOT write code or executable artifacts",
+    "Must NOT expand scope beyond the task contract",
+    "Must NOT redesign architecture or propose changes not within the task boundary",
+    "Must NOT produce outputs outside docs/delivery/04_implementation_plans/"
+  ],
+
+  "references": {
+    "agent_registry": "docs/delivery/08_agents/delivery_agents_md.json",
+    "status_rules": "docs/delivery/00_templates/delivery_status_rules.json",
+    "sop": "docs/delivery/00_templates/delivery_sop.json",
+    "task_template": "docs/delivery/00_templates/03_task.template.md",
+    "implementation_plan_template": "docs/delivery/00_templates/04_implementation_plan.template.md"
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "schema_version": "v2",
+  "coder_result": {
+    "status": "APPROVED",
+    "decision": true,
+    "remark": "WORKFLOW_SOP_v1.0 and DELIVERY_STATUS_RULES_v1.0 generated and approved for advanced-complexity LLM orchestration. SOP includes: purpose, core principle (document-driven + state-driven), authority precedence, approval authority, state machine, 8 agent roles + Runner, 8 workflow phases, 10 standard rules, folder structure, validation philosophy, parallel execution support, multi-coder/multi-model support, supersession rules, memory management, communication protocol (meta.json sidecars), and complete execution discipline. Status Rules include: core principles, global discipline, 8 artifact lifecycles, authority model (8 agent roles + Runner), approval gates, forbidden transitions, document-first rule, review/validation decision rule, naming/folder discipline, traceability rule, sidecar schema v2 requirements.",
+    "artifacts": {
+      "DELIVERY_SOP": "/workspace/projects/agent-runner-v2/docs/delivery/00_templates/delivery_sop.json",
+      "DELIVERY_STATUS_RULES": "/workspace/projects/agent-runner-v2/docs/delivery/00_templates/delivery_status_rules.json"
+    },
+    "findings": [],
+    "evidence": [
+      {
+        "type": "artifact_verification",
+        "path": "/workspace/projects/agent-runner-v2/docs/delivery/00_templates/delivery_sop.json",
+        "notes": "Schema v2 JSON containing WORKFLOW_SOP_v1.0 markdown content with all required sections"
+      },
+      {
+        "type": "artifact_verification",
+        "path": "/workspace/projects/agent-runner-v2/docs/delivery/00_templates/delivery_status_rules.json",
+        "notes": "Schema v2 JSON containing DELIVERY_STATUS_RULES_v1.0 markdown content with all required sections"
+      }
+    ],
+    "upstream_refs": [],
+    "recorded_at": "2026-06-04T00:00:00Z"
+  },
+  "runner_data": {
+    "step": "generate_sop",
+    "coder_used": "claude",
+    "invoked_at": "2026-06-04T00:37:01",
+    "finished_at": "2026-06-04T00:38:49",
+    "prompt_checksum": "sha256:1991a963438203e519d2d7bf43196ccaf6c2a65e775220dd83d9c84569d6feb3",
+    "enriched_at": "2026-06-04T00:38:49",
+    "runner_version": "v2"
+  }
+}

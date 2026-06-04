@@ -114,9 +114,20 @@ def _has_section(content: str, section: str) -> bool:
 
 
 def _has_metadata_field(content: str, field: str) -> bool:
-    """Check if metadata block contains a field."""
+    """Check if metadata block contains a field (supports list, table, and JSON)."""
+    # List format: - Field: value
     pattern = re.compile(rf"^\s*-?\s*{re.escape(field)}\s*[:：]", re.MULTILINE)
-    return bool(pattern.search(content))
+    if bool(pattern.search(content)):
+        return True
+    # Table format: | **Field** | value |
+    pattern = re.compile(rf"\|\s*\*?\*?{re.escape(field)}\*?\*?\s*\|", re.IGNORECASE)
+    if bool(pattern.search(content)):
+        return True
+    # JSON format: "field": "value"
+    pattern = re.compile(rf'"\s*{re.escape(field)}\s*"\s*:', re.IGNORECASE)
+    if bool(pattern.search(content)):
+        return True
+    return False
 
 
 def _read_file(project_root: Path, rel_path: str) -> str | None:

@@ -1,0 +1,77 @@
+# Project Analysis
+
+## Domain
+LLM Workflow Orchestration Engine — a Python-based system that manages multi-step, multi-coder delivery pipelines, running AI agents (Claude, Codex, Qwen, and aliased models like DeepSeek) through structured workflows with review loops, automatic retries, and human-in-the-loop approval gates. The project is a standalone extraction from the UKBE (Universal Knowledge Base Engine) project.
+
+## Tech Stack
+- **Language**: Python 3.11+
+- **Package Management**: setuptools, pip (installable package with `ukbe-run-agent` CLI entry point)
+- **Testing**: pytest, pytest-cov
+- **External Dependencies**: Claude CLI (Claude Code), Codex CLI (OpenAI Codex CLI), Qwen CLI (Qwen Code CLI)
+- **API Integrations**: OpenAI API, DeepSeek API, Anthropic API
+- **Architecture**: State-machine-driven workflow engine with JSON sidecar communication pattern, template-driven prompt rendering, and structured artifact validation
+- **Data Formats**: JSON (meta.json sidecars, job schemas, model mappings), Markdown (artifacts, templates, prompts)
+
+## Complexity
+advanced
+
+## Recommended Workflow Scope
+- SOP (Standard Operating Procedure)
+- DELIVERY_STATUS_RULES_v1.md
+- Initiative template (01_initiative)
+- Plan template (02_plan)
+- Task Graph template (02b_task_graph)
+- Task template (03_task)
+- Implementation Plan template (04_implementation_plan)
+- Review template (04_review)
+- Validation template (05_validation)
+- Memory template (06_memory)
+- Full agent system (AGENTS.md + 6 agent contracts: planner, task-decomposer, implementation-planner, executor, reviewer, memory-manager)
+- Template registry
+
+## Recommended Agent Roles
+- Planner (delivery plan creation)
+- Task Decomposer (dependency-aware task graph generation)
+- Implementation Planner (scoped implementation plans with tests and rollback)
+- Executor (implementation within approved scope)
+- Reviewer (independent review of plans, graphs, implementations)
+- Validator (final validation of behavior and contract compliance)
+- Memory Manager (durable context, snapshots, supersession links)
+- Architect (workflow policy, scope, approval gates — project owner role)
+- Runner (state enforcement, budget, routing, sidecar validation — automated)
+
+## Delivery Folder Structure
+Standard `docs/delivery/` structure with the following subfolders:
+- `00_templates/` — template files and registry
+- `01_initiatives/` — initiative documents (draft/, pre_init/)
+- `02_plans/` — plans and task graphs (artifacts/)
+- `03_tasks/` — individual task contracts
+- `04_implementation_plans/` — implementation plans
+- `05_reviews/` — review artifacts
+- `06_memory/` — memory snapshots
+- `08_agents/` — agent contracts (AGENTS.md + role-specific .md files)
+
+## Project-Specific SOP Considerations
+- **meta.json sidecar is the ONLY communication channel** — no stdout JSON parsing, no fallback recovery
+- **No pre-invocation sidecar writes** — the runner does not touch markdown files before coder invocation
+- **No markdown write-backs** — no sync_review_metadata, stamp_created_metadata, etc.
+- **Explicit exception routing** — hard failures go to route_after_failure() immediately
+- **No disk recovery functions** — failures are explicit, not silently recovered
+- **Authority precedence**: Runner Logic > SOP + Status Rules > Artifact metadata > Artifact body
+- **No phase skipping**, no artifact overwriting, no scope drift
+- **Approval is durable and binding** — once approved, scope is locked; changes require new artifact + supersession links + Architect re-approval
+- **Templates define contracts** — workflow step configurations serve as agent invocation contracts; agent master prompts are deprecated
+- **Multi-coder support** with model alias resolution (deepseek-chat, deepseek-reasoner, gpt-5.4-nano, qwen-claude, qwen-gemini)
+- **Cross-project scaffolding** via --target-project-root to scaffold into any repository
+- **Existing delivery docs already present** — this project has an established docs/delivery/ structure with templates, reviews, and active initiatives; the scaffold should respect and extend existing artifacts rather than overwrite
+- **UKBE spec lineage** — three UKBE spec documents define the artifact model, contract builder, and core data model; SOP should reference these as upstream specifications
+
+## Discovered Files
+1. `QWEN.md` — Qwen Code project context (comprehensive project overview, architecture, workflow templates, CLI usage, state machine, artifact types, coder aliases, development conventions)
+2. `README.md` — Project README (install, init, run instructions, common commands)
+3. `pyproject.toml` — Python project config (name: agent-runner-v2, version: 0.1.0, Python >=3.11, pytest dev dependencies, CLI entry point)
+4. `docs/specs/UKBE_Artifact_v1_FINAL.md` — UKBE Artifact v1.0 spec (defines structured system-understanding artifact, required sections, deterministic machine-readable JSON)
+5. `docs/specs/UKBE_Contract_Builder_v1.1_FINAL.md` — UKBE Contract Builder v1.1 spec (defines HOW artifacts are planned/scoped, contract freeze workflow, budget enforcement)
+6. `docs/specs/UKBE_Core_Data_Model_v1.2.1_FINAL.md` — UKBE Core Data Model v1.2.1 spec (canonical internal data structures, enums, entities, reproducibility rules)
+7. `docs/delivery/00_templates/template_registry.md` — Template registry (document type mapping, flow, stage descriptions, sidecar expectations, agent roles reference)
+8. `docs/delivery/00_templates/WORKFLOW_SOP_v1.md` — Workflow SOP (1064 lines, covers purpose, authority precedence, approval model, state machine, role definitions, execution discipline)

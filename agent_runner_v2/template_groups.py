@@ -15,9 +15,9 @@ def _p(*parts: str) -> str:
 
 
 REFERENCE_FILES: Dict[str, str] = {
-    "AGENTS_MD": _p("docs", "delivery", "08_agents", "AGENTS.md"),
-    "DELIVERY_STATUS_RULES": _p("docs", "delivery", "08_agents", "DELIVERY_STATUS_RULES_v1.md"),
-    "WORKFLOW_SOP": _p("docs", "delivery", "00_templates", "WORKFLOW_SOP_v1.md"),
+    "AGENTS_MD": _p("docs", "delivery", "08_agents", "delivery_agents_md.json"),
+    "DELIVERY_STATUS_RULES": _p("docs", "delivery", "00_templates", "delivery_status_rules.json"),
+    "WORKFLOW_SOP": _p("docs", "delivery", "00_templates", "delivery_sop.json"),
     "SPEC_ARTIFACT": _p("docs", "specs", "UKBE_Artifact_v1_FINAL.md"),
     "SPEC_CONTRACT_BUILDER": _p("docs", "specs", "UKBE_Contract_Builder_v1.1_FINAL.md"),
     "SPEC_CORE_DATA_MODEL": _p("docs", "specs", "UKBE_Core_Data_Model_v1.2.1_FINAL.md"),
@@ -71,7 +71,7 @@ TEMPLATE_GROUPS: Dict[str, Dict[str, Any]] = {
         "job_init_step": "pre_init",
         "job_init_inputs": ["DRAFT_INIT_FILE"],
         "default_max_rejects": 2,
-        "steps": ["pre_init", "review_pre_init", "refine_pre_init"],
+        "steps": ["pre_init", "review_pre_init", "refine_pre_init", "promote_pre_init"],
         "step_configs": {
             "pre_init": {
                 "prompt_file": _p("prompts", "initiative_intake_v1", "01_pre_init.txt"),

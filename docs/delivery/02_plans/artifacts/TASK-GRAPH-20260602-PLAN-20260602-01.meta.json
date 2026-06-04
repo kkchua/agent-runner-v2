@@ -1,0 +1,20 @@
+{
+  "schema_version": "v2",
+  "coder_result": {
+    "status": "APPROVED",
+    "remark": "Task graph successfully generated from approved plan with 12 executable tasks across 4 phases.",
+    "artifacts": {
+      "TASK_GRAPH_FILE": "docs/delivery/02_plans/artifacts/TASK-GRAPH-20260602-PLAN-20260602-01.md"
+    },
+    "recorded_at": "2026-06-02T00:00:00Z"
+  },
+  "runner_data": {
+    "step": "task_graph",
+    "coder_used": "claude",
+    "invoked_at": "2026-06-02T13:24:44",
+    "finished_at": "2026-06-02T13:26:14",
+    "prompt_checksum": "sha256:1541443593bdf61d58bf010cad1a5ad6db0d515f369fddd5517f2792857f5459",
+    "enriched_at": "2026-06-02T13:26:14",
+    "runner_version": "v2"
+  }
+}

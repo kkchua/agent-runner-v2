@@ -1,0 +1,20 @@
+{
+  "schema_version": "v2",
+  "coder_result": {
+    "status": "REJECTED",
+    "remark": "Rejected: the pre-init artifact is not self-contained and does not preserve clear pre-init-to-initiative traceability.",
+    "artifacts": {
+      "REVIEW_FILE": "docs/delivery/05_reviews/REV-260602-10_rpre_I-0602-01_pre-init-agent-runner-daemon-db-job-mana.md"
+    },
+    "recorded_at": "2026-06-02T00:00:00Z"
+  },
+  "runner_data": {
+    "step": "review_pre_init",
+    "coder_used": "codex",
+    "invoked_at": "2026-06-02T13:09:33",
+    "finished_at": "2026-06-02T13:11:13",
+    "prompt_checksum": "sha256:ebb7c27794e11eb09938a58c84161a0ac4688898fef28396cfc5eddc2fd1b442",
+    "enriched_at": "2026-06-02T13:11:13",
+    "runner_version": "v2"
+  }
+}

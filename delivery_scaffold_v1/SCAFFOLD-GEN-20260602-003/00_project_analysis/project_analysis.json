@@ -1,0 +1,63 @@
+# Project Analysis
+
+## Domain
+LLM workflow orchestration engine / CLI tool for multi-agent delivery pipeline management. The project manages multi-step, multi-coder delivery pipelines, running AI agents (Claude, Codex, Qwen, and aliased models like DeepSeek) through structured workflows with review loops, automatic retries, and human-in-the-loop approval gates. It is a standalone Python package extracted from the UKBE (Universal Knowledge Base Engine) project.
+
+## Tech Stack
+- **Language**: Python 3.11+
+- **Package management**: setuptools with pyproject.toml
+- **Testing**: pytest, pytest-cov
+- **External dependencies**: Claude CLI (Claude Code), Codex CLI (OpenAI Codex CLI), Qwen Code CLI
+- **API integrations**: OpenAI API, Anthropic API, DeepSeek API, Gemini API
+- **Architecture**: CLI-based orchestration engine with JSON schema validation, structured logging, and sidecar-based communication pattern (meta.json)
+
+## Complexity
+advanced
+
+## Recommended Workflow Scope
+- SOP (Standard Operating Procedure)
+- Status rules
+- Initiative template
+- Plan template
+- Task graph template
+- Task template
+- Implementation plan template
+- Review template
+- Memory template
+- Full agent system (AGENTS.md + agent contracts)
+- Template registry
+
+## Recommended Agent Roles
+- Planner
+- Task Decomposer
+- Implementation Planner
+- Executor
+- Reviewer
+- Memory Manager
+
+## Delivery Folder Structure
+docs/delivery/
+
+## Project-Specific SOP Considerations
+- **meta.json sidecar is the ONLY communication channel** — no stdout JSON parsing, no fallback recovery
+- **No pre-invocation sidecar writes** — the runner does not touch markdown files before coder invocation
+- **No markdown write-backs** — no sync_review_metadata, stamp_created_metadata, etc.
+- **Explicit exception routing** — hard failures go to route_after_failure() immediately
+- **No disk recovery functions** — failures are explicit, not silently recovered
+- **Python 3.11+ with type hints** throughout, `from __future__ import annotations` at top of every file
+- **Dataclasses for structured data** (StepResult, UsageData, InvocationManifest, InvocationResult)
+- **Explicit exception types** — no implicit error paths
+- **Deterministic hashing required** for artifact contracts (from UKBE specs)
+- **Contract is source of truth** — generator must obey contract, no out-of-contract documents allowed
+- **Budget enforced BEFORE generation** — cost governance must be maintained
+- **Reproducibility via snapshots** — artifact generation must be reproducible
+- **Machine-readable JSON first** — artifacts must be deterministic and traceable to source evidence
+- **Token-efficient** — artifacts should minimize token usage while maintaining completeness
+
+## Discovered Files
+- QWEN.md — Qwen Code project context (comprehensive architecture and workflow documentation)
+- README.md — Project overview and CLI usage
+- pyproject.toml — Python project configuration (name, version, dependencies, entry points)
+- docs/specs/UKBE_Core_Data_Model_v1.2.1_FINAL.md — Core data model specification (entities, enums, rules)
+- docs/specs/UKBE_Contract_Builder_v1.1_FINAL.md — Contract builder specification (control plane layer)
+- docs/specs/UKBE_Artifact_v1_FINAL.md — Artifact specification (structured system-understanding artifacts)

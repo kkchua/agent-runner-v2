@@ -1,0 +1,20 @@
+{
+  "schema_version": "v2",
+  "coder_result": {
+    "status": "REJECTED",
+    "remark": "Rejected: placeholder variables and version rendering remain inconsistent, the registry advertises a mandatory validation artifact without a validation template or documented generation source, and non-task template lifecycle values do not match the governed lifecycle spelling.",
+    "artifacts": {
+      "REVIEW_FILE": "docs/delivery/05_reviews/REV-260602-06_rtempl_R-0000-00_template-registry.md"
+    },
+    "recorded_at": "2026-06-02T04:09:46Z"
+  },
+  "runner_data": {
+    "step": "review_templates",
+    "coder_used": "codex",
+    "invoked_at": "2026-06-02T04:08:48",
+    "finished_at": "2026-06-02T04:10:30",
+    "prompt_checksum": "sha256:07f3f1666f6caa0b44492f3cadecf53e7050fd15b316240e118d6df696f513df",
+    "enriched_at": "2026-06-02T04:10:30",
+    "runner_version": "v2"
+  }
+}

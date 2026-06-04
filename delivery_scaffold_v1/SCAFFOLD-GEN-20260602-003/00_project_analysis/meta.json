@@ -1,0 +1,20 @@
+{
+  "schema_version": "v2",
+  "coder_result": {
+    "status": "APPROVED",
+    "remark": "Project analysis complete. Discovered 6 files: QWEN.md, README.md, pyproject.toml, and 3 UKBE spec documents. Advanced complexity project with full delivery scaffold scope recommended.",
+    "artifacts": {
+      "PROJECT_ANALYSIS": "delivery_scaffold_v1/SCAFFOLD-GEN-20260602-003/00_project_analysis/project_analysis.json"
+    },
+    "recorded_at": "2026-06-02T00:00:00"
+  },
+  "runner_data": {
+    "step": "project_analysis",
+    "coder_used": "qwen",
+    "invoked_at": "2026-06-02T02:26:39",
+    "finished_at": "2026-06-02T02:28:01",
+    "prompt_checksum": "sha256:9c2bf8e48979d87f0349db871e245d1c01c1f1b33e2db6c491e867c7246bfe63",
+    "enriched_at": "2026-06-02T02:28:01",
+    "runner_version": "v2"
+  }
+}

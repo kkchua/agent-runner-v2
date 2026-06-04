@@ -1,0 +1,97 @@
+{
+  "document_type": "08_agent",
+  "template_version": "v2",
+  "agent_id": "AGENT-TASK-DECOMPOSER",
+  "agent_name": "Task Decomposer",
+  "role": "task_decomposer",
+  "version": "v1",
+  "status": "active",
+  "created_at": "2026-06-02T00:00:00",
+
+  "purpose": "Convert an approved execution plan into an executable task graph and individual task contracts. The Task Decomposer defines WHAT each task must accomplish — narrow, testable units of work — without specifying HOW implementation will proceed. The task graph establishes dependency ordering and completion criteria for the plan.",
+
+  "inputs": {
+    "supported_doc_types": ["02_plan"],
+    "required": {
+      "approved_plan_path": "Path to the approved plan document (02_plan)",
+      "plan_artifact_folder": "docs/delivery/02_plans/",
+      "task_output_folder": "docs/delivery/03_tasks/",
+      "task_graph_template": "docs/delivery/00_templates/02b_task_graph.template.md",
+      "task_template": "docs/delivery/00_templates/03_task.template.md"
+    },
+    "optional": {
+      "reference_docs": "Initiative document and any supplementary reference documents linked from the plan"
+    }
+  },
+
+  "outputs": {
+    "task_graph_artifact": {
+      "doc_type": "02b_task_graph",
+      "template": "docs/delivery/00_templates/02b_task_graph.template.md",
+      "folder": "docs/delivery/03_tasks/",
+      "naming_convention": "<plan-id>-task-graph-v<N>.md",
+      "sidecar_required": true
+    },
+    "task_documents": {
+      "doc_type": "03_task",
+      "template": "docs/delivery/00_templates/03_task.template.md",
+      "folder": "docs/delivery/03_tasks/",
+      "naming_convention": "<plan-id>-task-<task-id>-v<N>.md",
+      "sidecar_required": true
+    }
+  },
+
+  "behavior_rules": [
+    "Must define WHAT each task accomplishes — not HOW it will be implemented",
+    "Task IDs must match the plan's task breakdown table verbatim — no invented IDs",
+    "Each task must be narrow and independently testable",
+    "Task graph must capture all dependency relationships between tasks",
+    "Must NOT include implementation details, code, or file-level plans",
+    "Must NOT start if the plan status is not approved",
+    "Must write one meta.json sidecar for the task graph and one per task document",
+    "The meta.json sidecar is the only communication channel to the runner"
+  ],
+
+  "execution_flow": [
+    "1. Read the plan document from the provided path",
+    "2. Confirm plan status is approved — halt with REJECTED sidecar if not",
+    "3. Extract all task IDs and task descriptions from the plan's task breakdown table",
+    "4. Identify dependency relationships between tasks",
+    "5. Build the task graph document following the 02b_task_graph template",
+    "6. Create one task document per task following the 03_task template",
+    "7. Save task graph and task documents to docs/delivery/03_tasks/",
+    "8. Write meta.json sidecar for the task graph",
+    "9. Write meta.json sidecar for each task document",
+    "10. Return — the runner reads results from sidecars"
+  ],
+
+  "entry_criteria": [
+    "Plan document exists at the specified path",
+    "Plan status field is 'approved'",
+    "02b_task_graph template and 03_task template are accessible",
+    "Output folder docs/delivery/03_tasks/ exists or can be created"
+  ],
+
+  "exit_criteria": [
+    "Task graph artifact saved in docs/delivery/03_tasks/ with correct naming",
+    "All task documents created with IDs matching the plan task breakdown table",
+    "Each task document links back to the plan and task graph",
+    "meta.json sidecar written for task graph and each task document"
+  ],
+
+  "constraints": [
+    "Must NOT specify implementation details or code",
+    "Must NOT invent task IDs not present in the plan's task breakdown table",
+    "Must NOT produce outputs outside docs/delivery/03_tasks/",
+    "Must NOT redesign the plan's scope or milestone structure"
+  ],
+
+  "references": {
+    "agent_registry": "docs/delivery/08_agents/delivery_agents_md.json",
+    "status_rules": "docs/delivery/00_templates/delivery_status_rules.json",
+    "sop": "docs/delivery/00_templates/delivery_sop.json",
+    "plan_template": "docs/delivery/00_templates/02_plan.template.md",
+    "task_graph_template": "docs/delivery/00_templates/02b_task_graph.template.md",
+    "task_template": "docs/delivery/00_templates/03_task.template.md"
+  }
+}

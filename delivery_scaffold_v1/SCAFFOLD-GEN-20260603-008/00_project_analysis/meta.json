@@ -1,0 +1,20 @@
+{
+  "schema_version": "v2",
+  "coder_result": {
+    "status": "APPROVED",
+    "remark": "Project analysis complete: analyzed 8 discovered files (QWEN.md, README.md, pyproject.toml, 3 UKBE specs, template_registry.md, WORKFLOW_SOP_v1.md). Domain: LLM Workflow Orchestration Engine. Complexity: advanced. Recommended full workflow scope with all 9 agent roles.",
+    "artifacts": {
+      "PROJECT_ANALYSIS": "delivery_scaffold_v1/SCAFFOLD-GEN-20260603-008/00_project_analysis/project_analysis.json"
+    },
+    "recorded_at": "2026-06-03T00:00:00"
+  },
+  "runner_data": {
+    "step": "project_analysis",
+    "coder_used": "qwen",
+    "invoked_at": "2026-06-03T23:35:29",
+    "finished_at": "2026-06-03T23:37:24",
+    "prompt_checksum": "sha256:2ac679591ab4c7fef1655c9f02afb3f64bf539de3cff2e15ed59fa22115f7885",
+    "enriched_at": "2026-06-03T23:37:24",
+    "runner_version": "v2"
+  }
+}

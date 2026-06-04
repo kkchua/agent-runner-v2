@@ -1,0 +1,62 @@
+# Project Analysis
+
+## Domain
+LLM workflow orchestration engine / CLI tool. The project is a standalone Python package (`agent-runner-v2`) extracted from the UKBE (Universal Knowledge Base Engine) that manages multi-step, multi-coder delivery pipelines with AI agents through structured workflows, review loops, and human-in-the-loop approval gates.
+
+## Tech Stack
+- **Language**: Python 3.11+
+- **Package**: setuptools-based, shipped as `agent-runner-v2` with CLI entry point `ukbe-run-agent`
+- **External CLI dependencies**: `claude` (Claude Code), `codex` (OpenAI Codex CLI), `qwen` (Qwen Code CLI)
+- **APIs**: OpenAI, Anthropic, DeepSeek (via model alias resolution)
+- **Testing**: pytest, pytest-cov
+- **Architecture**: Template-driven workflow engine with meta.json sidecar communication pattern
+- **UKBE spec lineage**: Core Data Model v1.2.1, Contract Builder v1.1, Artifact v1.0 specifications present in docs/specs/
+
+## Complexity
+advanced
+
+## Recommended Workflow Scope
+- SOP (WORKFLOW_SOP_v1.md)
+- DELIVERY_STATUS_RULES_v1.md
+- Initiative template (01_initiative.template.md)
+- Plan template (02_plan.template.md)
+- Task graph template (02b_task_graph.template.md)
+- Task template (03_task.template.md)
+- Implementation plan template (04_implementation_plan.template.md)
+- Review template (04_review.template.md)
+- Memory template (06_memory.template.md)
+- Full agent system (AGENTS.md + 6 agent contracts)
+- Template registry (template_registry.md)
+- Delivery folder map validation (folder_map.json)
+
+## Recommended Agent Roles
+- Planner
+- Reviewer
+- Task Decomposer
+- Implementation Planner
+- Executor
+- Memory Manager
+
+## Delivery Folder Structure
+docs/delivery/
+
+## Project-Specific SOP Considerations
+- meta.json sidecar is the ONLY communication channel between runner and coders — no stdout parsing
+- No pre-invocation sidecar writes or markdown write-backs
+- Explicit exception routing with failure classification (AUTO_RETRYABLE, HUMAN_RETRY_REQUIRED, FATAL)
+- Model alias resolution via model_mapping.json (e.g., deepseek-chat → qwen coder with DeepSeek API)
+- Multi-coder support (Claude, Codex, Qwen) with per-step coder selection
+- Human-in-the-loop approval gates at review steps
+- Refine/replan loops with bounded iterations (max 2 refine, max 1 replan)
+- Cross-project scaffolding support via --target-project-root flag
+- Deterministic validation step (validate_delivery_docs) — not a coder invocation
+- No external dependencies beyond coder CLIs — minimal Python dependency footprint
+- UKBE spec compliance: contract-driven artifact generation, budget enforcement, reproducibility via snapshots
+
+## Discovered Files
+- QWEN.md — Qwen Code project context (comprehensive architecture, workflow, and CLI documentation)
+- README.md — Project overview and usage guide
+- pyproject.toml — Python project configuration (name, version, dependencies, CLI entry point)
+- docs/specs/UKBE_Core_Data_Model_v1.2.1_FINAL.md — UKBE canonical data model spec
+- docs/specs/UKBE_Contract_Builder_v1.1_FINAL.md — UKBE artifact planning/scoping spec
+- docs/specs/UKBE_Artifact_v1_FINAL.md — UKBE deterministic artifact output spec

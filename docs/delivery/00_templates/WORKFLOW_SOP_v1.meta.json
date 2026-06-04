@@ -1,0 +1,43 @@
+{
+  "schema_version": "v2",
+  "coder_result": {
+    "status": "APPROVED",
+    "remark": "WORKFLOW_SOP_v1.md (16 sections, 9 phases, 9 roles) and DELIVERY_STATUS_RULES_v1.md (8 artifact lifecycles, authority model, forbidden transitions) generated for advanced-complexity agent-runner-v2 project. Complete document-driven + state-driven execution SOP with runner integration, approval gates, rejection routing, memory management, backward compatibility, daemon mode support, and governance rules. Status rules define complete artifact lifecycle model with strict role boundaries, sidecar schema v2, and escalation procedures.",
+    "artifacts": {
+      "DELIVERY_SOP": "/workspace/projects/agent-runner-v2/docs/delivery/00_templates/WORKFLOW_SOP_v1.md",
+      "DELIVERY_STATUS_RULES": "/workspace/projects/agent-runner-v2/docs/delivery/00_templates/DELIVERY_STATUS_RULES_v1.md"
+    },
+    "findings": [],
+    "evidence": [
+      {
+        "type": "document_section_count",
+        "path": "/workspace/projects/agent-runner-v2/docs/delivery/00_templates/WORKFLOW_SOP_v1.md",
+        "notes": "WORKFLOW_SOP_v1.md: 16 sections (Metadata, Purpose, Core Principle, Authority Precedence, Workflow Approval Authority, Complete State Machine, Agent Roles Table, 9 Workflow Phases including parallel execution + memory management, Standard Rules, Folder Structure, Validation Philosophy, Approval Gates + Escalation, Runner Integration, Backward Compatibility + Daemon Mode, Version + Change Control, Glossary, References). Comprehensive for advanced complexity."
+      },
+      {
+        "type": "document_section_count",
+        "path": "/workspace/projects/agent-runner-v2/docs/delivery/00_templates/DELIVERY_STATUS_RULES_v1.md",
+        "notes": "DELIVERY_STATUS_RULES_v1.md: 8 core principles, global workflow discipline, lifecycle rules for 8 artifact types (Initiative, Plan, Task Graph, Task, Implementation Plan, Review, Validation, Memory), authority model with strict role boundaries (Runner, Architect, Planner, Task Decomposer, Implementation Planner, Executor, Reviewer, Validator, Memory Manager), approval gates, comprehensive forbidden transitions table, rejection routing, document-first rule, review/validation decision rule, naming/folder discipline, traceability rule, sidecar schema v2 contract, enforcement + escalation procedures, glossary."
+      },
+      {
+        "type": "project_analysis_reference",
+        "path": "/workspace/projects/agent-runner-v2/delivery_scaffold_v1/SCAFFOLD-GEN-20260603-006/00_project_analysis/project_analysis.json",
+        "hash_sha256": "64523d9d992cb80fb3853cc10375a2fc29eaf93a1b5c29dc1ac9c15a6ea9de72",
+        "notes": "Advanced complexity project. Recommended workflow scope: all 8 artifact lifecycles, all 9 agent roles, full parallel execution support, memory management, refine/replan loops. Daemon mode + legacy CLI support required. No master prompts (deprecated). Meta.json sidecar as only communication channel."
+      }
+    ],
+    "upstream_refs": [
+      "delivery_scaffold_v1/SCAFFOLD-GEN-20260603-006/00_project_analysis/project_analysis.json"
+    ],
+    "recorded_at": "2026-06-03T00:00:00Z"
+  },
+  "runner_data": {
+    "step": "generate_sop",
+    "coder_used": "claude",
+    "invoked_at": "2026-06-03T23:28:44",
+    "finished_at": "2026-06-03T23:29:32",
+    "prompt_checksum": "sha256:e0adea4b451d9299840399647e151e135e685e7e2101d0e8b6f075f60cf93882",
+    "enriched_at": "2026-06-03T23:29:32",
+    "runner_version": "v2"
+  }
+}

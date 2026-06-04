@@ -1,0 +1,58 @@
+{
+  "schema_version": "v2",
+  "coder_result": {
+    "status": "Final",
+    "decision": false,
+    "remark": "Template registry is incomplete. Missing 05_validation.template.md from the document type mapping table. All 8 templates are generated and complete, but the registry fails to list them all, violating the contract-driven principle.",
+    "artifacts": {
+      "template_registry_md": "/workspace/projects/agent-runner-v2/docs/delivery/00_templates/template_registry.md",
+      "01_initiative_template": "/workspace/projects/agent-runner-v2/docs/delivery/00_templates/01_initiative.template.md",
+      "02_plan_template": "/workspace/projects/agent-runner-v2/docs/delivery/00_templates/02_plan.template.md",
+      "02b_task_graph_template": "/workspace/projects/agent-runner-v2/docs/delivery/00_templates/02b_task_graph.template.md",
+      "03_task_template": "/workspace/projects/agent-runner-v2/docs/delivery/00_templates/03_task.template.md",
+      "04_implementation_plan_template": "/workspace/projects/agent-runner-v2/docs/delivery/00_templates/04_implementation_plan.template.md",
+      "04_review_template": "/workspace/projects/agent-runner-v2/docs/delivery/00_templates/04_review.template.md",
+      "05_validation_template": "/workspace/projects/agent-runner-v2/docs/delivery/00_templates/05_validation.template.md",
+      "06_memory_template": "/workspace/projects/agent-runner-v2/docs/delivery/00_templates/06_memory.template.md",
+      "workflow_sop": "/workspace/projects/agent-runner-v2/docs/delivery/00_templates/WORKFLOW_SOP_v1.md",
+      "delivery_status_rules": "/workspace/projects/agent-runner-v2/docs/delivery/00_templates/DELIVERY_STATUS_RULES_v1.md"
+    },
+    "findings": [
+      {
+        "severity": "Critical",
+        "issue": "Template registry incomplete — missing validation template from document type mapping",
+        "location": "template_registry.md lines 4-13, Document Type Mapping table",
+        "impact": "Registry does not match actual template set. SOP requires contract-driven governance; missing entry in registry violates this principle. Future template lookups will fail to find the validation template."
+      },
+      {
+        "severity": "Critical",
+        "issue": "Registry flow diagram does not show validation phase",
+        "location": "template_registry.md line 18, Flow section",
+        "impact": "Current flow shows: Initiative → Plan → Task → Implementation Plan → Code → Review → Memory. Missing validation between Review and Memory (or as final gate before Memory). WORKFLOW_SOP_v1.md Phase 6 clearly defines validation as mandatory between review and completion."
+      }
+    ],
+    "evidence": [
+      {
+        "type": "file_comparison",
+        "path": "/workspace/projects/agent-runner-v2/docs/delivery/00_templates/05_validation.template.md",
+        "notes": "Validation template exists, is complete, and has proper metadata (Doc Type: 05_validation, Template Version: v1), but is NOT listed in template_registry.md"
+      },
+      {
+        "type": "sop_reference",
+        "path": "/workspace/projects/agent-runner-v2/docs/delivery/00_templates/WORKFLOW_SOP_v1.md lines 200-217",
+        "notes": "SOP Phase 6 (Validation) is defined and mandatory. It outputs 05_validation.template.md. Registry must include it."
+      },
+      {
+        "type": "sop_reference",
+        "path": "/workspace/projects/agent-runner-v2/docs/delivery/00_templates/DELIVERY_STATUS_RULES_v1.md lines 138-152",
+        "notes": "Validation artifact lifecycle is defined. Status rules confirm 05_validation is a required artifact type."
+      }
+    ],
+    "upstream_refs": [
+      "WORKFLOW_SOP_v1.md",
+      "DELIVERY_STATUS_RULES_v1.md",
+      "project_analysis.json"
+    ],
+    "recorded_at": "2026-06-03T00:00:00Z"
+  }
+}

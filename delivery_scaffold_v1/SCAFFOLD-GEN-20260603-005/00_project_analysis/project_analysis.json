@@ -1,0 +1,80 @@
+# Project Analysis
+
+## Domain
+LLM workflow orchestration engine and CLI tool. The project is a standalone Python package (`agent-runner-v2`) extracted from the UKBE (Universal Knowledge Base Engine) project. It manages multi-step, multi-coder delivery pipelines, running AI agents (Claude, Codex, Qwen, and aliased models like DeepSeek) through structured workflows with review loops, automatic retries, and human-in-the-loop approval gates. An active initiative exists to enhance the runner into daemon/worker mode with database-backed job management (PostgreSQL).
+
+## Tech Stack
+- **Language:** Python 3.11+ with type hints and dataclasses
+- **CLI:** Click-based CLI via `ukbe-run-agent` entry point (setuptools)
+- **Build:** setuptools with pyproject.toml
+- **Testing:** pytest >= 8.2.0, pytest-cov >= 5.0.0
+- **External Dependencies:** Claude Code CLI, OpenAI Codex CLI, Qwen Code CLI (invoked as subprocesses)
+- **API Integrations:** OpenAI API, DeepSeek API, Anthropic API (via model alias system in `model_mapping.json`)
+- **Database (planned):** PostgreSQL with `SELECT ... FOR UPDATE SKIP LOCKED` for daemon job claiming
+- **Configuration:** JSON schemas for jobs, LLM responses, usage data, model mappings
+- **Logging:** Structured logging with colorised console output and JSON-lines file logging
+
+## Complexity
+advanced
+
+## Recommended Workflow Scope
+- SOP (WORKFLOW_SOP_v1.md) — already exists, covers advanced workflow
+- Status rules (DELIVERY_STATUS_RULES_v1.md) — already exists
+- Initiative template (01_initiative.template.md) — already exists
+- Plan template (02_plan.template.md) — already exists
+- Task graph template (02b_task_graph.template.md) — already exists
+- Task template (03_task.template.md) — already exists
+- Implementation plan template (04_implementation_plan.template.md) — already exists
+- Review template (04_review.template.md) — already exists
+- Validation template (05_validation.template.md) — already exists
+- Memory template (06_memory.template.md) — already exists
+- Template registry (template_registry.md) — already exists
+- Full agent system (AGENTS.md + agent contracts) — recommended for advanced complexity
+- All 7 templates, SOP, status rules, registry, and full agent system are appropriate
+
+## Recommended Agent Roles
+- Planner (delivery plan creation)
+- Task Decomposer (dependency-aware task graph generation)
+- Implementation Planner (scoped implementation plans with tests and rollback)
+- Executor (implementation within approved scope)
+- Reviewer (independent review of plans, graphs, implementations)
+- Validator (final validation of behavior and contract compliance)
+- Memory Manager (durable context, snapshots, supersession links)
+- Architect (workflow policy, scope, approval gates — currently the project owner)
+- Runner (state enforcement, budget, routing, sidecar validation — automated)
+
+## Delivery Folder Structure
+Standard `docs/delivery/` structure with subdirectories: 00_templates, 01_initiatives, 02_plans, 03_tasks, 04_implementation, 05_reviews, 06_memory, 08_agents. Do not create 07_master_prompts/. No customization needed — the existing scaffold is already comprehensive and correct for this project.
+
+## Project-Specific SOP Considerations
+- meta.json sidecar is the ONLY communication channel between runner and coders — no stdout JSON parsing, no fallback recovery
+- No pre-invocation sidecar writes — runner does not touch markdown files before coder invocation
+- Explicit exception routing — hard failures go to route_after_failure() immediately
+- Agent master prompts are deprecated — workflow step configurations in template_groups.py serve as invocation contracts
+- Agent files in 08_agents/ define role boundaries and handoff rules only
+- Deterministic outputs required: stable IDs, normalized structure, deterministic hashes, reproducible snapshots
+- Budget enforcement before generation or agent invocation
+- Supersession links required when replacing approved artifacts — never overwrite approved/final artifacts
+- Parallel execution allowed for independent task-graph branches with isolated ownership
+- Existing delivery docs are already scaffolded and actively used (initiative, plan, task graph, reviews exist)
+- Active initiative to add daemon/worker mode with PostgreSQL job management (Slice 1-7 implementation plan)
+- Backward compatibility required — existing direct execution path must be preserved
+- Conservative resume strategy for v1 daemon — no automatic recovery of crashed workers
+
+## Discovered Files
+1. QWEN.md — Qwen Code project context (comprehensive architecture, workflows, state machine documentation)
+2. README.md — Project overview and CLI usage
+3. pyproject.toml — Python project config (name, version, dependencies, CLI entry point)
+4. docs/specs/UKBE_Artifact_v1_FINAL.md — Artifact specification (what the system produces)
+5. docs/specs/UKBE_Contract_Builder_v1.1_FINAL.md — Contract builder specification (how artifacts are planned)
+6. docs/specs/UKBE_Core_Data_Model_v1.2.1_FINAL.md — Core data model specification (canonical internal data structures)
+7. docs/delivery/00_templates/WORKFLOW_SOP_v1.md — Existing SOP (advanced complexity, 8 agent roles)
+8. docs/delivery/00_templates/template_registry.md — Template registry (7 templates + registry)
+9. docs/delivery/00_templates/DELIVERY_STATUS_RULES_v1.md — Status rules (lifecycle, authority model, transitions)
+10. docs/delivery/00_templates/01_initiative.template.md through 06_memory.template.md — All 7 delivery templates
+11. docs/delivery/01_initiatives/INIT-20260602-01_pre-init-agent-runner-daemon-db-job-mana.md — Active initiative (daemon mode with DB-backed job management)
+12. docs/delivery/02_plans/PLAN-20260602-01_pre-init-agent-runner-daemon-db-job-mana.md — Delivery plan
+13. docs/delivery/02_plans/artifacts/TASK-GRAPH-20260602-PLAN-20260602-01.md — Task graph
+14. docs/delivery/03_tasks/TASK-20260602-01_implement-db-schema-migrations-for-agent-runner-jobs-agent-runner-job-events-agent-runner-job-artifacts.md — Task artifact
+15. docs/delivery/04_implementation_plans/IMPL-20260602-01_implement-db-schema-migrations-for-agent-runner-jobs-agent-r.md — Implementation plan
+16. docs/delivery/05_reviews/ (15 review artifacts) — Review artifacts for SOP, templates, pre-init, plan, task graph, task, implementation

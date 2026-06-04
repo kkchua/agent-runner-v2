@@ -1,0 +1,20 @@
+{
+  "schema_version": "v2",
+  "coder_result": {
+    "status": "APPROVED",
+    "remark": "Fixed review findings: (1) Inlined critical content from draft into artifact for self-containment: CLI contract (8 commands), job status model with transitions, database schema for 3 tables, worker claiming strategy, testing strategy, and implementation slices. (2) Fixed lifecycle confusion by clarifying doc type as 'pre-init (promotion candidate)', renaming Initiative ID field to 'Proposed Initiative ID', adding Source Pre-Init ID field, and adding explicit Traceability metadata showing source → this artifact mapping. Artifact now self-contained and promotion-ready.",
+    "artifacts": {
+      "PRE_INIT_FILE": "docs/delivery/01_initiatives/pre_init/PRE-INIT-20260602-01_pre-init-agent-runner-daemon-db-job-mana.md"
+    },
+    "recorded_at": "2026-06-02T00:00:00Z"
+  },
+  "runner_data": {
+    "step": "refine_pre_init",
+    "coder_used": "claude",
+    "invoked_at": "2026-06-02T13:11:37",
+    "finished_at": "2026-06-02T13:13:14",
+    "prompt_checksum": "sha256:859eb0e0be85af112ec8c8f1812523e3c90d75f5a8b9ec6bd1e12181c043b69e",
+    "enriched_at": "2026-06-02T13:13:14",
+    "runner_version": "v2"
+  }
+}

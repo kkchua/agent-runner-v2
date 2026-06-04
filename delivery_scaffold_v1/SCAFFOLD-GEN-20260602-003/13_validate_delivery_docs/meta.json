@@ -1,0 +1,20 @@
+{
+  "schema_version": "v2",
+  "coder_result": {
+    "status": "REJECTED",
+    "remark": "Validation: 58/76 checks passed (18 failed)",
+    "artifacts": {
+      "DELIVERY_FOLDER_MAP": "docs/delivery/folder_map.json"
+    },
+    "recorded_at": "2026-06-02T05:05:41+00:00"
+  },
+  "runner_data": {
+    "step": "validate_delivery_docs",
+    "coder_used": "action",
+    "invoked_at": "2026-06-02T05:05:41",
+    "finished_at": "2026-06-02T05:05:41",
+    "prompt_checksum": "sha256:n/a",
+    "enriched_at": "2026-06-02T05:05:41",
+    "runner_version": "v2"
+  }
+}

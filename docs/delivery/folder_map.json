@@ -1,0 +1,519 @@
+{
+  "schema_version": "v2",
+  "validated_at": "2026-06-02T05:05:41+00:00",
+  "artifact_root": "docs/delivery/00_templates",
+  "summary": {
+    "total_checks": 76,
+    "passed": 58,
+    "failed": 18,
+    "pass_rate": 76.3
+  },
+  "checks": [
+    {
+      "check": "template_exists",
+      "artifact_key": "DELIVERY_INITIATIVE_TEMPLATE",
+      "path": "docs/delivery/00_templates/01_initiative.template.md",
+      "ok": true,
+      "detail": "exists (2060 bytes)"
+    },
+    {
+      "check": "template_metadata",
+      "path": "docs/delivery/00_templates/01_initiative.template.md",
+      "ok": false,
+      "detail": "Doc Type: missing, Template Version: missing"
+    },
+    {
+      "check": "template_section",
+      "path": "docs/delivery/00_templates/01_initiative.template.md",
+      "section": "Objective",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "template_section",
+      "path": "docs/delivery/00_templates/01_initiative.template.md",
+      "section": "Problem Statement",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "template_section",
+      "path": "docs/delivery/00_templates/01_initiative.template.md",
+      "section": "Expected Outcomes",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "template_section",
+      "path": "docs/delivery/00_templates/01_initiative.template.md",
+      "section": "Scope",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "template_exists",
+      "artifact_key": "DELIVERY_PLAN_TEMPLATE",
+      "path": "docs/delivery/00_templates/02_plan.template.md",
+      "ok": true,
+      "detail": "exists (3178 bytes)"
+    },
+    {
+      "check": "template_metadata",
+      "path": "docs/delivery/00_templates/02_plan.template.md",
+      "ok": false,
+      "detail": "Doc Type: missing, Template Version: missing"
+    },
+    {
+      "check": "template_section",
+      "path": "docs/delivery/00_templates/02_plan.template.md",
+      "section": "Plan Objective",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "template_section",
+      "path": "docs/delivery/00_templates/02_plan.template.md",
+      "section": "Strategy Overview",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "template_section",
+      "path": "docs/delivery/00_templates/02_plan.template.md",
+      "section": "Task Breakdown",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "template_section",
+      "path": "docs/delivery/00_templates/02_plan.template.md",
+      "section": "Scope Mapping",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "template_section",
+      "path": "docs/delivery/00_templates/02_plan.template.md",
+      "section": "System Design",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "template_exists",
+      "artifact_key": "DELIVERY_TASK_GRAPH_TEMPLATE",
+      "path": "docs/delivery/00_templates/02b_task_graph.template.md",
+      "ok": true,
+      "detail": "exists (2583 bytes)"
+    },
+    {
+      "check": "template_metadata",
+      "path": "docs/delivery/00_templates/02b_task_graph.template.md",
+      "ok": false,
+      "detail": "Doc Type: missing, Template Version: missing"
+    },
+    {
+      "check": "template_section",
+      "path": "docs/delivery/00_templates/02b_task_graph.template.md",
+      "section": "Task Graph Objective",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "template_section",
+      "path": "docs/delivery/00_templates/02b_task_graph.template.md",
+      "section": "Task Graph",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "template_section",
+      "path": "docs/delivery/00_templates/02b_task_graph.template.md",
+      "section": "Execution Flow",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "template_section",
+      "path": "docs/delivery/00_templates/02b_task_graph.template.md",
+      "section": "Task Success Criteria",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "template_exists",
+      "artifact_key": "DELIVERY_TASK_TEMPLATE",
+      "path": "docs/delivery/00_templates/03_task.template.md",
+      "ok": true,
+      "detail": "exists (2571 bytes)"
+    },
+    {
+      "check": "template_metadata",
+      "path": "docs/delivery/00_templates/03_task.template.md",
+      "ok": false,
+      "detail": "Doc Type: missing, Template Version: missing"
+    },
+    {
+      "check": "template_section",
+      "path": "docs/delivery/00_templates/03_task.template.md",
+      "section": "Objective",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "template_section",
+      "path": "docs/delivery/00_templates/03_task.template.md",
+      "section": "Inputs",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "template_section",
+      "path": "docs/delivery/00_templates/03_task.template.md",
+      "section": "Outputs",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "template_section",
+      "path": "docs/delivery/00_templates/03_task.template.md",
+      "section": "Execution Steps",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "template_section",
+      "path": "docs/delivery/00_templates/03_task.template.md",
+      "section": "Implementation Details",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "template_exists",
+      "artifact_key": "DELIVERY_IMPL_TEMPLATE",
+      "path": "docs/delivery/00_templates/04_implementation_plan.template.md",
+      "ok": true,
+      "detail": "exists (4235 bytes)"
+    },
+    {
+      "check": "template_metadata",
+      "path": "docs/delivery/00_templates/04_implementation_plan.template.md",
+      "ok": false,
+      "detail": "Doc Type: missing, Template Version: missing"
+    },
+    {
+      "check": "template_section",
+      "path": "docs/delivery/00_templates/04_implementation_plan.template.md",
+      "section": "Objective",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "template_section",
+      "path": "docs/delivery/00_templates/04_implementation_plan.template.md",
+      "section": "Inputs",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "template_section",
+      "path": "docs/delivery/00_templates/04_implementation_plan.template.md",
+      "section": "Outputs",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "template_section",
+      "path": "docs/delivery/00_templates/04_implementation_plan.template.md",
+      "section": "Scope Clarification",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "template_section",
+      "path": "docs/delivery/00_templates/04_implementation_plan.template.md",
+      "section": "File Plan",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "template_exists",
+      "artifact_key": "DELIVERY_REVIEW_TEMPLATE",
+      "path": "docs/delivery/00_templates/04_review.template.md",
+      "ok": true,
+      "detail": "exists (2567 bytes)"
+    },
+    {
+      "check": "template_metadata",
+      "path": "docs/delivery/00_templates/04_review.template.md",
+      "ok": false,
+      "detail": "Doc Type: missing, Template Version: missing"
+    },
+    {
+      "check": "template_section",
+      "path": "docs/delivery/00_templates/04_review.template.md",
+      "section": "Review Objective",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "template_section",
+      "path": "docs/delivery/00_templates/04_review.template.md",
+      "section": "Findings",
+      "ok": false,
+      "detail": "missing"
+    },
+    {
+      "check": "template_section",
+      "path": "docs/delivery/00_templates/04_review.template.md",
+      "section": "Decision",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "template_exists",
+      "artifact_key": "DELIVERY_MEMORY_TEMPLATE",
+      "path": "docs/delivery/00_templates/06_memory.template.md",
+      "ok": true,
+      "detail": "exists (2231 bytes)"
+    },
+    {
+      "check": "template_metadata",
+      "path": "docs/delivery/00_templates/06_memory.template.md",
+      "ok": false,
+      "detail": "Doc Type: missing, Template Version: missing"
+    },
+    {
+      "check": "template_section",
+      "path": "docs/delivery/00_templates/06_memory.template.md",
+      "section": "Purpose",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "template_section",
+      "path": "docs/delivery/00_templates/06_memory.template.md",
+      "section": "Key Decisions",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "sop_exists",
+      "path": "docs/delivery/00_templates/delivery_sop.json",
+      "ok": true,
+      "detail": "exists (4820 bytes)"
+    },
+    {
+      "check": "sop_section",
+      "path": "docs/delivery/00_templates/delivery_sop.json",
+      "section": "Purpose",
+      "ok": false,
+      "detail": "missing"
+    },
+    {
+      "check": "sop_section",
+      "path": "docs/delivery/00_templates/delivery_sop.json",
+      "section": "Core Principle",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "sop_section",
+      "path": "docs/delivery/00_templates/delivery_sop.json",
+      "section": "Authority Precedence",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "sop_section",
+      "path": "docs/delivery/00_templates/delivery_sop.json",
+      "section": "Workflow State Machine",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "sop_section",
+      "path": "docs/delivery/00_templates/delivery_sop.json",
+      "section": "Agent Roles",
+      "ok": false,
+      "detail": "missing"
+    },
+    {
+      "check": "sop_section",
+      "path": "docs/delivery/00_templates/delivery_sop.json",
+      "section": "Workflow Phases",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "sop_section",
+      "path": "docs/delivery/00_templates/delivery_sop.json",
+      "section": "Standard Rules",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "sop_section",
+      "path": "docs/delivery/00_templates/delivery_sop.json",
+      "section": "Folder Structure",
+      "ok": false,
+      "detail": "missing"
+    },
+    {
+      "check": "sop_section",
+      "path": "docs/delivery/00_templates/delivery_sop.json",
+      "section": "Validation",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "status_rules_exists",
+      "path": "docs/delivery/00_templates/delivery_status_rules.json",
+      "ok": true,
+      "detail": "exists (3983 bytes)"
+    },
+    {
+      "check": "status_rules_section",
+      "path": "docs/delivery/00_templates/delivery_status_rules.json",
+      "section": "Core Principles",
+      "ok": false,
+      "detail": "missing"
+    },
+    {
+      "check": "status_rules_section",
+      "path": "docs/delivery/00_templates/delivery_status_rules.json",
+      "section": "Global Workflow Discipline",
+      "ok": false,
+      "detail": "missing"
+    },
+    {
+      "check": "status_rules_section",
+      "path": "docs/delivery/00_templates/delivery_status_rules.json",
+      "section": "Authority Model",
+      "ok": false,
+      "detail": "missing"
+    },
+    {
+      "check": "status_rules_section",
+      "path": "docs/delivery/00_templates/delivery_status_rules.json",
+      "section": "Approval Gates",
+      "ok": false,
+      "detail": "missing"
+    },
+    {
+      "check": "status_rules_section",
+      "path": "docs/delivery/00_templates/delivery_status_rules.json",
+      "section": "Forbidden Transitions",
+      "ok": false,
+      "detail": "missing"
+    },
+    {
+      "check": "status_rules_section",
+      "path": "docs/delivery/00_templates/delivery_status_rules.json",
+      "section": "Document-First",
+      "ok": false,
+      "detail": "missing"
+    },
+    {
+      "check": "agent_contract_exists",
+      "path": "docs/delivery/08_agents/AGENT-planner.json",
+      "ok": true,
+      "detail": "exists (4006 bytes)"
+    },
+    {
+      "check": "agent_contract_metadata",
+      "path": "docs/delivery/08_agents/AGENT-planner.json",
+      "ok": true,
+      "detail": "Doc Type: present, Agent ID: present"
+    },
+    {
+      "check": "agent_contract_exists",
+      "path": "docs/delivery/08_agents/AGENT-task-decomposer.json",
+      "ok": true,
+      "detail": "exists (4373 bytes)"
+    },
+    {
+      "check": "agent_contract_metadata",
+      "path": "docs/delivery/08_agents/AGENT-task-decomposer.json",
+      "ok": true,
+      "detail": "Doc Type: present, Agent ID: present"
+    },
+    {
+      "check": "agent_contract_exists",
+      "path": "docs/delivery/08_agents/AGENT-implementation-planner.json",
+      "ok": true,
+      "detail": "exists (4945 bytes)"
+    },
+    {
+      "check": "agent_contract_metadata",
+      "path": "docs/delivery/08_agents/AGENT-implementation-planner.json",
+      "ok": true,
+      "detail": "Doc Type: present, Agent ID: present"
+    },
+    {
+      "check": "agent_contract_exists",
+      "path": "docs/delivery/08_agents/AGENT-executor.json",
+      "ok": true,
+      "detail": "exists (5007 bytes)"
+    },
+    {
+      "check": "agent_contract_metadata",
+      "path": "docs/delivery/08_agents/AGENT-executor.json",
+      "ok": true,
+      "detail": "Doc Type: present, Agent ID: present"
+    },
+    {
+      "check": "agent_contract_exists",
+      "path": "docs/delivery/08_agents/AGENT-reviewer.json",
+      "ok": true,
+      "detail": "exists (4924 bytes)"
+    },
+    {
+      "check": "agent_contract_metadata",
+      "path": "docs/delivery/08_agents/AGENT-reviewer.json",
+      "ok": true,
+      "detail": "Doc Type: present, Agent ID: present"
+    },
+    {
+      "check": "agent_contract_exists",
+      "path": "docs/delivery/08_agents/AGENT-memory-manager.json",
+      "ok": true,
+      "detail": "exists (4519 bytes)"
+    },
+    {
+      "check": "agent_contract_metadata",
+      "path": "docs/delivery/08_agents/AGENT-memory-manager.json",
+      "ok": true,
+      "detail": "Doc Type: present, Agent ID: present"
+    },
+    {
+      "check": "agent_contract_exists",
+      "path": "docs/delivery/08_agents/AGENT-architect.md",
+      "ok": false,
+      "detail": "Agent contract AGENT-architect not found (tried .md and .json)"
+    },
+    {
+      "check": "agents_registry_exists",
+      "path": "docs/delivery/08_agents/delivery_agents_md.json",
+      "ok": true,
+      "detail": "exists (11575 bytes)"
+    },
+    {
+      "check": "template_registry_exists",
+      "path": "docs/delivery/00_templates/template_registry.md",
+      "ok": true,
+      "detail": "exists (4086 bytes)"
+    },
+    {
+      "check": "cross_ref_registry_completeness",
+      "path": "docs/delivery/00_templates/template_registry.md",
+      "ok": true,
+      "detail": "all types registered"
+    },
+    {
+      "check": "reviews_folder_exists",
+      "path": "docs/delivery/05_reviews",
+      "ok": true,
+      "detail": "exists (27 items)"
+    }
+  ]
+}

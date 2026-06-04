@@ -1,0 +1,89 @@
+{
+  "schema_version": "v2",
+  "coder_result": {
+    "status": "Final",
+    "decision": false,
+    "remark": "Template review REJECTED due to critical metadata and naming inconsistencies. Three critical issues: (1) 02b_task_graph Doc Type mismatch ('02_plan_artifact' vs '02b_task_graph'), (2) 05_validation template uses wrong metadata format (Markdown table vs YAML frontmatter), (3) Validation ID format mismatch (VALIDATION- vs VAL-). Plus major issue: template_registry.md is incomplete (missing Validation entry). Templates cannot be approved until these structural issues are fixed.",
+    "artifacts": {
+      "review_file": "/workspace/projects/agent-runner-v2/docs/delivery/05_reviews/REV-260604-04_template-registry-review.md"
+    },
+    "findings": [
+      {
+        "severity": "Critical",
+        "issue": "Doc Type mismatch in 02b_task_graph.template.md",
+        "location": "docs/delivery/00_templates/02b_task_graph.template.md:2",
+        "impact": "Template declares 'Doc Type: 02_plan_artifact' but template_registry.md and SOP expect '02b_task_graph'. Will cause validation script failures when checking artifact type against registry."
+      },
+      {
+        "severity": "Critical",
+        "issue": "Validation template uses incompatible metadata format",
+        "location": "docs/delivery/00_templates/05_validation.template.md:3-28",
+        "impact": "Uses Markdown table for metadata instead of YAML frontmatter. All other 7 templates use YAML frontmatter (--- delimiters). Runner and validation scripts expect YAML frontmatter; will fail to parse metadata from this template."
+      },
+      {
+        "severity": "Critical",
+        "issue": "Validation artifact ID format mismatch",
+        "location": "docs/delivery/00_templates/05_validation.template.md:10",
+        "impact": "Template declares 'VALIDATION-{{YYYYMMDD}}-{{NN}}' but delivery_status_rules.json (Naming discipline section) specifies 'VAL-{{YYYYMMDD}}-{{NN}}'. Inconsistent naming breaks artifact registry lookups and traceability."
+      },
+      {
+        "severity": "Major",
+        "issue": "Template registry incomplete - missing Validation entry",
+        "location": "docs/delivery/00_templates/template_registry.md:5-13",
+        "impact": "Registry lists only 7 document types but 8 templates exist. Validation is missing from registry table and flow diagram. Registry is documentation of actual templates; omitting Validation indicates incomplete specification."
+      },
+      {
+        "severity": "Major",
+        "issue": "Validation template missing proper YAML frontmatter metadata fields",
+        "location": "docs/delivery/00_templates/05_validation.template.md:1-143",
+        "impact": "Lacks Doc Type and Template Version in YAML frontmatter. Other templates have these at top in --- block. Standard header format is missing, breaking consistency and causing runner metadata extraction to fail."
+      },
+      {
+        "severity": "Minor",
+        "issue": "Inconsistent metadata field naming across templates",
+        "location": "docs/delivery/00_templates/02_plan.template.md:4 vs 01_initiative.template.md:4",
+        "impact": "Some templates use 'Initiative ID' while others use '{{INITIATIVE_ID}}'. Field names should be consistent; only placeholder values should differ. Minor issue but indicates lack of careful template standardization."
+      }
+    ],
+    "evidence": [
+      {
+        "type": "file_comparison",
+        "path": "docs/delivery/00_templates/02b_task_graph.template.md:2",
+        "hash_sha256": null,
+        "notes": "Template header line 2: 'Doc Type: 02_plan_artifact' contradicts registry entry 'Doc Type: 02b_task_graph'"
+      },
+      {
+        "type": "file_comparison",
+        "path": "docs/delivery/00_templates/05_validation.template.md:1-3",
+        "hash_sha256": null,
+        "notes": "Missing YAML frontmatter. Line 1 starts with '# {{TITLE}}' instead of '---' YAML marker. Compare to 01_initiative.template.md which starts with '---\\nDoc Type: 01_initiative'"
+      },
+      {
+        "type": "specification_check",
+        "path": "docs/delivery/00_templates/delivery_status_rules.json:Naming and Folder Discipline",
+        "hash_sha256": null,
+        "notes": "Status rules specify 'VAL-YYYYMMDD-NN' format for validation artifacts but template declares 'VALIDATION-{{YYYYMMDD}}-{{NN}}'"
+      },
+      {
+        "type": "registry_audit",
+        "path": "docs/delivery/00_templates/template_registry.md:5-13",
+        "hash_sha256": null,
+        "notes": "Registry document type table lists: Initiative, Plan, Task Graph, Task, Implementation Plan, Review, Memory (7 types). Validation template exists but is not listed in registry."
+      },
+      {
+        "type": "template_count",
+        "path": "docs/delivery/00_templates/",
+        "hash_sha256": null,
+        "notes": "Directory contains 8 .template.md files: 01, 02, 02b, 03, 04_implementation_plan, 04_review, 05_validation, 06. Registry lists only 7 artifact types."
+      }
+    ],
+    "upstream_refs": [
+      "WORKFLOW_SOP_v1.0 (delivery_sop.json)",
+      "DELIVERY_STATUS_RULES_v1.0 (delivery_status_rules.json)",
+      "project_analysis.json (project analysis)"
+    ],
+    "supersedes": null,
+    "superseded_by": null,
+    "recorded_at": "2026-06-04T00:00:00Z"
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "schema_version": "v2",
+  "coder_result": {
+    "status": "REJECTED",
+    "remark": "Rejected: the .json SOP and status-rule artifacts contain Markdown rather than valid JSON; task approval transitions are not reconciled with the SOP state machine; rejection routing and phase-specific sidecar requirements are incomplete.",
+    "artifacts": {
+      "REVIEW_FILE": "docs/delivery/05_reviews/REV-260602-01_rsop_R-0000-00_delivery-sop.md"
+    },
+    "recorded_at": "2026-06-02T02:31:18Z"
+  },
+  "runner_data": {
+    "step": "review_sop",
+    "coder_used": "codex",
+    "invoked_at": "2026-06-02T02:30:33",
+    "finished_at": "2026-06-02T02:31:51",
+    "prompt_checksum": "sha256:d0087cd37d108222fb61998f3325598d83148f3f1272110592e6e340b01e5a5d",
+    "enriched_at": "2026-06-02T02:31:51",
+    "runner_version": "v2"
+  }
+}

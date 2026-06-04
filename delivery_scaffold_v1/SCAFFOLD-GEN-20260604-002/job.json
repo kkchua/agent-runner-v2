@@ -1,0 +1,23 @@
+{
+  "job_id": "SCAFFOLD-GEN-20260604-002",
+  "template_group": "delivery_scaffold_v1",
+  "current_step": "validate_delivery_docs",
+  "status": "IN_PROGRESS",
+  "artifacts": {
+    "REVIEW_FILE": "/workspace/projects/agent-runner-v2/docs/delivery/05_reviews/REV-260604-04_template-registry-review.md",
+    "PROJECT_ANALYSIS": "delivery_scaffold_v1/SCAFFOLD-GEN-20260604-002/00_project_analysis/project_analysis.json",
+    "DELIVERY_TEMPLATE_REGISTRY": "docs/delivery/00_templates/template_registry.json",
+    "DELIVERY_INITIATIVE_TEMPLATE": "docs/delivery/00_templates/01_initiative.template.md",
+    "DELIVERY_PLAN_TEMPLATE": "docs/delivery/00_templates/02_plan.template.md",
+    "DELIVERY_TASK_GRAPH_TEMPLATE": "docs/delivery/00_templates/02b_task_graph.template.md",
+    "DELIVERY_TASK_TEMPLATE": "docs/delivery/00_templates/03_task.template.md",
+    "DELIVERY_IMPL_TEMPLATE": "docs/delivery/00_templates/04_implementation_plan.template.md",
+    "DELIVERY_REVIEW_TEMPLATE": "docs/delivery/00_templates/04_review.template.md",
+    "DELIVERY_MEMORY_TEMPLATE": "docs/delivery/00_templates/05_validation.template.md"
+  },
+  "loop_context": {},
+  "review_state": {},
+  "created_at": "2026-06-04T00:35:12.001639",
+  "failure_count": 0,
+  "reject_count": 0
+}

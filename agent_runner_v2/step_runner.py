@@ -355,12 +355,26 @@ def _read_and_validate_meta_json(path: Path) -> dict:
                 remark = json.dumps(remark)
             raw_artifacts = meta.get("artifacts", {})
             # Flatten nested artifact objects: {key: {path, checksum}} → {key: path}
+            # Map review artifact short names to workflow artifact type names
+            REVIEW_ARTIFACT_REVERSE = {
+                "PRE_INIT": "PRE_INIT_FILE",
+                "INIT": "INIT_FILE", 
+                "PLAN": "PLAN_FILE",
+                "TASK_GRAPH": "TASK_GRAPH_FILE",
+                "TASK": "TASK_FILE",
+                "IMPL": "IMPL_FILE",
+                "VALIDATION": "VALIDATION_FILE",
+                "REVIEW": "REVIEW_FILE",
+            }
             artifacts = {}
             for k, v in raw_artifacts.items():
+                key_upper = k.upper()
+                # Map review short names to workflow artifact type names
+                mapped_key = REVIEW_ARTIFACT_REVERSE.get(key_upper, key_upper)
                 if isinstance(v, dict) and "path" in v:
-                    artifacts[k.upper()] = v["path"]
+                    artifacts[mapped_key] = v["path"]
                 elif isinstance(v, str):
-                    artifacts[k.upper()] = v
+                    artifacts[mapped_key] = v
             if not artifacts and "review_file" in meta:
                 artifacts["REVIEW_FILE"] = meta["review_file"]
             meta = {
@@ -520,12 +534,16 @@ def _validate_template_conformance(
 
     if missing_sections or missing_metadata:
         issues = []
+        missing = []
         if missing_sections:
             issues.append(f"missing sections: {', '.join(missing_sections)}")
+            missing.extend(missing_sections)
         if missing_metadata:
             issues.append(f"missing metadata fields: {', '.join(missing_metadata)}")
+            missing.extend(missing_metadata)
         raise ArtifactMissingError(
-            f"Template conformance failed for step {step!r} ({doc_type}): {'; '.join(issues)}"
+            f"Template conformance failed for step {step!r} ({doc_type}): {'; '.join(issues)}",
+            missing=missing,
         )
 
     print(f"[step_runner] template conformance OK for step={step} type={doc_type}", flush=True)
@@ -539,10 +557,17 @@ def _has_section(content: str, section: str) -> bool:
 
 
 def _has_metadata_field(content: str, field: str) -> bool:
-    """Check if metadata block contains a field."""
+    """Check if metadata block contains a field (list, table, or JSON)."""
     import re as _re
+    # List format: - Field: value
     pattern = _re.compile(rf'^\s*-?\s*{_re.escape(field)}\s*[:：]', _re.MULTILINE)
-    return bool(pattern.search(content))
+    if bool(pattern.search(content)):
+        return True
+    # Table format: | **Field** | value |
+    pattern = _re.compile(rf'\|\s*\*?\*?{_re.escape(field)}\*?\*?\s*\|', _re.IGNORECASE)
+    if bool(pattern.search(content)):
+        return True
+    return False
 
 
 # ---------------------------------------------------------------------------

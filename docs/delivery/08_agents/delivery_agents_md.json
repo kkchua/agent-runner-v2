@@ -1,0 +1,236 @@
+{
+  "document_type": "08_agent_registry",
+  "template_version": "v2",
+  "document_id": "AGENTS-REGISTRY-v1",
+  "status": "active",
+  "created_at": "2026-06-02T00:00:00",
+  "owner": "Architect",
+
+  "purpose": "Authoritative registry of all agents in the delivery system. Defines agent roles, handoff contracts, execution order, folder ownership, entry and exit criteria, and cross-agent coordination rules. All agents operate on approved documents and communicate exclusively through meta.json sidecars.",
+
+  "core_principle": "Agents coordinate through approved documents, explicit status transitions, and typed handoff contracts. No agent may act on unapproved inputs. No agent may produce outputs outside its assigned folder. The runner enforces all approval gates.",
+
+  "governing_documents": {
+    "sop": "docs/delivery/00_templates/delivery_sop.json",
+    "status_rules": "docs/delivery/00_templates/delivery_status_rules.json",
+    "template_registry": "docs/delivery/00_templates/template_registry.md"
+  },
+
+  "agent_registry": [
+    {
+      "agent_id": "AGENT-PLANNER",
+      "role": "planner",
+      "name": "Planner",
+      "primary_input": "01_initiative (approved)",
+      "primary_output": "02_plan",
+      "folder": "docs/delivery/02_plans/"
+    },
+    {
+      "agent_id": "AGENT-TASK-DECOMPOSER",
+      "role": "task_decomposer",
+      "name": "Task Decomposer",
+      "primary_input": "02_plan (approved)",
+      "primary_output": "02b_task_graph + 03_task documents",
+      "folder": "docs/delivery/03_tasks/"
+    },
+    {
+      "agent_id": "AGENT-REVIEWER",
+      "role": "reviewer",
+      "name": "Reviewer",
+      "primary_input": "task, plan, implementation, evidence (varies by review target)",
+      "primary_output": "04_review / 05_validation",
+      "folder": "docs/delivery/04_reviews/ or docs/delivery/05_validations/"
+    },
+    {
+      "agent_id": "AGENT-IMPLEMENTATION-PLANNER",
+      "role": "implementation_planner",
+      "name": "Implementation Planner",
+      "primary_input": "03_task (approved)",
+      "primary_output": "04_implementation_plan",
+      "folder": "docs/delivery/04_implementation_plans/"
+    },
+    {
+      "agent_id": "AGENT-EXECUTOR",
+      "role": "executor",
+      "name": "Executor",
+      "primary_input": "04_implementation_plan (approved)",
+      "primary_output": "code changes + tests + execution summary",
+      "folder": "src/ (code), docs/delivery/04_implementation_plans/ (execution summary)"
+    },
+    {
+      "agent_id": "AGENT-MEMORY-MANAGER",
+      "role": "memory_manager",
+      "name": "Memory Manager",
+      "primary_input": "approved plans, tasks, reviews, implementation outcomes",
+      "primary_output": "06_memory updates",
+      "folder": "docs/delivery/06_memory/"
+    }
+  ],
+
+  "workflow_order": [
+    "1. Architect/Human: create and approve initiative (01_initiative)",
+    "2. Planner: draft execution plan (02_plan)",
+    "3. Reviewer: review plan (04_review → plan approved)",
+    "4. Task Decomposer: build task graph (02b_task_graph) and task contracts (03_task)",
+    "5. Reviewer: review task graph (04_review → task graph approved)",
+    "6. Implementation Planner: define implementation plan per task (04_implementation_plan)",
+    "7. Reviewer/Architect: approve implementation plan",
+    "8. Executor: implement code and tests per approved plan",
+    "9. Reviewer: review implementation (04_review)",
+    "10. Reviewer: validate implementation (05_validation)",
+    "11. Memory Manager: preserve durable project knowledge (06_memory)"
+  ],
+
+  "handoff_contracts": [
+    {
+      "from": "Architect/Human",
+      "to": "Planner",
+      "input": "01_initiative with status=approved",
+      "output": "02_plan draft",
+      "rule": "Planner must not start until initiative status is approved. Initiative ID must be preserved in plan linkage."
+    },
+    {
+      "from": "Planner",
+      "to": "Task Decomposer",
+      "input": "02_plan with status=approved",
+      "output": "02b_task_graph + 03_task documents",
+      "rule": "Task Decomposer must not start until plan status is approved. Task IDs must derive from plan task breakdown table verbatim."
+    },
+    {
+      "from": "Task Decomposer",
+      "to": "Reviewer",
+      "input": "02b_task_graph + 03_task documents (drafted)",
+      "output": "04_review (task graph review decision)",
+      "rule": "Reviewer assesses graph completeness, linkage integrity, and coverage against the approved plan. Decision must be explicit: approved or rejected."
+    },
+    {
+      "from": "Reviewer/Architect",
+      "to": "Implementation Planner",
+      "input": "03_task with status=approved, linked 02_plan",
+      "output": "04_implementation_plan",
+      "rule": "Implementation Planner must not start until task status is approved. File plan is mandatory. Scope must not expand beyond the task contract."
+    },
+    {
+      "from": "Implementation Planner",
+      "to": "Executor",
+      "input": "04_implementation_plan with status=approved",
+      "output": "code changes + tests + execution summary",
+      "rule": "Executor must not start until implementation plan is approved. Executor must not deviate from the file plan or add unsolicited scope."
+    },
+    {
+      "from": "Executor",
+      "to": "Reviewer",
+      "input": "code changes + execution summary + linked 04_implementation_plan",
+      "output": "04_review (implementation review) + 05_validation",
+      "rule": "Reviewer performs independent assessment against the implementation plan. Validation is a separate artifact from review. Both must be produced with explicit decisions."
+    },
+    {
+      "from": "Reviewer/Architect",
+      "to": "Memory Manager",
+      "input": "approved plans, tasks, reviews, implementation outcomes",
+      "output": "06_memory update",
+      "rule": "Memory Manager only records stable, approved knowledge. Transient state, rejected artifacts, and speculative knowledge must not be persisted."
+    }
+  ],
+
+  "entry_criteria": {
+    "AGENT-PLANNER": [
+      "Initiative document exists at the expected path",
+      "Initiative status is approved",
+      "Plan template is accessible",
+      "Output folder exists or can be created"
+    ],
+    "AGENT-TASK-DECOMPOSER": [
+      "Plan document exists and status is approved",
+      "Task graph template and task template are accessible",
+      "Output folder exists or can be created"
+    ],
+    "AGENT-REVIEWER": [
+      "Review target exists (plan, task graph, implementation, or validation artifact)",
+      "All linked input artifacts are accessible",
+      "Evidence exists or can be produced from the artifact under review"
+    ],
+    "AGENT-IMPLEMENTATION-PLANNER": [
+      "Task document exists and status is approved for implementation planning",
+      "Linked plan is accessible",
+      "Code references are accessible",
+      "Implementation plan template is accessible"
+    ],
+    "AGENT-EXECUTOR": [
+      "Implementation plan exists and status is approved",
+      "Linked task is accessible and not blocked or cancelled",
+      "Linked plan is accessible",
+      "Code references are accessible"
+    ],
+    "AGENT-MEMORY-MANAGER": [
+      "Final approved artifacts exist (at minimum: approved plan, approved tasks, approved reviews)",
+      "Knowledge identified is stable and durable, not transient"
+    ]
+  },
+
+  "exit_criteria": {
+    "AGENT-PLANNER": [
+      "Exactly one valid plan document created in docs/delivery/02_plans/",
+      "Plan saved with correct naming convention",
+      "Initiative ID linkage preserved in plan",
+      "meta.json sidecar written with status, remark, artifacts, recorded_at"
+    ],
+    "AGENT-TASK-DECOMPOSER": [
+      "Task graph artifact saved in docs/delivery/03_tasks/",
+      "All task documents created with correct IDs matching plan task breakdown table",
+      "Each task has correct linkage to plan and task graph",
+      "meta.json sidecar written for task graph and each task"
+    ],
+    "AGENT-REVIEWER": [
+      "Review or validation document produced and saved in correct folder",
+      "Decision is explicit: approved or rejected",
+      "Evidence is recorded in the review document",
+      "meta.json sidecar written with status, remark, artifacts, recorded_at"
+    ],
+    "AGENT-IMPLEMENTATION-PLANNER": [
+      "Exactly one valid implementation plan document created",
+      "File plan is complete (all files to be modified or created are listed)",
+      "Test plan is explicit",
+      "meta.json sidecar written"
+    ],
+    "AGENT-EXECUTOR": [
+      "Required code changes implemented per the file plan",
+      "Unit tests added or updated as specified",
+      "Implementation stays within scope of the approved implementation plan",
+      "Execution summary saved",
+      "meta.json sidecar written"
+    ],
+    "AGENT-MEMORY-MANAGER": [
+      "Memory document updated with stable, durable knowledge",
+      "Source links to originating artifacts preserved",
+      "No transient or speculative knowledge included",
+      "meta.json sidecar written"
+    ]
+  },
+
+  "cross_agent_rules": {
+    "role_isolation": "Each agent performs only its designated role. Planners do not decompose tasks. Executors do not review. Reviewers do not implement.",
+    "document_first": "Agents act on documents, not on conversations or implicit agreements. Every decision is recorded in an artifact.",
+    "no_scope_drift": "Agents must not expand scope beyond what is defined in their input contract. Scope changes require a new initiative or plan amendment.",
+    "explicit_decisions": "Every agent output must include an explicit status (approved/rejected/drafted). Ambiguous outputs are rejected by the runner.",
+    "canonical_linking": "Every artifact must reference its parent artifact by ID. Orphaned artifacts are invalid.",
+    "deterministic_naming": "Artifact filenames follow the convention defined in the template registry. Non-conforming filenames are rejected.",
+    "approved_inputs_only": "An agent must not begin work if its required input artifact does not have an approved status.",
+    "rejected_means_stop": "A rejected sidecar halts the current workflow step. The runner routes to the appropriate upstream state per the rejection routing table.",
+    "superseded_means_inactive": "Superseded artifacts are immutable and inactive. Agents must not act on superseded inputs.",
+    "traceability_is_mandatory": "Every artifact must be traceable to its originating initiative via an unbroken chain of document linkage."
+  },
+
+  "validation_model": "Validation is performed by the Reviewer agent independently from the Executor. No agent validates its own output. The meta.json sidecar is the only communication channel between agents and the runner.",
+
+  "folder_responsibilities": {
+    "AGENT-PLANNER": "docs/delivery/02_plans/",
+    "AGENT-TASK-DECOMPOSER": "docs/delivery/03_tasks/",
+    "AGENT-REVIEWER": "docs/delivery/04_reviews/ and docs/delivery/05_validations/",
+    "AGENT-IMPLEMENTATION-PLANNER": "docs/delivery/04_implementation_plans/",
+    "AGENT-EXECUTOR": "src/ (code changes), docs/delivery/04_implementation_plans/ (execution summary)",
+    "AGENT-MEMORY-MANAGER": "docs/delivery/06_memory/"
+  },
+
+  "future_automation_notes": "This registry is designed for future control plane automation. Agent IDs are stable references for workflow configuration. Handoff contracts are typed and machine-readable. Entry and exit criteria are enumerable and can be checked programmatically. The runner currently enforces approval gates; a future control plane can enforce all criteria automatically."
+}

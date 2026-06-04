@@ -1,0 +1,54 @@
+{
+  "schema_version": "v2",
+  "coder_result": {
+    "status": "REJECTED",
+    "decision": false,
+    "remark": "SOP is comprehensive and complete; Status Rules contains critical folder naming inconsistency (04_implementation vs 04_implementation_plans) that creates ambiguity for artifact routing. Correction required before approval.",
+    "artifacts": {
+      "review": "/workspace/projects/agent-runner-v2/docs/delivery/05_reviews/REV-260604-01_rsop_R-0000-00_delivery-sop.md"
+    },
+    "findings": [
+      {
+        "severity": "Critical",
+        "issue": "Folder naming inconsistency for Implementation Plans artifacts between SOP and Status Rules",
+        "location": "Status Rules document, Naming and Folder Discipline table (line ~98); SOP folder structure diagram (line ~20)",
+        "impact": "Runner artifact routing will fail due to multiple authoritative sources defining different folder paths. State machine enforcement cannot proceed without exact folder path alignment. This creates a gate-blocking failure for artifact discovery and validation."
+      }
+    ],
+    "evidence": [
+      {
+        "type": "document_comparison",
+        "path": "docs/delivery/00_templates/delivery_sop.json",
+        "notes": "SOP folder structure line shows: '04_implementation_plans/' (plural)"
+      },
+      {
+        "type": "document_comparison",
+        "path": "docs/delivery/00_templates/delivery_status_rules.json",
+        "notes": "Status Rules naming table shows: '04_implementation/' (singular) - INCORRECT"
+      },
+      {
+        "type": "document_comparison",
+        "path": "delivery_scaffold_v1/SCAFFOLD-GEN-20260603-008/00_project_analysis/project_analysis.json",
+        "notes": "Project Analysis specifies: '04_implementation_plans/' (plural) - AUTHORITATIVE"
+      }
+    ],
+    "upstream_refs": [
+      "SCAFFOLD-GEN-20260603-008",
+      "delivery_sop.json",
+      "delivery_status_rules.json",
+      "project_analysis.json"
+    ],
+    "supersedes": null,
+    "superseded_by": null,
+    "recorded_at": "2026-06-04T00:00:00Z"
+  },
+  "runner_data": {
+    "step": "review_sop",
+    "coder_used": "claude",
+    "invoked_at": "2026-06-04T00:11:44",
+    "finished_at": "2026-06-04T00:12:59",
+    "prompt_checksum": "sha256:2c183a5f7f8add6aec5b9c829df44e163eea6303b7d2f004829e45ed4a10c180",
+    "enriched_at": "2026-06-04T00:12:59",
+    "runner_version": "v2"
+  }
+}

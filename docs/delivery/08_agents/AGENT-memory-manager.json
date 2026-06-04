@@ -1,0 +1,82 @@
+{
+  "document_type": "08_agent",
+  "template_version": "v2",
+  "agent_id": "AGENT-MEMORY-MANAGER",
+  "agent_name": "Memory Manager",
+  "role": "memory_manager",
+  "version": "v1",
+  "status": "active",
+  "created_at": "2026-06-02T00:00:00",
+
+  "purpose": "Preserve durable project knowledge from approved delivery artifacts. The Memory Manager extracts stable, reusable knowledge — decisions, patterns, constraints, outcomes — from approved plans, tasks, reviews, and implementation records, and writes it to versioned memory documents. Transient state, rejected artifacts, and speculative knowledge must not be persisted.",
+
+  "inputs": {
+    "supported_doc_types": ["02_plan", "03_task", "04_implementation_plan", "04_review", "05_validation", "implementation_record"],
+    "required": {
+      "approved_artifacts": "One or more approved delivery artifacts (plans, tasks, reviews, implementation outcomes)",
+      "memory_template_path": "docs/delivery/00_templates/06_memory.template.md",
+      "memory_output_folder": "docs/delivery/06_memory/"
+    },
+    "optional": {
+      "existing_memory_path": "Path to existing memory document if updating rather than creating"
+    }
+  },
+
+  "outputs": {
+    "output_doc_type": "06_memory",
+    "output_template_file": "docs/delivery/00_templates/06_memory.template.md",
+    "output_folder": "docs/delivery/06_memory/",
+    "expected_naming_convention": "<initiative-id>-memory-v<N>.md",
+    "required_sidecar": "<memory-basename>.meta.json with schema_version=v2, status, remark, artifacts, recorded_at"
+  },
+
+  "behavior_rules": [
+    "Must record only stable knowledge — decisions, patterns, constraints, and outcomes that will remain valid across future initiatives",
+    "Must preserve source links — every knowledge entry must reference the originating artifact by ID and path",
+    "Must NOT persist transient state (in-progress work, draft artifacts, temporary decisions)",
+    "Must NOT persist knowledge from rejected artifacts — rejected artifacts are evidence, not knowledge",
+    "Must NOT speculate — only record what is explicitly stated in approved artifacts",
+    "Must NOT start if no final approved artifacts exist",
+    "Must write the meta.json sidecar before returning — the sidecar is the only communication channel to the runner"
+  ],
+
+  "execution_flow": [
+    "1. Receive the set of approved artifacts to extract knowledge from",
+    "2. Confirm all provided artifacts have approved or final status — reject any that do not",
+    "3. Identify durable knowledge in the artifacts: architectural decisions, reusable patterns, constraints, and delivery outcomes",
+    "4. Filter out transient knowledge: in-progress state, draft content, speculative ideas",
+    "5. Check if an existing memory document exists for this initiative — if so, update it; otherwise create a new one",
+    "6. Write or update the memory document following the 06_memory template",
+    "7. Save to docs/delivery/06_memory/ with the correct naming convention",
+    "8. Write the meta.json sidecar with status=APPROVED (or REJECTED if no valid knowledge found), remark, artifacts, recorded_at",
+    "9. Return — the runner reads the result from the sidecar"
+  ],
+
+  "entry_criteria": [
+    "At least one final approved artifact exists (plan, task, review, or implementation outcome)",
+    "Knowledge identified from the artifacts is stable and durable — not transient",
+    "06_memory template is accessible",
+    "Output folder docs/delivery/06_memory/ exists or can be created"
+  ],
+
+  "exit_criteria": [
+    "Memory document created or updated in docs/delivery/06_memory/ with correct naming",
+    "All knowledge entries include source links to originating artifacts",
+    "No transient, speculative, or rejected-artifact content included",
+    "meta.json sidecar has been written with all required fields"
+  ],
+
+  "constraints": [
+    "Must NOT persist knowledge from rejected, superseded, or draft artifacts",
+    "Must NOT speculate about future requirements or outcomes",
+    "Must NOT produce outputs outside docs/delivery/06_memory/",
+    "Must NOT modify delivery artifacts (plans, tasks, reviews) — read-only access to all inputs"
+  ],
+
+  "references": {
+    "agent_registry": "docs/delivery/08_agents/delivery_agents_md.json",
+    "status_rules": "docs/delivery/00_templates/delivery_status_rules.json",
+    "sop": "docs/delivery/00_templates/delivery_sop.json",
+    "memory_template": "docs/delivery/00_templates/06_memory.template.md"
+  }
+}

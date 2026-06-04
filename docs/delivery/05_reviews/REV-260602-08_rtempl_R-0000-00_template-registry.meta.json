@@ -1,0 +1,20 @@
+{
+  "schema_version": "v2",
+  "coder_result": {
+    "status": "REJECTED",
+    "remark": "Rejected: the implementation-plan template uses a task-path placeholder that is inconsistent with the shared traceability contract, and the registered validation template conflates lifecycle status with validation decision values.",
+    "artifacts": {
+      "REVIEW_FILE": "docs/delivery/05_reviews/REV-260602-08_rtempl_R-0000-00_template-registry.md"
+    },
+    "recorded_at": "2026-06-02T04:18:55Z"
+  },
+  "runner_data": {
+    "step": "review_templates",
+    "coder_used": "codex",
+    "invoked_at": "2026-06-02T04:18:19",
+    "finished_at": "2026-06-02T04:19:49",
+    "prompt_checksum": "sha256:a9196c94e3c2ed21f9f561c50fd0e024a7d12c3d7950b32f98b4de1bd78e159e",
+    "enriched_at": "2026-06-02T04:19:49",
+    "runner_version": "v2"
+  }
+}

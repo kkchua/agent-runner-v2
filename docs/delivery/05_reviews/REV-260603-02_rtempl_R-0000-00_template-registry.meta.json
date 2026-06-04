@@ -1,0 +1,93 @@
+{
+  "schema_version": "v2",
+  "coder_result": {
+    "status": "Final",
+    "decision": false,
+    "remark": "Template registry and delivery templates have critical structural misalignments with SOP: registry omits validation phase; status field values in Review/Validation/Task templates don't match SOP state machine; artifact ID formats don't follow naming discipline; folder paths inconsistent. Required to fix 5 CRITICAL and 3 HIGH severity issues before approval.",
+    "artifacts": {
+      "review_document": "/workspace/projects/agent-runner-v2/docs/delivery/05_reviews/REV-260603-02_rtempl_R-0000-00_template-registry.md"
+    },
+    "findings": [
+      {
+        "severity": "Critical",
+        "issue": "Template Registry omits validation phase",
+        "location": "template_registry.md, flow diagram",
+        "impact": "Registry lists only 7 artifacts (missing 05_validation). Flow diagram shows incorrect phase sequence. Validation phase (mandatory per SOP) is completely absent from template index and workflow flow. This prevents proper artifact generation and runner state machine enforcement."
+      },
+      {
+        "severity": "Critical",
+        "issue": "Task Graph template Doc Type mismatch",
+        "location": "02b_task_graph.template.md line 7",
+        "impact": "Lists 'Doc Type: 02_plan_artifact' but per SOP naming discipline should be '02b_task_graph'. Will cause sidecar validation failures and artifact path/ID mismatches."
+      },
+      {
+        "severity": "Critical",
+        "issue": "Validation template ID format incorrect",
+        "location": "05_validation.template.md line 10",
+        "impact": "Uses 'VALIDATION-{{YYYYMMDD}}-{{NN}}' but SOP specifies 'VAL-{{YYYYMMDD}}-{{NN}}'. Non-conforming IDs will fail runner validation."
+      },
+      {
+        "severity": "Critical",
+        "issue": "Review template status values misaligned with SOP state machine",
+        "location": "04_review.template.md line 14",
+        "impact": "Lists status as 'in_progress | approved | rejected' but SOP specifies 'Draft → Final' lifecycle. Status field should never contain decision values (APPROVED/REJECTED); those belong in decision field. Runner will reject non-conforming status values."
+      },
+      {
+        "severity": "Critical",
+        "issue": "Validation template status values non-standard",
+        "location": "05_validation.template.md line 24",
+        "impact": "Lists status as 'VALIDATION_IN_PROGRESS / VALIDATED / FAILED / Superseded' but SOP requires standard lifecycle 'Draft → Final' with decision field for APPROVED/REJECTED. Non-conforming values prevent runner state machine enforcement."
+      },
+      {
+        "severity": "High",
+        "issue": "Task template status options include non-existent states",
+        "location": "03_task.template.md line 12",
+        "impact": "Lists 'pending | in_progress | in_review | approved | rejected | completed' but SOP specifies 'Pending → In Progress → Implemented → Approved'. Incorrect states will cause sidecar validation failures."
+      },
+      {
+        "severity": "High",
+        "issue": "Implementation Plan folder naming inconsistent",
+        "location": "04_implementation_plan.template.md, template_registry.md, DELIVERY_STATUS_RULES_v1.md",
+        "impact": "Template references '04_implementation_plans/' (plural) in some places but SOP specifies '04_implementation/' (singular). Inconsistent naming causes artifact path mismatches and prevents runner from locating sidecars."
+      },
+      {
+        "severity": "High",
+        "issue": "Review template missing documentation of review scope",
+        "location": "04_review.template.md line 10",
+        "impact": "Related Doc Type options incomplete; doesn't clarify that reviews can cover any artifact type. Missing guidance on what artifacts get reviewed in delivery workflow."
+      },
+      {
+        "severity": "Medium",
+        "issue": "Implementation Plan metadata uses wrong ID type",
+        "location": "04_implementation_plan.template.md line 9",
+        "impact": "Lists 'Plan ID' for implementation plan artifact; should be 'IMPL-' prefix per SOP. Misleading metadata."
+      }
+    ],
+    "evidence": [
+      {
+        "type": "artifact_review",
+        "path": "/workspace/projects/agent-runner-v2/docs/delivery/00_templates/template_registry.md",
+        "notes": "Registry lists 7 artifacts; missing 05_validation. Flow diagram incomplete."
+      },
+      {
+        "type": "spec_reference",
+        "path": "/workspace/projects/agent-runner-v2/docs/delivery/00_templates/DELIVERY_STATUS_RULES_v1.md",
+        "notes": "Section 'Naming and Folder Discipline' specifies VAL-YYYYMMDD-NN format for validation, IMPL-YYYYMMDD-NN for implementation plan, MEMORY-YYYYMMDD-NN for memory. Templates use non-conforming formats."
+      },
+      {
+        "type": "spec_reference",
+        "path": "/workspace/projects/agent-runner-v2/docs/delivery/00_templates/DELIVERY_STATUS_RULES_v1.md",
+        "notes": "Section 'Artifact Lifecycle Rules' specifies allowed state transitions. Review: Draft → Final. Validation: Draft → Final. Task: Pending → In Progress → Implemented → Approved. Templates use non-conforming status values."
+      },
+      {
+        "type": "spec_reference",
+        "path": "/workspace/projects/agent-runner-v2/docs/delivery/00_templates/WORKFLOW_SOP_v1.md",
+        "notes": "Section 'Folder Structure' specifies 04_implementation/ (singular). Templates and registry reference 04_implementation_plans/ (plural)."
+      }
+    ],
+    "upstream_refs": [
+      "N/A (SOP and template governance artifacts)"
+    ],
+    "recorded_at": "2026-06-03T00:00:00Z"
+  }
+}

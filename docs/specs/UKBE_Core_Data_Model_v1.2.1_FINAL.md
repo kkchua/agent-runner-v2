@@ -1,0 +1,1 @@
+../../../ukbe/docs/specs/UKBE_Core_Data_Model_v1.2.1_FINAL.md

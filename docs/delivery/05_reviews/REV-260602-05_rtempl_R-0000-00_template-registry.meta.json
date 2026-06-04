@@ -1,0 +1,20 @@
+{
+  "schema_version": "v2",
+  "coder_result": {
+    "status": "REJECTED",
+    "remark": "Rejected: registry implementation-record ordering and validation scope, incomplete upstream source-path and version traceability, inconsistent review related-document placeholders, and duplicate task-graph sample IDs require correction.",
+    "artifacts": {
+      "REVIEW_FILE": "docs/delivery/05_reviews/REV-260602-05_rtempl_R-0000-00_template-registry.md"
+    },
+    "recorded_at": "2026-06-02T03:24:14Z"
+  },
+  "runner_data": {
+    "step": "review_templates",
+    "coder_used": "codex",
+    "invoked_at": "2026-06-02T03:23:24",
+    "finished_at": "2026-06-02T03:25:00",
+    "prompt_checksum": "sha256:65a55d07452d3518fa8addb58bf3a6b095dd8d7f4a828ec5e97f288c10bacb7a",
+    "enriched_at": "2026-06-02T03:25:00",
+    "runner_version": "v2"
+  }
+}

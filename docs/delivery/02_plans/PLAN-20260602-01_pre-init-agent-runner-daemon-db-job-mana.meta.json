@@ -1,0 +1,11 @@
+{
+  "schema_version": "v2",
+  "coder_result": {
+    "status": "APPROVED",
+    "remark": "Plan successfully generated from approved initiative; includes 12 tasks across 7 implementation slices in 4 phases; all scope items mapped; excluded items specified",
+    "artifacts": {
+      "PLAN_FILE": "docs/delivery/02_plans/PLAN-20260602-01_pre-init-agent-runner-daemon-db-job-mana.md"
+    },
+    "recorded_at": "2026-06-02T00:00:00Z"
+  }
+}

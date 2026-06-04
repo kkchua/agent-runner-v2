@@ -1,0 +1,70 @@
+# Project Analysis
+
+## Domain
+LLM workflow orchestration engine — a Python-based CLI tool that manages multi-step, multi-coder delivery pipelines. It orchestrates AI agents (Claude, Codex, Qwen, DeepSeek) through structured workflows with review loops, automatic retries, and human-in-the-loop approval gates. The project is a standalone extraction from the UKBE (Universal Knowledge Base Engine) platform, with an active initiative to add daemon mode with database-backed job management (PostgreSQL).
+
+## Tech Stack
+- **Language:** Python 3.11+ with type hints and dataclasses
+- **CLI Framework:** Click or argparse (CLI entry point `ukbe-run-agent`)
+- **Package:** setuptools, installable via `pip install -e .`
+- **External LLM Providers:** Claude Code CLI, OpenAI Codex CLI, Qwen Code CLI, DeepSeek API, OpenAI API, Anthropic API, Gemini API
+- **Database:** PostgreSQL (planned for daemon mode — `SELECT ... FOR UPDATE SKIP LOCKED`)
+- **Testing:** pytest, pytest-cov
+- **Logging:** Structured logging with colorised console output and JSON-lines file logging
+- **Model Aliases:** Resolved via `model_mapping.json` (deepseek-chat, deepseek-reasoner, gpt-5.4-nano, qwen-claude, qwen-gemini)
+
+## Complexity
+advanced
+
+## Recommended Workflow Scope
+- SOP (WORKFLOW_SOP_v1.md) — already exists, may need updates for daemon scope
+- Status rules (DELIVERY_STATUS_RULES_v1.md) — already exists
+- All delivery templates (initiative, plan, task graph, task, implementation plan, review, validation, memory) — already scaffolded
+- Full agent system (AGENTS.md + 6+ agent contracts) — warranted given multi-agent orchestration nature
+- Template registry — already exists
+
+## Recommended Agent Roles
+- Planner
+- Task Decomposer
+- Implementation Planner
+- Executor
+- Reviewer
+- Validator
+- Memory Manager
+- Architect (project owner)
+- Runner (automated state enforcement)
+
+## Delivery Folder Structure
+Standard `docs/delivery/` structure — already established with subfolders:
+- `00_templates/` — 9 template files + registry + SOP + status rules
+- `01_initiatives/` — draft, pre_init, and approved initiative documents
+- `02_plans/` — approved plan + task graph artifact
+- `03_tasks/` — task specifications
+- `04_implementation_plans/` — implementation strategies
+- `05_reviews/` — 15+ review artifacts from prior workflow runs
+- `06_memory/` — (not yet populated)
+
+No customization needed — the standard structure is already in use.
+
+## Project-Specific SOP Considerations
+- **meta.json sidecar is the ONLY communication channel** — no stdout JSON parsing, no fallback recovery. All SOP and agent contracts must enforce this strictly.
+- **No pre-invocation sidecar writes** — the runner does not touch markdown files before coder invocation.
+- **No markdown write-backs** — no `sync_review_metadata`, `stamp_created_metadata`, etc.
+- **Explicit exception routing** — hard failures go to `route_after_failure()` immediately.
+- **Authority precedence**: Runner logic > SOP + Status Rules > Artifact metadata > Artifact body.
+- **Backward compatibility**: Existing `agent-runner run` execution path must remain unchanged; daemon features are additive.
+- **Conservative recovery**: v1 daemon uses manual recovery after worker crash — no automatic resume of partial coder steps.
+- **Database transactions**: All state-changing operations wrapped in transactions; claiming uses SKIP LOCKED to avoid blocking.
+- **Testing**: No LLM calls in tests — use mocked providers or fixture-based workflows.
+- **Active initiative**: Daemon mode with PostgreSQL-backed job management (PLAN-20260602-01) is in progress — 12 tasks across 4 phases.
+
+## Discovered Files
+1. `QWEN.md` — Qwen Code project context (comprehensive architecture, workflow, and CLI documentation)
+2. `README.md` — Project overview and installation instructions
+3. `pyproject.toml` — Python project configuration (name, dependencies, entry points)
+4. `docs/specs/UKBE_Artifact_v1_FINAL.md` — UKBE artifact spec (defines structured output contracts)
+5. `docs/specs/UKBE_Contract_Builder_v1.1_FINAL.md` — UKBE contract builder spec (control plane layer)
+6. `docs/specs/UKBE_Core_Data_Model_v1.2.1_FINAL.md` — UKBE core data model (canonical internal structures)
+7. `docs/delivery/00_templates/WORKFLOW_SOP_v1.md` — Existing SOP (1064 lines, advanced complexity workflow)
+8. `docs/delivery/00_templates/template_registry.md` — Template registry with 9 templates and agent roles
+9. `docs/delivery/02_plans/PLAN-20260602-01_pre-init-agent-runner-daemon-db-job-mana.md` — Active delivery plan for daemon mode initiative

@@ -1,0 +1,20 @@
+{
+  "schema_version": "v2",
+  "coder_result": {
+    "status": "APPROVED",
+    "remark": "Approved: the pre-init artifact is self-contained, template-compliant, traceable to the source draft, and ready for promotion.",
+    "artifacts": {
+      "REVIEW_FILE": "docs/delivery/05_reviews/REV-260602-11_rpre_I-0602-01_pre-init-agent-runner-daemon-db-job-mana.md"
+    },
+    "recorded_at": "2026-06-02T00:00:00Z"
+  },
+  "runner_data": {
+    "step": "review_pre_init",
+    "coder_used": "codex",
+    "invoked_at": "2026-06-02T13:13:24",
+    "finished_at": "2026-06-02T13:14:27",
+    "prompt_checksum": "sha256:b2e53cb4067026d5df8b60e78fdb26ac9316b955a26b7eb61a4ee459d087e504",
+    "enriched_at": "2026-06-02T13:14:27",
+    "runner_version": "v2"
+  }
+}

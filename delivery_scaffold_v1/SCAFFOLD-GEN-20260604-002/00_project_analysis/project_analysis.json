@@ -1,0 +1,68 @@
+# Project Analysis
+
+## Domain
+LLM workflow orchestration engine — a Python CLI tool and library that manages multi-step, multi-coder delivery pipelines. It orchestrates AI agents (Claude, Codex, Qwen, and aliased models like DeepSeek) through structured workflows with review loops, automatic retries, and human-in-the-loop approval gates. The project is a standalone extraction from the UKBE (Universal Knowledge Base Engine) initiative.
+
+## Tech Stack
+- **Language**: Python 3.11+
+- **Packaging**: setuptools, pyproject.toml, pip installable package
+- **CLI Entry Point**: `ukbe-run-agent` command
+- **External Dependencies**: Claude CLI (Anthropic), Codex CLI (OpenAI), Qwen CLI (Alibaba)
+- **APIs**: OpenAI API, Anthropic API, DeepSeek API, Gemini API
+- **Testing**: pytest >= 8.2.0, pytest-cov >= 5.0.0
+- **Data Format**: JSON schema validation, markdown artifacts with meta.json sidecars
+- **Logging**: Structured logging with colorised console + JSON-lines file logging
+- **Architecture**: Dataclasses for structured data, explicit exception types, state-machine-driven workflow execution
+
+## Complexity
+advanced
+
+## Recommended Workflow Scope
+- SOP (WORKFLOW_SOP_v1.md) — already exists and is mature
+- Status rules (DELIVERY_STATUS_RULES_v1.md) — already exists
+- All 7 delivery templates (initiative, plan, task graph, task, implementation plan, review, memory) — already exist in docs/delivery/00_templates/
+- Template registry — already exists
+- Full agent system (AGENTS.md + 6 agent contracts) — recommended; SOP already defines 9 roles (Architect, Planner, Task Decomposer, Implementation Planner, Executor, Reviewer, Validator, Memory Manager, Runner)
+- Memory template — recommended for context preservation across delivery cycles
+- Validation gate (validate_delivery_docs) — runner action for deterministic structural validation
+
+## Recommended Agent Roles
+- Planner — delivery plan creation from approved init document
+- Task Decomposer — dependency-aware task graph generation
+- Implementation Planner — scoped implementation plans with tests and rollback
+- Executor — code implementation within approved scope
+- Reviewer — independent review of plans, graphs, implementations
+- Validator — final validation of behavior and contract compliance
+- Memory Manager — durable context, snapshots, supersession links
+- Architect — workflow policy, scope, approval gates (project owner role)
+- Runner — state enforcement, budget, routing, sidecar validation (automated)
+
+## Delivery Folder Structure
+Standard docs/delivery/ structure — already established and actively used in this project. No customization needed. Current structure includes: 00_templates/, 01_initiatives/, 02_plans/, 03_tasks/, 04_implementation_plans/, 05_reviews/. Missing folders to scaffold: 06_memory/, 07_master_prompts/ (deprecated per SOP), 08_agents/.
+
+## Project-Specific SOP Considerations
+- **meta.json sidecar is the ONLY communication channel** — no stdout JSON parsing, no fallback recovery, no markdown write-backs
+- **No pre-invocation sidecar writes** — runner does not touch markdown files before coder invocation
+- **Explicit exception routing** — hard failures go to route_after_failure() immediately
+- **Document-driven execution** — workflow is driven by artifact state and runner-enforced transitions, not prompt-driven ad-hoc decisions
+- **Authority precedence**: Runner Logic > SOP > Status Rules > Artifact Metadata > Artifact Body
+- **No phase skipping** — each state must be reached in order; runner rejects attempts to skip phases
+- **Supersession required for changes** — once an artifact is approved, changes require new artifact + explicit supersession links + Architect re-approval
+- **Cross-project scaffolding** — delivery_scaffold_v1 supports --target-project-root to scaffold into any repository
+- **Agent master prompts deprecated** — workflow step configs in template_groups.py serve as agent invocation contracts
+- **Testing gap** — QWEN.md states "No test files currently exist" but git history shows 673 tests were added; tests/ directory exists and should be verified
+- **Daemon initiative in progress** — existing delivery docs reference an "agent-runner-daemon-db-job-management" initiative, indicating ongoing work to add database-backed job management
+
+## Discovered Files
+1. QWEN.md — Qwen Code project context (comprehensive architecture and workflow documentation)
+2. README.md — project overview and CLI usage
+3. pyproject.toml — Python project config (name, version, dependencies, entry points)
+4. docs/specs/UKBE_Artifact_v1_FINAL.md — defines structured system-understanding artifact spec
+5. docs/specs/UKBE_Contract_Builder_v1.1_FINAL.md — defines how artifacts are planned and scoped
+6. docs/specs/UKBE_Core_Data_Model_v1.2.1_FINAL.md — canonical internal data structures
+7. docs/delivery/00_templates/ — 11 template files (initiative, plan, task graph, task, implementation plan, review, memory, validation, SOP, status rules, registry)
+8. docs/delivery/01_initiatives/ — existing initiative documents (PRE_INIT, INIT, pre_init)
+9. docs/delivery/02_plans/ — existing plan and task graph artifacts
+10. docs/delivery/03_tasks/ — existing task specification
+11. docs/delivery/04_implementation_plans/ — existing implementation plan
+12. docs/delivery/05_reviews/ — 15 existing review artifacts

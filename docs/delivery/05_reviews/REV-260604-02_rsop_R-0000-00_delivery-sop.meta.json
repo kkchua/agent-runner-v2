@@ -1,0 +1,104 @@
+{
+  "schema_version": "v2",
+  "coder_result": {
+    "status": "REJECTED",
+    "decision": false,
+    "remark": "SOP and Status Rules contain critical internal contradictions and misalignments. Status Rules artifact lifecycle definitions conflict with approval gates; SOP state machine is incomplete (missing Reviewed states); meta.json schemas differ; reviewer role is ambiguous. Requires resolution before binding approval.",
+    "artifacts": {
+      "review_file": "/workspace/projects/agent-runner-v2/docs/delivery/05_reviews/REV-260604-02_rsop_R-0000-00_delivery-sop.md"
+    },
+    "findings": [
+      {
+        "severity": "Critical",
+        "issue": "Status Rules internal contradiction: Plan artifact lifecycle states 'Draft → Reviewed → Approved → Completed' but Approval Gates section shows 'Plan Draft → Approved' (skips Reviewed state)",
+        "location": "delivery_status_rules.json: Artifact Lifecycle Rules (Plan) vs. Approval Gates (section 2)",
+        "impact": "Executor will not know whether Plan artifacts require intermediate Reviewed state or transition directly to Approved. This will cause state machine failures and approval routing bugs."
+      },
+      {
+        "severity": "Critical",
+        "issue": "Status Rules internal contradiction: Task Graph artifact lifecycle states 'Draft → Reviewed → Approved' but Approval Gates section shows 'Task Graph Draft → Approved' (skips Reviewed state)",
+        "location": "delivery_status_rules.json: Artifact Lifecycle Rules (Task Graph) vs. Approval Gates (section 3)",
+        "impact": "Same as Plan: executor will not know correct state transition path, causing implementation failures."
+      },
+      {
+        "severity": "Major",
+        "issue": "SOP state machine missing PLAN_REVIEWED state. State Definitions table includes PLAN_DRAFT and PLAN_APPROVED but no PLAN_REVIEWED intermediate state",
+        "location": "delivery_sop.json: Workflow State Machine, State Definitions table (line ~20-50 in content)",
+        "impact": "SOP does not align with Status Rules artifact lifecycle definitions. Implementation will reference different state models, causing confusion and bugs."
+      },
+      {
+        "severity": "Major",
+        "issue": "SOP state machine missing TASK_GRAPH_REVIEWED state. State Definitions table includes TASK_GRAPH_DRAFT and TASK_GRAPH_APPROVED but no TASK_GRAPH_REVIEWED intermediate state",
+        "location": "delivery_sop.json: Workflow State Machine, State Definitions table",
+        "impact": "SOP does not align with Status Rules for Task Graph lifecycle."
+      },
+      {
+        "severity": "Major",
+        "issue": "Meta.json sidecar schema mismatch between documents. SOP defines 8 fields (status, decision, remark, artifacts, findings, evidence, upstream_refs, recorded_at). Status Rules defines 10 fields (adds supersedes, superseded_by).",
+        "location": "delivery_sop.json: Communication Protocol section vs. delivery_status_rules.json: Sidecar Rule section",
+        "impact": "SOP schema is incomplete; missing critical supersession tracking fields. Artifacts will lack immutable versioning links, breaking audit trail and supersession enforcement."
+      },
+      {
+        "severity": "Major",
+        "issue": "Reviewer role ambiguity. SOP Phase 2 states 'Architect reviews; approves or rejects'. Status Rules Approval Gate 2 states 'Reviewer assessment + Architect approval'. SOP does not clarify whether plan/task graph reviews are inline assessments or separate Review artifacts.",
+        "location": "delivery_sop.json: Phase 2 (Planning) Approval Gate vs. delivery_status_rules.json: Approval Gates section 2",
+        "impact": "Unclear whether independent Reviewer must assess Plans/Task Graphs before Architect approval. This ambiguity will cause approval workflow interpretation errors and scope boundaries violations."
+      },
+      {
+        "severity": "Minor",
+        "issue": "File reference error. SOP Authority Precedence cites 'DELIVERY_STATUS_RULES_v1.md' (markdown format) but actual file is 'delivery_status_rules.json' (JSON schema).",
+        "location": "delivery_sop.json: Authority Precedence section, line ~14",
+        "impact": "Users following SOP will look for .md file and not find it. Dead reference; reduces clarity and findability of binding documents."
+      }
+    ],
+    "evidence": [
+      {
+        "type": "document_excerpt",
+        "path": "delivery_status_rules.json",
+        "excerpt": "Plan: **Allowed States:** Draft → Reviewed → Approved → Completed",
+        "notes": "Status Rules Artifact Lifecycle Rules section shows Reviewed as intermediate state"
+      },
+      {
+        "type": "document_excerpt",
+        "path": "delivery_status_rules.json",
+        "excerpt": "2. **Plan Draft → Approved**",
+        "notes": "Approval Gates section shows direct Plan Draft to Approved transition (no Reviewed)"
+      },
+      {
+        "type": "document_excerpt",
+        "path": "delivery_sop.json",
+        "excerpt": "| PLAN_DRAFT | Planner | Plan | Draft complete; awaiting Architect review | | PLAN_APPROVED | Architect | Plan | Architect approved; Task Decomposer may create dependency-aware graph |",
+        "notes": "SOP State Definitions table shows PLAN_DRAFT and PLAN_APPROVED with no intermediate PLAN_REVIEWED state"
+      },
+      {
+        "type": "document_excerpt",
+        "path": "delivery_sop.json",
+        "excerpt": "\"content\": \"{ ... \"schema_version\": \"v2\", ... \"coder_result\": { \"status\": \"Draft | Approved | Final | Implemented | ...\", \"decision\": true | false, \"remark\": \"...\", \"artifacts\": {...}, \"findings\": [...], \"evidence\": [...], \"upstream_refs\": [...], \"recorded_at\": \"...\" }\"",
+        "notes": "SOP Communication Protocol defines 8 sidecar fields without supersedes/superseded_by"
+      },
+      {
+        "type": "document_excerpt",
+        "path": "delivery_status_rules.json",
+        "excerpt": "\"supersedes\": null | \"OLD-ID\", \"superseded_by\": null | \"NEW-ID\"",
+        "notes": "Status Rules Sidecar Rule section includes 10 fields with explicit supersedes/superseded_by"
+      }
+    ],
+    "upstream_refs": [
+      "docs/delivery/00_templates/delivery_sop.json",
+      "docs/delivery/00_templates/delivery_status_rules.json",
+      "delivery_scaffold_v1/SCAFFOLD-GEN-20260603-008/00_project_analysis/project_analysis.json"
+    ],
+    "supersedes": null,
+    "superseded_by": null,
+    "recorded_at": "2026-06-04T00:00:00Z"
+  },
+  "runner_data": {
+    "step": "review_sop",
+    "coder_used": "claude",
+    "invoked_at": "2026-06-04T00:21:09",
+    "finished_at": "2026-06-04T00:22:49",
+    "prompt_checksum": "sha256:809ce12ccc1fc2e042c3e3ced512e114fd8f2d225bd772deb1f74c262cf0e051",
+    "enriched_at": "2026-06-04T00:22:49",
+    "runner_version": "v2"
+  }
+}

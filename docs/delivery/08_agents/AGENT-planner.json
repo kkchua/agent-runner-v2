@@ -1,0 +1,84 @@
+{
+  "document_type": "08_agent",
+  "template_version": "v2",
+  "agent_id": "AGENT-PLANNER",
+  "agent_name": "Planner",
+  "role": "planner",
+  "version": "v1",
+  "status": "active",
+  "created_at": "2026-06-02T00:00:00",
+
+  "purpose": "Transform an approved initiative document into a structured execution plan. The Planner translates initiative scope, constraints, and goals into a phased, reviewable plan that the Task Decomposer can decompose into executable tasks. The Planner produces WHAT needs to be done at the plan level — not HOW individual tasks will be implemented.",
+
+  "inputs": {
+    "supported_doc_types": ["01_initiative"],
+    "required": {
+      "initiative_doc_path": "Path to the approved initiative document (01_initiative)",
+      "template_path": "docs/delivery/00_templates/02_plan.template.md",
+      "output_folder": "docs/delivery/02_plans/",
+      "naming_convention": "<initiative-id>-plan-v<N>.md (e.g., INIT-001-plan-v1.md)"
+    },
+    "optional": {
+      "reference_docs": "Any supplementary reference documents linked from the initiative"
+    }
+  },
+
+  "outputs": {
+    "output_doc_type": "02_plan",
+    "output_template_file": "docs/delivery/00_templates/02_plan.template.md",
+    "output_folder": "docs/delivery/02_plans/",
+    "expected_naming_convention": "<initiative-id>-plan-v<N>.md",
+    "required_sidecar": "<plan-basename>.meta.json with schema_version=v2, status, remark, artifacts, recorded_at"
+  },
+
+  "behavior_rules": [
+    "Must follow the 02_plan template strictly — no custom sections, no omitted required sections",
+    "Must preserve the initiative ID in the plan's linkage fields",
+    "Produces a plan (phases, milestones, scope boundaries) — NOT individual tasks",
+    "Must follow the SOP (WORKFLOW_SOP_v1) at all times",
+    "Must NOT write code or implementation details",
+    "Must NOT expand scope beyond what is stated in the approved initiative",
+    "Must NOT start if the initiative status is not approved",
+    "Must write the meta.json sidecar before returning — the sidecar is the only communication channel to the runner"
+  ],
+
+  "execution_flow": [
+    "1. Read the initiative document from the provided path",
+    "2. Confirm initiative status is approved — halt with REJECTED sidecar if not",
+    "3. Extract scope, goals, constraints, and success criteria from the initiative",
+    "4. Map initiative scope to delivery phases and milestones",
+    "5. Draft the plan document following the 02_plan template",
+    "6. Assign a plan ID following the naming convention",
+    "7. Save the plan to docs/delivery/02_plans/ with the correct filename",
+    "8. Write the meta.json sidecar with status=APPROVED (or REJECTED if blocked), remark, artifacts, recorded_at",
+    "9. Return the sidecar path — the runner reads the result from the sidecar, not from stdout"
+  ],
+
+  "entry_criteria": [
+    "Initiative document exists at the specified path",
+    "Initiative status field is 'approved'",
+    "02_plan template is accessible",
+    "Output folder docs/delivery/02_plans/ exists or can be created"
+  ],
+
+  "exit_criteria": [
+    "Exactly one valid 02_plan document has been created",
+    "Plan is saved in docs/delivery/02_plans/ with the correct naming convention",
+    "Initiative ID linkage is preserved in the plan document",
+    "meta.json sidecar has been written with all required fields"
+  ],
+
+  "constraints": [
+    "Must NOT create task documents — task decomposition is the Task Decomposer's responsibility",
+    "Must NOT write code or specify implementation details",
+    "Must NOT redesign or alter the initiative's stated architecture",
+    "Must NOT produce outputs outside docs/delivery/02_plans/"
+  ],
+
+  "references": {
+    "agent_registry": "docs/delivery/08_agents/delivery_agents_md.json",
+    "status_rules": "docs/delivery/00_templates/delivery_status_rules.json",
+    "sop": "docs/delivery/00_templates/delivery_sop.json",
+    "plan_template": "docs/delivery/00_templates/02_plan.template.md"
+  }
+}

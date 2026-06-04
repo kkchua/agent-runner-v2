@@ -1,0 +1,20 @@
+{
+  "schema_version": "v2",
+  "coder_result": {
+    "status": "APPROVED",
+    "remark": "Approved: the SOP and status rules are complete, consistent, machine-readable, and aligned with the project analysis. Workflow phases, approval gates, task transitions, rejection routing, supersession behavior, and sidecar requirements are explicitly defined.",
+    "artifacts": {
+      "REVIEW_FILE": "docs/delivery/05_reviews/REV-260602-02_rsop_R-0000-00_delivery-sop.md"
+    },
+    "recorded_at": "2026-06-02T02:35:53Z"
+  },
+  "runner_data": {
+    "step": "review_sop",
+    "coder_used": "codex",
+    "invoked_at": "2026-06-02T02:35:04",
+    "finished_at": "2026-06-02T02:36:16",
+    "prompt_checksum": "sha256:ad6d7b46e52da1ef33381da13824673dd2c84fed8514d9aaebdbcc69a07fdc7f",
+    "enriched_at": "2026-06-02T02:36:16",
+    "runner_version": "v2"
+  }
+}

@@ -1,0 +1,70 @@
+# Project Analysis
+
+## Domain
+LLM workflow orchestration engine — a Python CLI tool that manages multi-step, multi-coder delivery pipelines. It orchestrates AI coding agents (Claude, Codex, Qwen, DeepSeek) through structured workflows with review loops, automatic retries, and human-in-the-loop approval gates. The project is currently being enhanced with daemon mode and PostgreSQL-backed job management for asynchronous, long-running workflow execution.
+
+## Tech Stack
+- **Language:** Python 3.11+ with type hints and dataclasses
+- **Package:** Setuptools-based, installable Python package (`agent-runner-v2`)
+- **CLI:** Entry point `ukbe-run-agent` via `project.scripts`
+- **Database:** PostgreSQL (for upcoming daemon mode — `SELECT ... FOR UPDATE SKIP LOCKED` job claiming)
+- **LLM Integrations:** Claude Code CLI, OpenAI Codex CLI, Qwen Code CLI, DeepSeek API
+- **Testing:** pytest, pytest-cov
+- **External APIs:** OpenAI API, Anthropic API, DeepSeek API
+- **Auth:** Environment-variable API keys (OPENAI_API_KEY, DEEPSEEK_API_KEY, ANTHROPIC_API_KEY)
+
+## Complexity
+advanced
+
+## Recommended Workflow Scope
+- SOP (WORKFLOW_SOP_v1.md) — already exists, fully detailed for advanced complexity
+- Status Rules (DELIVERY_STATUS_RULES_v1.md) — already exists, comprehensive lifecycle rules
+- All 7 delivery templates (initiative, plan, task graph, task, implementation plan, review, memory) — already scaffolded
+- Agent system (AGENTS.md + 6+ agent contracts) — recommended for full advanced coverage
+- Template registry — already exists
+- Full refine/replan loops for SOP, templates, and agents — recommended given existing delivery infrastructure
+
+## Recommended Agent Roles
+- Planner (delivery plan creation)
+- Task Decomposer (dependency-aware task graph generation)
+- Implementation Planner (scoped implementation plans)
+- Executor (implementation within approved scope)
+- Reviewer (independent review of plans, implementations)
+- Validator (final validation of behavior and contract compliance)
+- Memory Manager (durable context, snapshots, supersession links)
+- Architect (workflow policy, scope, approval gates — project owner role)
+- Runner (automated state enforcement, budget, routing, sidecar validation)
+
+## Delivery Folder Structure
+Standard `docs/delivery/` structure — already established and actively used. No customization needed. Current structure includes: 00_templates/, 01_initiatives/, 02_plans/, 03_tasks/, 04_implementation_plans/, 05_reviews/, 06_memory/, 08_agents/ (partially scaffolded). Note: 07_master_prompts/ is explicitly deprecated and should not be created.
+
+## Project-Specific SOP Considerations
+- **meta.json sidecar is the ONLY communication channel** — no stdout JSON parsing, no markdown write-backs, no pre-invocation sidecar writes
+- **Agent master prompts are deprecated** — workflow step configurations in `template_groups.py` serve as agent invocation contracts; do not create 07_master_prompts/
+- **Daemon mode enhancement in progress** — PostgreSQL-backed job management with submit/status/worker/approve/reject/retry/cancel CLI commands; conservative v1 resume strategy (no automatic crash recovery)
+- **Cross-project scaffolding supported** — `--target-project-root` allows scaffolding into any repository
+- **Strict authority precedence** — Runner logic > SOP + Status Rules > Artifact metadata > Artifact body content
+- **No phase skipping, no overwriting approved artifacts, no scope drift** — enforced by runner state machine
+- **Budget and timeout enforcement** — runner checks before every agent invocation
+- **Existing delivery docs are partially scaffolded** — templates, SOP, status rules, registry, and one active initiative (daemon mode) with approved plan and task graph already exist; SOP generation should respect and update existing docs rather than regenerate from scratch
+- **Backward compatibility required** — existing direct CLI execution path must be preserved alongside new daemon mode
+- **Testing without LLM calls** — tests must use mocked providers or fixture-based workflows
+
+## Discovered Files
+- QWEN.md — Qwen Code project context (comprehensive architecture and workflow documentation)
+- README.md — Project overview and CLI usage
+- pyproject.toml — Python package configuration (Python 3.11+, setuptools, pytest)
+- docs/specs/UKBE_Artifact_v1_FINAL.md — UKBE artifact specification (structured system-understanding artifacts)
+- docs/specs/UKBE_Contract_Builder_v1.1_FINAL.md — UKBE contract builder specification (artifact contract planning)
+- docs/specs/UKBE_Core_Data_Model_v1.2.1_FINAL.md — UKBE core data model specification (canonical data structures)
+- docs/delivery/00_templates/WORKFLOW_SOP_v1.md — Active workflow SOP (advanced complexity)
+- docs/delivery/00_templates/DELIVERY_STATUS_RULES_v1.md — Active status rules (artifact lifecycle)
+- docs/delivery/00_templates/template_registry.md — Template registry (7 templates mapped)
+- docs/delivery/00_templates/01_initiative.template.md through 06_memory.template.md — All 7 delivery templates
+- docs/delivery/01_initiatives/INIT-20260602-01 — Active initiative (daemon mode enhancement)
+- docs/delivery/02_plans/PLAN-20260602-01 — Approved plan for daemon mode initiative
+- docs/delivery/02_plans/artifacts/TASK-GRAPH-20260602-PLAN-20260602-01.md — Approved task graph
+- docs/delivery/03_tasks/TASK-20260602-01 — Task artifact (DB schema migrations)
+- docs/delivery/04_implementation_plans/IMPL-20260602-01 — Implementation plan
+- docs/delivery/05_reviews/ — 15+ review artifacts from active workflow execution
+- docs/delivery/01_initiatives/draft/ and pre_init/ — Draft and pre-init documents

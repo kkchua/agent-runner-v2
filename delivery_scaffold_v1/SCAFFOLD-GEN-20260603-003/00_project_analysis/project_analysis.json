@@ -1,0 +1,101 @@
+# Project Analysis
+
+## Domain
+LLM workflow orchestration engine and CLI tool. The project is a Python package (`agent-runner-v2`) that manages multi-step, multi-coder delivery pipelines, running AI agents (Claude, Codex, Qwen, and aliased models like DeepSeek) through structured workflows with review loops, automatic retries, and human-in-the-loop approval gates. It was extracted from the UKBE (Universal Knowledge Base Engine) project as a standalone installable package.
+
+## Tech Stack
+- **Language**: Python 3.11+
+- **Package Management**: setuptools, pip (pyproject.toml based)
+- **CLI**: Custom entry point `ukbe-run-agent` via `project.scripts`
+- **External CLI Dependencies**: Claude Code (`claude`), OpenAI Codex CLI (`codex`), Qwen Code CLI (`qwen`)
+- **APIs**: OpenAI API, DeepSeek API, Anthropic API (via environment variables)
+- **Testing**: pytest, pytest-cov
+- **Data Formats**: JSON (sidecars, schemas, config), Markdown (artifacts, prompts, templates)
+- **Logging**: Structured logging with colorised console and JSON-lines file output
+
+## Complexity
+advanced
+
+## Recommended Workflow Scope
+- SOP (WORKFLOW_SOP_v1.md)
+- Status rules (DELIVERY_STATUS_RULES_v1.md)
+- All 7 delivery templates (initiative, plan, task graph, task, implementation plan, review, memory)
+- Template registry
+- Full agent system (AGENTS.md + 6 agent contracts: planner, task decomposer, implementation planner, executor, reviewer, memory manager)
+- Refine/replan loops for all generation steps
+- Delivery docs validation gate
+
+## Recommended Agent Roles
+- Planner
+- Task Decomposer
+- Implementation Planner
+- Executor
+- Reviewer
+- Memory Manager
+
+## Delivery Folder Structure
+Standard `docs/delivery/` structure is appropriate. The project already has an existing delivery documentation system under `docs/delivery/` with all standard folders (00_templates, 01_initiatives, 02_plans, 03_tasks, 04_implementation_plans, 05_reviews, 08_agents). The scaffold should regenerate and update these to match current project state.
+
+```
+docs/delivery/
+  00_templates/       SOP, status rules, templates, template registry
+  01_initiatives/     initiative artifacts
+  02_plans/           plans and task graphs
+  03_tasks/           task artifacts
+  04_implementation/  implementation plans and implementation records
+  05_reviews/         review and validation artifacts
+  06_memory/          durable memory and snapshots
+  08_agents/          AGENTS.md and role-boundary agent contracts
+```
+
+## Project-Specific SOP Considerations
+- **meta.json sidecar is the ONLY communication channel** — no stdout JSON parsing, no fallback recovery
+- **No pre-invocation sidecar writes** — runner must not touch markdown files before coder invocation
+- **No markdown write-backs** — no sync_review_metadata, stamp_created_metadata, etc.
+- **Explicit exception routing** — hard failures go to route_after_failure() immediately
+- **No disk recovery functions** — failures are explicit, not silently recovered
+- **Deterministic outputs required** — stable IDs, normalized structure, deterministic hashes, reproducible snapshots
+- **Agent master prompts are deprecated** — do not create 07_master_prompts/; workflow step configurations in template_groups.py serve as invocation contracts
+- **Approval is runner-enforced, not artifact-defined** — an artifact may recommend a decision but cannot approve itself
+- **Parallel task execution is allowed** for independent task-graph branches with satisfied dependencies
+- **Versioning**: templates are versioned via Template Version field; breaking changes increment version
+- **Existing delivery docs are already partially scaffolded** — regeneration should update, not duplicate
+- **DB/job management initiative is in progress** — current initiative covers DB schema migrations for agent-runner-jobs, agent-runner-job-events, agent-runner-job-artifacts
+
+## Discovered Files
+### AI Coder Context Files
+1. `QWEN.md` — Qwen Code project context (comprehensive project documentation)
+
+### Project Metadata Files
+2. `README.md` — Project overview and CLI usage
+3. `pyproject.toml` — Python project config (name, version, dependencies, entry points)
+
+### Architecture & Design Docs
+4. `docs/specs/UKBE_Core_Data_Model_v1.2.1_FINAL.md` — Core data model spec (entities, enums, rules)
+5. `docs/specs/UKBE_Artifact_v1_FINAL.md` — Artifact spec (deterministic structured output)
+
+### Existing Delivery Docs
+6. `docs/delivery/00_templates/WORKFLOW_SOP_v1.md` — Existing workflow SOP
+7. `docs/delivery/00_templates/DELIVERY_STATUS_RULES_v1.md` — Status rules
+8. `docs/delivery/00_templates/template_registry.md` — Template registry
+9. `docs/delivery/00_templates/01_initiative.template.md` — Initiative template
+10. `docs/delivery/00_templates/02_plan.template.md` — Plan template
+11. `docs/delivery/00_templates/02b_task_graph.template.md` — Task graph template
+12. `docs/delivery/00_templates/03_task.template.md` — Task template
+13. `docs/delivery/00_templates/04_implementation_plan.template.md` — Implementation plan template
+14. `docs/delivery/00_templates/04_review.template.md` — Review template
+15. `docs/delivery/00_templates/05_validation.template.md` — Validation template
+16. `docs/delivery/00_templates/06_memory.template.md` — Memory template
+17. `docs/delivery/08_agents/` — Existing agent contracts (6 JSON files + AGENTS.md manifest)
+18. `docs/delivery/folder_map.json` — Validation output manifest
+19. `docs/delivery/01_initiatives/` — Existing initiative artifacts
+20. `docs/delivery/02_plans/` — Existing plan and task graph artifacts
+21. `docs/delivery/03_tasks/` — Existing task artifacts
+22. `docs/delivery/04_implementation_plans/` — Existing implementation plan artifacts
+23. `docs/delivery/05_reviews/` — Existing review artifacts (15 reviews)
+
+### Files NOT Found
+- AGENTS.md (root level), CLAUDE.md, .cursorrules, .github/copilot-instructions.md, .windsurfrules
+- package.json, Cargo.toml, go.mod, Gemfile
+- ARCHITECTURE.md, DESIGN.md
+- docs/architecture/*, docs/design/*

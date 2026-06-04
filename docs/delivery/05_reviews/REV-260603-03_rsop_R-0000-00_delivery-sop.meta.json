@@ -1,0 +1,69 @@
+{
+  "schema_version": "v2",
+  "coder_result": {
+    "status": "Final",
+    "decision": false,
+    "remark": "SOP rejected due to critical state machine inconsistency: SOP state diagram omits Reviewed state for Plan and Task Graph artifacts that Status Rules require. SOP shows PLAN_DRAFT → PLAN_APPROVED; Status Rules mandate PLAN_DRAFT → REVIEWED → APPROVED. Update SOP state machine to align with Status Rules before re-submission.",
+    "artifacts": {
+      "review_file": "/workspace/projects/agent-runner-v2/docs/delivery/05_reviews/REV-260603-03_rsop_R-0000-00_delivery-sop.md",
+      "sop_target": "/workspace/projects/agent-runner-v2/docs/delivery/00_templates/delivery_sop.json",
+      "status_rules_target": "/workspace/projects/agent-runner-v2/docs/delivery/00_templates/delivery_status_rules.json",
+      "project_analysis": "/workspace/projects/agent-runner-v2/delivery_scaffold_v1/SCAFFOLD-GEN-20260603-008/00_project_analysis/project_analysis.json"
+    },
+    "findings": [
+      {
+        "severity": "Critical",
+        "issue": "State machine inconsistency for Plan and Task Graph artifacts",
+        "location": "SOP: Workflow State Machine section (Full State Diagram); Status Rules: Artifact Lifecycle Rules (Plan and Task Graph entries)",
+        "impact": "Runner cannot enforce consistent state transitions; executor may bypass review gate; fundamental conflict between SOP and Status Rules definitions"
+      },
+      {
+        "severity": "Major",
+        "issue": "SOP state diagram does not reference Reviewed state required by Status Rules before Architect approval",
+        "location": "SOP Phase 2 (Planning) and Phase 3 (Task Graph Creation) lack explicit review gate references",
+        "impact": "Reader cannot understand that review is mandatory before Plan and Task Graph approval; state machine enforcement becomes ambiguous"
+      },
+      {
+        "severity": "Minor",
+        "issue": "Terminology inconsistency between documents",
+        "location": "SOP uses implicit phase descriptions; Status Rules use explicit 'Reviewed' state name",
+        "impact": "Minor clarity issue; does not block functionality but reduces consistency"
+      }
+    ],
+    "evidence": [
+      {
+        "type": "document_citation",
+        "path": "/workspace/projects/agent-runner-v2/docs/delivery/00_templates/delivery_sop.json",
+        "hash_sha256": null,
+        "notes": "SOP state diagram: 'PLAN_DRAFT → PLAN_APPROVED (Architect)' and 'TASK_GRAPH_DRAFT → TASK_GRAPH_APPROVED (Architect)' show direct transition without Reviewed state"
+      },
+      {
+        "type": "document_citation",
+        "path": "/workspace/projects/agent-runner-v2/docs/delivery/00_templates/delivery_status_rules.json",
+        "hash_sha256": null,
+        "notes": "Status Rules Plan lifecycle: 'Draft → Reviewed → Approved → Completed'; Status Rules Task Graph lifecycle: 'Draft → Reviewed → Approved'; Status Rules Forbidden Transitions: 'Plan Draft → Approved (without review)' listed as forbidden"
+      },
+      {
+        "type": "document_citation",
+        "path": "/workspace/projects/agent-runner-v2/docs/delivery/00_templates/delivery_status_rules.json",
+        "hash_sha256": null,
+        "notes": "Status Rules Approval Gates section, Gates 2 and 3: Both require 'Reviewer assessment + Architect approval' but SOP shows no Reviewed state in diagram"
+      },
+      {
+        "type": "analysis",
+        "path": null,
+        "hash_sha256": null,
+        "notes": "Conflict resolution: Authority Precedence rule states 'Runner logic > SOP + Status Rules > Artifact metadata > Artifact body'. SOP and Status Rules are both at same precedence level; when they conflict, which takes priority? This ambiguity must be resolved by updating SOP to match Status Rules."
+      }
+    ],
+    "upstream_refs": [
+      "SCAFFOLD-GEN-20260603-008",
+      "delivery_sop.json",
+      "delivery_status_rules.json",
+      "project_analysis.json"
+    ],
+    "supersedes": null,
+    "superseded_by": null,
+    "recorded_at": "2026-06-03T23:41:00Z"
+  }
+}

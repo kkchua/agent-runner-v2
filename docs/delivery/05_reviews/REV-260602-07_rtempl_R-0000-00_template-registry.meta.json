@@ -1,0 +1,20 @@
+{
+  "schema_version": "v2",
+  "coder_result": {
+    "status": "REJECTED",
+    "remark": "Rejected: template_registry.md omits Implementation Record and Memory from its sidecar-required artifact table even though both require sidecars under the SOP and status rules.",
+    "artifacts": {
+      "REVIEW_FILE": "docs/delivery/05_reviews/REV-260602-07_rtempl_R-0000-00_template-registry.md"
+    },
+    "recorded_at": "2026-06-02T04:16:39Z"
+  },
+  "runner_data": {
+    "step": "review_templates",
+    "coder_used": "codex",
+    "invoked_at": "2026-06-02T04:15:35",
+    "finished_at": "2026-06-02T04:17:11",
+    "prompt_checksum": "sha256:1e1a73e491c96e979046ee4212b5b42e5d227eeda10994c639eb0bb9adff2584",
+    "enriched_at": "2026-06-02T04:17:11",
+    "runner_version": "v2"
+  }
+}

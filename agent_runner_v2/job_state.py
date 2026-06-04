@@ -785,6 +785,7 @@ def recover_exhausted_planning_job(state: dict[str, Any], group_cfg: dict[str, A
 # ---------------------------------------------------------------------------
 
 def _extract_document_status(content: str) -> str | None:
+    # List format: - **Status**: draft or - Status: draft
     pattern = re.compile(
         r"^\s*[-*]\s*(?:\*\*)?Status(?::(?:\*\*)?|\*\*:\s*|:)\s*(.+?)\s*$",
         re.IGNORECASE | re.MULTILINE,
@@ -795,6 +796,14 @@ def _extract_document_status(content: str) -> str | None:
             return match.group(1).strip()
         if line.strip().lower().startswith("status:"):
             return line.strip().split(":", 1)[1].strip()
+    # Table format: | **Status** | Approved |
+    table_pattern = re.compile(
+        r'\|\s*\*?\*?Status\*?\*?\s*\|\s*(.+?)\s*\|',
+        re.IGNORECASE
+    )
+    table_match = table_pattern.search(content)
+    if table_match:
+        return table_match.group(1).strip()
     return None
 
 
@@ -900,6 +909,7 @@ def _make_task_queue_item_id(sequence: int) -> str:
 
 
 def _extract_document_metadata_value(content: str, key: str) -> str | None:
+    # List format: - **Field**: value
     pattern = re.compile(
         rf"^\s*[-*]\s*(?:\*\*)?{re.escape(key)}(?::(?:\*\*)?|\*\*:\s*|:)\s*(.+?)\s*$",
         re.IGNORECASE,
@@ -908,6 +918,14 @@ def _extract_document_metadata_value(content: str, key: str) -> str | None:
         match = pattern.match(line.strip())
         if match:
             return match.group(1).strip()
+    # Table format: | **Field** | value |
+    table_pattern = re.compile(
+        rf'\|\s*\*?\*?{re.escape(key)}\*?\*?\s*\|\s*`?([^`|]+?)`?\s*\|',
+        re.IGNORECASE
+    )
+    table_match = table_pattern.search(content)
+    if table_match:
+        return table_match.group(1).strip()
     return None
 
 

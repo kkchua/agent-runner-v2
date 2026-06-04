@@ -1,0 +1,20 @@
+{
+  "schema_version": "v2",
+  "coder_result": {
+    "status": "REJECTED",
+    "remark": "Rejected: registry workflow ordering and sidecar coverage, artifact lifecycle statuses, task dependency placeholders, required review fields, implementation-plan evidence and rollback notes, traceability metadata, and the documented template naming convention require correction.",
+    "artifacts": {
+      "REVIEW_FILE": "docs/delivery/05_reviews/REV-260602-04_rtempl_R-0000-00_template-registry.md"
+    },
+    "recorded_at": "2026-06-02T03:15:11Z"
+  },
+  "runner_data": {
+    "step": "review_templates",
+    "coder_used": "codex",
+    "invoked_at": "2026-06-02T03:13:43",
+    "finished_at": "2026-06-02T03:15:55",
+    "prompt_checksum": "sha256:e9a70aaacafb2d8b8d46e76d894829ff73d28001547479f110e8480cb4e7a051",
+    "enriched_at": "2026-06-02T03:15:55",
+    "runner_version": "v2"
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "schema_version": "v2",
+  "coder_result": {
+    "status": "REJECTED",
+    "remark": "Rejected: template identifiers, task lifecycle statuses, upstream linkage, registry folder mappings, mandatory workflow phases, task-graph Doc Type, and memory-template comment structure require correction before approval.",
+    "artifacts": {
+      "REVIEW_FILE": "docs/delivery/05_reviews/REV-260602-03_rtempl_R-0000-00_template-registry.md"
+    },
+    "recorded_at": "2026-06-02T02:40:09Z"
+  },
+  "runner_data": {
+    "step": "review_templates",
+    "coder_used": "codex",
+    "invoked_at": "2026-06-02T02:39:22",
+    "finished_at": "2026-06-02T02:40:52",
+    "prompt_checksum": "sha256:ce26d4597f7c7814a0bcb70f9f84c650407995cec976404ae92c2c5fb59c591c",
+    "enriched_at": "2026-06-02T02:40:52",
+    "runner_version": "v2"
+  }
+}

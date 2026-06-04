@@ -1,0 +1,32 @@
+{
+  "schema_version": "v2",
+  "coder_result": {
+    "status": "REJECTED",
+    "remark": "Template review completed with REJECTED status. Found 3 critical issues: (1) Doc Type mismatch in 02b_task_graph.template.md ('02_plan_artifact' vs '02b_task_graph'), (2) Validation template uses incompatible Markdown table metadata format instead of YAML frontmatter like other templates, (3) Validation ID format mismatch (VALIDATION- vs VAL- per status rules). Also found major issue: template_registry.md is incomplete (lists 7 types, missing Validation entry). Templates cannot be used until these structural issues are fixed.",
+    "artifacts": {
+      "DRAFT_INIT_FILE": null,
+      "PRE_INIT_FILE": null,
+      "INIT_FILE": null,
+      "PLAN_FILE": null,
+      "TASK_GRAPH_FILE": null,
+      "TASK_FILE": null,
+      "IMPL_FILE": null,
+      "REVIEW_FILE": "/workspace/projects/agent-runner-v2/docs/delivery/05_reviews/REV-260604-04_template-registry-review.md",
+      "VALIDATION_FILE": null,
+      "IMAGE_DESC_FOLDER": null,
+      "IMAGE_CSV_JSON": null,
+      "IMAGE_CSV_CSV": null,
+      "IMAGE_CSV_SUBMIT_RESULT": null
+    },
+    "recorded_at": "2026-06-04T00:55:29"
+  },
+  "runner_data": {
+    "step": "review_templates",
+    "coder_used": "claude",
+    "invoked_at": "2026-06-04T00:53:29",
+    "finished_at": "2026-06-04T00:55:29",
+    "prompt_checksum": "sha256:496edfb6884a2e39345fd945abad4026f30994fbcc6f6f2a24c02d5775838510",
+    "enriched_at": "2026-06-04T00:55:29",
+    "runner_version": "v2"
+  }
+}
