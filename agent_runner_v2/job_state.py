@@ -1186,6 +1186,10 @@ def get_next_step_skipping_refine_replan(
             s = (sc.get(key) or {}).get("step")
             if s:
                 skip_steps.add(s)
+    # Also skip any replan/refine steps — these are only triggered via review rejection loops
+    for step in group_cfg["steps"]:
+        if "replan" in step.lower() or "refine" in step.lower():
+            skip_steps.add(step)
     for step in group_cfg["steps"]:
         if step not in completed and step not in skip_steps:
             return step

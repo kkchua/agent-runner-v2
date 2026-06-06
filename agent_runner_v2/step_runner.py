@@ -85,7 +85,7 @@ def run_step(
 
     # Resolve meta.json path before invocation so it can be used as an early-exit signal.
     # Safe to compute here — context is pre-built and immutable; we do NOT call build_context() again.
-    meta_path = _resolve_meta_json_path(step_cfg=step_cfg, context=context, project_root=project_root)
+    meta_path = _resolve_meta_json_path(step_cfg=step_cfg, context=context, project_root=project_root, step_dir=step_dir)
 
     try:
         invocation = invoke_coder(
@@ -257,6 +257,7 @@ def _resolve_meta_json_path(
     step_cfg: dict,
     context: dict[str, str],
     project_root: Path,
+    step_dir: Path | None = None,
 ) -> Path:
     """Resolve absolute path of the meta.json to read after coder invocation.
 
@@ -264,30 +265,31 @@ def _resolve_meta_json_path(
     1. result_meta_key_from_context — context variable holds the artifact path;
        derive meta.json by replacing extension.
     2. result_meta_key — use the precomputed {KEY}_METAJSON context variable.
+    3. step_dir fallback — for producing steps where artifact doesn't exist yet.
     """
     from_ctx_key = step_cfg.get("result_meta_key_from_context")
     if from_ctx_key:
         artifact_path_str = context.get(from_ctx_key, "")
-        if not artifact_path_str:
-            raise MetaJsonMissingError(
-                f"Context variable '{from_ctx_key}' is empty — cannot locate meta.json"
-            )
-        p = PurePath(artifact_path_str)
-        meta_rel = str(p.parent / f"{p.stem}.meta.json")
-        return project_root / meta_rel
+        if artifact_path_str:
+            p = PurePath(artifact_path_str)
+            meta_rel = str(p.parent / f"{p.stem}.meta.json")
+            return project_root / meta_rel
 
     result_key = step_cfg.get("result_meta_key")
     if result_key:
         meta_rel = context.get(f"{result_key}_METAJSON", "")
-        if not meta_rel:
-            raise MetaJsonMissingError(
-                f"Context variable '{result_key}_METAJSON' is empty — cannot locate meta.json"
-            )
-        return project_root / meta_rel
+        if meta_rel:
+            return project_root / meta_rel
+
+    # Fallback: use step directory for producing steps (artifact not yet created)
+    if step_dir is not None:
+        fallback = step_dir / "meta.json"
+        print(f"[step_runner] meta.json fallback to step dir: {fallback.relative_to(project_root)}", flush=True)
+        return fallback
 
     raise MetaJsonMissingError(
-        "Step config has neither 'result_meta_key' nor 'result_meta_key_from_context' — "
-        "cannot locate meta.json"
+        f"Step config has neither 'result_meta_key' nor 'result_meta_key_from_context' "
+        f"and no step_dir fallback available — cannot locate meta.json"
     )
 
 
@@ -551,6 +553,22 @@ def build_context(
         ctx[f"{key}_CHECKSUM"] = fp["checksum"]
         ctx[f"{key}_BYTES"] = str(fp["bytes"] if fp["bytes"] is not None else "")
         ctx[f"{key}_MTIME"] = str(fp["mtime"] if fp["mtime"] is not None else "")
+
+    # For producing steps where the artifact doesn't exist yet, compute the step
+    # directory meta.json path so the prompt can tell the coder where to write it.
+    if step and step_cfg:
+        result_key = step_cfg.get("result_meta_key") or step_cfg.get("result_meta_key_from_context", "")
+        if result_key and not ctx.get(f"{result_key}_METAJSON"):
+            steps = _workflow_module().TEMPLATE_GROUPS.get(state.get("template_group", ""), {}).get("steps", [])
+            try:
+                idx = steps.index(step) + 1
+            except ValueError:
+                idx = 1
+            template_group = state.get("template_group", "")
+            job_id = state.get("job_id", "")
+            step_dir_rel = f"{template_group}/{job_id}/{idx:02d}_{step}"
+            ctx[f"{result_key}_METAJSON"] = f"{step_dir_rel}/meta.json"
+            print(f"[step_runner] Producing step {step}: {result_key}_METAJSON -> {ctx[f'{result_key}_METAJSON']}", flush=True)
 
     ctx["ARTIFACT_FINGERPRINTS"] = _format_artifact_fingerprint_block(artifacts)
 

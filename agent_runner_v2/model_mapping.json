@@ -37,6 +37,14 @@
       "coder": "qwen",
       "model": "gemini-2.0-flash",
       "auth_type": "gemini"
+    },
+    "claude": {
+      "coder": "claude",
+      "model": ""
+    },
+    "claude-sonnet-4-6": {
+      "coder": "claude",
+      "model": "claude-sonnet-4-6"
     }
   }
 }
