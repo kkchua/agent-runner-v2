@@ -559,14 +559,16 @@ def build_context(
     if step and step_cfg:
         result_key = step_cfg.get("result_meta_key") or step_cfg.get("result_meta_key_from_context", "")
         if result_key and not ctx.get(f"{result_key}_METAJSON"):
-            steps = _workflow_module().TEMPLATE_GROUPS.get(state.get("template_group", ""), {}).get("steps", [])
-            try:
-                idx = steps.index(step) + 1
-            except ValueError:
-                idx = 1
-            template_group = state.get("template_group", "")
-            job_id = state.get("job_id", "")
-            step_dir_rel = f"{template_group}/{job_id}/{idx:02d}_{step}"
+            step_dir_rel = str(state.get("backend_step_dir_rel") or "").strip()
+            if not step_dir_rel:
+                steps = _workflow_module().TEMPLATE_GROUPS.get(state.get("template_group", ""), {}).get("steps", [])
+                try:
+                    idx = steps.index(step) + 1
+                except ValueError:
+                    idx = 1
+                template_group = state.get("template_group", "")
+                job_id = state.get("job_id", "")
+                step_dir_rel = f"{template_group}/{job_id}/{idx:02d}_{step}"
             ctx[f"{result_key}_METAJSON"] = f"{step_dir_rel}/meta.json"
             print(f"[step_runner] Producing step {step}: {result_key}_METAJSON -> {ctx[f'{result_key}_METAJSON']}", flush=True)
 
@@ -631,27 +633,60 @@ def build_context(
     )
 
     # Task queue / execution binding
-    from .job_state import task_queue_current_item, task_execution_binding_current_item
+    backend_ctx = state.get("backend_context_payload") or {}
+    backend_item = backend_ctx.get("current_item") if isinstance(backend_ctx.get("current_item"), dict) else {}
 
-    current_item = task_queue_current_item(state) or task_execution_binding_current_item(state)
-    ctx["CURRENT_QUEUE_ITEM_ID"] = str((current_item or {}).get("queue_item_id") or "")
-    ctx["CURRENT_TASK_ID"] = str(
-        (current_item or {}).get("task_id")
-        or (current_item or {}).get("task_node_id")
+    current_queue_item_id = str(
+        backend_item.get("queue_item_id")
+        or backend_ctx.get("CURRENT_QUEUE_ITEM_ID")
         or ""
     )
-    ctx["CURRENT_TASK_NODE_ID"] = str(
-        (current_item or {}).get("task_node_id") or ctx["CURRENT_TASK_ID"]
+    current_task_id = str(
+        backend_item.get("task_id")
+        or backend_item.get("task_node_id")
+        or backend_ctx.get("CURRENT_TASK_ID")
+        or backend_ctx.get("CURRENT_TASK_NODE_ID")
+        or ""
     )
-    ctx["CURRENT_TASK_TITLE"] = str((current_item or {}).get("title") or "")
+    current_task_node_id = str(
+        backend_item.get("task_node_id")
+        or backend_ctx.get("CURRENT_TASK_NODE_ID")
+        or current_task_id
+    )
+    current_task_title = str(
+        backend_item.get("title")
+        or backend_ctx.get("CURRENT_TASK_TITLE")
+        or ""
+    )
 
-    # Compute deterministic task file path from node_id + title
-    task_node_id = ctx["CURRENT_TASK_NODE_ID"]
-    task_title = ctx["CURRENT_TASK_TITLE"]
-    if task_node_id:
+    if not (current_queue_item_id or current_task_id or current_task_node_id or current_task_title):
+        from .job_state import task_queue_current_item, task_execution_binding_current_item
+        current_item = task_queue_current_item(state) or task_execution_binding_current_item(state)
+        current_queue_item_id = str((current_item or {}).get("queue_item_id") or "")
+        current_task_id = str(
+            (current_item or {}).get("task_id")
+            or (current_item or {}).get("task_node_id")
+            or ""
+        )
+        current_task_node_id = str(
+            (current_item or {}).get("task_node_id") or current_task_id
+        )
+        current_task_title = str((current_item or {}).get("title") or "")
+
+    ctx["CURRENT_QUEUE_ITEM_ID"] = current_queue_item_id
+    ctx["CURRENT_TASK_ID"] = current_task_id
+    ctx["CURRENT_TASK_NODE_ID"] = current_task_node_id
+    ctx["CURRENT_TASK_TITLE"] = current_task_title
+
+    backend_task_file_path = str(backend_ctx.get("TASK_FILE_PATH") or "")
+    backend_task_file_meta = str(backend_ctx.get("TASK_FILE_METAJSON") or "")
+    if backend_task_file_path:
+        ctx["TASK_FILE_PATH"] = backend_task_file_path
+        ctx["TASK_FILE_METAJSON"] = backend_task_file_meta or str(PurePath(backend_task_file_path).parent / f"{PurePath(backend_task_file_path).stem}.meta.json")
+    elif current_task_node_id:
         task_path, meta_path = compute_paths(
-            node_id=task_node_id,
-            title=task_title,
+            node_id=current_task_node_id,
+            title=current_task_title,
             output_dir="docs/delivery/03_tasks",
         )
         ctx["TASK_FILE_PATH"] = task_path
@@ -667,33 +702,41 @@ def build_context(
         print(f"[step_runner] step={step} produces={produces}", flush=True)
 
     if "PRE_INIT_FILE" in produces and not artifacts.get("PRE_INIT_FILE"):
-        pre_init_path = _build_pre_init_file_path(state=state)
+        pre_init_path = str(backend_ctx.get("PRE_INIT_FILE_PATH") or "")
+        if not pre_init_path:
+            pre_init_path = _build_pre_init_file_path(state=state)
         if pre_init_path:
             ctx["PRE_INIT_FILE_PATH"] = pre_init_path
+            pre_init_meta = str(backend_ctx.get("PRE_INIT_FILE_METAJSON") or "")
             p = PurePath(pre_init_path)
-            ctx["PRE_INIT_FILE_METAJSON"] = str(p.parent / f"{p.stem}.meta.json")
+            ctx["PRE_INIT_FILE_METAJSON"] = pre_init_meta or str(p.parent / f"{p.stem}.meta.json")
             print(f"[step_runner] PRE_INIT PATH: {pre_init_path}", flush=True)
             print(f"[step_runner] PRE_INIT Sidecar PATH: {ctx['PRE_INIT_FILE_METAJSON']}", flush=True)
 
     if "PLAN_FILE" in produces and not artifacts.get("PLAN_FILE"):
-        plan_path = _build_plan_file_path(state=state)
+        plan_path = str(backend_ctx.get("PLAN_FILE_PATH") or "")
+        if not plan_path:
+            plan_path = _build_plan_file_path(state=state)
         if plan_path:
             ctx["PLAN_FILE_PATH"] = plan_path
+            plan_meta = str(backend_ctx.get("PLAN_FILE_METAJSON") or "")
             p = PurePath(plan_path)
-            ctx["PLAN_FILE_METAJSON"] = str(p.parent / f"{p.stem}.meta.json")
-            # Extract Plan ID from filename stem (e.g. "PLAN-20260416-02" from "PLAN-20260416-02_slug.md")
+            ctx["PLAN_FILE_METAJSON"] = plan_meta or str(p.parent / f"{p.stem}.meta.json")
             stem_match = re.match(r"(PLAN-\d{8}-\d+)", p.stem)
-            ctx["PLAN_ID"] = stem_match.group(1) if stem_match else ""
+            ctx["PLAN_ID"] = str(backend_ctx.get("PLAN_ID") or (stem_match.group(1) if stem_match else ""))
             print(f"[step_runner] PLAN ID: {ctx['PLAN_ID']}", flush=True)
             print(f"[step_runner] PLAN PATH: {plan_path}", flush=True)
             print(f"[step_runner] PLAN Sidecar PATH: {ctx['PLAN_FILE_METAJSON']}", flush=True)
 
     if "TASK_GRAPH_FILE" in produces and not artifacts.get("TASK_GRAPH_FILE"):
-        tg_path = _build_task_graph_file_path(state=state)
+        tg_path = str(backend_ctx.get("TASK_GRAPH_FILE_PATH") or "")
+        if not tg_path:
+            tg_path = _build_task_graph_file_path(state=state)
         if tg_path:
             ctx["TASK_GRAPH_FILE_PATH"] = tg_path
+            tg_meta = str(backend_ctx.get("TASK_GRAPH_FILE_METAJSON") or "")
             p = PurePath(tg_path)
-            ctx["TASK_GRAPH_FILE_METAJSON"] = str(p.parent / f"{p.stem}.meta.json")
+            ctx["TASK_GRAPH_FILE_METAJSON"] = tg_meta or str(p.parent / f"{p.stem}.meta.json")
             print(f"[step_runner] TASK_GRAPH PATH: {tg_path}", flush=True)
             print(f"[step_runner] TASK_GRAPH Sidecar PATH: {ctx['TASK_GRAPH_FILE_METAJSON']}", flush=True)
 
@@ -707,11 +750,14 @@ def build_context(
             print(f"[step_runner] TASK Sidecar PATH: {task_meta}", flush=True)
 
     if "IMPL_FILE" in produces and not artifacts.get("IMPL_FILE"):
-        impl_path = _build_impl_file_path(state=state)
+        impl_path = str(backend_ctx.get("IMPL_FILE_PATH") or "")
+        if not impl_path:
+            impl_path = _build_impl_file_path(state=state)
         if impl_path:
             ctx["IMPL_FILE_PATH"] = impl_path
+            impl_meta = str(backend_ctx.get("IMPL_FILE_METAJSON") or "")
             p = PurePath(impl_path)
-            ctx["IMPL_FILE_METAJSON"] = str(p.parent / f"{p.stem}.meta.json")
+            ctx["IMPL_FILE_METAJSON"] = impl_meta or str(p.parent / f"{p.stem}.meta.json")
             print(f"[step_runner] IMPL PATH: {impl_path}", flush=True)
             print(f"[step_runner] IMPL Sidecar PATH: {ctx['IMPL_FILE_METAJSON']}", flush=True)
 

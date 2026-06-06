@@ -49,6 +49,8 @@ from .job_state import (
     classify_pre_run_failure,
     clear_last_failure,
     create_job,
+    CURRENT_SCHEMA_VERSION,
+    default_task_execution_binding,
     default_review_state,
     default_usage_summary,
     ensure_backward_compatible_state,
@@ -979,14 +981,89 @@ def _submit_worker_result(*, client: BackendClient, run: dict[str, Any], step_ru
 
 
 def _build_execution_state(*, request: ExecutionRequest, group_cfg: dict[str, Any]) -> dict[str, Any]:
-    state = create_job(request.template_group, group_cfg, dict(request.input_artifacts))
-    state["job_id"] = request.job_id or request.workflow_run_id or state["job_id"]
-    state["current_step"] = request.step_name
-    state["job_status"] = "IN_PROGRESS"
-    state["status"] = "IN_PROGRESS"
-    state["workflow_run_id"] = request.workflow_run_id
-    state["workflow_step_run_id"] = request.workflow_step_run_id
-    state["backend_context_payload"] = dict(request.context_payload)
+    bundle = get_workflow_module() or __import__(__package__ + ".template_groups", fromlist=["ARTIFACT_KEYS"])
+    artifact_keys = list(bundle.ARTIFACT_KEYS)
+    artifacts: dict[str, Any] = {key: None for key in artifact_keys}
+    artifacts.update(dict(request.input_artifacts))
+
+    step_index = 1
+    try:
+        step_index = list(group_cfg.get("steps") or []).index(request.step_name) + 1
+    except ValueError:
+        step_index = 1
+
+    run_id = str(request.workflow_run_id or request.job_id or "backend-run")
+    backend_ctx = dict(request.context_payload)
+    task_binding = default_task_execution_binding()
+    current_item = backend_ctx.get("current_item") if isinstance(backend_ctx.get("current_item"), dict) else {}
+    task_binding["task_node_id"] = current_item.get("task_node_id") or backend_ctx.get("CURRENT_TASK_NODE_ID")
+    task_binding["task_title"] = current_item.get("title") or backend_ctx.get("CURRENT_TASK_TITLE")
+    task_binding["task_graph_id"] = backend_ctx.get("SOURCE_TASK_GRAPH_ID")
+    task_binding["task_graph_file"] = backend_ctx.get("TASK_GRAPH_FILE")
+    task_binding["plan_file"] = backend_ctx.get("PLAN_FILE")
+    task_binding["plan_id"] = backend_ctx.get("PLAN_ID")
+
+    state: dict[str, Any] = {
+        "job_id": str(request.job_id or request.workflow_run_id or "backend-job"),
+        "template_group": request.template_group,
+        "runner_version": "v2",
+        "job_init_step": group_cfg.get("job_init_step"),
+        "job_status": "IN_PROGRESS",
+        "status": "IN_PROGRESS",
+        "current_step": request.step_name,
+        "completed_steps": [],
+        "failed_steps": [],
+        "reject_counts": {},
+        "step_coders": {},
+        "step_usage": {},
+        "usage_summary": default_usage_summary(),
+        "pending_human_approval_for": None,
+        "human_approvals": {},
+        "model_approved_steps": [],
+        "review_state": default_review_state(),
+        "last_model_output": None,
+        "retry_history": [],
+        "pending_intervention_for": None,
+        "last_failure_class": None,
+        "last_failure_code": None,
+        "last_failure_reason": None,
+        "last_failure_source": None,
+        "auto_retry_count_by_step": {},
+        "human_retry_count_by_step": {},
+        "failure_history": [],
+        "seed_artifact_type": None,
+        "seed_artifact_path": None,
+        "created_at": _now_iso(),
+        "updated_at": _now_iso(),
+        "artifacts": artifacts,
+        "loop_context": {
+            "active": False, "loop_step": None, "refine_step": None,
+            "loop_target_artifact": None, "loop_source_review": None,
+            "loop_iteration": 0, "pre_refine_checksum": None,
+        },
+        "loop_history": [],
+        "replan_context": {
+            "active": False, "source_review_step": None, "replan_step": None,
+            "target_artifact": None, "source_review_file": None, "replan_attempt": 0,
+            "pre_replan_checksum": None, "trigger_reason": None, "blocking_issues": [],
+            "previous_blocking_issue_count": 0, "previous_blocking_issue_severity": 0,
+        },
+        "replan_history": [],
+        "planning_attempt_count": 0,
+        "recovered_from_invalid_result": False,
+        "recovery_code": None,
+        "recovery_source": None,
+        "task_generation_state_version": 1,
+        "task_generation_state": None,
+        "task_execution_binding": task_binding,
+        "state_schema_version": CURRENT_SCHEMA_VERSION,
+        "repair_history": [],
+        "reconciled_from_failure": None,
+        "workflow_run_id": request.workflow_run_id,
+        "workflow_step_run_id": request.workflow_step_run_id,
+        "backend_context_payload": dict(request.context_payload),
+        "backend_step_dir_rel": f"backend_runs/{run_id}/{step_index:02d}_{request.step_name}",
+    }
     state.update(request.state_overrides)
     return state
 

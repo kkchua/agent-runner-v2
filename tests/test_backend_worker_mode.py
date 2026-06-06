@@ -6,6 +6,7 @@ from unittest.mock import MagicMock
 from agent_runner_v2.execution_request import ExecutionRequest
 from agent_runner_v2.execution_result import ExecutionFailure, ExecutionResult
 from agent_runner_v2 import run_agent as run_agent_module
+from agent_runner_v2.step_runner import build_context
 from agent_runner_v2.run_agent import (
     _build_execution_state,
     _build_worker_request_payload,
@@ -105,6 +106,33 @@ def test_build_execution_state_overrides_ids_and_step():
     assert state['workflow_run_id'] == 'run-1'
     assert state['workflow_step_run_id'] == 'step-1'
     assert state['backend_context_payload'] == {'x': 1}
+    assert state['backend_step_dir_rel'] == 'backend_runs/run-1/01_pre_init'
+
+
+def test_build_context_prefers_backend_output_paths(monkeypatch):
+    state = {
+        'current_step': 'plan',
+        'artifacts': {'INIT_FILE': 'docs/init.md'},
+        'backend_context_payload': {
+            'PLAN_FILE_PATH': 'docs/custom/PLAN-20260606-01_test.md',
+            'PLAN_FILE_METAJSON': 'docs/custom/PLAN-20260606-01_test.meta.json',
+            'PLAN_ID': 'PLAN-20260606-01',
+        },
+    }
+    step_cfg = {
+        'produces': ['PLAN_FILE'],
+    }
+
+    def fail_build_plan_file_path(*, state):
+        raise AssertionError('legacy plan path builder should not be used when backend supplies path')
+
+    monkeypatch.setattr('agent_runner_v2.step_runner._build_plan_file_path', fail_build_plan_file_path)
+
+    ctx = build_context(state=state, step='plan', step_cfg=step_cfg)
+
+    assert ctx['PLAN_FILE_PATH'] == 'docs/custom/PLAN-20260606-01_test.md'
+    assert ctx['PLAN_FILE_METAJSON'] == 'docs/custom/PLAN-20260606-01_test.meta.json'
+    assert ctx['PLAN_ID'] == 'PLAN-20260606-01'
 
 
 def test_submit_worker_result_posts_artifacts_event_and_completion():
@@ -322,3 +350,61 @@ def test_worker_command_once_exits_cleanly_when_no_claim(monkeypatch):
     assert exit_code == 0
     client.register_worker.assert_called_once()
     client.claim_step.assert_called_once_with(worker_id='worker-1')
+
+
+def test_build_execution_state_does_not_call_create_job(monkeypatch):
+    called = {'create_job': False}
+
+    def _fail_create_job(*args, **kwargs):
+        called['create_job'] = True
+        raise AssertionError('create_job should not be called in backend mode')
+
+    monkeypatch.setattr(run_agent_module, 'create_job', _fail_create_job)
+
+    request = ExecutionRequest.from_dict(
+        {
+            'workflow_name': 'initiative_intake_v1',
+            'template_group': 'initiative_intake_v1',
+            'workflow_run_id': 'run-1',
+            'workflow_step_run_id': 'step-1',
+            'step_name': 'pre_init',
+            'project_root': '/tmp/project',
+        }
+    )
+    group_cfg = {
+        'job_prefix': 'PREINIT',
+        'job_init_step': 'pre_init',
+        'job_init_inputs': [],
+        'default_max_rejects': 2,
+        'steps': ['pre_init'],
+        'step_configs': {'pre_init': {'prompt_file': 'dummy.txt'}},
+    }
+
+    state = _build_execution_state(request=request, group_cfg=group_cfg)
+
+    assert called['create_job'] is False
+    assert state['job_id'] == 'run-1'
+
+
+def test_build_context_prefers_backend_task_payload(monkeypatch):
+    monkeypatch.setattr(run_agent_module, 'get_workflow_module', lambda: None)
+    state = {
+        'template_group': 'task_execution_v1',
+        'artifacts': {},
+        'loop_context': {},
+        'replan_context': {},
+        'backend_context_payload': {
+            'CURRENT_TASK_NODE_ID': 'TASK-20260606-07',
+            'CURRENT_TASK_TITLE': 'Refactor worker mode',
+            'TASK_FILE_PATH': 'docs/delivery/03_tasks/TASK-20260606-07_refactor-worker-mode.md',
+            'TASK_FILE_METAJSON': 'docs/delivery/03_tasks/TASK-20260606-07_refactor-worker-mode.meta.json',
+        },
+    }
+    step_cfg = {'produces': ['TASK_FILE']}
+
+    ctx = build_context(state, step='task', step_cfg=step_cfg)
+
+    assert ctx['CURRENT_TASK_NODE_ID'] == 'TASK-20260606-07'
+    assert ctx['CURRENT_TASK_TITLE'] == 'Refactor worker mode'
+    assert ctx['TASK_FILE_PATH'] == 'docs/delivery/03_tasks/TASK-20260606-07_refactor-worker-mode.md'
+    assert ctx['TASK_FILE_METAJSON'] == 'docs/delivery/03_tasks/TASK-20260606-07_refactor-worker-mode.meta.json'
