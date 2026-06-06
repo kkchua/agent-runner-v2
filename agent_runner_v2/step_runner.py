@@ -374,6 +374,147 @@ def _validate_artifact_files_exist(
         )
 
 
+def _backend_artifact_rules(state: dict[str, Any]) -> dict[str, Any]:
+    rules = state.get("backend_artifact_rules") or {}
+    return rules if isinstance(rules, dict) else {}
+
+
+def _resolve_backend_artifact_rule_path(*, state: dict, artifact_key: str, step: str, prefer_final: bool = False) -> str:
+    rules = _backend_artifact_rules(state)
+    rule = rules.get(artifact_key) if isinstance(rules, dict) else None
+    if not isinstance(rule, dict):
+        return ""
+    template = rule.get("final_path_template") if prefer_final else rule.get("working_path_template")
+    if not template:
+        template = rule.get("working_path_template") or rule.get("final_path_template")
+    if not template:
+        return ""
+    run_id = str(state.get("job_id") or state.get("workflow_run_id") or "backend-run")
+    steps = _workflow_module().TEMPLATE_GROUPS.get(state.get("template_group", ""), {}).get("steps", [])
+    try:
+        step_index = steps.index(step) + 1
+    except ValueError:
+        step_index = 1
+    step_dir_rel = str(state.get("backend_step_dir_rel") or "").strip()
+    step_dir_name = PurePath(step_dir_rel).name if step_dir_rel else f"{step_index:02d}_{step}"
+    return str(template).format(
+        workflow_name=str(state.get("template_group") or ""),
+        template_group=str(state.get("template_group") or ""),
+        job_id=run_id,
+        run_code=run_id,
+        step_name=step,
+        step_order=step_index,
+        step_dir=step_dir_name,
+        step_dir_rel=step_dir_rel,
+    )
+
+
+def _set_backend_artifact_rule_aliases(*, ctx: dict[str, str], state: dict, step: str, artifacts: dict[str, Any], produces: list[str]) -> bool:
+    rules = _backend_artifact_rules(state)
+    if not rules:
+        return False
+    step_dir_rel = str(state.get("backend_step_dir_rel") or "").strip()
+    for artifact_key, rule in rules.items():
+        if not isinstance(rule, dict):
+            continue
+        is_produced = artifact_key in produces
+        artifact_value = artifacts.get(artifact_key) or ""
+        if not artifact_value:
+            artifact_value = _resolve_backend_artifact_rule_path(
+                state=state,
+                artifact_key=artifact_key,
+                step=step,
+                prefer_final=not is_produced,
+            )
+        if artifact_value:
+            ctx[f"{artifact_key}_PATH"] = str(artifact_value)
+        meta_strategy = str(rule.get("meta_path_strategy") or "artifact_sidecar")
+        if meta_strategy == "step_shared_meta" and step_dir_rel:
+            meta_path = f"{step_dir_rel}/meta.json"
+        else:
+            p = PurePath(str(artifact_value))
+            meta_path = str(p.parent / f"{p.stem}.meta.json") if artifact_value else ""
+        if meta_path:
+            ctx[f"{artifact_key}_METAJSON"] = meta_path
+        if is_produced and not artifacts.get(artifact_key) and artifact_value:
+            ctx[artifact_key] = str(artifact_value)
+            ctx[f"{artifact_key}_PATH"] = str(artifact_value)
+            if meta_path:
+                ctx[f"{artifact_key}_METAJSON"] = meta_path
+    return True
+
+
+
+DELIVERY_SCAFFOLD_OUTPUT_PATHS: dict[str, str] = {
+    "PROJECT_ANALYSIS": "{step_dir_rel}/project_analysis.md",
+    "DELIVERY_SOP": "{step_dir_rel}/WORKFLOW_SOP_v1.md",
+    "DELIVERY_STATUS_RULES": "{step_dir_rel}/DELIVERY_STATUS_RULES_v1.md",
+    "DELIVERY_TEMPLATE_REGISTRY": "{step_dir_rel}/template_registry.md",
+    "DELIVERY_INITIATIVE_TEMPLATE": "{step_dir_rel}/01_initiative.template.md",
+    "DELIVERY_PLAN_TEMPLATE": "{step_dir_rel}/02_plan.template.md",
+    "DELIVERY_TASK_GRAPH_TEMPLATE": "{step_dir_rel}/02b_task_graph.template.md",
+    "DELIVERY_TASK_TEMPLATE": "{step_dir_rel}/03_task.template.md",
+    "DELIVERY_IMPL_TEMPLATE": "{step_dir_rel}/04_implementation_plan.template.md",
+    "DELIVERY_REVIEW_TEMPLATE": "{step_dir_rel}/04_review.template.md",
+    "DELIVERY_MEMORY_TEMPLATE": "{step_dir_rel}/06_memory.template.md",
+    "DELIVERY_AGENTS_MD": "docs/delivery/08_agents/AGENTS.md",
+    "DELIVERY_AGENT_PLANNER": "docs/delivery/08_agents/AGENT-planner.md",
+    "DELIVERY_AGENT_TASK_DECOMPOSER": "docs/delivery/08_agents/AGENT-task-decomposer.md",
+    "DELIVERY_AGENT_IMPL_PLANNER": "docs/delivery/08_agents/AGENT-implementation-planner.md",
+    "DELIVERY_AGENT_EXECUTOR": "docs/delivery/08_agents/AGENT-executor.md",
+    "DELIVERY_AGENT_REVIEWER": "docs/delivery/08_agents/AGENT-reviewer.md",
+    "DELIVERY_AGENT_MEMORY_MANAGER": "docs/delivery/08_agents/AGENT-memory-manager.md",
+    "DELIVERY_FOLDER_MAP": "docs/delivery/DELIVERY_FOLDER_MAP.json",
+}
+
+
+def _delivery_scaffold_output_path(*, state: dict, artifact_key: str, step: str) -> str:
+    template = DELIVERY_SCAFFOLD_OUTPUT_PATHS.get(artifact_key)
+    if not template:
+        return ""
+    run_id = str(state.get("job_id") or state.get("workflow_run_id") or "delivery-scaffold-run")
+    steps = _workflow_module().TEMPLATE_GROUPS.get(state.get("template_group", ""), {}).get("steps", [])
+    try:
+        step_index = steps.index(step) + 1
+    except ValueError:
+        step_index = 1
+    step_dir_rel = str(state.get("backend_step_dir_rel") or "").strip()
+    return template.format(run_id=run_id, step=step, step_index=step_index, step_dir_rel=step_dir_rel)
+
+
+def _set_delivery_scaffold_aliases(*, ctx: dict[str, str], state: dict, step: str, artifacts: dict[str, Any], produces: list[str]) -> None:
+    if _set_backend_artifact_rule_aliases(ctx=ctx, state=state, step=step, artifacts=artifacts, produces=produces):
+        return
+    if not str(state.get("template_group") or "").startswith("delivery_scaffold"):
+        return
+
+    step_names = list(_workflow_module().TEMPLATE_GROUPS.get(state.get("template_group", ""), {}).get("steps", []))
+    step_dir_rel = str(state.get("backend_step_dir_rel") or "").strip()
+    step_dir_meta = f"{step_dir_rel}/meta.json" if step_dir_rel else ""
+    run_id = str(state.get("job_id") or state.get("workflow_run_id") or "delivery-scaffold-run")
+    step_index = (step_names.index(step) + 1) if step in step_names else 1
+
+    for artifact_key, rel_path in DELIVERY_SCAFFOLD_OUTPUT_PATHS.items():
+        artifact_value = artifacts.get(artifact_key) or rel_path.format(
+            run_id=run_id,
+            step=step,
+            step_index=step_index,
+            step_dir_rel=step_dir_rel,
+        )
+        ctx[f"{artifact_key}_PATH"] = str(artifact_value)
+        p = PurePath(str(artifact_value))
+        default_meta = step_dir_meta if artifact_key in produces and step_dir_meta else str(p.parent / f"{p.stem}.meta.json")
+        ctx[f"{artifact_key}_METAJSON"] = default_meta
+
+    for artifact_key in produces:
+        if artifact_key in DELIVERY_SCAFFOLD_OUTPUT_PATHS and not artifacts.get(artifact_key):
+            output_path = _delivery_scaffold_output_path(state=state, artifact_key=artifact_key, step=step)
+            if output_path:
+                ctx[artifact_key] = output_path
+                ctx[f"{artifact_key}_PATH"] = output_path
+                ctx[f"{artifact_key}_METAJSON"] = step_dir_meta or str(PurePath(output_path).parent / f"{PurePath(output_path).stem}.meta.json")
+
+
 def _validate_template_conformance(
     *,
     template_ref: dict[str, Any],
@@ -696,6 +837,14 @@ def build_context(
     # When the artifact is already in artifacts (refine/replan/executor), the loop above
     # already populated METAJSON from the existing path — no override needed.
     produces = (step_cfg or {}).get("produces", [])
+
+    _set_delivery_scaffold_aliases(
+        ctx=ctx,
+        state=state,
+        step=step,
+        artifacts=artifacts,
+        produces=produces,
+    )
 
     # Print expected output paths BEFORE the agent starts (for visibility)
     if produces:

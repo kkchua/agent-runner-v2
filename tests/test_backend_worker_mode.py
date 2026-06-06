@@ -11,6 +11,7 @@ from agent_runner_v2.run_agent import (
     _build_execution_state,
     _build_worker_request_payload,
     _execute_step_command,
+    _publish_backend_artifacts,
     _submit_worker_result,
     _worker_command,
 )
@@ -67,13 +68,23 @@ def test_build_worker_request_payload_maps_backend_fields():
         'coder': 'qwen',
     }
 
-    payload = _build_worker_request_payload(run=run, step_run=step_run)
+    payload = _build_worker_request_payload(
+        run=run,
+        step_run=step_run,
+        step_execution_spec={
+            'template_group': 'task_execution_v1',
+            'execution_kind': 'coder',
+            'required_inputs': [{'artifact_key': 'TASK_FILE', 'binding_type': 'required_input'}],
+            'produces': [{'artifact_key': 'IMPL_FILE', 'binding_type': 'produces'}],
+        },
+    )
 
     assert payload['workflow_run_id'] == 'run-1'
     assert payload['workflow_step_run_id'] == 'step-1'
     assert payload['template_group'] == 'task_execution_v1'
     assert payload['coder_override'] == 'qwen'
     assert payload['input_artifacts']['TASK_FILE'] == 'docs/task.md'
+    assert payload['step_execution_spec']['execution_kind'] == 'coder'
 
 
 def test_build_execution_state_overrides_ids_and_step():
@@ -106,7 +117,42 @@ def test_build_execution_state_overrides_ids_and_step():
     assert state['workflow_run_id'] == 'run-1'
     assert state['workflow_step_run_id'] == 'step-1'
     assert state['backend_context_payload'] == {'x': 1}
-    assert state['backend_step_dir_rel'] == 'backend_runs/run-1/01_pre_init'
+    assert state['backend_step_dir_rel'] == '.ukbe-runner/jobs/initiative_intake_v1/JOB-123/01_pre_init'
+
+
+def test_build_context_uses_step_execution_spec_artifact_rules_for_produced_paths():
+    state = {
+        'template_group': 'delivery_scaffold_v1',
+        'job_id': 'JOB-123',
+        'current_step': 'generate_templates',
+        'backend_step_dir_rel': '.ukbe-runner/jobs/delivery_scaffold_v1/JOB-123/05_generate_templates',
+        'artifacts': {'PROJECT_ANALYSIS': 'docs/delivery/00_templates/project_analysis.md'},
+        'backend_artifact_rules': {
+            'PROJECT_ANALYSIS': {
+                'working_path_template': '.ukbe-runner/jobs/{template_group}/{job_id}/{step_dir}/project_analysis.md',
+                'final_path_template': 'docs/delivery/00_templates/project_analysis.md',
+                'meta_path_strategy': 'step_shared_meta',
+                'publish_mode': 'copy',
+                'publish_on_status': 'approved',
+            },
+            'DELIVERY_TEMPLATE_REGISTRY': {
+                'working_path_template': '.ukbe-runner/jobs/{template_group}/{job_id}/{step_dir}/template_registry.md',
+                'final_path_template': 'docs/delivery/00_templates/template_registry.md',
+                'meta_path_strategy': 'step_shared_meta',
+                'publish_mode': 'copy',
+                'publish_on_status': 'approved',
+            },
+        },
+    }
+    step_cfg = {
+        'produces': ['DELIVERY_TEMPLATE_REGISTRY'],
+    }
+
+    ctx = build_context(state=state, step='generate_templates', step_cfg=step_cfg)
+
+    assert ctx['PROJECT_ANALYSIS_PATH'] == 'docs/delivery/00_templates/project_analysis.md'
+    assert ctx['DELIVERY_TEMPLATE_REGISTRY'] == '.ukbe-runner/jobs/delivery_scaffold_v1/JOB-123/05_generate_templates/template_registry.md'
+    assert ctx['DELIVERY_TEMPLATE_REGISTRY_METAJSON'] == '.ukbe-runner/jobs/delivery_scaffold_v1/JOB-123/05_generate_templates/meta.json'
 
 
 def test_build_context_prefers_backend_output_paths(monkeypatch):
@@ -133,6 +179,32 @@ def test_build_context_prefers_backend_output_paths(monkeypatch):
     assert ctx['PLAN_FILE_PATH'] == 'docs/custom/PLAN-20260606-01_test.md'
     assert ctx['PLAN_FILE_METAJSON'] == 'docs/custom/PLAN-20260606-01_test.meta.json'
     assert ctx['PLAN_ID'] == 'PLAN-20260606-01'
+
+
+def test_publish_backend_artifacts_uses_artifact_rules(tmp_path):
+    source_dir = tmp_path / '.ukbe-runner/jobs/delivery_scaffold_v1/JOB-123/05_generate_templates'
+    source_dir.mkdir(parents=True)
+    source_file = source_dir / 'template_registry.md'
+    source_file.write_text('registry', encoding='utf-8')
+    state = {
+        'backend_artifact_rules': {
+            'DELIVERY_TEMPLATE_REGISTRY': {
+                'final_path_template': 'docs/delivery/00_templates/template_registry.md',
+                'publish_mode': 'copy',
+                'publish_on_status': 'approved',
+            }
+        }
+    }
+
+    published = _publish_backend_artifacts(
+        state=state,
+        step='generate_templates',
+        artifacts={'DELIVERY_TEMPLATE_REGISTRY': '.ukbe-runner/jobs/delivery_scaffold_v1/JOB-123/05_generate_templates/template_registry.md'},
+        project_root=tmp_path,
+    )
+
+    assert published['DELIVERY_TEMPLATE_REGISTRY'] == 'docs/delivery/00_templates/template_registry.md'
+    assert (tmp_path / 'docs/delivery/00_templates/template_registry.md').read_text(encoding='utf-8') == 'registry'
 
 
 def test_submit_worker_result_posts_artifacts_event_and_completion():
@@ -168,6 +240,66 @@ def test_submit_worker_result_posts_artifacts_event_and_completion():
     client.create_event.assert_called_once()
     event_call = client.create_event.call_args.kwargs
     assert event_call['payload']['event_type'] == 'WORKER_RESULT'
+
+
+def test_execute_step_command_uses_step_execution_spec_without_load_group(monkeypatch, tmp_path):
+    request_path = tmp_path / 'request.json'
+    result_path = tmp_path / 'result.json'
+    request_path.write_text(
+        json.dumps(
+            {
+                'workflow_name': 'initiative_intake_v1',
+                'template_group': 'initiative_intake_v1',
+                'workflow_run_id': 'run-1',
+                'workflow_step_run_id': 'step-1',
+                'job_id': 'JOB-123',
+                'step_name': 'pre_init',
+                'project_root': str(tmp_path),
+                'input_artifacts': {'DRAFT_INIT_FILE': 'docs/draft.md'},
+                'step_execution_spec': {
+                    'template_group': 'initiative_intake_v1',
+                    'step_name': 'pre_init',
+                    'step_order': 1,
+                    'execution_kind': 'coder',
+                    'prompt_file': 'dummy.txt',
+                    'result_meta_key': 'PRE_INIT_FILE',
+                    'required_inputs': [{'artifact_key': 'DRAFT_INIT_FILE', 'binding_type': 'required_input'}],
+                    'produces': [{'artifact_key': 'PRE_INIT_FILE', 'binding_type': 'produces'}],
+                    'coder_policy': {'default_coder': 'claude', 'allowed_coders': ['claude'], 'must_differ_from_previous_step': False},
+                    'raw_config': {'prompt_file': 'dummy.txt'},
+                },
+            }
+        ),
+        encoding='utf-8',
+    )
+
+    monkeypatch.setattr(run_agent_module, 'load_project_config', lambda workspace_root: {'default_workflow': 'default', 'workflows': {'initiative_intake_v1': {'path': '.'}}})
+    monkeypatch.setattr(run_agent_module, 'workflow_root_for', lambda workspace_root, workflow_name: workspace_root)
+    monkeypatch.setattr(run_agent_module, 'load_workflow_module', lambda workspace_root, workflow_name, config=None: object())
+    monkeypatch.setattr(run_agent_module, 'set_context', lambda **kwargs: None)
+    monkeypatch.setattr(run_agent_module, 'set_workflow_module', lambda module: None)
+    monkeypatch.setattr(run_agent_module, '_load_group', lambda group_name: (_ for _ in ()).throw(AssertionError('_load_group should not be used when step_execution_spec is provided')))
+    monkeypatch.setattr(run_agent_module, '_validate_static_reference_files', lambda *args, **kwargs: None)
+    monkeypatch.setattr(
+        run_agent_module,
+        '_execute_backend_step_request',
+        lambda **kwargs: ExecutionResult(
+            status='completed',
+            outcome='approved',
+            step_name='pre_init',
+            coder_used='claude',
+            remark='ok',
+            artifacts={'PRE_INIT_FILE': 'docs/pre_init.md'},
+            diagnostics={'workflow_run_id': 'run-1'},
+        ),
+    )
+
+    exit_code = _execute_step_command(request_path, result_path)
+
+    assert exit_code == 0
+    payload = json.loads(result_path.read_text(encoding='utf-8'))
+    assert payload['status'] == 'completed'
+    assert payload['artifacts']['PRE_INIT_FILE'] == 'docs/pre_init.md'
 
 
 def test_execute_step_command_writes_result_file(monkeypatch, tmp_path):

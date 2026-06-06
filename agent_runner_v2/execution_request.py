@@ -21,6 +21,7 @@ class ExecutionRequest:
     input_artifacts: dict[str, str] = field(default_factory=dict)
     context_payload: dict[str, Any] = field(default_factory=dict)
     state_overrides: dict[str, Any] = field(default_factory=dict)
+    step_execution_spec: dict[str, Any] = field(default_factory=dict)
 
     @classmethod
     def from_dict(cls, payload: dict[str, Any]) -> 'ExecutionRequest':
@@ -48,4 +49,5 @@ class ExecutionRequest:
             input_artifacts=dict(payload.get('input_artifacts') or payload.get('artifacts') or {}),
             context_payload=dict(payload.get('context_payload') or {}),
             state_overrides=dict(payload.get('state_overrides') or {}),
+            step_execution_spec=dict(payload.get('step_execution_spec') or {}),
         )

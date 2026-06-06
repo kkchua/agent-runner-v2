@@ -168,8 +168,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
-    workspace_root = Path(args.project_root or ".").resolve()
     if args.command == "init":
+        workspace_root = Path(args.project_root or ".").resolve()
         result = init_workspace(workspace_root, workflow_name=args.workflow or "default")
         print(json.dumps(result, indent=2, ensure_ascii=False))
         return 0
@@ -187,6 +187,7 @@ def main(argv: list[str] | None = None) -> int:
             once=args.once,
         )
 
+    workspace_root = Path(args.project_root or ".").resolve()
     config = load_project_config(workspace_root)
     workflow_name = args.workflow or str(config.get("default_workflow") or "default")
     workflow_cfg = ((config.get("workflows") or {}).get(workflow_name) or {})
@@ -824,10 +825,12 @@ def _execute_step_command(request_path: Path, result_path: Path | None = None) -
     workspace_root = Path(request.workspace_root or request.project_root).resolve()
     config = load_project_config(workspace_root)
     workflow_name = request.workflow_name or str(config.get("default_workflow") or "default")
-    workflow_cfg = ((config.get("workflows") or {}).get(workflow_name) or {})
-    workflow_path = workflow_cfg.get("path") or str(workflow_root_for(workspace_root, workflow_name).relative_to(workspace_root))
+    workflow_cfg_map = config.get("workflows") or {}
+    bundle_workflow_name = workflow_name if workflow_name in workflow_cfg_map else str(config.get("default_workflow") or "default")
+    workflow_cfg = workflow_cfg_map.get(bundle_workflow_name) or {}
+    workflow_path = workflow_cfg.get("path") or str(workflow_root_for(workspace_root, bundle_workflow_name).relative_to(workspace_root))
     workflow_bundle_root = (workspace_root / workflow_path).resolve()
-    workflow_module = load_workflow_module(workspace_root, workflow_name, config=config)
+    workflow_module = load_workflow_module(workspace_root, bundle_workflow_name, config=config)
 
     delivery_root = Path(request.target_project_root).resolve() if request.target_project_root else None
     if delivery_root is not None and request.template_group.startswith("delivery_scaffold"):
@@ -843,11 +846,18 @@ def _execute_step_command(request_path: Path, result_path: Path | None = None) -
     set_workflow_module(workflow_module)
     effective_root = delivery_root if delivery_root is not None else workspace_root
 
-    group_cfg = _load_group(request.template_group)
+    if request.step_execution_spec:
+        group_cfg, step_cfg = _build_group_cfg_from_execution_spec(
+            request.step_execution_spec,
+            request.template_group,
+            request.step_name,
+        )
+    else:
+        group_cfg = _load_group(request.template_group)
+        step_cfg = group_cfg["step_configs"].get(request.step_name)
+        if not step_cfg:
+            raise ValueError(f"Step {request.step_name!r} is not defined for template group {request.template_group!r}")
     _validate_static_reference_files(workspace_root, group_cfg, template_group=request.template_group)
-    step_cfg = group_cfg["step_configs"].get(request.step_name)
-    if not step_cfg:
-        raise ValueError(f"Step {request.step_name!r} is not defined for template group {request.template_group!r}")
 
     state = _build_execution_state(request=request, group_cfg=group_cfg)
 
@@ -877,6 +887,46 @@ def _execute_step_command(request_path: Path, result_path: Path | None = None) -
     return 0 if result.status == 'completed' else 1
 
 
+def _build_group_cfg_from_execution_spec(spec: dict[str, Any], template_group: str, step_name: str) -> tuple[dict[str, Any], dict[str, Any]]:
+    raw_config = dict(spec.get("raw_config") or {})
+    required_inputs = [item.get("artifact_key") for item in spec.get("required_inputs") or [] if item.get("artifact_key")]
+    optional_inputs = [item.get("artifact_key") for item in spec.get("optional_inputs") or [] if item.get("artifact_key")]
+    immutable_inputs = [item.get("artifact_key") for item in spec.get("immutable_inputs") or [] if item.get("artifact_key")]
+    produces = [item.get("artifact_key") for item in spec.get("produces") or [] if item.get("artifact_key")]
+    step_cfg = dict(raw_config)
+    step_cfg["prompt_file"] = spec.get("prompt_file")
+    step_cfg["action"] = spec.get("action_name") or raw_config.get("action")
+    step_cfg["edit_mode"] = spec.get("edit_mode")
+    step_cfg["result_meta_key"] = spec.get("result_meta_key")
+    step_cfg["result_meta_key_from_context"] = spec.get("result_meta_key_from_context")
+    step_cfg["template_ref"] = spec.get("template_ref")
+    step_cfg["required_inputs"] = required_inputs
+    if optional_inputs:
+        step_cfg["optional_inputs"] = optional_inputs
+    if immutable_inputs:
+        step_cfg["immutable_inputs"] = immutable_inputs
+    step_cfg["produces"] = produces
+    target_artifact = spec.get("target_artifact")
+    if target_artifact:
+        step_cfg["target_artifact"] = target_artifact
+    coder_policy = spec.get("coder_policy")
+    if coder_policy:
+        step_cfg["coder"] = {
+            "default": coder_policy.get("default_coder"),
+            "allowed": list(coder_policy.get("allowed_coders") or []),
+            "must_differ_from_previous_step": bool(coder_policy.get("must_differ_from_previous_step")),
+        }
+    group_cfg = {
+        "job_prefix": spec.get("job_prefix") or template_group,
+        "job_init_step": spec.get("job_init_step") or step_name,
+        "job_init_inputs": list(spec.get("job_init_inputs") or []),
+        "default_max_rejects": int(spec.get("default_max_rejects") or 0),
+        "steps": [step_name],
+        "step_configs": {step_name: step_cfg},
+    }
+    return group_cfg, step_cfg
+
+
 def _worker_command(*, backend_url: str, worker_id: str, host_name: str | None, poll_seconds: int, once: bool) -> int:
     client = BackendClient(backend_url)
     client.register_worker(worker_id=worker_id, host_name=host_name, capabilities={"mode": ["execute-step"]})
@@ -894,7 +944,7 @@ def _worker_command(*, backend_url: str, worker_id: str, host_name: str | None, 
             continue
 
         client.heartbeat(worker_id=worker_id, status="busy", current_step_run_id=step_run.get("id"))
-        request_payload = _build_worker_request_payload(run=run, step_run=step_run)
+        request_payload = _build_worker_request_payload(run=run, step_run=step_run, step_execution_spec=claim.get("step_execution_spec"))
         result = _invoke_execute_step_subprocess(request_payload)
         _submit_worker_result(client=client, run=run, step_run=step_run, result=result)
         client.heartbeat(worker_id=worker_id, status="idle", current_step_run_id="")
@@ -902,12 +952,13 @@ def _worker_command(*, backend_url: str, worker_id: str, host_name: str | None, 
             return 0
 
 
-def _build_worker_request_payload(*, run: dict[str, Any], step_run: dict[str, Any]) -> dict[str, Any]:
+def _build_worker_request_payload(*, run: dict[str, Any], step_run: dict[str, Any], step_execution_spec: dict[str, Any] | None = None) -> dict[str, Any]:
     workflow_name = str(run.get("workflow_name") or "")
     project_root = str(run.get("project_root") or run.get("workspace_path") or ".")
+    spec = dict(step_execution_spec or {})
     return {
         "workflow_name": workflow_name,
-        "template_group": workflow_name,
+        "template_group": spec.get("template_group") or workflow_name,
         "workflow_run_id": run.get("id"),
         "workflow_step_run_id": step_run.get("id"),
         "job_id": run.get("run_code"),
@@ -921,6 +972,7 @@ def _build_worker_request_payload(*, run: dict[str, Any], step_run: dict[str, An
         "input_artifacts": run.get("input_payload") or {},
         "context_payload": run.get("context_payload") or {},
         "state_overrides": {},
+        "step_execution_spec": spec,
     }
 
 
@@ -992,7 +1044,7 @@ def _build_execution_state(*, request: ExecutionRequest, group_cfg: dict[str, An
     except ValueError:
         step_index = 1
 
-    run_id = str(request.workflow_run_id or request.job_id or "backend-run")
+    run_id = str(request.job_id or request.workflow_run_id or "backend-run")
     backend_ctx = dict(request.context_payload)
     task_binding = default_task_execution_binding()
     current_item = backend_ctx.get("current_item") if isinstance(backend_ctx.get("current_item"), dict) else {}
@@ -1062,10 +1114,71 @@ def _build_execution_state(*, request: ExecutionRequest, group_cfg: dict[str, An
         "workflow_run_id": request.workflow_run_id,
         "workflow_step_run_id": request.workflow_step_run_id,
         "backend_context_payload": dict(request.context_payload),
-        "backend_step_dir_rel": f"backend_runs/{run_id}/{step_index:02d}_{request.step_name}",
+        "backend_artifact_rules": dict((request.step_execution_spec or {}).get("artifact_rules") or {}),
+        "backend_step_dir_rel": f".ukbe-runner/jobs/{request.template_group}/{str(request.job_id or request.workflow_run_id or 'backend-job')}/{step_index:02d}_{request.step_name}",
     }
     state.update(request.state_overrides)
     return state
+
+
+DELIVERY_SCAFFOLD_PUBLISH_PATHS: dict[str, str] = {
+    "PROJECT_ANALYSIS": "docs/delivery/00_templates/project_analysis.md",
+    "DELIVERY_SOP": "docs/delivery/00_templates/WORKFLOW_SOP_v1.md",
+    "DELIVERY_STATUS_RULES": "docs/delivery/00_templates/DELIVERY_STATUS_RULES_v1.md",
+    "DELIVERY_TEMPLATE_REGISTRY": "docs/delivery/00_templates/template_registry.md",
+    "DELIVERY_INITIATIVE_TEMPLATE": "docs/delivery/00_templates/01_initiative.template.md",
+    "DELIVERY_PLAN_TEMPLATE": "docs/delivery/00_templates/02_plan.template.md",
+    "DELIVERY_TASK_GRAPH_TEMPLATE": "docs/delivery/00_templates/02b_task_graph.template.md",
+    "DELIVERY_TASK_TEMPLATE": "docs/delivery/00_templates/03_task.template.md",
+    "DELIVERY_IMPL_TEMPLATE": "docs/delivery/00_templates/04_implementation_plan.template.md",
+    "DELIVERY_REVIEW_TEMPLATE": "docs/delivery/00_templates/04_review.template.md",
+    "DELIVERY_MEMORY_TEMPLATE": "docs/delivery/00_templates/06_memory.template.md",
+}
+
+
+def _publish_backend_artifacts(*, state: dict[str, Any], step: str, artifacts: dict[str, str], project_root: Path) -> dict[str, str]:
+    rules = state.get("backend_artifact_rules") or {}
+    if isinstance(rules, dict) and rules:
+        published = dict(artifacts)
+        for artifact_key, source_rel in artifacts.items():
+            rule = rules.get(artifact_key)
+            if not isinstance(rule, dict):
+                continue
+            final_rel = rule.get("final_path_template")
+            publish_mode = str(rule.get("publish_mode") or "none")
+            publish_on_status = str(rule.get("publish_on_status") or "approved")
+            if not final_rel or publish_mode == "none" or publish_on_status not in {"approved", "completed", "always"}:
+                continue
+            source_path = (project_root / source_rel).resolve()
+            target_path = (project_root / str(final_rel)).resolve()
+            if source_path == target_path:
+                published[artifact_key] = str(final_rel)
+                continue
+            target_path.parent.mkdir(parents=True, exist_ok=True)
+            if publish_mode == "move":
+                shutil.move(str(source_path), str(target_path))
+            else:
+                shutil.copy2(source_path, target_path)
+            published[artifact_key] = str(final_rel)
+        return published
+
+    if step not in {"project_analysis", "generate_sop", "generate_templates"}:
+        return dict(artifacts)
+
+    published = dict(artifacts)
+    for artifact_key, source_rel in artifacts.items():
+        target_rel = DELIVERY_SCAFFOLD_PUBLISH_PATHS.get(artifact_key)
+        if not target_rel:
+            continue
+        source_path = (project_root / source_rel).resolve()
+        target_path = (project_root / target_rel).resolve()
+        if source_path == target_path:
+            published[artifact_key] = target_rel
+            continue
+        target_path.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source_path, target_path)
+        published[artifact_key] = target_rel
+    return published
 
 
 def _execute_backend_step_request(
@@ -1179,13 +1292,20 @@ def _execute_backend_step_request(
             "reject_code": step_result.reject_code,
         }
 
+    published_artifacts = _publish_backend_artifacts(
+        state=state,
+        step=step,
+        artifacts=step_result.artifacts,
+        project_root=effective_root,
+    )
+
     return ExecutionResult(
         status="completed",
         outcome=step_result.status.lower(),
         step_name=step,
         coder_used=coder_used,
         remark=step_result.remark,
-        artifacts=step_result.artifacts,
+        artifacts=published_artifacts,
         meta_json_path=step_result.meta_json_path,
         review=review,
         usage=step_result.usage_data,
