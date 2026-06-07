@@ -19,7 +19,7 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
-from .exceptions import PreflightBlockedError
+from .exceptions import ArtifactMissingError, MetaJsonInvalidError, MetaJsonMissingError, PreflightBlockedError
 from .runtime_context import JOBS_ROOT, PROJECT_ROOT, get_workflow_module
 
 CURRENT_SCHEMA_VERSION = 6  # v2 bumps to 6 (adds runner_version)
@@ -120,7 +120,8 @@ def get_step_index(group_cfg: dict[str, Any], step: str) -> int:
 
 
 def make_step_dir(group_cfg: dict[str, Any], state: dict[str, Any], step: str) -> Path:
-    idx = get_step_index(group_cfg, step)
+    # Use backend runtime step sequence for working dirs when available, fall back to definition order/index.
+    idx = state.get("backend_step_sequence", state.get("backend_step_order", get_step_index(group_cfg, step)))
     ctx = state.get("loop_context", {})
     if ctx.get("active") and step in (ctx.get("refine_step"), ctx.get("loop_step")):
         suffix = f"_iter{ctx['loop_iteration']}"
@@ -1666,6 +1667,21 @@ def classify_pre_run_failure(exc: Exception) -> dict[str, str]:
         return build_failure_envelope(
             failure_class="HUMAN_RETRY_REQUIRED", failure_code=code,
             failure_reason=message, failure_source="runner",
+        )
+    if isinstance(exc, MetaJsonMissingError):
+        return build_failure_envelope(
+            failure_class="HUMAN_RETRY_REQUIRED", failure_code="META_JSON_MISSING",
+            failure_reason=message, failure_source="runner",
+        )
+    if isinstance(exc, MetaJsonInvalidError):
+        return build_failure_envelope(
+            failure_class="HUMAN_RETRY_REQUIRED", failure_code="META_JSON_INVALID",
+            failure_reason=message, failure_source="runner",
+        )
+    if isinstance(exc, ArtifactMissingError):
+        return build_failure_envelope(
+            failure_class="HUMAN_RETRY_REQUIRED", failure_code="ARTIFACT_MISSING",
+            failure_reason=message, failure_source="validator",
         )
     if isinstance(exc, json.JSONDecodeError):
         return build_failure_envelope(

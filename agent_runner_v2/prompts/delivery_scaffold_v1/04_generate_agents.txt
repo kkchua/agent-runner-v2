@@ -67,8 +67,8 @@ Must include:
 Adaptation rules:
 - Only include agents recommended in the project analysis
 - If **simple**: Planner, Reviewer only
-- If **standard**: add Task Decomposer, Implementation Planner, Executor
-- If **advanced**: add Memory Manager
+- If **standard**: include Task Decomposer, Implementation Planner, Executor, and Memory Manager
+- If **advanced**: include Memory Manager as well
 - Handoff contracts must reference the actual templates generated
 
 ### 2. AGENT-planner.md
@@ -153,8 +153,14 @@ Agent generation completion rule (MANDATORY)
 - You may return `status: "APPROVED"` only after:
   - AGENTS.md has been created at `{DELIVERY_AGENTS_MD_PATH}`
   - all individual agent contracts have been created at their exact paths
-  - all 8 files exist on disk
+  - all 8 files exist on disk, including AGENT-memory-manager.md
   - the meta.json sidecar has been written
+
+
+Required artifact rule (MANDATORY)
+- DELIVERY_AGENT_MEMORY_MANAGER is required for this workflow, including standard workflows.
+- Do NOT use placeholders such as `N/A`, `null`, or empty strings for any artifact path.
+- Every artifact listed in the final JSON and meta.json must point to a real file that exists on disk.
 
 Critical: meta.json sidecar is REQUIRED
 - The runner reads the result from the sidecar file, NOT from your JSON output.
@@ -167,12 +173,12 @@ Critical: meta.json sidecar is REQUIRED
       "remark": "Brief summary",
       "artifacts": {
         "DELIVERY_AGENTS_MD": "<exact path>",
-        "DELIVERY_AGENT_PLANNER": "<path if created>",
-        "DELIVERY_AGENT_TASK_DECOMPOSER": "<path if created>",
-        "DELIVERY_AGENT_IMPL_PLANNER": "<path if created>",
-        "DELIVERY_AGENT_EXECUTOR": "<path if created>",
-        "DELIVERY_AGENT_REVIEWER": "<path if created>",
-        "DELIVERY_AGENT_MEMORY_MANAGER": "<path if created>"
+        "DELIVERY_AGENT_PLANNER": "<exact path>",
+        "DELIVERY_AGENT_TASK_DECOMPOSER": "<exact path>",
+        "DELIVERY_AGENT_IMPL_PLANNER": "<exact path>",
+        "DELIVERY_AGENT_EXECUTOR": "<exact path>",
+        "DELIVERY_AGENT_REVIEWER": "<exact path>",
+        "DELIVERY_AGENT_MEMORY_MANAGER": "<exact path>"
       },
       "recorded_at": "2026-05-24T00:00:00"
     }
@@ -195,12 +201,12 @@ Required JSON schema:
   "remark": "<short summary of result>",
   "artifacts": {
     "DELIVERY_AGENTS_MD": "<path if created>",
-    "DELIVERY_AGENT_PLANNER": "<path if created>",
-    "DELIVERY_AGENT_TASK_DECOMPOSER": "<path if created>",
-    "DELIVERY_AGENT_IMPL_PLANNER": "<path if created>",
-    "DELIVERY_AGENT_EXECUTOR": "<path if created>",
-    "DELIVERY_AGENT_REVIEWER": "<path if created>",
-    "DELIVERY_AGENT_MEMORY_MANAGER": "<path if created>"
+    "DELIVERY_AGENT_PLANNER": "<exact path>",
+    "DELIVERY_AGENT_TASK_DECOMPOSER": "<exact path>",
+    "DELIVERY_AGENT_IMPL_PLANNER": "<exact path>",
+    "DELIVERY_AGENT_EXECUTOR": "<exact path>",
+    "DELIVERY_AGENT_REVIEWER": "<exact path>",
+    "DELIVERY_AGENT_MEMORY_MANAGER": "<exact path>"
   }
 }
 

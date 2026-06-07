@@ -59,12 +59,12 @@ Task:
 4. **Suggested Workflow Scope**: Based on complexity, recommend which delivery layers are needed:
    - Always: SOP, status rules, initiative/planning/task templates
    - Standard adds: task graph template, implementation plan template, review template
-   - Advanced adds: memory template, full agent system (AGENTS.md + agent contracts)
+   - Standard and Advanced both require the memory template and full agent system (AGENTS.md + agent contracts).
 
 5. **Suggested Agent Roles**: Which agent roles make sense for this project?
    - Always: Planner, Reviewer
    - Standard adds: Task Decomposer, Implementation Planner, Executor
-   - Advanced adds: Memory Manager
+   - Standard and Advanced both require: Memory Manager
 
 6. **Delivery Folder Customization**: Should the standard `docs/delivery/` structure be customized? (usually no — keep the standard structure)
 

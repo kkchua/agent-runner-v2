@@ -65,6 +65,12 @@ Refinement completion rule (MANDATORY)
   - cross-reference consistency is verified (AGENTS.md matches individual contracts)
   - the meta.json sidecar has been written
 
+
+Required artifact rule (MANDATORY)
+- DELIVERY_AGENT_MEMORY_MANAGER remains required for this workflow, including standard workflows.
+- Do NOT use placeholders such as `N/A`, `null`, or empty strings for any artifact path.
+- Every artifact listed in the final JSON and meta.json must point to a real file that exists on disk.
+
 Critical: meta.json sidecar is REQUIRED
 - Sidecar path: `{DELIVERY_AGENTS_MD_METAJSON}`
 - Use `write_file` tool to create the sidecar after writing the refined files.
@@ -83,12 +89,12 @@ Required JSON schema:
   "remark": "<short summary of changes made>",
   "artifacts": {
     "DELIVERY_AGENTS_MD": "<path if updated>",
-    "DELIVERY_AGENT_PLANNER": "<path if updated>",
-    "DELIVERY_AGENT_TASK_DECOMPOSER": "<path if updated>",
-    "DELIVERY_AGENT_IMPL_PLANNER": "<path if updated>",
-    "DELIVERY_AGENT_EXECUTOR": "<path if updated>",
-    "DELIVERY_AGENT_REVIEWER": "<path if updated>",
-    "DELIVERY_AGENT_MEMORY_MANAGER": "<path if updated>"
+    "DELIVERY_AGENT_PLANNER": "<exact path>",
+    "DELIVERY_AGENT_TASK_DECOMPOSER": "<exact path>",
+    "DELIVERY_AGENT_IMPL_PLANNER": "<exact path>",
+    "DELIVERY_AGENT_EXECUTOR": "<exact path>",
+    "DELIVERY_AGENT_REVIEWER": "<exact path>",
+    "DELIVERY_AGENT_MEMORY_MANAGER": "<exact path>"
   }
 }
 

@@ -251,51 +251,47 @@ def _validate_sop(project_root: Path) -> list[dict[str, Any]]:
 def _validate_status_rules(project_root: Path) -> list[dict[str, Any]]:
     """Validate DELIVERY_STATUS_RULES_v1.md structure."""
     results = []
-    # Check both 00_templates and 08_agents locations
-    for rules_path in [
-        "docs/delivery/00_templates/DELIVERY_STATUS_RULES_v1.md",
-        "docs/delivery/08_agents/DELIVERY_STATUS_RULES_v1.md",
-    ]:
-        ok, detail = _check_file_exists(project_root, rules_path)
-        if ok:
-            content = _read_file(project_root, rules_path)
-            if content is None:
-                continue
-
-            results.append({
-                "check": "status_rules_exists",
-                "path": rules_path,
-                "ok": True,
-                "detail": detail,
-            })
-
-            for section in STATUS_RULES_REQUIRED_SECTIONS:
-                has = _has_section(content, section)
-                results.append({
-                    "check": "status_rules_section",
-                    "path": rules_path,
-                    "section": section,
-                    "ok": has,
-                    "detail": f"{'found' if has else 'missing'}",
-                })
-
-            # Check forbidden transitions exist
-            has_forbidden = bool(re.search(r"forbidden|must not|invalid", content, re.IGNORECASE))
-            results.append({
-                "check": "status_rules_forbidden_transitions",
-                "path": rules_path,
-                "ok": has_forbidden,
-                "detail": "forbidden transition rules found" if has_forbidden else "no forbidden transition rules found",
-            })
-
+    rules_path = "docs/delivery/00_templates/DELIVERY_STATUS_RULES_v1.md"
+    ok, detail = _check_file_exists(project_root, rules_path)
+    if ok:
+        content = _read_file(project_root, rules_path)
+        if content is None:
             return results
 
-    # Neither location found
+        results.append({
+            "check": "status_rules_exists",
+            "path": rules_path,
+            "ok": True,
+            "detail": detail,
+        })
+
+        for section in STATUS_RULES_REQUIRED_SECTIONS:
+            has = _has_section(content, section)
+            results.append({
+                "check": "status_rules_section",
+                "path": rules_path,
+                "section": section,
+                "ok": has,
+                "detail": f"{'found' if has else 'missing'}",
+            })
+
+        # Check forbidden transitions exist
+        has_forbidden = bool(re.search(r"forbidden|must not|invalid", content, re.IGNORECASE))
+        results.append({
+            "check": "status_rules_forbidden_transitions",
+            "path": rules_path,
+            "ok": has_forbidden,
+            "detail": "forbidden transition rules found" if has_forbidden else "no forbidden transition rules found",
+        })
+
+        return results
+
+    # Status rules not found in canonical location
     results.append({
         "check": "status_rules_exists",
-        "path": "docs/delivery/08_agents/DELIVERY_STATUS_RULES_v1.md",
+        "path": rules_path,
         "ok": False,
-        "detail": "not found in 00_templates/ or 08_agents/",
+        "detail": "not found in 00_templates/",
     })
     return results
 

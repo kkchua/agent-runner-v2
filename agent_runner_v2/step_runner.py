@@ -396,14 +396,15 @@ def _resolve_backend_artifact_rule_path(*, state: dict, artifact_key: str, step:
     except ValueError:
         step_index = 1
     step_dir_rel = str(state.get("backend_step_dir_rel") or "").strip()
-    step_dir_name = PurePath(step_dir_rel).name if step_dir_rel else f"{step_index:02d}_{step}"
+    step_sequence = int(state.get("backend_step_sequence") or step_index)
+    step_dir_name = PurePath(step_dir_rel).name if step_dir_rel else f"{step_sequence:02d}_{step}"
     return str(template).format(
         workflow_name=str(state.get("template_group") or ""),
         template_group=str(state.get("template_group") or ""),
         job_id=run_id,
         run_code=run_id,
         step_name=step,
-        step_order=step_index,
+        step_order=step_sequence,
         step_dir=step_dir_name,
         step_dir_rel=step_dir_rel,
     )

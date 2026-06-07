@@ -87,6 +87,30 @@ def test_build_worker_request_payload_maps_backend_fields():
     assert payload['step_execution_spec']['execution_kind'] == 'coder'
 
 
+def test_build_worker_request_payload_merges_required_artifacts_from_context():
+    run = {
+        'id': 'run-1',
+        'workflow_name': 'delivery_scaffold_v1',
+        'run_code': 'SCAFFOLD-001',
+        'project_root': '/workspace/project',
+        'input_payload': {},
+        'context_payload': {'PROJECT_ANALYSIS': 'docs/delivery/00_templates/project_analysis.md'},
+    }
+    step_run = {'id': 'step-2', 'step_name': 'generate_sop', 'coder': 'qwen'}
+    payload = _build_worker_request_payload(
+        run=run,
+        step_run=step_run,
+        step_execution_spec={
+            'template_group': 'delivery_scaffold_v1',
+            'execution_kind': 'coder',
+            'required_inputs': [{'artifact_key': 'PROJECT_ANALYSIS', 'binding_type': 'required_input'}],
+            'produces': [{'artifact_key': 'DELIVERY_SOP', 'binding_type': 'produces'}],
+        },
+    )
+
+    assert payload['input_artifacts']['PROJECT_ANALYSIS'] == 'docs/delivery/00_templates/project_analysis.md'
+
+
 def test_build_execution_state_overrides_ids_and_step():
     request = ExecutionRequest.from_dict(
         {
@@ -118,6 +142,38 @@ def test_build_execution_state_overrides_ids_and_step():
     assert state['workflow_step_run_id'] == 'step-1'
     assert state['backend_context_payload'] == {'x': 1}
     assert state['backend_step_dir_rel'] == '.ukbe-runner/jobs/initiative_intake_v1/JOB-123/01_pre_init'
+
+
+def test_build_execution_state_uses_backend_step_sequence_for_runtime_dir():
+    request = ExecutionRequest.from_dict(
+        {
+            'workflow_name': 'delivery_scaffold_v1',
+            'template_group': 'delivery_scaffold_v1',
+            'workflow_run_id': 'run-1',
+            'workflow_step_run_id': 'step-1',
+            'job_id': 'JOB-123',
+            'step_name': 'generate_templates',
+            'project_root': '/tmp/project',
+            'step_execution_spec': {
+                'step_order': 5,
+                'step_sequence_no': 3,
+            },
+        }
+    )
+    group_cfg = {
+        'job_prefix': 'SCAFFOLD',
+        'job_init_step': 'project_analysis',
+        'job_init_inputs': [],
+        'default_max_rejects': 2,
+        'steps': ['project_analysis', 'generate_sop', 'refine_sop', 'replan_sop', 'generate_templates'],
+        'step_configs': {'generate_templates': {'prompt_file': 'dummy.txt'}},
+    }
+
+    state = _build_execution_state(request=request, group_cfg=group_cfg)
+
+    assert state['backend_step_order'] == 5
+    assert state['backend_step_sequence'] == 3
+    assert state['backend_step_dir_rel'] == '.ukbe-runner/jobs/delivery_scaffold_v1/JOB-123/03_generate_templates'
 
 
 def test_build_context_uses_step_execution_spec_artifact_rules_for_produced_paths():
@@ -260,6 +316,7 @@ def test_execute_step_command_uses_step_execution_spec_without_load_group(monkey
                     'template_group': 'initiative_intake_v1',
                     'step_name': 'pre_init',
                     'step_order': 1,
+                    'step_sequence_no': 1,
                     'execution_kind': 'coder',
                     'prompt_file': 'dummy.txt',
                     'result_meta_key': 'PRE_INIT_FILE',
@@ -540,3 +597,67 @@ def test_build_context_prefers_backend_task_payload(monkeypatch):
     assert ctx['CURRENT_TASK_TITLE'] == 'Refactor worker mode'
     assert ctx['TASK_FILE_PATH'] == 'docs/delivery/03_tasks/TASK-20260606-07_refactor-worker-mode.md'
     assert ctx['TASK_FILE_METAJSON'] == 'docs/delivery/03_tasks/TASK-20260606-07_refactor-worker-mode.meta.json'
+
+
+def test_execute_backend_step_request_returns_failed_result_for_missing_meta_json(monkeypatch, tmp_path):
+    prompt_path = tmp_path / 'dummy.prompt'
+    prompt_path.write_text('prompt body', encoding='utf-8')
+    step_dir = tmp_path / 'job' / '01_pre_init'
+    step_dir.mkdir(parents=True)
+
+    request = ExecutionRequest.from_dict(
+        {
+            'workflow_name': 'initiative_intake_v1',
+            'template_group': 'initiative_intake_v1',
+            'workflow_run_id': 'run-1',
+            'workflow_step_run_id': 'step-1',
+            'job_id': 'JOB-123',
+            'step_name': 'pre_init',
+            'project_root': str(tmp_path),
+            'input_artifacts': {'DRAFT_INIT_FILE': 'docs/draft.md'},
+        }
+    )
+    group_cfg = {
+        'job_prefix': 'PREINIT',
+        'job_init_step': 'pre_init',
+        'job_init_inputs': ['DRAFT_INIT_FILE'],
+        'default_max_rejects': 2,
+        'steps': ['pre_init'],
+        'step_configs': {'pre_init': {'prompt_file': 'dummy.txt', 'required_inputs': ['DRAFT_INIT_FILE']}},
+    }
+    step_cfg = group_cfg['step_configs']['pre_init']
+    state = _build_execution_state(request=request, group_cfg=group_cfg)
+
+    draft_path = tmp_path / 'docs' / 'draft.md'
+    draft_path.parent.mkdir(parents=True, exist_ok=True)
+    draft_path.write_text('draft', encoding='utf-8')
+
+    monkeypatch.setattr(run_agent_module, '_resolve_step_coder', lambda **kwargs: ('qwen', None))
+    monkeypatch.setattr(run_agent_module, 'resolve_prompt_path', lambda **kwargs: prompt_path)
+    monkeypatch.setattr(run_agent_module, 'build_context', lambda state, step, step_cfg: {})
+    monkeypatch.setattr(run_agent_module, 'render_prompt', lambda template_text, context: template_text)
+    monkeypatch.setattr(run_agent_module, 'prompt_checksum', lambda prompt_text: 'checksum')
+    monkeypatch.setattr(run_agent_module, 'make_step_dir', lambda group_cfg, state, step: step_dir)
+    monkeypatch.setattr(run_agent_module, 'check_preflight_artifact_status', lambda **kwargs: None)
+    monkeypatch.setattr(run_agent_module, 'ensure_planning_task_queue_integrity', lambda state, step: None)
+    monkeypatch.setattr(run_agent_module, 'ensure_execution_task_binding_integrity', lambda state, step: None)
+    monkeypatch.setattr(run_agent_module, '_missing_artifacts', lambda keys, state: [])
+
+    def raise_missing_sidecar(**kwargs):
+        raise run_agent_module.MetaJsonMissingError('Coder did not write meta.json to expected path: tmp/meta.json')
+
+    monkeypatch.setattr(run_agent_module, 'run_step', raise_missing_sidecar)
+
+    result = run_agent_module._execute_backend_step_request(
+        request=request,
+        group_cfg=group_cfg,
+        step_cfg=step_cfg,
+        state=state,
+        effective_root=tmp_path,
+    )
+
+    assert result.status == 'failed'
+    assert result.outcome == 'failed'
+    assert result.failure is not None
+    assert result.failure.failure_code == 'META_JSON_MISSING'
+    assert result.failure.failure_source == 'runner'

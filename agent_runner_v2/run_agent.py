@@ -830,7 +830,12 @@ def _execute_step_command(request_path: Path, result_path: Path | None = None) -
     workflow_cfg = workflow_cfg_map.get(bundle_workflow_name) or {}
     workflow_path = workflow_cfg.get("path") or str(workflow_root_for(workspace_root, bundle_workflow_name).relative_to(workspace_root))
     workflow_bundle_root = (workspace_root / workflow_path).resolve()
-    workflow_module = load_workflow_module(workspace_root, bundle_workflow_name, config=config)
+
+    # Only load workflow module if not using DB-backed execution (step_execution_spec)
+    # DB-backed mode uses _build_group_cfg_from_execution_spec() which doesn't need the bundle
+    workflow_module = None
+    if not request.step_execution_spec:
+        workflow_module = load_workflow_module(workspace_root, bundle_workflow_name, config=config)
 
     delivery_root = Path(request.target_project_root).resolve() if request.target_project_root else None
     if delivery_root is not None and request.template_group.startswith("delivery_scaffold"):
@@ -921,6 +926,7 @@ def _build_group_cfg_from_execution_spec(spec: dict[str, Any], template_group: s
         "job_init_step": spec.get("job_init_step") or step_name,
         "job_init_inputs": list(spec.get("job_init_inputs") or []),
         "default_max_rejects": int(spec.get("default_max_rejects") or 0),
+        "reference_files": dict(spec.get("reference_files") or {}),
         "steps": [step_name],
         "step_configs": {step_name: step_cfg},
     }
@@ -956,6 +962,22 @@ def _build_worker_request_payload(*, run: dict[str, Any], step_run: dict[str, An
     workflow_name = str(run.get("workflow_name") or "")
     project_root = str(run.get("project_root") or run.get("workspace_path") or ".")
     spec = dict(step_execution_spec or {})
+    input_artifacts = dict(run.get("input_payload") or {})
+    required_artifact_keys = {
+        item.get("artifact_key")
+        for item in (spec.get("required_inputs") or [])
+        if isinstance(item, dict) and item.get("artifact_key")
+    }
+    optional_artifact_keys = {
+        item.get("artifact_key")
+        for item in (spec.get("optional_inputs") or [])
+        if isinstance(item, dict) and item.get("artifact_key")
+    }
+    context_payload = dict(run.get("context_payload") or {})
+    for artifact_key in required_artifact_keys | optional_artifact_keys:
+        value = context_payload.get(artifact_key)
+        if isinstance(value, str) and value:
+            input_artifacts[artifact_key] = value
     return {
         "workflow_name": workflow_name,
         "template_group": spec.get("template_group") or workflow_name,
@@ -969,8 +991,8 @@ def _build_worker_request_payload(*, run: dict[str, Any], step_run: dict[str, An
         "coder_override": step_run.get("coder"),
         "workflow_key_override": "",
         "env_overrides": run.get("env_overrides") or {},
-        "input_artifacts": run.get("input_payload") or {},
-        "context_payload": run.get("context_payload") or {},
+        "input_artifacts": input_artifacts,
+        "context_payload": context_payload,
         "state_overrides": {},
         "step_execution_spec": spec,
     }
@@ -984,7 +1006,9 @@ def _invoke_execute_step_subprocess(request_payload: dict[str, Any]) -> dict[str
         cmd = [sys.executable, "-m", "agent_runner_v2.agent_runner_v2.run_agent", "execute-step", "--request-file", str(req_path), "--result-file", str(res_path)]
         proc = subprocess.run(cmd, capture_output=True, text=True)
         if not res_path.exists():
-            raise RuntimeError(f"execute-step did not write result file; rc={proc.returncode} stdout={proc.stdout[:500]} stderr={proc.stderr[:500]}")
+            # Print full stderr before raising for debugging
+            print(f"[_invoke_execute_step_subprocess] FULL STDERR:\n{proc.stderr}", flush=True)
+            raise RuntimeError(f"execute-step did not write result file; rc={proc.returncode}\nFull stderr:\n{proc.stderr[-2000:]}")
         payload = json.loads(res_path.read_text(encoding="utf-8"))
         payload.setdefault("diagnostics", {})["subprocess_return_code"] = proc.returncode
         payload["diagnostics"]["stdout"] = proc.stdout[-2000:]
@@ -1043,6 +1067,10 @@ def _build_execution_state(*, request: ExecutionRequest, group_cfg: dict[str, An
         step_index = list(group_cfg.get("steps") or []).index(request.step_name) + 1
     except ValueError:
         step_index = 1
+
+    # Use definition step_order for workflow metadata, but runtime sequence for contiguous backend working dirs.
+    step_order = (request.step_execution_spec or {}).get("step_order", step_index)
+    step_sequence = (request.step_execution_spec or {}).get("step_sequence_no", step_index)
 
     run_id = str(request.job_id or request.workflow_run_id or "backend-run")
     backend_ctx = dict(request.context_payload)
@@ -1115,7 +1143,9 @@ def _build_execution_state(*, request: ExecutionRequest, group_cfg: dict[str, An
         "workflow_step_run_id": request.workflow_step_run_id,
         "backend_context_payload": dict(request.context_payload),
         "backend_artifact_rules": dict((request.step_execution_spec or {}).get("artifact_rules") or {}),
-        "backend_step_dir_rel": f".ukbe-runner/jobs/{request.template_group}/{str(request.job_id or request.workflow_run_id or 'backend-job')}/{step_index:02d}_{request.step_name}",
+        "backend_step_order": step_order,
+        "backend_step_sequence": step_sequence,
+        "backend_step_dir_rel": f".ukbe-runner/jobs/{request.template_group}/{str(request.job_id or request.workflow_run_id or 'backend-job')}/{step_sequence:02d}_{request.step_name}",
     }
     state.update(request.state_overrides)
     return state
