@@ -1,0 +1,20 @@
+{
+  "schema_version": "v2",
+  "coder_result": {
+    "status": "REJECTED",
+    "remark": "Rejected: template set is not aligned with the SOP/status rules. Registry omits Validation and uses wrong flow; multiple templates use lifecycle states, IDs, folders, and naming contracts that conflict with governing references.",
+    "artifacts": {
+      "REVIEW_FILE": "docs/delivery/05_reviews/REV-260604-03_rtempl_R-0000-00_template-registry.meta.json"
+    },
+    "recorded_at": "2026-06-04T09:27:40Z"
+  },
+  "runner_data": {
+    "step": "review_templates",
+    "coder_used": "codex",
+    "invoked_at": "2026-06-04T09:27:02",
+    "finished_at": "2026-06-04T09:28:05",
+    "prompt_checksum": "sha256:9a52ab7b3383b55d620f8f37d98ea1e96b2b3f75a2db26f37e070ad2a54b5582",
+    "enriched_at": "2026-06-04T09:28:05",
+    "runner_version": "v2"
+  }
+}

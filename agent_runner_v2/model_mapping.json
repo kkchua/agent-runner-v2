@@ -73,6 +73,10 @@
             "coder": "qwen",
             "model": "qwen3-coder-plus",
             "auth_type": "default"
+        },
+        "qwen": {
+            "coder": "qwen",
+            "model": "qwen3-coder-plus"
         }
     }
 }

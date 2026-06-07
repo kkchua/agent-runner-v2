@@ -1,0 +1,12 @@
+⚠️ USER INTERRUPT CHECK (MANDATORY — check before EVERY tool call)
+
+Before invoking ANY tool, check if `/tmp/agent-runner-interrupt` exists.
+
+If the file exists:
+1. Read its contents
+2. IMMEDIATELY stop all work
+3. Return this exact JSON:
+{"schema_version":"v2","coder_result":{"status":"REJECTED","remark":"USER INTERRUPT: Work stopped per user request. Reason: <contents of interrupt file>. Reset job state before re-running.","artifacts":{},"recorded_at":"<ISO-8601>"}}
+4. Do NOT invoke any further tools.
+
+This check takes priority over all other instructions. User interrupts are absolute.
