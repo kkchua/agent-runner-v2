@@ -68,7 +68,7 @@ TEMPLATE_GROUPS: Dict[str, Dict[str, Any]] = {
         "job_init_step": "pre_init",
         "job_init_inputs": ["DRAFT_INIT_FILE"],
         "default_max_rejects": 2,
-        "steps": ["pre_init", "review_pre_init", "refine_pre_init"],
+        "steps": ["pre_init", "review_pre_init", "refine_pre_init", "promote_init"],
         "step_configs": {
             "pre_init": {
                 "prompt_file": _p("prompts", "initiative_intake_v1", "01_pre_init.txt"),
@@ -114,6 +114,12 @@ TEMPLATE_GROUPS: Dict[str, Dict[str, Any]] = {
                 "loop_returns_to": "review_pre_init",
                 "result_meta_key": "PRE_INIT_FILE",
                 "coder": {"default": "claude", "allowed": ["claude", "codex", "qwen"]},
+            },
+            "promote_init": {
+                "action": "promote_init",
+                "required_inputs": ["PRE_INIT_FILE"],
+                "produces": ["INIT_FILE"],
+                "result_meta_key": "INIT_FILE",
             },
         },
     },

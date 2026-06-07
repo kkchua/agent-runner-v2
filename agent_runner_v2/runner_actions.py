@@ -20,6 +20,7 @@ from pathlib import Path
 from typing import Callable
 
 from .action_result import ActionResult
+from .actions.promote_init import promote_init
 from .actions.submit_comfyui import submit_comfyui
 from .actions.validate_delivery_docs import validate_delivery_docs
 
@@ -31,6 +32,7 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 ACTION_REGISTRY: dict[str, Callable] = {
+    "promote_init": promote_init,
     "submit_comfyui": submit_comfyui,
     "validate_delivery_docs": validate_delivery_docs,
 }
