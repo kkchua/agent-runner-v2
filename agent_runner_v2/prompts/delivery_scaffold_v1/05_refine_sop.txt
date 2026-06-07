@@ -52,6 +52,19 @@ Refinement completion rule (MANDATORY)
 Critical: meta.json sidecar is REQUIRED
 - Sidecar path: `{DELIVERY_SOP_METAJSON}`
 - Use `write_file` tool to create the sidecar after writing the refined files.
+- Sidecar structure (exact):
+  {
+    "schema_version": "v2",
+    "coder_result": {
+      "status": "APPROVED | REJECTED",
+      "remark": "<short summary of changes made>",
+      "artifacts": {
+        "DELIVERY_SOP": "<path>",
+        "DELIVERY_STATUS_RULES": "<path>"
+      },
+      "recorded_at": "<ISO timestamp e.g. 2026-06-07T10:00:00>"
+    }
+  }
 
 ABSOLUTE OUTPUT RULE (NON-NEGOTIABLE)
 

@@ -74,6 +74,24 @@ Required artifact rule (MANDATORY)
 Critical: meta.json sidecar is REQUIRED
 - Sidecar path: `{DELIVERY_AGENTS_MD_METAJSON}`
 - Use `write_file` tool to create the sidecar after writing the refined files.
+- Sidecar structure (exact):
+  {
+    "schema_version": "v2",
+    "coder_result": {
+      "status": "APPROVED | REJECTED",
+      "remark": "<short summary of changes made>",
+      "artifacts": {
+        "DELIVERY_AGENTS_MD": "<path>",
+        "DELIVERY_AGENT_PLANNER": "<path>",
+        "DELIVERY_AGENT_TASK_DECOMPOSER": "<path>",
+        "DELIVERY_AGENT_IMPL_PLANNER": "<path>",
+        "DELIVERY_AGENT_EXECUTOR": "<path>",
+        "DELIVERY_AGENT_REVIEWER": "<path>",
+        "DELIVERY_AGENT_MEMORY_MANAGER": "<path>"
+      },
+      "recorded_at": "<ISO timestamp e.g. 2026-06-07T10:00:00>"
+    }
+  }
 
 ABSOLUTE OUTPUT RULE (NON-NEGOTIABLE)
 

@@ -32,7 +32,7 @@ Generate TWO documents:
 
 ### Document 1: WORKFLOW_SOP_v1.md
 Must include:
-1. **Metadata block**: Document Type: SOP, Version: v1.0, Status: Active, Owner: Architect
+1. **Metadata block**: Document Type: SOP, Version: v1.0, Status: draft, Owner: Architect
 2. **Purpose**: Why this SOP exists and what it governs
 3. **Core Principle**: Document-driven + state-driven execution (not prompt-driven)
 4. **Authority Precedence**: Hierarchy of rule sources (runner logic > SOP/status rules > artifact metadata > artifact body content)

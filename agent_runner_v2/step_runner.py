@@ -1057,6 +1057,9 @@ def _review_step_code(step: str) -> str:
         "review_task": "rtask",
         "review_task_graph": "rtg",
         "review_prompts": "rcsv",
+        "review_sop": "rsop",
+        "review_templates": "rtmpl",
+        "review_agents": "ragent",
     }.get(step, "")
 
 

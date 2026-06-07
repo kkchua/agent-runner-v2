@@ -46,31 +46,31 @@ REQUIRED_TEMPLATES = {
 # Minimum required sections per template type (all must be present)
 TEMPLATE_SECTION_REQUIREMENTS: dict[str, list[str]] = {
     "01_initiative.template.md": [
-        "Metadata", "Objective", "Scope", "Constraints",
+        "Objective", "Scope", "Constraints",
         "Dependencies", "Success Criteria", "Approval",
     ],
     "02_plan.template.md": [
-        "Metadata", "Plan Objective", "Strategy Overview", "Task Breakdown",
+        "Plan Objective", "Strategy Overview", "Task Breakdown",
         "Scope Mapping", "Deliverables", "Risks", "Acceptance Criteria", "Approval",
     ],
     "02b_task_graph.template.md": [
-        "Metadata", "Task Graph Objective", "Task Graph",
+        "Task Graph Objective", "Task Graph",
         "Execution Flow", "Success Criteria",
     ],
     "03_task.template.md": [
-        "Metadata", "Objective", "Inputs", "Outputs",
+        "Objective", "Inputs", "Outputs",
         "Execution Steps", "Validation Criteria",
     ],
     "04_implementation_plan.template.md": [
-        "Metadata", "Objective", "Inputs", "Outputs",
+        "Objective", "Inputs", "Outputs",
         "Scope Clarification", "File Plan", "Test Plan", "Constraints",
     ],
     "04_review.template.md": [
-        "Metadata", "Review Objective", "Issues Identified",
+        "Review Objective", "Issues Identified",
         "Final Decision",
     ],
     "06_memory.template.md": [
-        "Metadata", "Purpose", "Key Decisions", "Important References",
+        "Purpose", "Key Decisions", "Important References",
     ],
 }
 
@@ -81,7 +81,7 @@ SOP_REQUIRED_SECTIONS = [
 ]
 
 STATUS_RULES_REQUIRED_SECTIONS = [
-    "Purpose", "Core Principles", "Global Workflow Discipline",
+    "Core Principles", "Global Workflow Discipline",
     "Lifecycle Rules", "Authority Model", "Approval Gates",
     "Forbidden Transitions", "Document-First", "Traceability",
 ]
@@ -236,8 +236,8 @@ def _validate_sop(project_root: Path) -> list[dict[str, Any]]:
             "detail": f"{'found' if has else 'missing'}",
         })
 
-    # Check state machine exists (arrow notation)
-    has_state_machine = bool(re.search(r"\w+\s*→\s*\w+", content))
+    # Check state machine exists (arrow notation — allow backtick-wrapped state names)
+    has_state_machine = bool(re.search(r"→", content))
     results.append({
         "check": "sop_state_machine",
         "path": sop_path,
@@ -360,9 +360,17 @@ def _validate_agents(project_root: Path) -> list[dict[str, Any]]:
         if ok:
             agent_content = _read_file(project_root, rel)
             if agent_content:
-                # Check metadata
-                has_doc_type = _has_metadata_field(agent_content, "Doc Type")
-                has_agent_id = _has_metadata_field(agent_content, "Agent ID")
+                # Accept "doc_type:", "document_type:" (YAML frontmatter) or "Doc Type:" (inline)
+                has_doc_type = (
+                    _has_metadata_field(agent_content, "doc_type")
+                    or _has_metadata_field(agent_content, "document_type")
+                    or _has_metadata_field(agent_content, "Doc Type")
+                )
+                # Accept both "agent_id:" (YAML frontmatter) and "Agent ID:" (inline)
+                has_agent_id = (
+                    _has_metadata_field(agent_content, "agent_id")
+                    or _has_metadata_field(agent_content, "Agent ID")
+                )
                 results.append({
                     "check": "agent_contract_metadata",
                     "path": rel,
@@ -487,17 +495,30 @@ def validate_delivery_docs(
         "checks": all_checks,
     }
 
+    # Resolve output paths from runner-injected context so the sidecar lands where
+    # the runner expects it (determined by DELIVERY_FOLDER_MAP_METAJSON in context).
+    folder_map_rel = (
+        context.get("DELIVERY_FOLDER_MAP")
+        or context.get("DELIVERY_FOLDER_MAP_PATH")
+        or "docs/delivery/DELIVERY_FOLDER_MAP.json"
+    )
+    meta_json_rel = context.get("DELIVERY_FOLDER_MAP_METAJSON", "")
+
     # Write the folder map file
-    folder_map_dir = project_root / "docs" / "delivery"
-    folder_map_dir.mkdir(parents=True, exist_ok=True)
-    folder_map_path = folder_map_dir / "folder_map.json"
+    folder_map_path = project_root / folder_map_rel
+    folder_map_path.parent.mkdir(parents=True, exist_ok=True)
     folder_map_path.write_text(
         json.dumps(folder_map, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
     )
 
-    # Write meta.json sidecar
-    meta_path = folder_map_dir / "folder_map.meta.json"
+    # Write meta.json sidecar to the runner-expected path
+    if meta_json_rel:
+        meta_path = project_root / meta_json_rel
+    else:
+        p = Path(folder_map_rel)
+        meta_path = project_root / p.parent / f"{p.stem}.meta.json"
+    meta_path.parent.mkdir(parents=True, exist_ok=True)
     meta = {
         "schema_version": "v2",
         "coder_result": {

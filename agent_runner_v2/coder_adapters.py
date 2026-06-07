@@ -65,7 +65,7 @@ class InvocationResult:
 
 DEFAULT_CODER_TIMEOUT_SECONDS = 600
 SIDECAR_POLL_INTERVAL_SECONDS = 3.0
-SIDECAR_SETTLE_DELAY_SECONDS = 0.5
+SIDECAR_SETTLE_DELAY_SECONDS = 1.0  # Increased from 0.5s to ensure coder finishes writing meta.json
 
 
 def _coder_timeout_seconds() -> int:
@@ -97,26 +97,73 @@ def _is_valid_sidecar_json(path: Path) -> bool:
     Mirrors the validation in _read_and_validate_meta_json() so we never trigger early exit
     on a partially-written sidecar (race condition: coder writes status before recorded_at).
     Required fields: schema_version, coder_result.status, coder_result.artifacts, coder_result.recorded_at.
+
+    Also checks for file write completion to avoid reading partially-written or locked files.
     """
     try:
-        data = json.loads(path.read_text(encoding="utf-8"))
+        # Check 1: File must be readable and not locked by checking if we can get its stat
+        try:
+            stat1 = path.stat()
+            print(f"[_is_valid_sidecar_json] Check 1 PASS: file stat successful, size={stat1.st_size}, mtime={stat1.st_mtime}", flush=True)
+        except (OSError, IOError) as e:
+            # File is locked or inaccessible
+            print(f"[_is_valid_sidecar_json] Check 1 FAIL: file stat failed: {e}", flush=True)
+            return False
+
+        # Check 2: Verify file modification is stable (not still being written)
+        # Get mtime, wait 100ms, check again - if it changed, file is still being written
+        import time as time_module
+        mtime1 = stat1.st_mtime
+        time_module.sleep(0.1)
+        try:
+            stat2 = path.stat()
+            mtime2 = stat2.st_mtime
+        except (OSError, IOError) as e:
+            print(f"[_is_valid_sidecar_json] Check 2 FAIL: second stat failed: {e}", flush=True)
+            return False
+
+        if mtime1 != mtime2:
+            # File is still being modified, not ready yet
+            print(f"[_is_valid_sidecar_json] Check 2 FAIL: mtime changed {mtime1} -> {mtime2}, file still being written", flush=True)
+            return False
+
+        print(f"[_is_valid_sidecar_json] Check 2 PASS: mtime stable at {mtime1}", flush=True)
+
+        # Check 3: Parse and validate JSON schema
+        try:
+            text_content = path.read_text(encoding="utf-8")
+            data = json.loads(text_content)
+            print(f"[_is_valid_sidecar_json] Check 3a PASS: JSON parsed successfully, size={len(text_content)} bytes", flush=True)
+        except Exception as e:
+            print(f"[_is_valid_sidecar_json] Check 3a FAIL: JSON parse failed: {e}", flush=True)
+            return False
+
         if not isinstance(data, dict):
+            print(f"[_is_valid_sidecar_json] Check 3b FAIL: data is not dict, type={type(data)}", flush=True)
             return False
         # Accept v2 schema or legacy artifact_meta_v1
         sv = data.get("schema_version") or data.get("sidecar_version") or ""
         if sv not in ("v2", "artifact_meta_v1"):
+            print(f"[_is_valid_sidecar_json] Check 3c FAIL: invalid schema version: {sv!r}", flush=True)
             return False
         cr = data.get("coder_result")
         if not isinstance(cr, dict):
+            print(f"[_is_valid_sidecar_json] Check 3d FAIL: coder_result not dict", flush=True)
             return False
-        if str(cr.get("status", "")).upper() not in ("APPROVED", "REJECTED"):
+        status = str(cr.get("status", "")).upper()
+        if status not in ("APPROVED", "REJECTED"):
+            print(f"[_is_valid_sidecar_json] Check 3e FAIL: invalid status: {status!r}", flush=True)
             return False
         if not isinstance(cr.get("artifacts"), dict):
+            print(f"[_is_valid_sidecar_json] Check 3f FAIL: artifacts not dict", flush=True)
             return False
         if not str(cr.get("recorded_at") or "").strip():
+            print(f"[_is_valid_sidecar_json] Check 3g FAIL: missing recorded_at", flush=True)
             return False
+        print(f"[_is_valid_sidecar_json] Check 3 PASS: schema valid (version={sv}, status={status})", flush=True)
         return True
-    except Exception:
+    except Exception as e:
+        print(f"[_is_valid_sidecar_json] UNEXPECTED EXCEPTION: {e}", flush=True)
         return False
 
 
@@ -212,11 +259,23 @@ def _run_with_sidecar_poll(
 
         deadline = time.monotonic() + timeout_seconds
         sidecar_triggered = False
+        poll_count = 0
 
+        # Polling loop: Wait for EITHER condition to be true:
+        # 1. Process exits (proc.poll() returns non-None) - normal completion
+        # 2. Sidecar (meta.json) becomes valid - coder finished work but didn't exit (common with hanging processes)
+        # This OR condition prevents indefinite hangs while respecting the coder's completion signal
         while True:
-            if proc.poll() is not None:
+            poll_count += 1
+            # Condition 1: Check if process exited
+            poll_result = proc.poll()
+            if poll_result is not None:
+                print(f"[coder_adapters] poll #{poll_count}: process exited with return_code={poll_result}", flush=True)
                 break
-            if time.monotonic() >= deadline:
+            # Check timeout
+            time_remaining = deadline - time.monotonic()
+            if time_remaining <= 0:
+                print(f"[coder_adapters] poll #{poll_count}: TIMEOUT after {timeout_seconds}s, terminating process", flush=True)
                 proc.terminate()
                 try:
                     proc.wait(timeout=5)
@@ -225,31 +284,56 @@ def _run_with_sidecar_poll(
                 t_out.join(timeout=2)
                 t_err.join(timeout=2)
                 raise subprocess.TimeoutExpired(cmd, timeout_seconds)
-            if sidecar_path is not None and sidecar_path.exists():
-                try:
-                    current_mtime = sidecar_path.stat().st_mtime
-                except OSError:
-                    current_mtime = None
-                is_new_sidecar = (
-                    current_mtime is not None
-                    and (sidecar_pre_mtime is None or current_mtime > sidecar_pre_mtime)
-                )
-                if is_new_sidecar and _is_valid_sidecar_json(sidecar_path):
-                    time.sleep(SIDECAR_SETTLE_DELAY_SECONDS)
-                    sidecar_triggered = True
-                    label = f" step={step}" if step else ""
-                    print(f"[coder_adapters] sidecar detected — terminating hung process early{label}", flush=True)
-                    proc.terminate()
+
+            # Condition 2: Check if sidecar (meta.json) became valid
+            # This is the critical early-exit signal for hung processes that complete their work
+            if sidecar_path is not None:
+                if not sidecar_path.exists():
+                    if poll_count % 20 == 1:  # Log every 60 seconds
+                        print(f"[coder_adapters] poll #{poll_count}: sidecar not yet created, waiting... ({time_remaining:.1f}s remaining)", flush=True)
+                else:
                     try:
-                        proc.wait(timeout=10)
-                    except subprocess.TimeoutExpired:
-                        proc.kill()
-                    break
+                        current_mtime = sidecar_path.stat().st_mtime
+                    except OSError:
+                        current_mtime = None
+                        print(f"[coder_adapters] poll #{poll_count}: sidecar exists but stat failed", flush=True)
+                    if current_mtime is not None:
+                        is_new_sidecar = (
+                            sidecar_pre_mtime is None or current_mtime > sidecar_pre_mtime
+                        )
+                        if is_new_sidecar:
+                            print(f"[coder_adapters] poll #{poll_count}: sidecar is new/updated, validating JSON...", flush=True)
+                            if _is_valid_sidecar_json(sidecar_path):
+                                # Sidecar is valid: coder finished its work!
+                                # Pause briefly to ensure coder finishes all writes to meta.json
+                                print(f"[coder_adapters] poll #{poll_count}: sidecar JSON valid! sleeping {SIDECAR_SETTLE_DELAY_SECONDS}s before terminating", flush=True)
+                                time.sleep(SIDECAR_SETTLE_DELAY_SECONDS)
+                                sidecar_triggered = True
+                                label = f" step={step}" if step else ""
+                                print(f"[coder_adapters] sidecar detected — coder completed work, terminating process{label}", flush=True)
+                                # Gracefully terminate the process (it didn't exit but has completed the work)
+                                proc.terminate()
+                                try:
+                                    term_result = proc.wait(timeout=10)
+                                    print(f"[coder_adapters] process terminated gracefully with code {term_result}", flush=True)
+                                except subprocess.TimeoutExpired:
+                                    print(f"[coder_adapters] process did not exit after terminate, killing...", flush=True)
+                                    proc.kill()
+                                    try:
+                                        kill_result = proc.wait(timeout=5)
+                                        print(f"[coder_adapters] process killed with code {kill_result}", flush=True)
+                                    except subprocess.TimeoutExpired:
+                                        print(f"[coder_adapters] WARNING: process did not exit even after kill!", flush=True)
+                                break
+                            else:
+                                print(f"[coder_adapters] poll #{poll_count}: sidecar exists but JSON validation failed", flush=True)
             time.sleep(SIDECAR_POLL_INTERVAL_SECONDS)
 
         t_out.join(timeout=5)
         t_err.join(timeout=5)
         rc = 0 if sidecar_triggered else (proc.returncode if proc.returncode is not None else 0)
+        exit_reason = "sidecar_detected" if sidecar_triggered else f"process_exited_rc={rc}"
+        print(f"[coder_adapters] exiting polling loop: {exit_reason}, total_polls={poll_count}, elapsed={(time.monotonic() - (deadline - timeout_seconds)):.1f}s", flush=True)
         return rc, "".join(chunks_out), "".join(chunks_err)
     finally:
         _restore_terminal_settings(saved_terminal)
@@ -623,7 +707,9 @@ def _invoke_qwen(*, step: str, prompt_text: str, cwd: Path, coder_config: dict[s
 
     # FAST FAIL: Detect empty output immediately to provide clear diagnostics
     # (skip when sidecar-triggered — stdout may be empty but sidecar has the result)
+    print(f"[_invoke_qwen] return_code={return_code}, stdout_len={len(stdout.strip())}, sidecar_path={sidecar_path}", flush=True)
     if not stdout.strip() and not (sidecar_path is not None and sidecar_path.exists() and _is_valid_sidecar_json(sidecar_path)):
+        print(f"[_invoke_qwen] FAIL: no stdout and sidecar not valid", flush=True)
         raise CoderInvocationError(
             message="Qwen completed but produced no output (empty stdout). "
                     "This may indicate a model API error, prompt execution failure, "
@@ -634,6 +720,8 @@ def _invoke_qwen(*, step: str, prompt_text: str, cwd: Path, coder_config: dict[s
             stderr=stderr,
             raw_events=[],
         )
+    else:
+        print(f"[_invoke_qwen] PASS: has stdout or valid sidecar", flush=True)
 
     payload = _parse_json_payload(stdout)
     raw_events = _payload_to_raw_events(payload, stdout)
