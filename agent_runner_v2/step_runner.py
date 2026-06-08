@@ -601,7 +601,8 @@ def _validate_template_conformance(
         if missing_metadata:
             issues.append(f"missing metadata fields: {', '.join(missing_metadata)}")
         raise ArtifactMissingError(
-            f"Template conformance failed for step {step!r} ({doc_type}): {'; '.join(issues)}"
+            f"Template conformance failed for step {step!r} ({doc_type}): {'; '.join(issues)}",
+            missing=missing_sections + missing_metadata,
         )
 
     print(f"[step_runner] template conformance OK for step={step} type={doc_type}", flush=True)
@@ -615,10 +616,14 @@ def _has_section(content: str, section: str) -> bool:
 
 
 def _has_metadata_field(content: str, field: str) -> bool:
-    """Check if metadata block contains a field."""
+    """Check if metadata block contains a field (frontmatter or markdown table)."""
     import re as _re
-    pattern = _re.compile(rf'^\s*-?\s*{_re.escape(field)}\s*[:：]', _re.MULTILINE)
-    return bool(pattern.search(content))
+    escaped = _re.escape(field)
+    # matches "Field: value" or "- Field: value" (frontmatter / YAML-style)
+    kv_pattern = _re.compile(rf'^\s*-?\s*{escaped}\s*[:：]', _re.MULTILINE)
+    # matches "| Field | value |" (markdown table row)
+    table_pattern = _re.compile(rf'^\|\s*{escaped}\s*\|', _re.MULTILINE | _re.IGNORECASE)
+    return bool(kv_pattern.search(content) or table_pattern.search(content))
 
 
 # ---------------------------------------------------------------------------

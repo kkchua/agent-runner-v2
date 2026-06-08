@@ -126,6 +126,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         p.add_argument("--host-name", default="", help="Optional host name for worker registration.")
         p.add_argument("--poll-seconds", type=int, default=5, help="Polling interval when idle.")
         p.add_argument("--once", action="store_true", help="Claim and process at most one step, then exit.")
+        p.add_argument("--engine-root", default="", help="Explicit version directory to prepend to PYTHONPATH for execute-step subprocesses. Overrides config.json lookup.")
         ns = p.parse_args(raw[1:])
         ns.command = "worker"
         return ns
@@ -185,6 +186,7 @@ def main(argv: list[str] | None = None) -> int:
             host_name=args.host_name or None,
             poll_seconds=args.poll_seconds,
             once=args.once,
+            engine_root=args.engine_root or None,
         )
 
     workspace_root = Path(args.project_root or ".").resolve()
@@ -933,9 +935,54 @@ def _build_group_cfg_from_execution_spec(spec: dict[str, Any], template_group: s
     return group_cfg, step_cfg
 
 
-def _worker_command(*, backend_url: str, worker_id: str, host_name: str | None, poll_seconds: int, once: bool) -> int:
+def _resolve_worker_engine_root(engine_root: str | None) -> tuple[str | None, str | None]:
+    """Resolve engine root and version from --engine-root flag or config.json.
+
+    Returns (effective_engine_root, engine_version).
+    Both are None if no version is configured (dev/live-source mode).
+    """
+    if engine_root:
+        vfile = Path(engine_root) / "version.json"
+        version = None
+        if vfile.exists():
+            try:
+                version = json.loads(vfile.read_text(encoding="utf-8")).get("version")
+            except Exception:
+                pass
+        return engine_root, version
+
+    config_path = Path.cwd() / ".ukbe-runner" / "engine" / "config.json"
+    if not config_path.exists():
+        return None, None
+
+    try:
+        cfg = json.loads(config_path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        raise RuntimeError(f"[worker] failed to read engine config {config_path}: {exc}") from exc
+
+    engine_version = (cfg.get("engine_version") or "").strip()
+    if not engine_version:
+        return None, None
+
+    version_dir = Path.cwd() / ".ukbe-runner" / "engine" / "versions" / engine_version
+    if not version_dir.exists():
+        raise RuntimeError(
+            f"[worker] engine version {engine_version!r} not found at {version_dir}. "
+            "Run: python scripts/engine_tool.py install <version>  "
+            "or: python scripts/engine_tool.py snapshot"
+        )
+    return str(version_dir), engine_version
+
+
+def _worker_command(*, backend_url: str, worker_id: str, host_name: str | None, poll_seconds: int, once: bool, engine_root: str | None = None) -> int:
+    effective_engine_root, engine_version = _resolve_worker_engine_root(engine_root)
+    if effective_engine_root:
+        print(f"[worker] engine version: {engine_version!r}  root: {effective_engine_root}", flush=True)
+    else:
+        print("[worker] engine version: live source (no config.json or PYTHONPATH override)", flush=True)
+
     client = BackendClient(backend_url)
-    client.register_worker(worker_id=worker_id, host_name=host_name, capabilities={"mode": ["execute-step"]})
+    client.register_worker(worker_id=worker_id, host_name=host_name, capabilities={"mode": ["execute-step"], "engine_version": engine_version})
 
     while True:
         client.heartbeat(worker_id=worker_id, status="idle")
@@ -951,7 +998,7 @@ def _worker_command(*, backend_url: str, worker_id: str, host_name: str | None, 
 
         client.heartbeat(worker_id=worker_id, status="busy", current_step_run_id=step_run.get("id"))
         request_payload = _build_worker_request_payload(run=run, step_run=step_run, step_execution_spec=claim.get("step_execution_spec"))
-        result = _invoke_execute_step_subprocess(request_payload)
+        result = _invoke_execute_step_subprocess(request_payload, engine_root=effective_engine_root)
         _submit_worker_result(client=client, run=run, step_run=step_run, result=result)
         client.heartbeat(worker_id=worker_id, status="idle", current_step_run_id="")
         if once:
@@ -998,13 +1045,16 @@ def _build_worker_request_payload(*, run: dict[str, Any], step_run: dict[str, An
     }
 
 
-def _invoke_execute_step_subprocess(request_payload: dict[str, Any]) -> dict[str, Any]:
+def _invoke_execute_step_subprocess(request_payload: dict[str, Any], engine_root: str | None = None) -> dict[str, Any]:
     with tempfile.TemporaryDirectory(prefix="agent-runner-v2-") as temp_dir:
         req_path = Path(temp_dir) / "request.json"
         res_path = Path(temp_dir) / "result.json"
         req_path.write_text(json.dumps(request_payload, indent=2), encoding="utf-8")
         cmd = [sys.executable, "-m", "agent_runner_v2.agent_runner_v2.run_agent", "execute-step", "--request-file", str(req_path), "--result-file", str(res_path)]
-        proc = subprocess.run(cmd, capture_output=True, text=True)
+        env = os.environ.copy()
+        if engine_root:
+            env["PYTHONPATH"] = str(engine_root) + os.pathsep + env.get("PYTHONPATH", "")
+        proc = subprocess.run(cmd, capture_output=True, text=True, env=env)
         if not res_path.exists():
             # Print full stderr before raising for debugging
             print(f"[_invoke_execute_step_subprocess] FULL STDERR:\n{proc.stderr}", flush=True)
@@ -1076,12 +1126,26 @@ def _build_execution_state(*, request: ExecutionRequest, group_cfg: dict[str, An
     backend_ctx = dict(request.context_payload)
     task_binding = default_task_execution_binding()
     current_item = backend_ctx.get("current_item") if isinstance(backend_ctx.get("current_item"), dict) else {}
-    task_binding["task_node_id"] = current_item.get("task_node_id") or backend_ctx.get("CURRENT_TASK_NODE_ID")
-    task_binding["task_title"] = current_item.get("title") or backend_ctx.get("CURRENT_TASK_TITLE")
-    task_binding["task_graph_id"] = backend_ctx.get("SOURCE_TASK_GRAPH_ID")
-    task_binding["task_graph_file"] = backend_ctx.get("TASK_GRAPH_FILE")
-    task_binding["plan_file"] = backend_ctx.get("PLAN_FILE")
-    task_binding["plan_id"] = backend_ctx.get("PLAN_ID")
+    ctx_task_node_id = (current_item.get("task_node_id") or backend_ctx.get("CURRENT_TASK_NODE_ID") or "").strip()
+    ctx_task_graph_file = (backend_ctx.get("TASK_GRAPH_FILE") or "").strip()
+    if ctx_task_graph_file and ctx_task_node_id and request.template_group == "task_execution_v1":
+        try:
+            from .job_state import build_task_execution_binding
+            task_binding = build_task_execution_binding(
+                task_graph_file=ctx_task_graph_file,
+                task_node_id=ctx_task_node_id,
+            )
+            if not task_binding.get("task_graph_id"):
+                task_binding["task_graph_id"] = backend_ctx.get("SOURCE_TASK_GRAPH_ID")
+        except Exception as _bind_exc:
+            raise RuntimeError(f"[_build_execution_state] could not build task execution binding: {_bind_exc}") from _bind_exc
+    else:
+        task_binding["task_node_id"] = ctx_task_node_id or None
+        task_binding["task_title"] = current_item.get("title") or backend_ctx.get("CURRENT_TASK_TITLE")
+        task_binding["task_graph_id"] = backend_ctx.get("SOURCE_TASK_GRAPH_ID")
+        task_binding["task_graph_file"] = ctx_task_graph_file or None
+        task_binding["plan_file"] = backend_ctx.get("PLAN_FILE")
+        task_binding["plan_id"] = backend_ctx.get("PLAN_ID")
 
     state: dict[str, Any] = {
         "job_id": str(request.job_id or request.workflow_run_id or "backend-job"),
