@@ -1056,14 +1056,14 @@ def _invoke_execute_step_subprocess(request_payload: dict[str, Any], engine_root
         req_path = Path(temp_dir) / "request.json"
         res_path = Path(temp_dir) / "result.json"
         req_path.write_text(json.dumps(request_payload, indent=2), encoding="utf-8")
-        if engine_root:
-            module = "agent_runner_v2.agent_runner_v2.run_agent"
-        else:
-            module = "agent_runner_v2.run_agent"
+        module = "agent_runner_v2.run_agent"
         cmd = [sys.executable, "-m", module, "execute-step", "--request-file", str(req_path), "--result-file", str(res_path)]
         env = os.environ.copy()
         if engine_root:
-            env["PYTHONPATH"] = str(engine_root) + os.pathsep + env.get("PYTHONPATH", "")
+            # Prepend <engine_root>/agent_runner_v2 so Python finds the frozen inner package
+            # at <engine_root>/agent_runner_v2/agent_runner_v2/, not the outer worker's copy.
+            env["PYTHONPATH"] = str(Path(engine_root) / "agent_runner_v2") + os.pathsep + env.get("PYTHONPATH", "")
+        # SNAPSHOT: engine_root is None — outer worker PYTHONPATH already provides agent_runner_v2
         proc = subprocess.run(cmd, capture_output=True, text=True, env=env)
         if not res_path.exists():
             # Print full stderr before raising for debugging
