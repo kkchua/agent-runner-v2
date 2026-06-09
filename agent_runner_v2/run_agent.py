@@ -964,12 +964,14 @@ def _resolve_worker_engine_root(engine_root: str | None) -> tuple[str | None, st
     if not engine_version:
         return None, None
 
+    if engine_version == "SNAPSHOT":
+        return None, engine_version
+
     version_dir = Path.cwd() / ".ukbe-runner" / "engine" / "versions" / engine_version
     if not version_dir.exists():
         raise RuntimeError(
             f"[worker] engine version {engine_version!r} not found at {version_dir}. "
-            "Run: python scripts/engine_tool.py install <version>  "
-            "or: python scripts/engine_tool.py snapshot"
+            "Run: python scripts/engine_tool.py install <version>"
         )
     return str(version_dir), engine_version
 
@@ -997,7 +999,7 @@ def _worker_command(*, backend_url: str, worker_id: str, host_name: str | None, 
             continue
 
         client.heartbeat(worker_id=worker_id, status="busy", current_step_run_id=step_run.get("id"))
-        request_payload = _build_worker_request_payload(run=run, step_run=step_run, step_execution_spec=claim.get("step_execution_spec"))
+        request_payload = _build_worker_request_payload(run=run, step_run=step_run, step_execution_spec=claim.get("step_execution_spec"), backend_url=backend_url)
         result = _invoke_execute_step_subprocess(request_payload, engine_root=effective_engine_root)
         _submit_worker_result(client=client, run=run, step_run=step_run, result=result)
         client.heartbeat(worker_id=worker_id, status="idle", current_step_run_id="")
@@ -1005,7 +1007,7 @@ def _worker_command(*, backend_url: str, worker_id: str, host_name: str | None, 
             return 0
 
 
-def _build_worker_request_payload(*, run: dict[str, Any], step_run: dict[str, Any], step_execution_spec: dict[str, Any] | None = None) -> dict[str, Any]:
+def _build_worker_request_payload(*, run: dict[str, Any], step_run: dict[str, Any], step_execution_spec: dict[str, Any] | None = None, backend_url: str = "") -> dict[str, Any]:
     workflow_name = str(run.get("workflow_name") or "")
     project_root = str(run.get("project_root") or run.get("workspace_path") or ".")
     spec = dict(step_execution_spec or {})
@@ -1037,7 +1039,11 @@ def _build_worker_request_payload(*, run: dict[str, Any], step_run: dict[str, An
         "target_project_root": run.get("project_root"),
         "coder_override": step_run.get("coder"),
         "workflow_key_override": "",
-        "env_overrides": run.get("env_overrides") or {},
+        "env_overrides": {
+            **(run.get("env_overrides") or {}),
+            "BACKEND_URL": backend_url,
+            "WORKFLOW_STEP_RUN_ID": str(step_run.get("id") or ""),
+        },
         "input_artifacts": input_artifacts,
         "context_payload": context_payload,
         "state_overrides": {},
@@ -1050,7 +1056,11 @@ def _invoke_execute_step_subprocess(request_payload: dict[str, Any], engine_root
         req_path = Path(temp_dir) / "request.json"
         res_path = Path(temp_dir) / "result.json"
         req_path.write_text(json.dumps(request_payload, indent=2), encoding="utf-8")
-        cmd = [sys.executable, "-m", "agent_runner_v2.agent_runner_v2.run_agent", "execute-step", "--request-file", str(req_path), "--result-file", str(res_path)]
+        if engine_root:
+            module = "agent_runner_v2.agent_runner_v2.run_agent"
+        else:
+            module = "agent_runner_v2.run_agent"
+        cmd = [sys.executable, "-m", module, "execute-step", "--request-file", str(req_path), "--result-file", str(res_path)]
         env = os.environ.copy()
         if engine_root:
             env["PYTHONPATH"] = str(engine_root) + os.pathsep + env.get("PYTHONPATH", "")

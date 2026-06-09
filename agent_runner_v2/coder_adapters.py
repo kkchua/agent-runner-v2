@@ -663,9 +663,8 @@ def _invoke_claude(*, step: str, prompt_text: str, cwd: Path, schema_path: Path,
 
 
 def _invoke_qwen(*, step: str, prompt_text: str, cwd: Path, coder_config: dict[str, Any] | None = None, sidecar_path: Path | None = None) -> dict[str, Any]:
-    session_id = str(uuid.uuid4())
     cc = coder_config or {}
-    command = ["qwen", "--output-format", "json", "--approval-mode", "yolo", "--session-id", session_id]
+    command = ["qwen", "-y"]
 
     # Inject model-specific CLI flags when a coder_config is provided
     if cc.get("model"):
@@ -679,7 +678,7 @@ def _invoke_qwen(*, step: str, prompt_text: str, cwd: Path, coder_config: dict[s
     if cc.get("openai_base_url"):
         command.extend(["--openai-base-url", cc["openai_base_url"]])
 
-    command.extend(["-p", prompt_text])
+    command.append(prompt_text)
 
     # Log the actual command for debugging (mask API key)
     _log_command_for_step(step, command, cc)
