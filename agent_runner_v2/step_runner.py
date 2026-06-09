@@ -4,7 +4,7 @@ step_runner.py — Core step execution contract for agent_runner_v2.
 
 Single responsibility: invoke coder → read meta.json → validate artifacts → enrich sidecar.
 
-Related: IMPL-20260422-04
+Related: IMPL-20260422-04, PLAN-20260608-01
 
 Key v2 differences from v1:
 - meta.json sidecar is the ONLY communication channel (no fallbacks, no stdout JSON parsing)
@@ -991,6 +991,21 @@ def build_context(
         else:
             ctx["IMAGE_CSV_SUBMIT_RESULT_PATH"] = ""
             ctx["IMAGE_CSV_SUBMIT_RESULT_METAJSON"] = ""
+
+    # Progress reporter script path resolution (PLAN-20260608-01)
+    # Resolve absolute path to agent_runner_v2/tools/progress_reporter.py.
+    # No-op fallback: if path cannot be resolved or file doesn't exist, set to "".
+    try:
+        _reporter_abs = (RUNNER_ROOT.parent / "tools" / "progress_reporter.py").resolve()
+        if _reporter_abs.is_file():
+            ctx["PROGRESS_REPORTER_PATH"] = str(_reporter_abs)
+        else:
+            ctx["PROGRESS_REPORTER_PATH"] = ""
+    except Exception:
+        ctx["PROGRESS_REPORTER_PATH"] = ""
+
+    # Current step name injection (PLAN-20260608-01)
+    ctx["STEP_NAME"] = step
 
     return ctx
 
