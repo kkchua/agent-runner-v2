@@ -254,11 +254,30 @@ def cmd_use(project_root: Path, version: str, local: bool = False) -> None:
 
     config_path = _local_config_path(project_root) if local else _global_config_path()
     config_path.parent.mkdir(parents=True, exist_ok=True)
-    config_path.write_text(json.dumps({"engine_version": version}, indent=2), encoding="utf-8")
+
+    # Preserve existing config fields; only set defaults for keys not already present
+    existing: dict = {}
+    if config_path.exists():
+        try:
+            existing = json.loads(config_path.read_text(encoding="utf-8"))
+        except Exception:
+            pass
+
+    defaults = {
+        "worker_id": "my-worker-01",
+        "worker_label": "live",
+        "backend_url": "http://127.0.0.1:8100",
+        "poll_seconds": 5,
+        "log_file": "/tmp/worker-daemon.log",
+    }
+    config = {**defaults, **existing, "engine_version": version}
+    config_path.write_text(json.dumps(config, indent=2), encoding="utf-8")
+
     store_location = "global" if global_dir.exists() else "local"
     scope_label = "repo-local" if local else "global"
     print(f"Active engine version set to {version!r} (resolved from {store_location} store)")
     print(f"Config ({scope_label}): {config_path}")
+    print(f"Edit {config_path} to set worker_id, backend_url, worker_label, etc.")
     print("Restart the worker to apply.")
 
 
