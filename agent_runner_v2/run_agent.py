@@ -993,7 +993,10 @@ def _resolve_worker_engine_root(engine_root: str | None) -> tuple[str | None, st
                 pass
         return engine_root, version
 
-    config_path = Path.cwd() / ".ukbe-runner" / "engine" / "config.json"
+    # Repo-local config overrides global config
+    local_config = Path.cwd() / ".ukbe-runner" / "engine" / "config.json"
+    global_config = Path.home() / ".ukbe-runner" / "engine" / "config.json"
+    config_path = local_config if local_config.exists() else global_config
     if not config_path.exists():
         return None, None
 
