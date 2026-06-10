@@ -37,6 +37,16 @@ class BackendClient:
             return {}
         return json.loads(body)
 
+    def submit_run(self, *, workflow_name: str, project_root: str | None = None, target_worker_id: str | None = None, worker_label: str = "live", input_payload: dict[str, Any] | None = None) -> dict[str, Any]:
+        payload: dict[str, Any] = {'workflow_name': workflow_name, 'worker_label': worker_label}
+        if project_root is not None:
+            payload['project_root'] = project_root
+        if target_worker_id is not None:
+            payload['target_worker_id'] = target_worker_id
+        if input_payload:
+            payload['input_payload'] = input_payload
+        return self._request('POST', '/api/runs', payload)
+
     def register_worker(self, *, worker_id: str, host_name: str | None = None, capabilities: dict[str, Any] | None = None, worker_label: str = "live") -> dict[str, Any]:
         return self._request('POST', '/api/workers/register', {
             'worker_id': worker_id,
