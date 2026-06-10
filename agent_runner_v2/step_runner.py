@@ -4,7 +4,7 @@ step_runner.py — Core step execution contract for agent_runner_v2.
 
 Single responsibility: invoke coder → read meta.json → validate artifacts → enrich sidecar.
 
-Related: IMPL-20260422-04
+Related: IMPL-20260422-04, PLAN-20260608-01
 
 Key v2 differences from v1:
 - meta.json sidecar is the ONLY communication channel (no fallbacks, no stdout JSON parsing)
@@ -27,7 +27,7 @@ from typing import Any
 from .artifact_paths import compute_paths
 from .coder_adapters import CoderInvocationError, dataclass_dict, invoke_coder
 from .exceptions import ArtifactMissingError, MetaJsonInvalidError, MetaJsonMissingError
-from .runtime_context import RUNNER_ROOT, ARTIFACT_ROOT, PathProxy, get_workflow_module
+from .runtime_context import RUNNER_ROOT, ARTIFACT_ROOT, PACKAGE_ROOT, PathProxy, get_workflow_module
 
 
 RESULT_SCHEMA_PATH = PathProxy(lambda: Path(RUNNER_ROOT) / "llm_response_schema.json")
@@ -601,7 +601,8 @@ def _validate_template_conformance(
         if missing_metadata:
             issues.append(f"missing metadata fields: {', '.join(missing_metadata)}")
         raise ArtifactMissingError(
-            f"Template conformance failed for step {step!r} ({doc_type}): {'; '.join(issues)}"
+            f"Template conformance failed for step {step!r} ({doc_type}): {'; '.join(issues)}",
+            missing=missing_sections + missing_metadata,
         )
 
     print(f"[step_runner] template conformance OK for step={step} type={doc_type}", flush=True)
@@ -615,10 +616,14 @@ def _has_section(content: str, section: str) -> bool:
 
 
 def _has_metadata_field(content: str, field: str) -> bool:
-    """Check if metadata block contains a field."""
+    """Check if metadata block contains a field (frontmatter or markdown table)."""
     import re as _re
-    pattern = _re.compile(rf'^\s*-?\s*{_re.escape(field)}\s*[:：]', _re.MULTILINE)
-    return bool(pattern.search(content))
+    escaped = _re.escape(field)
+    # matches "Field: value" or "- Field: value" (frontmatter / YAML-style)
+    kv_pattern = _re.compile(rf'^\s*-?\s*{escaped}\s*[:：]', _re.MULTILINE)
+    # matches "| Field | value |" (markdown table row)
+    table_pattern = _re.compile(rf'^\|\s*{escaped}\s*\|', _re.MULTILINE | _re.IGNORECASE)
+    return bool(kv_pattern.search(content) or table_pattern.search(content))
 
 
 # ---------------------------------------------------------------------------
@@ -987,13 +992,79 @@ def build_context(
             ctx["IMAGE_CSV_SUBMIT_RESULT_PATH"] = ""
             ctx["IMAGE_CSV_SUBMIT_RESULT_METAJSON"] = ""
 
+    ctx["STEP_NAME"] = step
+
+    # Step-scoped progress.jsonl path — lives inside the step job directory
+    try:
+        from .job_state import job_dir
+        _template_group = (state or {}).get("template_group", "")
+        _job_id = (state or {}).get("job_id", "")
+        _seq = int((state or {}).get("backend_step_sequence") or (state or {}).get("backend_step_order") or 0)
+        if _template_group and _job_id and _seq:
+            ctx["PROGRESS_FILE"] = str(job_dir(_template_group, _job_id) / f"{_seq:02d}_{step}" / "progress.jsonl")
+        else:
+            ctx["PROGRESS_FILE"] = "progress.jsonl"
+    except Exception:
+        ctx["PROGRESS_FILE"] = "progress.jsonl"
+
+    try:
+        _tools_dir = str((PACKAGE_ROOT / "tools").resolve())
+        ctx["TOOLS_DIR"] = _tools_dir
+    except Exception:
+        ctx["TOOLS_DIR"] = ""
+
     return ctx
 
 
+_TOOL_INSTRUCTION_TEMPLATE = """
+
+## Workflow Rules
+
+You MUST use the tools below for EVERY step. Do NOT skip them. Do NOT answer directly without calling them first.
+
+CRITICAL: Do NOT ask any clarifying questions. Do NOT ask for more info. Execute immediately using the tools.
+
+Your step ID is: {STEP_NAME}
+
+### create_todos(step_id, todos)
+Call FIRST. Break the task into concrete steps, one record per todo.
+Usage: python3 -c "import sys; sys.path.insert(0, '{TOOLS_DIR}'); import os; os.environ['PROGRESS_FILE']='{PROGRESS_FILE}'; from agent_tools import create_todos; create_todos('{STEP_NAME}', ['Step 1', 'Step 2'])"
+
+### mark_complete(step_id, index, notes='')
+Call after finishing each step. 1-based index.
+Usage: python3 -c "import sys; sys.path.insert(0, '{TOOLS_DIR}'); import os; os.environ['PROGRESS_FILE']='{PROGRESS_FILE}'; from agent_tools import mark_complete; mark_complete('{STEP_NAME}', 1, notes='Done')"
+
+## Mandatory Sequence
+1. create_todos(step_id) — list all your steps first
+2. Execute each step, call mark_complete(step_id, i) after each
+3. You MUST call mark_complete for every item before returning your final result
+
+Example for a 3-step task:
+  create_todos('{STEP_NAME}', ['Read input file', 'Generate output', 'Write result'])
+  mark_complete('{STEP_NAME}', 1, notes='File read successfully')
+  mark_complete('{STEP_NAME}', 2, notes='Output generated')
+  mark_complete('{STEP_NAME}', 3, notes='Result written to disk')
+
+Actually call the functions with real arguments — do NOT just describe your answer."""
+
+
 def render_prompt(template_text: str, context: dict[str, str]) -> str:
+    import os as _os
+    _src = _os.path.abspath(__file__)
+    _tools_dir = context.get("TOOLS_DIR", "")
+    print(f"[render_prompt] step_runner={_src}", flush=True)
+    print(f"[render_prompt] TOOLS_DIR={_tools_dir!r}", flush=True)
     rendered = template_text
     for key, value in context.items():
         rendered = rendered.replace(f"{{{key}}}", value)
+    if _tools_dir:
+        block = _TOOL_INSTRUCTION_TEMPLATE
+        for key, value in context.items():
+            block = block.replace(f"{{{key}}}", value)
+        rendered = rendered + block
+        print("[render_prompt] TOOL_INSTRUCTION appended", flush=True)
+    else:
+        print("[render_prompt] TOOLS_DIR empty — TOOL_INSTRUCTION skipped", flush=True)
     return rendered
 
 

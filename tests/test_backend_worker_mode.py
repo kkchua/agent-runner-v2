@@ -486,7 +486,7 @@ def test_worker_command_once_processes_one_claim(monkeypatch):
     monkeypatch.setattr(
         run_agent_module,
         '_invoke_execute_step_subprocess',
-        lambda request_payload: {
+        lambda request_payload, engine_root=None: {
             'status': 'completed',
             'outcome': 'approved',
             'coder_used': 'claude',
