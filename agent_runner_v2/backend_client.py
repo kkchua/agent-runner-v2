@@ -37,11 +37,12 @@ class BackendClient:
             return {}
         return json.loads(body)
 
-    def register_worker(self, *, worker_id: str, host_name: str | None = None, capabilities: dict[str, Any] | None = None) -> dict[str, Any]:
+    def register_worker(self, *, worker_id: str, host_name: str | None = None, capabilities: dict[str, Any] | None = None, worker_label: str = "live") -> dict[str, Any]:
         return self._request('POST', '/api/workers/register', {
             'worker_id': worker_id,
             'host_name': host_name,
             'capabilities': capabilities or {},
+            'worker_label': worker_label,
         })
 
     def heartbeat(self, *, worker_id: str, status: str | None = None, current_step_run_id: str | None = None) -> dict[str, Any]:
