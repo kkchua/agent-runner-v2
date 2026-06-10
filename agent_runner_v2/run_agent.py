@@ -152,6 +152,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         ns.engine_argv = raw[1:]
         return ns
 
+    if command == "daemon":
+        ns = argparse.Namespace()
+        ns.command = "daemon"
+        ns.daemon_argv = raw[1:]
+        return ns
+
     p = argparse.ArgumentParser(description="Run a job-based LLM workflow (v2).")
     p.add_argument("--project-root", default="", help="Workspace root. Defaults to the current directory.")
     p.add_argument("--workflow", default="", help="Workflow name to run. Defaults to the workspace default.")
@@ -230,6 +236,10 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "engine":
         from .engine_commands import main as _engine_main
         return _engine_main(args.engine_argv)
+
+    if args.command == "daemon":
+        from .daemon import main as _daemon_main
+        return _daemon_main(args.daemon_argv)
 
     workspace_root = Path(args.project_root or ".").resolve()
     config = load_project_config(workspace_root)
