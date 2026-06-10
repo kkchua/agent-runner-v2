@@ -901,14 +901,25 @@ def _make_task_queue_item_id(sequence: int) -> str:
 
 
 def _extract_document_metadata_value(content: str, key: str) -> str | None:
-    pattern = re.compile(
+    bullet_pattern = re.compile(
         rf"^\s*[-*]\s*(?:\*\*)?{re.escape(key)}(?::(?:\*\*)?|\*\*:\s*|:)\s*(.+?)\s*$",
         re.IGNORECASE,
     )
+    # Also match Markdown table rows: | Key | Value | or | Key | `Value` (extra text) |
+    table_pattern = re.compile(
+        rf"^\|\s*{re.escape(key)}\s*\|\s*(.+?)\s*\|",
+        re.IGNORECASE,
+    )
     for line in content.splitlines():
-        match = pattern.match(line.strip())
+        match = bullet_pattern.match(line.strip())
         if match:
-            return match.group(1).strip()
+            return match.group(1).strip().strip("`")
+        match = table_pattern.match(line.strip())
+        if match:
+            # Extract the first backtick-delimited token if present, else the full cell value
+            raw = match.group(1).strip()
+            bt = re.match(r"`([^`]+)`", raw)
+            return bt.group(1).strip() if bt else raw
     return None
 
 
