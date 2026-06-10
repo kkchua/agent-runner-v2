@@ -60,9 +60,12 @@ def _write_version_json(version_dir: Path, data: dict) -> None:
 
 def _verify_import(version_dir: Path) -> None:
     env = os.environ.copy()
-    env["PYTHONPATH"] = str(version_dir) + os.pathsep + env.get("PYTHONPATH", "")
+    # Mirror how _invoke_execute_step_subprocess resolves the engine:
+    # prepend <engine_root>/agent_runner_v2 so the inner package is found first,
+    # even if agent_runner_v2 is also installed as a pip package.
+    env["PYTHONPATH"] = str(version_dir / "agent_runner_v2") + os.pathsep + env.get("PYTHONPATH", "")
     result = subprocess.run(
-        [sys.executable, "-c", "import agent_runner_v2.agent_runner_v2.run_agent; print('import OK')"],
+        [sys.executable, "-c", "import agent_runner_v2.run_agent; print('import OK')"],
         capture_output=True, text=True, env=env,
     )
     if result.returncode != 0:
