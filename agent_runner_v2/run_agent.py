@@ -127,8 +127,29 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         p.add_argument("--poll-seconds", type=int, default=5, help="Polling interval when idle.")
         p.add_argument("--once", action="store_true", help="Claim and process at most one step, then exit.")
         p.add_argument("--engine-root", default="", help="Explicit version directory to prepend to PYTHONPATH for execute-step subprocesses. Overrides config.json lookup.")
+        p.add_argument("--worker-label", default="live", help="Worker queue label (e.g. 'live' or 'dev'). Only claims runs with matching worker_label.")
         ns = p.parse_args(raw[1:])
         ns.command = "worker"
+        return ns
+
+    if command == "poll":
+        # Convenience single-shot variant: reads AGENT_RUNNER_BACKEND_URL and AGENT_RUNNER_WORKER_ID
+        # from the environment. Equivalent to: worker --once --backend-url URL --worker-id ID
+        import os as _os
+        p = argparse.ArgumentParser(description="Single-shot backend poll (claim one step and exit).")
+        p.add_argument("--backend-url", default=_os.environ.get("AGENT_RUNNER_BACKEND_URL", "http://127.0.0.1:8100"))
+        p.add_argument("--worker-id", default=_os.environ.get("AGENT_RUNNER_WORKER_ID", ""))
+        p.add_argument("--host-name", default="")
+        p.add_argument("--engine-root", default="")
+        p.add_argument("--worker-label", default=_os.environ.get("WORKER_LABEL", "live"))
+        ns = p.parse_args(raw[1:])
+        ns.command = "poll"
+        return ns
+
+    if command == "engine":
+        ns = argparse.Namespace()
+        ns.command = "engine"
+        ns.engine_argv = raw[1:]
         return ns
 
     p = argparse.ArgumentParser(description="Run a job-based LLM workflow (v2).")
@@ -187,7 +208,28 @@ def main(argv: list[str] | None = None) -> int:
             poll_seconds=args.poll_seconds,
             once=args.once,
             engine_root=args.engine_root or None,
+            worker_label=args.worker_label,
         )
+
+    if args.command == "poll":
+        import os as _os
+        worker_id = args.worker_id or _os.environ.get("AGENT_RUNNER_WORKER_ID", "")
+        if not worker_id:
+            print("[poll] ERROR: --worker-id or AGENT_RUNNER_WORKER_ID env var required", flush=True)
+            return 1
+        return _worker_command(
+            backend_url=args.backend_url,
+            worker_id=worker_id,
+            host_name=args.host_name or None,
+            poll_seconds=5,
+            once=True,
+            engine_root=args.engine_root or None,
+            worker_label=args.worker_label,
+        )
+
+    if args.command == "engine":
+        from .engine_commands import main as _engine_main
+        return _engine_main(args.engine_argv)
 
     workspace_root = Path(args.project_root or ".").resolve()
     config = load_project_config(workspace_root)
@@ -967,16 +1009,25 @@ def _resolve_worker_engine_root(engine_root: str | None) -> tuple[str | None, st
     if engine_version == "SNAPSHOT":
         return None, engine_version
 
-    version_dir = Path.cwd() / ".ukbe-runner" / "engine" / "versions" / engine_version
-    if not version_dir.exists():
-        raise RuntimeError(
-            f"[worker] engine version {engine_version!r} not found at {version_dir}. "
-            "Run: python scripts/engine_tool.py install <version>"
-        )
-    return str(version_dir), engine_version
+    # Check repo-local store first, then machine-level global store
+    repo_local = Path.cwd() / ".ukbe-runner" / "engine" / "versions" / engine_version
+    global_store = Path.home() / ".ukbe-runner" / "engines" / engine_version
+
+    if repo_local.exists():
+        print(f"[worker] engine {engine_version!r} resolved from repo-local store", flush=True)
+        return str(repo_local), engine_version
+    if global_store.exists():
+        print(f"[worker] engine {engine_version!r} resolved from global store (~/.ukbe-runner/engines/)", flush=True)
+        return str(global_store), engine_version
+
+    raise RuntimeError(
+        f"[worker] engine version {engine_version!r} not found in repo-local ({repo_local}) "
+        f"or global ({global_store}) store. "
+        "Run: ukbe-run-agent engine install <version>"
+    )
 
 
-def _worker_command(*, backend_url: str, worker_id: str, host_name: str | None, poll_seconds: int, once: bool, engine_root: str | None = None) -> int:
+def _worker_command(*, backend_url: str, worker_id: str, host_name: str | None, poll_seconds: int, once: bool, engine_root: str | None = None, worker_label: str = "live") -> int:
     effective_engine_root, engine_version = _resolve_worker_engine_root(engine_root)
     if effective_engine_root:
         print(f"[worker] engine version: {engine_version!r}  root: {effective_engine_root}", flush=True)
@@ -984,7 +1035,7 @@ def _worker_command(*, backend_url: str, worker_id: str, host_name: str | None, 
         print("[worker] engine version: live source (no config.json or PYTHONPATH override)", flush=True)
 
     client = BackendClient(backend_url)
-    client.register_worker(worker_id=worker_id, host_name=host_name, capabilities={"mode": ["execute-step"], "engine_version": engine_version})
+    client.register_worker(worker_id=worker_id, host_name=host_name, capabilities={"mode": ["execute-step"], "engine_version": engine_version}, worker_label=worker_label)
 
     while True:
         client.heartbeat(worker_id=worker_id, status="idle")
