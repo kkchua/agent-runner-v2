@@ -10,6 +10,7 @@ from typing import Any, Callable
 
 PACKAGE_ROOT = Path(__file__).resolve().parent
 DEFAULT_RUNNER_HOME = ".ukbe-runner"
+GLOBAL_RUNNER_HOME = Path.home().resolve() / DEFAULT_RUNNER_HOME
 DEFAULT_WORKFLOW_NAME = "default"
 
 
@@ -25,7 +26,7 @@ class RuntimeContext:
 
 _CTX = RuntimeContext(
     workspace_root=Path.cwd().resolve(),
-    runner_home=Path.cwd().resolve() / DEFAULT_RUNNER_HOME,
+    runner_home=GLOBAL_RUNNER_HOME,
     workflow_name=DEFAULT_WORKFLOW_NAME,
     workflow_root=PACKAGE_ROOT,
     workflow_module=None,
@@ -72,7 +73,7 @@ def set_context(
     """Set process-local runtime context and return it."""
     global _CTX
     workspace_root = workspace_root.resolve()
-    runner_home = workspace_root / DEFAULT_RUNNER_HOME
+    runner_home = GLOBAL_RUNNER_HOME
     if workflow_name is None:
         workflow_name = _CTX.workflow_name
     if workflow_root is None:

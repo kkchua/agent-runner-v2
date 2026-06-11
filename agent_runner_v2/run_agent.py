@@ -32,6 +32,7 @@ from .bundle_loader import (
     init_workspace,
     load_project_config,
     load_workflow_module,
+    resolve_workflow_root,
     workflow_root as workflow_root_for,
 )
 from .coder_adapters import CoderInvocationError, dataclass_dict
@@ -71,11 +72,12 @@ from .job_state import (
     set_job_status,
     set_last_failure,
     task_execution_binding_current_item,
+    _update_document_status,
 )
 from .model_config import resolve_coder
 from .runner_logger import log_resolver
 from .runtime_context import (
-    PROJECT_ROOT, RUNNER_ROOT, JOBS_ROOT, ARTIFACT_ROOT,
+    PROJECT_ROOT, RUNNER_ROOT, JOBS_ROOT, ARTIFACT_ROOT, PACKAGE_ROOT,
     get_delivery_root, get_workflow_module,
     set_context, set_workflow_module, set_delivery_root,
 )
@@ -164,6 +166,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         ns.submit_argv = raw[1:]
         return ns
 
+    if command == "approve":
+        ns = argparse.Namespace()
+        ns.command = "approve"
+        ns.approve_argv = raw[1:]
+        return ns
+
     p = argparse.ArgumentParser(description="Run a job-based LLM workflow (v2).")
     p.add_argument("--project-root", default="", help="Workspace root. Defaults to the current directory.")
     p.add_argument("--workflow", default="", help="Workflow name to run. Defaults to the workspace default.")
@@ -250,6 +258,10 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "submit":
         from .submit_commands import main as _submit_main
         return _submit_main(args.submit_argv)
+
+    if args.command == "approve":
+        from .approve_commands import main as _approve_main
+        return _approve_main(args.approve_argv)
 
     workspace_root = Path(args.project_root or ".").resolve()
     config = load_project_config(workspace_root)
@@ -892,14 +904,23 @@ def _execute_step_command(request_path: Path, result_path: Path | None = None) -
     workflow_cfg_map = config.get("workflows") or {}
     bundle_workflow_name = workflow_name if workflow_name in workflow_cfg_map else str(config.get("default_workflow") or "default")
     workflow_cfg = workflow_cfg_map.get(bundle_workflow_name) or {}
-    workflow_path = workflow_cfg.get("path") or str(workflow_root_for(workspace_root, bundle_workflow_name).relative_to(workspace_root))
-    workflow_bundle_root = (workspace_root / workflow_path).resolve()
 
-    # Only load workflow module if not using DB-backed execution (step_execution_spec)
-    # DB-backed mode uses _build_group_cfg_from_execution_spec() which doesn't need the bundle
+    # Prefer a user-customized global default workflow bundle when present.
+    # Otherwise use DB-provided step_execution_spec directly.
+    # If neither is available, fail fast.
     workflow_module = None
-    if not request.step_execution_spec:
-        workflow_module = load_workflow_module(workspace_root, bundle_workflow_name, config=config)
+    global_default_root = resolve_workflow_root(workspace_root, "default", config=config)
+    global_default_module = global_default_root / "template_groups.py"
+    if global_default_module.exists():
+        workflow_bundle_root = global_default_root
+        workflow_module = load_workflow_module(workspace_root, "default", config=config)
+    elif request.step_execution_spec:
+        workflow_bundle_root = PACKAGE_ROOT.resolve()
+    else:
+        raise FileNotFoundError(
+            f"Workflow bundle not found at {global_default_module}. "
+            "Provide backend step_execution_spec or create ~/.ukbe-runner/workflows/default."
+        )
 
     delivery_root = Path(request.target_project_root).resolve() if request.target_project_root else None
     if delivery_root is not None and request.template_group.startswith("delivery_scaffold"):
@@ -1013,10 +1034,7 @@ def _resolve_worker_engine_root(engine_root: str | None) -> tuple[str | None, st
                 pass
         return engine_root, version
 
-    # Repo-local config overrides global config
-    local_config = Path.cwd() / ".ukbe-runner" / "engine" / "config.json"
-    global_config = Path.home() / ".ukbe-runner" / "engine" / "config.json"
-    config_path = local_config if local_config.exists() else global_config
+    config_path = Path.home() / ".ukbe-runner" / "engine" / "config.json"
     if not config_path.exists():
         return None, None
 
@@ -1032,20 +1050,14 @@ def _resolve_worker_engine_root(engine_root: str | None) -> tuple[str | None, st
     if engine_version == "SNAPSHOT":
         return None, engine_version
 
-    # Check repo-local store first, then machine-level global store
-    repo_local = Path.cwd() / ".ukbe-runner" / "engine" / "versions" / engine_version
-    global_store = Path.home() / ".ukbe-runner" / "engines" / engine_version
+    global_store = Path.home() / ".ukbe-runner" / "engine" / "versions" / engine_version
 
-    if repo_local.exists():
-        print(f"[worker] engine {engine_version!r} resolved from repo-local store", flush=True)
-        return str(repo_local), engine_version
     if global_store.exists():
-        print(f"[worker] engine {engine_version!r} resolved from global store (~/.ukbe-runner/engines/)", flush=True)
+        print(f"[worker] engine {engine_version!r} resolved from global store (~/.ukbe-runner/engine/versions/)", flush=True)
         return str(global_store), engine_version
 
     raise RuntimeError(
-        f"[worker] engine version {engine_version!r} not found in repo-local ({repo_local}) "
-        f"or global ({global_store}) store. "
+        f"[worker] engine version {engine_version!r} not found in global store ({global_store}). "
         "Run: ukbe-run-agent engine install <version>"
     )
 
@@ -1073,10 +1085,32 @@ def _worker_command(*, backend_url: str, worker_id: str, host_name: str | None, 
             continue
 
         client.heartbeat(worker_id=worker_id, status="busy", current_step_run_id=step_run.get("id"))
+        _write_backend_job_json(run=run, step_run=step_run, last_event="STEP_CLAIMED")
         request_payload = _build_worker_request_payload(run=run, step_run=step_run, step_execution_spec=claim.get("step_execution_spec"), backend_url=backend_url)
-        result = _invoke_execute_step_subprocess(request_payload, engine_root=effective_engine_root)
-        _submit_worker_result(client=client, run=run, step_run=step_run, result=result)
-        client.heartbeat(worker_id=worker_id, status="idle", current_step_run_id="")
+        try:
+            result = _invoke_execute_step_subprocess(request_payload, engine_root=effective_engine_root)
+        except Exception as exc:
+            result = _build_worker_crash_result(run=run, step_run=step_run, error=exc)
+        completion = _submit_worker_result(client=client, run=run, step_run=step_run, result=result)
+        completion_run = dict((completion or {}).get("run") or run)
+        completion_step_run = dict((completion or {}).get("step_run") or step_run)
+        next_step_run = (completion or {}).get("next_step_run")
+        last_event = "STEP_COMPLETED"
+        if completion_run.get("status") == "awaiting_human":
+            last_event = "HUMAN_APPROVAL_REQUIRED"
+        elif completion_run.get("status") == "completed":
+            last_event = "RUN_COMPLETED"
+        elif completion_run.get("status") == "failed":
+            last_event = "RUN_FAILED"
+        elif next_step_run:
+            last_event = "STEP_ENQUEUED"
+        _write_backend_job_json(
+            run=completion_run,
+            step_run=completion_step_run,
+            next_step_run=next_step_run if isinstance(next_step_run, dict) else None,
+            last_event=last_event,
+        )
+        client.heartbeat(worker_id=worker_id, status="idle", current_step_run_id=None)
         if once:
             return 0
 
@@ -1150,7 +1184,56 @@ def _invoke_execute_step_subprocess(request_payload: dict[str, Any], engine_root
         return payload
 
 
-def _submit_worker_result(*, client: BackendClient, run: dict[str, Any], step_run: dict[str, Any], result: dict[str, Any]) -> None:
+def _job_json_path(*, workflow_name: str, run_code: str) -> Path:
+    return JOBS_ROOT / workflow_name / run_code / "job.json"
+
+
+def _write_backend_job_json(
+    *,
+    run: dict[str, Any],
+    step_run: dict[str, Any] | None = None,
+    next_step_run: dict[str, Any] | None = None,
+    last_event: str | None = None,
+) -> None:
+    workflow_name = str(run.get("workflow_name") or "")
+    run_code = str(run.get("run_code") or "")
+    if not workflow_name or not run_code:
+        return
+
+    payload: dict[str, Any] = {
+        "run_id": run.get("id"),
+        "run_code": run_code,
+        "workflow_name": workflow_name,
+        "status": run.get("status"),
+        "current_step_name": run.get("current_step_name"),
+        "current_step_run_id": run.get("current_step_run_id"),
+        "awaiting_human_step": run.get("awaiting_human_step"),
+        "target_worker_id": run.get("target_worker_id"),
+        "claimed_by_worker": run.get("claimed_by_worker"),
+        "project_root": run.get("project_root"),
+        "context_payload": dict(run.get("context_payload") or {}),
+        "submitted_at": run.get("submitted_at"),
+        "started_at": run.get("started_at"),
+        "completed_at": run.get("completed_at"),
+        "error_message": run.get("error_message"),
+        "updated_at": _now_iso(),
+    }
+    if step_run:
+        payload["current_step_status"] = step_run.get("status")
+        payload["current_step_outcome"] = step_run.get("outcome")
+        payload["current_step_coder"] = step_run.get("coder")
+    if next_step_run:
+        payload["next_step_name"] = next_step_run.get("step_name")
+        payload["next_step_run_id"] = next_step_run.get("id")
+    if last_event:
+        payload["last_event"] = last_event
+
+    job_json_path = _job_json_path(workflow_name=workflow_name, run_code=run_code)
+    job_json_path.parent.mkdir(parents=True, exist_ok=True)
+    _save_json(job_json_path, payload)
+
+
+def _submit_worker_result(*, client: BackendClient, run: dict[str, Any], step_run: dict[str, Any], result: dict[str, Any]) -> dict[str, Any]:
     diagnostics = dict(result.get("diagnostics") or {})
     for artifact_key, file_path in (result.get("artifacts") or {}).items():
         client.create_artifact(
@@ -1174,7 +1257,7 @@ def _submit_worker_result(*, client: BackendClient, run: dict[str, Any], step_ru
     }
     if review:
         complete_payload["review"] = review
-    client.complete_step_run(step_run_id=str(step_run["id"]), payload=complete_payload)
+    completion = client.complete_step_run(step_run_id=str(step_run["id"]), payload=complete_payload)
 
     event_payload = {
         "event_type": "WORKER_RESULT",
@@ -1188,6 +1271,7 @@ def _submit_worker_result(*, client: BackendClient, run: dict[str, Any], step_ru
         },
     }
     client.create_event(run_id=str(run["id"]), payload=event_payload)
+    return completion
 
 
 def _build_execution_state(*, request: ExecutionRequest, group_cfg: dict[str, Any]) -> dict[str, Any]:
@@ -1469,6 +1553,20 @@ def _execute_backend_step_request(
             "remark": step_result.remark,
             "reject_code": step_result.reject_code,
         }
+        if review["decision"] == "rejected":
+            reject_target = ((step_cfg.get("on_reject_refine") or {}).get("artifact") or "").strip()
+            if reject_target:
+                artifact_path = state.get("artifacts", {}).get(reject_target)
+                if artifact_path:
+                    _update_document_status(file_path=artifact_path, new_status="changes_requested")
+
+    produced_status = step_cfg.get("produced_document_status") or {}
+    produced_artifact = str(produced_status.get("artifact") or "").strip()
+    produced_required_status = str(produced_status.get("required_status") or "").strip()
+    if produced_artifact and produced_required_status:
+        artifact_path = (step_result.artifacts or {}).get(produced_artifact) or state.get("artifacts", {}).get(produced_artifact)
+        if artifact_path:
+            _update_document_status(file_path=artifact_path, new_status=produced_required_status)
 
     published_artifacts = _publish_backend_artifacts(
         state=state,
@@ -1750,6 +1848,54 @@ def _save_json(path: Path, data: Any) -> None:
 
 def _now_iso() -> str:
     return dt.datetime.now().isoformat(timespec="seconds")
+
+
+def _worker_step_dir(*, run: dict[str, Any], step_run: dict[str, Any]) -> Path:
+    workflow_name = str(run.get("workflow_name") or "")
+    run_code = str(run.get("run_code") or run.get("id") or "backend-run")
+    sequence_no = int(step_run.get("sequence_no") or 1)
+    step_name = str(step_run.get("step_name") or "unknown_step")
+    return JOBS_ROOT / workflow_name / run_code / f"{sequence_no:02d}_{step_name}"
+
+
+def _build_worker_crash_result(*, run: dict[str, Any], step_run: dict[str, Any], error: Exception) -> dict[str, Any]:
+    step_name = str(step_run.get("step_name") or "unknown_step")
+    step_dir = _worker_step_dir(run=run, step_run=step_run)
+    diagnostics = {
+        "workflow_run_id": str(run.get("id") or ""),
+        "workflow_step_run_id": str(step_run.get("id") or ""),
+        "job_id": str(run.get("run_code") or ""),
+        "step_dir": str(step_dir.relative_to(JOBS_ROOT)),
+        "worker_error": repr(error),
+    }
+    step_dir.mkdir(parents=True, exist_ok=True)
+    _save_json(
+        step_dir / "worker_error.json",
+        {
+            "step_name": step_name,
+            "worker_error": repr(error),
+            "diagnostics": diagnostics,
+            "failed_at": _now_iso(),
+        },
+    )
+    return {
+        "status": "failed",
+        "outcome": "failed",
+        "step_name": step_name,
+        "coder_used": str(step_run.get("coder") or ""),
+        "remark": f"Worker failed before execute-step completed: {error}",
+        "artifacts": {},
+        "meta_json_path": None,
+        "review": None,
+        "usage": None,
+        "failure": {
+            "failure_class": "SYSTEM_ERROR",
+            "failure_code": "WORKER_EXECUTE_STEP_FAILED",
+            "failure_reason": str(error),
+            "failure_source": "worker",
+        },
+        "diagnostics": diagnostics,
+    }
 
 
 if __name__ == "__main__":

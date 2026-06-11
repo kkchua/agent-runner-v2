@@ -6,6 +6,7 @@ from unittest.mock import MagicMock
 from agent_runner_v2.execution_request import ExecutionRequest
 from agent_runner_v2.execution_result import ExecutionFailure, ExecutionResult
 from agent_runner_v2 import run_agent as run_agent_module
+from agent_runner_v2.actions.promote_artifact import promote_artifact
 from agent_runner_v2.step_runner import build_context
 from agent_runner_v2.run_agent import (
     _build_execution_state,
@@ -14,6 +15,7 @@ from agent_runner_v2.run_agent import (
     _publish_backend_artifacts,
     _submit_worker_result,
     _worker_command,
+    _write_backend_job_json,
 )
 
 
@@ -211,6 +213,26 @@ def test_build_context_uses_step_execution_spec_artifact_rules_for_produced_path
     assert ctx['DELIVERY_TEMPLATE_REGISTRY_METAJSON'] == '.ukbe-runner/jobs/delivery_scaffold_v1/JOB-123/05_generate_templates/meta.json'
 
 
+def test_build_context_action_steps_prefer_step_metajson():
+    state = {
+        'template_group': 'delivery_planning_v1',
+        'job_id': 'PLAN-20260611-38055dbf',
+        'backend_step_dir_rel': '.ukbe-runner/jobs/delivery_planning_v1/PLAN-20260611-38055dbf/03_promote_plan',
+        'artifacts': {
+            'PLAN_FILE': 'docs/delivery/02_plans/PLAN-20260611-01_backend-lineage-metadata-test.md',
+        },
+    }
+    step_cfg = {
+        'action': 'promote_artifact',
+        'result_meta_key': 'PLAN_FILE',
+        'produces': ['PLAN_FILE'],
+    }
+
+    ctx = build_context(state=state, step='promote_plan', step_cfg=step_cfg)
+
+    assert ctx['PLAN_FILE_METAJSON'] == '.ukbe-runner/jobs/delivery_planning_v1/PLAN-20260611-38055dbf/03_promote_plan/meta.json'
+
+
 def test_build_context_prefers_backend_output_paths(monkeypatch):
     state = {
         'current_step': 'plan',
@@ -235,6 +257,34 @@ def test_build_context_prefers_backend_output_paths(monkeypatch):
     assert ctx['PLAN_FILE_PATH'] == 'docs/custom/PLAN-20260606-01_test.md'
     assert ctx['PLAN_FILE_METAJSON'] == 'docs/custom/PLAN-20260606-01_test.meta.json'
     assert ctx['PLAN_ID'] == 'PLAN-20260606-01'
+
+
+def test_promote_artifact_writes_step_and_artifact_metajson(tmp_path):
+    plan_rel = 'docs/delivery/02_plans/PLAN-20260611-01_backend-lineage-metadata-test.md'
+    plan_path = tmp_path / plan_rel
+    plan_path.parent.mkdir(parents=True, exist_ok=True)
+    plan_path.write_text('| Status | `draft` |\n', encoding='utf-8')
+
+    context = {
+        'PLAN_FILE': plan_rel,
+        'PLAN_FILE_METAJSON': '.ukbe-runner/jobs/delivery_planning_v1/PLAN-20260611-38055dbf/03_promote_plan/meta.json',
+    }
+    result = promote_artifact(
+        context=context,
+        state={},
+        step_cfg={'promotes': 'PLAN_FILE', 'result_meta_key': 'PLAN_FILE'},
+        project_root=tmp_path,
+    )
+
+    assert result.status == 'APPROVED'
+    assert '`Approved`' in plan_path.read_text(encoding='utf-8')
+
+    step_meta = tmp_path / '.ukbe-runner/jobs/delivery_planning_v1/PLAN-20260611-38055dbf/03_promote_plan/meta.json'
+    artifact_meta = tmp_path / 'docs/delivery/02_plans/PLAN-20260611-01_backend-lineage-metadata-test.meta.json'
+    assert step_meta.exists()
+    assert artifact_meta.exists()
+    assert json.loads(step_meta.read_text(encoding='utf-8'))['coder_result']['artifacts']['PLAN_FILE'] == plan_rel
+    assert json.loads(artifact_meta.read_text(encoding='utf-8'))['coder_result']['artifacts']['PLAN_FILE'] == plan_rel
 
 
 def test_publish_backend_artifacts_uses_artifact_rules(tmp_path):
@@ -280,7 +330,15 @@ def test_submit_worker_result_posts_artifacts_event_and_completion():
         'failure': None,
     }
 
-    _submit_worker_result(client=client, run=run, step_run=step_run, result=result)
+    client.complete_step_run.return_value = {
+        'run': {'id': 'run-1', 'status': 'pending'},
+        'step_run': {'id': 'step-1', 'status': 'completed', 'outcome': 'approved'},
+        'next_step_run': {'id': 'step-2', 'step_name': 'review_pre_init'},
+    }
+
+    completion = _submit_worker_result(client=client, run=run, step_run=step_run, result=result)
+
+    assert completion['run']['status'] == 'pending'
 
     client.create_artifact.assert_called_once()
     artifact_call = client.create_artifact.call_args.kwargs
@@ -298,6 +356,45 @@ def test_submit_worker_result_posts_artifacts_event_and_completion():
     assert event_call['payload']['event_type'] == 'WORKER_RESULT'
 
 
+def test_write_backend_job_json_mirrors_run_state(tmp_path, monkeypatch):
+    monkeypatch.setattr(run_agent_module, 'JOBS_ROOT', tmp_path / '.ukbe-runner/jobs')
+
+    run = {
+        'id': 'run-1',
+        'run_code': 'PLAN-20260611-38055dbf',
+        'workflow_name': 'delivery_planning_v1',
+        'status': 'awaiting_human',
+        'current_step_name': 'review_planner',
+        'current_step_run_id': 'step-2',
+        'awaiting_human_step': 'review_planner',
+        'target_worker_id': 'worker-1',
+        'claimed_by_worker': 'worker-1',
+        'project_root': '/workspace/project',
+        'context_payload': {
+            'PLAN_FILE': 'docs/delivery/02_plans/PLAN-20260611-01_backend-lineage-metadata-test.md',
+            'REVIEW_FILE': 'docs/delivery/05_reviews/REV-260611-03_rplan_P-0611-01_backend-lineage-metadata-test.md',
+        },
+        'submitted_at': '2026-06-11T07:48:56',
+        'started_at': '2026-06-11T07:49:14',
+        'completed_at': None,
+        'error_message': None,
+    }
+    step_run = {'id': 'step-2', 'status': 'completed', 'outcome': 'approved', 'coder': 'claude'}
+    next_step_run = {'id': 'step-3', 'step_name': 'promote_plan'}
+
+    _write_backend_job_json(run=run, step_run=step_run, next_step_run=next_step_run, last_event='HUMAN_APPROVAL_REQUIRED')
+
+    job_json = tmp_path / '.ukbe-runner/jobs/delivery_planning_v1/PLAN-20260611-38055dbf/job.json'
+    assert job_json.exists()
+    payload = json.loads(job_json.read_text(encoding='utf-8'))
+    assert payload['status'] == 'awaiting_human'
+    assert payload['awaiting_human_step'] == 'review_planner'
+    assert payload['context_payload']['PLAN_FILE'] == 'docs/delivery/02_plans/PLAN-20260611-01_backend-lineage-metadata-test.md'
+    assert payload['current_step_status'] == 'completed'
+    assert payload['next_step_name'] == 'promote_plan'
+    assert payload['last_event'] == 'HUMAN_APPROVAL_REQUIRED'
+
+
 def test_execute_step_command_uses_step_execution_spec_without_load_group(monkeypatch, tmp_path):
     request_path = tmp_path / 'request.json'
     result_path = tmp_path / 'result.json'
@@ -312,6 +409,12 @@ def test_execute_step_command_uses_step_execution_spec_without_load_group(monkey
                 'step_name': 'pre_init',
                 'project_root': str(tmp_path),
                 'input_artifacts': {'DRAFT_INIT_FILE': 'docs/draft.md'},
+                'step_execution_spec': {
+                    'template_group': 'initiative_intake_v1',
+                    'prompt_file': 'prompts/initiative_intake_v1/01_pre_init.txt',
+                    'required_inputs': [{'artifact_key': 'DRAFT_INIT_FILE'}],
+                    'raw_config': {},
+                },
                 'step_execution_spec': {
                     'template_group': 'initiative_intake_v1',
                     'step_name': 'pre_init',
@@ -372,6 +475,12 @@ def test_execute_step_command_writes_result_file(monkeypatch, tmp_path):
                 'step_name': 'pre_init',
                 'project_root': str(tmp_path),
                 'input_artifacts': {'DRAFT_INIT_FILE': 'docs/draft.md'},
+                'step_execution_spec': {
+                    'template_group': 'initiative_intake_v1',
+                    'prompt_file': 'prompts/initiative_intake_v1/01_pre_init.txt',
+                    'required_inputs': [{'artifact_key': 'DRAFT_INIT_FILE'}],
+                    'raw_config': {},
+                },
             }
         ),
         encoding='utf-8',
@@ -424,6 +533,12 @@ def test_execute_step_command_returns_nonzero_on_failed_result(monkeypatch, tmp_
                 'workflow_step_run_id': 'step-1',
                 'step_name': 'pre_init',
                 'project_root': str(tmp_path),
+                'step_execution_spec': {
+                    'template_group': 'initiative_intake_v1',
+                    'prompt_file': 'prompts/initiative_intake_v1/01_pre_init.txt',
+                    'required_inputs': [],
+                    'raw_config': {},
+                },
             }
         ),
         encoding='utf-8',
@@ -661,3 +776,18 @@ def test_execute_backend_step_request_returns_failed_result_for_missing_meta_jso
     assert result.failure is not None
     assert result.failure.failure_code == 'META_JSON_MISSING'
     assert result.failure.failure_source == 'runner'
+
+
+def test_resolve_worker_engine_root_uses_global_only(monkeypatch, tmp_path):
+    home = tmp_path / "home"
+    global_cfg = home / ".ukbe-runner" / "engine" / "config.json"
+    global_ver = home / ".ukbe-runner" / "engine" / "versions" / "1.2.3"
+    global_ver.mkdir(parents=True)
+    global_cfg.parent.mkdir(parents=True, exist_ok=True)
+    global_cfg.write_text('{"engine_version": "1.2.3"}', encoding='utf-8')
+    monkeypatch.setattr(run_agent_module.Path, 'home', staticmethod(lambda: home))
+
+    engine_root, version = run_agent_module._resolve_worker_engine_root(None)
+
+    assert version == '1.2.3'
+    assert engine_root == str(global_ver)

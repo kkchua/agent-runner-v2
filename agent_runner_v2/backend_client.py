@@ -79,6 +79,17 @@ class BackendClient:
             payload['context_payload'] = context_payload
         return self._request('POST', '/api/runs', payload)
 
+    def approve_run(self, *, run_id: str, action: str = "approve", feedback: str | None = None, outcome: str | None = None) -> dict[str, Any]:
+        payload: dict[str, Any] = {'action': action}
+        if feedback is not None:
+            payload['feedback'] = feedback
+        if outcome is not None:
+            payload['outcome'] = outcome
+        return self._request('POST', f'/api/runs/{run_id}/approve', payload)
+
+    def get_run(self, *, run_id: str) -> dict[str, Any]:
+        return self._request('GET', f'/api/runs/{run_id}')
+
     def register_worker(self, *, worker_id: str, host_name: str | None = None, capabilities: dict[str, Any] | None = None, worker_label: str = "live") -> dict[str, Any]:
         return self._request('POST', '/api/workers/register', {
             'worker_id': worker_id,
@@ -87,12 +98,42 @@ class BackendClient:
             'worker_label': worker_label,
         })
 
-    def heartbeat(self, *, worker_id: str, status: str | None = None, current_step_run_id: str | None = None) -> dict[str, Any]:
+    def heartbeat(
+        self,
+        *,
+        worker_id: str,
+        status: str | None = None,
+        current_step_run_id: str | None = None,
+        workflow_run_id: str | None = None,
+        workflow_step_run_id: str | None = None,
+        run_code: str | None = None,
+        pid: int | None = None,
+        state: str | None = None,
+        log_file: str | None = None,
+        watchdog_reason: str | None = None,
+        exit_code: int | None = None,
+    ) -> dict[str, Any]:
         payload: dict[str, Any] = {'worker_id': worker_id}
         if status is not None:
             payload['status'] = status
         if current_step_run_id is not None:
             payload['current_step_run_id'] = current_step_run_id
+        if workflow_run_id is not None:
+            payload['workflow_run_id'] = workflow_run_id
+        if workflow_step_run_id is not None:
+            payload['workflow_step_run_id'] = workflow_step_run_id
+        if run_code is not None:
+            payload['run_code'] = run_code
+        if pid is not None:
+            payload['pid'] = pid
+        if state is not None:
+            payload['state'] = state
+        if log_file is not None:
+            payload['log_file'] = log_file
+        if watchdog_reason is not None:
+            payload['watchdog_reason'] = watchdog_reason
+        if exit_code is not None:
+            payload['exit_code'] = exit_code
         return self._request('POST', '/api/workers/heartbeat', payload)
 
     def claim_step(self, *, worker_id: str) -> dict[str, Any]:

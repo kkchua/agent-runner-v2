@@ -2,7 +2,7 @@
 
 Invoked via: ukbe-run-agent engine <subcommand>
 
-  install <tag>                    -- download from GitHub and install globally (~/.ukbe-runner/engines/)
+  install <tag>                    -- download from GitHub and install globally (~/.ukbe-runner/engine/versions/)
   install <tag> --local            -- install to repo-local .ukbe-runner/engine/versions/
   install <tag> --from-path <dir>  -- copy from a local source directory (useful for private repos)
   snapshot                         -- snapshot live source into repo-local SNAPSHOT version
@@ -31,7 +31,7 @@ DEFAULT_GITHUB_REPO = "kkchua/agent-runner-v2"
 # ---------------------------------------------------------------------------
 
 def _global_engines_dir() -> Path:
-    return Path.home() / ".ukbe-runner" / "engines"
+    return Path.home() / ".ukbe-runner" / "engine" / "versions"
 
 
 def _global_version_dir(version: str) -> Path:
@@ -77,7 +77,7 @@ def _copy_pkg_to(src_inner_pkg: Path, dest_version_dir: Path) -> None:
     """Copy agent_runner_v2 inner package to a versioned engine store directory.
 
     src_inner_pkg  — the agent_runner_v2/ package directory (contains __init__.py)
-    dest_version_dir — e.g. ~/.ukbe-runner/engines/1.0.1/
+    dest_version_dir — e.g. ~/.ukbe-runner/engine/versions/1.0.1/
     Result layout:
       dest_version_dir/
         agent_runner_v2/
@@ -160,7 +160,7 @@ def cmd_install(
         project_root = Path.cwd()
 
     dest_dir = _global_version_dir(tag) if global_install else _local_version_dir(project_root, tag)
-    store_label = "global (~/.ukbe-runner/engines/)" if global_install else "repo-local (.ukbe-runner/engine/versions/)"
+    store_label = "global (~/.ukbe-runner/engine/versions/)" if global_install else "repo-local (.ukbe-runner/engine/versions/)"
 
     if from_path:
         src_root = Path(from_path).resolve()
@@ -350,7 +350,7 @@ def main(argv: list[str] | None = None) -> int:
     p_install = sub.add_parser("install", help="Install engine from GitHub or a local path.")
     p_install.add_argument("tag", help="Version tag name, e.g. 1.0.1")
     p_install.add_argument("--local", action="store_true", default=False,
-                           help="Install to repo-local .ukbe-runner/engine/versions/ instead of ~/.ukbe-runner/engines/")
+                           help="Install to repo-local .ukbe-runner/engine/versions/ instead of ~/.ukbe-runner/engine/versions/")
     p_install.add_argument("--github-repo", default="",
                            help=f"GitHub repo (owner/repo). Defaults to {DEFAULT_GITHUB_REPO}.")
     p_install.add_argument("--from-path", default="",
