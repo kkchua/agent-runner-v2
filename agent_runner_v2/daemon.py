@@ -4,14 +4,12 @@ Invoked via: ukbe-run-agent daemon [worker-id]
 
 Claims backend work, spawns one child process per claimed step, monitors child
 liveness, writes local logs, and emits child-scoped heartbeats keyed by
-workflow_step_run_id.
-"""
+workflow_step_run_id."""
 from __future__ import annotations
 
 import json
 import os
-import shutil
-import signal
+import shutilimport signal
 import subprocess
 import sys
 import time
@@ -29,8 +27,7 @@ def _load_config() -> dict:
     path = Path.home() / '.ukbe-runner' / 'engine' / 'config.json'
     if path.exists():
         try:
-            return json.loads(path.read_text(encoding='utf-8'))
-        except Exception:
+            return json.loads(path.read_text(encoding='utf-8'))        except Exception:
             pass
     return {}
 
