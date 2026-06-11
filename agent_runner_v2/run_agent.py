@@ -1377,7 +1377,7 @@ def _build_execution_state(*, request: ExecutionRequest, group_cfg: dict[str, An
         "backend_artifact_rules": dict((request.step_execution_spec or {}).get("artifact_rules") or {}),
         "backend_step_order": step_order,
         "backend_step_sequence": step_sequence,
-        "backend_step_dir_rel": f".ukbe-runner/jobs/{request.template_group}/{str(request.job_id or request.workflow_run_id or 'backend-job')}/{step_sequence:02d}_{request.step_name}",
+        "backend_step_dir_rel": f"{request.template_group}/{str(request.job_id or request.workflow_run_id or 'backend-job')}/{step_sequence:02d}_{request.step_name}",
     }
     state.update(request.state_overrides)
     return state

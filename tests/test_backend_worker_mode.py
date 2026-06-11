@@ -143,7 +143,7 @@ def test_build_execution_state_overrides_ids_and_step():
     assert state['workflow_run_id'] == 'run-1'
     assert state['workflow_step_run_id'] == 'step-1'
     assert state['backend_context_payload'] == {'x': 1}
-    assert state['backend_step_dir_rel'] == '.ukbe-runner/jobs/initiative_intake_v1/JOB-123/01_pre_init'
+    assert state['backend_step_dir_rel'] == 'initiative_intake_v1/JOB-123/01_pre_init'
 
 
 def test_build_execution_state_uses_backend_step_sequence_for_runtime_dir():
@@ -175,7 +175,7 @@ def test_build_execution_state_uses_backend_step_sequence_for_runtime_dir():
 
     assert state['backend_step_order'] == 5
     assert state['backend_step_sequence'] == 3
-    assert state['backend_step_dir_rel'] == '.ukbe-runner/jobs/delivery_scaffold_v1/JOB-123/03_generate_templates'
+    assert state['backend_step_dir_rel'] == 'delivery_scaffold_v1/JOB-123/03_generate_templates'
 
 
 def test_build_context_uses_step_execution_spec_artifact_rules_for_produced_paths():

@@ -28,7 +28,7 @@ _CTX = RuntimeContext(
     workspace_root=Path.cwd().resolve(),
     runner_home=GLOBAL_RUNNER_HOME,
     workflow_name=DEFAULT_WORKFLOW_NAME,
-    workflow_root=PACKAGE_ROOT,
+    workflow_root=GLOBAL_RUNNER_HOME / "workflows" / DEFAULT_WORKFLOW_NAME,
     workflow_module=None,
     delivery_root=None,
 )
@@ -77,7 +77,7 @@ def set_context(
     if workflow_name is None:
         workflow_name = _CTX.workflow_name
     if workflow_root is None:
-        workflow_root = _CTX.workflow_root
+        workflow_root = GLOBAL_RUNNER_HOME / "workflows" / DEFAULT_WORKFLOW_NAME
     if delivery_root is not None:
         delivery_root = delivery_root.resolve()
     ctx = RuntimeContext(
