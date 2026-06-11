@@ -32,6 +32,7 @@ from .bundle_loader import (
     init_workspace,
     load_project_config,
     load_workflow_module,
+    resolve_workflow_root,
     workflow_root as workflow_root_for,
 )
 from .coder_adapters import CoderInvocationError, dataclass_dict
@@ -71,11 +72,12 @@ from .job_state import (
     set_job_status,
     set_last_failure,
     task_execution_binding_current_item,
+    _update_document_status,
 )
 from .model_config import resolve_coder
 from .runner_logger import log_resolver
 from .runtime_context import (
-    PROJECT_ROOT, RUNNER_ROOT, JOBS_ROOT, ARTIFACT_ROOT,
+    PROJECT_ROOT, RUNNER_ROOT, JOBS_ROOT, ARTIFACT_ROOT, PACKAGE_ROOT,
     get_delivery_root, get_workflow_module,
     set_context, set_workflow_module, set_delivery_root,
 )
@@ -126,8 +128,48 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         p.add_argument("--host-name", default="", help="Optional host name for worker registration.")
         p.add_argument("--poll-seconds", type=int, default=5, help="Polling interval when idle.")
         p.add_argument("--once", action="store_true", help="Claim and process at most one step, then exit.")
+        p.add_argument("--engine-root", default="", help="Explicit version directory to prepend to PYTHONPATH for execute-step subprocesses. Overrides config.json lookup.")
+        p.add_argument("--worker-label", default="live", help="Worker queue label (e.g. 'live' or 'dev'). Only claims runs with matching worker_label.")
         ns = p.parse_args(raw[1:])
         ns.command = "worker"
+        return ns
+
+    if command == "poll":
+        # Convenience single-shot variant: reads AGENT_RUNNER_BACKEND_URL and AGENT_RUNNER_WORKER_ID
+        # from the environment. Equivalent to: worker --once --backend-url URL --worker-id ID
+        import os as _os
+        p = argparse.ArgumentParser(description="Single-shot backend poll (claim one step and exit).")
+        p.add_argument("--backend-url", default=_os.environ.get("AGENT_RUNNER_BACKEND_URL", "http://127.0.0.1:8100"))
+        p.add_argument("--worker-id", default=_os.environ.get("AGENT_RUNNER_WORKER_ID", ""))
+        p.add_argument("--host-name", default="")
+        p.add_argument("--engine-root", default="")
+        p.add_argument("--worker-label", default=_os.environ.get("WORKER_LABEL", "live"))
+        ns = p.parse_args(raw[1:])
+        ns.command = "poll"
+        return ns
+
+    if command == "engine":
+        ns = argparse.Namespace()
+        ns.command = "engine"
+        ns.engine_argv = raw[1:]
+        return ns
+
+    if command == "daemon":
+        ns = argparse.Namespace()
+        ns.command = "daemon"
+        ns.daemon_argv = raw[1:]
+        return ns
+
+    if command == "submit":
+        ns = argparse.Namespace()
+        ns.command = "submit"
+        ns.submit_argv = raw[1:]
+        return ns
+
+    if command == "approve":
+        ns = argparse.Namespace()
+        ns.command = "approve"
+        ns.approve_argv = raw[1:]
         return ns
 
     p = argparse.ArgumentParser(description="Run a job-based LLM workflow (v2).")
@@ -185,7 +227,41 @@ def main(argv: list[str] | None = None) -> int:
             host_name=args.host_name or None,
             poll_seconds=args.poll_seconds,
             once=args.once,
+            engine_root=args.engine_root or None,
+            worker_label=args.worker_label,
         )
+
+    if args.command == "poll":
+        import os as _os
+        worker_id = args.worker_id or _os.environ.get("AGENT_RUNNER_WORKER_ID", "")
+        if not worker_id:
+            print("[poll] ERROR: --worker-id or AGENT_RUNNER_WORKER_ID env var required", flush=True)
+            return 1
+        return _worker_command(
+            backend_url=args.backend_url,
+            worker_id=worker_id,
+            host_name=args.host_name or None,
+            poll_seconds=5,
+            once=True,
+            engine_root=args.engine_root or None,
+            worker_label=args.worker_label,
+        )
+
+    if args.command == "engine":
+        from .engine_commands import main as _engine_main
+        return _engine_main(args.engine_argv)
+
+    if args.command == "daemon":
+        from .daemon import main as _daemon_main
+        return _daemon_main(args.daemon_argv)
+
+    if args.command == "submit":
+        from .submit_commands import main as _submit_main
+        return _submit_main(args.submit_argv)
+
+    if args.command == "approve":
+        from .approve_commands import main as _approve_main
+        return _approve_main(args.approve_argv)
 
     workspace_root = Path(args.project_root or ".").resolve()
     config = load_project_config(workspace_root)
@@ -828,14 +904,23 @@ def _execute_step_command(request_path: Path, result_path: Path | None = None) -
     workflow_cfg_map = config.get("workflows") or {}
     bundle_workflow_name = workflow_name if workflow_name in workflow_cfg_map else str(config.get("default_workflow") or "default")
     workflow_cfg = workflow_cfg_map.get(bundle_workflow_name) or {}
-    workflow_path = workflow_cfg.get("path") or str(workflow_root_for(workspace_root, bundle_workflow_name).relative_to(workspace_root))
-    workflow_bundle_root = (workspace_root / workflow_path).resolve()
 
-    # Only load workflow module if not using DB-backed execution (step_execution_spec)
-    # DB-backed mode uses _build_group_cfg_from_execution_spec() which doesn't need the bundle
+    # Prefer a user-customized global default workflow bundle when present.
+    # Otherwise use DB-provided step_execution_spec directly.
+    # If neither is available, fail fast.
     workflow_module = None
-    if not request.step_execution_spec:
-        workflow_module = load_workflow_module(workspace_root, bundle_workflow_name, config=config)
+    global_default_root = resolve_workflow_root(workspace_root, "default", config=config)
+    global_default_module = global_default_root / "template_groups.py"
+    if global_default_module.exists():
+        workflow_bundle_root = global_default_root
+        workflow_module = load_workflow_module(workspace_root, "default", config=config)
+    elif request.step_execution_spec:
+        workflow_bundle_root = PACKAGE_ROOT.resolve()
+    else:
+        raise FileNotFoundError(
+            f"Workflow bundle not found at {global_default_module}. "
+            "Provide backend step_execution_spec or create ~/.ukbe-runner/workflows/default."
+        )
 
     delivery_root = Path(request.target_project_root).resolve() if request.target_project_root else None
     if delivery_root is not None and request.template_group.startswith("delivery_scaffold"):
@@ -933,9 +1018,59 @@ def _build_group_cfg_from_execution_spec(spec: dict[str, Any], template_group: s
     return group_cfg, step_cfg
 
 
-def _worker_command(*, backend_url: str, worker_id: str, host_name: str | None, poll_seconds: int, once: bool) -> int:
+def _resolve_worker_engine_root(engine_root: str | None) -> tuple[str | None, str | None]:
+    """Resolve engine root and version from --engine-root flag or config.json.
+
+    Returns (effective_engine_root, engine_version).
+    Both are None if no version is configured (dev/live-source mode).
+    """
+    if engine_root:
+        vfile = Path(engine_root) / "version.json"
+        version = None
+        if vfile.exists():
+            try:
+                version = json.loads(vfile.read_text(encoding="utf-8")).get("version")
+            except Exception:
+                pass
+        return engine_root, version
+
+    config_path = Path.home() / ".ukbe-runner" / "engine" / "config.json"
+    if not config_path.exists():
+        return None, None
+
+    try:
+        cfg = json.loads(config_path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        raise RuntimeError(f"[worker] failed to read engine config {config_path}: {exc}") from exc
+
+    engine_version = (cfg.get("engine_version") or "").strip()
+    if not engine_version:
+        return None, None
+
+    if engine_version == "SNAPSHOT":
+        return None, engine_version
+
+    global_store = Path.home() / ".ukbe-runner" / "engine" / "versions" / engine_version
+
+    if global_store.exists():
+        print(f"[worker] engine {engine_version!r} resolved from global store (~/.ukbe-runner/engine/versions/)", flush=True)
+        return str(global_store), engine_version
+
+    raise RuntimeError(
+        f"[worker] engine version {engine_version!r} not found in global store ({global_store}). "
+        "Run: ukbe-run-agent engine install <version>"
+    )
+
+
+def _worker_command(*, backend_url: str, worker_id: str, host_name: str | None, poll_seconds: int, once: bool, engine_root: str | None = None, worker_label: str = "live") -> int:
+    effective_engine_root, engine_version = _resolve_worker_engine_root(engine_root)
+    if effective_engine_root:
+        print(f"[worker] engine version: {engine_version!r}  root: {effective_engine_root}", flush=True)
+    else:
+        print("[worker] engine version: live source (no config.json or PYTHONPATH override)", flush=True)
+
     client = BackendClient(backend_url)
-    client.register_worker(worker_id=worker_id, host_name=host_name, capabilities={"mode": ["execute-step"]})
+    client.register_worker(worker_id=worker_id, host_name=host_name, capabilities={"mode": ["execute-step"], "engine_version": engine_version}, worker_label=worker_label)
 
     while True:
         client.heartbeat(worker_id=worker_id, status="idle")
@@ -950,15 +1085,37 @@ def _worker_command(*, backend_url: str, worker_id: str, host_name: str | None, 
             continue
 
         client.heartbeat(worker_id=worker_id, status="busy", current_step_run_id=step_run.get("id"))
-        request_payload = _build_worker_request_payload(run=run, step_run=step_run, step_execution_spec=claim.get("step_execution_spec"))
-        result = _invoke_execute_step_subprocess(request_payload)
-        _submit_worker_result(client=client, run=run, step_run=step_run, result=result)
-        client.heartbeat(worker_id=worker_id, status="idle", current_step_run_id="")
+        _write_backend_job_json(run=run, step_run=step_run, last_event="STEP_CLAIMED")
+        request_payload = _build_worker_request_payload(run=run, step_run=step_run, step_execution_spec=claim.get("step_execution_spec"), backend_url=backend_url)
+        try:
+            result = _invoke_execute_step_subprocess(request_payload, engine_root=effective_engine_root)
+        except Exception as exc:
+            result = _build_worker_crash_result(run=run, step_run=step_run, error=exc)
+        completion = _submit_worker_result(client=client, run=run, step_run=step_run, result=result)
+        completion_run = dict((completion or {}).get("run") or run)
+        completion_step_run = dict((completion or {}).get("step_run") or step_run)
+        next_step_run = (completion or {}).get("next_step_run")
+        last_event = "STEP_COMPLETED"
+        if completion_run.get("status") == "awaiting_human":
+            last_event = "HUMAN_APPROVAL_REQUIRED"
+        elif completion_run.get("status") == "completed":
+            last_event = "RUN_COMPLETED"
+        elif completion_run.get("status") == "failed":
+            last_event = "RUN_FAILED"
+        elif next_step_run:
+            last_event = "STEP_ENQUEUED"
+        _write_backend_job_json(
+            run=completion_run,
+            step_run=completion_step_run,
+            next_step_run=next_step_run if isinstance(next_step_run, dict) else None,
+            last_event=last_event,
+        )
+        client.heartbeat(worker_id=worker_id, status="idle", current_step_run_id=None)
         if once:
             return 0
 
 
-def _build_worker_request_payload(*, run: dict[str, Any], step_run: dict[str, Any], step_execution_spec: dict[str, Any] | None = None) -> dict[str, Any]:
+def _build_worker_request_payload(*, run: dict[str, Any], step_run: dict[str, Any], step_execution_spec: dict[str, Any] | None = None, backend_url: str = "") -> dict[str, Any]:
     workflow_name = str(run.get("workflow_name") or "")
     project_root = str(run.get("project_root") or run.get("workspace_path") or ".")
     spec = dict(step_execution_spec or {})
@@ -990,7 +1147,11 @@ def _build_worker_request_payload(*, run: dict[str, Any], step_run: dict[str, An
         "target_project_root": run.get("project_root"),
         "coder_override": step_run.get("coder"),
         "workflow_key_override": "",
-        "env_overrides": run.get("env_overrides") or {},
+        "env_overrides": {
+            **(run.get("env_overrides") or {}),
+            "BACKEND_URL": backend_url,
+            "WORKFLOW_STEP_RUN_ID": str(step_run.get("id") or ""),
+        },
         "input_artifacts": input_artifacts,
         "context_payload": context_payload,
         "state_overrides": {},
@@ -998,13 +1159,20 @@ def _build_worker_request_payload(*, run: dict[str, Any], step_run: dict[str, An
     }
 
 
-def _invoke_execute_step_subprocess(request_payload: dict[str, Any]) -> dict[str, Any]:
+def _invoke_execute_step_subprocess(request_payload: dict[str, Any], engine_root: str | None = None) -> dict[str, Any]:
     with tempfile.TemporaryDirectory(prefix="agent-runner-v2-") as temp_dir:
         req_path = Path(temp_dir) / "request.json"
         res_path = Path(temp_dir) / "result.json"
         req_path.write_text(json.dumps(request_payload, indent=2), encoding="utf-8")
-        cmd = [sys.executable, "-m", "agent_runner_v2.agent_runner_v2.run_agent", "execute-step", "--request-file", str(req_path), "--result-file", str(res_path)]
-        proc = subprocess.run(cmd, capture_output=True, text=True)
+        module = "agent_runner_v2.run_agent"
+        cmd = [sys.executable, "-m", module, "execute-step", "--request-file", str(req_path), "--result-file", str(res_path)]
+        env = os.environ.copy()
+        if engine_root:
+            # Prepend <engine_root>/agent_runner_v2 so Python finds the frozen inner package
+            # at <engine_root>/agent_runner_v2/agent_runner_v2/, not the outer worker's copy.
+            env["PYTHONPATH"] = str(Path(engine_root) / "agent_runner_v2") + os.pathsep + env.get("PYTHONPATH", "")
+        # SNAPSHOT: engine_root is None — outer worker PYTHONPATH already provides agent_runner_v2
+        proc = subprocess.run(cmd, capture_output=True, text=True, env=env)
         if not res_path.exists():
             # Print full stderr before raising for debugging
             print(f"[_invoke_execute_step_subprocess] FULL STDERR:\n{proc.stderr}", flush=True)
@@ -1016,7 +1184,56 @@ def _invoke_execute_step_subprocess(request_payload: dict[str, Any]) -> dict[str
         return payload
 
 
-def _submit_worker_result(*, client: BackendClient, run: dict[str, Any], step_run: dict[str, Any], result: dict[str, Any]) -> None:
+def _job_json_path(*, workflow_name: str, run_code: str) -> Path:
+    return JOBS_ROOT / workflow_name / run_code / "job.json"
+
+
+def _write_backend_job_json(
+    *,
+    run: dict[str, Any],
+    step_run: dict[str, Any] | None = None,
+    next_step_run: dict[str, Any] | None = None,
+    last_event: str | None = None,
+) -> None:
+    workflow_name = str(run.get("workflow_name") or "")
+    run_code = str(run.get("run_code") or "")
+    if not workflow_name or not run_code:
+        return
+
+    payload: dict[str, Any] = {
+        "run_id": run.get("id"),
+        "run_code": run_code,
+        "workflow_name": workflow_name,
+        "status": run.get("status"),
+        "current_step_name": run.get("current_step_name"),
+        "current_step_run_id": run.get("current_step_run_id"),
+        "awaiting_human_step": run.get("awaiting_human_step"),
+        "target_worker_id": run.get("target_worker_id"),
+        "claimed_by_worker": run.get("claimed_by_worker"),
+        "project_root": run.get("project_root"),
+        "context_payload": dict(run.get("context_payload") or {}),
+        "submitted_at": run.get("submitted_at"),
+        "started_at": run.get("started_at"),
+        "completed_at": run.get("completed_at"),
+        "error_message": run.get("error_message"),
+        "updated_at": _now_iso(),
+    }
+    if step_run:
+        payload["current_step_status"] = step_run.get("status")
+        payload["current_step_outcome"] = step_run.get("outcome")
+        payload["current_step_coder"] = step_run.get("coder")
+    if next_step_run:
+        payload["next_step_name"] = next_step_run.get("step_name")
+        payload["next_step_run_id"] = next_step_run.get("id")
+    if last_event:
+        payload["last_event"] = last_event
+
+    job_json_path = _job_json_path(workflow_name=workflow_name, run_code=run_code)
+    job_json_path.parent.mkdir(parents=True, exist_ok=True)
+    _save_json(job_json_path, payload)
+
+
+def _submit_worker_result(*, client: BackendClient, run: dict[str, Any], step_run: dict[str, Any], result: dict[str, Any]) -> dict[str, Any]:
     diagnostics = dict(result.get("diagnostics") or {})
     for artifact_key, file_path in (result.get("artifacts") or {}).items():
         client.create_artifact(
@@ -1040,7 +1257,7 @@ def _submit_worker_result(*, client: BackendClient, run: dict[str, Any], step_ru
     }
     if review:
         complete_payload["review"] = review
-    client.complete_step_run(step_run_id=str(step_run["id"]), payload=complete_payload)
+    completion = client.complete_step_run(step_run_id=str(step_run["id"]), payload=complete_payload)
 
     event_payload = {
         "event_type": "WORKER_RESULT",
@@ -1054,6 +1271,7 @@ def _submit_worker_result(*, client: BackendClient, run: dict[str, Any], step_ru
         },
     }
     client.create_event(run_id=str(run["id"]), payload=event_payload)
+    return completion
 
 
 def _build_execution_state(*, request: ExecutionRequest, group_cfg: dict[str, Any]) -> dict[str, Any]:
@@ -1076,12 +1294,26 @@ def _build_execution_state(*, request: ExecutionRequest, group_cfg: dict[str, An
     backend_ctx = dict(request.context_payload)
     task_binding = default_task_execution_binding()
     current_item = backend_ctx.get("current_item") if isinstance(backend_ctx.get("current_item"), dict) else {}
-    task_binding["task_node_id"] = current_item.get("task_node_id") or backend_ctx.get("CURRENT_TASK_NODE_ID")
-    task_binding["task_title"] = current_item.get("title") or backend_ctx.get("CURRENT_TASK_TITLE")
-    task_binding["task_graph_id"] = backend_ctx.get("SOURCE_TASK_GRAPH_ID")
-    task_binding["task_graph_file"] = backend_ctx.get("TASK_GRAPH_FILE")
-    task_binding["plan_file"] = backend_ctx.get("PLAN_FILE")
-    task_binding["plan_id"] = backend_ctx.get("PLAN_ID")
+    ctx_task_node_id = (current_item.get("task_node_id") or backend_ctx.get("CURRENT_TASK_NODE_ID") or "").strip()
+    ctx_task_graph_file = (backend_ctx.get("TASK_GRAPH_FILE") or "").strip()
+    if ctx_task_graph_file and ctx_task_node_id and request.template_group == "task_execution_v1":
+        try:
+            from .job_state import build_task_execution_binding
+            task_binding = build_task_execution_binding(
+                task_graph_file=ctx_task_graph_file,
+                task_node_id=ctx_task_node_id,
+            )
+            if not task_binding.get("task_graph_id"):
+                task_binding["task_graph_id"] = backend_ctx.get("SOURCE_TASK_GRAPH_ID")
+        except Exception as _bind_exc:
+            raise RuntimeError(f"[_build_execution_state] could not build task execution binding: {_bind_exc}") from _bind_exc
+    else:
+        task_binding["task_node_id"] = ctx_task_node_id or None
+        task_binding["task_title"] = current_item.get("title") or backend_ctx.get("CURRENT_TASK_TITLE")
+        task_binding["task_graph_id"] = backend_ctx.get("SOURCE_TASK_GRAPH_ID")
+        task_binding["task_graph_file"] = ctx_task_graph_file or None
+        task_binding["plan_file"] = backend_ctx.get("PLAN_FILE")
+        task_binding["plan_id"] = backend_ctx.get("PLAN_ID")
 
     state: dict[str, Any] = {
         "job_id": str(request.job_id or request.workflow_run_id or "backend-job"),
@@ -1145,7 +1377,7 @@ def _build_execution_state(*, request: ExecutionRequest, group_cfg: dict[str, An
         "backend_artifact_rules": dict((request.step_execution_spec or {}).get("artifact_rules") or {}),
         "backend_step_order": step_order,
         "backend_step_sequence": step_sequence,
-        "backend_step_dir_rel": f".ukbe-runner/jobs/{request.template_group}/{str(request.job_id or request.workflow_run_id or 'backend-job')}/{step_sequence:02d}_{request.step_name}",
+        "backend_step_dir_rel": f"{request.template_group}/{str(request.job_id or request.workflow_run_id or 'backend-job')}/{step_sequence:02d}_{request.step_name}",
     }
     state.update(request.state_overrides)
     return state
@@ -1321,6 +1553,20 @@ def _execute_backend_step_request(
             "remark": step_result.remark,
             "reject_code": step_result.reject_code,
         }
+        if review["decision"] == "rejected":
+            reject_target = ((step_cfg.get("on_reject_refine") or {}).get("artifact") or "").strip()
+            if reject_target:
+                artifact_path = state.get("artifacts", {}).get(reject_target)
+                if artifact_path:
+                    _update_document_status(file_path=artifact_path, new_status="changes_requested")
+
+    produced_status = step_cfg.get("produced_document_status") or {}
+    produced_artifact = str(produced_status.get("artifact") or "").strip()
+    produced_required_status = str(produced_status.get("required_status") or "").strip()
+    if produced_artifact and produced_required_status:
+        artifact_path = (step_result.artifacts or {}).get(produced_artifact) or state.get("artifacts", {}).get(produced_artifact)
+        if artifact_path:
+            _update_document_status(file_path=artifact_path, new_status=produced_required_status)
 
     published_artifacts = _publish_backend_artifacts(
         state=state,
@@ -1602,6 +1848,54 @@ def _save_json(path: Path, data: Any) -> None:
 
 def _now_iso() -> str:
     return dt.datetime.now().isoformat(timespec="seconds")
+
+
+def _worker_step_dir(*, run: dict[str, Any], step_run: dict[str, Any]) -> Path:
+    workflow_name = str(run.get("workflow_name") or "")
+    run_code = str(run.get("run_code") or run.get("id") or "backend-run")
+    sequence_no = int(step_run.get("sequence_no") or 1)
+    step_name = str(step_run.get("step_name") or "unknown_step")
+    return JOBS_ROOT / workflow_name / run_code / f"{sequence_no:02d}_{step_name}"
+
+
+def _build_worker_crash_result(*, run: dict[str, Any], step_run: dict[str, Any], error: Exception) -> dict[str, Any]:
+    step_name = str(step_run.get("step_name") or "unknown_step")
+    step_dir = _worker_step_dir(run=run, step_run=step_run)
+    diagnostics = {
+        "workflow_run_id": str(run.get("id") or ""),
+        "workflow_step_run_id": str(step_run.get("id") or ""),
+        "job_id": str(run.get("run_code") or ""),
+        "step_dir": str(step_dir.relative_to(JOBS_ROOT)),
+        "worker_error": repr(error),
+    }
+    step_dir.mkdir(parents=True, exist_ok=True)
+    _save_json(
+        step_dir / "worker_error.json",
+        {
+            "step_name": step_name,
+            "worker_error": repr(error),
+            "diagnostics": diagnostics,
+            "failed_at": _now_iso(),
+        },
+    )
+    return {
+        "status": "failed",
+        "outcome": "failed",
+        "step_name": step_name,
+        "coder_used": str(step_run.get("coder") or ""),
+        "remark": f"Worker failed before execute-step completed: {error}",
+        "artifacts": {},
+        "meta_json_path": None,
+        "review": None,
+        "usage": None,
+        "failure": {
+            "failure_class": "SYSTEM_ERROR",
+            "failure_code": "WORKER_EXECUTE_STEP_FAILED",
+            "failure_reason": str(error),
+            "failure_source": "worker",
+        },
+        "diagnostics": diagnostics,
+    }
 
 
 if __name__ == "__main__":

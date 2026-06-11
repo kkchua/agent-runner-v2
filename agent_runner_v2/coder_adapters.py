@@ -520,9 +520,7 @@ def _invoke_codex(*, step: str, prompt_text: str, cwd: Path, schema_path: Path, 
         "codex",
         "exec",
         "--sandbox",
-        "workspace-write",
-        "--cd",
-        str(cwd),
+        "danger-full-access",
         "--json",
         "--output-schema",
         str(schema_path),
@@ -616,13 +614,8 @@ def _invoke_claude(*, step: str, prompt_text: str, cwd: Path, schema_path: Path,
     # Inject model flag when provided via model_mapping or step config
     if cc.get("model"):
         command.extend(["--model", cc["model"]])
-    # --permission-mode bypassPermissions converts to --dangerously-skip-permissions
-    # which is blocked for root in Docker. Only add it when not root.
-    if os.getuid() != 0:
-        command.extend(["--permission-mode", "bypassPermissions"])
+    command.extend(["--permission-mode", "acceptEdits"])
     command.extend([
-        "--add-dir",
-        str(cwd),
         "--print",
         "--output-format",
         "json",
@@ -665,9 +658,8 @@ def _invoke_claude(*, step: str, prompt_text: str, cwd: Path, schema_path: Path,
 
 
 def _invoke_qwen(*, step: str, prompt_text: str, cwd: Path, coder_config: dict[str, Any] | None = None, sidecar_path: Path | None = None) -> dict[str, Any]:
-    session_id = str(uuid.uuid4())
     cc = coder_config or {}
-    command = ["qwen", "--output-format", "json", "--approval-mode", "yolo", "--session-id", session_id]
+    command = ["qwen", "-y"]
 
     # Inject model-specific CLI flags when a coder_config is provided
     if cc.get("model"):
@@ -681,7 +673,7 @@ def _invoke_qwen(*, step: str, prompt_text: str, cwd: Path, coder_config: dict[s
     if cc.get("openai_base_url"):
         command.extend(["--openai-base-url", cc["openai_base_url"]])
 
-    command.extend(["-p", prompt_text])
+    command.append(prompt_text)
 
     # Log the actual command for debugging (mask API key)
     _log_command_for_step(step, command, cc)

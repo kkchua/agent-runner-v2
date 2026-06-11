@@ -1,0 +1,99 @@
+{
+  "type": "object",
+  "required": [
+    "status",
+    "remark",
+    "artifacts",
+    "reject_type",
+    "reject_code",
+    "retry_after_seconds"
+  ],
+  "properties": {
+    "status": {
+      "type": "string",
+      "enum": [
+        "APPROVED",
+        "REJECTED"
+      ]
+    },
+    "remark": {
+      "type": "string"
+    },
+    "artifacts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "DRAFT_INIT_FILE",
+        "PRE_INIT_FILE",
+        "INIT_FILE",
+        "PLAN_FILE",
+        "TASK_GRAPH_FILE",
+        "TASK_FILE",
+        "IMPL_FILE",
+        "REVIEW_FILE",
+        "VALIDATION_FILE",
+        "IMAGE_DESC_FOLDER",
+        "IMAGE_CSV_JSON",
+        "IMAGE_CSV_CSV",
+        "IMAGE_CSV_SUBMIT_RESULT"
+      ],
+      "properties": {
+        "DRAFT_INIT_FILE": {
+          "anyOf": [{"type": "string"}, {"type": "null"}]
+        },
+        "PRE_INIT_FILE": {
+          "anyOf": [{"type": "string"}, {"type": "null"}]
+        },
+        "INIT_FILE": {
+          "anyOf": [{"type": "string"}, {"type": "null"}]
+        },
+        "PLAN_FILE": {
+          "anyOf": [{"type": "string"}, {"type": "null"}]
+        },
+        "TASK_GRAPH_FILE": {
+          "anyOf": [{"type": "string"}, {"type": "null"}]
+        },
+        "TASK_FILE": {
+          "anyOf": [{"type": "string"}, {"type": "null"}]
+        },
+        "IMPL_FILE": {
+          "anyOf": [{"type": "string"}, {"type": "null"}]
+        },
+        "REVIEW_FILE": {
+          "anyOf": [{"type": "string"}, {"type": "null"}]
+        },
+        "VALIDATION_FILE": {
+          "anyOf": [{"type": "string"}, {"type": "null"}]
+        },
+        "IMAGE_DESC_FOLDER": {
+          "anyOf": [{"type": "string"}, {"type": "null"}]
+        },
+        "IMAGE_CSV_JSON": {
+          "anyOf": [{"type": "string"}, {"type": "null"}]
+        },
+        "IMAGE_CSV_CSV": {
+          "anyOf": [{"type": "string"}, {"type": "null"}]
+        },
+        "IMAGE_CSV_SUBMIT_RESULT": {
+          "anyOf": [{"type": "string"}, {"type": "null"}]
+        }
+      }
+    },
+    "reject_type": {
+      "anyOf": [
+        {"type": "string", "enum": ["AUTO_RETRYABLE", "HUMAN_RETRY_REQUIRED", "FATAL"]},
+        {"type": "null"}
+      ]
+    },
+    "reject_code": {
+      "anyOf": [{"type": "string"}, {"type": "null"}]
+    },
+    "retry_after_seconds": {
+      "anyOf": [
+        {"type": "integer", "minimum": 0},
+        {"type": "null"}
+      ]
+    }
+  },
+  "additionalProperties": false
+}
