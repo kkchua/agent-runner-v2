@@ -9,3 +9,11 @@ build/
 
 
 .env
+
+.venv/
+
+.qwen/
+
+.claude/
+
+progress.jsonl
