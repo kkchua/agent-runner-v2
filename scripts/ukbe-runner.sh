@@ -24,6 +24,7 @@ UKBE_CLI="${UKBE_CLI:-ukbe-run-agent}"
 PID_DIR="${HOME}/.ukbe-runner/workers"
 BACKEND_PID_FILE="${HOME}/.ukbe-runner/backend.pid"
 BACKEND_LOG_FILE="${HOME}/.ukbe-runner/logs/backend.log"
+WORKER_LOG_DIR="${HOME}/.ukbe-runner/logs"
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -63,6 +64,11 @@ _pid_file() {
     echo "${PID_DIR}/${worker_id}.pid"
 }
 
+_worker_log_file() {
+    local worker_id="$1"
+    echo "${WORKER_LOG_DIR}/worker-${worker_id}.log"
+}
+
 _is_running() {
     local pid_file="$1"
     if [[ ! -f "$pid_file" ]]; then
@@ -86,7 +92,7 @@ _kill_pid_file() {
     local i=0
     while kill -0 "$pid" 2>/dev/null && [[ $i -lt 10 ]]; do
         sleep 0.5
-        ((i++))
+        i=$((i + 1))
     done
 
     if kill -0 "$pid" 2>/dev/null; then
@@ -104,22 +110,39 @@ _kill_pid_file() {
 
 cmd_worker_start() {
     local worker_id="${1:-$(_default_worker_id)}"
-    local pid_file
+    local pid_file worker_log_file
     pid_file=$(_pid_file "$worker_id")
+    worker_log_file=$(_worker_log_file "$worker_id")
 
     if _is_running "$pid_file"; then
         echo "Worker '$worker_id' is already running (PID $(cat "$pid_file"))."
+        echo "  Log:  $worker_log_file"
         return 0
     fi
 
-    mkdir -p "$PID_DIR"
+    mkdir -p "$PID_DIR" "$(dirname "$worker_log_file")"
     shift 1 2>/dev/null || true
 
     echo "Starting worker '$worker_id'..."
-    nohup "$UKBE_CLI" daemon "$worker_id" "$@" </dev/null >/dev/null 2>&1 &
+    nohup "$UKBE_CLI" daemon "$worker_id" "$@" </dev/null >>"$worker_log_file" 2>&1 &
     local pid=$!
     echo "$pid" > "$pid_file"
-    echo "Worker '$worker_id' started (PID $pid). PID saved to $pid_file"
+
+    local i=0
+    while [[ $i -lt 5 ]]; do
+        if ! kill -0 "$pid" 2>/dev/null; then
+            rm -f "$pid_file"
+            echo "ERROR: Worker '$worker_id' failed to stay running."
+            echo "  Log:  $worker_log_file"
+            return 1
+        fi
+        sleep 0.2
+        i=$((i + 1))
+    done
+
+    echo "Worker '$worker_id' started (PID $pid)."
+    echo "  Log:  $worker_log_file"
+    echo "  PID:  $pid_file"
 }
 
 cmd_worker_stop() {
@@ -138,13 +161,18 @@ cmd_worker_stop() {
 
 cmd_worker_status() {
     local worker_id="${1:-$(_default_worker_id)}"
-    local pid_file
+    local pid_file worker_log_file
     pid_file=$(_pid_file "$worker_id")
+    worker_log_file=$(_worker_log_file "$worker_id")
 
     if _is_running "$pid_file"; then
         echo "Worker '$worker_id' is running (PID $(cat "$pid_file"))."
+        echo "  Log:  $worker_log_file"
     else
         echo "Worker '$worker_id' is not running."
+        if [[ -f "$worker_log_file" ]]; then
+            echo "  Log:  $worker_log_file"
+        fi
         [[ -f "$pid_file" ]] && rm -f "$pid_file"
         return 1
     fi
