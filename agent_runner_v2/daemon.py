@@ -9,7 +9,8 @@ from __future__ import annotations
 
 import json
 import os
-import shutilimport signal
+import shutil
+import signal
 import subprocess
 import sys
 import time
@@ -27,7 +28,8 @@ def _load_config() -> dict:
     path = Path.home() / '.ukbe-runner' / 'engine' / 'config.json'
     if path.exists():
         try:
-            return json.loads(path.read_text(encoding='utf-8'))        except Exception:
+            return json.loads(path.read_text(encoding='utf-8'))
+        except Exception:
             pass
     return {}
 
