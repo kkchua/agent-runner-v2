@@ -234,10 +234,16 @@ def _terminate_child(child: ChildExecution, logger: _DaemonLogger, sigkill: bool
     try:
         if sigkill:
             child.process.kill()
-            logger.log('error', 'child_killed', message='sent SIGKILL to child', child=child)
+            if os.name == 'nt':
+                logger.log('error', 'child_killed', message='force terminated child process', child=child)
+            else:
+                logger.log('error', 'child_killed', message='sent SIGKILL to child', child=child)
         else:
             child.process.terminate()
-            logger.log('error', 'child_terminated', message='sent SIGTERM to child', child=child)
+            if os.name == 'nt':
+                logger.log('error', 'child_terminated', message='terminated child process', child=child)
+            else:
+                logger.log('error', 'child_terminated', message='sent SIGTERM to child', child=child)
     except ProcessLookupError:
         return
 
@@ -259,8 +265,9 @@ def _run_supervisor(*, worker_id: str, worker_label: str, backend_url: str, poll
         running = False
         logger.log('info', 'daemon_shutdown_signal', message='received shutdown signal')
 
-    signal.signal(signal.SIGTERM, _handle_signal)
     signal.signal(signal.SIGINT, _handle_signal)
+    if os.name != 'nt':
+        signal.signal(signal.SIGTERM, _handle_signal)
 
     while running or children:
         now = time.monotonic()
