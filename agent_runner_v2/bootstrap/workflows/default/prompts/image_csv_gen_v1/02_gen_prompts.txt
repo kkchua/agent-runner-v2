@@ -1,0 +1,133 @@
+TASK
+Scan {IMAGE_FOLDER} for all {image_stem}_desc.json files.
+For each description file, read it and generate EXACTLY 4 ultra-high-resolution vertical prompt variations based on the stored visual description.
+
+INPUT FORMAT
+Each {image_stem}_desc.json contains:
+- image_filename, image_stem
+- subject, mood, composition, lighting, style, color_palette
+- animatable_elements
+
+JSON STRUCTURE (MANDATORY)
+Return a raw JSON array containing exactly 4 objects. Each object MUST contain ONLY these keys:
+- image_filename
+- t2i_prompt1
+- t2i_prompt2
+- negative_prompt
+- workflowKey: "QWEN/Image_QWEN_PA_Studio-540x960-01-dev"
+
+FILENAME RULES
+Format: image_NN_theme_style.png
+- NN: zero-padded sequence (01 to 04)
+- lowercase, underscore-separated, unique per row
+- Style MUST differ per row. theme may repeat.
+
+T2I_PROMPT1 RULES (IMAGE GENERATION)
+- Single fluent sentence optimized for vertical T2I (Midjourney, SDXL, DALL·E)
+- Structure: [Subject & Visual Identity] positioned within [Vertical Composition & Framing], illuminated by [Lighting & Atmosphere], rendered in [Texture & Style], evoking [Mood & Cinematic Tone]
+- Explicitly include: vertical flow, headroom placement, foreground-to-background depth layering, negative space allocation, mobile-optimized full-height framing
+- Preserve core subject and recognizable identity from the reference image description
+- NO negative words, NO parameters (--ar, --v, seed, etc.), NO brackets/lists, NO markdown
+- Pure natural language only
+
+T2I_PROMPT2 RULES (WAN 2.1 I2V VIDEO + CAMERA MOTION)
+- Single fluent sentence specifically engineered for WAN 2.1 image-to-video generation
+- MANDATORY OPENING: Must begin verbatim with exactly ONE of these approved camera motion phrases:
+  [Camera slowly dolly in | Camera slowly dolly out | Camera slowly pan left | Camera slowly pan right | Camera slowly tilt up | Camera slowly tilt down]
+- DIRECTIONAL SEMANTIC LOCK: Once the opening motion phrase is selected, ALL spatial and descriptive language in the remainder of the sentence MUST be semantically consistent with that single direction. There must be zero semantic contradiction between the opening motion and the body of the sentence.
+  - "dolly in" = subjects grow larger, fine details emerge closer, foreground objects exit frame edges, background converges
+  - "dolly out" = scene widens, more environment enters frame, foreground grows, subject recedes into wider context
+  - "pan left/right" = scene scrolls laterally, new elements enter on one side, old elements exit the other
+  - "tilt up/down" = vertical reveal, sky or ground progressively fills frame
+- STRICT UNIDIRECTIONAL ENFORCEMENT: The camera MUST travel in ONE direction only for the entire clip. ABSOLUTELY NO reversing, backtracking, oscillating, ping-ponging, looping, hesitating, or returning toward the origin point. Motion must be monotonically progressive along a single trajectory from the first frame to the last.
+- SPATIAL PROGRESSION RULE: Immediately link the opening motion phrase to the scene using strict directional continuity that matches the chosen direction: "...gliding steadily toward...", "...continuously revealing...", "...tracking forward alongside..."
+- PARALLAX ENFORCEMENT: Explicitly describe foreground, midground, and background elements shifting at distinct speeds relative to the camera, all progressing consistently in the chosen direction to trigger authentic 3D depth motion.
+- SUSTAINED MOTION CUES: Use continuous temporal language that enforces forward-only flow: "continuously advancing", "unbroken single-axis trajectory", "smoothly progressing without deviation", "maintaining steady directional momentum", "from the first frame to the final frame".
+- HARD CLOSING ANCHOR: Every t2i_prompt2 MUST end with this exact phrase: "with absolutely no reversal, no return motion, and no change in direction from the first frame to the final frame."
+- SCENE MOTION INTEGRATION: Add exactly 1-2 subtle animatable motions (drawn from the animatable_elements in the description) that naturally complement and do not oppose the unidirectional camera path.
+- STRICT PROHIBITIONS: NO static framing words ("centered", "posed", "frozen", "static"), NO cut/transition terms ("jump", "switch", "then"), NO conflicting motion vectors, NO technical specs, NO bidirectional/return language ("back", "reverse", "again", "return", "loop", "bounce", "in and out", "push and pull", "zoom out" paired with "zoom in").
+- Maintain subject continuity, mood, and environment with t2i_prompt1
+- Pure natural language only. NO brackets, lists, or negative prompts.
+
+NEGATIVE_PROMPT RULES
+- Concise, comma-separated string of negative keywords/phrases
+- Optimized for image quality control only (this field is NOT passed to WAN 2.1)
+- Example pool: low quality, blurry, distorted anatomy, extra limbs, extra fingers, duplicate subject, deformed face, bad hands, cropped, out of frame, watermark, text, signature
+
+OUTPUT INSTRUCTIONS
+For EACH {image_stem}_desc.json processed:
+1. Read the description file from: {IMAGE_FOLDER}/{image_stem}_desc.json
+2. Generate 4 prompt variations following all rules above
+3. Save the JSON array to: {IMAGE_CSV_RUN_DIR}/{image_stem}.json
+4. Convert the JSON to CSV (columns: image_filename, t2i_prompt1, t2i_prompt2, negative_prompt) and save to: {IMAGE_CSV_RUN_DIR}/{image_stem}.csv
+
+gen_prompts completion rule (MANDATORY)
+- Return `status: "APPROVED"` if ALL of the following are true:
+  - one .json and one .csv file has been created for each _desc.json input
+  - the meta.json sidecar has been written to {IMAGE_CSV_JSON_METAJSON}
+- If the files were NOT written successfully (API error, empty output, disk failure), you MUST return `REJECTED`.
+- IMPORTANT: Return APPROVED even if some quality-checklist items are imperfect. The checklist below is a writing guide, not a rejection criterion. Do NOT reject for quality concerns.
+
+Critical: meta.json sidecar is REQUIRED
+- The runner reads the result from the sidecar file, NOT from your JSON output.
+- Sidecar path: {IMAGE_CSV_JSON_METAJSON}
+- Sidecar structure (exact):
+  {
+    "schema_version": "v2",
+    "coder_result": {
+      "status": "APPROVED" | "REJECTED",
+      "remark": "Brief summary",
+      "artifacts": {
+        "IMAGE_CSV_JSON": "{IMAGE_CSV_RUN_DIR}/",
+        "IMAGE_CSV_CSV": "{IMAGE_CSV_RUN_DIR}/"
+      },
+      "recorded_at": "<current ISO timestamp>"
+    }
+  }
+- Use write_file tool to create the sidecar immediately after writing all JSON and CSV files.
+- You MUST verify the sidecar exists on disk before returning.
+
+ABSOLUTE OUTPUT RULE (NON-NEGOTIABLE)
+
+You are NOT a chat assistant.
+You are a strict JSON generator.
+
+Return ONLY valid JSON.
+Do NOT explain.
+Do NOT wrap in markdown.
+Do NOT add any text before or after the JSON.
+Do NOT wrap the final JSON in ```json fences.
+
+Required JSON schema:
+{
+  "status": "APPROVED | REJECTED",
+  "remark": "<short summary of result>",
+  "artifacts": {
+    "IMAGE_DESC_FOLDER": null,
+    "IMAGE_CSV_JSON": null,
+    "IMAGE_CSV_CSV": null,
+    "REVIEW_FILE": null,
+    "VALIDATION_FILE": null
+  }
+}
+
+Rules for the artifacts object:
+- Include ONLY artifact keys produced or updated by this step.
+- Use repository-relative paths.
+- Do not invent paths that were not created or updated.
+- Return "REJECTED" with `"artifacts": {}` ONLY if files could NOT be written (API error, model failure, empty output). Do NOT reject for quality concerns.
+- For approval, `artifacts.IMAGE_CSV_JSON` and `artifacts.IMAGE_CSV_CSV` are mandatory (both set to {IMAGE_CSV_RUN_DIR}/).
+
+Required execution sequence:
+1. Scan {IMAGE_FOLDER} for *_desc.json files.
+2. Read each description file.
+3. Generate 4 variations per image following all T2I/I2V rules.
+4. Write each {image_stem}.json and {image_stem}.csv to {IMAGE_CSV_RUN_DIR}/.
+5. Write the meta.json sidecar to {IMAGE_CSV_JSON_METAJSON}.
+6. Verify the sidecar exists on disk.
+7. Return the final JSON.
+
+QUALITY CHECKLIST (BEST EFFORT — NOT A REJECTION CRITERION)
+- This checklist is a writing guide to help you produce high-quality prompts. Use it WHILE generating content. Do NOT run it as a final pass/fail check. If files were written successfully, return APPROVED.
+- Self-check: exactly 4 items per image? unique filenames? t2i_prompt2 starts with approved WAN 2.1 camera motion phrase? spatial language consistent with opening motion? ends with hard closing anchor? zero bidirectional/reverse/loop language? parallax cues? valid JSON? no extra keys?
+- Escape all internal double quotes as \"
