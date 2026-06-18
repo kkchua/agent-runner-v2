@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from agent_runner_v2 import bundle_loader
+from agent_runner_v2 import run_agent as run_agent_module
 
 
 def test_init_workspace_seeds_global_example_and_not_repo_workflows(tmp_path, monkeypatch):
@@ -47,3 +48,20 @@ def test_bootstrap_root_is_packaged_with_template_groups():
     assert bundle_loader.BOOTSTRAP_ROOT.exists()
     assert (bundle_loader.BOOTSTRAP_ROOT / "template_groups.py").exists()
     assert (bundle_loader.BOOTSTRAP_ROOT / "prompts").exists()
+
+
+def test_run_agent_resolves_global_workflow_bundle_root(tmp_path, monkeypatch):
+    workspace_root = tmp_path / "workspace"
+    workspace_root.mkdir()
+    global_root = tmp_path / "home" / ".ukbe-runner" / "workflows" / "default"
+    global_root.mkdir(parents=True)
+    monkeypatch.setattr(run_agent_module, 'resolve_workflow_root', lambda workspace_root_arg, workflow_name, config=None: global_root)
+
+    resolved = run_agent_module._resolve_workflow_bundle_root(
+        workspace_root,
+        'default',
+        {'default_workflow': 'default', 'workflows': {}},
+    )
+
+    assert resolved == global_root.resolve()
+

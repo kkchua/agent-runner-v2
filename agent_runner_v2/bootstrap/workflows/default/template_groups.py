@@ -446,7 +446,7 @@ TEMPLATE_GROUPS: Dict[str, Dict[str, Any]] = {
                 "produces": ["IMAGE_DESC_FOLDER"],
                 "produced_document_status": {"artifact": "IMAGE_DESC_FOLDER", "required_status": "draft"},
                 "result_meta_key": "IMAGE_DESC_FOLDER",
-                "coder": {"default": "qwen", "allowed": ["qwen", "codex", "claude"]},
+                "coder": {"default": "qwen-developer", "allowed": ["qwen", "qwen-developer", "qwen-review"]},
             },
             "gen_prompts": {
                 "prompt_file": _p("prompts", "image_csv_gen_v2", "02_gen_prompts.txt"),
@@ -454,7 +454,7 @@ TEMPLATE_GROUPS: Dict[str, Dict[str, Any]] = {
                 "produces": ["IMAGE_CSV_JSON", "IMAGE_CSV_CSV"],
                 "produced_document_status": {"artifact": "IMAGE_CSV_JSON", "required_status": "draft"},
                 "result_meta_key": "IMAGE_CSV_JSON",
-                "coder": {"default": "qwen", "allowed": ["qwen", "codex", "claude"]},
+                "coder": {"default": "deepseek-developer", "allowed": ["qwen", "qwen-developer", "deepseek-developer"]},
             },
             "submit_prompts": {
                 "required_inputs": ["IMAGE_CSV_JSON"],
