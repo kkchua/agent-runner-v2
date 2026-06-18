@@ -41,3 +41,9 @@ def test_load_project_config_uses_global_config(tmp_path, monkeypatch):
     config = bundle_loader.load_project_config(tmp_path / "workspace")
 
     assert config["default_workflow"] == "default"
+
+
+def test_bootstrap_root_is_packaged_with_template_groups():
+    assert bundle_loader.BOOTSTRAP_ROOT.exists()
+    assert (bundle_loader.BOOTSTRAP_ROOT / "template_groups.py").exists()
+    assert (bundle_loader.BOOTSTRAP_ROOT / "prompts").exists()

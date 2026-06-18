@@ -12,7 +12,7 @@ from .runtime_context import DEFAULT_RUNNER_HOME, PACKAGE_ROOT
 
 
 GLOBAL_RUNNER_HOME = Path.home() / DEFAULT_RUNNER_HOME
-BOOTSTRAP_ROOT = PACKAGE_ROOT.parent / "bootstrap" / "workflows" / "default"
+BOOTSTRAP_ROOT = PACKAGE_ROOT / "bootstrap" / "workflows" / "default"
 
 
 def config_path(workspace_root: Path) -> Path:
