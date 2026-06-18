@@ -55,6 +55,11 @@ def _write_meta(meta_rel: str, project_root: Path, status: str, remark: str, art
     print(f"[promote_artifact] wrote meta.json → {meta_rel}", flush=True)
 
 
+def _artifact_meta_rel(artifact_rel: str) -> str:
+    artifact_path = Path(artifact_rel)
+    return str(artifact_path.parent / f"{artifact_path.stem}.meta.json")
+
+
 def promote_artifact(
     *,
     context: dict[str, str],
@@ -98,4 +103,8 @@ def promote_artifact(
 
     remark = f"Status set to {target_status}: {', '.join(promoted.keys())}"
     _write_meta(meta_rel, project_root, "APPROVED", remark, promoted)
+    for artifact_key, artifact_rel in promoted.items():
+        artifact_meta_rel = _artifact_meta_rel(artifact_rel)
+        if artifact_meta_rel != meta_rel:
+            _write_meta(artifact_meta_rel, project_root, "APPROVED", remark, {artifact_key: artifact_rel})
     return ActionResult(status="APPROVED", remark=remark, artifacts=promoted)

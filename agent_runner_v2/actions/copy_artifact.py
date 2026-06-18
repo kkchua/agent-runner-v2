@@ -51,6 +51,17 @@ def _to_slug(title: str) -> str:
     return title.strip("-")
 
 
+def _upsert_metadata_field(content: str, field: str, value: str) -> str:
+    row_re = re.compile(rf"^\|\s*{re.escape(field)}\s*\|.*$", re.MULTILINE)
+    new_row = f"| {field} | `{value}` |"
+    if row_re.search(content):
+        return row_re.sub(new_row, content, count=1)
+    metadata_anchor = "## Metadata\n\n| Field | Value |\n|---|---|\n"
+    if metadata_anchor in content:
+        return content.replace(metadata_anchor, metadata_anchor + new_row + "\n", 1)
+    return content
+
+
 def _write_meta(meta_rel: str, project_root: Path, status: str, remark: str, artifacts: dict) -> None:
     if not meta_rel:
         print("[copy_artifact] WARNING: meta.json path not in context — skipping", flush=True)
@@ -126,9 +137,13 @@ def copy_artifact(
     dest_dir = project_root / dest_dir_rel
     dest_dir.mkdir(parents=True, exist_ok=True)
     dest_path = dest_dir / filename
-    dest_path.write_text(content, encoding="utf-8")
 
     dest_rel = f"{dest_dir_rel}/{filename}"
+    if filename_strategy == "init_id_slug":
+        content = _upsert_metadata_field(content, "Document File", dest_rel)
+        content = _upsert_metadata_field(content, "Source Pre-Init File", source_rel)
+    dest_path.write_text(content, encoding="utf-8")
+
     print(f"[copy_artifact] copied {source_rel} → {dest_rel}", flush=True)
 
     _write_meta(meta_rel, project_root, "APPROVED", f"Copied to {dest_rel}", {dest_artifact_key: dest_rel})
