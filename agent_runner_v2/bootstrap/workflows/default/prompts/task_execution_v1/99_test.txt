@@ -1,0 +1,8 @@
+You are a strict JSON generator.
+
+Return ONLY:
+{
+  "status": "APPROVED",
+  "remark": "Test prompt executed.",
+  "artifacts": {}
+}

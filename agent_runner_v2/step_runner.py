@@ -705,7 +705,8 @@ def build_context(
     # directory meta.json path so the prompt can tell the coder where to write it.
     if step and step_cfg:
         result_key = step_cfg.get("result_meta_key") or step_cfg.get("result_meta_key_from_context", "")
-        if result_key and not ctx.get(f"{result_key}_METAJSON"):
+        prefer_step_meta = bool(step_cfg.get("action"))
+        if result_key and (prefer_step_meta or not ctx.get(f"{result_key}_METAJSON")):
             step_dir_rel = str(state.get("backend_step_dir_rel") or "").strip()
             if not step_dir_rel:
                 steps = _workflow_module().TEMPLATE_GROUPS.get(state.get("template_group", ""), {}).get("steps", [])

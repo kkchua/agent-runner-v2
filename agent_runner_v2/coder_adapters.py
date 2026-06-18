@@ -614,13 +614,8 @@ def _invoke_claude(*, step: str, prompt_text: str, cwd: Path, schema_path: Path,
     # Inject model flag when provided via model_mapping or step config
     if cc.get("model"):
         command.extend(["--model", cc["model"]])
-    # --permission-mode bypassPermissions converts to --dangerously-skip-permissions
-    # which is blocked for root in Docker. Only add it when not root.
-    if os.getuid() != 0:
-        command.extend(["--permission-mode", "bypassPermissions"])
+    command.extend(["--permission-mode", "acceptEdits"])
     command.extend([
-        "--add-dir",
-        str(cwd),
         "--print",
         "--output-format",
         "json",

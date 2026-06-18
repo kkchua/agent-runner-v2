@@ -1,6 +1,8 @@
-# How-To Guide: Delivery Scaffold Workflow
+# Delivery Scaffold Workflow Guide
 
 ## Overview
+
+This guide is specific to `delivery_scaffold_v1`. It is not the general operator manual for the daemon or backend-connected worker modes. For workstation worker setup, logs, heartbeats, and troubleshooting, use [docs/worker_supervisor_manual.md](docs/worker_supervisor_manual.md). For backend run submission parameters by workflow, use [docs/submit_job_manual.md](docs/submit_job_manual.md).
 
 The `delivery_scaffold_v1` workflow generates a complete delivery documentation system — templates, SOP, status rules, and agent contracts — into any target repository. This is the first step for any new project that wants to use the agent-runner-v2 orchestration system.
 
