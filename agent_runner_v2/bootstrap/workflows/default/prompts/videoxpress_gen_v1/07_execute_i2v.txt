@@ -1,0 +1,55 @@
+TASK
+Execute Image-to-Video generation for all scenes.
+
+INPUT:
+- VIDEOWORKFLOW_FILE: Contains scene image_to_video_prompts
+- GENERATED_IMAGES_FOLDER: Contains T2I images as base
+
+EXECUTION STEPS:
+================================================================================
+
+For EACH scene:
+1. Load scene_{NN}_t2i.png from GENERATED_IMAGES_FOLDER
+2. Extract image_to_video_prompt
+3. Execute I2V generation
+4. Save video clip to GENERATED_VIDEO_CLIPS
+
+VIDEO CLIP NAMING:
+================================================================================
+
+Save clips as:
+{GENERATED_VIDEO_CLIPS}/scene_{NN}_i2v.mp4
+
+Where NN is zero-padded scene number (01, 02, etc.)
+
+I2V PARAMETERS:
+================================================================================
+
+- Duration: 8-15 seconds per scene (based on platform)
+- FPS: 24 or 30
+- Resolution: Match T2I image resolution
+- Motion: Extract from image_to_video_prompt
+
+COMFYUI WORKFLOW:
+================================================================================
+
+Use VideoExpress I2V workflow:
+- Input image: scene_{NN}_t2i.png
+- Motion prompt: scene.image_to_video_prompt
+- Generate video with temporal consistency
+
+OUTPUT:
+================================================================================
+
+{
+  "status": "APPROVED|REJECTED",
+  "remark": "Generated N video clips",
+  "artifacts": {
+    "GENERATED_VIDEO_CLIPS": "path/to/clips/folder/"
+  },
+  "scene_status": [
+    {"scene": 1, "status": "success|failed", "filename": "scene_01_i2v.mp4"}
+  ]
+}
+
+Write meta.json sidecar with generation status.
