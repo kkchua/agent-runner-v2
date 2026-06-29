@@ -67,6 +67,7 @@ If any earlier understanding conflicts with the current files above, ignore the 
 Task:
 - Read the target and linked governing documents carefully.
 - Evaluate scope accuracy, dependency correctness, completeness, readiness for next phase, and alignment.
+- Explicitly verify the plan defines documentation strategy, affected codebase areas, update modes, and stale-doc handling.
 - Evaluate scope traceability explicitly:
   - every task should map to initiative included scope or success criteria
   - workflow-mandated artifacts such as task graph / review artifacts are allowed when clearly marked as workflow-derived rather than product-scope additions
@@ -80,6 +81,7 @@ Task:
 - Do not reject based on runner-managed review metadata alone when those fields match valid active-review context.
 - Judge plan content and design semantics, not bookkeeping-field formatting differences that normalize to the same meaning.
 - Do not reject a PLAN for omitting workflow approval mechanics, runner approval actions, or approval-owner details when those are governed by SOP/status rules and workflow governance is out of scope for the initiative.
+- Reject a PLAN if documentation work is implicit, generic, or disconnected from initiative scope.
 - Do not validate implementation code.
 - Do not implement anything.
 - Do not expand scope.

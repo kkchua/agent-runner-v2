@@ -279,7 +279,7 @@ def _route_rejected(
     auto_retry_counts: dict,
     human_retry_counts: dict,
 ) -> tuple[dict, int]:
-    on_reject_refine = step_cfg.get("on_reject_refine")
+    on_reject_refine = _resolve_reject_route(step_cfg=step_cfg, reject_code=step_result.reject_code)
     if on_reject_refine:
         return _route_loop_or_replan(
             group_name=group_name,
@@ -339,6 +339,17 @@ def _route_rejected(
     state["current_step"] = step
     save_job(group_name, state["job_id"], state)
     return state, 1
+
+
+def _resolve_reject_route(*, step_cfg: dict, reject_code: str | None) -> dict | None:
+    """Return the refine-route config for the current reject code, if any."""
+    default_route = step_cfg.get("on_reject_refine")
+    routes = step_cfg.get("reject_code_routes") or {}
+    if reject_code and isinstance(routes, dict):
+        candidate = routes.get(str(reject_code).strip().upper())
+        if isinstance(candidate, dict) and candidate.get("step") and candidate.get("artifact"):
+            return candidate
+    return default_route
 
 
 def _route_loop_or_replan(

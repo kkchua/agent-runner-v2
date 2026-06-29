@@ -4,9 +4,10 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from agent_runner_v2.bundle_loader import BOOTSTRAP_ROOT
 from agent_runner_v2.step_runner import render_prompt
 
-_PROMPTS_ROOT = Path(__file__).parent.parent / "agent_runner_v2" / "prompts"
+_PROMPTS_ROOT = BOOTSTRAP_ROOT / "prompts"
 
 _TEST_CONTEXT = {
     "STEP_NAME": "test_step_name",
@@ -118,6 +119,13 @@ def test_render_step_name_substituted():
     assert _TEST_CONTEXT["STEP_NAME"] in rendered
 
 
+def test_render_tolerates_none_context_values():
+    """Render should coerce None values instead of raising during placeholder replacement."""
+    template = "value={NULLISH}"
+    rendered = render_prompt(template, {"NULLISH": None, "TOOLS_DIR": "", "STEP_NAME": "x", "PROGRESS_FILE": "p"})
+    assert rendered == "value="
+
+
 # ---------------------------------------------------------------------------
 # Cross-group tests: verify block exists in other workflow groups
 # ---------------------------------------------------------------------------
@@ -154,5 +162,12 @@ def test_image_csv_gen_v1_has_tool_instruction():
 def test_image_csv_gen_v2_has_tool_instruction():
     """Verify TOOL_INSTRUCTION block is present in image_csv_gen_v2 templates."""
     template = _read_template("image_csv_gen_v2", "01_extract_desc.txt")
+    rendered = render_prompt(template, _TEST_CONTEXT)
+    assert "## Workflow Rules" in rendered
+
+
+def test_documentation_sync_has_tool_instruction():
+    """Verify TOOL_INSTRUCTION block is present in documentation_sync_v1 templates."""
+    template = _read_template("documentation_sync_v1", "01_sync_docs.txt")
     rendered = render_prompt(template, _TEST_CONTEXT)
     assert "## Workflow Rules" in rendered

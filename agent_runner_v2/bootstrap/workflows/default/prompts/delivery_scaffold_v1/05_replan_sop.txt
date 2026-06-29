@@ -9,7 +9,7 @@ Governing rules (STRICT):
 - Do NOT include agent master prompts — they are deprecated.
 
 Role:
-- You are the SOP Architect replanning the delivery SOP and status rules from scratch.
+- You are the SOP Architect replanning the delivery SOP, delivery status rules, codebase-doc SOP, and codebase-doc status rules from scratch.
 
 Inputs:
 Project analysis:
@@ -20,6 +20,12 @@ Current SOP (previous attempt):
 
 Current status rules (previous attempt):
 {DELIVERY_STATUS_RULES}
+
+Current codebase-doc SOP (previous attempt):
+{CODEBASE_DOC_SOP}
+
+Current codebase-doc status rules (previous attempt):
+{CODEBASE_DOC_STATUS_RULES}
 
 Review feedback:
 {REVIEW_FILE}
@@ -33,13 +39,15 @@ Current artifact fingerprints:
 Task:
 - Read all review feedback accumulated across refinement iterations.
 - Regenerate WORKFLOW_SOP_v1.md and DELIVERY_STATUS_RULES_v1.md from scratch.
+- Regenerate the paired codebase documentation SOP and status rules from scratch as part of the same governance set.
 - Ensure every issue flagged in the review is addressed in the new version.
 - Follow all the original SOP generation requirements (metadata, state machine, agent roles, phases, rules, etc.).
 - Ensure the status rules cover all artifact lifecycles, authority model, approval gates, and forbidden transitions.
+- Ensure the regenerated governance explicitly covers intake, planning, execution, stale-doc retirement, and file-type documentation rules.
 
 Replan completion rule (MANDATORY)
 - You may return `status: "APPROVED"` only after:
-  - both SOP and status rules files have been regenerated
+  - all four governance files have been regenerated
   - the files exist on disk at their original paths
   - the meta.json sidecar has been written
 
@@ -54,7 +62,9 @@ Critical: meta.json sidecar is REQUIRED
       "remark": "<short summary of regenerated content>",
       "artifacts": {
         "DELIVERY_SOP": "<path>",
-        "DELIVERY_STATUS_RULES": "<path>"
+        "DELIVERY_STATUS_RULES": "<path>",
+        "CODEBASE_DOC_SOP": "<path>",
+        "CODEBASE_DOC_STATUS_RULES": "<path>"
       },
       "recorded_at": "<ISO timestamp e.g. 2026-06-07T10:00:00>"
     }
@@ -74,7 +84,9 @@ Required JSON schema:
   "remark": "<short summary of regenerated content>",
   "artifacts": {
     "DELIVERY_SOP": "<path if created>",
-    "DELIVERY_STATUS_RULES": "<path if created>"
+    "DELIVERY_STATUS_RULES": "<path if created>",
+    "CODEBASE_DOC_SOP": "<path if created>",
+    "CODEBASE_DOC_STATUS_RULES": "<path if created>"
   }
 }
 
@@ -82,6 +94,7 @@ Required execution sequence:
 1. Read all input files and review feedback.
 2. Regenerate WORKFLOW_SOP_v1.md to `{DELIVERY_SOP_PATH}` (exact path from runner).
 3. Regenerate DELIVERY_STATUS_RULES_v1.md to `{DELIVERY_STATUS_RULES_PATH}` (exact path from runner).
-4. Verify both files exist and address all review issues.
-5. Write the meta.json sidecar to `{DELIVERY_SOP_METAJSON}`.
-6. Return the final JSON.
+4. Regenerate `{CODEBASE_DOC_SOP}` and `{CODEBASE_DOC_STATUS_RULES}` to their exact runner paths.
+5. Verify all files exist and address all review issues.
+6. Write the meta.json sidecar to `{DELIVERY_SOP_METAJSON}`.
+7. Return the final JSON.

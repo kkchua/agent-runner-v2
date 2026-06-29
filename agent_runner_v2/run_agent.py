@@ -89,6 +89,8 @@ from .step_runner import (
     run_action,
     run_step,
 )
+
+__version__ = "0.1.0"
 from .execution_request import ExecutionRequest
 from .execution_result import ExecutionFailure, ExecutionResult
 from .workflow_router import route_after_failure, route_after_step
@@ -99,7 +101,7 @@ from .workflow_router import route_after_failure, route_after_step
 # ---------------------------------------------------------------------------
 
 def _resolve_workflow_bundle_root(workspace_root: Path, workflow_name: str, config: dict) -> Path:
-    """Resolve the workflow bundle root for either project-local or global installs."""
+    """Resolve the active workflow bundle root from configured overrides or runner home."""
     workflow_cfg = ((config.get("workflows") or {}).get(workflow_name) or {})
     workflow_path = workflow_cfg.get("path")
     if workflow_path:
@@ -114,7 +116,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
     command = raw[0]
     if command == "init":
-        p = argparse.ArgumentParser(description="Initialize a project-local runner workspace.")
+        p = argparse.ArgumentParser(description="Initialize the runner home and workspace configuration.")
         p.add_argument("--project-root", default=".", help="Workspace directory to initialize.")
         p.add_argument("--workflow", default="default", help="Workflow name to seed.")
         ns = p.parse_args(raw[1:])
@@ -181,6 +183,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         return ns
 
     p = argparse.ArgumentParser(description="Run a job-based LLM workflow (v2).")
+    p.add_argument("-v", "--version", action="version", version=f"%(prog)s {__version__}")
     p.add_argument("--project-root", default="", help="Workspace root. Defaults to the current directory.")
     p.add_argument("--workflow", default="", help="Workflow name to run. Defaults to the workspace default.")
     p.add_argument("--target-project-root", default="",
@@ -460,6 +463,14 @@ def main(argv: list[str] | None = None) -> int:
             if target_idx >= 0:
                 downstream = set(steps_order[target_idx:])
                 state["completed_steps"] = [s for s in state.get("completed_steps", []) if s not in downstream]
+                # Clear artifacts produced by downstream steps so they get
+                # regenerated with fresh paths on re-run.
+                for ds_step in downstream:
+                    ds_cfg = group_cfg["step_configs"].get(ds_step)
+                    if ds_cfg:
+                        for produced_key in (ds_cfg.get("produces") or []):
+                            if produced_key in state.get("artifacts", {}):
+                                state["artifacts"][produced_key] = None
             clear_last_failure(state)
             save_job(args.template_group, state["job_id"], state)
             print(json.dumps({
@@ -692,10 +703,12 @@ def main(argv: list[str] | None = None) -> int:
             return exit_code
 
         # --- Coder step path ---
-        coder_used, coder_config = _resolve_step_coder(
+        coder_used, coder_alias, coder_config = _resolve_step_coder(
             group_cfg=group_cfg, state=state, step=step, step_cfg=step_cfg,
             cli_coder=args.coder or None,
         )
+        # Show alias in STARTING log when an alias was resolved
+        coder_label = f"{coder_alias} ({coder_used})" if coder_alias else coder_used
         max_rejects = (
             args.max_rejects if args.max_rejects >= 0
             else int(step_cfg.get("max_rejects", group_cfg["default_max_rejects"]))
@@ -809,7 +822,7 @@ def main(argv: list[str] | None = None) -> int:
         }, indent=2))
         return 0
 
-    print(f"[{_now_iso()}] coder={coder_used} step={step} status=STARTING", flush=True)
+    print(f"[{_now_iso()}] coder={coder_label} step={step} status=STARTING", flush=True)
 
     # Mark review state started (job.json only — no markdown writes in v2)
     _mark_review_started(state, step=step, step_cfg=step_cfg, coder_used=coder_used)
@@ -925,7 +938,7 @@ def _execute_step_command(request_path: Path, result_path: Path | None = None) -
     else:
         raise FileNotFoundError(
             f"Workflow bundle not found at {global_default_module}. "
-            "Provide backend step_execution_spec or create ~/.ukbe-runner/workflows/default."
+            "Provide backend step_execution_spec or create %USERPROFILE%\\.ukbe-runner\\workflows\\default."
         )
 
     delivery_root = Path(request.target_project_root).resolve() if request.target_project_root else None
@@ -1499,13 +1512,15 @@ def _execute_backend_step_request(
             diagnostics={"workflow_run_id": request.workflow_run_id, "workflow_step_run_id": request.workflow_step_run_id},
         )
 
-    coder_used, coder_config = _resolve_step_coder(
+    coder_used, coder_alias, coder_config = _resolve_step_coder(
         group_cfg=group_cfg,
         state=state,
         step=step,
         step_cfg=step_cfg,
         cli_coder=request.coder_override or None,
     )
+    # Show alias in STARTING log when an alias was resolved
+    coder_label = f"{coder_alias} ({coder_used})" if coder_alias else coder_used
     model_id = (coder_config or {}).get("model") or None
     prompt_path = resolve_prompt_path(step_cfg=step_cfg, coder=coder_used, model_id=model_id)
     if not prompt_path.exists():
@@ -1605,7 +1620,7 @@ def _execute_backend_step_request(
 # ---------------------------------------------------------------------------
 
 def _ensure_delivery_folders(target_root: Path) -> None:
-    """Create the standard docs/delivery/ folder structure in a target project."""
+    """Create the standard delivery and codebase documentation structure."""
     folders = [
         "docs/delivery/00_templates",
         "docs/delivery/01_initiatives",
@@ -1615,8 +1630,14 @@ def _ensure_delivery_folders(target_root: Path) -> None:
         "docs/delivery/04_implementation_plans",
         "docs/delivery/05_reviews",
         "docs/delivery/06_memory",
-        "docs/delivery/07_master_prompts",
         "docs/delivery/08_agents",
+        "docs/codebase/00_standards",
+        "docs/codebase/00_templates",
+        "docs/codebase/01_inventory",
+        "docs/codebase/02_modules",
+        "docs/codebase/03_components",
+        "docs/codebase/04_changes",
+        "docs/codebase/05_archives",
     ]
     for folder in folders:
         (target_root / folder).mkdir(parents=True, exist_ok=True)
@@ -1670,7 +1691,8 @@ def _parse_key_value_pairs(values: list[str]) -> dict[str, str]:
 
 def _resolve_step_coder(
     *, group_cfg: dict, state: dict, step: str, step_cfg: dict, cli_coder: str | None
-) -> tuple[str, dict | None]:
+) -> tuple[str, str | None, dict | None]:
+    """Returns (resolved_coder, original_alias, resolved_config)."""
     coder_cfg = step_cfg.get("coder", {})
     default_coder = coder_cfg.get("default")
     allowed_coders = coder_cfg.get("allowed", [])
@@ -1678,20 +1700,25 @@ def _resolve_step_coder(
     if not chosen:
         raise ValueError(f"No coder specified and no default coder configured for step {step!r}")
 
+    original = chosen
     resolved_config = resolve_coder(chosen)
     if resolved_config is not None:
         actual_coder = resolved_config.get("coder", chosen)
-        log_resolver(chosen, f"{actual_coder} (model={resolved_config.get('model', '')})", is_alias=True)
+        log_resolver(original, f"{actual_coder} (model={resolved_config.get('model', '')})", is_alias=True)
         if shutil.which(actual_coder) is None:
-            raise FileNotFoundError(f"Coder executable not found: {actual_coder!r} (alias {chosen!r})")
+            raise FileNotFoundError(f"Coder executable not found: {actual_coder!r} (alias {original!r})")
         chosen = actual_coder
     else:
-        log_resolver(chosen, chosen, is_alias=False)
+        log_resolver(original, original, is_alias=False)
         if shutil.which(chosen) is None:
             raise FileNotFoundError(f"Coder executable not found in PATH: {chosen!r}")
 
-    if allowed_coders and chosen not in allowed_coders:
-        raise ValueError(f"Coder {chosen!r} is not allowed for step {step!r}. Allowed: {allowed_coders}")
+    # Check the original name (alias or direct) against the allowed list.
+    # The allowed list contains alias names (e.g. 'qwen-architect') or direct
+    # coder names (e.g. 'claude', 'codex'), NOT resolved backend executables.
+    check_name = original if original != chosen else chosen
+    if allowed_coders and check_name not in allowed_coders:
+        raise ValueError(f"Coder {check_name!r} is not allowed for step {step!r}. Allowed: {allowed_coders}")
     if coder_cfg.get("must_differ_from_previous_step"):
         idx = group_cfg["steps"].index(step)
         if idx > 0:
@@ -1701,7 +1728,7 @@ def _resolve_step_coder(
                 raise ValueError(
                     f"Coder {chosen!r} is not allowed for step {step!r} because it matches previous step {prev_step!r}"
                 )
-    return chosen, resolved_config
+    return chosen, original if original != chosen else None, resolved_config
 
 
 def _task_execution_binding_identity(binding: dict | None) -> tuple[str | None, str | None]:

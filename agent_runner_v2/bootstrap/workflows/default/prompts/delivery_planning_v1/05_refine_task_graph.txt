@@ -54,6 +54,7 @@ Step 2 - Fix the task graph.
 - Do NOT create a new task graph file.
 - Do NOT generate task docs.
 - Do NOT widen plan scope.
+- Preserve or restore documentation workstream coverage required by the plan.
 - Do NOT mark the task graph approved.
 - You MUST make at least one substantive edit to the file.
 
