@@ -23,6 +23,10 @@ Refinement rules
 - Edit the existing pre-init artifact in place.
 - Address every blocking finding from the review.
 - Fix only what the review flagged; do not broaden scope.
+- Preserve or improve the documentation-scope signals required for downstream planning:
+  - affected codebase areas
+  - documentation expectations
+  - stale-guidance or replacement risk
 - Do not mark the artifact approved.
 - The runner will reset lifecycle state after your edits; you should only update content.
 - Do not create the final official initiative artifact.

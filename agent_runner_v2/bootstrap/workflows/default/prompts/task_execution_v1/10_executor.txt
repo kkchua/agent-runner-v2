@@ -51,11 +51,16 @@ Task:
     follows the same rule.
   - The Impl ID is found in the IMPL document's metadata (e.g. `IMPL-20260417-02`).
   - Skip files that already contain this Impl ID reference.
+- Non-Python documentation requirement (MANDATORY):
+  - For every changed file type that does not use Python-style module docstrings, you MUST still execute the documentation obligations defined in {IMPL_FILE} and {TASK_FILE}.
+  - Config files, schemas, workflow definitions, templates, markdown docs, assets, and generated support files must be reflected through the required inventory/module/component/change-impact docs.
+  - Do not treat "no Python file changed" as a reason to skip documentation work.
 - After implementing the code changes, you MUST run the tests declared in the IMPL's Test Plan section:
   - Command: `pytest <test_files_from_impl> -v --tb=short`
   - Verify all tests pass (exit code 0).
 - Do not summarize the plan. Do the work described by the plan.
 - Use `{TASK_FILE}` only to keep the work inside approved scope.
+- If implementation changes invalidate existing active guidance, you MUST remove that guidance from active use or mark it superseded through the documentation workflow.
 - If preflight passes, do not stop at a readiness summary like "ready to execute". Continue and perform the actual execution work.
 
 meta.json File

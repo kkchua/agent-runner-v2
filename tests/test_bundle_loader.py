@@ -65,3 +65,14 @@ def test_run_agent_resolves_global_workflow_bundle_root(tmp_path, monkeypatch):
 
     assert resolved == global_root.resolve()
 
+
+def test_ensure_delivery_folders_omits_master_prompts_and_adds_codebase_docs(tmp_path):
+    target_root = tmp_path / "workspace"
+    target_root.mkdir()
+
+    run_agent_module._ensure_delivery_folders(target_root)
+
+    assert not (target_root / "docs" / "delivery" / "07_master_prompts").exists()
+    assert (target_root / "docs" / "codebase" / "00_standards").exists()
+    assert (target_root / "docs" / "codebase" / "04_changes").exists()
+

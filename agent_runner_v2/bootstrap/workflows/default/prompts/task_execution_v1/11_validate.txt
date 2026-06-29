@@ -18,6 +18,8 @@ Inputs
 
 * IMPL_FILE: {IMPL_FILE}
 * TASK_FILE: {TASK_FILE}
+* CODEBASE_CHANGE_IMPACT: {CODEBASE_CHANGE_IMPACT}
+* CODEBASE_INVENTORY: {CODEBASE_INVENTORY}
 
 Freshness
 
@@ -28,6 +30,12 @@ Validation Duties
 
 1. Verify implementation matches approved task + implementation plan.
 2. Verify required deliverables exist on disk.
+2b. Verify documentation synchronization:
+   - Read {CODEBASE_CHANGE_IMPACT} and {CODEBASE_INVENTORY}.
+   - Confirm the change-impact record matches the implemented task scope.
+   - Confirm the inventory reflects the current state of affected codebase areas.
+   - Confirm stale docs were removed from active guidance or marked superseded with replacement pointers.
+   - Confirm non-Python file changes are represented in the documentation set where applicable.
 3. Verify docstring linkage (MANDATORY):
    - Extract the Impl ID from IMPL_FILE metadata (e.g. `IMPL-20260417-02`).
    - For every new or modified .py file declared in the IMPL's File Plan and Test Plan:
@@ -38,11 +46,16 @@ Validation Duties
    - Capture raw output and exit code
    - Include results in validation record
 5. Produce APPROVED or REJECTED based on findings.
+6. Set `reject_code` based on the dominant failure class:
+   - `IMPL_VALIDATION_FAILED` for implementation or test failures only
+   - `DOC_SYNC_VALIDATION_FAILED` for documentation synchronization failures only
+   - `IMPL_AND_DOC_VALIDATION_FAILED` when both classes fail
 
 Validation Record
 
 * Follow: `docs/delivery/00_templates/05_validation.template.md`
 * Write exactly one markdown file to: {VALIDATION_FILE_PATH}
+* The validation record must separate implementation/test findings from documentation-sync findings.
 
 meta.json File
 

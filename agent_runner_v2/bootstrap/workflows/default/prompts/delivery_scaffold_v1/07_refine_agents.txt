@@ -23,6 +23,12 @@ Delivery SOP:
 Delivery status rules:
 {DELIVERY_STATUS_RULES}
 
+Codebase-doc SOP:
+{CODEBASE_DOC_SOP}
+
+Codebase-doc status rules:
+{CODEBASE_DOC_STATUS_RULES}
+
 Current agent registry:
 {DELIVERY_AGENTS_MD}
 
@@ -57,6 +63,7 @@ Agent refinement rules:
 - If the review flagged handoff contract gaps: fix the affected handoff descriptions.
 - If the review flagged AGENTS.md inconsistency: update the registry to match the individual contracts.
 - If the review flagged entry/exit criteria gaps: add the missing criteria.
+- Preserve explicit documentation-governance duties across planner, task decomposer, executor, reviewer, and memory manager contracts.
 
 Refinement completion rule (MANDATORY)
 - You may return `status: "APPROVED"` only after:

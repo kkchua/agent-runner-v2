@@ -80,6 +80,12 @@ Task:
   - Mark each extracted constraint as [TASK-DERIVED] in the impl plan so the executor
     can trace it back to the task document.
 - Define file plan, module responsibilities, reuse strategy, data flow, and test plan.
+- Define a documentation update plan covering all affected file types:
+  - inventory entries to update
+  - module/component docs to update
+  - stale docs to supersede or remove
+  - file-type-specific inline documentation obligations where applicable
+  - validation evidence needed to prove documentation freshness
 - Stay within task scope.
 - Do not redesign architecture.
 - Do not write code.
@@ -169,6 +175,7 @@ Required self-check before APPROVED
 - Confirm every test case from the task document's Validation Criteria is enumerated in the
   impl plan's test plan — no summarization.
 - Confirm the impl plan marks task-derived constraints as [TASK-DERIVED] for traceability.
+- Confirm the documentation update plan covers all affected file types, not only Python files.
 
 Bad implementation-plan behaviors (avoid):
 - Redesigning architecture beyond task scope
