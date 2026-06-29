@@ -11,16 +11,42 @@ from types import ModuleType
 from .runtime_context import DEFAULT_RUNNER_HOME, PACKAGE_ROOT
 
 
+GLOBAL_RUNNER_HOME = Path.home() / DEFAULT_RUNNER_HOME
+BOOTSTRAP_ROOT = PACKAGE_ROOT / "bootstrap" / "workflows" / "default"
+
+
 def config_path(workspace_root: Path) -> Path:
-    return workspace_root / DEFAULT_RUNNER_HOME / "config.json"
+    return GLOBAL_RUNNER_HOME / "config.json"
 
 
 def workflows_root(workspace_root: Path) -> Path:
-    return workspace_root / DEFAULT_RUNNER_HOME / "workflows"
+    return global_workflows_root()
 
 
 def workflow_root(workspace_root: Path, workflow_name: str) -> Path:
     return workflows_root(workspace_root) / workflow_name
+
+
+def global_workflows_root() -> Path:
+    return GLOBAL_RUNNER_HOME / "workflows"
+
+
+def global_workflow_root(workflow_name: str) -> Path:
+    return global_workflows_root() / workflow_name
+
+
+def resolve_workflow_root(workspace_root: Path, workflow_name: str, *, config: dict | None = None) -> Path:
+    workflow_cfg_map = (config or {}).get("workflows") or {}
+    workflow_cfg = workflow_cfg_map.get(workflow_name) or {}
+    workflow_path = workflow_cfg.get("path")
+    if workflow_path:
+        return (workspace_root / workflow_path).resolve()
+
+    global_root = global_workflow_root(workflow_name)
+    if global_root.exists():
+        return global_root.resolve()
+
+    return global_workflow_root(workflow_name).resolve()
 
 
 def load_project_config(workspace_root: Path) -> dict:
@@ -28,11 +54,7 @@ def load_project_config(workspace_root: Path) -> dict:
     if not path.exists():
         return {
             "default_workflow": "default",
-            "workflows": {
-                "default": {
-                    "path": str(workflow_root(workspace_root, "default").relative_to(workspace_root)),
-                }
-            },
+            "workflows": {},
         }
     return json.loads(path.read_text(encoding="utf-8"))
 
@@ -50,12 +72,8 @@ def load_workflow_module(
     config: dict | None = None,
 ) -> ModuleType:
     workflow_cfg_map = (config or {}).get("workflows") or {}
-    if config is not None and workflow_name not in workflow_cfg_map:
-        valid = ", ".join(sorted(workflow_cfg_map)) or "<none>"
-        raise ValueError(f"Unknown workflow {workflow_name!r}. Available workflows: {valid}")
     workflow_cfg = workflow_cfg_map.get(workflow_name) or {}
-    workflow_path = workflow_cfg.get("path") or str(workflow_root(workspace_root, workflow_name).relative_to(workspace_root))
-    wf_root = (workspace_root / workflow_path).resolve()
+    wf_root = resolve_workflow_root(workspace_root, workflow_name, config=config)
     module_path = wf_root / "template_groups.py"
     if not module_path.exists():
         raise FileNotFoundError(
@@ -72,9 +90,9 @@ def load_workflow_module(
     return module
 
 
-def seed_workflow_bundle(workspace_root: Path, workflow_name: str = "default") -> Path:
-    """Copy the bundled workflow template set into the target workspace."""
-    wf_root = workflow_root(workspace_root, workflow_name)
+def seed_workflow_bundle(target_root: Path, workflow_name: str = "example") -> Path:
+    """Copy the bootstrap workflow template set into the target global workflow location."""
+    wf_root = target_root / workflow_name
     wf_root.mkdir(parents=True, exist_ok=True)
     for name in (
         "template_groups.py",
@@ -83,8 +101,8 @@ def seed_workflow_bundle(workspace_root: Path, workflow_name: str = "default") -
         "model_mapping.json",
         "usage_schema.json",
     ):
-        shutil.copy2(PACKAGE_ROOT / name, wf_root / name)
-    prompts_src = PACKAGE_ROOT / "prompts"
+        shutil.copy2(BOOTSTRAP_ROOT / name, wf_root / name)
+    prompts_src = BOOTSTRAP_ROOT / "prompts"
     prompts_dst = wf_root / "prompts"
     if prompts_dst.exists():
         shutil.rmtree(prompts_dst)
@@ -94,21 +112,20 @@ def seed_workflow_bundle(workspace_root: Path, workflow_name: str = "default") -
 
 def init_workspace(workspace_root: Path, workflow_name: str = "default") -> dict:
     workspace_root = workspace_root.resolve()
-    runner_home = workspace_root / DEFAULT_RUNNER_HOME
+    runner_home = GLOBAL_RUNNER_HOME
     runner_home.mkdir(parents=True, exist_ok=True)
     (runner_home / "jobs").mkdir(parents=True, exist_ok=True)
     (runner_home / "logs").mkdir(parents=True, exist_ok=True)
-    workflows_dir = runner_home / "workflows"
-    workflows_dir.mkdir(parents=True, exist_ok=True)
+    (runner_home / "runtime").mkdir(parents=True, exist_ok=True)
 
-    wf_root = seed_workflow_bundle(workspace_root, workflow_name=workflow_name)
+    workflows_dir = global_workflows_root()
+    workflows_dir.mkdir(parents=True, exist_ok=True)
+    wf_root = seed_workflow_bundle(workflows_dir, workflow_name="example")
+
     config = load_project_config(workspace_root)
     config.setdefault("workflows", {})
     if not config.get("default_workflow"):
         config["default_workflow"] = workflow_name
-    config["workflows"][workflow_name] = {
-        "path": str(wf_root.relative_to(workspace_root)),
-    }
     save_project_config(workspace_root, config)
     return {
         "workspace_root": str(workspace_root),

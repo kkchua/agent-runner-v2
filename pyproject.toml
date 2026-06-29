@@ -26,8 +26,10 @@ ukbe-run-agent = "agent_runner_v2.run_agent:main"
 agent_runner_v2 = [
     "*.json",
     "*.md",
-    "prompts/*/*.txt",
-    "prompts/*/*.md",
+    "bootstrap/workflows/default/*.json",
+    "bootstrap/workflows/default/*.py",
+    "bootstrap/workflows/default/prompts/*/*.txt",
+    "bootstrap/workflows/default/prompts/*/*.md",
 ]
 
 [tool.pytest.ini_options]

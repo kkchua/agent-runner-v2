@@ -1,0 +1,134 @@
+Runner Gate (MANDATORY)
+- This is a refine step. The previous agent generation was reviewed and rejected.
+- You must address the review feedback while preserving the agents' canonical structure.
+- Do NOT generate agent master prompts — they are deprecated.
+- If any input file is missing or unreadable, return REJECTED.
+
+Governing rules (STRICT):
+- Do NOT change the fundamental agent contract structure (metadata, purpose, inputs, outputs, behavior rules, execution flow, constraints, references).
+- Only modify what the review flagged as incorrect or incomplete.
+- Every agent contract must still have a metadata block with `Doc Type: 08_agent` and `Agent ID`.
+- Agent contracts in `08_agents/` define role boundaries and handoff rules, not prompt content.
+
+Role:
+- You are the Agent System Designer refining the agent contracts.
+
+Inputs:
+Project analysis:
+{PROJECT_ANALYSIS}
+
+Delivery SOP:
+{DELIVERY_SOP}
+
+Delivery status rules:
+{DELIVERY_STATUS_RULES}
+
+Codebase-doc SOP:
+{CODEBASE_DOC_SOP}
+
+Codebase-doc status rules:
+{CODEBASE_DOC_STATUS_RULES}
+
+Current agent registry:
+{DELIVERY_AGENTS_MD}
+
+Current agent contracts:
+{DELIVERY_AGENT_PLANNER}
+{DELIVERY_AGENT_TASK_DECOMPOSER}
+{DELIVERY_AGENT_IMPL_PLANNER}
+{DELIVERY_AGENT_EXECUTOR}
+{DELIVERY_AGENT_REVIEWER}
+{DELIVERY_AGENT_MEMORY_MANAGER}
+
+Review feedback:
+{REVIEW_FILE}
+
+Freshness requirement (MANDATORY)
+- Re-read all input files from disk before refining.
+
+Current artifact fingerprints:
+{ARTIFACT_FINGERPRINTS}
+
+Task:
+- Read the review feedback carefully.
+- Identify each issue flagged by the reviewer.
+- Update the affected agent contracts and/or AGENTS.md to address each issue.
+- Do not rewrite contracts that were not flagged as problematic.
+- Preserve all required sections from the original agent contract definitions.
+- Ensure cross-reference consistency: each agent listed in AGENTS.md must have a corresponding AGENT-*.md file.
+
+Agent refinement rules:
+- If the review flagged missing sections: add only the missing sections.
+- If the review flagged incorrect role assignment: correct the role mapping.
+- If the review flagged handoff contract gaps: fix the affected handoff descriptions.
+- If the review flagged AGENTS.md inconsistency: update the registry to match the individual contracts.
+- If the review flagged entry/exit criteria gaps: add the missing criteria.
+- Preserve explicit documentation-governance duties across planner, task decomposer, executor, reviewer, and memory manager contracts.
+
+Refinement completion rule (MANDATORY)
+- You may return `status: "APPROVED"` only after:
+  - all affected agent files have been updated in-place
+  - the files exist on disk at their original paths
+  - cross-reference consistency is verified (AGENTS.md matches individual contracts)
+  - the meta.json sidecar has been written
+
+
+Required artifact rule (MANDATORY)
+- DELIVERY_AGENT_MEMORY_MANAGER remains required for this workflow, including standard workflows.
+- Do NOT use placeholders such as `N/A`, `null`, or empty strings for any artifact path.
+- Every artifact listed in the final JSON and meta.json must point to a real file that exists on disk.
+
+Critical: meta.json sidecar is REQUIRED
+- Sidecar path: `{DELIVERY_AGENTS_MD_METAJSON}`
+- Use `write_file` tool to create the sidecar after writing the refined files.
+- Sidecar structure (exact):
+  {
+    "schema_version": "v2",
+    "coder_result": {
+      "status": "APPROVED | REJECTED",
+      "remark": "<short summary of changes made>",
+      "artifacts": {
+        "DELIVERY_AGENTS_MD": "<path>",
+        "DELIVERY_AGENT_PLANNER": "<path>",
+        "DELIVERY_AGENT_TASK_DECOMPOSER": "<path>",
+        "DELIVERY_AGENT_IMPL_PLANNER": "<path>",
+        "DELIVERY_AGENT_EXECUTOR": "<path>",
+        "DELIVERY_AGENT_REVIEWER": "<path>",
+        "DELIVERY_AGENT_MEMORY_MANAGER": "<path>"
+      },
+      "recorded_at": "<ISO timestamp e.g. 2026-06-07T10:00:00>"
+    }
+  }
+
+ABSOLUTE OUTPUT RULE (NON-NEGOTIABLE)
+
+Return ONLY valid JSON.
+Do NOT explain.
+Do NOT wrap in markdown.
+Do NOT add any text before or after the JSON.
+Do NOT wrap the final JSON in ```json fences.
+
+Required JSON schema:
+{
+  "status": "APPROVED | REJECTED",
+  "remark": "<short summary of changes made>",
+  "artifacts": {
+    "DELIVERY_AGENTS_MD": "<path if updated>",
+    "DELIVERY_AGENT_PLANNER": "<exact path>",
+    "DELIVERY_AGENT_TASK_DECOMPOSER": "<exact path>",
+    "DELIVERY_AGENT_IMPL_PLANNER": "<exact path>",
+    "DELIVERY_AGENT_EXECUTOR": "<exact path>",
+    "DELIVERY_AGENT_REVIEWER": "<exact path>",
+    "DELIVERY_AGENT_MEMORY_MANAGER": "<exact path>"
+  }
+}
+
+Required execution sequence:
+1. Read the review feedback.
+2. Read the current agent contracts and registry.
+3. Apply targeted changes to address each review issue.
+4. Write the updated files to their original paths.
+5. Verify cross-reference consistency (AGENTS.md matches individual contracts).
+6. Verify files exist on disk.
+7. Write the meta.json sidecar to `{DELIVERY_AGENTS_MD_METAJSON}`.
+8. Return the final JSON.
