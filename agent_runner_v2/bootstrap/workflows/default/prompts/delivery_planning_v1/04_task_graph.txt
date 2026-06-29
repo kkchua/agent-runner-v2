@@ -53,6 +53,7 @@ Task Graph Template (MANDATORY):
 Task:
 - Read the approved plan carefully.
 - Generate a task graph artifact for review.
+- Preserve documentation work as part of the execution structure, not as an optional afterthought.
 - Save the task graph to: `{TASK_GRAPH_FILE_PATH}` (exact path provided by runner — do not choose a different path)
 - Preserve the Plan ID exactly.
 - Include the following file-path lineage metadata in the document:
@@ -63,6 +64,9 @@ Task:
   - When writing or updating document lifecycle fields, use canonical lowercase status values only.
   - Allowed values must match the delivery templates exactly.
 - Keep each task narrow, executable, testable, and reviewable.
+- Ensure the task graph shows where documentation synchronization happens for affected work:
+  - embedded in delivery tasks, or
+  - as explicit linked documentation workstream nodes when the plan requires it
 - Do not produce implementation plans.
 - Do not produce code.
 - Return the created task graph path in artifacts.TASK_GRAPH_FILE.

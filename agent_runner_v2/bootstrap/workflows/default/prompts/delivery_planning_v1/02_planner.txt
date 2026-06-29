@@ -61,6 +61,8 @@ Task:
   - Allowed values must match the delivery templates exactly.
 - Include execution phases, task breakdown, risks, mitigations, deliverables, dependencies, and acceptance criteria.
 - Include an exact `## 🧭 Scope Mapping` section heading.
+- Include an exact `## Documentation Strategy` section heading.
+- Include an exact `## Documentation Freshness Risks` section heading.
 - Include a compact `## Explicitly Excluded / Not Planned` section.
 - Do not generate task docs.
 - Do not write implementation code.
@@ -75,6 +77,10 @@ Scope traceability rule (MANDATORY)
   - workflow-mandated artifacts
   - initiative-scope deliverables
   - excluded / future-work items
+- Plan documentation work explicitly:
+  - identify the likely codebase areas affected
+  - identify whether inventory updates, module docs, component docs, inline docs, or change-impact records will be required
+  - identify stale-doc cleanup or supersession work if the initiative replaces existing behavior
 - Minimal implementation detail is allowed only when it is traceable to initiative intent. Untraceable additions are invalid.
 - Determine workflow-governance scope from the initiative metadata:
   - if `Workflow Governance In Scope: YES`, workflow/SOP/process redesign may be included in plan scope
@@ -87,6 +93,10 @@ Required compact format
 - In `## Explicitly Excluded / Not Planned`, use compact bullets such as:
   - `- Audit-trail extension: excluded`
   - `- Future lifecycle/versioning system: excluded`
+- In `## Documentation Strategy`, use compact bullets such as:
+  - `- Codebase areas: api/workflows/docs/codebase inventory`
+  - `- Documentation mode: module docs for Python packages; inventory entries for config/assets; change-impact record mandatory`
+  - `- Stale guidance handling: supersede legacy docs if behavior is replaced`
 
 Scope Mapping completeness rule (MANDATORY)
 - The heading must be exactly `## 🧭 Scope Mapping`.
@@ -130,6 +140,8 @@ Critical: meta.json sidecar is REQUIRED
 - A plan where any task lacks a corresponding scope-mapping bullet is invalid.
 - A plan missing the exact heading `## Plan Objective` is invalid (do NOT use `## Objective`).
 - A plan missing the exact heading `## Strategy Overview` is invalid (do NOT use `## Execution Phases` or any other variant).
+- A plan missing `## Documentation Strategy` is invalid.
+- A plan missing `## Documentation Freshness Risks` is invalid.
 - Claiming that a PLAN file was created without actually writing it to disk is invalid.
 - Returning a PLAN path that does not exist on disk is invalid.
 

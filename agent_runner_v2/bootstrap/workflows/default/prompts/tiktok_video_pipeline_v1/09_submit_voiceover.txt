@@ -1,0 +1,151 @@
+================================================================================
+TASK
+================================================================================
+
+Submit all voiceover text to ElevenLabs TTS API for audio generation.
+
+================================================================================
+INPUT
+================================================================================
+
+Read the approved workflow from {WORKFLOW_JSON_PATH}.
+
+Extract voiceover text for each scene:
+- Scene 1: scenes[0].voiceover
+- Scene 2: scenes[1].voiceover
+- ... and so on for all scenes
+
+================================================================================
+SUBMISSION FORMAT
+================================================================================
+
+For EACH scene voiceover, create a submission entry with:
+{
+  "audio_filename": "scene_<NN>_voiceover.mp3",
+  "scene_number": <N>,
+  "text": "<the voiceover text>",
+  "voice_id": "<from elevenlabs_config>",
+  "model_id": "eleven_multilingual_v2",
+  "stability": 0.5,
+  "similarity_boost": 0.75
+}
+
+================================================================================
+SUBMISSION PROCESS
+================================================================================
+
+1. Load the ElevenLabs configuration from: {PACKAGE_ROOT}/elevenlabs_config.json
+   - This file contains: api_key_env, voice_id, model_id, delay_seconds
+   - Read API key from the environment variable specified in api_key_env
+
+2. For each voiceover entry:
+   a. POST https://api.elevenlabs.io/v1/text-to-speech/{voice_id}
+      Headers:
+        xi-api-key: <from env>
+        Content-Type: application/json
+      Body: {
+        "text": "<voiceover text>",
+        "model_id": "eleven_multilingual_v2",
+        "voice_settings": {
+          "stability": 0.5,
+          "similarity_boost": 0.75
+        }
+      }
+   b. Save the returned audio to: {AUDIO_OUTPUT_DIR}/scene_<NN>_voiceover.mp3
+   c. Wait {delay_seconds} before the next request (rate limiting)
+
+3. After all submissions, write a summary to {AUDIO_SUBMIT_RESULT_PATH}
+
+================================================================================
+RESULT FORMAT
+================================================================================
+
+Write the submission result summary to: {AUDIO_SUBMIT_RESULT_PATH}
+
+{
+  "total_submissions": <N>,
+  "successful": <M>,
+  "failed": <K>,
+  "entries": [
+    {
+      "scene_number": 1,
+      "audio_filename": "scene_01_voiceover.mp3",
+      "audio_path": "<path to saved audio file>",
+      "status": "generated" | "failed",
+      "error": null | "<error message if failed>"
+    }
+  ],
+  "voice_id_used": "<voice_id>",
+  "model_used": "eleven_multilingual_v2"
+}
+
+================================================================================
+submit_voiceover COMPLETION RULE (MANDATORY)
+================================================================================
+
+You may return status: "APPROVED" only after all of the following are true:
+- all voiceover texts have been submitted to ElevenLabs API
+- all audio files have been saved to {AUDIO_OUTPUT_DIR}
+- the submission result summary has been written to {AUDIO_SUBMIT_RESULT_PATH}
+- the meta.json sidecar has been written to {AUDIO_SUBMIT_RESULT_METAJSON}
+- If the submission was not completed successfully, you MUST return REJECTED.
+
+Critical: meta.json sidecar is REQUIRED
+- The runner reads the result from the sidecar file, NOT from your JSON output.
+- Sidecar path: {AUDIO_SUBMIT_RESULT_METAJSON}
+- Sidecar structure (exact):
+{
+  "schema_version": "v2",
+  "coder_result": {
+    "status": "APPROVED" | "REJECTED",
+    "remark": "Generated N audio files: M succeeded, K failed",
+    "artifacts": {
+      "AUDIO_SUBMIT_RESULT": "{AUDIO_SUBMIT_RESULT_PATH}"
+    },
+    "recorded_at": "<current ISO timestamp>"
+  }
+}
+- Use write_file tool to create the sidecar immediately after writing the summary.
+- You MUST verify the sidecar exists on disk before returning.
+
+================================================================================
+ABSOLUTE OUTPUT RULE (NON-NEGOTIABLE)
+================================================================================
+
+You are NOT a chat assistant.
+You are a strict JSON generator.
+
+Return ONLY valid JSON.
+Do NOT explain.
+Do NOT wrap in markdown.
+Do NOT add any text before or after the JSON.
+Do NOT wrap the final JSON in ```json fences.
+
+Required JSON schema:
+{
+  "status": "APPROVED | REJECTED",
+  "remark": "<short summary of result>",
+  "artifacts": {
+    "IMAGE_SUBMIT_RESULT": null,
+    "VIDEO_SUBMIT_RESULT": null,
+    "AUDIO_SUBMIT_RESULT": null,
+    "FINAL_VIDEO": null
+  }
+}
+
+Rules for the artifacts object:
+- Include ONLY artifact keys produced or updated by this step.
+- Use repository-relative paths.
+- Do not invent paths that were not created or updated.
+- If submission fails entirely, return status "REJECTED" with "artifacts": {}.
+- For approval, artifacts.AUDIO_SUBMIT_RESULT is mandatory.
+
+Required execution sequence:
+1. Read the workflow from {WORKFLOW_JSON_PATH}.
+2. Extract all voiceover texts (one per scene).
+3. Load ElevenLabs configuration.
+4. For each voiceover, call ElevenLabs TTS API and save audio.
+5. Write the submission summary to {AUDIO_SUBMIT_RESULT_PATH}.
+6. Write the meta.json sidecar to {AUDIO_SUBMIT_RESULT_METAJSON}.
+7. Verify the sidecar exists on disk.
+8. Return the final JSON.

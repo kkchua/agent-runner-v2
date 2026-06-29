@@ -18,18 +18,27 @@ The backend is the source of truth for runs, step runs, artifacts, events, and a
 pip install -e .
 ```
 
-## Initialize a Local Workspace
+## Initialize the Runner Home
 
 ```bash
 ukbe-run-agent init
 ```
 
-This creates a project-local runner home:
+This seeds the global runner home under `%USERPROFILE%\.ukbe-runner`:
 
-- `.ukbe-runner/config.json`
-- `.ukbe-runner/jobs/`
-- `.ukbe-runner/workflows/default/`
-- `.ukbe-runner/logs/`
+- `%USERPROFILE%\.ukbe-runner\config.json`
+- `%USERPROFILE%\.ukbe-runner\jobs\`
+- `%USERPROFILE%\.ukbe-runner\workflows\example\`
+- `%USERPROFILE%\.ukbe-runner\logs\`
+
+Runtime workflow definitions and prompt templates are loaded from:
+
+- `%USERPROFILE%\.ukbe-runner\workflows\<workflow>\template_groups.py`
+- `%USERPROFILE%\.ukbe-runner\workflows\<workflow>\prompts\...`
+
+The packaged bootstrap source in this repo exists only to seed those global workflow bundles:
+
+- `agent_runner_v2/bootstrap/workflows/default/...`
 
 ## Current CLI Modes
 
@@ -84,3 +93,4 @@ ukbe-run-agent daemon kode-worker-01 --backend-url http://127.0.0.1:8100
 - `worker`, `poll`, and `daemon` are for backend-driven execution.
 - The daemon uses a stable workstation `worker_id`; it does not generate per-child worker IDs.
 - Operational visibility is available from local daemon/child logs and backend run events.
+- Runtime workflow prompts are not loaded from this repo tree directly; they are loaded from the global `.ukbe-runner/workflows/...` bundle.

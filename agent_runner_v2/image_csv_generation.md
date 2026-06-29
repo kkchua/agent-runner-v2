@@ -1,7 +1,7 @@
 # Execution Plan: Image-to-CSV Prompt Generation
 
 **Document version:** 1.0
-**Related template:** `prompts/image_video_execution_v1/01_gen_csv.txt`
+**Related template:** `bootstrap/workflows/default/prompts/image_csv_gen_v1/02_gen_prompts.txt`
 
 ---
 
@@ -25,7 +25,7 @@ Process images from `source_images/` folder, generate T2I/I2V prompt CSVs via LL
   - **Animatable elements** — objects or effects that could move in video (e.g., butterflies, mist, foliage)
 
 ### Step 2: Prompt Construction
-- Combine the image description with the rules from `01_gen_csv.txt` into a single prompt
+- Combine the image description with the rules from the runtime workflow prompt into a single prompt
 - The prompt instructs generation of exactly 6 JSON rows with:
   - `image_filename` — zero-padded, lowercase, unique per row (format: `image_NN_theme_style.png`)
   - `t2i_prompt1` — single-sentence vertical T2I prompt (Midjourney/SDXL/DALL·E optimized)
@@ -58,7 +58,7 @@ Before saving, verify:
 | Path | Description |
 |------|-------------|
 | `source_images/*.png` | Source images to process |
-| `agent_runner_v2/prompts/image_video_execution_v1/01_gen_csv.txt` | Prompt template with generation rules |
+| `%USERPROFILE%/.ukbe-runner/workflows/<workflow>/prompts/image_csv_gen_v1/02_gen_prompts.txt` | Runtime prompt template with generation rules |
 
 ## Outputs
 
@@ -106,7 +106,7 @@ All generation happens **in-session** using Qwen Code's own LLM capabilities:
 image in source_images/
   → read_file (visual analysis)
   → structured description
-  → apply template rules from 01_gen_csv.txt
+  → apply template rules from the runtime workflow prompt
   → generate JSON array (6 rows)
   → validate schema
   → convert to CSV

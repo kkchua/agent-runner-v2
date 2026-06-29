@@ -54,6 +54,10 @@ Step 2 - Fix the plan.
 - Do NOT create a new plan file.
 - Do NOT generate task docs.
 - Do NOT widen initiative scope.
+- Preserve or improve documentation strategy fidelity:
+  - affected codebase areas
+  - required documentation modes
+  - stale-doc handling
 - Do NOT mark the plan approved.
 - You MUST make at least one substantive edit to the file.
 

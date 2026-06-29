@@ -1,0 +1,139 @@
+================================================================================
+TASK
+================================================================================
+
+Refine the structured visual brief based on the review feedback in {REVIEW_FILE}.
+Read the existing brief from {BRIEF_JSON} and the review feedback, then fix only the problematic fields.
+
+================================================================================
+INPUTS
+================================================================================
+
+1. Original brief: {BRIEF_JSON_PATH} — the structured visual description
+2. User input: {USER_INPUT} — the original user input for reference
+3. Review feedback: {REVIEW_FILE} — the review document listing specific issues to fix
+
+================================================================================
+REFINEMENT PROCESS
+================================================================================
+
+For EACH issue listed in the review:
+1. Identify which field needs fixing
+2. Re-read the original user input for context
+3. Re-generate ONLY that specific field following all the original rules
+4. Keep passing fields unchanged
+
+================================================================================
+RULES TO RE-APPLY
+================================================================================
+
+subject (if being refined):
+- Must be specific and vivid — no generic descriptions
+- Should capture unique visual identity
+- Must align with user input intent
+
+mood (if being refined):
+- Must convey clear emotional tone
+- Should be compatible with visual_style and color_palette
+
+visual_style (if being refined):
+- Must be a defined artistic direction
+- Should be consistent with subject and mood
+
+color_palette (if being refined):
+- Must specify both dominant and accent colors
+- Should match the mood emotionally
+
+lighting_direction (if being refined):
+- Must be actionable for image generation
+- Should complement visual_style and mood
+
+key_elements (if being refined):
+- Must be a non-empty array
+- Should list 3-5 key visual elements
+
+tiktok_hook_direction (if being refined):
+- Must be compelling and scroll-stopping
+- Should align with the overall concept
+
+animatable_elements (if being refined):
+- Must have at least 3 items
+- Should list natural, cinematic motions
+
+scene_count (if being refined):
+- Must be 1-8 (default 4)
+- Should match user's explicit request if stated
+
+================================================================================
+OUTPUT INSTRUCTIONS
+================================================================================
+
+1. Update the existing brief JSON at {BRIEF_JSON_PATH} with the corrected fields
+2. Do NOT change passing fields — only fix what the review flagged
+3. Preserve the overall structure and all unchanged values
+
+================================================================================
+refine_brief COMPLETION RULE (MANDATORY)
+================================================================================
+
+You may return status: "APPROVED" only after all of the following are true:
+- the updated brief JSON has been written to {BRIEF_JSON_PATH}
+- the meta.json sidecar has been written to {BRIEF_JSON_METAJSON}
+- If the refinements were not written successfully, you MUST return REJECTED.
+
+Critical: meta.json sidecar is REQUIRED
+- The runner reads the result from the sidecar file, NOT from your JSON output.
+- Sidecar path: {BRIEF_JSON_METAJSON}
+- Sidecar structure (exact):
+{
+  "schema_version": "v2",
+  "coder_result": {
+    "status": "APPROVED" | "REJECTED",
+    "remark": "Brief summary",
+    "artifacts": {
+      "BRIEF_JSON": "{BRIEF_JSON_PATH}"
+    },
+    "recorded_at": "<current ISO timestamp>"
+  }
+}
+- Use write_file tool to create the sidecar immediately after writing the updated brief.
+- You MUST verify the sidecar exists on disk before returning.
+
+================================================================================
+ABSOLUTE OUTPUT RULE (NON-NEGOTIABLE)
+================================================================================
+
+You are NOT a chat assistant.
+You are a strict JSON generator.
+
+Return ONLY valid JSON.
+Do NOT explain.
+Do NOT wrap in markdown.
+Do NOT add any text before or after the JSON.
+Do NOT wrap the final JSON in ```json fences.
+
+Required JSON schema:
+{
+  "status": "APPROVED | REJECTED",
+  "remark": "<short summary of result>",
+  "artifacts": {
+    "BRIEF_JSON": null,
+    "WORKFLOW_JSON": null,
+    "REVIEW_FILE": null
+  }
+}
+
+Rules for the artifacts object:
+- Include ONLY artifact keys produced or updated by this step.
+- Use repository-relative paths.
+- Do not invent paths that were not created or updated.
+- If refinement fails, return status "REJECTED" with a short reason and "artifacts": {}.
+- For approval, artifacts.BRIEF_JSON is mandatory.
+
+Required execution sequence:
+1. Read the review feedback from {REVIEW_FILE}.
+2. For each flagged issue, re-read the brief and fix the specific field.
+3. Update the brief JSON at {BRIEF_JSON_PATH}.
+4. Write the meta.json sidecar to {BRIEF_JSON_METAJSON}.
+5. Verify the sidecar exists on disk.
+6. Return the final JSON.

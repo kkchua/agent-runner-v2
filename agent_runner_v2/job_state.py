@@ -655,7 +655,7 @@ def reconcile_job_state(state: dict[str, Any], group_cfg: dict[str, Any]) -> dic
 def _apply_loop_routing(
     state: dict[str, Any], step: str, step_cfg: dict[str, Any], *, repair_type: str = "LOOP_TRIGGER",
 ) -> dict[str, Any]:
-    on_reject_refine = step_cfg["on_reject_refine"]
+    on_reject_refine = _resolve_reject_route_for_state(state=state, step_cfg=step_cfg)
     review_file = state.get("artifacts", {}).get("REVIEW_FILE")
     state["reconciled_from_failure"] = {
         "class": state.get("last_failure_class"),
@@ -736,7 +736,7 @@ def _apply_replan_routing(
 def reapply_routing(state: dict[str, Any], group_cfg: dict[str, Any]) -> dict[str, Any]:
     current_step = state.get("current_step")
     step_cfg = group_cfg.get("step_configs", {}).get(current_step, {})
-    on_reject_refine = step_cfg.get("on_reject_refine") or {}
+    on_reject_refine = _resolve_reject_route_for_state(state=state, step_cfg=step_cfg) or {}
     on_exhaust_replan = step_cfg.get("on_exhaust_replan") or {}
     exhausted_code = on_reject_refine.get("exhausted_failure_code")
     max_replans = int(on_exhaust_replan.get("max_replans", 0))
@@ -756,6 +756,18 @@ def reapply_routing(state: dict[str, Any], group_cfg: dict[str, Any]) -> dict[st
         return _apply_loop_routing(state, current_step, step_cfg, repair_type="USER_REAPPLY")
 
     return state
+
+
+def _resolve_reject_route_for_state(*, state: dict[str, Any], step_cfg: dict[str, Any]) -> dict[str, Any] | None:
+    """Resolve a reject-route override using the last failure code when present."""
+    routes = step_cfg.get("reject_code_routes") or {}
+    failure_code = str(state.get("last_failure_code") or "").strip().upper()
+    if failure_code and isinstance(routes, dict):
+        candidate = routes.get(failure_code)
+        if isinstance(candidate, dict) and candidate.get("step") and candidate.get("artifact"):
+            return candidate
+    default_route = step_cfg.get("on_reject_refine")
+    return default_route if isinstance(default_route, dict) else None
 
 
 def recover_exhausted_planning_job(state: dict[str, Any], group_cfg: dict[str, Any]) -> dict[str, Any]:
