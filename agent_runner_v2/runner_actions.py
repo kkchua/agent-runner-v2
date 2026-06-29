@@ -25,6 +25,10 @@ from .actions.promote_artifact import promote_artifact
 from .actions.promote_init import promote_init
 from .actions.submit_comfyui import submit_comfyui
 from .actions.validate_delivery_docs import validate_delivery_docs
+from .actions.execute_t2i import execute_t2i
+from .actions.execute_i2v import execute_i2v
+from .actions.execute_voiceover import execute_voiceover
+from .actions.assemble_video import assemble_video
 
 logger = logging.getLogger(__name__)
 
@@ -39,6 +43,10 @@ ACTION_REGISTRY: dict[str, Callable] = {
     "promote_init": promote_init,
     "submit_comfyui": submit_comfyui,
     "validate_delivery_docs": validate_delivery_docs,
+    "execute_t2i": execute_t2i,
+    "execute_i2v": execute_i2v,
+    "execute_voiceover": execute_voiceover,
+    "assemble_video": assemble_video,
 }
 
 

@@ -51,6 +51,7 @@ If any earlier understanding conflicts with the current files above, ignore the 
 
 Task:
 - Evaluate scope accuracy, dependency correctness, completeness, readiness for next phase, and alignment.
+- Explicitly verify documentation obligations from the plan are preserved in the task graph and not dropped.
 - Do not implement anything.
 - Read the sidecar file for {TASK_GRAPH_FILE}:
   - Path: {TASK_GRAPH_FILE_METAJSON}

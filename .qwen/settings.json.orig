@@ -1,9 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Read(//home/kengkoon/projects/comfyui-submitter/**)",
-      "Read(//home/kengkoon/projects/csv_generator/source_csv/20260426-007/**)"
-    ]
-  },
-  "$version": 4
-}

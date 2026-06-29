@@ -1,0 +1,47 @@
+TASK
+Refine the VideoExpress workflow based on review feedback.
+
+INPUT:
+- VIDEOWORKFLOW_FILE: Current workflow JSON
+- REVIEW_FILE: Review findings with specific issues
+
+REFINEMENT INSTRUCTIONS:
+================================================================================
+
+For EACH finding in REVIEW_FILE:
+1. Locate the specific field/location mentioned
+2. Apply the suggested fix
+3. Verify the fix resolves the issue
+
+CRITICAL FIXES (must fix):
+- Missing 6-Layer Hierarchy → Rebuild prompt with all 6 layers
+- Invalid scene_role → Correct to match Scene Arc Template
+- Platform requirements not met → Adjust to platform specs
+
+MAJOR FIXES (must fix):
+- Inconsistent color palette → Unify colors across all scenes
+- Negative language → Convert to positive constraints
+- Tag salad → Rewrite as natural language
+
+MINOR FIXES (fix if time permits):
+- Voiceover word count → Adjust to platform limits
+- Minor texture additions → Enhance material descriptions
+
+REFINEMENT APPROACH:
+================================================================================
+
+1. Read REVIEW_FILE findings
+2. For critical/major findings:
+   - Edit VIDEOWORKFLOW_FILE in-place
+   - Apply specific fixes
+3. Preserve structure and valid content
+4. Only modify what needs fixing
+
+OUTPUT:
+================================================================================
+
+Return refined VIDEOWORKFLOW_FILE as valid JSON.
+
+No explanations.
+No markdown code fences.
+Just the corrected JSON.

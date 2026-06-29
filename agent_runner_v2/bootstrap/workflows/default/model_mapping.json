@@ -1,50 +1,36 @@
 {
   "coder_aliases": {
-    "deepseek-chat": {
+    "deepseek-reviewer": {
       "coder": "qwen",
-      "model": "deepseek-chat",
-      "auth_type": "openai",
-      "openai_api_key_env": "DEEPSEEK_API_KEY",
-      "openai_base_url": "https://api.deepseek.com/v1"
+      "model": "deepseek-v4-pro"
     },
-    "deepseek-reasoner": {
+    "deepseek-developer": {
       "coder": "qwen",
-      "model": "deepseek-reasoner",
-      "auth_type": "openai",
-      "openai_api_key_env": "DEEPSEEK_API_KEY",
-      "openai_base_url": "https://api.deepseek.com/v1"
-    },
-    "deepseek-coder": {
+      "model": "deepseek-v4-flash"
+    },   
+    "qwen-architect": {
       "coder": "qwen",
-      "model": "deepseek-coder",
-      "auth_type": "openai",
-      "openai_api_key_env": "DEEPSEEK_API_KEY",
-      "openai_base_url": "https://api.deepseek.com/v1"
+      "model": "qwen3.7-plus"
+    }, 
+    "qwen-reviewer": {
+      "coder": "qwen",
+      "model": "qwen3.6-plus"
     },
-	"gpt-5.4-nano": {
+    "qwen-developer": {
+      "coder": "qwen",
+      "model": "qwen3.5-plus"
+    }, 
+    "gpt-5.4-nano": {
       "coder": "qwen",
       "model": "gpt-5.4-nano",
       "auth_type": "openai",
       "openai_api_key_env": "OPENAI_API_KEY",
       "openai_base_url": "https://api.openai.com/v1/"
     },
-	"qwen-claude": {
-      "coder": "qwen",
-      "model": "claude-3-5-sonnet",
-      "auth_type": "anthropic"
-    },
-    "qwen-gemini": {
+	  "qwen-gemini": {
       "coder": "qwen",
       "model": "gemini-2.0-flash",
       "auth_type": "gemini"
-    },
-    "claude": {
-      "coder": "claude",
-      "model": ""
-    },
-    "claude-sonnet-4-6": {
-      "coder": "claude",
-      "model": "claude-sonnet-4-6"
-    }
+    }  
   }
 }

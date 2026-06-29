@@ -24,7 +24,14 @@ Current templates:
 {DELIVERY_TASK_TEMPLATE}
 {DELIVERY_IMPL_TEMPLATE}
 {DELIVERY_REVIEW_TEMPLATE}
+{DELIVERY_VALIDATION_TEMPLATE}
 {DELIVERY_MEMORY_TEMPLATE}
+{CODEBASE_TEMPLATE_REGISTRY}
+{CODEBASE_INVENTORY_TEMPLATE}
+{CODEBASE_MODULE_TEMPLATE}
+{CODEBASE_COMPONENT_TEMPLATE}
+{CODEBASE_CHANGE_TEMPLATE}
+{CODEBASE_INVENTORY}
 
 Review feedback:
 {REVIEW_FILE}
@@ -47,6 +54,7 @@ Template refinement rules:
 - If the review flagged incorrect structure: correct the structure without rewriting the whole template.
 - If the review flagged placeholder issues: fix the placeholder variable patterns.
 - If the review flagged registry mismatch: update the template_registry.md to match the actual templates.
+- If the review flagged documentation-governance gaps: add or correct the required sections without weakening determinism.
 
 Refinement completion rule (MANDATORY)
 - You may return `status: "APPROVED"` only after:
@@ -71,7 +79,14 @@ Critical: meta.json sidecar is REQUIRED
         "DELIVERY_TASK_TEMPLATE": "<path>",
         "DELIVERY_IMPL_TEMPLATE": "<path>",
         "DELIVERY_REVIEW_TEMPLATE": "<path>",
-        "DELIVERY_MEMORY_TEMPLATE": "<path>"
+        "DELIVERY_VALIDATION_TEMPLATE": "<path>",
+        "DELIVERY_MEMORY_TEMPLATE": "<path>",
+        "CODEBASE_TEMPLATE_REGISTRY": "<path>",
+        "CODEBASE_INVENTORY_TEMPLATE": "<path>",
+        "CODEBASE_MODULE_TEMPLATE": "<path>",
+        "CODEBASE_COMPONENT_TEMPLATE": "<path>",
+        "CODEBASE_CHANGE_TEMPLATE": "<path>",
+        "CODEBASE_INVENTORY": "<path>"
       },
       "recorded_at": "<ISO timestamp e.g. 2026-06-07T10:00:00>"
     }
@@ -97,7 +112,14 @@ Required JSON schema:
     "DELIVERY_TASK_TEMPLATE": "<path if updated>",
     "DELIVERY_IMPL_TEMPLATE": "<path if updated>",
     "DELIVERY_REVIEW_TEMPLATE": "<path if updated>",
-    "DELIVERY_MEMORY_TEMPLATE": "<path if updated>"
+    "DELIVERY_VALIDATION_TEMPLATE": "<path if updated>",
+    "DELIVERY_MEMORY_TEMPLATE": "<path if updated>",
+    "CODEBASE_TEMPLATE_REGISTRY": "<path if updated>",
+    "CODEBASE_INVENTORY_TEMPLATE": "<path if updated>",
+    "CODEBASE_MODULE_TEMPLATE": "<path if updated>",
+    "CODEBASE_COMPONENT_TEMPLATE": "<path if updated>",
+    "CODEBASE_CHANGE_TEMPLATE": "<path if updated>",
+    "CODEBASE_INVENTORY": "<path if updated>"
   }
 }
 

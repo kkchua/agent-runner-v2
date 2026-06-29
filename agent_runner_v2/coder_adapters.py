@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import subprocess
 import tempfile
 import time
@@ -230,6 +231,13 @@ def _run_with_sidecar_poll(
     saved_terminal = _save_terminal_settings()
 
     try:
+        # Windows: cmd.exe must wrap .cmd/.bat shims since CreateProcess
+        # does not resolve PATHEXT (npm-installed CLIs like qwen.cmd).
+        if os.name == "nt":
+            resolved = shutil.which(cmd[0])
+            if resolved and resolved.lower().endswith((".cmd", ".bat")):
+                cmd = ["cmd", "/c"] + cmd
+
         proc = subprocess.Popen(
             cmd,
             cwd=cwd,
@@ -614,14 +622,8 @@ def _invoke_claude(*, step: str, prompt_text: str, cwd: Path, schema_path: Path,
     # Inject model flag when provided via model_mapping or step config
     if cc.get("model"):
         command.extend(["--model", cc["model"]])
-    command.extend(["--permission-mode", "acceptEdits"])
-    command.extend([
-        "--print",
-        "--output-format",
-        "json",
-        "--json-schema",
-        schema_text,
-    ])
+    command.extend(["--dangerously-skip-permissions"])
+    command.extend(["--print", "--output-format", "json"])
     timeout_seconds = _coder_timeout_seconds()
     try:
         return_code, stdout, stderr = _run_with_sidecar_poll(
@@ -673,7 +675,9 @@ def _invoke_qwen(*, step: str, prompt_text: str, cwd: Path, coder_config: dict[s
     if cc.get("openai_base_url"):
         command.extend(["--openai-base-url", cc["openai_base_url"]])
 
-    command.append(prompt_text)
+    # Pass prompt via stdin instead of CLI arg to avoid Windows CreateProcess
+    # 8191-char command-line limit — the prompt is far too long for argv.
+    command.append("-p")
 
     # Log the actual command for debugging (mask API key)
     _log_command_for_step(step, command, cc)
@@ -686,6 +690,7 @@ def _invoke_qwen(*, step: str, prompt_text: str, cwd: Path, coder_config: dict[s
             timeout_seconds=timeout_seconds,
             sidecar_path=sidecar_path,
             step=step,
+            input_text=prompt_text,
         )
     except subprocess.TimeoutExpired as exc:
         raise CoderInvocationError(
