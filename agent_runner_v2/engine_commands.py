@@ -2,7 +2,7 @@
 
 Invoked via: ukbe-run-agent engine <subcommand>
 
-  install <tag>                    -- download from GitHub and install globally (~/.ukbe-runner/engines/)
+  install <tag>                    -- download from GitHub and install globally (~/.ukbe-runner/engine/versions/)
   install <tag> --local            -- install to repo-local .ukbe-runner/engine/versions/
   install <tag> --from-path <dir>  -- copy from a local source directory (useful for private repos)
   snapshot                         -- snapshot live source into repo-local SNAPSHOT version
@@ -31,7 +31,7 @@ DEFAULT_GITHUB_REPO = "kkchua/agent-runner-v2"
 # ---------------------------------------------------------------------------
 
 def _global_engines_dir() -> Path:
-    return Path.home() / ".ukbe-runner" / "engines"
+    return Path.home() / ".ukbe-runner" / "engine" / "versions"
 
 
 def _global_version_dir(version: str) -> Path:
@@ -60,9 +60,12 @@ def _write_version_json(version_dir: Path, data: dict) -> None:
 
 def _verify_import(version_dir: Path) -> None:
     env = os.environ.copy()
-    env["PYTHONPATH"] = str(version_dir) + os.pathsep + env.get("PYTHONPATH", "")
+    # Mirror how _invoke_execute_step_subprocess resolves the engine:
+    # prepend <engine_root>/agent_runner_v2 so the inner package is found first,
+    # even if agent_runner_v2 is also installed as a pip package.
+    env["PYTHONPATH"] = str(version_dir / "agent_runner_v2") + os.pathsep + env.get("PYTHONPATH", "")
     result = subprocess.run(
-        [sys.executable, "-c", "import agent_runner_v2.agent_runner_v2.run_agent; print('import OK')"],
+        [sys.executable, "-c", "import agent_runner_v2.run_agent; print('import OK')"],
         capture_output=True, text=True, env=env,
     )
     if result.returncode != 0:
@@ -74,7 +77,7 @@ def _copy_pkg_to(src_inner_pkg: Path, dest_version_dir: Path) -> None:
     """Copy agent_runner_v2 inner package to a versioned engine store directory.
 
     src_inner_pkg  — the agent_runner_v2/ package directory (contains __init__.py)
-    dest_version_dir — e.g. ~/.ukbe-runner/engines/1.0.1/
+    dest_version_dir — e.g. ~/.ukbe-runner/engine/versions/1.0.1/
     Result layout:
       dest_version_dir/
         agent_runner_v2/
@@ -157,7 +160,7 @@ def cmd_install(
         project_root = Path.cwd()
 
     dest_dir = _global_version_dir(tag) if global_install else _local_version_dir(project_root, tag)
-    store_label = "global (~/.ukbe-runner/engines/)" if global_install else "repo-local (.ukbe-runner/engine/versions/)"
+    store_label = "global (~/.ukbe-runner/engine/versions/)" if global_install else "repo-local (.ukbe-runner/engine/versions/)"
 
     if from_path:
         src_root = Path(from_path).resolve()
@@ -229,11 +232,20 @@ def cmd_install(
     print(f"Version {tag!r} installed at {dest_dir}")
 
 
-def cmd_use(project_root: Path, version: str) -> None:
-    """Set the active engine version in config.json."""
+def _global_config_path() -> Path:
+    return Path.home() / ".ukbe-runner" / "engine" / "config.json"
+
+
+def cmd_use(project_root: Path, version: str, local: bool = False) -> None:
+    """Set the active engine version in config.json.
+
+    Defaults to global (~/.ukbe-runner/engine/config.json).
+    Pass local=True to write to the repo-local .ukbe-runner/engine/config.json instead.
+    """
     global_dir = _global_version_dir(version)
     local_dir = _local_version_dir(project_root, version)
-    if not global_dir.exists() and not local_dir.exists():
+    # SNAPSHOT uses ambient PYTHONPATH, no version directory needed
+    if version.upper() != "SNAPSHOT" and not global_dir.exists() and not local_dir.exists():
         print(
             f"ERROR: version {version!r} not found in global ({global_dir}) or local ({local_dir}) store",
             file=sys.stderr,
@@ -241,24 +253,55 @@ def cmd_use(project_root: Path, version: str) -> None:
         print("Run: ukbe-run-agent engine list", file=sys.stderr)
         sys.exit(1)
 
-    config_path = _local_config_path(project_root)
+    config_path = _local_config_path(project_root) if local else _global_config_path()
     config_path.parent.mkdir(parents=True, exist_ok=True)
-    config_path.write_text(json.dumps({"engine_version": version}, indent=2), encoding="utf-8")
-    location = "global" if global_dir.exists() else "local"
-    print(f"Active engine version set to {version!r} (resolved from {location} store)")
-    print(f"Config: {config_path}")
+
+    # Preserve existing config fields; only set defaults for keys not already present
+    existing: dict = {}
+    if config_path.exists():
+        try:
+            existing = json.loads(config_path.read_text(encoding="utf-8"))
+        except Exception:
+            pass
+
+    defaults = {
+        "worker_id": "my-worker-01",
+        "worker_label": "live",
+        "backend_url": "http://127.0.0.1:8100",
+        "poll_seconds": 5,
+        "log_file": "/tmp/worker-daemon.log",
+    }
+    config = {**defaults, **existing, "engine_version": version}
+    config_path.write_text(json.dumps(config, indent=2), encoding="utf-8")
+
+    if version.upper() == "SNAPSHOT":
+        store_location = "SNAPSHOT (ambient PYTHONPATH)"
+    elif global_dir.exists():
+        store_location = "global"
+    else:
+        store_location = "local"
+    scope_label = "repo-local" if local else "global"
+    print(f"Active engine version set to {version!r} (resolved from {store_location})")
+    print(f"Config ({scope_label}): {config_path}")
+    print(f"Edit {config_path} to set worker_id, backend_url, worker_label, etc.")
     print("Restart the worker to apply.")
 
 
 def cmd_list(project_root: Path) -> None:
     """List all installed engine versions (global + repo-local)."""
-    config_path = _local_config_path(project_root)
+    # Prefer repo-local config; fall back to global config
+    local_cfg = _local_config_path(project_root)
+    global_cfg = _global_config_path()
     active = None
-    if config_path.exists():
-        try:
-            active = json.loads(config_path.read_text(encoding="utf-8")).get("engine_version")
-        except Exception:
-            pass
+    active_scope = ""
+    for cfg_path, scope in [(local_cfg, "repo-local"), (global_cfg, "global")]:
+        if cfg_path.exists():
+            try:
+                active = json.loads(cfg_path.read_text(encoding="utf-8")).get("engine_version")
+                active_scope = scope
+                break
+            except Exception:
+                pass
 
     global_dir = _global_engines_dir()
     local_dir = _local_versions_dir(project_root)
@@ -289,7 +332,8 @@ def cmd_list(project_root: Path) -> None:
         return
 
     if active:
-        print(f"\nActive: {active!r}  (edit {config_path} or run 'engine use' to change)")
+        cfg_shown = local_cfg if active_scope == "repo-local" else global_cfg
+        print(f"\nActive: {active!r}  [{active_scope} config: {cfg_shown}]")
     else:
         print(f"\nNo active version set (live source / dev mode).")
         print(f"Set one: ukbe-run-agent engine use <version>")
@@ -312,7 +356,7 @@ def main(argv: list[str] | None = None) -> int:
     p_install = sub.add_parser("install", help="Install engine from GitHub or a local path.")
     p_install.add_argument("tag", help="Version tag name, e.g. 1.0.1")
     p_install.add_argument("--local", action="store_true", default=False,
-                           help="Install to repo-local .ukbe-runner/engine/versions/ instead of ~/.ukbe-runner/engines/")
+                           help="Install to repo-local .ukbe-runner/engine/versions/ instead of ~/.ukbe-runner/engine/versions/")
     p_install.add_argument("--github-repo", default="",
                            help=f"GitHub repo (owner/repo). Defaults to {DEFAULT_GITHUB_REPO}.")
     p_install.add_argument("--from-path", default="",
@@ -320,6 +364,8 @@ def main(argv: list[str] | None = None) -> int:
 
     p_use = sub.add_parser("use", help="Set the active engine version.")
     p_use.add_argument("version", help="Version name or SNAPSHOT.")
+    p_use.add_argument("--local", action="store_true", default=False,
+                       help="Write config to repo-local .ukbe-runner/engine/config.json instead of ~/.ukbe-runner/engine/config.json")
 
     sub.add_parser("list", help="List installed versions (global + repo-local).")
 
@@ -338,7 +384,7 @@ def main(argv: list[str] | None = None) -> int:
             project_root=project_root,
         )
     elif args.command == "use":
-        cmd_use(project_root, args.version)
+        cmd_use(project_root, args.version, local=args.local)
     elif args.command == "list":
         cmd_list(project_root)
 
