@@ -23,6 +23,7 @@ Current artifact fingerprints:
 Review rules
 - APPROVE only if the document is self-contained, template-compliant, traceable to the source draft, contains file-path lineage metadata, and is ready for promotion.
 - REJECT if there are material structural, scope, fidelity, traceability, or metadata-lineage issues.
+- REJECT if documentation scope is missing, generic, or too vague for downstream planning to decide what parts of the codebase and docs are likely affected.
 - If REJECTED, write a review file with actionable findings.
 - Do not edit the pre-init artifact in this step.
 - Do not create the official initiative artifact in this step.

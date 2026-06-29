@@ -33,6 +33,7 @@ Execution Steps (FOLLOW IN ORDER):
 
 Step 1 — Read all inputs.
 Step 2 — Fix the implementation plan.
+- Preserve or improve the documentation update plan, including all affected file types and stale-doc handling, when the review flagged those areas.
 Step 3 — Write meta.json sidecar and return result JSON.
 
 Critical: meta.json sidecar is REQUIRED
