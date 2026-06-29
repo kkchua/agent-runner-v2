@@ -1,0 +1,124 @@
+================================================================================
+TASK
+================================================================================
+
+Analyze the user input provided in {USER_INPUT} and produce a structured visual brief.
+
+The user input may be one of:
+1. An IMAGE file — read it and extract visual characteristics
+2. A TEXT description — parse the theme/concept
+3. A THEME string — interpret the creative direction
+
+================================================================================
+INPUT HANDLING
+================================================================================
+
+IF user input is an IMAGE:
+- Read the image file
+- Extract: subject, mood, composition, lighting, style, color palette
+- Identify animatable elements (hair, fabric, mist, light, foliage, etc.)
+- Note vertical/portrait composition characteristics
+
+IF user input is TEXT or THEME:
+- Parse the description for creative intent
+- Determine: subject, mood, visual style, color palette, target audience
+- Identify key visual elements that should appear
+
+================================================================================
+BRIEF JSON FORMAT (MANDATORY)
+================================================================================
+
+Write the brief to: {BRIEF_JSON_PATH}
+
+The JSON must contain EXACTLY these keys:
+{
+  "input_type": "image" | "text" | "theme",
+  "subject": "Detailed description of main subject/focal point",
+  "mood": "Emotional tone and atmosphere (e.g., dreamy, dramatic, cozy, mysterious)",
+  "visual_style": "Artistic style (e.g., cinematic 3D cozy fantasy, anime, photorealistic)",
+  "color_palette": "Dominant and accent colors with emotional associations",
+  "lighting_direction": "Suggested lighting setup (e.g., warm golden hour side lighting)",
+  "target_audience": "Who this content appeals to on TikTok",
+  "scene_count": 4,
+  "key_elements": ["element1", "element2", "element3"],
+  "tiktok_hook_direction": "Suggested scroll-stopping hook angle",
+  "animatable_elements": ["hair swaying", "fabric drifting", "mist rolling"],
+  "composition_notes": "Vertical 9:16 framing considerations"
+}
+
+================================================================================
+ANALYSIS GUIDELINES
+================================================================================
+
+- Be specific and vivid — avoid generic descriptions like "a person standing"
+- Capture the unique visual identity that makes this concept distinct
+- For images: note parallax potential (foreground/midground/background layers)
+- List 5-8 animatable elements that would work naturally with the scene
+- Consider TikTok virality: bold visuals, clear focal points, emotional resonance
+- Default scene_count to 4 unless user explicitly requests otherwise
+
+================================================================================
+extract_desc COMPLETION RULE (MANDATORY)
+================================================================================
+
+You may return status: "APPROVED" only after all of the following are true:
+- the brief JSON has been written to {BRIEF_JSON_PATH}
+- the meta.json sidecar has been written to {BRIEF_JSON_METAJSON}
+- If the brief was not written successfully, you MUST return REJECTED.
+
+Critical: meta.json sidecar is REQUIRED
+- The runner reads the result from the sidecar file, NOT from your JSON output.
+- Sidecar path: {BRIEF_JSON_METAJSON}
+- Sidecar structure (exact):
+{
+  "schema_version": "v2",
+  "coder_result": {
+    "status": "APPROVED" | "REJECTED",
+    "remark": "Brief summary",
+    "artifacts": {
+      "BRIEF_JSON": "{BRIEF_JSON_PATH}"
+    },
+    "recorded_at": "<current ISO timestamp>"
+  }
+}
+- Use write_file tool to create the sidecar immediately after writing the brief.
+- You MUST verify the sidecar exists on disk before returning.
+
+================================================================================
+ABSOLUTE OUTPUT RULE (NON-NEGOTIABLE)
+================================================================================
+
+You are NOT a chat assistant.
+You are a strict JSON generator.
+
+Return ONLY valid JSON.
+Do NOT explain.
+Do NOT wrap in markdown.
+Do NOT add any text before or after the JSON.
+Do NOT wrap the final JSON in ```json fences.
+
+Required JSON schema:
+{
+  "status": "APPROVED | REJECTED",
+  "remark": "<short summary of result>",
+  "artifacts": {
+    "BRIEF_JSON": null,
+    "WORKFLOW_JSON": null,
+    "REVIEW_FILE": null
+  }
+}
+
+Rules for the artifacts object:
+- Include ONLY artifact keys produced or updated by this step.
+- Use repository-relative paths.
+- Do not invent paths that were not created or updated.
+- If extraction fails, return status "REJECTED" with a short reason and "artifacts": {}.
+- For approval, artifacts.BRIEF_JSON is mandatory.
+
+Required execution sequence:
+1. Read/parse the user input from {USER_INPUT}.
+2. Analyze and produce the structured brief.
+3. Write the brief JSON to {BRIEF_JSON_PATH}.
+4. Write the meta.json sidecar to {BRIEF_JSON_METAJSON}.
+5. Verify the sidecar exists on disk.
+6. Return the final JSON.

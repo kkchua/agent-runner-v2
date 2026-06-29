@@ -244,7 +244,8 @@ def cmd_use(project_root: Path, version: str, local: bool = False) -> None:
     """
     global_dir = _global_version_dir(version)
     local_dir = _local_version_dir(project_root, version)
-    if not global_dir.exists() and not local_dir.exists():
+    # SNAPSHOT uses ambient PYTHONPATH, no version directory needed
+    if version.upper() != "SNAPSHOT" and not global_dir.exists() and not local_dir.exists():
         print(
             f"ERROR: version {version!r} not found in global ({global_dir}) or local ({local_dir}) store",
             file=sys.stderr,
@@ -273,9 +274,14 @@ def cmd_use(project_root: Path, version: str, local: bool = False) -> None:
     config = {**defaults, **existing, "engine_version": version}
     config_path.write_text(json.dumps(config, indent=2), encoding="utf-8")
 
-    store_location = "global" if global_dir.exists() else "local"
+    if version.upper() == "SNAPSHOT":
+        store_location = "SNAPSHOT (ambient PYTHONPATH)"
+    elif global_dir.exists():
+        store_location = "global"
+    else:
+        store_location = "local"
     scope_label = "repo-local" if local else "global"
-    print(f"Active engine version set to {version!r} (resolved from {store_location} store)")
+    print(f"Active engine version set to {version!r} (resolved from {store_location})")
     print(f"Config ({scope_label}): {config_path}")
     print(f"Edit {config_path} to set worker_id, backend_url, worker_label, etc.")
     print("Restart the worker to apply.")

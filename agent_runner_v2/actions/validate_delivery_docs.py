@@ -31,6 +31,13 @@ DELIVERY_FOLDERS = [
     "docs/delivery/05_reviews",
     "docs/delivery/06_memory",
     "docs/delivery/08_agents",
+    "docs/codebase/00_standards",
+    "docs/codebase/00_templates",
+    "docs/codebase/01_inventory",
+    "docs/codebase/02_modules",
+    "docs/codebase/03_components",
+    "docs/codebase/04_changes",
+    "docs/codebase/05_archives",
 ]
 
 REQUIRED_TEMPLATES = {
@@ -40,37 +47,69 @@ REQUIRED_TEMPLATES = {
     "DELIVERY_TASK_TEMPLATE": "03_task.template.md",
     "DELIVERY_IMPL_TEMPLATE": "04_implementation_plan.template.md",
     "DELIVERY_REVIEW_TEMPLATE": "04_review.template.md",
+    "DELIVERY_VALIDATION_TEMPLATE": "05_validation.template.md",
     "DELIVERY_MEMORY_TEMPLATE": "06_memory.template.md",
+}
+
+REQUIRED_CODEBASE_FILES = {
+    "CODEBASE_DOC_SOP": "docs/codebase/00_standards/CODEBASE_DOC_SOP_v1.md",
+    "CODEBASE_DOC_STATUS_RULES": "docs/codebase/00_standards/CODEBASE_DOC_STATUS_RULES_v1.md",
+    "CODEBASE_TEMPLATE_REGISTRY": "docs/codebase/00_templates/codebase_template_registry.md",
+    "CODEBASE_INVENTORY_TEMPLATE": "docs/codebase/00_templates/01_codebase_inventory.template.md",
+    "CODEBASE_MODULE_TEMPLATE": "docs/codebase/00_templates/02_module_doc.template.md",
+    "CODEBASE_COMPONENT_TEMPLATE": "docs/codebase/00_templates/03_component_doc.template.md",
+    "CODEBASE_CHANGE_TEMPLATE": "docs/codebase/00_templates/04_change_impact.template.md",
+    "CODEBASE_INVENTORY": "docs/codebase/01_inventory/codebase_inventory.md",
 }
 
 # Minimum required sections per template type (all must be present)
 TEMPLATE_SECTION_REQUIREMENTS: dict[str, list[str]] = {
     "01_initiative.template.md": [
         "Objective", "Scope", "Constraints",
-        "Dependencies", "Success Criteria", "Approval",
+        "Dependencies", "Documentation Scope", "Stale Guidance Risks",
+        "Success Criteria", "Approval",
     ],
     "02_plan.template.md": [
         "Plan Objective", "Strategy Overview", "Task Breakdown",
-        "Scope Mapping", "Deliverables", "Risks", "Acceptance Criteria", "Approval",
+        "Scope Mapping", "Documentation Strategy", "Documentation Freshness Risks",
+        "Deliverables", "Risks", "Acceptance Criteria", "Approval",
     ],
     "02b_task_graph.template.md": [
         "Task Graph Objective", "Task Graph",
-        "Execution Flow", "Success Criteria",
+        "Execution Flow", "Documentation Workstream", "Success Criteria",
     ],
     "03_task.template.md": [
         "Objective", "Inputs", "Outputs",
-        "Execution Steps", "Validation Criteria",
+        "Execution Steps", "Validation Criteria", "Documentation Impact",
     ],
     "04_implementation_plan.template.md": [
         "Objective", "Inputs", "Outputs",
-        "Scope Clarification", "File Plan", "Test Plan", "Constraints",
+        "Scope Clarification", "File Plan", "Test Plan", "Documentation Update Plan", "Constraints",
     ],
     "04_review.template.md": [
         "Review Objective", "Issues Identified",
         "Final Decision",
     ],
+    "05_validation.template.md": [
+        "Validation Objective", "Validation Checks", "Test Results", "Documentation Sync Results", "Final Decision",
+    ],
     "06_memory.template.md": [
         "Purpose", "Key Decisions", "Important References",
+    ],
+}
+
+CODEBASE_TEMPLATE_SECTION_REQUIREMENTS: dict[str, list[str]] = {
+    "01_codebase_inventory.template.md": [
+        "Inventory Objective", "Coverage Rules", "Entry Schema", "Status Model", "Freshness Triggers",
+    ],
+    "02_module_doc.template.md": [
+        "Module Objective", "Responsibilities", "Key Files", "Interfaces", "Documentation Mode", "Change Risks",
+    ],
+    "03_component_doc.template.md": [
+        "Component Objective", "Inputs", "Outputs", "Dependencies", "Documentation Mode", "Operational Notes",
+    ],
+    "04_change_impact.template.md": [
+        "Change Objective", "Changed Files", "Documentation Updates", "Superseded Content", "Validation",
     ],
 }
 
@@ -84,6 +123,16 @@ STATUS_RULES_REQUIRED_SECTIONS = [
     "Core Principles", "Global Workflow Discipline",
     "Lifecycle Rules", "Authority Model", "Approval Gates",
     "Forbidden Transitions", "Document-First", "Traceability",
+]
+
+CODEBASE_SOP_REQUIRED_SECTIONS = [
+    "Purpose", "Coverage Model", "Documentation Modes", "Freshness Rules",
+    "Stale Content Policy", "Workflow Integration", "File-Type Rules", "Validation",
+]
+
+CODEBASE_STATUS_RULES_REQUIRED_SECTIONS = [
+    "Core Principles", "Inventory Status Model", "Document Status Model",
+    "Supersession Rules", "Update Triggers", "Traceability", "Removal Rules",
 ]
 
 AGENT_REGISTRY_ENTRY_PATTERN = re.compile(r"\|[\s-]*(\w[\w\s-]+)\s*\|[\s-]*(\w[\w\s-]+)\s*\|", re.MULTILINE)
@@ -187,6 +236,95 @@ def _validate_templates(project_root: Path) -> list[dict[str, Any]]:
                 "ok": has,
                 "detail": f"{'found' if has else 'missing'}",
             })
+
+    return results
+
+
+def _validate_codebase_docs(project_root: Path) -> list[dict[str, Any]]:
+    """Validate scaffolded codebase documentation standards, templates, and inventory."""
+    results = []
+
+    for artifact_key, rel_path in REQUIRED_CODEBASE_FILES.items():
+        ok, detail = _check_file_exists(project_root, rel_path)
+        results.append({
+            "check": "codebase_file_exists",
+            "artifact_key": artifact_key,
+            "path": rel_path,
+            "ok": ok,
+            "detail": detail,
+        })
+        if not ok:
+            continue
+
+        content = _read_file(project_root, rel_path)
+        if content is None:
+            continue
+
+        filename = Path(rel_path).name
+        required_sections = CODEBASE_TEMPLATE_SECTION_REQUIREMENTS.get(filename, [])
+        for section in required_sections:
+            has = _has_section(content, section)
+            results.append({
+                "check": "codebase_template_section",
+                "path": rel_path,
+                "section": section,
+                "ok": has,
+                "detail": f"{'found' if has else 'missing'}",
+            })
+
+    sop_path = REQUIRED_CODEBASE_FILES["CODEBASE_DOC_SOP"]
+    sop_content = _read_file(project_root, sop_path)
+    if sop_content is not None:
+        for section in CODEBASE_SOP_REQUIRED_SECTIONS:
+            has = _has_section(sop_content, section)
+            results.append({
+                "check": "codebase_sop_section",
+                "path": sop_path,
+                "section": section,
+                "ok": has,
+                "detail": f"{'found' if has else 'missing'}",
+            })
+
+    rules_path = REQUIRED_CODEBASE_FILES["CODEBASE_DOC_STATUS_RULES"]
+    rules_content = _read_file(project_root, rules_path)
+    if rules_content is not None:
+        for section in CODEBASE_STATUS_RULES_REQUIRED_SECTIONS:
+            has = _has_section(rules_content, section)
+            results.append({
+                "check": "codebase_status_section",
+                "path": rules_path,
+                "section": section,
+                "ok": has,
+                "detail": f"{'found' if has else 'missing'}",
+            })
+
+    inventory_path = REQUIRED_CODEBASE_FILES["CODEBASE_INVENTORY"]
+    inventory_content = _read_file(project_root, inventory_path)
+    if inventory_content is not None:
+        inventory_checks = {
+            "has_current_status": "`current`" in inventory_content or "current" in inventory_content.lower(),
+            "has_needs_update_status": "`needs_update`" in inventory_content or "needs_update" in inventory_content.lower(),
+            "has_pending_review_status": "`pending_review`" in inventory_content or "pending_review" in inventory_content.lower(),
+            "has_superseded_status": "`superseded`" in inventory_content or "superseded" in inventory_content.lower(),
+            "has_doc_mode": "documentation mode" in inventory_content.lower(),
+            "has_owner_doc_path": "owner doc path" in inventory_content.lower(),
+            "has_last_verified_by_change": "last verified by change" in inventory_content.lower(),
+        }
+        for check_name, ok in inventory_checks.items():
+            results.append({
+                "check": f"codebase_inventory_{check_name}",
+                "path": inventory_path,
+                "ok": ok,
+                "detail": "present" if ok else "missing",
+            })
+
+    deprecated_dir = project_root / "docs" / "delivery" / "07_master_prompts"
+    results.append({
+        "check": "deprecated_master_prompts_absent",
+        "path": "docs/delivery/07_master_prompts",
+        "ok": not deprecated_dir.exists(),
+        "detail": "absent as expected" if not deprecated_dir.exists() else "deprecated folder still exists",
+    })
 
     return results
 
@@ -397,6 +535,13 @@ def _validate_cross_references(project_root: Path) -> list[dict[str, Any]]:
             "ok": refs_initiative,
             "detail": "plan references initiative" if refs_initiative else "plan does not reference initiative",
         })
+        docs_strategy_present = "documentation strategy" in content.lower()
+        results.append({
+            "check": "cross_ref_plan_doc_strategy",
+            "path": str(plan_path.relative_to(project_root)),
+            "ok": docs_strategy_present,
+            "detail": "plan includes documentation strategy" if docs_strategy_present else "plan missing documentation strategy",
+        })
 
     # Task template should reference plan
     task_path = templates_dir / "03_task.template.md"
@@ -408,6 +553,24 @@ def _validate_cross_references(project_root: Path) -> list[dict[str, Any]]:
             "path": str(task_path.relative_to(project_root)),
             "ok": refs_plan,
             "detail": "task references plan" if refs_plan else "task does not reference plan",
+        })
+        docs_impact_present = "documentation impact" in content.lower()
+        results.append({
+            "check": "cross_ref_task_doc_impact",
+            "path": str(task_path.relative_to(project_root)),
+            "ok": docs_impact_present,
+            "detail": "task includes documentation impact" if docs_impact_present else "task missing documentation impact section",
+        })
+
+    validation_path = templates_dir / "05_validation.template.md"
+    if validation_path.exists():
+        content = validation_path.read_text(encoding="utf-8")
+        doc_sync_present = "documentation sync" in content.lower()
+        results.append({
+            "check": "cross_ref_validation_doc_sync",
+            "path": str(validation_path.relative_to(project_root)),
+            "ok": doc_sync_present,
+            "detail": "validation includes documentation sync" if doc_sync_present else "validation missing documentation sync section",
         })
 
     # Template registry should list all templates
@@ -466,6 +629,10 @@ def validate_delivery_docs(
     # 5. Status rules validity
     print("[validate_delivery_docs] checking status rules...", flush=True)
     all_checks.extend(_validate_status_rules(project_root))
+
+    # 5b. Codebase documentation standards
+    print("[validate_delivery_docs] checking codebase docs...", flush=True)
+    all_checks.extend(_validate_codebase_docs(project_root))
 
     # 6. Agent registry consistency
     print("[validate_delivery_docs] checking agent registry...", flush=True)

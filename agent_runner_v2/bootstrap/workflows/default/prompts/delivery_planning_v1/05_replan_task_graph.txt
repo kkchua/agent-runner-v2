@@ -29,6 +29,7 @@ Execution Steps (FOLLOW IN ORDER):
 - Resolve the blocking issues without introducing new blocking issues.
 - Preserve the existing task graph ID and file path exactly.
 - Do NOT generate task docs.
+- Ensure the rewritten task graph preserves documentation obligations and execution ordering from the plan.
 - Do NOT mark the task graph approved.
 
 Resolution requirement (MANDATORY)
