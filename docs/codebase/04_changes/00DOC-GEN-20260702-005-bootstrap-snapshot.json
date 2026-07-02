@@ -1,0 +1,5303 @@
+{
+  "generated_at": "2026-07-02T18:00:39+08:00",
+  "mode": "bootstrap",
+  "workflow_name": "00_master_docs_bootstrap_v1",
+  "job_id": "00DOC-GEN-20260702-005",
+  "step": "00_scan_repo_codebase",
+  "project_root": "D:\\MyProjectSpace\\01_Workflows\\agent-runner-v2",
+  "items": [
+    {
+      "rel_path": ".env",
+      "category": "other files",
+      "subcategory": "other",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": ".env.example",
+      "category": "configuration/data files",
+      "subcategory": "config",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/config-and-data.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": ".gitignore",
+      "category": "other files",
+      "subcategory": "other",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": ".qwen/skills/auto-skill-agent-system-review/SKILL.md",
+      "category": "documentation files",
+      "subcategory": "docs",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": ".qwen/skills/auto-skill-generate-agents/SKILL.md",
+      "category": "documentation files",
+      "subcategory": "docs",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": ".qwen/skills/auto-skill-generate-architecture-docs/SKILL.md",
+      "category": "documentation files",
+      "subcategory": "docs",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": ".qwen/skills/auto-skill-generate-master-system-docs/SKILL.md",
+      "category": "documentation files",
+      "subcategory": "docs",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": ".qwen/skills/auto-skill-generate-sop/SKILL.md",
+      "category": "documentation files",
+      "subcategory": "docs",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": ".qwen/skills/auto-skill-generate-templates/SKILL.md",
+      "category": "documentation files",
+      "subcategory": "docs",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": ".qwen/skills/auto-skill-project-analysis/SKILL.md",
+      "category": "documentation files",
+      "subcategory": "docs",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": ".qwen/skills/auto-skill-review-master-system-docs/SKILL.md",
+      "category": "documentation files",
+      "subcategory": "docs",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/__init__.py",
+      "category": "python modules",
+      "subcategory": "package",
+      "doc_mode": "stub",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-init.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/action_result.py",
+      "category": "python modules",
+      "subcategory": "schema",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-action-result.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/actions/__init__.py",
+      "category": "python modules",
+      "subcategory": "actions",
+      "doc_mode": "stub",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-actions-init.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/actions/assemble_video.py",
+      "category": "python modules",
+      "subcategory": "actions",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-actions-assemble-video.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/actions/copy_artifact.py",
+      "category": "python modules",
+      "subcategory": "actions",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-actions-copy-artifact.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/actions/execute_i2v.py",
+      "category": "python modules",
+      "subcategory": "actions",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-actions-execute-i2v.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/actions/execute_t2i.py",
+      "category": "python modules",
+      "subcategory": "actions",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-actions-execute-t2i.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/actions/execute_voiceover.py",
+      "category": "python modules",
+      "subcategory": "actions",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-actions-execute-voiceover.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/actions/finalize_bootstrap.py",
+      "category": "python modules",
+      "subcategory": "actions",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-actions-finalize-bootstrap.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/actions/prepare_delivery_scaffold.py",
+      "category": "python modules",
+      "subcategory": "actions",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-actions-prepare-delivery-scaffold.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/actions/promote_artifact.py",
+      "category": "python modules",
+      "subcategory": "actions",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-actions-promote-artifact.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/actions/promote_init.py",
+      "category": "python modules",
+      "subcategory": "actions",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-actions-promote-init.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/actions/scan_repo_codebase.py",
+      "category": "python modules",
+      "subcategory": "actions",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-actions-scan-repo-codebase.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/actions/submit_comfyui.py",
+      "category": "python modules",
+      "subcategory": "actions",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-actions-submit-comfyui.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/actions/sync_codebase_docs.py",
+      "category": "python modules",
+      "subcategory": "actions",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-actions-sync-codebase-docs.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/actions/sync_system_docs.py",
+      "category": "python modules",
+      "subcategory": "actions",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-actions-sync-system-docs.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/actions/validate_codebase_docs.py",
+      "category": "python modules",
+      "subcategory": "actions",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-actions-validate-codebase-docs.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/actions/validate_delivery_docs.py",
+      "category": "python modules",
+      "subcategory": "actions",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-actions-validate-delivery-docs.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/actions/validate_system_docs.py",
+      "category": "python modules",
+      "subcategory": "actions",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-actions-validate-system-docs.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/approve_commands.py",
+      "category": "python modules",
+      "subcategory": "commands",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-approve-commands.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/artifact_paths.py",
+      "category": "python modules",
+      "subcategory": "schema",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-artifact-paths.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/backend_client.py",
+      "category": "python modules",
+      "subcategory": "backend",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-backend-client.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/bootstrap/workflows/default/job_schema.json",
+      "category": "bootstrap workflow files",
+      "subcategory": "workflow assets",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/workflow-families.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/bootstrap/workflows/default/llm_response_schema.json",
+      "category": "bootstrap workflow files",
+      "subcategory": "workflow assets",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/workflow-families.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/bootstrap/workflows/default/model_mapping.json",
+      "category": "bootstrap workflow files",
+      "subcategory": "workflow assets",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/workflow-families.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/bootstrap/workflows/default/prompts/00_master_docs_bootstrap_v1/02_generate_project_analysis.txt",
+      "category": "bootstrap workflow files",
+      "subcategory": "workflow assets",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/workflow-families.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/bootstrap/workflows/default/prompts/00_master_docs_bootstrap_v1/03_generate_system_overview_docs.txt",
+      "category": "bootstrap workflow files",
+      "subcategory": "workflow assets",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/workflow-families.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/bootstrap/workflows/default/prompts/00_master_docs_bootstrap_v1/04_generate_architecture_docs.txt",
+      "category": "bootstrap workflow files",
+      "subcategory": "workflow assets",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/workflow-families.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/bootstrap/workflows/default/prompts/00_master_docs_bootstrap_v1/05_review_master_system_docs.txt",
+      "category": "bootstrap workflow files",
+      "subcategory": "workflow assets",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/workflow-families.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/bootstrap/workflows/default/prompts/00_master_docs_bootstrap_v1/06_refine_master_system_docs.txt",
+      "category": "bootstrap workflow files",
+      "subcategory": "workflow assets",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/workflow-families.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/bootstrap/workflows/default/prompts/10_execution_scaffold_v1/01_project_analysis.txt",
+      "category": "bootstrap workflow files",
+      "subcategory": "workflow assets",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/workflow-families.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/bootstrap/workflows/default/prompts/10_execution_scaffold_v1/02_generate_sop.txt",
+      "category": "bootstrap workflow files",
+      "subcategory": "workflow assets",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/workflow-families.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/bootstrap/workflows/default/prompts/10_execution_scaffold_v1/03_generate_templates.txt",
+      "category": "bootstrap workflow files",
+      "subcategory": "workflow assets",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/workflow-families.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/bootstrap/workflows/default/prompts/10_execution_scaffold_v1/03_review_sop.txt",
+      "category": "bootstrap workflow files",
+      "subcategory": "workflow assets",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/workflow-families.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/bootstrap/workflows/default/prompts/10_execution_scaffold_v1/04_generate_agents.txt",
+      "category": "bootstrap workflow files",
+      "subcategory": "workflow assets",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/workflow-families.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/bootstrap/workflows/default/prompts/10_execution_scaffold_v1/05_refine_sop.txt",
+      "category": "bootstrap workflow files",
+      "subcategory": "workflow assets",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/workflow-families.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/bootstrap/workflows/default/prompts/10_execution_scaffold_v1/05_replan_sop.txt",
+      "category": "bootstrap workflow files",
+      "subcategory": "workflow assets",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/workflow-families.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/bootstrap/workflows/default/prompts/10_execution_scaffold_v1/06_refine_templates.txt",
+      "category": "bootstrap workflow files",
+      "subcategory": "workflow assets",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/workflow-families.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/bootstrap/workflows/default/prompts/10_execution_scaffold_v1/06_review_templates.txt",
+      "category": "bootstrap workflow files",
+      "subcategory": "workflow assets",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/workflow-families.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/bootstrap/workflows/default/prompts/10_execution_scaffold_v1/07_refine_agents.txt",
+      "category": "bootstrap workflow files",
+      "subcategory": "workflow assets",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/workflow-families.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/bootstrap/workflows/default/prompts/10_execution_scaffold_v1/08_review_agents.txt",
+      "category": "bootstrap workflow files",
+      "subcategory": "workflow assets",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/workflow-families.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/bootstrap/workflows/default/prompts/20_initiative_intake_v1/01_pre_init.txt",
+      "category": "bootstrap workflow files",
+      "subcategory": "workflow assets",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/workflow-families.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/bootstrap/workflows/default/prompts/20_initiative_intake_v1/02_review_pre_init.txt",
+      "category": "bootstrap workflow files",
+      "subcategory": "workflow assets",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/workflow-families.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/bootstrap/workflows/default/prompts/20_initiative_intake_v1/03_refine_pre_init.txt",
+      "category": "bootstrap workflow files",
+      "subcategory": "workflow assets",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/workflow-families.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/bootstrap/workflows/default/prompts/21_bug_fix_intake_v1/01_triage_bug.txt",
+      "category": "bootstrap workflow files",
+      "subcategory": "workflow assets",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/workflow-families.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/bootstrap/workflows/default/prompts/21_bug_fix_intake_v1/02_reproduce_bug.txt",
+      "category": "bootstrap workflow files",
+      "subcategory": "workflow assets",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/workflow-families.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/bootstrap/workflows/default/prompts/21_bug_fix_intake_v1/03_isolate_root_cause.txt",
+      "category": "bootstrap workflow files",
+      "subcategory": "workflow assets",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/workflow-families.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/bootstrap/workflows/default/prompts/21_bug_fix_intake_v1/04_patch_bug.txt",
+      "category": "bootstrap workflow files",
+      "subcategory": "workflow assets",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/workflow-families.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/bootstrap/workflows/default/prompts/21_bug_fix_intake_v1/05_regression_validate.txt",
+      "category": "bootstrap workflow files",
+      "subcategory": "workflow assets",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/workflow-families.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/bootstrap/workflows/default/prompts/30_delivery_planning_v1/02_planner.txt",
+      "category": "bootstrap workflow files",
+      "subcategory": "workflow assets",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/workflow-families.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/bootstrap/workflows/default/prompts/30_delivery_planning_v1/03_refine_plan.txt",
+      "category": "bootstrap workflow files",
+      "subcategory": "workflow assets",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/workflow-families.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/bootstrap/workflows/default/prompts/30_delivery_planning_v1/03_replan_plan.txt",
+      "category": "bootstrap workflow files",
+      "subcategory": "workflow assets",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/workflow-families.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/bootstrap/workflows/default/prompts/30_delivery_planning_v1/03_review_planner.txt",
+      "category": "bootstrap workflow files",
+      "subcategory": "workflow assets",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/workflow-families.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/bootstrap/workflows/default/prompts/30_delivery_planning_v1/04_task_graph.txt",
+      "category": "bootstrap workflow files",
+      "subcategory": "workflow assets",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/workflow-families.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/bootstrap/workflows/default/prompts/30_delivery_planning_v1/05_refine_task_graph.txt",
+      "category": "bootstrap workflow files",
+      "subcategory": "workflow assets",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/workflow-families.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/bootstrap/workflows/default/prompts/30_delivery_planning_v1/05_replan_task_graph.txt",
+      "category": "bootstrap workflow files",
+      "subcategory": "workflow assets",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/workflow-families.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/bootstrap/workflows/default/prompts/30_delivery_planning_v1/05_review_task_graph.txt",
+      "category": "bootstrap workflow files",
+      "subcategory": "workflow assets",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/workflow-families.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/bootstrap/workflows/default/prompts/30_delivery_planning_v1/06_task.txt",
+      "category": "bootstrap workflow files",
+      "subcategory": "workflow assets",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/workflow-families.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/bootstrap/workflows/default/prompts/30_delivery_planning_v1/07_refine_task.txt",
+      "category": "bootstrap workflow files",
+      "subcategory": "workflow assets",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/workflow-families.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/bootstrap/workflows/default/prompts/30_delivery_planning_v1/07_review_task.txt",
+      "category": "bootstrap workflow files",
+      "subcategory": "workflow assets",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/workflow-families.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/bootstrap/workflows/default/prompts/31_task_execution_v1/08_impl_task.txt",
+      "category": "bootstrap workflow files",
+      "subcategory": "workflow assets",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/workflow-families.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/bootstrap/workflows/default/prompts/31_task_execution_v1/08_impl_task_qwen.txt",
+      "category": "bootstrap workflow files",
+      "subcategory": "workflow assets",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/workflow-families.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/bootstrap/workflows/default/prompts/31_task_execution_v1/09_refine_impl.txt",
+      "category": "bootstrap workflow files",
+      "subcategory": "workflow assets",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/workflow-families.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/bootstrap/workflows/default/prompts/31_task_execution_v1/09_review_impl_task.txt",
+      "category": "bootstrap workflow files",
+      "subcategory": "workflow assets",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/workflow-families.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/bootstrap/workflows/default/prompts/31_task_execution_v1/09_review_impl_task_qwen.txt",
+      "category": "bootstrap workflow files",
+      "subcategory": "workflow assets",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/workflow-families.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/bootstrap/workflows/default/prompts/31_task_execution_v1/10_executor.txt",
+      "category": "bootstrap workflow files",
+      "subcategory": "workflow assets",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/workflow-families.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/bootstrap/workflows/default/prompts/31_task_execution_v1/11_validate.txt",
+      "category": "bootstrap workflow files",
+      "subcategory": "workflow assets",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/workflow-families.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/bootstrap/workflows/default/prompts/31_task_execution_v1/11_validate_qwen.txt",
+      "category": "bootstrap workflow files",
+      "subcategory": "workflow assets",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/workflow-families.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/bootstrap/workflows/default/prompts/31_task_execution_v1/99_test.txt",
+      "category": "bootstrap workflow files",
+      "subcategory": "workflow assets",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/workflow-families.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/bootstrap/workflows/default/prompts/40_documentation_sync_v1/01_sync_docs.txt",
+      "category": "bootstrap workflow files",
+      "subcategory": "workflow assets",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/workflow-families.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/bootstrap/workflows/default/prompts/40_documentation_sync_v1/02_review_docs.txt",
+      "category": "bootstrap workflow files",
+      "subcategory": "workflow assets",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/workflow-families.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/bootstrap/workflows/default/prompts/40_documentation_sync_v1/03_refine_docs.txt",
+      "category": "bootstrap workflow files",
+      "subcategory": "workflow assets",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/workflow-families.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/bootstrap/workflows/default/prompts/40_documentation_sync_v1/04_validate_doc_sync.txt",
+      "category": "bootstrap workflow files",
+      "subcategory": "workflow assets",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/workflow-families.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/bootstrap/workflows/default/prompts/image_csv_gen_v1/01_extract_desc.txt",
+      "category": "bootstrap workflow files",
+      "subcategory": "workflow assets",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/workflow-families.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/bootstrap/workflows/default/prompts/image_csv_gen_v1/02_gen_prompts.txt",
+      "category": "bootstrap workflow files",
+      "subcategory": "workflow assets",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/workflow-families.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/bootstrap/workflows/default/prompts/image_csv_gen_v1/03_review_prompts.txt",
+      "category": "bootstrap workflow files",
+      "subcategory": "workflow assets",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/workflow-families.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/bootstrap/workflows/default/prompts/image_csv_gen_v1/04_refine_prompts.txt",
+      "category": "bootstrap workflow files",
+      "subcategory": "workflow assets",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/workflow-families.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/bootstrap/workflows/default/prompts/image_csv_gen_v1/05_submit_prompts.txt",
+      "category": "bootstrap workflow files",
+      "subcategory": "workflow assets",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/workflow-families.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/bootstrap/workflows/default/prompts/image_csv_gen_v2/01_extract_desc.txt",
+      "category": "bootstrap workflow files",
+      "subcategory": "workflow assets",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/workflow-families.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/bootstrap/workflows/default/prompts/image_csv_gen_v2/02_gen_prompts.txt",
+      "category": "bootstrap workflow files",
+      "subcategory": "workflow assets",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/workflow-families.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/bootstrap/workflows/default/prompts/image_csv_gen_v2/03_review_prompts.txt",
+      "category": "bootstrap workflow files",
+      "subcategory": "workflow assets",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/workflow-families.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/bootstrap/workflows/default/prompts/image_csv_gen_v2/04_refine_prompts.txt",
+      "category": "bootstrap workflow files",
+      "subcategory": "workflow assets",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/workflow-families.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/bootstrap/workflows/default/prompts/image_csv_gen_v2/05_submit_prompts.txt",
+      "category": "bootstrap workflow files",
+      "subcategory": "workflow assets",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/workflow-families.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/bootstrap/workflows/default/prompts/tiktok_video_pipeline_v1/01_extract_desc.txt",
+      "category": "bootstrap workflow files",
+      "subcategory": "workflow assets",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/workflow-families.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/bootstrap/workflows/default/prompts/tiktok_video_pipeline_v1/02_review_brief.txt",
+      "category": "bootstrap workflow files",
+      "subcategory": "workflow assets",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/workflow-families.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/bootstrap/workflows/default/prompts/tiktok_video_pipeline_v1/03_refine_brief.txt",
+      "category": "bootstrap workflow files",
+      "subcategory": "workflow assets",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/workflow-families.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/bootstrap/workflows/default/prompts/tiktok_video_pipeline_v1/04_gen_workflow.txt",
+      "category": "bootstrap workflow files",
+      "subcategory": "workflow assets",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/workflow-families.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/bootstrap/workflows/default/prompts/tiktok_video_pipeline_v1/05_review_workflow.txt",
+      "category": "bootstrap workflow files",
+      "subcategory": "workflow assets",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/workflow-families.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/bootstrap/workflows/default/prompts/tiktok_video_pipeline_v1/06_refine_workflow.txt",
+      "category": "bootstrap workflow files",
+      "subcategory": "workflow assets",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/workflow-families.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/bootstrap/workflows/default/prompts/tiktok_video_pipeline_v1/07_submit_images.txt",
+      "category": "bootstrap workflow files",
+      "subcategory": "workflow assets",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/workflow-families.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/bootstrap/workflows/default/prompts/tiktok_video_pipeline_v1/08_submit_videos.txt",
+      "category": "bootstrap workflow files",
+      "subcategory": "workflow assets",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/workflow-families.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/bootstrap/workflows/default/prompts/tiktok_video_pipeline_v1/09_submit_voiceover.txt",
+      "category": "bootstrap workflow files",
+      "subcategory": "workflow assets",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/workflow-families.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/bootstrap/workflows/default/prompts/tiktok_video_pipeline_v1/10_compose_final.txt",
+      "category": "bootstrap workflow files",
+      "subcategory": "workflow assets",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/workflow-families.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/bootstrap/workflows/default/prompts/videoxpress_gen_v1/01_extract_narrative.txt",
+      "category": "bootstrap workflow files",
+      "subcategory": "workflow assets",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/workflow-families.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/bootstrap/workflows/default/prompts/videoxpress_gen_v1/02_gen_videoxpress_workflow.txt",
+      "category": "bootstrap workflow files",
+      "subcategory": "workflow assets",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/workflow-families.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/bootstrap/workflows/default/prompts/videoxpress_gen_v1/03_review_workflow.txt",
+      "category": "bootstrap workflow files",
+      "subcategory": "workflow assets",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/workflow-families.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/bootstrap/workflows/default/prompts/videoxpress_gen_v1/04_refine_workflow.txt",
+      "category": "bootstrap workflow files",
+      "subcategory": "workflow assets",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/workflow-families.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/bootstrap/workflows/default/prompts/videoxpress_gen_v1/06_execute_t2i.txt",
+      "category": "bootstrap workflow files",
+      "subcategory": "workflow assets",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/workflow-families.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/bootstrap/workflows/default/prompts/videoxpress_gen_v1/07_execute_i2v.txt",
+      "category": "bootstrap workflow files",
+      "subcategory": "workflow assets",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/workflow-families.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/bootstrap/workflows/default/prompts/videoxpress_gen_v1/08_execute_voiceover.txt",
+      "category": "bootstrap workflow files",
+      "subcategory": "workflow assets",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/workflow-families.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/bootstrap/workflows/default/prompts/videoxpress_gen_v1/09_assemble_video.txt",
+      "category": "bootstrap workflow files",
+      "subcategory": "workflow assets",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/workflow-families.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/bootstrap/workflows/default/template_groups.py",
+      "category": "python modules",
+      "subcategory": "bootstrap",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-bootstrap-workflows-default-template-groups.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/bootstrap/workflows/default/usage_schema.json",
+      "category": "bootstrap workflow files",
+      "subcategory": "workflow assets",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/workflow-families.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/bundle_loader.py",
+      "category": "python modules",
+      "subcategory": "bootstrap",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-bundle-loader.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/bundle_taxonomy.py",
+      "category": "python modules",
+      "subcategory": "support",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-bundle-taxonomy.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/codebase_docs.py",
+      "category": "python modules",
+      "subcategory": "support",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-codebase-docs.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/coder_adapters.py",
+      "category": "python modules",
+      "subcategory": "coder",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-coder-adapters.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/comfyui_config.json",
+      "category": "configuration/data files",
+      "subcategory": "config",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/config-and-data.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/daemon.py",
+      "category": "python modules",
+      "subcategory": "backend",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-daemon.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/documentation_guardrails.py",
+      "category": "python modules",
+      "subcategory": "support",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-documentation-guardrails.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/engine_commands.py",
+      "category": "python modules",
+      "subcategory": "commands",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-engine-commands.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/exceptions.py",
+      "category": "python modules",
+      "subcategory": "schema",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-exceptions.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/execution_request.py",
+      "category": "python modules",
+      "subcategory": "state",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-execution-request.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/execution_result.py",
+      "category": "python modules",
+      "subcategory": "state",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-execution-result.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/image_csv_generation.md",
+      "category": "documentation files",
+      "subcategory": "docs",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/job_schema.json",
+      "category": "configuration/data files",
+      "subcategory": "config",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/config-and-data.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/job_state.py",
+      "category": "python modules",
+      "subcategory": "state",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-job-state.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/llm_response_schema.json",
+      "category": "configuration/data files",
+      "subcategory": "config",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/config-and-data.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/model_config.py",
+      "category": "python modules",
+      "subcategory": "coder",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-model-config.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/model_mapping.json",
+      "category": "configuration/data files",
+      "subcategory": "config",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/config-and-data.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/QWEN.md",
+      "category": "documentation files",
+      "subcategory": "docs",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/run_agent.py",
+      "category": "python modules",
+      "subcategory": "core",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-run-agent.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/runner_actions.py",
+      "category": "python modules",
+      "subcategory": "schema",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-runner-actions.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/runner_logger.py",
+      "category": "python modules",
+      "subcategory": "backend",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-runner-logger.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/runtime_context.py",
+      "category": "python modules",
+      "subcategory": "state",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-runtime-context.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/step_runner.py",
+      "category": "python modules",
+      "subcategory": "core",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-step-runner.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/submit_commands.py",
+      "category": "python modules",
+      "subcategory": "commands",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-submit-commands.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/submitter.py",
+      "category": "python modules",
+      "subcategory": "commands",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-submitter.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/system_docs.py",
+      "category": "python modules",
+      "subcategory": "support",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-system-docs.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/tools/agent_tools.py",
+      "category": "python modules",
+      "subcategory": "tools",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-tools-agent-tools.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/usage_schema.json",
+      "category": "configuration/data files",
+      "subcategory": "config",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/config-and-data.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/workflow_router.py",
+      "category": "python modules",
+      "subcategory": "core",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-workflow-router.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/workflow_spec_commands.py",
+      "category": "python modules",
+      "subcategory": "support",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-workflow-spec-commands.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/workflow_specs.py",
+      "category": "python modules",
+      "subcategory": "support",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-workflow-specs.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "archive/batch/README.md",
+      "category": "documentation files",
+      "subcategory": "docs",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "archive/batch/run-bug_fix_v1.bat",
+      "category": "scripts",
+      "subcategory": "scripts",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/scripts-suite.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "archive/batch/run-codebase_bootstrap_v1.bat",
+      "category": "scripts",
+      "subcategory": "scripts",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/scripts-suite.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "archive/batch/run-codebase_reconcile_v1.bat",
+      "category": "scripts",
+      "subcategory": "scripts",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/scripts-suite.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "archive/batch/run-codebase_rescan_v1.bat",
+      "category": "scripts",
+      "subcategory": "scripts",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/scripts-suite.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "archive/batch/run-codebase_sync_v1.bat",
+      "category": "scripts",
+      "subcategory": "scripts",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/scripts-suite.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "archive/batch/run-documentation_bootstrap_v1.bat",
+      "category": "scripts",
+      "subcategory": "scripts",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/scripts-suite.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "archive/batch/run-documentation_validation_v1.bat",
+      "category": "scripts",
+      "subcategory": "scripts",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/scripts-suite.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "archive/batch/run-system_docs_bootstrap_v1.bat",
+      "category": "scripts",
+      "subcategory": "scripts",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/scripts-suite.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "archive/batch/submit-bug_fix_v1.bat",
+      "category": "scripts",
+      "subcategory": "scripts",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/scripts-suite.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "archive/batch/submit-codebase_bootstrap_v1.bat",
+      "category": "scripts",
+      "subcategory": "scripts",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/scripts-suite.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "archive/batch/submit-codebase_reconcile_v1.bat",
+      "category": "scripts",
+      "subcategory": "scripts",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/scripts-suite.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "archive/batch/submit-codebase_rescan_v1.bat",
+      "category": "scripts",
+      "subcategory": "scripts",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/scripts-suite.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "archive/batch/submit-codebase_sync_v1.bat",
+      "category": "scripts",
+      "subcategory": "scripts",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/scripts-suite.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "archive/batch/submit-documentation_bootstrap_v1.bat",
+      "category": "scripts",
+      "subcategory": "scripts",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/scripts-suite.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "archive/batch/submit-documentation_validation_v1.bat",
+      "category": "scripts",
+      "subcategory": "scripts",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/scripts-suite.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "HOW_TO_GUIDE.md",
+      "category": "documentation files",
+      "subcategory": "docs",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "MANIFEST.in",
+      "category": "other files",
+      "subcategory": "other",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "progress.jsonl",
+      "category": "other files",
+      "subcategory": "other",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "pyproject.toml",
+      "category": "configuration/data files",
+      "subcategory": "config",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/config-and-data.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "QWEN.md",
+      "category": "documentation files",
+      "subcategory": "docs",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "README.md",
+      "category": "documentation files",
+      "subcategory": "docs",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "run-00_master_docs_bootstrap_v1.bat",
+      "category": "scripts",
+      "subcategory": "scripts",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/scripts-suite.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "run-10_execution_scaffold_v1.bat",
+      "category": "scripts",
+      "subcategory": "scripts",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/scripts-suite.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "run-approve-step.bat",
+      "category": "scripts",
+      "subcategory": "scripts",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/scripts-suite.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "run-daemon.bat",
+      "category": "scripts",
+      "subcategory": "scripts",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/scripts-suite.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "run-reset-step.bat",
+      "category": "scripts",
+      "subcategory": "scripts",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/scripts-suite.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "sample-run-delivery.bat",
+      "category": "scripts",
+      "subcategory": "scripts",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/scripts-suite.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "scripts/approve-run.sh",
+      "category": "scripts",
+      "subcategory": "scripts",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/scripts-suite.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "scripts/examples/approve-run.sh",
+      "category": "scripts",
+      "subcategory": "scripts",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/scripts-suite.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "scripts/examples/submit-delivery-planning.sh",
+      "category": "scripts",
+      "subcategory": "scripts",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/scripts-suite.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "scripts/examples/submit-delivery-scaffold.sh",
+      "category": "scripts",
+      "subcategory": "scripts",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/scripts-suite.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "scripts/examples/submit-image-csv-gen-v1.sh",
+      "category": "scripts",
+      "subcategory": "scripts",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/scripts-suite.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "scripts/examples/submit-image-csv-gen-v2.sh",
+      "category": "scripts",
+      "subcategory": "scripts",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/scripts-suite.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "scripts/examples/submit-initiative-intake.sh",
+      "category": "scripts",
+      "subcategory": "scripts",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/scripts-suite.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "scripts/examples/submit-task-execution.sh",
+      "category": "scripts",
+      "subcategory": "scripts",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/scripts-suite.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "scripts/README.md",
+      "category": "scripts",
+      "subcategory": "scripts",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/scripts-suite.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "scripts/submit-delivery-planning.sh",
+      "category": "scripts",
+      "subcategory": "scripts",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/scripts-suite.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "scripts/submit-delivery-scaffold.sh",
+      "category": "scripts",
+      "subcategory": "scripts",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/scripts-suite.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "scripts/submit-initiative-intake.sh",
+      "category": "scripts",
+      "subcategory": "scripts",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/scripts-suite.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "scripts/ukbe-daemon-wsl.sh",
+      "category": "scripts",
+      "subcategory": "scripts",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/scripts-suite.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "scripts/ukbe-daemon.bat",
+      "category": "scripts",
+      "subcategory": "scripts",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/scripts-suite.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "scripts/ukbe-run-delivery.bat",
+      "category": "scripts",
+      "subcategory": "scripts",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/scripts-suite.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "scripts/ukbe-runner.sh",
+      "category": "scripts",
+      "subcategory": "scripts",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/scripts-suite.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "submit-00_master_docs_bootstrap_v1.bat",
+      "category": "scripts",
+      "subcategory": "scripts",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/scripts-suite.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "submit-10_execution_scaffold_v1.bat",
+      "category": "scripts",
+      "subcategory": "scripts",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/scripts-suite.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "sync-10_execution_scaffold_v1-workflow-spec.bat",
+      "category": "scripts",
+      "subcategory": "scripts",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/scripts-suite.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "sync-workflows-to-backend.bat",
+      "category": "scripts",
+      "subcategory": "scripts",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/scripts-suite.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "test-runner.bat",
+      "category": "scripts",
+      "subcategory": "scripts",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/scripts-suite.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "test-runner.ps1",
+      "category": "other files",
+      "subcategory": "other",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "tests/conftest.py",
+      "category": "test files",
+      "subcategory": "tests",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/tests-suite.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "tests/test_backend_worker_mode.py",
+      "category": "test files",
+      "subcategory": "tests",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/tests-suite.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "tests/test_bundle_loader.py",
+      "category": "test files",
+      "subcategory": "tests",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/tests-suite.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "tests/test_codebase_docs.py",
+      "category": "test files",
+      "subcategory": "tests",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/tests-suite.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "tests/test_daemon.py",
+      "category": "test files",
+      "subcategory": "tests",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/tests-suite.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "tests/test_documentation_governance.py",
+      "category": "test files",
+      "subcategory": "tests",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/tests-suite.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "tests/test_run_agent_status.py",
+      "category": "test files",
+      "subcategory": "tests",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/tests-suite.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "tests/test_runtime_context_paths.py",
+      "category": "test files",
+      "subcategory": "tests",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/tests-suite.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "tests/test_tool_instruction_block.py",
+      "category": "test files",
+      "subcategory": "tests",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/tests-suite.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "tests/test_ukbe_runner_wrapper.py",
+      "category": "test files",
+      "subcategory": "tests",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/tests-suite.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "WINDOWS_COMPATIBILITY.md",
+      "category": "documentation files",
+      "subcategory": "docs",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    }
+  ],
+  "python_modules": [
+    {
+      "rel_path": "agent_runner_v2/__init__.py",
+      "module_name": "agent_runner_v2",
+      "module_area": "package",
+      "doc_mode": "stub",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-init.md",
+      "summary": "Auto-generated baseline module documentation.",
+      "module_doc": "",
+      "stdlib_imports": [],
+      "local_imports": [],
+      "external_imports": [],
+      "public_functions": [],
+      "public_classes": [],
+      "constants": [],
+      "test_references": [
+        "tests/conftest.py",
+        "tests/test_backend_worker_mode.py",
+        "tests/test_bundle_loader.py",
+        "tests/test_codebase_docs.py",
+        "tests/test_daemon.py",
+        "tests/test_documentation_governance.py",
+        "tests/test_run_agent_status.py",
+        "tests/test_runtime_context_paths.py",
+        "tests/test_tool_instruction_block.py"
+      ]
+    },
+    {
+      "rel_path": "agent_runner_v2/action_result.py",
+      "module_name": "agent_runner_v2.action_result",
+      "module_area": "schema",
+      "doc_mode": "summary",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-action-result.md",
+      "summary": "action_result.py — Return type for non-coder action functions.",
+      "module_doc": "action_result.py — Return type for non-coder action functions.",
+      "stdlib_imports": [
+        "__future__",
+        "dataclasses"
+      ],
+      "local_imports": [],
+      "external_imports": [],
+      "public_functions": [],
+      "public_classes": [
+        {
+          "name": "ActionResult",
+          "summary": ""
+        }
+      ],
+      "constants": [],
+      "test_references": []
+    },
+    {
+      "rel_path": "agent_runner_v2/actions/__init__.py",
+      "module_name": "agent_runner_v2",
+      "module_area": "actions",
+      "doc_mode": "stub",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-actions-init.md",
+      "summary": "Auto-generated baseline module documentation.",
+      "module_doc": "",
+      "stdlib_imports": [],
+      "local_imports": [],
+      "external_imports": [
+        "finalize_bootstrap",
+        "prepare_delivery_scaffold",
+        "scan_repo_codebase",
+        "submit_comfyui",
+        "sync_codebase_docs",
+        "sync_system_docs",
+        "validate_codebase_docs",
+        "validate_delivery_docs",
+        "validate_system_docs"
+      ],
+      "public_functions": [],
+      "public_classes": [],
+      "constants": [],
+      "test_references": [
+        "tests/conftest.py",
+        "tests/test_backend_worker_mode.py",
+        "tests/test_bundle_loader.py",
+        "tests/test_codebase_docs.py",
+        "tests/test_daemon.py",
+        "tests/test_documentation_governance.py",
+        "tests/test_run_agent_status.py",
+        "tests/test_runtime_context_paths.py",
+        "tests/test_tool_instruction_block.py"
+      ]
+    },
+    {
+      "rel_path": "agent_runner_v2/actions/assemble_video.py",
+      "module_name": "agent_runner_v2.actions.assemble_video",
+      "module_area": "actions",
+      "doc_mode": "full",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-actions-assemble-video.md",
+      "summary": "actions/assemble_video.py - Assemble final video from clips and audio.",
+      "module_doc": "actions/assemble_video.py - Assemble final video from clips and audio.\n\nUses ffmpeg to concatenate video clips, mix audio, and apply transitions.",
+      "stdlib_imports": [
+        "__future__",
+        "datetime",
+        "json",
+        "pathlib",
+        "subprocess",
+        "tempfile"
+      ],
+      "local_imports": [],
+      "external_imports": [
+        "action_result",
+        "runtime_context"
+      ],
+      "public_functions": [
+        {
+          "name": "assemble_video",
+          "signature": "()",
+          "summary": "Assemble final video from clips and audio."
+        }
+      ],
+      "public_classes": [],
+      "constants": [],
+      "test_references": []
+    },
+    {
+      "rel_path": "agent_runner_v2/actions/copy_artifact.py",
+      "module_name": "agent_runner_v2.actions.copy_artifact",
+      "module_area": "actions",
+      "doc_mode": "full",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-actions-copy-artifact.md",
+      "summary": "actions/copy_artifact.py — Copy an artifact to a new canonical destination path.",
+      "module_doc": "actions/copy_artifact.py — Copy an artifact to a new canonical destination path.\n\nStep config:\n    \"source\": \"PRE_INIT_FILE\"       # artifact key to read from context\n    \"dest_artifact\": \"INIT_FILE\"    # artifact key for the output file\n    \"dest_dir\": \"docs/delivery/01_initiatives\"\n    \"filename_strategy\": \"init_id_slug\"   # derive filename from content metadata\n    \"result_meta_key\": \"INIT_FILE\"\n\nfilename_strategy options:\n  \"init_id_slug\" — extract Initiative ID + H1 title from content, build\n                   \"<INIT-ID>_<kebab-title>.md\"\n  (default)      — reuse the source filename as-is",
+      "stdlib_imports": [
+        "__future__",
+        "datetime",
+        "json",
+        "logging",
+        "pathlib",
+        "re"
+      ],
+      "local_imports": [],
+      "external_imports": [
+        "action_result",
+        "runtime_context"
+      ],
+      "public_functions": [
+        {
+          "name": "copy_artifact",
+          "signature": "()",
+          "summary": ""
+        }
+      ],
+      "public_classes": [],
+      "constants": [
+        "_INIT_ID_RE"
+      ],
+      "test_references": []
+    },
+    {
+      "rel_path": "agent_runner_v2/actions/execute_i2v.py",
+      "module_name": "agent_runner_v2.actions.execute_i2v",
+      "module_area": "actions",
+      "doc_mode": "full",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-actions-execute-i2v.md",
+      "summary": "actions/execute_i2v.py - Execute Image-to-Video generation for VideoExpress workflow.",
+      "module_doc": "actions/execute_i2v.py - Execute Image-to-Video generation for VideoExpress workflow.\n\nReads VIDEOWORKFLOW_FILE and GENERATED_IMAGES_FOLDER,\nsubmits image + motion prompt to ComfyUI I2V workflow.",
+      "stdlib_imports": [
+        "__future__",
+        "datetime",
+        "json",
+        "os",
+        "pathlib",
+        "time",
+        "urllib.error",
+        "urllib.request"
+      ],
+      "local_imports": [],
+      "external_imports": [
+        "action_result",
+        "runtime_context"
+      ],
+      "public_functions": [
+        {
+          "name": "execute_i2v",
+          "signature": "()",
+          "summary": "Execute I2V generation for all scenes."
+        }
+      ],
+      "public_classes": [],
+      "constants": [
+        "_PACKAGE_ROOT"
+      ],
+      "test_references": []
+    },
+    {
+      "rel_path": "agent_runner_v2/actions/execute_t2i.py",
+      "module_name": "agent_runner_v2.actions.execute_t2i",
+      "module_area": "actions",
+      "doc_mode": "full",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-actions-execute-t2i.md",
+      "summary": "actions/execute_t2i.py - Execute Text-to-Image generation for VideoExpress workflow.",
+      "module_doc": "actions/execute_t2i.py - Execute Text-to-Image generation for VideoExpress workflow.\n\nReads VIDEOWORKFLOW_FILE, extracts scene text_to_image_prompts,\nsubmits to ComfyUI API, and saves generated images.",
+      "stdlib_imports": [
+        "__future__",
+        "datetime",
+        "json",
+        "os",
+        "pathlib",
+        "time",
+        "urllib.error",
+        "urllib.request"
+      ],
+      "local_imports": [],
+      "external_imports": [
+        "action_result",
+        "runtime_context"
+      ],
+      "public_functions": [
+        {
+          "name": "execute_t2i",
+          "signature": "()",
+          "summary": "Execute T2I generation for all scenes in VideoExpress workflow."
+        }
+      ],
+      "public_classes": [],
+      "constants": [
+        "_PACKAGE_ROOT"
+      ],
+      "test_references": []
+    },
+    {
+      "rel_path": "agent_runner_v2/actions/execute_voiceover.py",
+      "module_name": "agent_runner_v2.actions.execute_voiceover",
+      "module_area": "actions",
+      "doc_mode": "full",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-actions-execute-voiceover.md",
+      "summary": "actions/execute_voiceover.py - Generate voiceover audio for VideoExpress workflow.",
+      "module_doc": "actions/execute_voiceover.py - Generate voiceover audio for VideoExpress workflow.\n\nSupports multiple TTS providers: elevenlabs, openai, local.",
+      "stdlib_imports": [
+        "__future__",
+        "datetime",
+        "json",
+        "os",
+        "pathlib",
+        "subprocess",
+        "time",
+        "urllib.error",
+        "urllib.request"
+      ],
+      "local_imports": [],
+      "external_imports": [
+        "action_result",
+        "runtime_context"
+      ],
+      "public_functions": [
+        {
+          "name": "execute_voiceover",
+          "signature": "()",
+          "summary": "Generate voiceover for all scenes."
+        }
+      ],
+      "public_classes": [],
+      "constants": [
+        "_PACKAGE_ROOT"
+      ],
+      "test_references": []
+    },
+    {
+      "rel_path": "agent_runner_v2/actions/finalize_bootstrap.py",
+      "module_name": "agent_runner_v2.actions.finalize_bootstrap",
+      "module_area": "actions",
+      "doc_mode": "full",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-actions-finalize-bootstrap.md",
+      "summary": "Auto-generated baseline module documentation.",
+      "module_doc": "",
+      "stdlib_imports": [
+        "__future__",
+        "pathlib"
+      ],
+      "local_imports": [],
+      "external_imports": [
+        "action_result",
+        "runtime_context"
+      ],
+      "public_functions": [
+        {
+          "name": "finalize_bootstrap",
+          "signature": "()",
+          "summary": ""
+        }
+      ],
+      "public_classes": [],
+      "constants": [],
+      "test_references": [
+        "tests/test_bundle_loader.py",
+        "tests/test_documentation_governance.py"
+      ]
+    },
+    {
+      "rel_path": "agent_runner_v2/actions/prepare_delivery_scaffold.py",
+      "module_name": "agent_runner_v2.actions.prepare_delivery_scaffold",
+      "module_area": "actions",
+      "doc_mode": "full",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-actions-prepare-delivery-scaffold.md",
+      "summary": "Auto-generated baseline module documentation.",
+      "module_doc": "",
+      "stdlib_imports": [
+        "__future__",
+        "pathlib"
+      ],
+      "local_imports": [],
+      "external_imports": [
+        "action_result",
+        "runtime_context"
+      ],
+      "public_functions": [
+        {
+          "name": "prepare_delivery_scaffold",
+          "signature": "()",
+          "summary": ""
+        }
+      ],
+      "public_classes": [],
+      "constants": [
+        "SCAFFOLD_DIRS"
+      ],
+      "test_references": []
+    },
+    {
+      "rel_path": "agent_runner_v2/actions/promote_artifact.py",
+      "module_name": "agent_runner_v2.actions.promote_artifact",
+      "module_area": "actions",
+      "doc_mode": "full",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-actions-promote-artifact.md",
+      "summary": "actions/promote_artifact.py — Update artifact Status field in-place.",
+      "module_doc": "actions/promote_artifact.py — Update artifact Status field in-place.\n\nStep config:\n    \"promotes\": \"PLAN_FILE\"                          # single artifact key\n    \"promotes\": [\"TASK_GRAPH_FILE\", \"PLAN_FILE\"]     # multiple artifact keys\n    \"target_status\": \"Approved\"                      # default; use \"Completed\" for task completion\n    \"result_meta_key\": \"PLAN_FILE\"                   # which artifact's metajson path to use",
+      "stdlib_imports": [
+        "__future__",
+        "logging",
+        "pathlib",
+        "re"
+      ],
+      "local_imports": [],
+      "external_imports": [
+        "action_result",
+        "runtime_context"
+      ],
+      "public_functions": [
+        {
+          "name": "promote_artifact",
+          "signature": "()",
+          "summary": ""
+        }
+      ],
+      "public_classes": [],
+      "constants": [
+        "_TABLE_STATUS_RE",
+        "_KV_STATUS_RE"
+      ],
+      "test_references": [
+        "tests/test_backend_worker_mode.py"
+      ]
+    },
+    {
+      "rel_path": "agent_runner_v2/actions/promote_init.py",
+      "module_name": "agent_runner_v2.actions.promote_init",
+      "module_area": "actions",
+      "doc_mode": "full",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-actions-promote-init.md",
+      "summary": "actions/promote_init.py — Promote a reviewed PRE_INIT_FILE to an official INIT_FILE.",
+      "module_doc": "actions/promote_init.py — Promote a reviewed PRE_INIT_FILE to an official INIT_FILE.\n\nReads the PRE_INIT_FILE, extracts the Initiative ID and title, derives a\nkebab-case filename, and writes the promoted copy to docs/delivery/01_initiatives/\nwith Status changed from draft → Approved.",
+      "stdlib_imports": [
+        "__future__",
+        "logging",
+        "pathlib",
+        "re"
+      ],
+      "local_imports": [],
+      "external_imports": [
+        "action_result",
+        "runtime_context"
+      ],
+      "public_functions": [
+        {
+          "name": "promote_init",
+          "signature": "()",
+          "summary": ""
+        }
+      ],
+      "public_classes": [],
+      "constants": [
+        "_INIT_ID_RE",
+        "_STATUS_RE"
+      ],
+      "test_references": []
+    },
+    {
+      "rel_path": "agent_runner_v2/actions/scan_repo_codebase.py",
+      "module_name": "agent_runner_v2.actions.scan_repo_codebase",
+      "module_area": "actions",
+      "doc_mode": "full",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-actions-scan-repo-codebase.md",
+      "summary": "Auto-generated baseline module documentation.",
+      "module_doc": "",
+      "stdlib_imports": [
+        "__future__",
+        "dataclasses",
+        "json",
+        "pathlib",
+        "typing"
+      ],
+      "local_imports": [],
+      "external_imports": [
+        "action_result",
+        "codebase_docs",
+        "runtime_context"
+      ],
+      "public_functions": [
+        {
+          "name": "scan_repo_codebase",
+          "signature": "()",
+          "summary": ""
+        }
+      ],
+      "public_classes": [],
+      "constants": [],
+      "test_references": [
+        "tests/test_bundle_loader.py",
+        "tests/test_codebase_docs.py"
+      ]
+    },
+    {
+      "rel_path": "agent_runner_v2/actions/submit_comfyui.py",
+      "module_name": "agent_runner_v2.actions.submit_comfyui",
+      "module_area": "actions",
+      "doc_mode": "full",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-actions-submit-comfyui.md",
+      "summary": "actions/submit_comfyui.py - Submit prompt entries to ComfyUI remote API.",
+      "module_doc": "actions/submit_comfyui.py - Submit prompt entries to ComfyUI remote API.\n\nReads JSON files from {IMAGE_CSV_RUN_DIR}, authenticates to the ComfyUI API,\nsubmits each entry, and writes summary + meta.json sidecar.",
+      "stdlib_imports": [
+        "__future__",
+        "datetime",
+        "json",
+        "os",
+        "pathlib",
+        "time",
+        "urllib.error",
+        "urllib.request"
+      ],
+      "local_imports": [],
+      "external_imports": [
+        "action_result",
+        "runtime_context"
+      ],
+      "public_functions": [
+        {
+          "name": "submit_comfyui",
+          "signature": "()",
+          "summary": "Submit all prompt entries from IMAGE_CSV_RUN_DIR to ComfyUI API."
+        }
+      ],
+      "public_classes": [],
+      "constants": [
+        "_PACKAGE_ROOT"
+      ],
+      "test_references": []
+    },
+    {
+      "rel_path": "agent_runner_v2/actions/sync_codebase_docs.py",
+      "module_name": "agent_runner_v2.actions.sync_codebase_docs",
+      "module_area": "actions",
+      "doc_mode": "full",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-actions-sync-codebase-docs.md",
+      "summary": "Auto-generated baseline module documentation.",
+      "module_doc": "",
+      "stdlib_imports": [
+        "__future__",
+        "datetime",
+        "json",
+        "pathlib"
+      ],
+      "local_imports": [],
+      "external_imports": [
+        "action_result",
+        "codebase_docs",
+        "runtime_context"
+      ],
+      "public_functions": [
+        {
+          "name": "sync_codebase_docs",
+          "signature": "()",
+          "summary": ""
+        }
+      ],
+      "public_classes": [],
+      "constants": [],
+      "test_references": [
+        "tests/test_bundle_loader.py"
+      ]
+    },
+    {
+      "rel_path": "agent_runner_v2/actions/sync_system_docs.py",
+      "module_name": "agent_runner_v2.actions.sync_system_docs",
+      "module_area": "actions",
+      "doc_mode": "full",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-actions-sync-system-docs.md",
+      "summary": "Auto-generated baseline module documentation.",
+      "module_doc": "",
+      "stdlib_imports": [
+        "__future__",
+        "datetime",
+        "json",
+        "pathlib"
+      ],
+      "local_imports": [],
+      "external_imports": [
+        "action_result",
+        "codebase_docs",
+        "runtime_context",
+        "system_docs"
+      ],
+      "public_functions": [
+        {
+          "name": "sync_system_docs",
+          "signature": "()",
+          "summary": ""
+        }
+      ],
+      "public_classes": [],
+      "constants": [],
+      "test_references": [
+        "tests/test_bundle_loader.py"
+      ]
+    },
+    {
+      "rel_path": "agent_runner_v2/actions/validate_codebase_docs.py",
+      "module_name": "agent_runner_v2.actions.validate_codebase_docs",
+      "module_area": "actions",
+      "doc_mode": "full",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-actions-validate-codebase-docs.md",
+      "summary": "Auto-generated baseline module documentation.",
+      "module_doc": "",
+      "stdlib_imports": [
+        "__future__",
+        "datetime",
+        "json",
+        "pathlib"
+      ],
+      "local_imports": [],
+      "external_imports": [
+        "action_result",
+        "codebase_docs",
+        "runtime_context"
+      ],
+      "public_functions": [
+        {
+          "name": "validate_codebase_docs",
+          "signature": "()",
+          "summary": ""
+        }
+      ],
+      "public_classes": [],
+      "constants": [],
+      "test_references": [
+        "tests/test_bundle_loader.py"
+      ]
+    },
+    {
+      "rel_path": "agent_runner_v2/actions/validate_delivery_docs.py",
+      "module_name": "agent_runner_v2.actions.validate_delivery_docs",
+      "module_area": "actions",
+      "doc_mode": "full",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-actions-validate-delivery-docs.md",
+      "summary": "actions/validate_delivery_docs.py — Deterministic validation of scaffolded delivery docs.",
+      "module_doc": "actions/validate_delivery_docs.py — Deterministic validation of scaffolded delivery docs.\n\nValidates folder structure, template completeness, template structure, SOP validity,\nstatus rules validity, agent registry consistency, and cross-reference integrity.\n\nOutputs DELIVERY_FOLDER_MAP — a JSON manifest of what was validated.",
+      "stdlib_imports": [
+        "__future__",
+        "datetime",
+        "json",
+        "logging",
+        "pathlib",
+        "re",
+        "typing"
+      ],
+      "local_imports": [],
+      "external_imports": [
+        "action_result",
+        "runtime_context"
+      ],
+      "public_functions": [
+        {
+          "name": "validate_delivery_docs",
+          "signature": "()",
+          "summary": "Validate the complete delivery documentation scaffold."
+        }
+      ],
+      "public_classes": [],
+      "constants": [
+        "DELIVERY_FOLDERS",
+        "DELIVERY_TEMPLATE_ROOT",
+        "CODEBASE_TEMPLATE_ROOT",
+        "DELIVERY_AGENT_ROOT",
+        "REQUIRED_TEMPLATES",
+        "REQUIRED_CODEBASE_FILES",
+        "REQUIRED_SYSTEM_FILES",
+        "SOP_REQUIRED_SECTIONS",
+        "STATUS_RULES_REQUIRED_SECTIONS",
+        "CODEBASE_SOP_REQUIRED_SECTIONS",
+        "CODEBASE_STATUS_RULES_REQUIRED_SECTIONS",
+        "AGENT_REGISTRY_ENTRY_PATTERN"
+      ],
+      "test_references": [
+        "tests/test_bundle_loader.py",
+        "tests/test_documentation_governance.py"
+      ]
+    },
+    {
+      "rel_path": "agent_runner_v2/actions/validate_system_docs.py",
+      "module_name": "agent_runner_v2.actions.validate_system_docs",
+      "module_area": "actions",
+      "doc_mode": "full",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-actions-validate-system-docs.md",
+      "summary": "Auto-generated baseline module documentation.",
+      "module_doc": "",
+      "stdlib_imports": [
+        "__future__",
+        "datetime",
+        "json",
+        "pathlib"
+      ],
+      "local_imports": [],
+      "external_imports": [
+        "action_result",
+        "codebase_docs",
+        "runtime_context",
+        "system_docs"
+      ],
+      "public_functions": [
+        {
+          "name": "validate_system_docs",
+          "signature": "()",
+          "summary": ""
+        }
+      ],
+      "public_classes": [],
+      "constants": [],
+      "test_references": [
+        "tests/test_bundle_loader.py"
+      ]
+    },
+    {
+      "rel_path": "agent_runner_v2/approve_commands.py",
+      "module_name": "agent_runner_v2.approve_commands",
+      "module_area": "commands",
+      "doc_mode": "summary",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-approve-commands.md",
+      "summary": "Approve or reject a run awaiting human action.",
+      "module_doc": "Approve or reject a run awaiting human action.\n\nInvoked via: ukbe-run-agent approve <run-id> [--reject] [--feedback \"notes\"]\n\nReads backend_url from ~/.ukbe-runner/engine/config.json by default.",
+      "stdlib_imports": [
+        "__future__",
+        "argparse",
+        "json",
+        "os",
+        "pathlib",
+        "sys"
+      ],
+      "local_imports": [],
+      "external_imports": [
+        "backend_client"
+      ],
+      "public_functions": [
+        {
+          "name": "main",
+          "signature": "(argv)",
+          "summary": ""
+        }
+      ],
+      "public_classes": [],
+      "constants": [],
+      "test_references": []
+    },
+    {
+      "rel_path": "agent_runner_v2/artifact_paths.py",
+      "module_name": "agent_runner_v2.artifact_paths",
+      "module_area": "schema",
+      "doc_mode": "summary",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-artifact-paths.md",
+      "summary": "artifact_paths.py — Single source of truth for all step artifact paths.",
+      "module_doc": "artifact_paths.py — Single source of truth for all step artifact paths.\n\nDesign:\n1. One function: `compute_paths(node_id, title, output_dir, ext=\".md\")`\n2. Returns (artifact_path, meta_json_path) — always same base name.\n3. No parsing. Node ID IS the base. Title is appended as slug.",
+      "stdlib_imports": [
+        "__future__",
+        "datetime",
+        "hashlib",
+        "json",
+        "logging",
+        "pathlib",
+        "re"
+      ],
+      "local_imports": [],
+      "external_imports": [],
+      "public_functions": [
+        {
+          "name": "compute_paths",
+          "signature": "()",
+          "summary": "Return (artifact_path, meta_json_path) — single source of truth."
+        },
+        {
+          "name": "meta_json_path_for_artifact",
+          "signature": "(artifact_path)",
+          "summary": "Return the meta.json path for any artifact path."
+        },
+        {
+          "name": "load_meta_json",
+          "signature": "(artifact_path)",
+          "summary": "Load coder-written meta.json. Returns None if missing."
+        },
+        {
+          "name": "read_coder_result",
+          "signature": "(artifact_path)",
+          "summary": "Read coder_result from meta.json. Returns None if missing or invalid."
+        }
+      ],
+      "public_classes": [],
+      "constants": [],
+      "test_references": []
+    },
+    {
+      "rel_path": "agent_runner_v2/backend_client.py",
+      "module_name": "agent_runner_v2.backend_client",
+      "module_area": "backend",
+      "doc_mode": "full",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-backend-client.md",
+      "summary": "Auto-generated baseline module documentation.",
+      "module_doc": "",
+      "stdlib_imports": [
+        "__future__",
+        "dataclasses",
+        "json",
+        "typing",
+        "urllib"
+      ],
+      "local_imports": [],
+      "external_imports": [],
+      "public_functions": [],
+      "public_classes": [
+        {
+          "name": "BackendClient",
+          "summary": ""
+        }
+      ],
+      "constants": [],
+      "test_references": [
+        "tests/test_daemon.py"
+      ]
+    },
+    {
+      "rel_path": "agent_runner_v2/bootstrap/workflows/default/template_groups.py",
+      "module_name": "agent_runner_v2.bootstrap.workflows.default.template_groups",
+      "module_area": "bootstrap",
+      "doc_mode": "full",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-bootstrap-workflows-default-template-groups.md",
+      "summary": "Auto-generated baseline module documentation.",
+      "module_doc": "",
+      "stdlib_imports": [],
+      "local_imports": [],
+      "external_imports": [],
+      "public_functions": [],
+      "public_classes": [],
+      "constants": [],
+      "test_references": [
+        "tests/conftest.py",
+        "tests/test_bundle_loader.py",
+        "tests/test_documentation_governance.py"
+      ]
+    },
+    {
+      "rel_path": "agent_runner_v2/bundle_loader.py",
+      "module_name": "agent_runner_v2.bundle_loader",
+      "module_area": "bootstrap",
+      "doc_mode": "full",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-bundle-loader.md",
+      "summary": "Auto-generated baseline module documentation.",
+      "module_doc": "",
+      "stdlib_imports": [
+        "__future__",
+        "importlib.util",
+        "json",
+        "pathlib",
+        "shutil",
+        "types"
+      ],
+      "local_imports": [],
+      "external_imports": [
+        "bundle_taxonomy",
+        "runtime_context"
+      ],
+      "public_functions": [
+        {
+          "name": "bundles_root",
+          "signature": "()",
+          "summary": ""
+        },
+        {
+          "name": "core_bundles_root",
+          "signature": "()",
+          "summary": ""
+        },
+        {
+          "name": "domain_bundles_root",
+          "signature": "()",
+          "summary": ""
+        },
+        {
+          "name": "workflow_bundles_root",
+          "signature": "()",
+          "summary": ""
+        },
+        {
+          "name": "config_path",
+          "signature": "(workspace_root)",
+          "summary": ""
+        },
+        {
+          "name": "workflows_root",
+          "signature": "(workspace_root)",
+          "summary": ""
+        },
+        {
+          "name": "workflow_root",
+          "signature": "(workspace_root, workflow_name)",
+          "summary": ""
+        },
+        {
+          "name": "global_workflows_root",
+          "signature": "()",
+          "summary": ""
+        },
+        {
+          "name": "global_workflow_root",
+          "signature": "(workflow_name)",
+          "summary": ""
+        },
+        {
+          "name": "resolve_workflow_root",
+          "signature": "(workspace_root, workflow_name)",
+          "summary": ""
+        },
+        {
+          "name": "load_project_config",
+          "signature": "(workspace_root)",
+          "summary": ""
+        },
+        {
+          "name": "save_project_config",
+          "signature": "(workspace_root, config)",
+          "summary": ""
+        },
+        {
+          "name": "load_workflow_module",
+          "signature": "(workspace_root, workflow_name)",
+          "summary": ""
+        },
+        {
+          "name": "seed_workflow_bundle",
+          "signature": "(target_root, workflow_name)",
+          "summary": "Copy the bootstrap workflow template set into the target global workflow location."
+        },
+        {
+          "name": "init_workspace",
+          "signature": "(workspace_root, workflow_name)",
+          "summary": ""
+        }
+      ],
+      "public_classes": [],
+      "constants": [
+        "GLOBAL_RUNNER_HOME",
+        "BOOTSTRAP_ROOT"
+      ],
+      "test_references": [
+        "tests/test_bundle_loader.py",
+        "tests/test_tool_instruction_block.py"
+      ]
+    },
+    {
+      "rel_path": "agent_runner_v2/bundle_taxonomy.py",
+      "module_name": "agent_runner_v2.bundle_taxonomy",
+      "module_area": "support",
+      "doc_mode": "summary",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-bundle-taxonomy.md",
+      "summary": "Auto-generated baseline module documentation.",
+      "module_doc": "",
+      "stdlib_imports": [
+        "__future__",
+        "dataclasses",
+        "pathlib",
+        "typing"
+      ],
+      "local_imports": [],
+      "external_imports": [],
+      "public_functions": [
+        {
+          "name": "bundle_manifest",
+          "signature": "()",
+          "summary": ""
+        },
+        {
+          "name": "bundle_manifest_path",
+          "signature": "(runner_home)",
+          "summary": ""
+        }
+      ],
+      "public_classes": [
+        {
+          "name": "BundleSelection",
+          "summary": ""
+        }
+      ],
+      "constants": [
+        "CORE_BUNDLE_NAME",
+        "DEFAULT_DOMAIN_BUNDLE",
+        "DEFAULT_BUNDLE_PROFILE",
+        "DOMAIN_BUNDLE_NAMES",
+        "CORE_DOCS",
+        "WORKFLOW_DOCS",
+        "DOMAIN_DOCS"
+      ],
+      "test_references": []
+    },
+    {
+      "rel_path": "agent_runner_v2/codebase_docs.py",
+      "module_name": "agent_runner_v2.codebase_docs",
+      "module_area": "support",
+      "doc_mode": "summary",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-codebase-docs.md",
+      "summary": "Auto-generated baseline module documentation.",
+      "module_doc": "",
+      "stdlib_imports": [
+        "__future__",
+        "ast",
+        "dataclasses",
+        "datetime",
+        "json",
+        "pathlib",
+        "re",
+        "sys",
+        "typing"
+      ],
+      "local_imports": [],
+      "external_imports": [
+        "runtime_context"
+      ],
+      "public_functions": [
+        {
+          "name": "build_snapshot",
+          "signature": "(project_root)",
+          "summary": ""
+        },
+        {
+          "name": "render_inventory",
+          "signature": "(snapshot)",
+          "summary": ""
+        },
+        {
+          "name": "render_module_doc",
+          "signature": "(snapshot, module_record)",
+          "summary": ""
+        },
+        {
+          "name": "render_component_doc",
+          "signature": "(snapshot)",
+          "summary": ""
+        },
+        {
+          "name": "render_change_impact",
+          "signature": "(snapshot)",
+          "summary": ""
+        },
+        {
+          "name": "render_validation",
+          "signature": "(snapshot)",
+          "summary": ""
+        }
+      ],
+      "public_classes": [
+        {
+          "name": "ScanItem",
+          "summary": ""
+        }
+      ],
+      "constants": [
+        "EXCLUDED_DIRS",
+        "STD_LIBS"
+      ],
+      "test_references": [
+        "tests/test_bundle_loader.py",
+        "tests/test_codebase_docs.py"
+      ]
+    },
+    {
+      "rel_path": "agent_runner_v2/coder_adapters.py",
+      "module_name": "agent_runner_v2.coder_adapters",
+      "module_area": "coder",
+      "doc_mode": "full",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-coder-adapters.md",
+      "summary": "Auto-generated baseline module documentation.",
+      "module_doc": "",
+      "stdlib_imports": [
+        "__future__",
+        "dataclasses",
+        "json",
+        "os",
+        "pathlib",
+        "shutil",
+        "subprocess",
+        "tempfile",
+        "time",
+        "typing",
+        "uuid"
+      ],
+      "local_imports": [],
+      "external_imports": [
+        "model_config",
+        "runner_logger",
+        "runtime_context"
+      ],
+      "public_functions": [
+        {
+          "name": "dataclass_dict",
+          "signature": "(value)",
+          "summary": ""
+        },
+        {
+          "name": "invoke_coder",
+          "signature": "()",
+          "summary": ""
+        },
+        {
+          "name": "merge_usage",
+          "signature": "(target, source)",
+          "summary": ""
+        }
+      ],
+      "public_classes": [
+        {
+          "name": "CoderInvocationError",
+          "summary": ""
+        },
+        {
+          "name": "UsageData",
+          "summary": ""
+        },
+        {
+          "name": "InvocationManifest",
+          "summary": ""
+        },
+        {
+          "name": "InvocationResult",
+          "summary": ""
+        }
+      ],
+      "constants": [
+        "DEFAULT_CODER_TIMEOUT_SECONDS",
+        "SIDECAR_POLL_INTERVAL_SECONDS",
+        "SIDECAR_SETTLE_DELAY_SECONDS"
+      ],
+      "test_references": [
+        "tests/test_documentation_governance.py"
+      ]
+    },
+    {
+      "rel_path": "agent_runner_v2/daemon.py",
+      "module_name": "agent_runner_v2.daemon",
+      "module_area": "backend",
+      "doc_mode": "full",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-daemon.md",
+      "summary": "Worker daemon supervisor.",
+      "module_doc": "Worker daemon supervisor.\n\nInvoked via: ukbe-run-agent daemon [worker-id]\n\nClaims backend work, spawns one child process per claimed step, monitors child\nliveness, writes local logs, and emits child-scoped heartbeats keyed by\nworkflow_step_run_id.",
+      "stdlib_imports": [
+        "__future__",
+        "dataclasses",
+        "datetime",
+        "json",
+        "os",
+        "pathlib",
+        "shutil",
+        "signal",
+        "subprocess",
+        "sys",
+        "time",
+        "typing"
+      ],
+      "local_imports": [],
+      "external_imports": [
+        "runtime_context"
+      ],
+      "public_functions": [
+        {
+          "name": "main",
+          "signature": "(argv)",
+          "summary": ""
+        }
+      ],
+      "public_classes": [
+        {
+          "name": "ChildExecution",
+          "summary": ""
+        }
+      ],
+      "constants": [],
+      "test_references": [
+        "tests/test_daemon.py",
+        "tests/test_ukbe_runner_wrapper.py"
+      ]
+    },
+    {
+      "rel_path": "agent_runner_v2/documentation_guardrails.py",
+      "module_name": "agent_runner_v2.documentation_guardrails",
+      "module_area": "support",
+      "doc_mode": "summary",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-documentation-guardrails.md",
+      "summary": "Auto-generated baseline module documentation.",
+      "module_doc": "",
+      "stdlib_imports": [
+        "__future__",
+        "pathlib",
+        "typing"
+      ],
+      "local_imports": [],
+      "external_imports": [],
+      "public_functions": [
+        {
+          "name": "managed_banner",
+          "signature": "()",
+          "summary": ""
+        },
+        {
+          "name": "master_bootstrap_doc_paths",
+          "signature": "()",
+          "summary": ""
+        },
+        {
+          "name": "master_bootstrap_artifact_candidates",
+          "signature": "()",
+          "summary": ""
+        },
+        {
+          "name": "execution_scaffold_doc_paths",
+          "signature": "()",
+          "summary": ""
+        },
+        {
+          "name": "workflow_generated_doc_paths",
+          "signature": "()",
+          "summary": ""
+        },
+        {
+          "name": "generated_doc_manifest",
+          "signature": "()",
+          "summary": ""
+        },
+        {
+          "name": "snapshot_paths",
+          "signature": "()",
+          "summary": ""
+        }
+      ],
+      "public_classes": [],
+      "constants": [
+        "MASTER_BOOTSTRAP_WORKFLOW",
+        "EXECUTION_SCAFFOLD_WORKFLOW",
+        "WORKFLOW_GENERATED_MARKER"
+      ],
+      "test_references": [
+        "tests/test_documentation_governance.py"
+      ]
+    },
+    {
+      "rel_path": "agent_runner_v2/engine_commands.py",
+      "module_name": "agent_runner_v2.engine_commands",
+      "module_area": "commands",
+      "doc_mode": "summary",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-engine-commands.md",
+      "summary": "Engine version management for agent_runner_v2.",
+      "module_doc": "Engine version management for agent_runner_v2.\n\nInvoked via: ukbe-run-agent engine <subcommand>\n\n  install <tag>                    -- download from GitHub and install globally (~/.ukbe-runner/engine/versions/)\n  install <tag> --local            -- install to repo-local .ukbe-runner/engine/versions/\n  install <tag> --from-path <dir>  -- copy from a local source directory (useful for private repos)\n  snapshot                         -- snapshot live source into repo-local SNAPSHOT version\n  use <version>                    -- set active version in .ukbe-runner/engine/config.json\n  list                             -- list installed versions (global + repo-local)",
+      "stdlib_imports": [
+        "__future__",
+        "argparse",
+        "datetime",
+        "json",
+        "os",
+        "pathlib",
+        "shutil",
+        "subprocess",
+        "sys",
+        "tarfile",
+        "tempfile",
+        "urllib.request"
+      ],
+      "local_imports": [],
+      "external_imports": [],
+      "public_functions": [
+        {
+          "name": "cmd_snapshot",
+          "signature": "(project_root)",
+          "summary": "Snapshot the live package source into repo-local SNAPSHOT version."
+        },
+        {
+          "name": "cmd_install",
+          "signature": "(tag, github_repo, global_install, from_path, project_root)",
+          "summary": "Install engine from a local path or a GitHub tag."
+        },
+        {
+          "name": "cmd_use",
+          "signature": "(project_root, version, local)",
+          "summary": "Set the active engine version in config.json."
+        },
+        {
+          "name": "cmd_list",
+          "signature": "(project_root)",
+          "summary": "List all installed engine versions (global + repo-local)."
+        },
+        {
+          "name": "main",
+          "signature": "(argv)",
+          "summary": ""
+        }
+      ],
+      "public_classes": [],
+      "constants": [
+        "DEFAULT_GITHUB_REPO"
+      ],
+      "test_references": []
+    },
+    {
+      "rel_path": "agent_runner_v2/exceptions.py",
+      "module_name": "agent_runner_v2.exceptions",
+      "module_area": "schema",
+      "doc_mode": "summary",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-exceptions.md",
+      "summary": "exceptions.py — Custom exceptions for agent_runner_v2.",
+      "module_doc": "exceptions.py — Custom exceptions for agent_runner_v2.\n\nThese replace the implicit error paths in v1 that relied on fallback recovery functions.\nIn v2, each failure has an explicit type so the runner can route it correctly.",
+      "stdlib_imports": [
+        "__future__"
+      ],
+      "local_imports": [],
+      "external_imports": [],
+      "public_functions": [],
+      "public_classes": [
+        {
+          "name": "PreflightBlockedError",
+          "summary": "Raised when a preflight check blocks step execution (e.g. artifact status not approved)."
+        },
+        {
+          "name": "MetaJsonMissingError",
+          "summary": "Raised when the coder did not write the expected meta.json sidecar after invocation."
+        },
+        {
+          "name": "MetaJsonInvalidError",
+          "summary": "Raised when meta.json exists but fails schema validation."
+        },
+        {
+          "name": "ArtifactMissingError",
+          "summary": "Raised when coder_result.artifacts references paths that don't exist on disk."
+        }
+      ],
+      "constants": [],
+      "test_references": []
+    },
+    {
+      "rel_path": "agent_runner_v2/execution_request.py",
+      "module_name": "agent_runner_v2.execution_request",
+      "module_area": "state",
+      "doc_mode": "summary",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-execution-request.md",
+      "summary": "Auto-generated baseline module documentation.",
+      "module_doc": "",
+      "stdlib_imports": [
+        "__future__",
+        "dataclasses",
+        "typing"
+      ],
+      "local_imports": [],
+      "external_imports": [],
+      "public_functions": [],
+      "public_classes": [
+        {
+          "name": "ExecutionRequest",
+          "summary": ""
+        }
+      ],
+      "constants": [],
+      "test_references": [
+        "tests/test_backend_worker_mode.py"
+      ]
+    },
+    {
+      "rel_path": "agent_runner_v2/execution_result.py",
+      "module_name": "agent_runner_v2.execution_result",
+      "module_area": "state",
+      "doc_mode": "summary",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-execution-result.md",
+      "summary": "Auto-generated baseline module documentation.",
+      "module_doc": "",
+      "stdlib_imports": [
+        "__future__",
+        "dataclasses",
+        "typing"
+      ],
+      "local_imports": [],
+      "external_imports": [],
+      "public_functions": [],
+      "public_classes": [
+        {
+          "name": "ExecutionFailure",
+          "summary": ""
+        },
+        {
+          "name": "ExecutionResult",
+          "summary": ""
+        }
+      ],
+      "constants": [],
+      "test_references": [
+        "tests/test_backend_worker_mode.py"
+      ]
+    },
+    {
+      "rel_path": "agent_runner_v2/job_state.py",
+      "module_name": "agent_runner_v2.job_state",
+      "module_area": "state",
+      "doc_mode": "full",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-job-state.md",
+      "summary": "job_state.py — All job.json lifecycle management for agent_runner_v2.",
+      "module_doc": "job_state.py — All job.json lifecycle management for agent_runner_v2.\n\nExtracted from v1 run_agent.py. Key differences from v1:\n- approve_step / force_approve_step no longer write back to markdown files\n- migrate_job_state adds schema version 6: runner_version=\"v2\"\n- No extract_blocking_issues, review_converges, or sync_review_metadata\n- replan_context.blocking_issues is always [] (content analysis is coder's job)",
+      "stdlib_imports": [
+        "__future__",
+        "datetime",
+        "hashlib",
+        "json",
+        "os",
+        "pathlib",
+        "re",
+        "tempfile",
+        "typing"
+      ],
+      "local_imports": [],
+      "external_imports": [
+        "documentation_guardrails",
+        "exceptions",
+        "runtime_context"
+      ],
+      "public_functions": [
+        {
+          "name": "now_iso",
+          "signature": "()",
+          "summary": ""
+        },
+        {
+          "name": "get_job_status",
+          "signature": "(state)",
+          "summary": ""
+        },
+        {
+          "name": "set_job_status",
+          "signature": "(state, value)",
+          "summary": ""
+        },
+        {
+          "name": "ensure_dir",
+          "signature": "(path)",
+          "summary": ""
+        },
+        {
+          "name": "resolve_repo_path",
+          "signature": "(value)",
+          "summary": ""
+        },
+        {
+          "name": "normalize_repo_relative_path",
+          "signature": "(value)",
+          "summary": ""
+        },
+        {
+          "name": "group_dir",
+          "signature": "(group_name)",
+          "summary": ""
+        },
+        {
+          "name": "job_dir",
+          "signature": "(group_name, job_id)",
+          "summary": ""
+        },
+        {
+          "name": "job_state_path",
+          "signature": "(group_name, job_id)",
+          "summary": ""
+        },
+        {
+          "name": "get_step_index",
+          "signature": "(group_cfg, step)",
+          "summary": ""
+        },
+        {
+          "name": "make_step_dir",
+          "signature": "(group_cfg, state, step)",
+          "summary": ""
+        },
+        {
+          "name": "load_json",
+          "signature": "(path)",
+          "summary": ""
+        },
+        {
+          "name": "save_json",
+          "signature": "(path, data)",
+          "summary": ""
+        },
+        {
+          "name": "save_json_atomic",
+          "signature": "(path, data)",
+          "summary": ""
+        },
+        {
+          "name": "save_text",
+          "signature": "(path, content)",
+          "summary": ""
+        },
+        {
+          "name": "set_last_failure",
+          "signature": "()",
+          "summary": ""
+        },
+        {
+          "name": "clear_last_failure",
+          "signature": "(state)",
+          "summary": ""
+        },
+        {
+          "name": "append_failure_history",
+          "signature": "()",
+          "summary": ""
+        },
+        {
+          "name": "build_failure_envelope",
+          "signature": "()",
+          "summary": ""
+        },
+        {
+          "name": "record_step_usage",
+          "signature": "(state, step, usage_data)",
+          "summary": ""
+        },
+        {
+          "name": "default_review_state",
+          "signature": "()",
+          "summary": ""
+        },
+        {
+          "name": "default_task_execution_binding",
+          "signature": "()",
+          "summary": ""
+        },
+        {
+          "name": "default_usage_summary",
+          "signature": "()",
+          "summary": ""
+        },
+        {
+          "name": "make_job_id",
+          "signature": "(group_name, group_cfg, seed_artifacts)",
+          "summary": ""
+        },
+        {
+          "name": "infer_seed_identity",
+          "signature": "(group_name, seed_artifacts)",
+          "summary": ""
+        },
+        {
+          "name": "create_job",
+          "signature": "(group_name, group_cfg, seed_artifacts)",
+          "summary": ""
+        },
+        {
+          "name": "load_job",
+          "signature": "(group_name, job_id)",
+          "summary": ""
+        },
+        {
+          "name": "save_job",
+          "signature": "(group_name, job_id, state)",
+          "summary": ""
+        },
+        {
+          "name": "iter_group_jobs",
+          "signature": "(group_name)",
+          "summary": ""
+        },
+        {
+          "name": "find_matching_active_job",
+          "signature": "()",
+          "summary": ""
+        },
+        {
+          "name": "find_matching_completed_job",
+          "signature": "()",
+          "summary": ""
+        },
+        {
+          "name": "migrate_job_state",
+          "signature": "(state)",
+          "summary": ""
+        },
+        {
+          "name": "ensure_backward_compatible_state",
+          "signature": "(state)",
+          "summary": ""
+        },
+        {
+          "name": "reconcile_job_state",
+          "signature": "(state, group_cfg)",
+          "summary": "Auto-repair obvious routing inconsistencies on job load."
+        },
+        {
+          "name": "reapply_routing",
+          "signature": "(state, group_cfg)",
+          "summary": ""
+        },
+        {
+          "name": "recover_exhausted_planning_job",
+          "signature": "(state, group_cfg)",
+          "summary": ""
+        },
+        {
+          "name": "check_preflight_artifact_status",
+          "signature": "()",
+          "summary": ""
+        },
+        {
+          "name": "task_queue_is_initialized",
+          "signature": "(state)",
+          "summary": ""
+        },
+        {
+          "name": "task_queue_current_item",
+          "signature": "(state)",
+          "summary": ""
+        },
+        {
+          "name": "next_pending_task_queue_item",
+          "signature": "(state)",
+          "summary": ""
+        },
+        {
+          "name": "task_queue_has_remaining_work",
+          "signature": "(state)",
+          "summary": ""
+        },
+        {
+          "name": "extract_task_graph_nodes",
+          "signature": "(task_graph_path)",
+          "summary": ""
+        },
+        {
+          "name": "find_task_graph_file_by_id",
+          "signature": "(task_graph_id)",
+          "summary": ""
+        },
+        {
+          "name": "find_plan_file_by_id",
+          "signature": "(plan_id)",
+          "summary": ""
+        },
+        {
+          "name": "build_task_execution_binding",
+          "signature": "()",
+          "summary": ""
+        },
+        {
+          "name": "build_task_execution_binding_from_ids",
+          "signature": "()",
+          "summary": ""
+        },
+        {
+          "name": "task_execution_binding_identity",
+          "signature": "(binding)",
+          "summary": ""
+        },
+        {
+          "name": "task_execution_binding_current_item",
+          "signature": "(state)",
+          "summary": ""
+        },
+        {
+          "name": "apply_task_execution_binding",
+          "signature": "(state, binding)",
+          "summary": ""
+        },
+        {
+          "name": "initialize_task_generation_state",
+          "signature": "(state)",
+          "summary": ""
+        },
+        {
+          "name": "ensure_planning_task_queue_integrity",
+          "signature": "(state)",
+          "summary": ""
+        },
+        {
+          "name": "ensure_execution_task_binding_integrity",
+          "signature": "(state)",
+          "summary": ""
+        },
+        {
+          "name": "get_next_step_skipping_refine_replan",
+          "signature": "(group_cfg, state)",
+          "summary": ""
+        },
+        {
+          "name": "get_next_step",
+          "signature": "(group_cfg, state)",
+          "summary": ""
+        },
+        {
+          "name": "advance_step",
+          "signature": "()",
+          "summary": "Unified step advancement. Returns (state, exit_code): 0=continue, 1=waiting, 2=failed."
+        },
+        {
+          "name": "approve_step",
+          "signature": "()",
+          "summary": ""
+        },
+        {
+          "name": "force_approve_step",
+          "signature": "()",
+          "summary": ""
+        },
+        {
+          "name": "prepare_state_for_retry",
+          "signature": "()",
+          "summary": ""
+        },
+        {
+          "name": "enforce_retry_limit_before_run",
+          "signature": "()",
+          "summary": ""
+        },
+        {
+          "name": "looks_like_transient_error",
+          "signature": "(message)",
+          "summary": ""
+        },
+        {
+          "name": "classify_pre_run_failure",
+          "signature": "(exc)",
+          "summary": ""
+        }
+      ],
+      "public_classes": [],
+      "constants": [
+        "CURRENT_SCHEMA_VERSION",
+        "NON_TERMINAL_JOB_STATUSES",
+        "REVIEW_DECISIONS",
+        "HUMAN_DECISIONS",
+        "FINAL_DECISION_SOURCES",
+        "CONTROL_CLASSES",
+        "FAILURE_SOURCES",
+        "REVIEW_ARTIFACT_TYPES"
+      ],
+      "test_references": [
+        "tests/test_run_agent_status.py"
+      ]
+    },
+    {
+      "rel_path": "agent_runner_v2/model_config.py",
+      "module_name": "agent_runner_v2.model_config",
+      "module_area": "coder",
+      "doc_mode": "summary",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-model-config.md",
+      "summary": "Model alias resolver for the agent runner.",
+      "module_doc": "Model alias resolver for the agent runner.\n\nLoads ``model_mapping.json`` from the runner root and resolves coder\naliases (e.g. ``\"qwen-deepseek\"``) into full invocation configs.\nPlain coder names (``\"claude\"``, ``\"codex\"``, ``\"qwen\"``) pass\nthrough unchanged.",
+      "stdlib_imports": [
+        "__future__",
+        "json",
+        "os",
+        "pathlib",
+        "typing"
+      ],
+      "local_imports": [],
+      "external_imports": [
+        "runtime_context"
+      ],
+      "public_functions": [
+        {
+          "name": "load_model_mapping",
+          "signature": "(path)",
+          "summary": "Load the model mapping file."
+        },
+        {
+          "name": "resolve_coder",
+          "signature": "(name)",
+          "summary": "Resolve a coder name into a full invocation config."
+        },
+        {
+          "name": "get_api_key",
+          "signature": "(coder_config)",
+          "summary": "Retrieve the API key for a coder config from environment variables."
+        }
+      ],
+      "public_classes": [],
+      "constants": [],
+      "test_references": []
+    },
+    {
+      "rel_path": "agent_runner_v2/run_agent.py",
+      "module_name": "agent_runner_v2.run_agent",
+      "module_area": "core",
+      "doc_mode": "full",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-run-agent.md",
+      "summary": "run_agent.py — Main CLI entry point for agent_runner_v2.",
+      "module_doc": "run_agent.py — Main CLI entry point for agent_runner_v2.\n\nOrchestration only: load config → resolve job → preflight → prompt → run_step → route.\n\nRelated: IMPL-20260422-04\n\nKey v2 differences from v1:\n- No disk recovery functions anywhere\n- No pre-invocation sidecar writes\n- No markdown write-backs (no sync_review_metadata, stamp_created_metadata, etc.)\n- run_step() and route_after_step() are the single execution path\n- Hard failures (MetaJsonMissingError, etc.) go to route_after_failure() immediately",
+      "stdlib_imports": [
+        "__future__",
+        "argparse",
+        "dataclasses",
+        "datetime",
+        "json",
+        "os",
+        "pathlib",
+        "re",
+        "shutil",
+        "subprocess",
+        "sys",
+        "tempfile",
+        "typing"
+      ],
+      "local_imports": [],
+      "external_imports": [
+        "backend_client",
+        "bundle_loader",
+        "documentation_guardrails",
+        "exceptions",
+        "execution_request",
+        "execution_result",
+        "job_state",
+        "model_config",
+        "runner_logger",
+        "runtime_context",
+        "step_runner",
+        "workflow_router",
+        "workflow_specs"
+      ],
+      "public_functions": [
+        {
+          "name": "parse_args",
+          "signature": "(argv)",
+          "summary": ""
+        },
+        {
+          "name": "main",
+          "signature": "(argv)",
+          "summary": ""
+        }
+      ],
+      "public_classes": [
+        {
+          "name": "PreparedStepExecution",
+          "summary": ""
+        }
+      ],
+      "constants": [],
+      "test_references": [
+        "tests/test_backend_worker_mode.py",
+        "tests/test_bundle_loader.py",
+        "tests/test_daemon.py",
+        "tests/test_documentation_governance.py",
+        "tests/test_run_agent_status.py"
+      ]
+    },
+    {
+      "rel_path": "agent_runner_v2/runner_actions.py",
+      "module_name": "agent_runner_v2.runner_actions",
+      "module_area": "schema",
+      "doc_mode": "summary",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-runner-actions.md",
+      "summary": "runner_actions.py — Registry and dispatch for non-coder step actions.",
+      "module_doc": "runner_actions.py — Registry and dispatch for non-coder step actions.\n\nDesign:\n- Action steps skip LLM invocation entirely.\n- Each action is a plain Python function with a standard signature.\n- The runner calls execute() which dispatches to the registered function.\n- Actions write their own meta.json sidecar and return a StepResult.\n\nAdding a new action:\n1. Write function in agent_runner_v2/actions/my_action.py\n2. Import and register in ACTION_REGISTRY below\n3. Set \"action\": \"my_action\" in the step config in template_groups.py",
+      "stdlib_imports": [
+        "__future__",
+        "logging",
+        "pathlib",
+        "typing"
+      ],
+      "local_imports": [],
+      "external_imports": [
+        "action_result",
+        "actions.assemble_video",
+        "actions.copy_artifact",
+        "actions.execute_i2v",
+        "actions.execute_t2i",
+        "actions.execute_voiceover",
+        "actions.finalize_bootstrap",
+        "actions.prepare_delivery_scaffold",
+        "actions.promote_artifact",
+        "actions.promote_init",
+        "actions.scan_repo_codebase",
+        "actions.submit_comfyui",
+        "actions.sync_codebase_docs",
+        "actions.sync_system_docs",
+        "actions.validate_codebase_docs",
+        "actions.validate_delivery_docs",
+        "actions.validate_system_docs"
+      ],
+      "public_functions": [
+        {
+          "name": "execute",
+          "signature": "()",
+          "summary": "Dispatch to a registered action function."
+        },
+        {
+          "name": "get_registered_actions",
+          "signature": "()",
+          "summary": "Return sorted list of registered action names."
+        }
+      ],
+      "public_classes": [],
+      "constants": [],
+      "test_references": []
+    },
+    {
+      "rel_path": "agent_runner_v2/runner_logger.py",
+      "module_name": "agent_runner_v2.runner_logger",
+      "module_area": "backend",
+      "doc_mode": "full",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-runner-logger.md",
+      "summary": "Structured logger for the agent runner.",
+      "module_doc": "Structured logger for the agent runner.\n\nProvides both console output (colourised) and file logging (JSON-lines).\nAll events include: timestamp, step, coder, model, duration, status.",
+      "stdlib_imports": [
+        "__future__",
+        "datetime",
+        "json",
+        "pathlib",
+        "sys",
+        "typing"
+      ],
+      "local_imports": [],
+      "external_imports": [
+        "runtime_context"
+      ],
+      "public_functions": [
+        {
+          "name": "log_event",
+          "signature": "(step, coder)",
+          "summary": "Log one event to both console and file."
+        },
+        {
+          "name": "log_invocation_start",
+          "signature": "(step, coder)",
+          "summary": "Log that a coder invocation is about to start."
+        },
+        {
+          "name": "log_invocation_result",
+          "signature": "(step, coder)",
+          "summary": "Log the result of a coder invocation."
+        },
+        {
+          "name": "log_error",
+          "signature": "(step, coder)",
+          "summary": "Log a coder invocation error."
+        },
+        {
+          "name": "log_resolver",
+          "signature": "(coder_input, resolved)",
+          "summary": "Log coder alias resolution."
+        }
+      ],
+      "public_classes": [],
+      "constants": [
+        "_COLOURS",
+        "_COLOUR_SUPPORTED"
+      ],
+      "test_references": []
+    },
+    {
+      "rel_path": "agent_runner_v2/runtime_context.py",
+      "module_name": "agent_runner_v2.runtime_context",
+      "module_area": "state",
+      "doc_mode": "full",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-runtime-context.md",
+      "summary": "Auto-generated baseline module documentation.",
+      "module_doc": "",
+      "stdlib_imports": [
+        "__future__",
+        "dataclasses",
+        "datetime",
+        "json",
+        "pathlib",
+        "tempfile",
+        "types",
+        "typing"
+      ],
+      "local_imports": [],
+      "external_imports": [],
+      "public_functions": [
+        {
+          "name": "set_context",
+          "signature": "()",
+          "summary": "Set process-local runtime context and return it."
+        },
+        {
+          "name": "get_context",
+          "signature": "()",
+          "summary": ""
+        },
+        {
+          "name": "get_workspace_root",
+          "signature": "()",
+          "summary": ""
+        },
+        {
+          "name": "get_runner_home",
+          "signature": "()",
+          "summary": ""
+        },
+        {
+          "name": "get_jobs_root",
+          "signature": "()",
+          "summary": ""
+        },
+        {
+          "name": "get_workflow_root",
+          "signature": "()",
+          "summary": ""
+        },
+        {
+          "name": "get_workflow_module",
+          "signature": "()",
+          "summary": ""
+        },
+        {
+          "name": "set_workflow_module",
+          "signature": "(module)",
+          "summary": ""
+        },
+        {
+          "name": "get_delivery_root",
+          "signature": "()",
+          "summary": ""
+        },
+        {
+          "name": "set_delivery_root",
+          "signature": "(root)",
+          "summary": ""
+        },
+        {
+          "name": "resolve_artifact_root",
+          "signature": "()",
+          "summary": "Return the root for resolving artifact paths."
+        },
+        {
+          "name": "resolve_repo_or_runtime_path",
+          "signature": "(path_str)",
+          "summary": "Resolve a path using the repo/runtime namespace convention."
+        },
+        {
+          "name": "artifact_rel_to_meta_rel",
+          "signature": "(artifact_rel)",
+          "summary": "Return the meta.json sibling path for a repo/runtime-relative artifact."
+        },
+        {
+          "name": "write_meta_sidecar",
+          "signature": "(meta_path_like)",
+          "summary": "Write a v2 meta.json sidecar using the shared path resolver."
+        },
+        {
+          "name": "resolve_step_meta_rel",
+          "signature": "()",
+          "summary": "Resolve the meta.json relative path for a step-owned artifact."
+        }
+      ],
+      "public_classes": [
+        {
+          "name": "RuntimeContext",
+          "summary": ""
+        },
+        {
+          "name": "PathProxy",
+          "summary": "Lightweight Path-like proxy that resolves lazily from current context."
+        }
+      ],
+      "constants": [
+        "PACKAGE_ROOT",
+        "DEFAULT_RUNNER_HOME",
+        "GLOBAL_RUNNER_HOME",
+        "DEFAULT_WORKFLOW_NAME",
+        "_CTX",
+        "PROJECT_ROOT",
+        "RUNNER_HOME",
+        "RUNNER_ROOT",
+        "JOBS_ROOT",
+        "DELIVERY_ROOT",
+        "ARTIFACT_ROOT"
+      ],
+      "test_references": [
+        "tests/test_backend_worker_mode.py",
+        "tests/test_runtime_context_paths.py"
+      ]
+    },
+    {
+      "rel_path": "agent_runner_v2/step_runner.py",
+      "module_name": "agent_runner_v2.step_runner",
+      "module_area": "core",
+      "doc_mode": "full",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-step-runner.md",
+      "summary": "step_runner.py — Core step execution contract for agent_runner_v2.",
+      "module_doc": "step_runner.py — Core step execution contract for agent_runner_v2.\n\nSingle responsibility: invoke coder → read meta.json → validate artifacts → enrich sidecar.\n\nRelated: IMPL-20260422-04, PLAN-20260608-01\n\nKey v2 differences from v1:\n- meta.json sidecar is the ONLY communication channel (no fallbacks, no stdout JSON parsing)\n- No pre-invocation sidecar writes\n- No recovery functions\n- Raises exceptions on failure; caller routes them",
+      "stdlib_imports": [
+        "__future__",
+        "dataclasses",
+        "datetime",
+        "hashlib",
+        "json",
+        "pathlib",
+        "re",
+        "shutil",
+        "tempfile",
+        "typing"
+      ],
+      "local_imports": [],
+      "external_imports": [
+        "artifact_paths",
+        "coder_adapters",
+        "documentation_guardrails",
+        "exceptions",
+        "runtime_context"
+      ],
+      "public_functions": [
+        {
+          "name": "run_step",
+          "signature": "()",
+          "summary": "Invoke coder, read meta.json contract, validate artifacts, enrich sidecar."
+        },
+        {
+          "name": "run_action",
+          "signature": "()",
+          "summary": "Execute a runner action (non-coder step)."
+        },
+        {
+          "name": "enrich_sidecar",
+          "signature": "()",
+          "summary": "Atomically append runner_data section to existing meta.json."
+        },
+        {
+          "name": "build_context",
+          "signature": "(state)",
+          "summary": "Build the full context dict for prompt rendering."
+        },
+        {
+          "name": "render_prompt",
+          "signature": "(template_text, context)",
+          "summary": ""
+        },
+        {
+          "name": "prompt_checksum",
+          "signature": "(prompt_text)",
+          "summary": ""
+        },
+        {
+          "name": "resolve_prompt_path",
+          "signature": "()",
+          "summary": "Resolve prompt file path with three-level fallback."
+        }
+      ],
+      "public_classes": [
+        {
+          "name": "StepResult",
+          "summary": ""
+        }
+      ],
+      "constants": [
+        "RESULT_SCHEMA_PATH",
+        "_TOOL_INSTRUCTION_TEMPLATE"
+      ],
+      "test_references": [
+        "tests/test_backend_worker_mode.py",
+        "tests/test_documentation_governance.py",
+        "tests/test_tool_instruction_block.py"
+      ]
+    },
+    {
+      "rel_path": "agent_runner_v2/submit_commands.py",
+      "module_name": "agent_runner_v2.submit_commands",
+      "module_area": "commands",
+      "doc_mode": "summary",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-submit-commands.md",
+      "summary": "Submit a run to the agent-runner-backend API.",
+      "module_doc": "Submit a run to the agent-runner-backend API.\n\nInvoked via: ukbe-run-agent submit --workflow-name <name> [options]\n\nReads backend_url, worker_id, and worker_label from ~/.ukbe-runner/engine/config.json\nby default. All options can be overridden via flags or env vars.",
+      "stdlib_imports": [
+        "__future__",
+        "argparse",
+        "json",
+        "os",
+        "pathlib",
+        "sys"
+      ],
+      "local_imports": [],
+      "external_imports": [
+        "backend_client"
+      ],
+      "public_functions": [
+        {
+          "name": "main",
+          "signature": "(argv)",
+          "summary": ""
+        }
+      ],
+      "public_classes": [],
+      "constants": [],
+      "test_references": []
+    },
+    {
+      "rel_path": "agent_runner_v2/submitter.py",
+      "module_name": "agent_runner_v2.submitter",
+      "module_area": "commands",
+      "doc_mode": "summary",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-submitter.md",
+      "summary": "submitter.py — ComfyUI API client for agent-runner-v2.",
+      "module_doc": "submitter.py — ComfyUI API client for agent-runner-v2.\n\nRe-implementation of comfyui-submitter logic in Python.\nHandles authentication, workflow execution, and batch submission.\n\nUsage (standalone):\n    python -m agent_runner_v2.submitter --input-dir source_csv/20260425-001/\n    python -m agent_runner_v2.submitter --input-dir source_csv/20260425-001/ --workflow-key \"QWEN/Test\"\n\nUsage (from runner):\n    submit_files(run_dir, workflow_key_override=None)",
+      "stdlib_imports": [
+        "__future__",
+        "dataclasses",
+        "json",
+        "os",
+        "pathlib",
+        "time",
+        "typing",
+        "urllib.error",
+        "urllib.request"
+      ],
+      "local_imports": [],
+      "external_imports": [],
+      "public_functions": [
+        {
+          "name": "load_config",
+          "signature": "(config_path)",
+          "summary": "Load ComfyUI config from JSON file, resolving env var placeholders."
+        },
+        {
+          "name": "login",
+          "signature": "(base_url, email, password)",
+          "summary": "Authenticate and return JWT token."
+        },
+        {
+          "name": "execute_workflow",
+          "signature": "(base_url, token, workflow_key, entry, test_mode)",
+          "summary": "Submit a single entry to the ComfyUI workflow."
+        },
+        {
+          "name": "submit_files",
+          "signature": "(run_dir)",
+          "summary": "Submit all JSON files in run_dir to ComfyUI."
+        },
+        {
+          "name": "main",
+          "signature": "()",
+          "summary": ""
+        }
+      ],
+      "public_classes": [
+        {
+          "name": "SubmissionResult",
+          "summary": "Result of a single entry submission."
+        },
+        {
+          "name": "SubmissionSummary",
+          "summary": "Summary of a batch submission."
+        }
+      ],
+      "constants": [
+        "PACKAGE_ROOT",
+        "DEFAULT_CONFIG_PATH"
+      ],
+      "test_references": []
+    },
+    {
+      "rel_path": "agent_runner_v2/system_docs.py",
+      "module_name": "agent_runner_v2.system_docs",
+      "module_area": "support",
+      "doc_mode": "summary",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-system-docs.md",
+      "summary": "Auto-generated baseline module documentation.",
+      "module_doc": "",
+      "stdlib_imports": [
+        "__future__",
+        "datetime",
+        "pathlib"
+      ],
+      "local_imports": [],
+      "external_imports": [],
+      "public_functions": [
+        {
+          "name": "render_system_index",
+          "signature": "(snapshot)",
+          "summary": ""
+        },
+        {
+          "name": "render_documentation_standard",
+          "signature": "(snapshot)",
+          "summary": ""
+        },
+        {
+          "name": "render_bundle_taxonomy",
+          "signature": "(snapshot)",
+          "summary": ""
+        },
+        {
+          "name": "render_bundle_migration_plan",
+          "signature": "(snapshot)",
+          "summary": ""
+        },
+        {
+          "name": "render_system_overview",
+          "signature": "(snapshot)",
+          "summary": ""
+        },
+        {
+          "name": "render_business_capabilities",
+          "signature": "(snapshot)",
+          "summary": ""
+        },
+        {
+          "name": "render_functional_spec",
+          "signature": "(snapshot)",
+          "summary": ""
+        },
+        {
+          "name": "render_nfr",
+          "signature": "(snapshot)",
+          "summary": ""
+        },
+        {
+          "name": "render_system_context",
+          "signature": "(snapshot)",
+          "summary": ""
+        },
+        {
+          "name": "render_component_architecture",
+          "signature": "(snapshot)",
+          "summary": ""
+        },
+        {
+          "name": "render_decision_log",
+          "signature": "(snapshot)",
+          "summary": ""
+        },
+        {
+          "name": "render_system_file_structure",
+          "signature": "(snapshot)",
+          "summary": ""
+        },
+        {
+          "name": "render_developer_guide",
+          "signature": "(snapshot)",
+          "summary": ""
+        },
+        {
+          "name": "render_runbook",
+          "signature": "(snapshot)",
+          "summary": ""
+        },
+        {
+          "name": "render_system_docs_change_log",
+          "signature": "(snapshot)",
+          "summary": ""
+        },
+        {
+          "name": "render_system_docs_validation",
+          "signature": "(snapshot)",
+          "summary": ""
+        }
+      ],
+      "public_classes": [],
+      "constants": [],
+      "test_references": [
+        "tests/test_bundle_loader.py",
+        "tests/test_documentation_governance.py"
+      ]
+    },
+    {
+      "rel_path": "agent_runner_v2/tools/agent_tools.py",
+      "module_name": "agent_runner_v2.tools.agent_tools",
+      "module_area": "tools",
+      "doc_mode": "summary",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-tools-agent-tools.md",
+      "summary": "agent_tools.py — Task coder tool functions for agent-runner steps.",
+      "module_doc": "agent_tools.py — Task coder tool functions for agent-runner steps.\n\nTwo operations:\n  create_todos(step_id, todos)        → records all todo items as pending\n  mark_complete(step_id, index, notes) → marks a todo item as completed\n\nWrites append-only JSON lines to the file at PROGRESS_FILE env var.\nAlso POSTs to the backend API when BACKEND_URL and WORKFLOW_STEP_RUN_ID are set.",
+      "stdlib_imports": [
+        "datetime",
+        "json",
+        "os",
+        "pathlib",
+        "sys",
+        "urllib.request"
+      ],
+      "local_imports": [],
+      "external_imports": [],
+      "public_functions": [
+        {
+          "name": "create_todos",
+          "signature": "(step_id, todos)",
+          "summary": "Register all todo items for this step. All start as pending."
+        },
+        {
+          "name": "mark_complete",
+          "signature": "(step_id, todo_index, notes)",
+          "summary": "Mark the todo at 1-based index as completed, resolving the original item description."
+        }
+      ],
+      "public_classes": [],
+      "constants": [
+        "PROGRESS_FILE",
+        "BACKEND_URL",
+        "STEP_RUN_ID"
+      ],
+      "test_references": []
+    },
+    {
+      "rel_path": "agent_runner_v2/workflow_router.py",
+      "module_name": "agent_runner_v2.workflow_router",
+      "module_area": "core",
+      "doc_mode": "full",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-workflow-router.md",
+      "summary": "workflow_router.py — Post-step routing for agent_runner_v2.",
+      "module_doc": "workflow_router.py — Post-step routing for agent_runner_v2.\n\nReplaces the monolithic update_job_state_after_result() from v1.\n\nKey v2 differences from v1:\n- No extract_blocking_issues() — blocking_issues is always [] (coder owns content analysis)\n- No review_converges() check — coder decides if replan was adequate\n- No review_file_has_actionable_findings() check — trust coder's REJECTED\n- No duplicate review file check — coder owns path uniqueness\n- No sync_review_metadata() — runner does NOT write to markdown files\n- No stamp_created_metadata() — runner does NOT own markdown fields\n- update_review_state() still used to track review state in job.json only",
+      "stdlib_imports": [
+        "__future__",
+        "datetime",
+        "pathlib",
+        "re",
+        "typing"
+      ],
+      "local_imports": [],
+      "external_imports": [
+        "coder_adapters",
+        "exceptions",
+        "job_state",
+        "runtime_context",
+        "step_runner"
+      ],
+      "public_functions": [
+        {
+          "name": "route_after_step",
+          "signature": "()",
+          "summary": "Route job state after a successful step invocation."
+        },
+        {
+          "name": "route_after_failure",
+          "signature": "()",
+          "summary": "Route job state after a hard failure (exception from run_step)."
+        }
+      ],
+      "public_classes": [],
+      "constants": [],
+      "test_references": [
+        "tests/test_documentation_governance.py"
+      ]
+    },
+    {
+      "rel_path": "agent_runner_v2/workflow_spec_commands.py",
+      "module_name": "agent_runner_v2.workflow_spec_commands",
+      "module_area": "support",
+      "doc_mode": "summary",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-workflow-spec-commands.md",
+      "summary": "Auto-generated baseline module documentation.",
+      "module_doc": "",
+      "stdlib_imports": [
+        "__future__",
+        "argparse",
+        "json",
+        "pathlib",
+        "sys"
+      ],
+      "local_imports": [],
+      "external_imports": [
+        "workflow_specs"
+      ],
+      "public_functions": [
+        {
+          "name": "main",
+          "signature": "(argv)",
+          "summary": ""
+        }
+      ],
+      "public_classes": [],
+      "constants": [],
+      "test_references": []
+    },
+    {
+      "rel_path": "agent_runner_v2/workflow_specs.py",
+      "module_name": "agent_runner_v2.workflow_specs",
+      "module_area": "support",
+      "doc_mode": "summary",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-workflow-specs.md",
+      "summary": "Auto-generated baseline module documentation.",
+      "module_doc": "",
+      "stdlib_imports": [
+        "__future__",
+        "copy",
+        "pathlib",
+        "typing"
+      ],
+      "local_imports": [],
+      "external_imports": [
+        "bundle_loader"
+      ],
+      "public_functions": [
+        {
+          "name": "load_workflow_definition",
+          "signature": "()",
+          "summary": ""
+        },
+        {
+          "name": "get_template_group_cfg",
+          "signature": "()",
+          "summary": ""
+        },
+        {
+          "name": "build_step_execution_spec",
+          "signature": "()",
+          "summary": ""
+        },
+        {
+          "name": "build_workflow_step_specs",
+          "signature": "()",
+          "summary": ""
+        },
+        {
+          "name": "reconcile_step_execution_spec",
+          "signature": "()",
+          "summary": ""
+        }
+      ],
+      "public_classes": [],
+      "constants": [
+        "AUTHORITATIVE_STEP_SPEC_KEYS"
+      ],
+      "test_references": []
+    }
+  ],
+  "workflow_families": [
+    {
+      "family_name": "00_master_docs_bootstrap_v1",
+      "job_prefix": "00DOC",
+      "job_init_step": "00_scan_repo_codebase",
+      "job_init_inputs": [],
+      "visibility": "canonical",
+      "steps": [
+        {
+          "step": "00_scan_repo_codebase",
+          "kind": "action",
+          "coder": "",
+          "prompt_file": "",
+          "produces": [
+            "CODEBASE_SCAN_SNAPSHOT"
+          ]
+        },
+        {
+          "step": "01_generate_codebase_baseline",
+          "kind": "action",
+          "coder": "",
+          "prompt_file": "",
+          "produces": [
+            "CODEBASE_CHANGE_IMPACT",
+            "CODEBASE_INVENTORY"
+          ]
+        },
+        {
+          "step": "02_generate_project_analysis",
+          "kind": "coder",
+          "coder": "qwen-architect",
+          "prompt_file": "prompts\\00_master_docs_bootstrap_v1\\02_generate_project_analysis.txt",
+          "produces": [
+            "PROJECT_ANALYSIS"
+          ]
+        },
+        {
+          "step": "03_generate_system_overview_docs",
+          "kind": "coder",
+          "coder": "qwen-architect",
+          "prompt_file": "prompts\\00_master_docs_bootstrap_v1\\03_generate_system_overview_docs.txt",
+          "produces": [
+            "SYSTEM_DOCS_INDEX",
+            "SYSTEM_DOC_STANDARD",
+            "BUNDLE_TAXONOMY",
+            "BUNDLE_MIGRATION_PLAN",
+            "SYSTEM_OVERVIEW",
+            "BUSINESS_CAPABILITIES",
+            "FUNCTIONAL_SPEC",
+            "NON_FUNCTIONAL_REQUIREMENTS"
+          ]
+        },
+        {
+          "step": "04_generate_architecture_docs",
+          "kind": "coder",
+          "coder": "qwen-architect",
+          "prompt_file": "prompts\\00_master_docs_bootstrap_v1\\04_generate_architecture_docs.txt",
+          "produces": [
+            "SYSTEM_DOCS_CHANGE_LOG",
+            "SYSTEM_CONTEXT",
+            "COMPONENT_ARCHITECTURE",
+            "DECISION_LOG",
+            "SYSTEM_FILE_STRUCTURE",
+            "DEVELOPER_GUIDE",
+            "RUNBOOK",
+            "EXISTING_REPO_WORKFLOW_SOP"
+          ]
+        },
+        {
+          "step": "05_review_master_system_docs",
+          "kind": "coder",
+          "coder": "qwen-reviewer",
+          "prompt_file": "prompts\\00_master_docs_bootstrap_v1\\05_review_master_system_docs.txt",
+          "produces": [
+            "REVIEW_FILE"
+          ]
+        },
+        {
+          "step": "06_refine_master_system_docs",
+          "kind": "coder",
+          "coder": "qwen-architect",
+          "prompt_file": "prompts\\00_master_docs_bootstrap_v1\\06_refine_master_system_docs.txt",
+          "produces": [
+            "PROJECT_ANALYSIS",
+            "SYSTEM_DOCS_INDEX",
+            "SYSTEM_DOCS_CHANGE_LOG"
+          ]
+        },
+        {
+          "step": "07_validate_codebase_baseline",
+          "kind": "action",
+          "coder": "",
+          "prompt_file": "",
+          "produces": [
+            "VALIDATION_FILE"
+          ]
+        },
+        {
+          "step": "08_validate_master_system_docs",
+          "kind": "action",
+          "coder": "",
+          "prompt_file": "",
+          "produces": [
+            "SYSTEM_DOCS_VALIDATION"
+          ]
+        },
+        {
+          "step": "09_finalize_bootstrap",
+          "kind": "action",
+          "coder": "",
+          "prompt_file": "",
+          "produces": [
+            "BOOTSTRAP_SUMMARY"
+          ]
+        }
+      ],
+      "component_id": "00_master_docs_bootstrap_v1",
+      "owner_doc_path": "docs/codebase/03_components/workflow-families.md"
+    },
+    {
+      "family_name": "10_execution_scaffold_v1",
+      "job_prefix": "10SCAFFOLD",
+      "job_init_step": "project_analysis",
+      "job_init_inputs": [],
+      "visibility": "canonical",
+      "steps": [
+        {
+          "step": "project_analysis",
+          "kind": "coder",
+          "coder": "claude-architect",
+          "prompt_file": "prompts\\10_execution_scaffold_v1\\01_project_analysis.txt",
+          "produces": [
+            "PROJECT_ANALYSIS"
+          ]
+        },
+        {
+          "step": "prepare_delivery_scaffold_dirs",
+          "kind": "action",
+          "coder": "",
+          "prompt_file": "",
+          "produces": []
+        },
+        {
+          "step": "generate_sop",
+          "kind": "coder",
+          "coder": "claude-architect",
+          "prompt_file": "prompts\\10_execution_scaffold_v1\\02_generate_sop.txt",
+          "produces": [
+            "DELIVERY_SOP",
+            "DELIVERY_STATUS_RULES",
+            "CODEBASE_DOC_SOP",
+            "CODEBASE_DOC_STATUS_RULES",
+            "EXISTING_REPO_WORKFLOW_SOP"
+          ]
+        },
+        {
+          "step": "review_sop",
+          "kind": "coder",
+          "coder": "qwen-reviewer",
+          "prompt_file": "prompts\\10_execution_scaffold_v1\\03_review_sop.txt",
+          "produces": [
+            "REVIEW_FILE"
+          ]
+        },
+        {
+          "step": "refine_sop",
+          "kind": "coder",
+          "coder": "claude-architect",
+          "prompt_file": "prompts\\10_execution_scaffold_v1\\05_refine_sop.txt",
+          "produces": [
+            "DELIVERY_SOP",
+            "DELIVERY_STATUS_RULES",
+            "CODEBASE_DOC_SOP",
+            "CODEBASE_DOC_STATUS_RULES",
+            "EXISTING_REPO_WORKFLOW_SOP"
+          ]
+        },
+        {
+          "step": "replan_sop",
+          "kind": "coder",
+          "coder": "qwen-architect",
+          "prompt_file": "prompts\\10_execution_scaffold_v1\\05_replan_sop.txt",
+          "produces": [
+            "DELIVERY_SOP",
+            "DELIVERY_STATUS_RULES",
+            "CODEBASE_DOC_SOP",
+            "CODEBASE_DOC_STATUS_RULES",
+            "EXISTING_REPO_WORKFLOW_SOP"
+          ]
+        },
+        {
+          "step": "generate_templates",
+          "kind": "coder",
+          "coder": "claude-architect",
+          "prompt_file": "prompts\\10_execution_scaffold_v1\\03_generate_templates.txt",
+          "produces": [
+            "DELIVERY_TEMPLATE_REGISTRY",
+            "DELIVERY_INITIATIVE_TEMPLATE",
+            "DELIVERY_PLAN_TEMPLATE",
+            "DELIVERY_TASK_GRAPH_TEMPLATE",
+            "DELIVERY_TASK_TEMPLATE",
+            "DELIVERY_IMPL_TEMPLATE",
+            "DELIVERY_REVIEW_TEMPLATE",
+            "DELIVERY_VALIDATION_TEMPLATE",
+            "DELIVERY_MEMORY_TEMPLATE",
+            "CODEBASE_TEMPLATE_REGISTRY",
+            "CODEBASE_INVENTORY_TEMPLATE",
+            "CODEBASE_MODULE_TEMPLATE",
+            "CODEBASE_COMPONENT_TEMPLATE",
+            "CODEBASE_CHANGE_TEMPLATE",
+            "CODEBASE_INVENTORY"
+          ]
+        },
+        {
+          "step": "review_templates",
+          "kind": "coder",
+          "coder": "claude-reviewer",
+          "prompt_file": "prompts\\10_execution_scaffold_v1\\06_review_templates.txt",
+          "produces": [
+            "REVIEW_FILE"
+          ]
+        },
+        {
+          "step": "refine_templates",
+          "kind": "coder",
+          "coder": "codex-architect",
+          "prompt_file": "prompts\\10_execution_scaffold_v1\\06_refine_templates.txt",
+          "produces": [
+            "DELIVERY_TEMPLATE_REGISTRY",
+            "DELIVERY_INITIATIVE_TEMPLATE",
+            "DELIVERY_PLAN_TEMPLATE",
+            "DELIVERY_TASK_GRAPH_TEMPLATE",
+            "DELIVERY_TASK_TEMPLATE",
+            "DELIVERY_IMPL_TEMPLATE",
+            "DELIVERY_REVIEW_TEMPLATE",
+            "DELIVERY_VALIDATION_TEMPLATE",
+            "DELIVERY_MEMORY_TEMPLATE",
+            "CODEBASE_TEMPLATE_REGISTRY",
+            "CODEBASE_INVENTORY_TEMPLATE",
+            "CODEBASE_MODULE_TEMPLATE",
+            "CODEBASE_COMPONENT_TEMPLATE",
+            "CODEBASE_CHANGE_TEMPLATE",
+            "CODEBASE_INVENTORY"
+          ]
+        },
+        {
+          "step": "generate_agents",
+          "kind": "coder",
+          "coder": "claude-architect",
+          "prompt_file": "prompts\\10_execution_scaffold_v1\\04_generate_agents.txt",
+          "produces": [
+            "DELIVERY_AGENTS_MD",
+            "DELIVERY_AGENT_PLANNER",
+            "DELIVERY_AGENT_TASK_DECOMPOSER",
+            "DELIVERY_AGENT_IMPL_PLANNER",
+            "DELIVERY_AGENT_EXECUTOR",
+            "DELIVERY_AGENT_REVIEWER",
+            "DELIVERY_AGENT_MEMORY_MANAGER"
+          ]
+        },
+        {
+          "step": "review_agents",
+          "kind": "coder",
+          "coder": "claude-reviewer",
+          "prompt_file": "prompts\\10_execution_scaffold_v1\\08_review_agents.txt",
+          "produces": [
+            "REVIEW_FILE"
+          ]
+        },
+        {
+          "step": "refine_agents",
+          "kind": "coder",
+          "coder": "claude-architect",
+          "prompt_file": "prompts\\10_execution_scaffold_v1\\07_refine_agents.txt",
+          "produces": [
+            "DELIVERY_AGENTS_MD",
+            "DELIVERY_AGENT_PLANNER",
+            "DELIVERY_AGENT_TASK_DECOMPOSER",
+            "DELIVERY_AGENT_IMPL_PLANNER",
+            "DELIVERY_AGENT_EXECUTOR",
+            "DELIVERY_AGENT_REVIEWER",
+            "DELIVERY_AGENT_MEMORY_MANAGER"
+          ]
+        },
+        {
+          "step": "validate_delivery_docs",
+          "kind": "action",
+          "coder": "",
+          "prompt_file": "",
+          "produces": [
+            "DELIVERY_FOLDER_MAP"
+          ]
+        }
+      ],
+      "component_id": "10_execution_scaffold_v1",
+      "owner_doc_path": "docs/codebase/03_components/workflow-families.md"
+    },
+    {
+      "family_name": "20_initiative_intake_v1",
+      "job_prefix": "20PREINIT",
+      "job_init_step": "pre_init",
+      "job_init_inputs": [
+        "DRAFT_INIT_FILE"
+      ],
+      "visibility": "canonical",
+      "steps": [
+        {
+          "step": "pre_init",
+          "kind": "coder",
+          "coder": "qwen-architect",
+          "prompt_file": "prompts\\20_initiative_intake_v1\\01_pre_init.txt",
+          "produces": [
+            "PRE_INIT_FILE"
+          ]
+        },
+        {
+          "step": "review_pre_init",
+          "kind": "coder",
+          "coder": "qwen-reviewer",
+          "prompt_file": "prompts\\20_initiative_intake_v1\\02_review_pre_init.txt",
+          "produces": [
+            "REVIEW_FILE"
+          ]
+        },
+        {
+          "step": "refine_pre_init",
+          "kind": "coder",
+          "coder": "qwen-architect",
+          "prompt_file": "prompts\\20_initiative_intake_v1\\03_refine_pre_init.txt",
+          "produces": [
+            "PRE_INIT_FILE"
+          ]
+        },
+        {
+          "step": "promote_pre_init",
+          "kind": "action",
+          "coder": "",
+          "prompt_file": "",
+          "produces": [
+            "PRE_INIT_FILE"
+          ]
+        },
+        {
+          "step": "copy_init",
+          "kind": "action",
+          "coder": "",
+          "prompt_file": "",
+          "produces": [
+            "INIT_FILE"
+          ]
+        }
+      ],
+      "component_id": "20_initiative_intake_v1",
+      "owner_doc_path": "docs/codebase/03_components/workflow-families.md"
+    },
+    {
+      "family_name": "21_bug_fix_intake_v1",
+      "job_prefix": "21BUGFIX",
+      "job_init_step": "triage_bug",
+      "job_init_inputs": [
+        "BUG_DRAFT_FILE"
+      ],
+      "visibility": "canonical",
+      "steps": [
+        {
+          "step": "triage_bug",
+          "kind": "coder",
+          "coder": "",
+          "prompt_file": "prompts\\21_bug_fix_intake_v1\\01_triage_bug.txt",
+          "produces": [
+            "BUG_REPORT_FILE"
+          ]
+        },
+        {
+          "step": "reproduce_bug",
+          "kind": "coder",
+          "coder": "",
+          "prompt_file": "prompts\\21_bug_fix_intake_v1\\02_reproduce_bug.txt",
+          "produces": [
+            "REPRO_FILE"
+          ]
+        },
+        {
+          "step": "isolate_root_cause",
+          "kind": "coder",
+          "coder": "",
+          "prompt_file": "prompts\\21_bug_fix_intake_v1\\03_isolate_root_cause.txt",
+          "produces": [
+            "ROOT_CAUSE_FILE"
+          ]
+        },
+        {
+          "step": "patch_bug",
+          "kind": "coder",
+          "coder": "",
+          "prompt_file": "prompts\\21_bug_fix_intake_v1\\04_patch_bug.txt",
+          "produces": [
+            "PATCH_FILE"
+          ]
+        },
+        {
+          "step": "regression_validate",
+          "kind": "coder",
+          "coder": "",
+          "prompt_file": "prompts\\21_bug_fix_intake_v1\\05_regression_validate.txt",
+          "produces": [
+            "VALIDATION_FILE"
+          ]
+        },
+        {
+          "step": "sync_codebase_docs",
+          "kind": "action",
+          "coder": "",
+          "prompt_file": "",
+          "produces": [
+            "CODEBASE_CHANGE_IMPACT",
+            "CODEBASE_INVENTORY"
+          ]
+        },
+        {
+          "step": "sync_system_docs",
+          "kind": "action",
+          "coder": "",
+          "prompt_file": "",
+          "produces": [
+            "SYSTEM_DOCS_INDEX",
+            "SYSTEM_DOCS_CHANGE_LOG"
+          ]
+        }
+      ],
+      "component_id": "21_bug_fix_intake_v1",
+      "owner_doc_path": "docs/codebase/03_components/workflow-families.md"
+    },
+    {
+      "family_name": "30_delivery_planning_v1",
+      "job_prefix": "30PLAN",
+      "job_init_step": "planner",
+      "job_init_inputs": [
+        "INIT_FILE"
+      ],
+      "visibility": "canonical",
+      "steps": [
+        {
+          "step": "planner",
+          "kind": "coder",
+          "coder": "qwen-architect",
+          "prompt_file": "prompts\\30_delivery_planning_v1\\02_planner.txt",
+          "produces": [
+            "PLAN_FILE"
+          ]
+        },
+        {
+          "step": "review_planner",
+          "kind": "coder",
+          "coder": "qwen-reviewer",
+          "prompt_file": "prompts\\30_delivery_planning_v1\\03_review_planner.txt",
+          "produces": [
+            "REVIEW_FILE"
+          ]
+        },
+        {
+          "step": "refine_plan",
+          "kind": "coder",
+          "coder": "qwen-architect",
+          "prompt_file": "prompts\\30_delivery_planning_v1\\03_refine_plan.txt",
+          "produces": [
+            "PLAN_FILE"
+          ]
+        },
+        {
+          "step": "replan_plan",
+          "kind": "coder",
+          "coder": "qwen-architect",
+          "prompt_file": "prompts\\30_delivery_planning_v1\\03_replan_plan.txt",
+          "produces": [
+            "PLAN_FILE"
+          ]
+        },
+        {
+          "step": "promote_plan",
+          "kind": "action",
+          "coder": "",
+          "prompt_file": "",
+          "produces": [
+            "PLAN_FILE"
+          ]
+        },
+        {
+          "step": "task_graph",
+          "kind": "coder",
+          "coder": "qwen-architect",
+          "prompt_file": "prompts\\30_delivery_planning_v1\\04_task_graph.txt",
+          "produces": [
+            "TASK_GRAPH_FILE"
+          ]
+        },
+        {
+          "step": "review_task_graph",
+          "kind": "coder",
+          "coder": "qwen-reviewer",
+          "prompt_file": "prompts\\30_delivery_planning_v1\\05_review_task_graph.txt",
+          "produces": [
+            "REVIEW_FILE"
+          ]
+        },
+        {
+          "step": "refine_task_graph",
+          "kind": "coder",
+          "coder": "qwen-architect",
+          "prompt_file": "prompts\\30_delivery_planning_v1\\05_refine_task_graph.txt",
+          "produces": [
+            "TASK_GRAPH_FILE"
+          ]
+        },
+        {
+          "step": "replan_task_graph",
+          "kind": "coder",
+          "coder": "qwen-architect",
+          "prompt_file": "prompts\\30_delivery_planning_v1\\05_replan_task_graph.txt",
+          "produces": [
+            "TASK_GRAPH_FILE"
+          ]
+        },
+        {
+          "step": "promote_task_graph",
+          "kind": "action",
+          "coder": "",
+          "prompt_file": "",
+          "produces": [
+            "TASK_GRAPH_FILE",
+            "PLAN_FILE"
+          ]
+        }
+      ],
+      "component_id": "30_delivery_planning_v1",
+      "owner_doc_path": "docs/codebase/03_components/workflow-families.md"
+    },
+    {
+      "family_name": "31_task_execution_v1",
+      "job_prefix": "31EXEC",
+      "job_init_step": "task",
+      "job_init_inputs": [],
+      "visibility": "canonical",
+      "steps": [
+        {
+          "step": "task",
+          "kind": "coder",
+          "coder": "qwen-architect",
+          "prompt_file": "prompts\\30_delivery_planning_v1\\06_task.txt",
+          "produces": [
+            "TASK_FILE"
+          ]
+        },
+        {
+          "step": "review_task",
+          "kind": "coder",
+          "coder": "qwen-reviewer",
+          "prompt_file": "prompts\\30_delivery_planning_v1\\07_review_task.txt",
+          "produces": [
+            "REVIEW_FILE"
+          ]
+        },
+        {
+          "step": "refine_task",
+          "kind": "coder",
+          "coder": "qwen-architect",
+          "prompt_file": "prompts\\30_delivery_planning_v1\\07_refine_task.txt",
+          "produces": [
+            "TASK_FILE"
+          ]
+        },
+        {
+          "step": "impl",
+          "kind": "coder",
+          "coder": "qwen-developer",
+          "prompt_file": "prompts\\31_task_execution_v1\\08_impl_task.txt",
+          "produces": [
+            "IMPL_FILE"
+          ]
+        },
+        {
+          "step": "review_impl",
+          "kind": "coder",
+          "coder": "qwen-reviewer",
+          "prompt_file": "prompts\\31_task_execution_v1\\09_review_impl_task.txt",
+          "produces": [
+            "REVIEW_FILE"
+          ]
+        },
+        {
+          "step": "refine_impl",
+          "kind": "coder",
+          "coder": "qwen-developer",
+          "prompt_file": "prompts\\31_task_execution_v1\\09_refine_impl.txt",
+          "produces": [
+            "IMPL_FILE"
+          ]
+        },
+        {
+          "step": "executor",
+          "kind": "coder",
+          "coder": "qwen-developer",
+          "prompt_file": "prompts\\31_task_execution_v1\\10_executor.txt",
+          "produces": []
+        },
+        {
+          "step": "sync_docs",
+          "kind": "action",
+          "coder": "qwen-architect",
+          "prompt_file": "",
+          "produces": [
+            "CODEBASE_CHANGE_IMPACT"
+          ]
+        },
+        {
+          "step": "review_docs",
+          "kind": "coder",
+          "coder": "qwen-reviewer",
+          "prompt_file": "prompts\\40_documentation_sync_v1\\02_review_docs.txt",
+          "produces": [
+            "REVIEW_FILE"
+          ]
+        },
+        {
+          "step": "refine_docs",
+          "kind": "coder",
+          "coder": "qwen-architect",
+          "prompt_file": "prompts\\40_documentation_sync_v1\\03_refine_docs.txt",
+          "produces": [
+            "CODEBASE_CHANGE_IMPACT"
+          ]
+        },
+        {
+          "step": "validator",
+          "kind": "coder",
+          "coder": "qwen-reviewer",
+          "prompt_file": "prompts\\31_task_execution_v1\\11_validate.txt",
+          "produces": [
+            "VALIDATION_FILE"
+          ]
+        },
+        {
+          "step": "complete_task",
+          "kind": "action",
+          "coder": "",
+          "prompt_file": "",
+          "produces": [
+            "IMPL_FILE",
+            "VALIDATION_FILE"
+          ]
+        }
+      ],
+      "component_id": "31_task_execution_v1",
+      "owner_doc_path": "docs/codebase/03_components/workflow-families.md"
+    },
+    {
+      "family_name": "40_documentation_sync_v1",
+      "job_prefix": "40DOCSYNC",
+      "job_init_step": "sync_docs",
+      "job_init_inputs": [
+        "TASK_FILE",
+        "IMPL_FILE"
+      ],
+      "visibility": "canonical",
+      "steps": [
+        {
+          "step": "sync_docs",
+          "kind": "action",
+          "coder": "qwen-architect",
+          "prompt_file": "",
+          "produces": [
+            "CODEBASE_CHANGE_IMPACT"
+          ]
+        },
+        {
+          "step": "review_docs",
+          "kind": "coder",
+          "coder": "qwen-reviewer",
+          "prompt_file": "prompts\\40_documentation_sync_v1\\02_review_docs.txt",
+          "produces": [
+            "REVIEW_FILE"
+          ]
+        },
+        {
+          "step": "refine_docs",
+          "kind": "coder",
+          "coder": "qwen-architect",
+          "prompt_file": "prompts\\40_documentation_sync_v1\\03_refine_docs.txt",
+          "produces": [
+            "CODEBASE_CHANGE_IMPACT"
+          ]
+        },
+        {
+          "step": "validate_doc_sync",
+          "kind": "action",
+          "coder": "",
+          "prompt_file": "",
+          "produces": [
+            "VALIDATION_FILE"
+          ]
+        }
+      ],
+      "component_id": "40_documentation_sync_v1",
+      "owner_doc_path": "docs/codebase/03_components/workflow-families.md"
+    },
+    {
+      "family_name": "image_csv_gen_v2",
+      "job_prefix": "IMGCSV",
+      "job_init_step": "extract_desc",
+      "job_init_inputs": [
+        "IMAGE_FOLDER"
+      ],
+      "visibility": "visible",
+      "steps": [
+        {
+          "step": "extract_desc",
+          "kind": "coder",
+          "coder": "qwen-developer",
+          "prompt_file": "prompts\\image_csv_gen_v2\\01_extract_desc.txt",
+          "produces": [
+            "IMAGE_DESC_FOLDER"
+          ]
+        },
+        {
+          "step": "gen_prompts",
+          "kind": "coder",
+          "coder": "deepseek-developer",
+          "prompt_file": "prompts\\image_csv_gen_v2\\02_gen_prompts.txt",
+          "produces": [
+            "IMAGE_CSV_JSON",
+            "IMAGE_CSV_CSV"
+          ]
+        },
+        {
+          "step": "submit_prompts",
+          "kind": "action",
+          "coder": "",
+          "prompt_file": "",
+          "produces": [
+            "IMAGE_CSV_SUBMIT_RESULT"
+          ]
+        }
+      ],
+      "component_id": "image_csv_gen_v2",
+      "owner_doc_path": "docs/codebase/03_components/workflow-families.md"
+    },
+    {
+      "family_name": "videoxpress_gen_v1",
+      "job_prefix": "VIDEXP",
+      "job_init_step": "extract_narrative",
+      "job_init_inputs": [
+        "IMAGE_DESC_FOLDER"
+      ],
+      "visibility": "visible",
+      "steps": [
+        {
+          "step": "extract_narrative",
+          "kind": "coder",
+          "coder": "qwen-architect",
+          "prompt_file": "prompts\\videoxpress_gen_v1\\01_extract_narrative.txt",
+          "produces": [
+            "NARRATIVE_FILE"
+          ]
+        },
+        {
+          "step": "gen_videoxpress_workflow",
+          "kind": "coder",
+          "coder": "qwen-developer",
+          "prompt_file": "prompts\\videoxpress_gen_v1\\02_gen_videoxpress_workflow.txt",
+          "produces": [
+            "VIDEOWORKFLOW_FILE"
+          ]
+        },
+        {
+          "step": "review_workflow",
+          "kind": "coder",
+          "coder": "qwen-reviewer",
+          "prompt_file": "prompts\\videoxpress_gen_v1\\03_review_workflow.txt",
+          "produces": [
+            "REVIEW_FILE"
+          ]
+        },
+        {
+          "step": "refine_workflow",
+          "kind": "coder",
+          "coder": "qwen-developer",
+          "prompt_file": "prompts\\videoxpress_gen_v1\\04_refine_workflow.txt",
+          "produces": [
+            "VIDEOWORKFLOW_FILE"
+          ]
+        },
+        {
+          "step": "execute_t2i",
+          "kind": "action",
+          "coder": "",
+          "prompt_file": "",
+          "produces": [
+            "GENERATED_IMAGES_FOLDER"
+          ]
+        },
+        {
+          "step": "execute_i2v",
+          "kind": "action",
+          "coder": "",
+          "prompt_file": "",
+          "produces": [
+            "GENERATED_VIDEO_CLIPS"
+          ]
+        },
+        {
+          "step": "execute_voiceover",
+          "kind": "action",
+          "coder": "",
+          "prompt_file": "",
+          "produces": [
+            "GENERATED_AUDIO_FOLDER"
+          ]
+        },
+        {
+          "step": "assemble_video",
+          "kind": "action",
+          "coder": "",
+          "prompt_file": "",
+          "produces": [
+            "FINAL_VIDEO_FILE"
+          ]
+        },
+        {
+          "step": "promote_workflow",
+          "kind": "action",
+          "coder": "",
+          "prompt_file": "",
+          "produces": [
+            "VIDEOWORKFLOW_FILE"
+          ]
+        }
+      ],
+      "component_id": "videoxpress_gen_v1",
+      "owner_doc_path": "docs/codebase/03_components/workflow-families.md"
+    },
+    {
+      "family_name": "tiktok_video_pipeline_v1",
+      "job_prefix": "TIKTOK",
+      "job_init_step": "extract_desc",
+      "job_init_inputs": [
+        "USER_INPUT"
+      ],
+      "visibility": "visible",
+      "steps": [
+        {
+          "step": "extract_desc",
+          "kind": "coder",
+          "coder": "qwen-architect",
+          "prompt_file": "prompts\\tiktok_video_pipeline_v1\\01_extract_desc.txt",
+          "produces": [
+            "BRIEF_JSON"
+          ]
+        },
+        {
+          "step": "review_brief",
+          "kind": "coder",
+          "coder": "qwen-reviewer",
+          "prompt_file": "prompts\\tiktok_video_pipeline_v1\\02_review_brief.txt",
+          "produces": [
+            "REVIEW_FILE"
+          ]
+        },
+        {
+          "step": "refine_brief",
+          "kind": "coder",
+          "coder": "qwen-architect",
+          "prompt_file": "prompts\\tiktok_video_pipeline_v1\\03_refine_brief.txt",
+          "produces": [
+            "BRIEF_JSON"
+          ]
+        },
+        {
+          "step": "gen_workflow",
+          "kind": "coder",
+          "coder": "qwen-developer",
+          "prompt_file": "prompts\\tiktok_video_pipeline_v1\\04_gen_workflow.txt",
+          "produces": [
+            "WORKFLOW_JSON"
+          ]
+        },
+        {
+          "step": "review_workflow",
+          "kind": "coder",
+          "coder": "qwen-reviewer",
+          "prompt_file": "prompts\\tiktok_video_pipeline_v1\\05_review_workflow.txt",
+          "produces": [
+            "REVIEW_FILE"
+          ]
+        },
+        {
+          "step": "refine_workflow",
+          "kind": "coder",
+          "coder": "qwen-developer",
+          "prompt_file": "prompts\\tiktok_video_pipeline_v1\\06_refine_workflow.txt",
+          "produces": [
+            "WORKFLOW_JSON"
+          ]
+        },
+        {
+          "step": "submit_images",
+          "kind": "action",
+          "coder": "",
+          "prompt_file": "",
+          "produces": [
+            "IMAGE_SUBMIT_RESULT"
+          ]
+        },
+        {
+          "step": "submit_videos",
+          "kind": "action",
+          "coder": "",
+          "prompt_file": "",
+          "produces": [
+            "VIDEO_SUBMIT_RESULT"
+          ]
+        },
+        {
+          "step": "submit_voiceover",
+          "kind": "action",
+          "coder": "",
+          "prompt_file": "",
+          "produces": [
+            "AUDIO_SUBMIT_RESULT"
+          ]
+        },
+        {
+          "step": "compose_final",
+          "kind": "action",
+          "coder": "",
+          "prompt_file": "",
+          "produces": [
+            "FINAL_VIDEO"
+          ]
+        }
+      ],
+      "component_id": "tiktok_video_pipeline_v1",
+      "owner_doc_path": "docs/codebase/03_components/workflow-families.md"
+    }
+  ],
+  "counts": {
+    "other files": {
+      "current": 5,
+      "needs_update": 0,
+      "pending_review": 0,
+      "superseded": 0,
+      "total": 5
+    },
+    "configuration/data files": {
+      "current": 7,
+      "needs_update": 0,
+      "pending_review": 0,
+      "superseded": 0,
+      "total": 7
+    },
+    "documentation files": {
+      "current": 15,
+      "needs_update": 0,
+      "pending_review": 0,
+      "superseded": 0,
+      "total": 15
+    },
+    "python modules": {
+      "current": 47,
+      "needs_update": 0,
+      "pending_review": 0,
+      "superseded": 0,
+      "total": 47
+    },
+    "bootstrap workflow files": {
+      "current": 80,
+      "needs_update": 0,
+      "pending_review": 0,
+      "superseded": 0,
+      "total": 80
+    },
+    "scripts": {
+      "current": 42,
+      "needs_update": 0,
+      "pending_review": 0,
+      "superseded": 0,
+      "total": 42
+    },
+    "test files": {
+      "current": 10,
+      "needs_update": 0,
+      "pending_review": 0,
+      "superseded": 0,
+      "total": 10
+    }
+  }
+}

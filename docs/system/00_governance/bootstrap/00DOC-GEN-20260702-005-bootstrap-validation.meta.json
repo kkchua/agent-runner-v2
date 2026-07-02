@@ -1,0 +1,20 @@
+{
+  "schema_version": "v2",
+  "coder_result": {
+    "status": "APPROVED",
+    "remark": "Master/system documentation set is coherent, complete, and aligned with repository baseline. All 19 documents pass validation. No blocking findings.",
+    "artifacts": {
+      "REVIEW_FILE": "docs\\system\\00_governance\\bootstrap\\00DOC-GEN-20260702-005-bootstrap-validation.md"
+    },
+    "recorded_at": "2026-07-02T20:30:00+08:00"
+  },
+  "runner_data": {
+    "step": "05_review_master_system_docs",
+    "coder_used": "qwen",
+    "invoked_at": "2026-07-02T18:22:34",
+    "finished_at": "2026-07-02T18:25:18",
+    "prompt_checksum": "sha256:7749b29c9670fd1aeb2ab291334e6f3408f1d000d3aa0f4a4cce029ccc3719bb",
+    "enriched_at": "2026-07-02T18:25:18",
+    "runner_version": "v2"
+  }
+}

@@ -1,0 +1,196 @@
+---
+title: "Documentation Standard"
+template_id: "SYS-00-DS"
+status: "active"
+managed_by: workflow-generated
+generated: "2026-07-02T00:00:00+08:00"
+workflow: "00_master_docs_bootstrap_v1"
+step: "03_generate_system_overview_docs"
+change_id: "00DOC-GEN-20260702-005"
+---
+
+# Documentation Standard
+
+> Managed by workflow: `00_master_docs_bootstrap_v1` / step: `03_generate_system_overview_docs`
+> This file is workflow-generated and protected from manual edits.
+
+## Purpose
+
+This document defines the standards, conventions, and expectations for all documentation within the agent-runner-v2 project.
+
+## Documentation Hierarchy
+
+The project uses a two-tier documentation structure:
+
+```
+docs/
+├── system/          # System-level documentation (governance)
+│   └── 00_governance/
+│       └── bootstrap/
+│           ├── README.md
+│           ├── SYSTEM_OVERVIEW.md
+│           ├── BUSINESS_CAPABILITIES.md
+│           ├── FUNCTIONAL_SPEC.md
+│           ├── NON_FUNCTIONAL_REQUIREMENTS.md
+│           ├── DOCUMENTATION_STANDARD.md
+│           ├── BUNDLE_TAXONOMY.md
+│           └── BUNDLE_MIGRATION_PLAN.md
+│
+└── codebase/        # Codebase-level documentation
+    ├── 01_inventory/
+    │   └── codebase_inventory.md
+    ├── 02_modules/
+    │   └── [module documentation files]
+    ├── 03_components/
+    │   └── [component documentation files]
+    └── 04_changes/
+        └── [change impact documents]
+```
+
+## Document Types
+
+### 1. System Documentation (`docs/system/`)
+
+System documentation describes the platform from a user and stakeholder perspective.
+
+| Document Type | Audience | Content |
+|---------------|----------|---------|
+| Overview | All | Platform concept, value, capabilities |
+| Business Capabilities | Stakeholders | Operational value and enablement |
+| Functional Spec | Developers | Behaviors and functional requirements |
+| Non-Functional Requirements | Architects | Quality attributes and constraints |
+
+### 2. Codebase Documentation (`docs/codebase/`)
+
+Codebase documentation describes the implementation from a maintainer perspective.
+
+| Document Type | Audience | Content |
+|---------------|----------|---------|
+| Inventory | Maintainers | Complete file listing with status |
+| Module Docs | Developers | Per-module API and implementation details |
+| Component Docs | Developers | Cross-cutting component documentation |
+| Change Impact | Maintainers | Change tracking and impact analysis |
+
+## File Naming Conventions
+
+### System Documents
+
+- Use `UPPER_SNAKE_CASE.md` for system documents
+- Examples: `SYSTEM_OVERVIEW.md`, `FUNCTIONAL_SPEC.md`
+
+### Codebase Documents
+
+- Module docs: `{package-name}-{module-name}.md`
+- Component docs: `{component-area}.md`
+- Change docs: `{CHANGE-ID}-{description}.md`
+
+## Frontmatter Requirements
+
+All generated documentation must include YAML frontmatter:
+
+```yaml
+---
+title: "Document Title"
+template_id: "SYS-XX-XXX"
+status: "active"
+managed_by: workflow-generated
+generated: "YYYY-MM-DDTHH:MM:SS+08:00"
+workflow: "workflow_name"
+step: "step_name"
+change_id: "CHANGE-ID"
+---
+```
+
+### Field Definitions
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| title | Yes | Human-readable document title |
+| template_id | Yes | Document template identifier |
+| status | Yes | Document status: `active`, `draft`, `superseded` |
+| managed_by | For generated | `workflow-generated` or `manual` |
+| generated | For generated | ISO 8601 timestamp |
+| workflow | For generated | Source workflow name |
+| step | For generated | Source step name |
+| change_id | For generated | Change identifier |
+
+## Workflow-Generated Document Banner
+
+All workflow-generated markdown files must include this banner immediately after frontmatter:
+
+```markdown
+> Managed by workflow: `{workflow_name}` / step: `{step_name}`
+> This file is workflow-generated and protected from manual edits.
+```
+
+## Content Style Guidelines
+
+### Markdown Standards
+
+- Use ATX-style headers (`#` not `underlines`)
+- Use fenced code blocks with language tags
+- Use tables for structured data
+- Use bullet lists for unordered items
+- Use numbered lists for sequential steps
+
+### Writing Style
+
+- Write in present tense
+- Use active voice
+- Be concise but complete
+- Define acronyms on first use
+- Use sentence case for headings (not Title Case)
+
+### Code References
+
+- Use backticks for inline code: `function_name()`
+- Use code blocks for multi-line examples
+- Include file paths in code blocks where relevant
+
+## Protection and Validation
+
+### Workflow-Generated Documents
+
+- Protected from manual edits
+- Validation checks for:
+  - Frontmatter completeness
+  - Banner presence
+  - Cross-reference validity
+  - Out-of-date content
+
+### Manual Documents
+
+- No protection required
+- Should follow style guidelines
+- Should reference generated docs where appropriate
+
+## Change Management
+
+### Document Lifecycle
+
+1. **Created**: Generated by workflow or created manually
+2. **Active**: Current and maintained
+3. **Superseded**: Replaced by newer version
+4. **Archived**: Retained for reference but not updated
+
+### Change Tracking
+
+- All generated docs include `change_id` in frontmatter
+- Change impact documents track modifications
+- Validation reports flag stale documentation
+
+## Verification Checklist
+
+Before submitting documentation changes:
+
+- [ ] Frontmatter is complete and valid
+- [ ] Banner is present for generated docs
+- [ ] Links resolve correctly
+- [ ] Tables render properly
+- [ ] Code examples are accurate
+- [ ] No broken internal references
+- [ ] Consistent terminology throughout
+
+---
+
+*Generated by workflow `00_master_docs_bootstrap_v1` step `03_generate_system_overview_docs`*

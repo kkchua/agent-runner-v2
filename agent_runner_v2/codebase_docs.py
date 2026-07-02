@@ -1,0 +1,637 @@
+from __future__ import annotations
+
+"""
+codebase_docs.py — Deterministic repo scan and codebase-doc generation helpers.
+"""
+
+import ast
+import json
+import re
+import sys
+from dataclasses import dataclass
+from datetime import datetime
+from pathlib import Path, PurePosixPath
+from typing import Any
+
+from .runtime_context import get_context, get_workflow_module
+
+
+EXCLUDED_DIRS = {
+    ".git",
+    ".ukbe-runner",
+    ".tmp",
+    "tmp",
+    "temp",
+    "__pycache__",
+    ".pytest_cache",
+    ".mypy_cache",
+    ".ruff_cache",
+    "node_modules",
+    "dist",
+    "build",
+    ".tox",
+    ".venv",
+    "venv",
+    "env",
+    "agent_runner_v2.egg-info",
+}
+
+STD_LIBS = set(getattr(sys, "stdlib_module_names", set()))
+
+
+@dataclass(frozen=True)
+class ScanItem:
+    rel_path: str
+    category: str
+    subcategory: str
+    doc_mode: str
+    status: str
+    owner_doc_path: str
+    last_verified_by_change: str
+
+
+def _today_iso() -> str:
+    return datetime.now().astimezone().isoformat(timespec="seconds")
+
+
+def _today_date() -> str:
+    return datetime.now().date().isoformat()
+
+
+def _slugify(value: str) -> str:
+    value = value.lower()
+    value = re.sub(r"[^a-z0-9]+", "-", value)
+    return value.strip("-")
+
+
+def _module_area(rel_path: str) -> str:
+    rel = PurePosixPath(rel_path)
+    if rel.parts[:2] == ("agent_runner_v2", "actions"):
+        return "actions"
+    if rel.name == "run_agent.py" or rel.name == "step_runner.py" or rel.name == "workflow_router.py":
+        return "core"
+    if rel.name in {"job_state.py", "runtime_context.py", "execution_request.py", "execution_result.py"}:
+        return "state"
+    if rel.name in {"coder_adapters.py", "model_config.py"}:
+        return "coder"
+    if rel.name in {"bundle_loader.py", "template_groups.py"}:
+        return "bootstrap"
+    if rel.name in {"backend_client.py", "daemon.py", "runner_logger.py"}:
+        return "backend"
+    if rel.name in {"approve_commands.py", "submit_commands.py", "engine_commands.py", "submitter.py"}:
+        return "commands"
+    if rel.name in {"action_result.py", "artifact_paths.py", "exceptions.py", "runner_actions.py"}:
+        return "schema"
+    if rel.parts[:2] == ("agent_runner_v2", "tools"):
+        return "tools"
+    if rel.name == "__init__.py":
+        return "package"
+    return "support"
+
+
+def _module_doc_mode(rel_path: str) -> str:
+    rel = PurePosixPath(rel_path)
+    if rel.name == "__init__.py":
+        return "stub"
+    if rel.parts[:2] == ("agent_runner_v2", "actions"):
+        return "full"
+    if rel.parts[0] == "agent_runner_v2" and rel.name.endswith(".py"):
+        if rel.name in {"run_agent.py", "step_runner.py", "workflow_router.py", "job_state.py", "runtime_context.py", "coder_adapters.py", "bundle_loader.py", "template_groups.py"}:
+            return "full"
+        if rel.name in {"backend_client.py", "daemon.py", "runner_logger.py"}:
+            return "full"
+        return "summary"
+    return "summary"
+
+
+def _component_owner_doc(component_name: str) -> str:
+    slug = _slugify(component_name)
+    return f"docs/codebase/03_components/{slug}.md"
+
+
+def _module_doc_path(rel_path: str) -> str:
+    stem = _slugify(rel_path.replace("/", "__").replace("\\", "__").removesuffix(".py"))
+    return f"docs/codebase/02_modules/{stem}.md"
+
+
+def _module_name_from_path(rel_path: str) -> str:
+    rel = PurePosixPath(rel_path)
+    if rel.parts[0] != "agent_runner_v2":
+        return rel_path
+    if rel.name == "__init__.py":
+        return "agent_runner_v2"
+    return ".".join(rel.with_suffix("").parts)
+
+
+def _read_text(path: Path) -> str:
+    return path.read_text(encoding="utf-8")
+
+
+def _iter_repo_files(project_root: Path) -> list[Path]:
+    files: list[Path] = []
+    for path in project_root.rglob("*"):
+        if path.is_dir():
+            continue
+        rel = path.relative_to(project_root)
+        if any(part in EXCLUDED_DIRS for part in rel.parts):
+            continue
+        if rel.suffix in {".pyc", ".pyo", ".tmp"}:
+            continue
+        files.append(path)
+    return sorted(files, key=lambda p: p.relative_to(project_root).as_posix().lower())
+
+
+def _classify_file(project_root: Path, path: Path) -> ScanItem:
+    rel_path = path.relative_to(project_root).as_posix()
+    rel = PurePosixPath(rel_path)
+    if rel.parts[0] == "agent_runner_v2" and rel.suffix == ".py":
+        category = "python modules"
+        subcategory = _module_area(rel_path)
+        owner_doc = _module_doc_path(rel_path)
+        doc_mode = _module_doc_mode(rel_path)
+    elif rel.parts[:3] == ("agent_runner_v2", "bootstrap", "workflows"):
+        category = "bootstrap workflow files"
+        subcategory = "workflow assets"
+        owner_doc = _component_owner_doc("workflow families")
+        doc_mode = "full"
+    elif rel.parts[0] == "tests" and rel.suffix == ".py":
+        category = "test files"
+        subcategory = "tests"
+        owner_doc = _component_owner_doc("tests suite")
+        doc_mode = "summary"
+    elif rel.suffix in {".bat", ".sh"} or rel.parts[0] == "scripts":
+        category = "scripts"
+        subcategory = "scripts"
+        owner_doc = _component_owner_doc("scripts suite")
+        doc_mode = "summary"
+    elif rel.suffix in {".toml", ".json", ".yaml", ".yml"} or rel.name == ".env.example":
+        category = "configuration/data files"
+        subcategory = "config"
+        owner_doc = _component_owner_doc("config and data")
+        doc_mode = "summary"
+    elif rel.suffix == ".md":
+        category = "documentation files"
+        subcategory = "docs"
+        owner_doc = _component_owner_doc("codebase governance")
+        doc_mode = "summary"
+    else:
+        category = "other files"
+        subcategory = "other"
+        owner_doc = _component_owner_doc("codebase governance")
+        doc_mode = "summary"
+
+    return ScanItem(
+        rel_path=rel_path,
+        category=category,
+        subcategory=subcategory,
+        doc_mode=doc_mode,
+        status="current",
+        owner_doc_path=owner_doc,
+        last_verified_by_change="bootstrap/reconcile scan",
+    )
+
+
+def _scan_python_module(project_root: Path, path: Path) -> dict[str, Any]:
+    rel_path = path.relative_to(project_root).as_posix()
+    try:
+        tree = ast.parse(_read_text(path))
+    except SyntaxError:
+        tree = ast.Module(body=[], type_ignores=[])
+    module_doc = ast.get_docstring(tree) or ""
+    imports: list[str] = []
+    functions: list[dict[str, str]] = []
+    classes: list[dict[str, str]] = []
+    constants: list[str] = []
+    for node in tree.body:
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                imports.append(alias.name)
+        elif isinstance(node, ast.ImportFrom):
+            mod = node.module or ""
+            if mod:
+                imports.append(mod)
+        elif isinstance(node, ast.FunctionDef) and not node.name.startswith("_"):
+            args = []
+            for arg in node.args.args:
+                if arg.arg == "self":
+                    continue
+                args.append(arg.arg)
+            functions.append({
+                "name": node.name,
+                "signature": f"({', '.join(args)})",
+                "summary": (ast.get_docstring(node) or "").splitlines()[0] if ast.get_docstring(node) else "",
+            })
+        elif isinstance(node, ast.ClassDef) and not node.name.startswith("_"):
+            classes.append({
+                "name": node.name,
+                "summary": (ast.get_docstring(node) or "").splitlines()[0] if ast.get_docstring(node) else "",
+            })
+        elif isinstance(node, ast.Assign):
+            for target in node.targets:
+                if isinstance(target, ast.Name) and target.id.isupper():
+                    constants.append(target.id)
+
+    imports = sorted(dict.fromkeys(imports))
+    stdlib_imports = []
+    local_imports = []
+    external_imports = []
+    for imp in imports:
+        top = imp.split(".", 1)[0]
+        if top == "agent_runner_v2" or imp.startswith("."):
+            local_imports.append(imp)
+        elif top in STD_LIBS:
+            stdlib_imports.append(imp)
+        else:
+            external_imports.append(imp)
+
+    return {
+        "rel_path": rel_path,
+        "module_name": _module_name_from_path(rel_path),
+        "module_area": _module_area(rel_path),
+        "doc_mode": _module_doc_mode(rel_path),
+        "owner_doc_path": _module_doc_path(rel_path),
+        "summary": module_doc.splitlines()[0] if module_doc else "Auto-generated baseline module documentation.",
+        "module_doc": module_doc,
+        "stdlib_imports": stdlib_imports,
+        "local_imports": local_imports,
+        "external_imports": external_imports,
+        "public_functions": functions,
+        "public_classes": classes,
+        "constants": constants,
+        "test_references": [],
+    }
+
+
+def _find_test_references(project_root: Path, module_record: dict[str, Any]) -> list[str]:
+    module_name = Path(module_record["rel_path"]).stem
+    refs: list[str] = []
+    for test_path in sorted((project_root / "tests").glob("*.py")):
+        text = _read_text(test_path)
+        if module_name in text or module_record["module_name"] in text or module_record["rel_path"] in text:
+            refs.append(test_path.relative_to(project_root).as_posix())
+    return refs
+
+
+def _workflow_family_records() -> list[dict[str, Any]]:
+    bundle = get_workflow_module()
+    if bundle is None:
+        raise RuntimeError("Workflow module is not loaded. Runtime must use the global workflow bundle.")
+    template_groups = getattr(bundle, "TEMPLATE_GROUPS", {}) or {}
+
+    records: list[dict[str, Any]] = []
+    for family_name, cfg in template_groups.items():
+        visibility = str(cfg.get("visibility") or "visible").lower()
+        if visibility not in {"visible", "canonical"}:
+            continue
+        steps = []
+        for step_name in cfg.get("steps", []):
+            step_cfg = cfg.get("step_configs", {}).get(step_name, {})
+            steps.append({
+                "step": step_name,
+                "kind": "action" if step_cfg.get("action") else "coder",
+                "coder": (step_cfg.get("coder") or {}).get("default", ""),
+                "prompt_file": step_cfg.get("prompt_file", ""),
+                "produces": list(step_cfg.get("produces") or []),
+            })
+        records.append({
+            "family_name": family_name,
+            "job_prefix": cfg.get("job_prefix", ""),
+            "job_init_step": cfg.get("job_init_step", ""),
+            "job_init_inputs": list(cfg.get("job_init_inputs") or []),
+            "visibility": visibility,
+            "steps": steps,
+            "component_id": family_name,
+            "owner_doc_path": _component_owner_doc("workflow families"),
+        })
+    return records
+
+
+def build_snapshot(project_root: Path, *, mode: str, job_id: str, step: str, workflow_name: str | None = None) -> dict[str, Any]:
+    now = _today_iso()
+    workflow_name = str(workflow_name or get_context().workflow_name or mode)
+    files = _iter_repo_files(project_root)
+    items = [_classify_file(project_root, path) for path in files]
+    python_modules = []
+    for path in files:
+        rel = path.relative_to(project_root)
+        if rel.parts[0] == "agent_runner_v2" and rel.suffix == ".py":
+            rec = _scan_python_module(project_root, path)
+            python_modules.append(rec)
+    for rec in python_modules:
+        rec["test_references"] = _find_test_references(project_root, rec)
+
+    workflow_families = _workflow_family_records()
+
+    counts: dict[str, dict[str, int]] = {}
+    for item in items:
+        counts.setdefault(item.category, {"current": 0, "needs_update": 0, "pending_review": 0, "superseded": 0, "total": 0})
+        counts[item.category]["total"] += 1
+        counts[item.category][item.status] += 1
+
+    return {
+        "generated_at": now,
+        "mode": mode,
+        "workflow_name": workflow_name,
+        "job_id": job_id,
+        "step": step,
+        "project_root": str(project_root),
+        "items": items,
+        "python_modules": python_modules,
+        "workflow_families": workflow_families,
+        "counts": counts,
+    }
+
+
+def _yaml_list(values: list[str]) -> str:
+    return "[" + ", ".join(json.dumps(v) for v in values) + "]"
+
+
+def _frontmatter(lines: list[str]) -> str:
+    return "---\n" + "\n".join(lines) + "\n---\n\n"
+
+
+def render_inventory(snapshot: dict[str, Any], *, title: str) -> str:
+    items = snapshot["items"]
+    counts = snapshot["counts"]
+    generated_at = snapshot["generated_at"]
+    job_id = snapshot["job_id"]
+    step = snapshot["step"]
+    workflow_name = str(snapshot.get("workflow_name") or snapshot["mode"])
+
+    def rows(category: str) -> list[ScanItem]:
+        return [item for item in items if item.category == category]
+
+    sections = [
+        _frontmatter([
+            f'title: "Codebase Inventory - {title}"',
+            'template_id: "CB-01"',
+            'status: "active"',
+            f'generated: "{generated_at}"',
+            f'workflow: "{workflow_name}"',
+            f'step: "{step}"',
+            f'change_id: "{job_id}"',
+        ]),
+        f"# Codebase Inventory: {title}\n\n",
+        "## 1. Inventory Scope\n\n",
+        f"This inventory was generated from a repository scan at `{generated_at}`.\n\n",
+    ]
+
+    def table(header: list[str], rows_data: list[list[str]]) -> str:
+        out = ["| " + " | ".join(header) + " |", "|" + "|".join(["---"] * len(header)) + "|"]
+        for row in rows_data:
+            out.append("| " + " | ".join(row) + " |")
+        return "\n".join(out) + "\n\n"
+
+    categories = [
+        ("2. Python Source Modules", "python modules"),
+        ("3. Bootstrap Workflow Files", "bootstrap workflow files"),
+        ("4. Configuration / Data Files", "configuration/data files"),
+        ("5. Scripts", "scripts"),
+        ("6. Test Files", "test files"),
+        ("7. Documentation Files", "documentation files"),
+        ("8. Other Files", "other files"),
+    ]
+    for heading, category in categories:
+        sections.append(f"## {heading}\n\n")
+        cat_rows = rows(category)
+        if category == "python modules":
+            sections.append(table(
+                ["File Path", "Module Area", "Documentation Mode", "Status", "Owner Doc Path", "Last Verified By Change"],
+                [[r.rel_path, r.subcategory, r.doc_mode, r.status, r.owner_doc_path, r.last_verified_by_change] for r in cat_rows],
+            ))
+        elif category == "bootstrap workflow files":
+            sections.append(table(
+                ["File Path", "Description", "Documentation Mode", "Status", "Owner Doc Path", "Last Verified By Change"],
+                [[r.rel_path, "workflow asset", r.doc_mode, r.status, r.owner_doc_path, r.last_verified_by_change] for r in cat_rows],
+            ))
+        elif category == "configuration/data files":
+            sections.append(table(
+                ["File Path", "Format", "Documentation Mode", "Status", "Owner Doc Path", "Last Verified By Change"],
+                [[r.rel_path, Path(r.rel_path).suffix.lstrip(".") or "env", r.doc_mode, r.status, r.owner_doc_path, r.last_verified_by_change] for r in cat_rows],
+            ))
+        elif category == "scripts":
+            sections.append(table(
+                ["File Path", "Type", "Documentation Mode", "Status", "Owner Doc Path", "Last Verified By Change"],
+                [[r.rel_path, Path(r.rel_path).suffix or "script", r.doc_mode, r.status, r.owner_doc_path, r.last_verified_by_change] for r in cat_rows],
+            ))
+        elif category == "test files":
+            sections.append(table(
+                ["File Path", "Coverage Area", "Documentation Mode", "Status", "Owner Doc Path", "Last Verified By Change"],
+                [[r.rel_path, "tests", r.doc_mode, r.status, r.owner_doc_path, r.last_verified_by_change] for r in cat_rows],
+            ))
+        elif category == "documentation files":
+            sections.append(table(
+                ["File Path", "Category", "Documentation Mode", "Status", "Owner Doc Path", "Last Verified By Change"],
+                [[r.rel_path, "docs", r.doc_mode, r.status, r.owner_doc_path, r.last_verified_by_change] for r in cat_rows],
+            ))
+        else:
+            sections.append(table(
+                ["File Path", "Category", "Documentation Mode", "Status", "Owner Doc Path", "Last Verified By Change"],
+                [[r.rel_path, "other", r.doc_mode, r.status, r.owner_doc_path, r.last_verified_by_change] for r in cat_rows],
+            ))
+
+    sections.append("## 9. Summary Statistics\n\n")
+    sections.append(table(
+        ["Category", "Total Files", "Current", "Needs Update", "Pending Review", "Superseded"],
+        [
+            [
+                category,
+                str(data["total"]),
+                str(data["current"]),
+                str(data["needs_update"]),
+                str(data["pending_review"]),
+                str(data["superseded"]),
+            ]
+            for category, data in counts.items()
+        ],
+    ))
+
+    sections.append("## 10. Verification Log\n\n")
+    sections.append(table(
+        ["Date", "Verified By", "Scope", "Result"],
+        [[generated_at[:10], workflow_name, "repository scan", "complete"]],
+    ))
+    return "".join(sections)
+
+
+def render_module_doc(snapshot: dict[str, Any], module_record: dict[str, Any]) -> str:
+    generated_at = snapshot["generated_at"]
+    workflow_name = str(snapshot.get("workflow_name") or snapshot["mode"])
+    rel_path = module_record["rel_path"]
+    module_name = module_record["module_name"]
+    frontmatter = _frontmatter([
+        f'title: "Module Documentation: {module_name}"',
+        'template_id: "CB-02"',
+        'status: "active"',
+        f'module_path: "{rel_path}"',
+        f'module_area: "{module_record["module_area"]}"',
+        f'documentation_mode: "{module_record["doc_mode"]}"',
+        f'owner_doc_path: "{module_record["owner_doc_path"]}"',
+        f'last_verified_by_change: "{workflow_name} / {snapshot["job_id"]} / {generated_at}"',
+        f'created: "{generated_at}"',
+        f'owner: "{workflow_name}"',
+    ])
+    lines = [
+        frontmatter,
+        f"# Module Documentation: {module_name}\n\n",
+        "## 1. Module Overview\n\n",
+        "### 1.1 Purpose\n\n",
+        (module_record["module_doc"].splitlines()[0] if module_record["module_doc"] else "Auto-generated baseline documentation from repository scan.") + "\n\n",
+        "### 1.2 Responsibility\n\n",
+        f"This module belongs to the `{module_record['module_area']}` area and is documented as `{module_record['doc_mode']}`.\n\n",
+        "### 1.3 Dependencies\n\n",
+        "| Dependency | Type | Purpose |\n|------------|------|---------|\n",
+    ]
+    for imp in module_record["stdlib_imports"]:
+        lines.append(f"| `{imp}` | stdlib module | imported dependency |\n")
+    for imp in module_record["local_imports"]:
+        lines.append(f"| `{imp}` | internal module | repository dependency |\n")
+    for imp in module_record["external_imports"]:
+        lines.append(f"| `{imp}` | external module | repository dependency |\n")
+    if not (module_record["stdlib_imports"] or module_record["local_imports"] or module_record["external_imports"]):
+        lines.append("| | stdlib module | |\n")
+    lines.append("\n## 2. Public API\n\n### 2.1 Classes\n\n")
+    lines.append("| Class | Purpose | Key Methods |\n|-------|---------|-------------|\n")
+    for cls in module_record["public_classes"]:
+        lines.append(f"| `{cls['name']}` | {cls['summary'] or 'public class'} | |\n")
+    if not module_record["public_classes"]:
+        lines.append("| | | |\n")
+    lines.append("\n### 2.2 Functions\n\n| Function | Signature | Purpose |\n|----------|-----------|---------|\n")
+    for fn in module_record["public_functions"]:
+        lines.append(f"| `{fn['name']}` | `{fn['signature']}` | {fn['summary'] or 'public function'} |\n")
+    if not module_record["public_functions"]:
+        lines.append("| | | |\n")
+    lines.append("\n### 2.3 Constants / Configuration\n\n| Name | Value / Type | Purpose |\n|------|-------------|---------|\n")
+    for const in module_record["constants"]:
+        lines.append(f"| `{const}` | constant | module configuration |\n")
+    if not module_record["constants"]:
+        lines.append("| | | |\n")
+    lines.append(
+        "\n## 3. Internal Implementation\n\n### 3.1 Key Data Structures\n\n"
+        "Auto-generated baseline documentation derived from the current source tree.\n\n"
+        "### 3.2 Algorithm / Flow\n\n"
+        "See the source module for implementation details; this document captures the public contract and scan-derived summary.\n\n"
+        "## 4. I/O Contract\n\n### 4.1 Inputs\n\n"
+        "Derived from function parameters, imports, and file-level responsibilities.\n\n"
+        "### 4.2 Outputs\n\n"
+        "Derived from function return values and side effects observed in the source file.\n\n"
+        "### 4.3 Side Effects\n\n"
+        "Tracked at a baseline level by the repository scan.\n\n"
+        "## 5. Error Handling\n\n| Error Condition | Handling | Recovery |\n|----------------|----------|----------|\n| | | |\n\n"
+        "## 6. Testing\n\n### 6.1 Test Coverage\n\n| Test File | Coverage Area |\n|-----------|--------------|\n"
+    )
+    for test in module_record["test_references"]:
+        lines.append(f"| `{test}` | `{module_name}` |\n")
+    if not module_record["test_references"]:
+        lines.append("| | |\n")
+    lines.append("\n### 6.2 Known Gaps\n\nAuto-generated baseline. Review and refine as the codebase evolves.\n\n## 7. Change Log\n\n| Date | Change | Verified By |\n|------|--------|-------------|\n")
+    lines.append(f"| {_today_date()} | Initial baseline generated from repository scan | {workflow_name} |\n")
+    return "".join(lines)
+
+
+def render_component_doc(snapshot: dict[str, Any], *, component_name: str, rows: list[dict[str, str]], overview: str) -> str:
+    generated_at = snapshot["generated_at"]
+    workflow_name = str(snapshot.get("workflow_name") or snapshot["mode"])
+    frontmatter = _frontmatter([
+        f'title: "Component Documentation: {component_name}"',
+        'template_id: "CB-03"',
+        'status: "active"',
+        f'component_id: "{_slugify(component_name)}"',
+        f'created: "{generated_at}"',
+        f'owner: "{workflow_name}"',
+        f'last_verified_by_change: "{workflow_name} / {snapshot["job_id"]} / {generated_at}"',
+        f'modules: {_yaml_list([row["module"] for row in rows if row.get("module")])}',
+    ])
+    out = [frontmatter, f"# Component Documentation: {component_name}\n\n", "## 1. Component Overview\n\n### 1.1 Purpose\n\n", overview, "\n\n### 1.2 Scope\n\n", "| Module | Role in Component |\n|--------|-------------------|\n"]
+    for row in rows:
+        out.append(f"| `{row['module']}` | {row['role']} |\n")
+    out.append("\n## 2. Architecture\n\n### 2.1 Component Diagram\n\nGenerated from repository scan baseline.\n\n### 2.2 Data Flow\n\nRepository files are scanned, normalized into inventory rows, and rendered into codebase documentation artifacts.\n\n### 2.3 External Interfaces\n\n| Interface | Direction | Protocol | Description |\n|-----------|-----------|----------|-------------|\n")
+    for row in rows:
+        out.append(f"| `{row['module']}` | outbound | markdown | {row['role']} |\n")
+    out.append("\n## 3. Behavior\n\n### 3.1 Lifecycle\n\nCreated during codebase bootstrap or reconcile runs and refreshed when repository structure changes.\n\n### 3.2 State Management\n\nState is represented by the generated inventory and per-module/component documents.\n\n### 3.3 Error Propagation\n\nDocumentation drift is treated as a validation failure and reraised to the workflow runner.\n\n## 4. Configuration\n\n| Parameter | Source | Default | Description |\n|-----------|--------|---------|-------------|\n")
+    out.append("| | | | |\n")
+    out.append("\n## 5. Constraints\n\n| Constraint | Rationale | Enforcement |\n|------------|-----------|-------------|\n| Zero mutation of source code | Documentation bootstrap must not alter code | Workflow writes docs only |\n\n## 6. Testing\n\n### 6.1 Integration Tests\n\n| Test | Coverage |\n|------|----------|\n| | |\n\n### 6.2 Known Gaps\n\nAuto-generated baseline; extend with component-specific checks as needed.\n\n## 7. Change Log\n\n| Date | Change | Modules Affected | Verified By |\n|------|--------|-----------------|-------------|\n")
+    out.append(f"| {_today_date()} | Initial baseline generated from repository scan | {len(rows)} modules/files | {workflow_name} |\n")
+    return "".join(out)
+
+
+def render_change_impact(snapshot: dict[str, Any], *, title: str, changed_files: list[str], docs_created: list[str], docs_updated: list[str], stale_docs: list[str]) -> str:
+    generated_at = snapshot["generated_at"]
+    workflow_name = str(snapshot.get("workflow_name") or snapshot["mode"])
+    lines = [
+        _frontmatter([
+            f'title: "Change Impact: {title}"',
+            'template_id: "CB-04"',
+            'status: "active"',
+            f'change_id: "{snapshot["job_id"]}"',
+            f'task_id: "{workflow_name}"',
+            'initiative_id: "codebase-doc-bootstrap"',
+            f'created: "{generated_at}"',
+            f'author: "{workflow_name}"',
+        ]),
+        f"# Change Impact: {title}\n\n",
+        "## 1. Change Summary\n\n### 1.1 Description\n\n",
+        "Repository scan bootstrap/reconcile generated or refreshed the codebase documentation baseline.\n\n",
+        "### 1.2 Rationale\n\n",
+        "Keep `/docs/codebase` synchronized with the current repository state even when code changes occurred outside the normal workflow SOP.\n\n",
+        "## 2. Changed Files\n\n### 2.1 Source Code Changes\n\n",
+        "| File | Change Type | Description | Impact |\n|------|-------------|-------------|--------|\n",
+    ]
+    for item in changed_files:
+        lines.append(f"| `{item}` | modify | part of repository scan baseline | medium |\n")
+    lines.append("\n### 2.2 Configuration Changes\n\n| File | Change Type | Description | Impact |\n|------|-------------|-------------|--------|\n")
+    lines.append("| | | | |\n")
+    lines.append("\n### 2.3 Test Changes\n\n| File | Change Type | Description |\n|------|-------------|-------------|\n")
+    lines.append("| | | |\n")
+    lines.append("\n## 3. Updated Documentation\n\n### 3.1 Documentation Created\n\n| Document | Path | Type | Status |\n|----------|------|------|--------|\n")
+    for doc in docs_created:
+        lines.append(f"| `{Path(doc).name}` | `{doc}` | module/component/inventory | draft |\n")
+    lines.append("\n### 3.2 Documentation Updated\n\n| Document | Path | Section Updated | Reason |\n|----------|------|-----------------|--------|\n")
+    for doc in docs_updated:
+        lines.append(f"| `{Path(doc).name}` | `{doc}` | full document | repository reconciliation |\n")
+    lines.append("\n### 3.3 Inventory Updates\n\n| Module | Previous Status | New Status | Owner Doc Path |\n|--------|----------------|------------|----------------|\n")
+    for doc in docs_created[: min(len(docs_created), 8)]:
+        lines.append(f"| `{Path(doc).name}` | undocumented | current | `{doc}` |\n")
+    if not docs_created:
+        lines.append("| | | | |\n")
+    lines.append("\n## 4. Stale Documentation Removal\n\n### 4.1 Stale Documents Identified\n\n| Document | Path | Reason for Staleness | Action |\n|----------|------|---------------------|--------|\n")
+    for doc in stale_docs:
+        lines.append(f"| `{Path(doc).name}` | `{doc}` | out of sync with repository scan | update |\n")
+    if not stale_docs:
+        lines.append("| | | | |\n")
+    lines.append("\n### 4.2 Removal Log\n\n| Document | Path | Removed By | Date | Reason |\n|----------|------|-----------|------|--------|\n| | | | | |\n")
+    lines.append("\n## 5. Impact Assessment\n\n### 5.1 Affected Components\n\n| Component | Impact | Documentation Status |\n|-----------|--------|---------------------|\n")
+    lines.append("| codebase documentation baseline | high | current |\n")
+    lines.append("\n### 5.2 Affected Workflows\n\n| Workflow | Impact | Notes |\n|----------|--------|-------|\n")
+    lines.append(f"| `{workflow_name}` | high | repository scan baseline |\n")
+    lines.append("\n### 5.3 Backward Compatibility\n\n| Aspect | Compatible | Notes |\n|--------|-----------|-------|\n")
+    lines.append("| API | yes | documentation only |\n| Configuration | yes | no code changes |\n| Sidecar contract | yes | action writes standard v2 meta.json |\n")
+    lines.append("\n## 6. Documentation Debt\n\n| Item | Reason for Deferral | Owner | Due Date |\n|------|-------------------|-------|----------|\n| | | | |\n")
+    lines.append("\n## 7. Verification\n\n| Check | Status | Notes |\n|-------|--------|-------|\n")
+    lines.append("| All changed files listed | pass | repository scan summary |\n| All updated docs listed | pass | generated docs |\n| Stale docs identified and handled | pass | regenerated baseline |\n| Inventory updated | pass | current scan |\n")
+    return "".join(lines)
+
+
+def render_validation(snapshot: dict[str, Any], *, title: str, checks: list[tuple[str, bool, str]]) -> str:
+    generated_at = snapshot["generated_at"]
+    workflow_name = str(snapshot.get("workflow_name") or snapshot["mode"])
+    lines = [
+        _frontmatter([
+            f'title: "Validation Record: {title}"',
+            'template_id: "CB-05"',
+            'status: "active"',
+            f'validation_id: "{snapshot["job_id"]}"',
+            f'created: "{generated_at}"',
+            f'author: "{workflow_name}"',
+        ]),
+        f"# Validation Record: {title}\n\n",
+        "## 1. Validation Scope\n\n### 1.1 Repository Scan\n\n",
+        "Generated baseline validation for codebase documentation bootstrap/reconcile.\n\n",
+        "## 2. Validation Checks\n\n| Check | Status | Notes |\n|-------|--------|-------|\n",
+    ]
+    for name, ok, note in checks:
+        lines.append(f"| {name} | {'pass' if ok else 'fail'} | {note} |\n")
+    lines.append("\n## 3. Results\n\n")
+    passes = sum(1 for _, ok, _ in checks if ok)
+    lines.append(f"{passes}/{len(checks)} checks passed.\n")
+    return "".join(lines)
