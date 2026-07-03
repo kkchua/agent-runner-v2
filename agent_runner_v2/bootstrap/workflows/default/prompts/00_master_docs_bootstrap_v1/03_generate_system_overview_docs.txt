@@ -1,0 +1,112 @@
+You are generating the system overview and governance-facing master docs for the current repository.
+
+This step builds on the approved bootstrap project analysis. Keep the scope limited to overview and functional documentation.
+
+Inputs you must read first:
+- `docs/system/00_governance/bootstrap/project_analysis.md`
+- `docs/codebase/01_inventory/codebase_inventory.md`
+- `docs/codebase/04_changes/` latest change impact document
+- relevant source files under `agent_runner_v2/`
+
+Write or refresh these docs:
+- `docs/system/00_governance/bootstrap/README.md`
+- `docs/system/00_governance/bootstrap/DOCUMENTATION_STANDARD.md`
+- `docs/system/00_governance/bootstrap/BUNDLE_TAXONOMY.md`
+- `docs/system/00_governance/bootstrap/BUNDLE_MIGRATION_PLAN.md`
+- `docs/system/00_governance/bootstrap/SYSTEM_OVERVIEW.md`
+- `docs/system/00_governance/bootstrap/BUSINESS_CAPABILITIES.md`
+- `docs/system/00_governance/bootstrap/FUNCTIONAL_SPEC.md`
+- `docs/system/00_governance/bootstrap/NON_FUNCTIONAL_REQUIREMENTS.md`
+
+Primary objectives:
+1. Explain the platform at a level useful to users, developers, and stakeholders.
+2. Define the documentation standard and repo documentation expectations.
+3. Describe the system capabilities and functional scope without drifting into low-level architecture detail.
+4. Keep the written docs aligned with the actual repository and the approved project analysis.
+5. Make the universal ecosystem baseline and repo-selected architecture posture explicit, especially when the repository has no clear prior standard.
+
+Hard ownership rule:
+- `docs/system/00_governance/bootstrap/project_analysis.md` is read-only in this step.
+- Do not create, modify, or refresh any architecture or operations docs in this step.
+- The only writable outputs are the eight files listed in "Write or refresh these docs".
+- In particular, do not touch `SYSTEM_CONTEXT.md`, `COMPONENT_ARCHITECTURE.md`, `DECISION_LOG.md`, `SYSTEM_FILE_STRUCTURE.md`, `DEVELOPER_GUIDE.md`, `RUNBOOK.md`, or `EXISTING_REPO_WORKFLOW_SOP.md`.
+
+Frontmatter contract:
+- Use these exact `template_id` values in YAML frontmatter:
+  - `README.md` -> `SYS-00-IDX`
+  - `DOCUMENTATION_STANDARD.md` -> `SYS-00-DS`
+  - `BUNDLE_TAXONOMY.md` -> `SYS-00-BT`
+  - `BUNDLE_MIGRATION_PLAN.md` -> `SYS-00-BMP`
+  - `SYSTEM_OVERVIEW.md` -> `SYS-00-SO`
+  - `BUSINESS_CAPABILITIES.md` -> `SYS-00-BC`
+  - `FUNCTIONAL_SPEC.md` -> `SYS-00-FS`
+  - `NON_FUNCTIONAL_REQUIREMENTS.md` -> `SYS-00-NFR`
+
+Required content rules:
+- `docs/system/00_governance/bootstrap/README.md` should index the master doc set and describe the audience views.
+- `SYSTEM_OVERVIEW.md` should explain the platform, workflow model, and value flow, not just list files.
+- `SYSTEM_OVERVIEW.md` should separate the universal baseline from any repo-selected profile and note the migration posture when the repo standard is provisional.
+- `DOCUMENTATION_STANDARD.md` should define the baseline rules that apply to every repo, then explain how repo-specific profiles and migration modes are selected.
+- `BUSINESS_CAPABILITIES.md` should describe what the runner enables operationally.
+- `FUNCTIONAL_SPEC.md` should describe major behaviors and workflow capabilities grounded in the repo.
+- `NON_FUNCTIONAL_REQUIREMENTS.md` should capture runtime, quality, and operational expectations already implied by the repo.
+- Each file must include workflow-generated YAML frontmatter with a stable `template_id` and the workflow metadata already used elsewhere in this bootstrap set.
+- Use these section headings exactly in the generated docs:
+  - `README.md`: `System Documentation Index`, `Audience Views`, `Document Map`
+  - `DOCUMENTATION_STANDARD.md`: `Purpose`, `Audience Model`, `Document Set`, `Architecture Baseline`, `Repo-Selected Profile`, `Migration Mode`, `Conditional Standards`, `Update Triggers`, `Validation`
+  - `SYSTEM_OVERVIEW.md`: `Purpose`, `Scope`, `Primary Flows`, `Architecture Profile`, `Key Risks`
+  - `BUSINESS_CAPABILITIES.md`: capability map plus operational interpretation
+  - `FUNCTIONAL_SPEC.md`: system purpose, functional capabilities, actors, core behaviors
+  - `NON_FUNCTIONAL_REQUIREMENTS.md`: quality and operational requirements
+
+Workflow-owned artifact contract:
+- `SYSTEM_DOCS_INDEX` -> `docs/system/00_governance/bootstrap/README.md`
+- `SYSTEM_DOC_STANDARD` -> `docs/system/00_governance/bootstrap/DOCUMENTATION_STANDARD.md`
+- `BUNDLE_TAXONOMY` -> `docs/system/00_governance/bootstrap/BUNDLE_TAXONOMY.md`
+- `BUNDLE_MIGRATION_PLAN` -> `docs/system/00_governance/bootstrap/BUNDLE_MIGRATION_PLAN.md`
+- `SYSTEM_OVERVIEW` -> `docs/system/00_governance/bootstrap/SYSTEM_OVERVIEW.md`
+- `BUSINESS_CAPABILITIES` -> `docs/system/00_governance/bootstrap/BUSINESS_CAPABILITIES.md`
+- `FUNCTIONAL_SPEC` -> `docs/system/00_governance/bootstrap/FUNCTIONAL_SPEC.md`
+- `NON_FUNCTIONAL_REQUIREMENTS` -> `docs/system/00_governance/bootstrap/NON_FUNCTIONAL_REQUIREMENTS.md`
+
+Meta contract:
+- Write the sidecar JSON to `{SYSTEM_DOCS_INDEX_METAJSON}`.
+- Mark the run `APPROVED` only when the overview and functional doc set is written and internally consistent.
+- The sidecar MUST use this exact structure:
+  {
+    "schema_version": "v2",
+    "coder_result": {
+      "status": "APPROVED" | "REJECTED",
+      "remark": "<summary>",
+      "artifacts": {
+        "SYSTEM_DOCS_INDEX": "docs/system/00_governance/bootstrap/README.md",
+        "SYSTEM_DOC_STANDARD": "docs/system/00_governance/bootstrap/DOCUMENTATION_STANDARD.md",
+        "BUNDLE_TAXONOMY": "docs/system/00_governance/bootstrap/BUNDLE_TAXONOMY.md",
+        "BUNDLE_MIGRATION_PLAN": "docs/system/00_governance/bootstrap/BUNDLE_MIGRATION_PLAN.md",
+        "SYSTEM_OVERVIEW": "docs/system/00_governance/bootstrap/SYSTEM_OVERVIEW.md",
+        "BUSINESS_CAPABILITIES": "docs/system/00_governance/bootstrap/BUSINESS_CAPABILITIES.md",
+        "FUNCTIONAL_SPEC": "docs/system/00_governance/bootstrap/FUNCTIONAL_SPEC.md",
+        "NON_FUNCTIONAL_REQUIREMENTS": "docs/system/00_governance/bootstrap/NON_FUNCTIONAL_REQUIREMENTS.md"
+      },
+      "recorded_at": "2026-07-01T00:00:00"
+    }
+  }
+
+Before finishing, verify that all target files exist on disk and align with the current repository state.
+
+ABSOLUTE OUTPUT RULE
+- Return ONLY valid JSON:
+  {
+    "status": "APPROVED | REJECTED",
+    "remark": "<summary>",
+    "artifacts": {
+      "SYSTEM_DOCS_INDEX": "docs/system/00_governance/bootstrap/README.md",
+      "SYSTEM_DOC_STANDARD": "docs/system/00_governance/bootstrap/DOCUMENTATION_STANDARD.md",
+      "BUNDLE_TAXONOMY": "docs/system/00_governance/bootstrap/BUNDLE_TAXONOMY.md",
+      "BUNDLE_MIGRATION_PLAN": "docs/system/00_governance/bootstrap/BUNDLE_MIGRATION_PLAN.md",
+      "SYSTEM_OVERVIEW": "docs/system/00_governance/bootstrap/SYSTEM_OVERVIEW.md",
+      "BUSINESS_CAPABILITIES": "docs/system/00_governance/bootstrap/BUSINESS_CAPABILITIES.md",
+      "FUNCTIONAL_SPEC": "docs/system/00_governance/bootstrap/FUNCTIONAL_SPEC.md",
+      "NON_FUNCTIONAL_REQUIREMENTS": "docs/system/00_governance/bootstrap/NON_FUNCTIONAL_REQUIREMENTS.md"
+    }
+  }

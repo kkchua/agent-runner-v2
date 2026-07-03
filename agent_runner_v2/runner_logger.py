@@ -6,7 +6,6 @@ All events include: timestamp, step, coder, model, duration, status.
 from __future__ import annotations
 
 import json
-import os
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -19,13 +18,13 @@ from .runtime_context import RUNNER_HOME
 # ---------------------------------------------------------------------------
 _LOG_FILE: Path | None = None
 _COLOURS = {
-    "reset":  "\033[0m",
-    "bold":   "\033[1m",
-    "green":  "\033[32m",
+    "reset": "\033[0m",
+    "bold": "\033[1m",
+    "green": "\033[32m",
     "yellow": "\033[33m",
-    "red":    "\033[31m",
-    "cyan":   "\033[36m",
-    "dim":    "\033[2m",
+    "red": "\033[31m",
+    "cyan": "\033[36m",
+    "dim": "\033[2m",
 }
 _COLOUR_SUPPORTED = sys.stdout.isatty()
 
@@ -39,6 +38,14 @@ def _colour(text: str, name: str) -> str:
         return text
     code = _COLOURS.get(name, "")
     return f"{code}{text}{_COLOURS['reset']}" if code else text
+
+
+def _safe_print(text: str) -> None:
+    try:
+        print(text)
+    except UnicodeEncodeError:
+        sys.stdout.buffer.write((text + "\n").encode("ascii", errors="replace"))
+        sys.stdout.flush()
 
 
 def _now_iso() -> str:
@@ -66,10 +73,18 @@ def _ensure_log_file() -> Path | None:
 # Public API
 # ---------------------------------------------------------------------------
 
-def log_event(step: str, coder: str, *, model: str = "", auth_type: str = "",
-              event: str = "info", duration_ms: int | None = None,
-              return_code: int | None = None, status: str = "",
-              message: str = "") -> None:
+def log_event(
+    step: str,
+    coder: str,
+    *,
+    model: str = "",
+    auth_type: str = "",
+    event: str = "info",
+    duration_ms: int | None = None,
+    return_code: int | None = None,
+    status: str = "",
+    message: str = "",
+) -> None:
     """Log one event to both console and file."""
     record: dict[str, Any] = {
         "timestamp": _now_iso(),
@@ -88,33 +103,48 @@ def log_event(step: str, coder: str, *, model: str = "", auth_type: str = "",
     if message:
         record["message"] = message
 
-    # Console
     _print_console(record)
-
-    # File
     _write_file(record)
 
 
-def log_invocation_start(step: str, coder: str, *, model: str = "",
-                         auth_type: str = "", command: list[str] | None = None) -> None:
+def log_invocation_start(
+    step: str,
+    coder: str,
+    *,
+    model: str = "",
+    auth_type: str = "",
+    command: list[str] | None = None,
+) -> None:
     """Log that a coder invocation is about to start."""
     model_name = model or "n/a"
     log_event(
-        step, coder, model=model, auth_type=auth_type,
+        step,
+        coder,
+        model=model,
+        auth_type=auth_type,
         event="invocation_start",
         message=f"[{step}] invoking coder={coder} model={model_name} auth={auth_type or 'default'}",
     )
 
 
-def log_invocation_result(step: str, coder: str, *, model: str = "",
-                          auth_type: str = "", return_code: int,
-                          duration_ms: int, status: str,
-                          message: str = "") -> None:
+def log_invocation_result(
+    step: str,
+    coder: str,
+    *,
+    model: str = "",
+    auth_type: str = "",
+    return_code: int,
+    duration_ms: int,
+    status: str,
+    message: str = "",
+) -> None:
     """Log the result of a coder invocation."""
-    colour = "green" if return_code == 0 else "red"
     status_label = f"rc={return_code} {status}"
     log_event(
-        step, coder, model=model, auth_type=auth_type,
+        step,
+        coder,
+        model=model,
+        auth_type=auth_type,
         event="invocation_result",
         return_code=return_code,
         duration_ms=duration_ms,
@@ -123,11 +153,13 @@ def log_invocation_result(step: str, coder: str, *, model: str = "",
     )
 
 
-def log_error(step: str, coder: str, *, model: str = "",
-              auth_type: str = "", error: str = "") -> None:
+def log_error(step: str, coder: str, *, model: str = "", auth_type: str = "", error: str = "") -> None:
     """Log a coder invocation error."""
     log_event(
-        step, coder, model=model, auth_type=auth_type,
+        step,
+        coder,
+        model=model,
+        auth_type=auth_type,
         event="error",
         status="ERROR",
         message=error or f"[{step}] error coder={coder} model={model or 'n/a'}",
@@ -137,10 +169,10 @@ def log_error(step: str, coder: str, *, model: str = "",
 def log_resolver(coder_input: str, resolved: str, *, is_alias: bool) -> None:
     """Log coder alias resolution."""
     if is_alias:
-        msg = f"[resolver] '{coder_input}' → resolved alias to '{resolved}'"
+        msg = f"[resolver] '{coder_input}' -> resolved alias to '{resolved}'"
     else:
-        msg = f"[resolver] '{coder_input}' → using plain coder name"
-    print(_colour(f"  {msg}", "dim"))
+        msg = f"[resolver] '{coder_input}' -> using plain coder name"
+    _safe_print(_colour(f"  {msg}", "dim"))
 
 
 # ---------------------------------------------------------------------------
@@ -154,16 +186,13 @@ def _print_console(record: dict[str, Any]) -> None:
         return
 
     if event == "invocation_start":
-        print(_colour(msg, "cyan"))
+        _safe_print(_colour(msg, "cyan"))
     elif event == "invocation_result":
-        if record.get("return_code") == 0:
-            print(_colour(msg, "green"))
-        else:
-            print(_colour(msg, "red"))
+        _safe_print(_colour(msg, "green" if record.get("return_code") == 0 else "red"))
     elif event == "error":
-        print(_colour(msg, "red"))
+        _safe_print(_colour(msg, "red"))
     else:
-        print(msg)
+        _safe_print(msg)
 
 
 # ---------------------------------------------------------------------------

@@ -1,18 +1,22 @@
 ---
 title: "Codebase Inventory - agent-runner-v2"
-template_id: "CB-01"
+template_id: "CODEBASE-INV-v1"
 status: "active"
-generated: "2026-07-02T18:00:53+08:00"
-workflow: "00_master_docs_bootstrap_v1"
-step: "01_generate_codebase_baseline"
-change_id: "00DOC-GEN-20260702-005"
+generated: "2026-07-04T06:01:39+08:00"
+workflow: "10_execution_scaffold_v1"
+step: "generate_templates"
+change_id: "00DOC-GEN-20260704-001"
+managed_by: workflow-generated
 ---
+
+> Managed by workflow: `10_execution_scaffold_v1` / step: `generate_templates`
+> This file is workflow-generated and protected from manual edits.
 
 # Codebase Inventory: agent-runner-v2
 
 ## 1. Inventory Scope
 
-This inventory was generated from a repository scan at `2026-07-02T18:00:53+08:00`.
+This inventory was generated from a repository scan at `2026-07-04T06:01:39+08:00`.
 
 ## 2. Python Source Modules
 
@@ -23,6 +27,7 @@ This inventory was generated from a repository scan at `2026-07-02T18:00:53+08:0
 | agent_runner_v2/actions/__init__.py | actions | stub | current | docs/codebase/02_modules/agent-runner-v2-actions-init.md | bootstrap/reconcile scan |
 | agent_runner_v2/actions/assemble_video.py | actions | full | current | docs/codebase/02_modules/agent-runner-v2-actions-assemble-video.md | bootstrap/reconcile scan |
 | agent_runner_v2/actions/copy_artifact.py | actions | full | current | docs/codebase/02_modules/agent-runner-v2-actions-copy-artifact.md | bootstrap/reconcile scan |
+| agent_runner_v2/actions/documentation_validation_core.py | actions | full | current | docs/codebase/02_modules/agent-runner-v2-actions-documentation-validation-core.md | bootstrap/reconcile scan |
 | agent_runner_v2/actions/execute_i2v.py | actions | full | current | docs/codebase/02_modules/agent-runner-v2-actions-execute-i2v.md | bootstrap/reconcile scan |
 | agent_runner_v2/actions/execute_t2i.py | actions | full | current | docs/codebase/02_modules/agent-runner-v2-actions-execute-t2i.md | bootstrap/reconcile scan |
 | agent_runner_v2/actions/execute_voiceover.py | actions | full | current | docs/codebase/02_modules/agent-runner-v2-actions-execute-voiceover.md | bootstrap/reconcile scan |
@@ -43,6 +48,7 @@ This inventory was generated from a repository scan at `2026-07-02T18:00:53+08:0
 | agent_runner_v2/bootstrap/workflows/default/template_groups.py | bootstrap | full | current | docs/codebase/02_modules/agent-runner-v2-bootstrap-workflows-default-template-groups.md | bootstrap/reconcile scan |
 | agent_runner_v2/bundle_loader.py | bootstrap | full | current | docs/codebase/02_modules/agent-runner-v2-bundle-loader.md | bootstrap/reconcile scan |
 | agent_runner_v2/bundle_taxonomy.py | support | summary | current | docs/codebase/02_modules/agent-runner-v2-bundle-taxonomy.md | bootstrap/reconcile scan |
+| agent_runner_v2/cleanup_generated_docs.py | support | summary | current | docs/codebase/02_modules/agent-runner-v2-cleanup-generated-docs.md | bootstrap/reconcile scan |
 | agent_runner_v2/codebase_docs.py | support | summary | current | docs/codebase/02_modules/agent-runner-v2-codebase-docs.md | bootstrap/reconcile scan |
 | agent_runner_v2/coder_adapters.py | coder | full | current | docs/codebase/02_modules/agent-runner-v2-coder-adapters.md | bootstrap/reconcile scan |
 | agent_runner_v2/daemon.py | backend | full | current | docs/codebase/02_modules/agent-runner-v2-daemon.md | bootstrap/reconcile scan |
@@ -161,7 +167,20 @@ This inventory was generated from a repository scan at `2026-07-02T18:00:53+08:0
 | agent_runner_v2/llm_response_schema.json | json | summary | current | docs/codebase/03_components/config-and-data.md | bootstrap/reconcile scan |
 | agent_runner_v2/model_mapping.json | json | summary | current | docs/codebase/03_components/config-and-data.md | bootstrap/reconcile scan |
 | agent_runner_v2/usage_schema.json | json | summary | current | docs/codebase/03_components/config-and-data.md | bootstrap/reconcile scan |
-| docs/codebase/04_changes/00DOC-GEN-20260702-005-bootstrap-snapshot.json | json | summary | current | docs/codebase/03_components/config-and-data.md | bootstrap/reconcile scan |
+| docs/codebase/04_changes/00DOC-GEN-20260703-005-bootstrap-snapshot.json | json | summary | current | docs/codebase/03_components/config-and-data.md | bootstrap/reconcile scan |
+| docs/codebase/04_changes/00DOC-GEN-20260703-006-bootstrap-snapshot.json | json | summary | current | docs/codebase/03_components/config-and-data.md | bootstrap/reconcile scan |
+| docs/codebase/04_changes/00DOC-GEN-20260703-007-bootstrap-snapshot.json | json | summary | current | docs/codebase/03_components/config-and-data.md | bootstrap/reconcile scan |
+| docs/codebase/04_changes/00DOC-GEN-20260704-001-bootstrap-snapshot.json | json | summary | current | docs/codebase/03_components/config-and-data.md | bootstrap/reconcile scan |
+| docs/codebase/04_changes/DOCSYNC-20260703_codebase-doc-update.meta.json | json | summary | current | docs/codebase/03_components/config-and-data.md | bootstrap/reconcile scan |
+| docs/delivery/05_reviews/REV-260703-01_rsop_R-0000-00_workflow-sop-v1.meta.json | json | summary | current | docs/codebase/03_components/config-and-data.md | bootstrap/reconcile scan |
+| docs/delivery/05_reviews/REV-260703-02_rtmpl_R-0000-00_01-delivery-template-registry.meta.json | json | summary | current | docs/codebase/03_components/config-and-data.md | bootstrap/reconcile scan |
+| docs/delivery/05_reviews/REV-260703-03_ragent_R-0000-00_delivery-agents-md.meta.json | json | summary | current | docs/codebase/03_components/config-and-data.md | bootstrap/reconcile scan |
+| docs/delivery/05_reviews/REV-260704-01_rsop_R-0000-00_workflow-sop-v1.meta.json | json | summary | current | docs/codebase/03_components/config-and-data.md | bootstrap/reconcile scan |
+| docs/delivery/05_reviews/REV-260704-02_rtmpl_R-0000-00_01-delivery-template-registry.meta.json | json | summary | current | docs/codebase/03_components/config-and-data.md | bootstrap/reconcile scan |
+| docs/delivery/05_reviews/REV-260704-03_ragent_R-0000-00_delivery-agents-md.meta.json | json | summary | current | docs/codebase/03_components/config-and-data.md | bootstrap/reconcile scan |
+| docs/delivery/DELIVERY_FOLDER_MAP.json | json | summary | current | docs/codebase/03_components/config-and-data.md | bootstrap/reconcile scan |
+| docs/system/00_governance/bootstrap/00DOC-GEN-20260703-007-bootstrap-validation.meta.json | json | summary | current | docs/codebase/03_components/config-and-data.md | bootstrap/reconcile scan |
+| docs/system/00_governance/bootstrap/meta.json | json | summary | current | docs/codebase/03_components/config-and-data.md | bootstrap/reconcile scan |
 | pyproject.toml | toml | summary | current | docs/codebase/03_components/config-and-data.md | bootstrap/reconcile scan |
 
 ## 5. Scripts
@@ -186,6 +205,7 @@ This inventory was generated from a repository scan at `2026-07-02T18:00:53+08:0
 | run-00_master_docs_bootstrap_v1.bat | .bat | summary | current | docs/codebase/03_components/scripts-suite.md | bootstrap/reconcile scan |
 | run-10_execution_scaffold_v1.bat | .bat | summary | current | docs/codebase/03_components/scripts-suite.md | bootstrap/reconcile scan |
 | run-approve-step.bat | .bat | summary | current | docs/codebase/03_components/scripts-suite.md | bootstrap/reconcile scan |
+| run-cleanup-generated-docs.bat | .bat | summary | current | docs/codebase/03_components/scripts-suite.md | bootstrap/reconcile scan |
 | run-daemon.bat | .bat | summary | current | docs/codebase/03_components/scripts-suite.md | bootstrap/reconcile scan |
 | run-reset-step.bat | .bat | summary | current | docs/codebase/03_components/scripts-suite.md | bootstrap/reconcile scan |
 | sample-run-delivery.bat | .bat | summary | current | docs/codebase/03_components/scripts-suite.md | bootstrap/reconcile scan |
@@ -221,6 +241,7 @@ This inventory was generated from a repository scan at `2026-07-02T18:00:53+08:0
 | tests/test_codebase_docs.py | tests | summary | current | docs/codebase/03_components/tests-suite.md | bootstrap/reconcile scan |
 | tests/test_daemon.py | tests | summary | current | docs/codebase/03_components/tests-suite.md | bootstrap/reconcile scan |
 | tests/test_documentation_governance.py | tests | summary | current | docs/codebase/03_components/tests-suite.md | bootstrap/reconcile scan |
+| tests/test_documentation_guardrails_cleanup.py | tests | summary | current | docs/codebase/03_components/tests-suite.md | bootstrap/reconcile scan |
 | tests/test_run_agent_status.py | tests | summary | current | docs/codebase/03_components/tests-suite.md | bootstrap/reconcile scan |
 | tests/test_runtime_context_paths.py | tests | summary | current | docs/codebase/03_components/tests-suite.md | bootstrap/reconcile scan |
 | tests/test_tool_instruction_block.py | tests | summary | current | docs/codebase/03_components/tests-suite.md | bootstrap/reconcile scan |
@@ -241,6 +262,117 @@ This inventory was generated from a repository scan at `2026-07-02T18:00:53+08:0
 | agent_runner_v2/image_csv_generation.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
 | agent_runner_v2/QWEN.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
 | archive/batch/README.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/codebase/00_standards/CODEBASE_DOC_SOP_v1.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/codebase/00_standards/CODEBASE_DOC_STATUS_RULES_v1.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/codebase/01_inventory/codebase_inventory.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/codebase/02_modules/agent-runner-v2-action-result.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/codebase/02_modules/agent-runner-v2-actions-assemble-video.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/codebase/02_modules/agent-runner-v2-actions-copy-artifact.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/codebase/02_modules/agent-runner-v2-actions-documentation-validation-core.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/codebase/02_modules/agent-runner-v2-actions-execute-i2v.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/codebase/02_modules/agent-runner-v2-actions-execute-t2i.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/codebase/02_modules/agent-runner-v2-actions-execute-voiceover.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/codebase/02_modules/agent-runner-v2-actions-finalize-bootstrap.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/codebase/02_modules/agent-runner-v2-actions-init.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/codebase/02_modules/agent-runner-v2-actions-prepare-delivery-scaffold.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/codebase/02_modules/agent-runner-v2-actions-promote-artifact.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/codebase/02_modules/agent-runner-v2-actions-promote-init.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/codebase/02_modules/agent-runner-v2-actions-scan-repo-codebase.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/codebase/02_modules/agent-runner-v2-actions-submit-comfyui.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/codebase/02_modules/agent-runner-v2-actions-sync-codebase-docs.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/codebase/02_modules/agent-runner-v2-actions-sync-system-docs.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/codebase/02_modules/agent-runner-v2-actions-validate-codebase-docs.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/codebase/02_modules/agent-runner-v2-actions-validate-delivery-docs.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/codebase/02_modules/agent-runner-v2-actions-validate-system-docs.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/codebase/02_modules/agent-runner-v2-approve-commands.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/codebase/02_modules/agent-runner-v2-artifact-paths.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/codebase/02_modules/agent-runner-v2-backend-client.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/codebase/02_modules/agent-runner-v2-bootstrap-workflows-default-template-groups.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/codebase/02_modules/agent-runner-v2-bundle-loader.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/codebase/02_modules/agent-runner-v2-bundle-taxonomy.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/codebase/02_modules/agent-runner-v2-cleanup-generated-docs.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/codebase/02_modules/agent-runner-v2-codebase-docs.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/codebase/02_modules/agent-runner-v2-coder-adapters.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/codebase/02_modules/agent-runner-v2-daemon.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/codebase/02_modules/agent-runner-v2-documentation-guardrails.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/codebase/02_modules/agent-runner-v2-engine-commands.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/codebase/02_modules/agent-runner-v2-exceptions.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/codebase/02_modules/agent-runner-v2-execution-request.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/codebase/02_modules/agent-runner-v2-execution-result.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/codebase/02_modules/agent-runner-v2-init.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/codebase/02_modules/agent-runner-v2-job-state.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/codebase/02_modules/agent-runner-v2-model-config.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/codebase/02_modules/agent-runner-v2-run-agent.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/codebase/02_modules/agent-runner-v2-runner-actions.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/codebase/02_modules/agent-runner-v2-runner-logger.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/codebase/02_modules/agent-runner-v2-runtime-context.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/codebase/02_modules/agent-runner-v2-step-runner.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/codebase/02_modules/agent-runner-v2-submit-commands.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/codebase/02_modules/agent-runner-v2-submitter.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/codebase/02_modules/agent-runner-v2-system-docs.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/codebase/02_modules/agent-runner-v2-tools-agent-tools.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/codebase/02_modules/agent-runner-v2-workflow-router.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/codebase/02_modules/agent-runner-v2-workflow-spec-commands.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/codebase/02_modules/agent-runner-v2-workflow-specs.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/codebase/03_components/actions-package.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/codebase/03_components/codebase-governance.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/codebase/03_components/config-and-data.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/codebase/03_components/scripts-suite.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/codebase/03_components/tests-suite.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/codebase/03_components/workflow-families.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/codebase/04_changes/00DOC-GEN-20260703-005-bootstrap.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/codebase/04_changes/00DOC-GEN-20260703-006-bootstrap.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/codebase/04_changes/00DOC-GEN-20260703-007-bootstrap-validation.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/codebase/04_changes/00DOC-GEN-20260703-007-bootstrap.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/delivery/00_standards/DELIVERY_AGENT_EXECUTOR.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/delivery/00_standards/DELIVERY_AGENT_IMPL_PLANNER.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/delivery/00_standards/DELIVERY_AGENT_MEMORY_MANAGER.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/delivery/00_standards/DELIVERY_AGENT_PLANNER.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/delivery/00_standards/DELIVERY_AGENT_REVIEWER.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/delivery/00_standards/DELIVERY_AGENT_TASK_DECOMPOSER.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/delivery/00_standards/DELIVERY_AGENTS_MD.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/delivery/05_reviews/REV-260703-01_rsop_R-0000-00_workflow-sop-v1.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/delivery/05_reviews/REV-260703-02_rtmpl_R-0000-00_01-delivery-template-registry.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/delivery/05_reviews/REV-260703-03_ragent_R-0000-00_delivery-agents-md.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/delivery/05_reviews/REV-260704-01_rsop_R-0000-00_workflow-sop-v1.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/delivery/05_reviews/REV-260704-02_rtmpl_R-0000-00_01-delivery-template-registry.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/delivery/05_reviews/REV-260704-03_ragent_R-0000-00_delivery-agents-md.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/delivery/project_analysis.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/system/00_governance/bootstrap/00DOC-GEN-20260703-007-bootstrap-change-log.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/system/00_governance/bootstrap/00DOC-GEN-20260703-007-bootstrap-summary.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/system/00_governance/bootstrap/00DOC-GEN-20260703-007-bootstrap-validation.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/system/00_governance/bootstrap/BUNDLE_MIGRATION_PLAN.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/system/00_governance/bootstrap/BUNDLE_TAXONOMY.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/system/00_governance/bootstrap/BUSINESS_CAPABILITIES.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/system/00_governance/bootstrap/COMPONENT_ARCHITECTURE.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/system/00_governance/bootstrap/DECISION_LOG.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/system/00_governance/bootstrap/DELIVERY_STATUS_RULES_v1.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/system/00_governance/bootstrap/DEVELOPER_GUIDE.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/system/00_governance/bootstrap/DOCUMENTATION_STANDARD.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/system/00_governance/bootstrap/EXISTING_REPO_WORKFLOW_SOP.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/system/00_governance/bootstrap/FUNCTIONAL_SPEC.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/system/00_governance/bootstrap/NON_FUNCTIONAL_REQUIREMENTS.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/system/00_governance/bootstrap/project_analysis.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/system/00_governance/bootstrap/README.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/system/00_governance/bootstrap/RUNBOOK.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/system/00_governance/bootstrap/SYSTEM_CONTEXT.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/system/00_governance/bootstrap/SYSTEM_FILE_STRUCTURE.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/system/00_governance/bootstrap/SYSTEM_OVERVIEW.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/system/00_governance/bootstrap/templates/codebase/01_codebase_template_registry.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/system/00_governance/bootstrap/templates/codebase/02_codebase_inventory_template.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/system/00_governance/bootstrap/templates/codebase/03_codebase_module_template.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/system/00_governance/bootstrap/templates/codebase/04_codebase_component_template.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/system/00_governance/bootstrap/templates/codebase/05_codebase_change_template.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/system/00_governance/bootstrap/templates/delivery/01_delivery_template_registry.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/system/00_governance/bootstrap/templates/delivery/02_delivery_initiative_template.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/system/00_governance/bootstrap/templates/delivery/03_delivery_plan_template.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/system/00_governance/bootstrap/templates/delivery/04_delivery_task_graph_template.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/system/00_governance/bootstrap/templates/delivery/05_delivery_task_template.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/system/00_governance/bootstrap/templates/delivery/06_delivery_impl_template.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/system/00_governance/bootstrap/templates/delivery/07_delivery_review_template.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/system/00_governance/bootstrap/templates/delivery/08_delivery_validation_template.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/system/00_governance/bootstrap/templates/delivery/09_delivery_memory_template.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| docs/system/00_governance/bootstrap/WORKFLOW_SOP_v1.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
 | HOW_TO_GUIDE.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
 | QWEN.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
 | README.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
@@ -261,16 +393,24 @@ This inventory was generated from a repository scan at `2026-07-02T18:00:53+08:0
 | Category | Total Files | Current | Needs Update | Pending Review | Superseded |
 |---|---|---|---|---|---|
 | other files | 5 | 5 | 0 | 0 | 0 |
-| configuration/data files | 8 | 8 | 0 | 0 | 0 |
-| documentation files | 15 | 15 | 0 | 0 | 0 |
-| python modules | 47 | 47 | 0 | 0 | 0 |
+| configuration/data files | 21 | 21 | 0 | 0 | 0 |
+| documentation files | 126 | 126 | 0 | 0 | 0 |
+| python modules | 49 | 49 | 0 | 0 | 0 |
 | bootstrap workflow files | 80 | 80 | 0 | 0 | 0 |
-| scripts | 42 | 42 | 0 | 0 | 0 |
-| test files | 10 | 10 | 0 | 0 | 0 |
+| scripts | 43 | 43 | 0 | 0 | 0 |
+| test files | 11 | 11 | 0 | 0 | 0 |
 
-## 10. Verification Log
+## 10. Status Legend
+
+- `current`: documentation is up to date and matches the source
+- `needs_update`: source changed and documentation is stale
+- `pending_review`: documentation exists but has not been verified
+- `superseded`: documentation is obsolete or replaced
+
+## 11. Verification Log
 
 | Date | Verified By | Scope | Result |
 |---|---|---|---|
-| 2026-07-02 | 00_master_docs_bootstrap_v1 | repository scan | complete |
+| 2026-07-04 | 10_execution_scaffold_v1 / generate_templates | template refresh validation | complete |
+| 2026-07-04 | 00_master_docs_bootstrap_v1 | repository scan | complete |
 

@@ -6,6 +6,7 @@ actions/sync_system_docs.py - Bootstrap or reconcile audience-oriented system do
 """
 
 import json
+import re
 from datetime import datetime
 from pathlib import Path
 
@@ -36,6 +37,34 @@ def _write_text(path: Path, content: str) -> None:
     path.write_text(content, encoding="utf-8")
 
 
+def _architecture_profile_from_project_analysis(project_root: Path) -> dict[str, str]:
+    analysis_path = project_root / "docs/system/00_governance/bootstrap/project_analysis.md"
+    if not analysis_path.exists():
+        return {}
+    text = analysis_path.read_text(encoding="utf-8")
+    patterns = {
+        "architecture_profile": r"^Current Profile:\s*(.+)$",
+        "architecture_target_profile": r"^Target Profile:\s*(.+)$",
+        "architecture_migration_mode": r"^Migration Mode:\s*(.+)$",
+        "architecture_baseline": r"^Baseline:\s*(.+)$",
+    }
+    result: dict[str, str] = {}
+    for key, pattern in patterns.items():
+        match = re.search(pattern, text, re.MULTILINE | re.IGNORECASE)
+        if match:
+            result[key] = match.group(1).strip()
+    if "architecture_profile" not in result:
+        result["architecture_profile"] = "provisional"
+    if "architecture_target_profile" not in result:
+        result["architecture_target_profile"] = "repo-selected"
+    if "architecture_migration_mode" not in result:
+        result["architecture_migration_mode"] = "targeted_migration"
+    if "architecture_baseline" not in result:
+        result["architecture_baseline"] = "universal baseline"
+    result["architecture_profile_source"] = "docs/system/00_governance/bootstrap/project_analysis.md"
+    return result
+
+
 def sync_system_docs(*, context: dict[str, str], state: dict, step_cfg: dict, project_root: Path) -> ActionResult:
     mode = str(step_cfg.get("mode") or "bootstrap")
     job_id = str(state.get("job_id") or "system-docs")
@@ -48,6 +77,7 @@ def sync_system_docs(*, context: dict[str, str], state: dict, step_cfg: dict, pr
         step=step,
         workflow_name=str(state.get("template_group") or mode),
     )
+    snapshot.update(_architecture_profile_from_project_analysis(project_root))
     repo_name = project_root.name or "repository"
 
     docs_to_write = {

@@ -1,196 +1,214 @@
 ---
-title: "Documentation Standard"
 template_id: "SYS-00-DS"
+title: "Documentation Standard - agent-runner-v2"
 status: "active"
-managed_by: workflow-generated
-generated: "2026-07-02T00:00:00+08:00"
+generated: "2026-07-04T08:00:00+08:00"
 workflow: "00_master_docs_bootstrap_v1"
 step: "03_generate_system_overview_docs"
-change_id: "00DOC-GEN-20260702-005"
+change_id: "00DOC-GEN-20260704-001"
+managed_by: workflow-generated
 ---
-
-# Documentation Standard
 
 > Managed by workflow: `00_master_docs_bootstrap_v1` / step: `03_generate_system_overview_docs`
 > This file is workflow-generated and protected from manual edits.
 
+# Documentation Standard
+
 ## Purpose
 
-This document defines the standards, conventions, and expectations for all documentation within the agent-runner-v2 project.
+This document defines the documentation baseline rules that apply to every repository using the agent-runner-v2 platform. It establishes the minimum viable documentation set, content expectations, and the mechanism for selecting repo-specific profiles and migration modes.
 
-## Documentation Hierarchy
+**Why:** Documentation drift is a major source of operational friction. A consistent baseline ensures stakeholders can always find critical information, while flexible profiles allow repositories to adapt to their domain needs.
 
-The project uses a two-tier documentation structure:
+## Audience Model
 
-```
-docs/
-├── system/          # System-level documentation (governance)
-│   └── 00_governance/
-│       └── bootstrap/
-│           ├── README.md
-│           ├── SYSTEM_OVERVIEW.md
-│           ├── BUSINESS_CAPABILITIES.md
-│           ├── FUNCTIONAL_SPEC.md
-│           ├── NON_FUNCTIONAL_REQUIREMENTS.md
-│           ├── DOCUMENTATION_STANDARD.md
-│           ├── BUNDLE_TAXONOMY.md
-│           └── BUNDLE_MIGRATION_PLAN.md
-│
-└── codebase/        # Codebase-level documentation
-    ├── 01_inventory/
-    │   └── codebase_inventory.md
-    ├── 02_modules/
-    │   └── [module documentation files]
-    ├── 03_components/
-    │   └── [component documentation files]
-    └── 04_changes/
-        └── [change impact documents]
-```
+| Audience | Needs | Primary Documents |
+|----------|-------|-------------------|
+| **Users** | Run workflows, interpret results | System Overview, Functional Spec, Runbook |
+| **Developers** | Extend, debug, contribute | Developer Guide, Component Architecture, Decision Log |
+| **Stakeholders** | Evaluate, plan, govern | Business Capabilities, System Overview, NFRs |
 
-## Document Types
+## Document Set
 
-### 1. System Documentation (`docs/system/`)
+### Universal Baseline (Required Everywhere)
 
-System documentation describes the platform from a user and stakeholder perspective.
+Every repository must maintain:
 
-| Document Type | Audience | Content |
-|---------------|----------|---------|
-| Overview | All | Platform concept, value, capabilities |
-| Business Capabilities | Stakeholders | Operational value and enablement |
-| Functional Spec | Developers | Behaviors and functional requirements |
-| Non-Functional Requirements | Architects | Quality attributes and constraints |
+| Document | Template ID | Purpose |
+|----------|-------------|---------|
+| System Documentation Index | SYS-00-IDX | Entry point and navigation |
+| Documentation Standard | SYS-00-DS | This document — rules and profiles |
+| Bundle Taxonomy | SYS-00-BT | Runtime bundle organization |
+| System Overview | SYS-00-SO | Purpose, scope, and value flow |
 
-### 2. Codebase Documentation (`docs/codebase/`)
+### Architecture Baseline (Required for `standard` profile)
 
-Codebase documentation describes the implementation from a maintainer perspective.
+Repositories targeting the `standard` architecture profile must additionally maintain:
 
-| Document Type | Audience | Content |
-|---------------|----------|---------|
-| Inventory | Maintainers | Complete file listing with status |
-| Module Docs | Developers | Per-module API and implementation details |
-| Component Docs | Developers | Cross-cutting component documentation |
-| Change Impact | Maintainers | Change tracking and impact analysis |
+| Document | Template ID | Purpose |
+|----------|-------------|---------|
+| System Context | SYS-00-SC | Context and boundaries |
+| Component Architecture | SYS-00-CA | Component design |
+| Decision Log | SYS-00-DL | ADRs and rationale |
+| System File Structure | SYS-00-SFS | Repository organization |
+| Developer Guide | SYS-00-DG | Setup and contribution |
+| Runbook | SYS-00-RB | Operations and troubleshooting |
 
-## File Naming Conventions
+### Functional Baseline (Required for active delivery)
 
-### System Documents
+Repositories with active delivery workflows must maintain:
 
-- Use `UPPER_SNAKE_CASE.md` for system documents
-- Examples: `SYSTEM_OVERVIEW.md`, `FUNCTIONAL_SPEC.md`
+| Document | Template ID | Purpose |
+|----------|-------------|---------|
+| Business Capabilities | SYS-00-BC | Capability mapping |
+| Functional Specification | SYS-00-FS | Behaviors and capabilities |
+| Non-Functional Requirements | SYS-00-NFR | Quality and operational expectations |
 
-### Codebase Documents
+## Architecture Baseline
 
-- Module docs: `{package-name}-{module-name}.md`
-- Component docs: `{component-area}.md`
-- Change docs: `{CHANGE-ID}-{description}.md`
+### Universal Baseline
 
-## Frontmatter Requirements
+The universal baseline applies to **all** repositories, regardless of profile or state:
 
-All generated documentation must include YAML frontmatter:
+1. **Documentation Index (SYS-00-IDX)** — Must exist and be accurate
+2. **Documentation Standard (SYS-00-DS)** — Must define current profile and migration mode
+3. **Bundle Taxonomy (SYS-00-BT)** — Must describe runtime bundle organization
+4. **System Overview (SYS-00-SO)** — Must explain platform purpose and scope
 
-```yaml
+**Rationale:** Even minimal repositories need navigation, rules, bundle structure, and purpose documentation. These four documents provide the minimum viable system documentation.
+
+### Profile-Specific Requirements
+
+| Profile | Additional Required Documents |
+|---------|------------------------------|
+| `minimal` | None (universal baseline only) |
+| `standard` | SYS-00-SC, SYS-00-CA, SYS-00-DL, SYS-00-SFS, SYS-00-DG, SYS-00-RB |
+| `comprehensive` | All `standard` docs plus domain-specific extensions |
+
+## Repo-Selected Profile
+
+### Current Profile
+
+| Attribute | Value |
+|-----------|-------|
+| **Repository** | agent-runner-v2 |
+| **Current Profile** | `standard` |
+| **Target Profile** | `standard` |
+| **Migration Mode** | `in_progress` |
+
+### Profile Selection Rationale
+
+The `agent-runner-v2` repository selects the `standard` profile because:
+
+1. **Mature codebase** — 40+ modules with clear architectural patterns
+2. **Multi-stakeholder** — Users, developers, and operators interact with the system
+3. **Production usage** — Backend-connected worker and daemon modes require operational documentation
+4. **Extensible design** — Action system and workflow families invite contribution
+
+### Profile Components
+
+This repository maintains the full standard profile:
+
+- **Core system docs**: Index, Standard, Taxonomy, Overview, Capabilities, Functional Spec, NFRs
+- **Architecture docs**: Context, Component Architecture, Decision Log, File Structure
+- **Operational docs**: Developer Guide, Runbook, Repository SOP
+
+## Migration Mode
+
+### Current Mode: `in_progress`
+
+The repository is actively generating its documentation baseline. This mode indicates:
+
+- Documentation is being created by the bootstrap workflow
+- Some documents may be stubs or incomplete
+- Updates are expected as the codebase evolves
+
+### Mode Transitions
+
+| From | To | Trigger |
+|------|-----|---------|
+| `in_progress` | `active` | Bootstrap complete, all docs validated |
+| `active` | `drift_detected` | Validation finds stale or missing docs |
+| `drift_detected` | `in_progress` | Documentation sync workflow initiated |
+| `any` | `archived` | Repository deprecated |
+
+### Migration Posture
+
+When the repository standard is provisional (during bootstrap), the following applies:
+
+1. **Docs are workflow-generated** — Manual edits are blocked by guardrails
+2. **Validation is advisory** — Failures don't block development
+3. **Updates are batched** — Changes accumulate until explicit sync
+4. **Approval required** — Final transition to `active` requires human approval
+
+## Conditional Standards
+
+### For Workflow Bundles
+
+Workflow bundles under `agent_runner_v2/bootstrap/workflows/default/` must maintain:
+
+1. **template_groups.py** — Workflow definitions and step configurations
+2. **JSON schemas** — job_schema.json, llm_response_schema.json, usage_schema.json
+3. **Prompt templates** — One .txt file per step under `prompts/<workflow>/`
+
+### For Packaged Code
+
+Python modules under `agent_runner_v2/` must maintain:
+
+1. **Module docstrings** — Purpose and responsibility
+2. **Type hints** — Function signatures and return types
+3. **Runtime context** — Integration with `runtime_context.py`
+
+### For Documentation
+
+All markdown files must include:
+
+1. **YAML frontmatter** — template_id, status, generated timestamp
+2. **Workflow banner** — Managed by workflow notice
+3. **Version tracking** — Change ID for traceability
+
+## Update Triggers
+
+Documentation must be refreshed when:
+
+| Trigger | Documents Affected |
+|---------|-------------------|
+| Code change impacting public API | Functional Spec, Developer Guide |
+| New workflow family added | Bundle Taxonomy, Functional Spec |
+| Architecture decision | Decision Log, Component Architecture |
+| Operational procedure change | Runbook, Repository SOP |
+| Bundle format change | Bundle Taxonomy, Bundle Migration Plan |
+| Release cut | System Overview, Business Capabilities |
+
+## Validation
+
+### Automated Checks
+
+The following validations run automatically:
+
+1. **Frontmatter validation** — All required fields present
+2. **Template ID uniqueness** — No duplicate template IDs
+3. **Cross-reference integrity** — Links to other docs resolve
+4. **Schema compliance** — JSON sidecars match schemas
+
+### Manual Reviews
+
+The following require human review:
+
+1. **Content accuracy** — Technical correctness
+2. **Completeness** — All topics covered
+3. **Clarity** — Appropriate for target audience
+4. **Consistency** — Terminology and style
+
+### Validation Results
+
+Validation results are recorded in:
+
+- `docs/system/00_governance/bootstrap/00DOC-GEN-<id>-bootstrap-validation.md`
+- `docs/codebase/04_changes/00DOC-GEN-<id>-bootstrap.md`
+
 ---
-title: "Document Title"
-template_id: "SYS-XX-XXX"
-status: "active"
-managed_by: workflow-generated
-generated: "YYYY-MM-DDTHH:MM:SS+08:00"
-workflow: "workflow_name"
-step: "step_name"
-change_id: "CHANGE-ID"
----
-```
 
-### Field Definitions
-
-| Field | Required | Description |
-|-------|----------|-------------|
-| title | Yes | Human-readable document title |
-| template_id | Yes | Document template identifier |
-| status | Yes | Document status: `active`, `draft`, `superseded` |
-| managed_by | For generated | `workflow-generated` or `manual` |
-| generated | For generated | ISO 8601 timestamp |
-| workflow | For generated | Source workflow name |
-| step | For generated | Source step name |
-| change_id | For generated | Change identifier |
-
-## Workflow-Generated Document Banner
-
-All workflow-generated markdown files must include this banner immediately after frontmatter:
-
-```markdown
-> Managed by workflow: `{workflow_name}` / step: `{step_name}`
-> This file is workflow-generated and protected from manual edits.
-```
-
-## Content Style Guidelines
-
-### Markdown Standards
-
-- Use ATX-style headers (`#` not `underlines`)
-- Use fenced code blocks with language tags
-- Use tables for structured data
-- Use bullet lists for unordered items
-- Use numbered lists for sequential steps
-
-### Writing Style
-
-- Write in present tense
-- Use active voice
-- Be concise but complete
-- Define acronyms on first use
-- Use sentence case for headings (not Title Case)
-
-### Code References
-
-- Use backticks for inline code: `function_name()`
-- Use code blocks for multi-line examples
-- Include file paths in code blocks where relevant
-
-## Protection and Validation
-
-### Workflow-Generated Documents
-
-- Protected from manual edits
-- Validation checks for:
-  - Frontmatter completeness
-  - Banner presence
-  - Cross-reference validity
-  - Out-of-date content
-
-### Manual Documents
-
-- No protection required
-- Should follow style guidelines
-- Should reference generated docs where appropriate
-
-## Change Management
-
-### Document Lifecycle
-
-1. **Created**: Generated by workflow or created manually
-2. **Active**: Current and maintained
-3. **Superseded**: Replaced by newer version
-4. **Archived**: Retained for reference but not updated
-
-### Change Tracking
-
-- All generated docs include `change_id` in frontmatter
-- Change impact documents track modifications
-- Validation reports flag stale documentation
-
-## Verification Checklist
-
-Before submitting documentation changes:
-
-- [ ] Frontmatter is complete and valid
-- [ ] Banner is present for generated docs
-- [ ] Links resolve correctly
-- [ ] Tables render properly
-- [ ] Code examples are accurate
-- [ ] No broken internal references
-- [ ] Consistent terminology throughout
-
----
-
-*Generated by workflow `00_master_docs_bootstrap_v1` step `03_generate_system_overview_docs`*
+*Generated: 2026-07-04T08:00:00+08:00*
+*Workflow: 00_master_docs_bootstrap_v1 / Step: 03_generate_system_overview_docs*
+*Change ID: 00DOC-GEN-20260704-001*

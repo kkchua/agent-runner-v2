@@ -16,33 +16,9 @@ from datetime import datetime
 from pathlib import Path
 
 from ..action_result import ActionResult
+from ..runtime_context import write_meta_sidecar
 
 _PACKAGE_ROOT = Path(__file__).resolve().parent.parent
-
-
-def _write_meta(
-    project_root: Path,
-    output_dir: Path,
-    status: str,
-    remark: str,
-    artifacts: dict,
-) -> None:
-    """Write meta.json sidecar."""
-    meta_path = output_dir / "meta.json"
-    output_dir.mkdir(parents=True, exist_ok=True)
-    meta = {
-        "schema_version": "v2",
-        "coder_result": {
-            "status": status,
-            "remark": remark,
-            "artifacts": artifacts,
-            "recorded_at": datetime.now().astimezone().isoformat(timespec="seconds"),
-        },
-    }
-    meta_path.write_text(
-        json.dumps(meta, ensure_ascii=False, indent=2) + "\n",
-        encoding="utf-8",
-    )
 
 
 def _post_json(
@@ -160,7 +136,7 @@ def execute_i2v(
             password = password or os.environ.get(config.get("password_env", "COMFYUI_PASSWORD"), "")
 
     if not base_url:
-        _write_meta(project_root, output_dir, "REJECTED", "COMFYUI_BASE_URL not configured", {})
+        write_meta_sidecar(output_dir / "meta.json", status="REJECTED", remark="COMFYUI_BASE_URL not configured", artifacts={})
         return ActionResult(
             status="REJECTED",
             remark="COMFYUI_BASE_URL not set in .env or config",
@@ -176,7 +152,7 @@ def execute_i2v(
     )
 
     if not workflow_key:
-        _write_meta(project_root, output_dir, "REJECTED", "No I2V workflow key configured", {})
+        write_meta_sidecar(output_dir / "meta.json", status="REJECTED", remark="No I2V workflow key configured", artifacts={})
         return ActionResult(
             status="REJECTED",
             remark="No I2V workflow key configured",
@@ -185,7 +161,7 @@ def execute_i2v(
         )
 
     if not email or not password:
-        _write_meta(project_root, output_dir, "REJECTED", "Missing credentials", {})
+        write_meta_sidecar(output_dir / "meta.json", status="REJECTED", remark="Missing credentials", artifacts={})
         return ActionResult(
             status="REJECTED",
             remark="Missing ComfyUI credentials",
@@ -205,7 +181,7 @@ def execute_i2v(
         login_resp = json.loads(login_body)
         token = login_resp["token"]
     except Exception as exc:
-        _write_meta(project_root, output_dir, "REJECTED", f"Auth failed: {exc}", {})
+        write_meta_sidecar(output_dir / "meta.json", status="REJECTED", remark=f"Auth failed: {exc}", artifacts={})
         return ActionResult(
             status="REJECTED",
             remark=f"Authentication failed: {exc}",
@@ -232,7 +208,7 @@ def execute_i2v(
                 "error": "input_image_not_found",
                 "path": str(input_image.relative_to(project_root)),
             })
-            _write_meta(project_root, output_dir, "REJECTED", f"Input image not found for scene {scene_num}", {})
+            write_meta_sidecar(output_dir / "meta.json", status="REJECTED", remark=f"Input image not found for scene {scene_num}", artifacts={})
             return ActionResult(
                 status="REJECTED",
                 remark=f"Input image not found for scene {scene_num}",
@@ -299,7 +275,7 @@ def execute_i2v(
                 "error": f"http_error_{e.code}",
                 "response": err_body,
             })
-            _write_meta(project_root, output_dir, "REJECTED", f"HTTP error on scene {scene_num}", {})
+            write_meta_sidecar(output_dir / "meta.json", status="REJECTED", remark=f"HTTP error on scene {scene_num}", artifacts={})
             return ActionResult(
                 status="REJECTED",
                 remark=f"HTTP error on scene {scene_num}: {e.code}",
@@ -313,7 +289,7 @@ def execute_i2v(
                 "status": "failed",
                 "error": f"exception: {e}",
             })
-            _write_meta(project_root, output_dir, "REJECTED", f"Exception on scene {scene_num}", {})
+            write_meta_sidecar(output_dir / "meta.json", status="REJECTED", remark=f"Exception on scene {scene_num}", artifacts={})
             return ActionResult(
                 status="REJECTED",
                 remark=f"Exception on scene {scene_num}: {e}",
@@ -339,7 +315,7 @@ def execute_i2v(
 
     if failed > 0:
         remark = f"I2V generation: {succeeded} succeeded, {failed} failed"
-        _write_meta(project_root, output_dir, "REJECTED", remark, {})
+        write_meta_sidecar(output_dir / "meta.json", status="REJECTED", remark=remark, artifacts={})
         return ActionResult(
             status="REJECTED",
             remark=remark,
@@ -349,7 +325,7 @@ def execute_i2v(
 
     remark = f"I2V generation complete: {succeeded} scenes"
     artifacts = {"GENERATED_VIDEO_CLIPS": str(output_dir_rel)}
-    _write_meta(project_root, output_dir, "APPROVED", remark, artifacts)
+    write_meta_sidecar(output_dir / "meta.json", status="APPROVED", remark=remark, artifacts=artifacts)
 
     return ActionResult(
         status="APPROVED",

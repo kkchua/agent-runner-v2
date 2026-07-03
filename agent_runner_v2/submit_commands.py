@@ -46,6 +46,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     p.add_argument("--workflow-name", required=True, help="Workflow name, e.g. delivery_scaffold_v1")
     p.add_argument("--project-root", default="", help="Project root path for the run.")
+    p.add_argument("--target-project-root", default="", help="Target repository root for workflows that write into a project tree.")
     p.add_argument("--workspace-path", default="", help="Workspace path override.")
     p.add_argument("--initiative-id", default="", help="Initiative ID to link to this run.")
     p.add_argument("--worker-id", default="", help="Pin run to a specific worker ID.")
@@ -88,6 +89,7 @@ def main(argv: list[str] | None = None) -> int:
             workspace_path=args.workspace_path or None,
             repo_url=args.repo_url or None,
             repo_ref=args.repo_ref or None,
+            target_project_root=args.target_project_root or None,
             worker_label=worker_label,
             input_payload=_parse_kv(args.input, "--input"),
             context_payload=_parse_kv(args.context, "--context"),

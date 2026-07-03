@@ -46,6 +46,7 @@ class BackendClient:
         assigned_provider: str | None = None,
         coder_override: str | None = None,
         project_root: str | None = None,
+        target_project_root: str | None = None,
         workspace_path: str | None = None,
         repo_url: str | None = None,
         repo_ref: str | None = None,
@@ -65,6 +66,8 @@ class BackendClient:
             payload['coder_override'] = coder_override
         if project_root is not None:
             payload['project_root'] = project_root
+        if target_project_root is not None:
+            payload['target_project_root'] = target_project_root
         if workspace_path is not None:
             payload['workspace_path'] = workspace_path
         if repo_url is not None:

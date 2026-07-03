@@ -11,13 +11,84 @@ from pathlib import Path
 
 from ..action_result import ActionResult
 from ..codebase_docs import build_snapshot
-from ..system_docs import render_system_docs_validation
 from ..runtime_context import resolve_step_meta_rel, write_meta_sidecar
+from ..system_docs import render_system_docs_validation
+from .documentation_validation_core import (
+    DocumentationValidationPlan,
+    has_section,
+    read_file,
+    validate_documentation_plan,
+)
 
 
-def _write_text(path: Path, content: str) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(content, encoding="utf-8")
+SYSTEM_DOC_REQUIRED_SECTIONS: dict[str, list[str]] = {
+    "docs/system/00_governance/bootstrap/project_analysis.md": [
+        "Repo Overview",
+        "Codebase Structure",
+        "Operational Risks",
+        "Architectural Observations",
+        "Architecture Posture",
+    ],
+    "docs/system/00_governance/bootstrap/README.md": [
+        "System Documentation Index",
+        "Audience Views",
+        "Document Map",
+    ],
+    "docs/system/00_governance/bootstrap/DOCUMENTATION_STANDARD.md": [
+        "Purpose",
+        "Audience Model",
+        "Document Set",
+        "Update Triggers",
+        "Validation",
+        "Architecture Baseline",
+        "Repo-Selected Profile",
+        "Migration Mode",
+        "Conditional Standards",
+    ],
+    "docs/system/00_governance/bootstrap/SYSTEM_OVERVIEW.md": [
+        "Purpose",
+        "Scope",
+        "Primary Flows",
+        "Key Risks",
+        "Architecture Profile",
+    ],
+    "docs/system/00_governance/bootstrap/SYSTEM_FILE_STRUCTURE.md": [
+        "Repository Structure",
+        "Top-Level Directories",
+        "Documentation Locations",
+    ],
+    "docs/system/00_governance/bootstrap/DEVELOPER_GUIDE.md": [
+        "Development Workflow",
+        "Key Commands",
+        "Documentation Responsibilities",
+        "Architecture Posture",
+    ],
+    "docs/system/00_governance/bootstrap/RUNBOOK.md": [
+        "Operations Scope",
+        "Routine Procedures",
+        "Failure Handling",
+    ],
+    "docs/system/00_governance/bootstrap/EXISTING_REPO_WORKFLOW_SOP.md": [
+        "Purpose",
+        "First-Time Setup",
+        "Normal Governed Delivery",
+        "Drift Reconciliation",
+        "Governance Refresh",
+        "Batch Files",
+        "Notes",
+    ],
+}
+
+
+def _system_extra_checks(project_root: Path) -> list[dict[str, object]]:
+    checks: list[dict[str, object]] = []
+    index_path = "docs/system/00_governance/bootstrap/README.md"
+    index_text = read_file(project_root, index_path)
+    if index_text is not None:
+        checks.append({"check": "index_mentions_documentation_standard", "path": index_path, "ok": "DOCUMENTATION_STANDARD.md" in index_text, "detail": "present" if "DOCUMENTATION_STANDARD.md" in index_text else "missing"})
+        checks.append({"check": "index_mentions_system_overview", "path": index_path, "ok": "SYSTEM_OVERVIEW.md" in index_text, "detail": "present" if "SYSTEM_OVERVIEW.md" in index_text else "missing"})
+
+    return checks
 
 
 def validate_system_docs(*, context: dict[str, str], state: dict, step_cfg: dict, project_root: Path) -> ActionResult:
@@ -33,7 +104,7 @@ def validate_system_docs(*, context: dict[str, str], state: dict, step_cfg: dict
         workflow_name=str(state.get("template_group") or mode),
     )
 
-    expected = [
+    required_files = (
         "docs/system/00_governance/bootstrap/project_analysis.md",
         "docs/system/00_governance/bootstrap/README.md",
         "docs/system/00_governance/bootstrap/DOCUMENTATION_STANDARD.md",
@@ -51,23 +122,47 @@ def validate_system_docs(*, context: dict[str, str], state: dict, step_cfg: dict
         "docs/system/00_governance/bootstrap/RUNBOOK.md",
         "docs/system/00_governance/bootstrap/EXISTING_REPO_WORKFLOW_SOP.md",
         f"docs/system/00_governance/bootstrap/{job_id}-{mode}-change-log.md",
-    ]
-    checks: list[tuple[str, bool, str]] = []
-    for rel_path in expected:
-        exists = (project_root / rel_path).exists()
-        checks.append((f"{Path(rel_path).name} exists", exists, rel_path))
-
-    index_text = (project_root / "docs/system/00_governance/bootstrap/README.md").read_text(encoding="utf-8")
-    checks.append(("index mentions documentation standard", "DOCUMENTATION_STANDARD.md" in index_text, "docs/system/00_governance/bootstrap/README.md"))
-    checks.append(("index mentions system overview", "SYSTEM_OVERVIEW.md" in index_text, "docs/system/00_governance/bootstrap/README.md"))
-
-    validation_path = project_root / "docs/system/00_governance/bootstrap" / f"{job_id}-{mode}-validation.md"
-    _write_text(
-        validation_path,
-        render_system_docs_validation(snapshot, title=f"System docs {mode} validation", checks=checks),
     )
 
-    passed = all(ok for _, ok, _ in checks)
+    plan = DocumentationValidationPlan(
+        required_files=required_files,
+        section_requirements=SYSTEM_DOC_REQUIRED_SECTIONS,
+        template_ids={
+            "docs/system/00_governance/bootstrap/README.md": "SYS-00-IDX",
+            "docs/system/00_governance/bootstrap/DOCUMENTATION_STANDARD.md": "SYS-00-DS",
+            "docs/system/00_governance/bootstrap/BUNDLE_TAXONOMY.md": "SYS-00-BT",
+            "docs/system/00_governance/bootstrap/BUNDLE_MIGRATION_PLAN.md": "SYS-00-BMP",
+            "docs/system/00_governance/bootstrap/SYSTEM_OVERVIEW.md": "SYS-00-SO",
+            "docs/system/00_governance/bootstrap/BUSINESS_CAPABILITIES.md": "SYS-00-BC",
+            "docs/system/00_governance/bootstrap/FUNCTIONAL_SPEC.md": "SYS-00-FS",
+            "docs/system/00_governance/bootstrap/NON_FUNCTIONAL_REQUIREMENTS.md": "SYS-00-NFR",
+            "docs/system/00_governance/bootstrap/SYSTEM_CONTEXT.md": "SYS-03-CTX",
+            "docs/system/00_governance/bootstrap/COMPONENT_ARCHITECTURE.md": "SYS-03-CA",
+            "docs/system/00_governance/bootstrap/DECISION_LOG.md": "SYS-03-DL",
+            "docs/system/00_governance/bootstrap/SYSTEM_FILE_STRUCTURE.md": "SYS-03-SF",
+            "docs/system/00_governance/bootstrap/DEVELOPER_GUIDE.md": "ENG-01-DG",
+            "docs/system/00_governance/bootstrap/RUNBOOK.md": "OPS-01-RB",
+        },
+        extra_checkers=(_system_extra_checks,),
+    )
+
+    checks = validate_documentation_plan(project_root=project_root, plan=plan)
+    validation_path = project_root / "docs/system/00_governance/bootstrap" / f"{job_id}-{mode}-validation.md"
+    validation_path.parent.mkdir(parents=True, exist_ok=True)
+    rendered_checks = [
+        (
+            f"{item['check']} @ {item['path']}",
+            bool(item["ok"]),
+            str(item.get("detail") or ""),
+        )
+        for item in checks
+    ]
+    validation_path.write_text(
+        render_system_docs_validation(snapshot, title=f"System docs {mode} validation", checks=rendered_checks),
+        encoding="utf-8",
+    )
+
+    passed = all(bool(item["ok"]) for item in checks)
     artifacts = {"SYSTEM_DOCS_VALIDATION": validation_path.relative_to(project_root).as_posix()}
     if meta_rel:
         write_meta_sidecar(

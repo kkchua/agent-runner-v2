@@ -17,20 +17,20 @@ from pathlib import Path
 from typing import Any
 
 from ..action_result import ActionResult
+from ..runtime_context import write_meta_sidecar
+from .documentation_validation_core import DocumentationValidationPlan, validate_documentation_plan
 
 logger = logging.getLogger(__name__)
 
 # --- Constants ---
 
 DELIVERY_FOLDERS = [
-    "docs/delivery/00_templates",
     "docs/delivery/01_initiatives",
     "docs/delivery/02_plans",
     "docs/delivery/03_tasks",
     "docs/delivery/04_implementation_plans",
     "docs/delivery/05_reviews",
     "docs/delivery/06_memory",
-    "docs/delivery/08_agents",
     "docs/codebase/00_standards",
     "docs/codebase/00_templates",
     "docs/codebase/01_inventory",
@@ -38,78 +38,126 @@ DELIVERY_FOLDERS = [
     "docs/codebase/03_components",
     "docs/codebase/04_changes",
     "docs/codebase/05_archives",
+    "docs/system/00_governance",
+    "docs/system/00_governance/bootstrap",
 ]
 
+DELIVERY_TEMPLATE_ROOT = Path("docs/system/00_governance/bootstrap/templates/delivery")
+CODEBASE_TEMPLATE_ROOT = Path("docs/system/00_governance/bootstrap/templates/codebase")
+DELIVERY_AGENT_ROOT = Path("docs/delivery/00_standards")
+
 REQUIRED_TEMPLATES = {
-    "DELIVERY_INITIATIVE_TEMPLATE": "01_initiative.template.md",
-    "DELIVERY_PLAN_TEMPLATE": "02_plan.template.md",
-    "DELIVERY_TASK_GRAPH_TEMPLATE": "02b_task_graph.template.md",
-    "DELIVERY_TASK_TEMPLATE": "03_task.template.md",
-    "DELIVERY_IMPL_TEMPLATE": "04_implementation_plan.template.md",
-    "DELIVERY_REVIEW_TEMPLATE": "04_review.template.md",
-    "DELIVERY_VALIDATION_TEMPLATE": "05_validation.template.md",
-    "DELIVERY_MEMORY_TEMPLATE": "06_memory.template.md",
+    "DELIVERY_TEMPLATE_REGISTRY": "01_delivery_template_registry.md",
+    "DELIVERY_INITIATIVE_TEMPLATE": "02_delivery_initiative_template.md",
+    "DELIVERY_PLAN_TEMPLATE": "03_delivery_plan_template.md",
+    "DELIVERY_TASK_GRAPH_TEMPLATE": "04_delivery_task_graph_template.md",
+    "DELIVERY_TASK_TEMPLATE": "05_delivery_task_template.md",
+    "DELIVERY_IMPL_TEMPLATE": "06_delivery_impl_template.md",
+    "DELIVERY_REVIEW_TEMPLATE": "07_delivery_review_template.md",
+    "DELIVERY_VALIDATION_TEMPLATE": "08_delivery_validation_template.md",
+    "DELIVERY_MEMORY_TEMPLATE": "09_delivery_memory_template.md",
 }
 
 REQUIRED_CODEBASE_FILES = {
     "CODEBASE_DOC_SOP": "docs/codebase/00_standards/CODEBASE_DOC_SOP_v1.md",
     "CODEBASE_DOC_STATUS_RULES": "docs/codebase/00_standards/CODEBASE_DOC_STATUS_RULES_v1.md",
-    "CODEBASE_TEMPLATE_REGISTRY": "docs/codebase/00_templates/codebase_template_registry.md",
-    "CODEBASE_INVENTORY_TEMPLATE": "docs/codebase/00_templates/01_codebase_inventory.template.md",
-    "CODEBASE_MODULE_TEMPLATE": "docs/codebase/00_templates/02_module_doc.template.md",
-    "CODEBASE_COMPONENT_TEMPLATE": "docs/codebase/00_templates/03_component_doc.template.md",
-    "CODEBASE_CHANGE_TEMPLATE": "docs/codebase/00_templates/04_change_impact.template.md",
+    "CODEBASE_TEMPLATE_REGISTRY": "docs/system/00_governance/bootstrap/templates/codebase/01_codebase_template_registry.md",
+    "CODEBASE_INVENTORY_TEMPLATE": "docs/system/00_governance/bootstrap/templates/codebase/02_codebase_inventory_template.md",
+    "CODEBASE_MODULE_TEMPLATE": "docs/system/00_governance/bootstrap/templates/codebase/03_codebase_module_template.md",
+    "CODEBASE_COMPONENT_TEMPLATE": "docs/system/00_governance/bootstrap/templates/codebase/04_codebase_component_template.md",
+    "CODEBASE_CHANGE_TEMPLATE": "docs/system/00_governance/bootstrap/templates/codebase/05_codebase_change_template.md",
     "CODEBASE_INVENTORY": "docs/codebase/01_inventory/codebase_inventory.md",
 }
 
+REQUIRED_SYSTEM_FILES = {
+    "PROJECT_ANALYSIS": "docs/system/00_governance/bootstrap/project_analysis.md",
+    "SYSTEM_DOC_STANDARD": "docs/system/00_governance/bootstrap/DOCUMENTATION_STANDARD.md",
+    "SYSTEM_DOCS_INDEX": "docs/system/00_governance/bootstrap/README.md",
+    "SYSTEM_OVERVIEW": "docs/system/00_governance/bootstrap/SYSTEM_OVERVIEW.md",
+    "BUSINESS_CAPABILITIES": "docs/system/00_governance/bootstrap/BUSINESS_CAPABILITIES.md",
+    "FUNCTIONAL_SPEC": "docs/system/00_governance/bootstrap/FUNCTIONAL_SPEC.md",
+    "NON_FUNCTIONAL_REQUIREMENTS": "docs/system/00_governance/bootstrap/NON_FUNCTIONAL_REQUIREMENTS.md",
+    "SYSTEM_CONTEXT": "docs/system/00_governance/bootstrap/SYSTEM_CONTEXT.md",
+    "COMPONENT_ARCHITECTURE": "docs/system/00_governance/bootstrap/COMPONENT_ARCHITECTURE.md",
+    "DECISION_LOG": "docs/system/00_governance/bootstrap/DECISION_LOG.md",
+    "SYSTEM_FILE_STRUCTURE": "docs/system/00_governance/bootstrap/SYSTEM_FILE_STRUCTURE.md",
+    "DEVELOPER_GUIDE": "docs/system/00_governance/bootstrap/DEVELOPER_GUIDE.md",
+    "RUNBOOK": "docs/system/00_governance/bootstrap/RUNBOOK.md",
+    "EXISTING_REPO_WORKFLOW_SOP": "docs/system/00_governance/bootstrap/EXISTING_REPO_WORKFLOW_SOP.md",
+}
+
+
+def _delivery_template_paths() -> dict[str, str]:
+    return {
+        artifact_key: str(DELIVERY_TEMPLATE_ROOT / filename)
+        for artifact_key, filename in REQUIRED_TEMPLATES.items()
+    }
+
 # Minimum required sections per template type (all must be present)
 TEMPLATE_SECTION_REQUIREMENTS: dict[str, list[str]] = {
-    "01_initiative.template.md": [
-        "Objective", "Scope", "Constraints",
-        "Dependencies", "Documentation Scope", "Stale Guidance Risks",
-        "Success Criteria", "Approval",
+    "01_delivery_template_registry.md": [
+        "Metadata", "Registry Overview", "Template Families",
+        "Usage Rules", "Cross-References",
     ],
-    "02_plan.template.md": [
-        "Plan Objective", "Strategy Overview", "Task Breakdown",
-        "Scope Mapping", "Documentation Strategy", "Documentation Freshness Risks",
-        "Deliverables", "Risks", "Acceptance Criteria", "Approval",
+    "02_delivery_initiative_template.md": [
+        "Metadata", "Initiative Description", "Scope",
+        "Documentation Scope", "Dependencies", "Acceptance Criteria", "Notes",
     ],
-    "02b_task_graph.template.md": [
-        "Task Graph Objective", "Task Graph",
-        "Execution Flow", "Documentation Workstream", "Success Criteria",
+    "03_delivery_plan_template.md": [
+        "Metadata", "Plan Objective", "Strategy Overview",
+        "Scope Mapping", "Task Breakdown", "Documentation Strategy",
+        "Risks", "Deliverables", "Acceptance Criteria", "Notes",
     ],
-    "03_task.template.md": [
-        "Objective", "Inputs", "Outputs",
+    "04_delivery_task_graph_template.md": [
+        "Metadata", "Task Graph Objective", "Task Graph",
+        "Execution Flow", "Documentation Workstream", "Success Criteria", "Notes",
+    ],
+    "05_delivery_task_template.md": [
+        "Metadata", "Objective", "Inputs", "Outputs",
         "Execution Steps", "Validation Criteria", "Documentation Impact",
+        "Dependencies", "Notes",
     ],
-    "04_implementation_plan.template.md": [
-        "Objective", "Inputs", "Outputs",
-        "Scope Clarification", "File Plan", "Test Plan", "Documentation Update Plan", "Constraints",
+    "06_delivery_impl_template.md": [
+        "Metadata", "Implementation Objective", "Changes Overview",
+        "Implementation Steps", "Documentation Update Plan", "Risk Assessment",
+        "Validation Criteria", "Notes",
     ],
-    "04_review.template.md": [
-        "Review Objective", "Issues Identified",
-        "Final Decision",
+    "07_delivery_review_template.md": [
+        "Metadata", "Review Scope", "Findings",
+        "Documentation Compliance", "Verdict", "Notes",
     ],
-    "05_validation.template.md": [
-        "Validation Objective", "Validation Checks", "Test Results", "Documentation Sync Results", "Final Decision",
+    "08_delivery_validation_template.md": [
+        "Metadata", "Validation Scope", "Code Validation",
+        "Documentation Synchronization Validation", "Validation Issues", "Validation Summary", "Verdict", "Approval", "Notes",
     ],
-    "06_memory.template.md": [
-        "Purpose", "Key Decisions", "Important References",
+    "09_delivery_memory_template.md": [
+        "Metadata", "Context", "Lessons Learned",
+        "Reusable Patterns", "Anti-Patterns", "Documentation Notes",
+        "Related Memories", "Notes",
     ],
 }
 
 CODEBASE_TEMPLATE_SECTION_REQUIREMENTS: dict[str, list[str]] = {
-    "01_codebase_inventory.template.md": [
-        "Inventory Objective", "Coverage Rules", "Entry Schema", "Status Model", "Freshness Triggers",
+    "01_codebase_template_registry.md": [
+        "Metadata", "Registry Overview", "Template Families",
+        "Usage Rules", "Cross-References",
     ],
-    "02_module_doc.template.md": [
-        "Module Objective", "Responsibilities", "Key Files", "Interfaces", "Documentation Mode", "Change Risks",
+    "02_codebase_inventory_template.md": [
+        "Metadata", "Template Fields", "Entry Template", "Status Definitions", "File Type Coverage",
     ],
-    "03_component_doc.template.md": [
-        "Component Objective", "Inputs", "Outputs", "Dependencies", "Documentation Mode", "Operational Notes",
+    "03_codebase_module_template.md": [
+        "Metadata", "Module Overview", "File Inventory", "Architecture",
+        "Key Components", "Public API", "Dependencies", "Testing",
+        "Change Log", "Notes",
     ],
-    "04_change_impact.template.md": [
-        "Change Objective", "Changed Files", "Documentation Updates", "Superseded Content", "Validation",
+    "04_codebase_component_template.md": [
+        "Metadata", "Component Overview", "File Coverage", "Interface",
+        "Implementation Details", "Dependencies", "Testing", "Change Log", "Notes",
+    ],
+    "05_codebase_change_template.md": [
+        "Metadata", "Change Summary", "Changed Files", "Documentation Updates",
+        "Stale Documentation Removal", "Documentation Freshness Verification",
+        "Cross-References", "Notes",
     ],
 }
 
@@ -134,6 +182,39 @@ CODEBASE_STATUS_RULES_REQUIRED_SECTIONS = [
     "Core Principles", "Inventory Status Model", "Document Status Model",
     "Supersession Rules", "Update Triggers", "Traceability", "Removal Rules",
 ]
+
+SYSTEM_DOC_REQUIRED_SECTIONS: dict[str, list[str]] = {
+    "docs/system/00_governance/bootstrap/project_analysis.md": [
+        "Repo Overview",
+        "Codebase Structure",
+        "Operational Risks",
+        "Architectural Observations",
+        "Architecture Posture",
+    ],
+    "docs/system/00_governance/bootstrap/DOCUMENTATION_STANDARD.md": [
+        "Purpose", "Audience Model", "Document Set", "Update Triggers", "Validation",
+        "Architecture Baseline", "Repo-Selected Profile", "Migration Mode", "Conditional Standards",
+    ],
+    "docs/system/00_governance/bootstrap/README.md": [
+        "System Documentation Index", "Audience Views", "Document Map",
+    ],
+    "docs/system/00_governance/bootstrap/SYSTEM_OVERVIEW.md": [
+        "Purpose", "Scope", "Primary Flows", "Key Risks", "Architecture Profile",
+    ],
+    "docs/system/00_governance/bootstrap/SYSTEM_FILE_STRUCTURE.md": [
+        "Repository Structure", "Top-Level Directories", "Documentation Locations",
+    ],
+    "docs/system/00_governance/bootstrap/DEVELOPER_GUIDE.md": [
+        "Development Workflow", "Key Commands", "Documentation Responsibilities", "Architecture Posture",
+    ],
+    "docs/system/00_governance/bootstrap/RUNBOOK.md": [
+        "Operations Scope", "Routine Procedures", "Failure Handling",
+    ],
+    "docs/system/00_governance/bootstrap/EXISTING_REPO_WORKFLOW_SOP.md": [
+        "Purpose", "First-Time Setup", "Normal Governed Delivery",
+        "Drift Reconciliation", "Governance Refresh", "Batch Files", "Notes",
+    ],
+}
 
 AGENT_REGISTRY_ENTRY_PATTERN = re.compile(r"\|[\s-]*(\w[\w\s-]+)\s*\|[\s-]*(\w[\w\s-]+)\s*\|", re.MULTILINE)
 
@@ -193,7 +274,7 @@ def _validate_folder_structure(project_root: Path) -> list[dict[str, Any]]:
 def _validate_templates(project_root: Path) -> list[dict[str, Any]]:
     """Validate all required template files exist and have required sections."""
     results = []
-    templates_dir = project_root / "docs" / "delivery" / "00_templates"
+    templates_dir = project_root / DELIVERY_TEMPLATE_ROOT
 
     for artifact_key, filename in REQUIRED_TEMPLATES.items():
         # Check file exists
@@ -215,14 +296,24 @@ def _validate_templates(project_root: Path) -> list[dict[str, Any]]:
         if content is None:
             continue
 
-        # Check metadata block
-        has_doc_type = _has_metadata_field(content, "Doc Type")
-        has_version = _has_metadata_field(content, "Template Version")
+        # Accept both legacy inline metadata and current YAML-frontmatter templates.
+        has_doc_type = (
+            _has_metadata_field(content, "Doc Type")
+            or _has_metadata_field(content, "doc_type")
+            or _has_metadata_field(content, "document_type")
+            or _has_metadata_field(content, "template_id")
+        )
+        has_version = (
+            _has_metadata_field(content, "Template Version")
+            or _has_metadata_field(content, "template_version")
+            or _has_metadata_field(content, "version")
+            or _has_metadata_field(content, "generated")
+        )
         results.append({
             "check": "template_metadata",
             "path": str(file_path.relative_to(project_root)),
             "ok": has_doc_type and has_version,
-            "detail": f"Doc Type: {'present' if has_doc_type else 'missing'}, Template Version: {'present' if has_version else 'missing'}",
+            "detail": f"Template identity: {'present' if has_doc_type else 'missing'}, Template version marker: {'present' if has_version else 'missing'}",
         })
 
         # Check required sections
@@ -304,8 +395,6 @@ def _validate_codebase_docs(project_root: Path) -> list[dict[str, Any]]:
         inventory_checks = {
             "has_current_status": "`current`" in inventory_content or "current" in inventory_content.lower(),
             "has_needs_update_status": "`needs_update`" in inventory_content or "needs_update" in inventory_content.lower(),
-            "has_pending_review_status": "`pending_review`" in inventory_content or "pending_review" in inventory_content.lower(),
-            "has_superseded_status": "`superseded`" in inventory_content or "superseded" in inventory_content.lower(),
             "has_doc_mode": "documentation mode" in inventory_content.lower(),
             "has_owner_doc_path": "owner doc path" in inventory_content.lower(),
             "has_last_verified_by_change": "last verified by change" in inventory_content.lower(),
@@ -329,10 +418,43 @@ def _validate_codebase_docs(project_root: Path) -> list[dict[str, Any]]:
     return results
 
 
+def _validate_system_docs(project_root: Path) -> list[dict[str, Any]]:
+    """Validate scaffolded system documentation standards and core documents."""
+    results = []
+
+    for artifact_key, rel_path in REQUIRED_SYSTEM_FILES.items():
+        ok, detail = _check_file_exists(project_root, rel_path)
+        results.append({
+            "check": "system_file_exists",
+            "artifact_key": artifact_key,
+            "path": rel_path,
+            "ok": ok,
+            "detail": detail,
+        })
+        if not ok:
+            continue
+
+        content = _read_file(project_root, rel_path)
+        if content is None:
+            continue
+
+        for section in SYSTEM_DOC_REQUIRED_SECTIONS.get(rel_path, []):
+            has = _has_section(content, section)
+            results.append({
+                "check": "system_doc_section",
+                "path": rel_path,
+                "section": section,
+                "ok": has,
+                "detail": f"{'found' if has else 'missing'}",
+            })
+
+    return results
+
+
 def _validate_sop(project_root: Path) -> list[dict[str, Any]]:
     """Validate WORKFLOW_SOP_v1.md structure."""
     results = []
-    sop_path = "docs/delivery/00_templates/WORKFLOW_SOP_v1.md"
+    sop_path = "docs/system/00_governance/bootstrap/WORKFLOW_SOP_v1.md"
 
     ok, detail = _check_file_exists(project_root, sop_path)
     results.append({
@@ -341,21 +463,6 @@ def _validate_sop(project_root: Path) -> list[dict[str, Any]]:
         "ok": ok,
         "detail": detail,
     })
-
-    if not ok:
-        # Also check 08_agents/ as alternative location
-        sop_path_alt = "docs/delivery/08_agents/WORKFLOW_SOP_v1.md"
-        ok_alt, detail_alt = _check_file_exists(project_root, sop_path_alt)
-        if ok_alt:
-            sop_path = sop_path_alt
-            ok = True
-            detail = detail_alt
-            results.append({
-                "check": "sop_exists_alt",
-                "path": sop_path_alt,
-                "ok": True,
-                "detail": f"found at alternate location",
-            })
 
     if not ok:
         return results
@@ -389,7 +496,7 @@ def _validate_sop(project_root: Path) -> list[dict[str, Any]]:
 def _validate_status_rules(project_root: Path) -> list[dict[str, Any]]:
     """Validate DELIVERY_STATUS_RULES_v1.md structure."""
     results = []
-    rules_path = "docs/delivery/00_templates/DELIVERY_STATUS_RULES_v1.md"
+    rules_path = "docs/system/00_governance/bootstrap/DELIVERY_STATUS_RULES_v1.md"
     ok, detail = _check_file_exists(project_root, rules_path)
     if ok:
         content = _read_file(project_root, rules_path)
@@ -435,10 +542,10 @@ def _validate_status_rules(project_root: Path) -> list[dict[str, Any]]:
 
 
 def _validate_agents(project_root: Path) -> list[dict[str, Any]]:
-    """Validate AGENTS.md registry consistency with individual agent contracts."""
+    """Validate delivery agent registry consistency with individual agent contracts."""
     results = []
-    agents_dir = project_root / "docs" / "delivery" / "08_agents"
-    agents_md_path = agents_dir / "AGENTS.md"
+    agents_dir = project_root / DELIVERY_AGENT_ROOT
+    agents_md_path = agents_dir / "DELIVERY_AGENTS_MD.md"
 
     # Check AGENTS.md exists
     ok, detail = _check_file_exists(project_root, str(agents_md_path.relative_to(project_root)))
@@ -476,12 +583,12 @@ def _validate_agents(project_root: Path) -> list[dict[str, Any]]:
 
     # Check individual agent contracts exist
     known_agent_files = [
-        "AGENT-planner.md",
-        "AGENT-task-decomposer.md",
-        "AGENT-implementation-planner.md",
-        "AGENT-executor.md",
-        "AGENT-reviewer.md",
-        "AGENT-memory-manager.md",
+        "DELIVERY_AGENT_PLANNER.md",
+        "DELIVERY_AGENT_TASK_DECOMPOSER.md",
+        "DELIVERY_AGENT_IMPL_PLANNER.md",
+        "DELIVERY_AGENT_EXECUTOR.md",
+        "DELIVERY_AGENT_REVIEWER.md",
+        "DELIVERY_AGENT_MEMORY_MANAGER.md",
     ]
 
     for agent_file in known_agent_files:
@@ -498,13 +605,11 @@ def _validate_agents(project_root: Path) -> list[dict[str, Any]]:
         if ok:
             agent_content = _read_file(project_root, rel)
             if agent_content:
-                # Accept "doc_type:", "document_type:" (YAML frontmatter) or "Doc Type:" (inline)
                 has_doc_type = (
                     _has_metadata_field(agent_content, "doc_type")
                     or _has_metadata_field(agent_content, "document_type")
                     or _has_metadata_field(agent_content, "Doc Type")
                 )
-                # Accept both "agent_id:" (YAML frontmatter) and "Agent ID:" (inline)
                 has_agent_id = (
                     _has_metadata_field(agent_content, "agent_id")
                     or _has_metadata_field(agent_content, "Agent ID")
@@ -513,7 +618,7 @@ def _validate_agents(project_root: Path) -> list[dict[str, Any]]:
                     "check": "agent_contract_metadata",
                     "path": rel,
                     "ok": has_doc_type and has_agent_id,
-                    "detail": f"Doc Type: {'present' if has_doc_type else 'missing'}, Agent ID: {'present' if has_agent_id else 'missing'}",
+                    "detail": f"Agent contract marker: {'present' if has_doc_type else 'missing'}, Agent identifier: {'present' if has_agent_id else 'missing'}",
                 })
 
     return results
@@ -522,13 +627,13 @@ def _validate_agents(project_root: Path) -> list[dict[str, Any]]:
 def _validate_cross_references(project_root: Path) -> list[dict[str, Any]]:
     """Validate that templates reference each other correctly."""
     results = []
-    templates_dir = project_root / "docs" / "delivery" / "00_templates"
+    templates_dir = project_root / DELIVERY_TEMPLATE_ROOT
 
     # Plan template should reference initiative template
-    plan_path = templates_dir / "02_plan.template.md"
+    plan_path = templates_dir / "03_delivery_plan_template.md"
     if plan_path.exists():
         content = plan_path.read_text(encoding="utf-8")
-        refs_initiative = "initiative" in content.lower() or "INIT" in content
+        refs_initiative = "initiative" in content.lower() or "DELIVERY_INITIATIVE_TEMPLATE" in content
         results.append({
             "check": "cross_ref_plan_initiative",
             "path": str(plan_path.relative_to(project_root)),
@@ -544,17 +649,17 @@ def _validate_cross_references(project_root: Path) -> list[dict[str, Any]]:
         })
 
     # Task template should reference plan
-    task_path = templates_dir / "03_task.template.md"
+    task_path = templates_dir / "05_delivery_task_template.md"
     if task_path.exists():
         content = task_path.read_text(encoding="utf-8")
-        refs_plan = "plan" in content.lower() or "PLAN" in content
+        refs_plan = "plan" in content.lower() or "DELIVERY_PLAN_TEMPLATE" in content
         results.append({
             "check": "cross_ref_task_plan",
             "path": str(task_path.relative_to(project_root)),
             "ok": refs_plan,
             "detail": "task references plan" if refs_plan else "task does not reference plan",
         })
-        docs_impact_present = "documentation impact" in content.lower()
+        docs_impact_present = "documentation impact" in content.lower() or "documentation obligations" in content.lower()
         results.append({
             "check": "cross_ref_task_doc_impact",
             "path": str(task_path.relative_to(project_root)),
@@ -562,10 +667,10 @@ def _validate_cross_references(project_root: Path) -> list[dict[str, Any]]:
             "detail": "task includes documentation impact" if docs_impact_present else "task missing documentation impact section",
         })
 
-    validation_path = templates_dir / "05_validation.template.md"
+    validation_path = templates_dir / "08_delivery_validation_template.md"
     if validation_path.exists():
         content = validation_path.read_text(encoding="utf-8")
-        doc_sync_present = "documentation sync" in content.lower()
+        doc_sync_present = "documentation synchronization" in content.lower() or "documentation sync" in content.lower()
         results.append({
             "check": "cross_ref_validation_doc_sync",
             "path": str(validation_path.relative_to(project_root)),
@@ -574,10 +679,19 @@ def _validate_cross_references(project_root: Path) -> list[dict[str, Any]]:
         })
 
     # Template registry should list all templates
-    registry_path = templates_dir / "template_registry.md"
+    registry_path = templates_dir / "01_delivery_template_registry.md"
     if registry_path.exists():
         content = registry_path.read_text(encoding="utf-8")
-        expected_types = ["01_initiative", "02_plan", "03_task", "04_review"]
+        expected_types = [
+            "DELIVERY_INITIATIVE_TEMPLATE",
+            "DELIVERY_PLAN_TEMPLATE",
+            "DELIVERY_TASK_GRAPH_TEMPLATE",
+            "DELIVERY_TASK_TEMPLATE",
+            "DELIVERY_IMPL_TEMPLATE",
+            "DELIVERY_REVIEW_TEMPLATE",
+            "DELIVERY_VALIDATION_TEMPLATE",
+            "DELIVERY_MEMORY_TEMPLATE",
+        ]
         missing_types = [t for t in expected_types if t not in content]
         results.append({
             "check": "cross_ref_registry_completeness",
@@ -612,35 +726,52 @@ def validate_delivery_docs(
     logger.info("[validate_delivery_docs] starting validation")
     print("[validate_delivery_docs] starting delivery docs validation", flush=True)
 
-    all_checks = []
+    required_files = tuple(
+        list(REQUIRED_CODEBASE_FILES.values())
+        + list(REQUIRED_SYSTEM_FILES.values())
+        + list(_delivery_template_paths().values())
+        + [str(DELIVERY_AGENT_ROOT / name) for name in [
+            "DELIVERY_AGENTS_MD.md",
+            "DELIVERY_AGENT_PLANNER.md",
+            "DELIVERY_AGENT_TASK_DECOMPOSER.md",
+            "DELIVERY_AGENT_IMPL_PLANNER.md",
+            "DELIVERY_AGENT_EXECUTOR.md",
+            "DELIVERY_AGENT_REVIEWER.md",
+            "DELIVERY_AGENT_MEMORY_MANAGER.md",
+        ]]
+        + [
+            "docs/system/00_governance/bootstrap/WORKFLOW_SOP_v1.md",
+            "docs/system/00_governance/bootstrap/DELIVERY_STATUS_RULES_v1.md",
+        ]
+    )
 
-    # 1. Folder structure
-    print("[validate_delivery_docs] checking folder structure...", flush=True)
-    all_checks.extend(_validate_folder_structure(project_root))
+    section_requirements = dict(SYSTEM_DOC_REQUIRED_SECTIONS)
+    section_requirements.update({path: sections for path, sections in {
+        str(DELIVERY_TEMPLATE_ROOT / name): sections
+        for name, sections in TEMPLATE_SECTION_REQUIREMENTS.items()
+    }.items()})
+    section_requirements.update({f"docs/system/00_governance/bootstrap/templates/codebase/{name}": sections for name, sections in CODEBASE_TEMPLATE_SECTION_REQUIREMENTS.items()})
+    section_requirements["docs/system/00_governance/bootstrap/WORKFLOW_SOP_v1.md"] = SOP_REQUIRED_SECTIONS
+    section_requirements["docs/system/00_governance/bootstrap/DELIVERY_STATUS_RULES_v1.md"] = STATUS_RULES_REQUIRED_SECTIONS
+    section_requirements["docs/codebase/00_standards/CODEBASE_DOC_SOP_v1.md"] = CODEBASE_SOP_REQUIRED_SECTIONS
+    section_requirements["docs/codebase/00_standards/CODEBASE_DOC_STATUS_RULES_v1.md"] = CODEBASE_STATUS_RULES_REQUIRED_SECTIONS
 
-    # 2 & 3. Template completeness and structure
-    print("[validate_delivery_docs] checking templates...", flush=True)
-    all_checks.extend(_validate_templates(project_root))
+    plan = DocumentationValidationPlan(
+        required_folders=tuple(DELIVERY_FOLDERS),
+        required_files=required_files,
+        section_requirements={path: tuple(sections) for path, sections in section_requirements.items()},
+        extra_checkers=(
+            _validate_codebase_docs,
+            _validate_system_docs,
+            _validate_sop,
+            _validate_status_rules,
+            _validate_agents,
+            _validate_cross_references,
+        ),
+    )
 
-    # 4. SOP validity
-    print("[validate_delivery_docs] checking SOP...", flush=True)
-    all_checks.extend(_validate_sop(project_root))
-
-    # 5. Status rules validity
-    print("[validate_delivery_docs] checking status rules...", flush=True)
-    all_checks.extend(_validate_status_rules(project_root))
-
-    # 5b. Codebase documentation standards
-    print("[validate_delivery_docs] checking codebase docs...", flush=True)
-    all_checks.extend(_validate_codebase_docs(project_root))
-
-    # 6. Agent registry consistency
-    print("[validate_delivery_docs] checking agent registry...", flush=True)
-    all_checks.extend(_validate_agents(project_root))
-
-    # 7. Cross-reference integrity
-    print("[validate_delivery_docs] checking cross-references...", flush=True)
-    all_checks.extend(_validate_cross_references(project_root))
+    print("[validate_delivery_docs] checking shared validation plan...", flush=True)
+    all_checks = validate_documentation_plan(project_root=project_root, plan=plan)
 
     # Summary
     total = len(all_checks)
@@ -681,25 +812,18 @@ def validate_delivery_docs(
 
     # Write meta.json sidecar to the runner-expected path
     if meta_json_rel:
-        meta_path = project_root / meta_json_rel
+        meta_path = meta_json_rel
     else:
         p = Path(folder_map_rel)
-        meta_path = project_root / p.parent / f"{p.stem}.meta.json"
-    meta_path.parent.mkdir(parents=True, exist_ok=True)
-    meta = {
-        "schema_version": "v2",
-        "coder_result": {
-            "status": "APPROVED" if failed == 0 else "REJECTED",
-            "remark": f"Validation: {passed}/{total} checks passed ({failed} failed)",
-            "artifacts": {
-                "DELIVERY_FOLDER_MAP": str(folder_map_path.relative_to(project_root)),
-            },
-            "recorded_at": datetime.now().astimezone().isoformat(timespec="seconds"),
+        meta_path = str(p.parent / f"{p.stem}.meta.json")
+    write_meta_sidecar(
+        meta_path,
+        project_root=project_root,
+        status="APPROVED" if failed == 0 else "REJECTED",
+        remark=f"Validation: {passed}/{total} checks passed ({failed} failed)",
+        artifacts={
+            "DELIVERY_FOLDER_MAP": str(folder_map_path.relative_to(project_root)),
         },
-    }
-    meta_path.write_text(
-        json.dumps(meta, ensure_ascii=False, indent=2) + "\n",
-        encoding="utf-8",
     )
 
     # Print summary

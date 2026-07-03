@@ -8,11 +8,33 @@ import shutil
 from pathlib import Path
 from types import ModuleType
 
+from .bundle_taxonomy import (
+    DEFAULT_BUNDLE_PROFILE,
+    DEFAULT_DOMAIN_BUNDLE,
+    bundle_manifest,
+    bundle_manifest_path,
+)
 from .runtime_context import DEFAULT_RUNNER_HOME, PACKAGE_ROOT
 
 
 GLOBAL_RUNNER_HOME = Path.home() / DEFAULT_RUNNER_HOME
 BOOTSTRAP_ROOT = PACKAGE_ROOT / "bootstrap" / "workflows" / "default"
+
+
+def bundles_root() -> Path:
+    return GLOBAL_RUNNER_HOME / "bundles"
+
+
+def core_bundles_root() -> Path:
+    return bundles_root() / "core"
+
+
+def domain_bundles_root() -> Path:
+    return bundles_root() / "domains"
+
+
+def workflow_bundles_root() -> Path:
+    return bundles_root() / "workflows"
 
 
 def config_path(workspace_root: Path) -> Path:
@@ -110,27 +132,56 @@ def seed_workflow_bundle(target_root: Path, workflow_name: str = "example") -> P
     return wf_root
 
 
-def init_workspace(workspace_root: Path, workflow_name: str = "default") -> dict:
+def init_workspace(
+    workspace_root: Path,
+    workflow_name: str = "default",
+    *,
+    domain: str = DEFAULT_DOMAIN_BUNDLE,
+    bundle_profile: str = DEFAULT_BUNDLE_PROFILE,
+) -> dict:
     workspace_root = workspace_root.resolve()
     runner_home = GLOBAL_RUNNER_HOME
     runner_home.mkdir(parents=True, exist_ok=True)
     (runner_home / "jobs").mkdir(parents=True, exist_ok=True)
     (runner_home / "logs").mkdir(parents=True, exist_ok=True)
     (runner_home / "runtime").mkdir(parents=True, exist_ok=True)
+    bundles_dir = runner_home / "bundles"
+    bundles_dir.mkdir(parents=True, exist_ok=True)
+    core_dir = bundles_dir / "core"
+    domain_dir = bundles_dir / "domains"
+    workflow_dir = bundles_dir / "workflows"
+    core_dir.mkdir(parents=True, exist_ok=True)
+    domain_dir.mkdir(parents=True, exist_ok=True)
+    workflow_dir.mkdir(parents=True, exist_ok=True)
 
     workflows_dir = global_workflows_root()
     workflows_dir.mkdir(parents=True, exist_ok=True)
     wf_root = seed_workflow_bundle(workflows_dir, workflow_name="example")
 
+    (core_dir / "current").mkdir(parents=True, exist_ok=True)
+    (domain_dir / domain / "current").mkdir(parents=True, exist_ok=True)
+    (workflow_dir / workflow_name / "current").mkdir(parents=True, exist_ok=True)
+
+    manifest = bundle_manifest(workflow_name=workflow_name, domain=domain, profile=bundle_profile)
+    manifest_path = bundle_manifest_path(runner_home)
+    manifest_path.parent.mkdir(parents=True, exist_ok=True)
+    manifest_path.write_text(json.dumps(manifest, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+
     config = load_project_config(workspace_root)
     config.setdefault("workflows", {})
     if not config.get("default_workflow"):
         config["default_workflow"] = workflow_name
+    config["bundle_profile"] = bundle_profile
+    config["bundle_domain"] = domain
+    config["bundle_manifest"] = str(manifest_path.relative_to(runner_home).as_posix())
     save_project_config(workspace_root, config)
     return {
         "workspace_root": str(workspace_root),
         "runner_home": str(runner_home),
         "workflow_name": workflow_name,
+        "bundle_profile": bundle_profile,
+        "bundle_domain": domain,
+        "bundle_manifest": str(manifest_path),
         "workflow_root": str(wf_root),
         "config_path": str(config_path(workspace_root)),
     }

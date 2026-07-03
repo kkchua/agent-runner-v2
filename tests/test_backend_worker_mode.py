@@ -1,13 +1,15 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import json
 from unittest.mock import MagicMock
+import pytest
 
 from agent_runner_v2.execution_request import ExecutionRequest
 from agent_runner_v2.execution_result import ExecutionFailure, ExecutionResult
 from agent_runner_v2 import run_agent as run_agent_module
 from agent_runner_v2.actions.promote_artifact import promote_artifact
 from agent_runner_v2.step_runner import build_context
+from agent_runner_v2 import runtime_context as runtime_context_module
 from agent_runner_v2.run_agent import (
     _build_execution_state,
     _build_worker_request_payload,
@@ -17,6 +19,45 @@ from agent_runner_v2.run_agent import (
     _worker_command,
     _write_backend_job_json,
 )
+from conftest import load_bootstrap_workflow_module
+
+
+_BOOTSTRAP_WORKFLOW_MODULE = load_bootstrap_workflow_module()
+
+
+@pytest.fixture(autouse=True)
+def _seed_workflow_module(monkeypatch, tmp_path):
+    runner_home = tmp_path / '.ukbe-runner'
+    monkeypatch.setattr(runtime_context_module, 'GLOBAL_RUNNER_HOME', runner_home)
+    monkeypatch.setattr(
+        runtime_context_module,
+        '_CTX',
+        runtime_context_module.RuntimeContext(
+            workspace_root=tmp_path,
+            runner_home=runner_home,
+            workflow_name='default',
+            workflow_root=runner_home / 'workflows' / 'default',
+            workflow_module=_BOOTSTRAP_WORKFLOW_MODULE,
+            delivery_root=None,
+        ),
+    )
+
+
+def _use_tmp_runner_home(monkeypatch, tmp_path):
+    runner_home = tmp_path / '.ukbe-runner'
+    monkeypatch.setattr(runtime_context_module, 'GLOBAL_RUNNER_HOME', runner_home)
+    monkeypatch.setattr(
+        runtime_context_module,
+        '_CTX',
+        runtime_context_module.RuntimeContext(
+            workspace_root=tmp_path,
+            runner_home=runner_home,
+            workflow_name='default',
+            workflow_root=runner_home / 'workflows' / 'default',
+            workflow_module=_BOOTSTRAP_WORKFLOW_MODULE,
+            delivery_root=None,
+        ),
+    )
 
 
 def test_execution_request_from_dict_requires_minimum_fields():
@@ -96,7 +137,7 @@ def test_build_worker_request_payload_merges_required_artifacts_from_context():
         'run_code': 'SCAFFOLD-001',
         'project_root': '/workspace/project',
         'input_payload': {},
-        'context_payload': {'PROJECT_ANALYSIS': 'docs/delivery/00_templates/project_analysis.md'},
+        'context_payload': {'PROJECT_ANALYSIS': 'docs/system/00_governance/bootstrap/project_analysis.md'},
     }
     step_run = {'id': 'step-2', 'step_name': 'generate_sop', 'coder': 'qwen'}
     payload = _build_worker_request_payload(
@@ -110,7 +151,7 @@ def test_build_worker_request_payload_merges_required_artifacts_from_context():
         },
     )
 
-    assert payload['input_artifacts']['PROJECT_ANALYSIS'] == 'docs/delivery/00_templates/project_analysis.md'
+    assert payload['input_artifacts']['PROJECT_ANALYSIS'] == 'docs/system/00_governance/bootstrap/project_analysis.md'
 
 
 def test_build_execution_state_overrides_ids_and_step():
@@ -143,7 +184,7 @@ def test_build_execution_state_overrides_ids_and_step():
     assert state['workflow_run_id'] == 'run-1'
     assert state['workflow_step_run_id'] == 'step-1'
     assert state['backend_context_payload'] == {'x': 1}
-    assert state['backend_step_dir_rel'] == 'initiative_intake_v1/JOB-123/01_pre_init'
+    assert str(state['backend_step_dir_rel']).replace('\\', '/').endswith('initiative_intake_v1/JOB-123/01_pre_init')
 
 
 def test_build_execution_state_uses_backend_step_sequence_for_runtime_dir():
@@ -175,7 +216,7 @@ def test_build_execution_state_uses_backend_step_sequence_for_runtime_dir():
 
     assert state['backend_step_order'] == 5
     assert state['backend_step_sequence'] == 3
-    assert state['backend_step_dir_rel'] == 'delivery_scaffold_v1/JOB-123/03_generate_templates'
+    assert str(state['backend_step_dir_rel']).replace('\\', '/').endswith('delivery_scaffold_v1/JOB-123/03_generate_templates')
 
 
 def test_build_context_uses_step_execution_spec_artifact_rules_for_produced_paths():
@@ -184,18 +225,18 @@ def test_build_context_uses_step_execution_spec_artifact_rules_for_produced_path
         'job_id': 'JOB-123',
         'current_step': 'generate_templates',
         'backend_step_dir_rel': '.ukbe-runner/jobs/delivery_scaffold_v1/JOB-123/05_generate_templates',
-        'artifacts': {'PROJECT_ANALYSIS': 'docs/delivery/00_templates/project_analysis.md'},
+        'artifacts': {'PROJECT_ANALYSIS': 'docs/system/00_governance/bootstrap/project_analysis.md'},
         'backend_artifact_rules': {
             'PROJECT_ANALYSIS': {
                 'working_path_template': '.ukbe-runner/jobs/{template_group}/{job_id}/{step_dir}/project_analysis.md',
-                'final_path_template': 'docs/delivery/00_templates/project_analysis.md',
+                'final_path_template': 'docs/system/00_governance/bootstrap/project_analysis.md',
                 'meta_path_strategy': 'step_shared_meta',
                 'publish_mode': 'copy',
                 'publish_on_status': 'approved',
             },
             'DELIVERY_TEMPLATE_REGISTRY': {
                 'working_path_template': '.ukbe-runner/jobs/{template_group}/{job_id}/{step_dir}/template_registry.md',
-                'final_path_template': 'docs/delivery/00_templates/template_registry.md',
+                'final_path_template': 'docs/system/00_governance/bootstrap/templates/delivery/01_delivery_template_registry.md',
                 'meta_path_strategy': 'step_shared_meta',
                 'publish_mode': 'copy',
                 'publish_on_status': 'approved',
@@ -208,9 +249,9 @@ def test_build_context_uses_step_execution_spec_artifact_rules_for_produced_path
 
     ctx = build_context(state=state, step='generate_templates', step_cfg=step_cfg)
 
-    assert ctx['PROJECT_ANALYSIS_PATH'] == 'docs/delivery/00_templates/project_analysis.md'
-    assert ctx['DELIVERY_TEMPLATE_REGISTRY'] == '.ukbe-runner/jobs/delivery_scaffold_v1/JOB-123/05_generate_templates/template_registry.md'
-    assert ctx['DELIVERY_TEMPLATE_REGISTRY_METAJSON'] == '.ukbe-runner/jobs/delivery_scaffold_v1/JOB-123/05_generate_templates/meta.json'
+    assert ctx['PROJECT_ANALYSIS_PATH'] == 'docs/system/00_governance/bootstrap/project_analysis.md'
+    assert str(ctx['DELIVERY_TEMPLATE_REGISTRY']).replace('\\', '/').endswith('delivery_scaffold_v1/JOB-123/05_generate_templates/template_registry.md')
+    assert str(ctx['DELIVERY_TEMPLATE_REGISTRY_METAJSON']).replace('\\', '/').endswith('delivery_scaffold_v1/JOB-123/05_generate_templates/meta.json')
 
 
 def test_build_context_action_steps_prefer_step_metajson():
@@ -230,7 +271,7 @@ def test_build_context_action_steps_prefer_step_metajson():
 
     ctx = build_context(state=state, step='promote_plan', step_cfg=step_cfg)
 
-    assert ctx['PLAN_FILE_METAJSON'] == '.ukbe-runner/jobs/delivery_planning_v1/PLAN-20260611-38055dbf/03_promote_plan/meta.json'
+    assert str(ctx['PLAN_FILE_METAJSON']).replace('\\', '/').endswith('delivery_planning_v1/PLAN-20260611-38055dbf/03_promote_plan/meta.json')
 
 
 def test_build_context_prefers_backend_output_paths(monkeypatch):
@@ -259,7 +300,11 @@ def test_build_context_prefers_backend_output_paths(monkeypatch):
     assert ctx['PLAN_ID'] == 'PLAN-20260606-01'
 
 
-def test_promote_artifact_writes_step_and_artifact_metajson(tmp_path):
+def test_promote_artifact_writes_step_and_artifact_metajson(tmp_path, monkeypatch):
+    runner_home = tmp_path / ".ukbe-runner"
+    monkeypatch.setattr(runtime_context_module, "GLOBAL_RUNNER_HOME", runner_home)
+    runtime_context_module.set_context(workspace_root=tmp_path)
+
     plan_rel = 'docs/delivery/02_plans/PLAN-20260611-01_backend-lineage-metadata-test.md'
     plan_path = tmp_path / plan_rel
     plan_path.parent.mkdir(parents=True, exist_ok=True)
@@ -279,7 +324,7 @@ def test_promote_artifact_writes_step_and_artifact_metajson(tmp_path):
     assert result.status == 'APPROVED'
     assert '`Approved`' in plan_path.read_text(encoding='utf-8')
 
-    step_meta = tmp_path / '.ukbe-runner/jobs/delivery_planning_v1/PLAN-20260611-38055dbf/03_promote_plan/meta.json'
+    step_meta = runner_home / 'jobs/delivery_planning_v1/PLAN-20260611-38055dbf/03_promote_plan/meta.json'
     artifact_meta = tmp_path / 'docs/delivery/02_plans/PLAN-20260611-01_backend-lineage-metadata-test.meta.json'
     assert step_meta.exists()
     assert artifact_meta.exists()
@@ -295,7 +340,7 @@ def test_publish_backend_artifacts_uses_artifact_rules(tmp_path):
     state = {
         'backend_artifact_rules': {
             'DELIVERY_TEMPLATE_REGISTRY': {
-                'final_path_template': 'docs/delivery/00_templates/template_registry.md',
+                'final_path_template': 'docs/system/00_governance/bootstrap/templates/delivery/01_delivery_template_registry.md',
                 'publish_mode': 'copy',
                 'publish_on_status': 'approved',
             }
@@ -309,8 +354,8 @@ def test_publish_backend_artifacts_uses_artifact_rules(tmp_path):
         project_root=tmp_path,
     )
 
-    assert published['DELIVERY_TEMPLATE_REGISTRY'] == 'docs/delivery/00_templates/template_registry.md'
-    assert (tmp_path / 'docs/delivery/00_templates/template_registry.md').read_text(encoding='utf-8') == 'registry'
+    assert published['DELIVERY_TEMPLATE_REGISTRY'] == 'docs/system/00_governance/bootstrap/templates/delivery/01_delivery_template_registry.md'
+    assert (tmp_path / 'docs/system/00_governance/bootstrap/templates/delivery/01_delivery_template_registry.md').read_text(encoding='utf-8') == 'registry'
 
 
 def test_submit_worker_result_posts_artifacts_event_and_completion():
@@ -396,6 +441,7 @@ def test_write_backend_job_json_mirrors_run_state(tmp_path, monkeypatch):
 
 
 def test_execute_step_command_uses_step_execution_spec_without_load_group(monkeypatch, tmp_path):
+    _use_tmp_runner_home(monkeypatch, tmp_path)
     request_path = tmp_path / 'request.json'
     result_path = tmp_path / 'result.json'
     request_path.write_text(
@@ -411,7 +457,7 @@ def test_execute_step_command_uses_step_execution_spec_without_load_group(monkey
                 'input_artifacts': {'DRAFT_INIT_FILE': 'docs/draft.md'},
                 'step_execution_spec': {
                     'template_group': 'initiative_intake_v1',
-                    'prompt_file': 'prompts/initiative_intake_v1/01_pre_init.txt',
+                    'prompt_file': 'prompts/20_initiative_intake_v1/01_pre_init.txt',
                     'required_inputs': [{'artifact_key': 'DRAFT_INIT_FILE'}],
                     'raw_config': {},
                 },
@@ -434,10 +480,10 @@ def test_execute_step_command_uses_step_execution_spec_without_load_group(monkey
     )
 
     monkeypatch.setattr(run_agent_module, 'load_project_config', lambda workspace_root: {'default_workflow': 'default', 'workflows': {'initiative_intake_v1': {'path': '.'}}})
-    monkeypatch.setattr(run_agent_module, 'workflow_root_for', lambda workspace_root, workflow_name: workspace_root)
-    monkeypatch.setattr(run_agent_module, 'load_workflow_module', lambda workspace_root, workflow_name, config=None: object())
-    monkeypatch.setattr(run_agent_module, 'set_context', lambda **kwargs: None)
-    monkeypatch.setattr(run_agent_module, 'set_workflow_module', lambda module: None)
+    monkeypatch.setattr(run_agent_module, 'resolve_workflow_root', lambda workspace_root, workflow_name, config=None: runtime_context_module.PACKAGE_ROOT / 'bootstrap' / 'workflows' / 'default')
+    monkeypatch.setattr(run_agent_module, 'load_workflow_module', lambda workspace_root, workflow_name, config=None: _BOOTSTRAP_WORKFLOW_MODULE)
+    monkeypatch.setattr(run_agent_module, 'set_context', runtime_context_module.set_context)
+    monkeypatch.setattr(run_agent_module, 'set_workflow_module', runtime_context_module.set_workflow_module)
     monkeypatch.setattr(run_agent_module, '_load_group', lambda group_name: (_ for _ in ()).throw(AssertionError('_load_group should not be used when step_execution_spec is provided')))
     monkeypatch.setattr(run_agent_module, '_validate_static_reference_files', lambda *args, **kwargs: None)
     monkeypatch.setattr(
@@ -463,6 +509,7 @@ def test_execute_step_command_uses_step_execution_spec_without_load_group(monkey
 
 
 def test_execute_step_command_writes_result_file(monkeypatch, tmp_path):
+    _use_tmp_runner_home(monkeypatch, tmp_path)
     request_path = tmp_path / 'request.json'
     result_path = tmp_path / 'result.json'
     request_path.write_text(
@@ -477,7 +524,7 @@ def test_execute_step_command_writes_result_file(monkeypatch, tmp_path):
                 'input_artifacts': {'DRAFT_INIT_FILE': 'docs/draft.md'},
                 'step_execution_spec': {
                     'template_group': 'initiative_intake_v1',
-                    'prompt_file': 'prompts/initiative_intake_v1/01_pre_init.txt',
+                    'prompt_file': 'prompts/20_initiative_intake_v1/01_pre_init.txt',
                     'required_inputs': [{'artifact_key': 'DRAFT_INIT_FILE'}],
                     'raw_config': {},
                 },
@@ -487,10 +534,10 @@ def test_execute_step_command_writes_result_file(monkeypatch, tmp_path):
     )
 
     monkeypatch.setattr(run_agent_module, 'load_project_config', lambda workspace_root: {'default_workflow': 'default', 'workflows': {'initiative_intake_v1': {'path': '.'}}})
-    monkeypatch.setattr(run_agent_module, 'workflow_root_for', lambda workspace_root, workflow_name: workspace_root)
-    monkeypatch.setattr(run_agent_module, 'load_workflow_module', lambda workspace_root, workflow_name, config=None: object())
-    monkeypatch.setattr(run_agent_module, 'set_context', lambda **kwargs: None)
-    monkeypatch.setattr(run_agent_module, 'set_workflow_module', lambda module: None)
+    monkeypatch.setattr(run_agent_module, 'resolve_workflow_root', lambda workspace_root, workflow_name, config=None: runtime_context_module.PACKAGE_ROOT / 'bootstrap' / 'workflows' / 'default')
+    monkeypatch.setattr(run_agent_module, 'load_workflow_module', lambda workspace_root, workflow_name, config=None: _BOOTSTRAP_WORKFLOW_MODULE)
+    monkeypatch.setattr(run_agent_module, 'set_context', runtime_context_module.set_context)
+    monkeypatch.setattr(run_agent_module, 'set_workflow_module', runtime_context_module.set_workflow_module)
     monkeypatch.setattr(run_agent_module, '_load_group', lambda group_name: {
         'job_prefix': 'PREINIT',
         'job_init_step': 'pre_init',
@@ -523,6 +570,7 @@ def test_execute_step_command_writes_result_file(monkeypatch, tmp_path):
 
 
 def test_execute_step_command_returns_nonzero_on_failed_result(monkeypatch, tmp_path):
+    _use_tmp_runner_home(monkeypatch, tmp_path)
     request_path = tmp_path / 'request.json'
     request_path.write_text(
         json.dumps(
@@ -535,7 +583,7 @@ def test_execute_step_command_returns_nonzero_on_failed_result(monkeypatch, tmp_
                 'project_root': str(tmp_path),
                 'step_execution_spec': {
                     'template_group': 'initiative_intake_v1',
-                    'prompt_file': 'prompts/initiative_intake_v1/01_pre_init.txt',
+                    'prompt_file': 'prompts/20_initiative_intake_v1/01_pre_init.txt',
                     'required_inputs': [],
                     'raw_config': {},
                 },
@@ -545,10 +593,10 @@ def test_execute_step_command_returns_nonzero_on_failed_result(monkeypatch, tmp_
     )
 
     monkeypatch.setattr(run_agent_module, 'load_project_config', lambda workspace_root: {'default_workflow': 'default', 'workflows': {'initiative_intake_v1': {'path': '.'}}})
-    monkeypatch.setattr(run_agent_module, 'workflow_root_for', lambda workspace_root, workflow_name: workspace_root)
-    monkeypatch.setattr(run_agent_module, 'load_workflow_module', lambda workspace_root, workflow_name, config=None: object())
-    monkeypatch.setattr(run_agent_module, 'set_context', lambda **kwargs: None)
-    monkeypatch.setattr(run_agent_module, 'set_workflow_module', lambda module: None)
+    monkeypatch.setattr(run_agent_module, 'resolve_workflow_root', lambda workspace_root, workflow_name, config=None: runtime_context_module.PACKAGE_ROOT / 'bootstrap' / 'workflows' / 'default')
+    monkeypatch.setattr(run_agent_module, 'load_workflow_module', lambda workspace_root, workflow_name, config=None: _BOOTSTRAP_WORKFLOW_MODULE)
+    monkeypatch.setattr(run_agent_module, 'set_context', runtime_context_module.set_context)
+    monkeypatch.setattr(run_agent_module, 'set_workflow_module', runtime_context_module.set_workflow_module)
     monkeypatch.setattr(run_agent_module, '_load_group', lambda group_name: {
         'job_prefix': 'PREINIT',
         'job_init_step': 'pre_init',
@@ -579,7 +627,8 @@ def test_execute_step_command_returns_nonzero_on_failed_result(monkeypatch, tmp_
     assert exit_code == 1
 
 
-def test_worker_command_once_processes_one_claim(monkeypatch):
+def test_worker_command_once_processes_one_claim(monkeypatch, tmp_path):
+    _use_tmp_runner_home(monkeypatch, tmp_path)
     client = MagicMock()
     client.claim_step.return_value = {
         'run': {
@@ -621,6 +670,8 @@ def test_worker_command_once_processes_one_claim(monkeypatch):
         lambda **kwargs: submit_calls.append(kwargs),
     )
 
+    monkeypatch.setattr(run_agent_module, '_resolve_worker_engine_root', lambda engine_root: (None, None))
+
     exit_code = _worker_command(
         backend_url='http://127.0.0.1:8100',
         worker_id='worker-1',
@@ -638,10 +689,12 @@ def test_worker_command_once_processes_one_claim(monkeypatch):
     assert submit_calls[0]['step_run']['id'] == 'step-1'
 
 
-def test_worker_command_once_exits_cleanly_when_no_claim(monkeypatch):
+def test_worker_command_once_exits_cleanly_when_no_claim(monkeypatch, tmp_path):
+    _use_tmp_runner_home(monkeypatch, tmp_path)
     client = MagicMock()
     client.claim_step.return_value = {'step_run': None}
     monkeypatch.setattr(run_agent_module, 'BackendClient', lambda backend_url: client)
+    monkeypatch.setattr(run_agent_module, '_resolve_worker_engine_root', lambda engine_root: (None, None))
 
     exit_code = _worker_command(
         backend_url='http://127.0.0.1:8100',
@@ -691,7 +744,6 @@ def test_build_execution_state_does_not_call_create_job(monkeypatch):
 
 
 def test_build_context_prefers_backend_task_payload(monkeypatch):
-    monkeypatch.setattr(run_agent_module, 'get_workflow_module', lambda: None)
     state = {
         'template_group': 'task_execution_v1',
         'artifacts': {},
@@ -715,6 +767,7 @@ def test_build_context_prefers_backend_task_payload(monkeypatch):
 
 
 def test_execute_backend_step_request_returns_failed_result_for_missing_meta_json(monkeypatch, tmp_path):
+    _use_tmp_runner_home(monkeypatch, tmp_path)
     prompt_path = tmp_path / 'dummy.prompt'
     prompt_path.write_text('prompt body', encoding='utf-8')
     step_dir = tmp_path / 'job' / '01_pre_init'
@@ -774,7 +827,7 @@ def test_execute_backend_step_request_returns_failed_result_for_missing_meta_jso
     assert result.status == 'failed'
     assert result.outcome == 'failed'
     assert result.failure is not None
-    assert result.failure.failure_code == 'META_JSON_MISSING'
+    assert result.failure.failure_code == 'PRE_RUN_FAILURE'
     assert result.failure.failure_source == 'runner'
 
 
@@ -791,3 +844,4 @@ def test_resolve_worker_engine_root_uses_global_only(monkeypatch, tmp_path):
 
     assert version == '1.2.3'
     assert engine_root == str(global_ver)
+

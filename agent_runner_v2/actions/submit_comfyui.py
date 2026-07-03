@@ -16,35 +16,10 @@ from datetime import datetime
 from pathlib import Path
 
 from ..action_result import ActionResult
+from ..runtime_context import write_meta_sidecar
 
 # Package root — comfyui_config.json lives alongside the .py modules
 _PACKAGE_ROOT = Path(__file__).resolve().parent.parent
-
-
-def _write_meta(
-    project_root: Path,
-    run_dir: Path,
-    run_dir_str: str,
-    status: str,
-    remark: str,
-    artifacts: dict,
-) -> None:
-    """Write meta.json sidecar. Always called, even on rejection."""
-    meta_path = run_dir / "submission_results.meta.json"
-    run_dir.mkdir(parents=True, exist_ok=True)
-    meta = {
-        "schema_version": "v2",
-        "coder_result": {
-            "status": status,
-            "remark": remark,
-            "artifacts": artifacts,
-            "recorded_at": datetime.now().astimezone().isoformat(timespec="seconds"),
-        },
-    }
-    meta_path.write_text(
-        json.dumps(meta, ensure_ascii=False, indent=2) + "\n",
-        encoding="utf-8",
-    )
 
 
 def _fail(
@@ -55,7 +30,7 @@ def _fail(
     code: str,
 ) -> ActionResult:
     """Helper: write meta.json for rejection and return ActionResult."""
-    _write_meta(project_root, run_dir, run_dir_str, "REJECTED", remark, {})
+    write_meta_sidecar(run_dir / "submission_results.meta.json", status="REJECTED", remark=remark, artifacts={})
     return ActionResult(
         status="REJECTED",
         remark=remark,
@@ -285,8 +260,12 @@ def submit_comfyui(
         )
 
     # Write meta.json sidecar
-    _write_meta(project_root, run_dir, run_dir_str,
-                overall_status, remark, artifacts)
+    write_meta_sidecar(
+        run_dir / "submission_results.meta.json",
+        status=overall_status,
+        remark=remark,
+        artifacts=artifacts,
+    )
 
     return ActionResult(
         status=overall_status,

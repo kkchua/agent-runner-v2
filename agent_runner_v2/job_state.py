@@ -20,6 +20,7 @@ from pathlib import Path
 from typing import Any
 
 from .exceptions import ArtifactMissingError, MetaJsonInvalidError, MetaJsonMissingError, PreflightBlockedError
+from .documentation_guardrails import MASTER_BOOTSTRAP_WORKFLOW, master_bootstrap_artifact_candidates
 from .runtime_context import JOBS_ROOT, PROJECT_ROOT, get_workflow_module
 
 CURRENT_SCHEMA_VERSION = 6  # v2 bumps to 6 (adds runner_version)
@@ -51,7 +52,7 @@ REVIEW_ARTIFACT_TYPES = {
 def _workflow_module():
     module = get_workflow_module()
     if module is None:
-        from . import template_groups as module  # type: ignore[no-redef]
+        raise RuntimeError("Workflow module is not loaded. Runtime must use the global workflow bundle.")
     return module
 
 
@@ -601,7 +602,47 @@ def ensure_backward_compatible_state(state: dict[str, Any]) -> dict[str, Any]:
             state["seed_artifact_path"] = inferred_path
     if state.get("step_usage"):
         state["usage_summary"] = _recompute_usage_summary(state["step_usage"])
+    _repair_master_bootstrap_artifacts(state)
     return state
+
+
+def _repair_master_bootstrap_artifacts(state: dict[str, Any]) -> None:
+    if state.get("template_group") != MASTER_BOOTSTRAP_WORKFLOW:
+        return
+
+    job_id = str(state.get("job_id") or "").strip()
+    mode = str((state.get("current_step_cfg") or {}).get("mode") or state.get("current_mode") or "bootstrap")
+    candidates = master_bootstrap_artifact_candidates(job_id=job_id, mode=mode)
+    artifacts = state.setdefault("artifacts", {})
+
+    for artifact_key, path_candidates in candidates.items():
+        if not path_candidates:
+            continue
+        canonical_rel = path_candidates[0]
+        canonical_abs = resolve_repo_path(canonical_rel)
+        current_rel = str(artifacts.get(artifact_key) or "").strip()
+
+        chosen_rel = ""
+        if current_rel:
+            current_abs = resolve_repo_path(current_rel)
+            if current_abs.exists() and current_abs.is_file():
+                chosen_rel = current_rel
+
+        if not chosen_rel:
+            for candidate_rel in path_candidates:
+                candidate_abs = resolve_repo_path(candidate_rel)
+                if candidate_abs.exists() and candidate_abs.is_file():
+                    chosen_rel = candidate_rel
+                    break
+
+        if not chosen_rel:
+            continue
+
+        chosen_abs = resolve_repo_path(chosen_rel)
+        if chosen_rel != canonical_rel:
+            ensure_dir(canonical_abs.parent)
+            canonical_abs.write_text(chosen_abs.read_text(encoding="utf-8"), encoding="utf-8")
+        artifacts[artifact_key] = canonical_rel
 
 
 # ---------------------------------------------------------------------------

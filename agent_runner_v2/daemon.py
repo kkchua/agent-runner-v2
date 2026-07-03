@@ -19,6 +19,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from .runtime_context import GLOBAL_RUNNER_HOME
+
 
 def _utcnow_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
@@ -40,6 +42,13 @@ def _setting(cfg: dict, env_key: str, config_key: str, default: str) -> str:
 
 def _setting_int(cfg: dict, env_key: str, config_key: str, default: int) -> int:
     return int(_setting(cfg, env_key, config_key, str(default)))
+
+
+def _step_spec_source(cfg: dict, cli_value: str) -> str:
+    value = (cli_value or os.environ.get('STEP_SPEC_SOURCE') or str(cfg.get('step_spec_source') or 'backend')).strip().lower()
+    if value not in {'global', 'backend', 'hybrid'}:
+        return 'backend'
+    return value
 
 
 def _resolve_engine_pythonpath(cfg: dict, log) -> str | None:
@@ -165,7 +174,7 @@ def _send_child_heartbeat(client, worker_id: str, child: ChildExecution, *, stat
     )
 
 
-def _spawn_child(*, claim: dict[str, Any], runtime_root: Path, cli_pythonpath: str | None, logger: _DaemonLogger, backend_url: str) -> ChildExecution:
+def _spawn_child(*, claim: dict[str, Any], runtime_root: Path, cli_pythonpath: str | None, logger: _DaemonLogger, backend_url: str, step_spec_source: str) -> ChildExecution:
     from .run_agent import _build_worker_request_payload
 
     run = dict(claim['run'])
@@ -178,6 +187,7 @@ def _spawn_child(*, claim: dict[str, Any], runtime_root: Path, cli_pythonpath: s
         step_run=step_run,
         step_execution_spec=claim.get('step_execution_spec'),
         backend_url=backend_url,
+        step_spec_source=step_spec_source,
     )
     request_path = child_dir / 'request.json'
     result_path = child_dir / 'result.json'
@@ -214,7 +224,7 @@ def _spawn_child(*, claim: dict[str, Any], runtime_root: Path, cli_pythonpath: s
         state='running',
         last_heartbeat_at=0.0,
     )
-    logger.log('info', 'child_spawned', message='spawned execute-step child', child=child, details={'request_path': str(request_path), 'result_path': str(result_path), 'log_file': str(combined_log_path)})
+    logger.log('info', 'child_spawned', message='spawned execute-step child', child=child, details={'request_path': str(request_path), 'result_path': str(result_path), 'log_file': str(combined_log_path), 'step_spec_source': step_spec_source, 'coder_override': request_payload.get('coder_override')})
     return child
 
 
@@ -248,14 +258,14 @@ def _terminate_child(child: ChildExecution, logger: _DaemonLogger, sigkill: bool
         return
 
 
-def _run_supervisor(*, worker_id: str, worker_label: str, backend_url: str, poll_seconds: int, max_parallel: int, stalled_seconds: int, step_timeout_seconds: int, kill_grace_seconds: int, runtime_dir: Path, log_file: Path, cli_pythonpath: str | None, once: bool = False) -> int:
+def _run_supervisor(*, worker_id: str, worker_label: str, backend_url: str, poll_seconds: int, max_parallel: int, stalled_seconds: int, step_timeout_seconds: int, kill_grace_seconds: int, runtime_dir: Path, log_file: Path, cli_pythonpath: str | None, step_spec_source: str, once: bool = False) -> int:
     from .backend_client import BackendClient
     from .run_agent import _submit_worker_result
 
     logger = _DaemonLogger(log_file, worker_id)
     client = BackendClient(backend_url)
     client.register_worker(worker_id=worker_id, host_name=None, capabilities={'mode': ['execute-step-daemon'], 'max_parallel': max_parallel}, worker_label=worker_label)
-    logger.log('info', 'daemon_started', message='worker daemon started', details={'backend_url': backend_url, 'worker_label': worker_label, 'max_parallel': max_parallel, 'runtime_dir': str(runtime_dir)})
+    logger.log('info', 'daemon_started', message='worker daemon started', details={'backend_url': backend_url, 'worker_label': worker_label, 'max_parallel': max_parallel, 'runtime_dir': str(runtime_dir), 'step_spec_source': step_spec_source})
 
     children: dict[str, ChildExecution] = {}
     running = True
@@ -313,6 +323,10 @@ def _run_supervisor(*, worker_id: str, worker_label: str, backend_url: str, poll
                     child.state = 'submit_failed'
                     child.watchdog_reason = str(exc)
                     logger.log('error', 'result_submit_failed', message='failed to submit child result', child=child, details={'error': str(exc)})
+                    if not running:
+                        logger.log('error', 'result_submit_abandoned', message='shutdown requested; abandoning unsubmitted child result', child=child, details={'error': str(exc)})
+                        del children[step_run_id]
+                        continue
                     if now - child.last_heartbeat_at >= max(5, poll_seconds):
                         _send_child_heartbeat(client, worker_id, child, status='busy')
                         child.last_heartbeat_at = now
@@ -330,7 +344,7 @@ def _run_supervisor(*, worker_id: str, worker_label: str, backend_url: str, poll
                 if not claim.get('step_run') or not claim.get('run'):
                     logger.log('info', 'poll_no_work', message='no work available', details={'active_children': len(children)})
                     break
-                child = _spawn_child(claim=claim, runtime_root=runtime_dir, cli_pythonpath=cli_pythonpath, logger=logger, backend_url=backend_url)
+                child = _spawn_child(claim=claim, runtime_root=runtime_dir, cli_pythonpath=cli_pythonpath, logger=logger, backend_url=backend_url, step_spec_source=step_spec_source)
                 children[child.step_run_id] = child
                 _send_child_heartbeat(client, worker_id, child, status='busy')
                 child.last_heartbeat_at = time.monotonic()
@@ -367,6 +381,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument('--stalled-seconds', type=int, default=0, help='Seconds without child log/result activity before marking stalled.')
     p.add_argument('--step-timeout-seconds', type=int, default=0, help='Hard timeout for a child execution.')
     p.add_argument('--kill-grace-seconds', type=int, default=0, help='Grace period between SIGTERM and SIGKILL.')
+    p.add_argument('--step-spec-source', default='', help='Workflow step spec source: global, backend, or hybrid.')
     args = p.parse_args(argv)
 
     cfg = _load_config()
@@ -378,8 +393,11 @@ def main(argv: list[str] | None = None) -> int:
     stalled_seconds = args.stalled_seconds or _setting_int(cfg, 'WORKER_STALLED_SEC', 'stalled_seconds', 300)
     step_timeout_seconds = args.step_timeout_seconds or _setting_int(cfg, 'WORKER_STEP_TIMEOUT_SEC', 'step_timeout_seconds', 3600)
     kill_grace_seconds = args.kill_grace_seconds or _setting_int(cfg, 'WORKER_KILL_GRACE_SEC', 'kill_grace_seconds', 30)
-    log_file = Path(args.log_file or _setting(cfg, 'WORKER_LOG_FILE', 'log_file', '.ukbe-runner/logs/worker-daemon.jsonl')).resolve()
-    runtime_dir = Path(args.runtime_dir or _setting(cfg, 'WORKER_RUNTIME_DIR', 'runtime_dir', '.ukbe-runner/runtime/worker')).resolve()
+    step_spec_source = _step_spec_source(cfg, args.step_spec_source)
+    default_log_file = str(GLOBAL_RUNNER_HOME / 'logs' / 'worker-daemon.jsonl')
+    default_runtime_dir = str(GLOBAL_RUNNER_HOME / 'runtime' / 'worker')
+    log_file = Path(args.log_file or _setting(cfg, 'WORKER_LOG_FILE', 'log_file', default_log_file)).resolve()
+    runtime_dir = Path(args.runtime_dir or _setting(cfg, 'WORKER_RUNTIME_DIR', 'runtime_dir', default_runtime_dir)).resolve()
 
     bootstrap_logger = _DaemonLogger(log_file, worker_id)
     cli_pythonpath = _resolve_engine_pythonpath(cfg, bootstrap_logger.log)
@@ -397,4 +415,5 @@ def main(argv: list[str] | None = None) -> int:
         runtime_dir=runtime_dir,
         log_file=log_file,
         cli_pythonpath=cli_pythonpath,
+        step_spec_source=step_spec_source,
     )

@@ -10,13 +10,12 @@ Step config:
 """
 from __future__ import annotations
 
-import json
 import logging
 import re
-from datetime import datetime
 from pathlib import Path
 
 from ..action_result import ActionResult
+from ..runtime_context import artifact_rel_to_meta_rel, write_meta_sidecar
 
 logger = logging.getLogger(__name__)
 
@@ -32,32 +31,6 @@ def _set_status(content: str, target_status: str) -> str:
     content = _TABLE_STATUS_RE.sub(rf"\1`{target_status}`\2", content)
     content = _KV_STATUS_RE.sub(rf"\g<1>{target_status}", content)
     return content
-
-
-def _write_meta(meta_rel: str, project_root: Path, status: str, remark: str, artifacts: dict) -> None:
-    if not meta_rel:
-        print("[promote_artifact] WARNING: meta.json path not in context — skipping", flush=True)
-        return
-    meta_path = project_root / meta_rel
-    meta_path.parent.mkdir(parents=True, exist_ok=True)
-    meta_path.write_text(
-        json.dumps({
-            "schema_version": "v2",
-            "coder_result": {
-                "status": status,
-                "remark": remark,
-                "artifacts": artifacts,
-                "recorded_at": datetime.now().astimezone().isoformat(timespec="seconds"),
-            },
-        }, indent=2) + "\n",
-        encoding="utf-8",
-    )
-    print(f"[promote_artifact] wrote meta.json → {meta_rel}", flush=True)
-
-
-def _artifact_meta_rel(artifact_rel: str) -> str:
-    artifact_path = Path(artifact_rel)
-    return str(artifact_path.parent / f"{artifact_path.stem}.meta.json")
 
 
 def promote_artifact(
@@ -77,7 +50,8 @@ def promote_artifact(
 
     if not promotes:
         remark = "No 'promotes' key in step config"
-        _write_meta(meta_rel, project_root, "REJECTED", remark, {})
+        if meta_rel:
+            write_meta_sidecar(meta_rel, project_root=project_root, status="REJECTED", remark=remark, artifacts={})
         return ActionResult(status="REJECTED", remark=remark, artifacts={})
 
     promoted: dict[str, str] = {}
@@ -98,13 +72,15 @@ def promote_artifact(
 
     if not promoted:
         remark = f"No artifacts promoted (keys: {promotes})"
-        _write_meta(meta_rel, project_root, "REJECTED", remark, {})
+        if meta_rel:
+            write_meta_sidecar(meta_rel, project_root=project_root, status="REJECTED", remark=remark, artifacts={})
         return ActionResult(status="REJECTED", remark=remark, artifacts={})
 
     remark = f"Status set to {target_status}: {', '.join(promoted.keys())}"
-    _write_meta(meta_rel, project_root, "APPROVED", remark, promoted)
+    if meta_rel:
+        write_meta_sidecar(meta_rel, project_root=project_root, status="APPROVED", remark=remark, artifacts=promoted)
     for artifact_key, artifact_rel in promoted.items():
-        artifact_meta_rel = _artifact_meta_rel(artifact_rel)
+        artifact_meta_rel = artifact_rel_to_meta_rel(artifact_rel)
         if artifact_meta_rel != meta_rel:
-            _write_meta(artifact_meta_rel, project_root, "APPROVED", remark, {artifact_key: artifact_rel})
+            write_meta_sidecar(artifact_meta_rel, project_root=project_root, status="APPROVED", remark=remark, artifacts={artifact_key: artifact_rel})
     return ActionResult(status="APPROVED", remark=remark, artifacts=promoted)

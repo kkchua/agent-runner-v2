@@ -10,6 +10,7 @@ class ExecutionRequest:
     template_group: str
     step_name: str
     project_root: str
+    step_spec_source: str = "backend"
     workspace_root: str | None = None
     target_project_root: str | None = None
     workflow_run_id: str | None = None
@@ -38,6 +39,7 @@ class ExecutionRequest:
             template_group=template_group,
             step_name=step_name,
             project_root=project_root,
+            step_spec_source=str(payload.get('step_spec_source') or 'backend'),
             workspace_root=payload.get('workspace_root'),
             target_project_root=payload.get('target_project_root'),
             workflow_run_id=payload.get('workflow_run_id'),

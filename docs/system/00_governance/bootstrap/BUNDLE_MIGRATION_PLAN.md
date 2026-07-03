@@ -1,219 +1,178 @@
 ---
-title: "Bundle Migration Plan"
 template_id: "SYS-00-BMP"
+title: "Bundle Migration Plan - agent-runner-v2"
 status: "active"
-managed_by: workflow-generated
-generated: "2026-07-02T00:00:00+08:00"
+generated: "2026-07-04T08:00:00+08:00"
 workflow: "00_master_docs_bootstrap_v1"
 step: "03_generate_system_overview_docs"
-change_id: "00DOC-GEN-20260702-005"
+change_id: "00DOC-GEN-20260704-001"
+managed_by: workflow-generated
 ---
-
-# Bundle Migration Plan
 
 > Managed by workflow: `00_master_docs_bootstrap_v1` / step: `03_generate_system_overview_docs`
 > This file is workflow-generated and protected from manual edits.
 
-## Overview
+# Bundle Migration Plan
 
-This document provides guidance for migrating workflow bundles and job states between versions of agent-runner-v2.
+## Purpose
 
-## Version Compatibility
+This document defines the migration path for bundle format evolution in agent-runner-v2. It records historical changes, current version status, and future migration steps.
 
-### Current Version
+**Why:** Bundle formats evolve as the platform grows. A clear migration plan ensures smooth transitions and preserves backward compatibility where possible.
 
-- **Package Version**: 0.1.0
-- **Job Schema Version**: v6
-- **Sidecar Schema**: v2
+## Current Version
 
-### Compatibility Matrix
+| Attribute | Value |
+|-----------|-------|
+| **Current Version** | v1 |
+| **Status** | Stable |
+| **Introduced** | 2026-07-03 |
+| **Deprecated** | — |
 
-| Package Version | Job Schema | Sidecar Schema | Migration Required |
-|-----------------|------------|----------------|------------------|
-| 0.1.0 | v6 | v2 | Baseline |
-| < 0.1.0 | v1-v5 | v1 | Yes |
+## Version History
+
+### v1 (Current)
+
+**Introduced:** 2026-07-03  
+**Status:** Active and stable
+
+#### Features
+
+- Core bundle with system documentation
+- Workflow bundles with template groups and prompts
+- Domain bundles for specialized documentation
+- Bundle manifest (`bundle-set.json`) for selection tracking
+- Artifact key taxonomy for delivery workflows
+
+#### Structure
+
+```
+%USERPROFILE%\.ukbe-runner/
+├── bundles/
+│   └── core/                    # System documentation
+├── workflows/
+│   └── default/                 # Workflow definitions
+│       ├── template_groups.py
+│       ├── job_schema.json
+│       ├── llm_response_schema.json
+│       ├── model_mapping.json
+│       ├── usage_schema.json
+│       └── prompts/
+└── bundle-set.json              # Bundle selection manifest
+```
 
 ## Migration Scenarios
 
-### Scenario 1: Package Update (New Bootstrap)
+### Scenario: New Bundle Version
 
-**Trigger**: Package updated with new workflow definitions
+When a v2 bundle format is introduced:
 
-**Steps**:
+1. **Update package** — New bootstrap includes v2 structures
+2. **Runtime detection** — Runner detects bundle version at load
+3. **Migration path** — Automatic or manual migration as needed
+4. **Backward compatibility** — v1 bundles continue to work
 
-1. Backup existing runtime bundle:
-   ```bash
-   cp -r %USERPROFILE%\.ukbe-runner\workflows %USERPROFILE%\.ukbe-runner\workflows.backup
-   ```
+### Scenario: Domain Bundle Addition
 
-2. Reinitialize from new bootstrap:
-   ```bash
-   ukbe-run-agent init
-   ```
+When adding a new domain bundle:
 
-3. Verify workflows load correctly:
-   ```bash
-   ukbe-run-agent list-workflows
-   ```
+1. **Define domain** — Create domain taxonomy
+2. **Create templates** — Add domain-specific templates
+3. **Update manifest** — Register in bundle taxonomy
+4. **Document** — Update BUNDLE_TAXONOMY.md
 
-**Risk**: Low — bootstrap seeding is non-destructive to jobs
+### Scenario: Workflow Family Addition
 
-### Scenario 2: Job State Schema Migration
+When adding a new workflow family:
 
-**Trigger**: Job state schema version mismatch
+1. **Define steps** — Add to template_groups.py
+2. **Create prompts** — Add prompt templates
+3. **Test** — Validate workflow execution
+4. **Document** — Update relevant documentation
 
-**Automatic Migration**:
+## Backward Compatibility
 
-The `job_state.py` module includes `migrate_job_state()` which automatically migrates older job states:
+### Compatibility Guarantees
 
-| From Version | To Version | Migration Actions |
-|--------------|------------|-------------------|
-| v1-v5 | v6 | Add missing fields, update structure |
+| Version | Compatible With | Notes |
+|---------|-----------------|-------|
+| v1 | v1 | Current version |
 
-**Manual Verification**:
+### Breaking Changes
 
-```python
-from agent_runner_v2.job_state import load_job, save_job
+No breaking changes are planned for v1.
 
-# Load will auto-migrate
-state = load_job(job_path)
+Future v2 may introduce:
+- Revised schema structures
+- New artifact key categories
+- Enhanced domain bundle support
 
-# Save in new format
-save_job(state, job_path)
-```
+## Future Considerations
 
-### Scenario 3: Workflow Bundle Drift
+### Potential v2 Features
 
-**Trigger**: Runtime bundle differs from packaged source
+1. **Hierarchical bundles** — Bundle inheritance and composition
+2. **Versioned workflows** — Workflow family versioning
+3. **Conditional prompts** — Platform-specific prompt variants
+4. **Plugin bundles** — Third-party extension support
 
-**Detection**:
+### Migration Timeline
 
-Compare checksums or timestamps between:
-- `agent_runner_v2/bootstrap/workflows/default/`
-- `%USERPROFILE%\.ukbe-runner\workflows\`
+| Milestone | Target Date | Description |
+|-----------|-------------|-------------|
+| v1 stable | 2026-07-03 | Initial release |
+| v2 design | TBD | Design phase for next version |
+| v2 alpha | TBD | Alpha testing |
+| v1 deprecation | TBD | Announce v1 deprecation |
+| v1 EOL | TBD | End of life for v1 |
 
-**Resolution**:
+## Migration Procedures
+
+### Bundle Initialization
+
+New installations receive the current bundle version:
 
 ```bash
-# Force re-seed from bootstrap
+ukbe-run-agent init
+```
+
+This seeds `%USERPROFILE%\.ukbe-runner\` with the current bundle format.
+
+### Bundle Update
+
+Updates are applied via:
+
+```bash
 ukbe-run-agent init --force
-
-# Or manually sync specific workflows
-ukbe-run-agent sync-workflow {workflow_name}
 ```
 
-### Scenario 4: Breaking Prompt Changes
+This refreshes the runtime bundle from the packaged bootstrap.
 
-**Trigger**: Prompt template changes require job restart
+**Note:** Customizations in the runtime bundle may be overwritten. Back up before forcing.
 
-**Impact**: In-progress jobs may fail validation
+### Bundle Validation
 
-**Mitigation**:
-
-1. Complete or cancel in-progress jobs before updating
-2. Use workflow versioning (`_v1`, `_v2`) for incompatible changes
-3. Document breaking changes in release notes
-
-## Migration Checklist
-
-### Before Migration
-
-- [ ] Backup existing runtime bundle
-- [ ] List in-progress jobs
-- [ ] Review release notes for breaking changes
-- [ ] Verify new package version compatibility
-
-### During Migration
-
-- [ ] Run `ukbe-run-agent init`
-- [ ] Verify workflow templates load
-- [ ] Check for schema migration warnings
-- [ ] Validate a test job
-
-### After Migration
-
-- [ ] Verify existing jobs remain accessible
-- [ ] Test a complete workflow execution
-- [ ] Confirm prompt templates render correctly
-- [ ] Clean up backup if successful
-
-## Rollback Procedures
-
-### Rollback Runtime Bundle
+Validate bundle integrity:
 
 ```bash
-# Remove current bundle
-rmdir /s %USERPROFILE%\.ukbe-runner\workflows
-
-# Restore backup
-move %USERPROFILE%\.ukbe-runner\workflows.backup %USERPROFILE%\.ukbe-runner\workflows
+ukbe-run-agent validate-bundle
 ```
 
-### Rollback Package
+Checks:
+- Schema compliance
+- Required files present
+- Cross-references resolve
 
-```bash
-pip install agent-runner-v2=={previous_version}
-ukbe-run-agent init
-```
+## Rollback
 
-## Deprecated Features
+If a bundle update causes issues:
 
-| Feature | Deprecated In | Removal Target | Replacement |
-|---------|---------------|----------------|-------------|
-| v1 sidecar format | 0.1.0 | 0.2.0 | v2 sidecar (meta.json) |
-| Markdown write-backs | 0.1.0 | 0.2.0 | Sidecar-only communication |
-| Legacy job states | 0.1.0 | 0.2.0 | Schema v6 job states |
-
-## Future Migration Roadmap
-
-### Version 0.2.0 (Planned)
-
-- Remove v1 sidecar backward compatibility
-- Remove markdown write-back functions
-- Require schema v6 job states
-
-### Version 0.3.0 (Proposed)
-
-- Bundle versioning in metadata
-- Delta-based bundle updates
-- Migration hooks for custom workflows
-
-## Troubleshooting
-
-### Issue: Job fails with "schema version mismatch"
-
-**Cause**: Job state created by older/newer package version
-
-**Solution**: Auto-migration should handle this. If not:
-
-```python
-from agent_runner_v2.job_state import migrate_job_state, load_job, save_job
-
-state = load_job(path)
-migrate_job_state(state)  # Force migration
-save_job(state, path)
-```
-
-### Issue: Prompt template not found
-
-**Cause**: Runtime bundle missing new template
-
-**Solution**: Reinitialize bundle
-
-```bash
-ukbe-run-agent init
-```
-
-### Issue: Workflow family not recognized
-
-**Cause**: Runtime bundle out of sync
-
-**Solution**: Sync workflows
-
-```bash
-ukbe-run-agent sync-workflows-to-backend
-```
+1. **Restore from backup** — Manual restoration of `.ukbe-runner\`
+2. **Re-init with previous package** — Install previous package version
+3. **Report issue** — File issue with bundle version and error details
 
 ---
 
-*Generated by workflow `00_master_docs_bootstrap_v1` step `03_generate_system_overview_docs`*
+*Generated: 2026-07-04T08:00:00+08:00*
+*Workflow: 00_master_docs_bootstrap_v1 / Step: 03_generate_system_overview_docs*
+*Change ID: 00DOC-GEN-20260704-001*

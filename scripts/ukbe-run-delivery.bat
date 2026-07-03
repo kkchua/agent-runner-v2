@@ -16,6 +16,10 @@ REM   --dry-run                         Render prompts only, skip coder invocati
 REM   --new-job                         Force fresh job, skip auto-resume
 REM   --help, /?                        Show this usage message
 REM
+REM Runtime output convention:
+REM   Jobs and sidecars are written under %USERPROFILE%\.ukbe-runner\jobs\
+REM   Runtime workflow bundles are loaded from %USERPROFILE%\.ukbe-runner\workflows\
+REM
 REM Examples:
 REM   %~nx0 --target-project-root D:\MyProjectSpace\target-repo
 REM   %~nx0 --target-project-root D:\MyProjectSpace\target-repo --new-job
@@ -122,8 +126,31 @@ if not exist "%PROJECT_ROOT%" (
     exit /b 1
 )
 
+REM If resuming a specific job, show status and stop early when it is already completed.
+if not "%JOB_ID%"=="" (
+    set "STATUS_FILE=%TEMP%\ukbe-run-delivery-status-%RANDOM%.txt"
+    %UKBE_CLI% run --project-root "%PROJECT_ROOT%" --template-group %TEMPLATE_GROUP% --job-id %JOB_ID% --check-job-status > "!STATUS_FILE!"
+    set "STATUS_EXIT=%ERRORLEVEL%"
+    if "!STATUS_EXIT!"=="0" (
+        set "JOB_STATUS="
+        for /f "tokens=1,* delims=:" %%A in ('findstr /B /C:"Status:" "!STATUS_FILE!"') do set "JOB_STATUS=%%B"
+        set "JOB_STATUS=!JOB_STATUS: =!"
+        if /I "!JOB_STATUS!"=="COMPLETED" (
+            echo ===========================================================================
+            echo  Existing Job Status
+            echo ===========================================================================
+            type "!STATUS_FILE!"
+            del "!STATUS_FILE!" >nul 2>nul
+            echo(
+            echo Job is already completed. Use --new-job to force another run.
+            exit /b 0
+        )
+    )
+    del "!STATUS_FILE!" >nul 2>nul
+)
+
 REM Build the command
-set "CMD=%UKBE_CLI% run --project-root "%PROJECT_ROOT%" --template-group %TEMPLATE_GROUP% --target-project-root "%TARGET_ROOT%""
+set "CMD=%UKBE_CLI% run --project-root "%PROJECT_ROOT%" --template-group %TEMPLATE_GROUP% --target-project-root "%TARGET_ROOT%"" 
 if "%DRY_RUN%"=="1" (
     set "CMD=!CMD! --dry-run"
 )
@@ -156,7 +183,11 @@ set "EXIT_CODE=%ERRORLEVEL%"
 echo(
 if "%EXIT_CODE%"=="0" goto :success
 echo Delivery scaffold exited with code %EXIT_CODE%.
-echo Check job status: %UKBE_CLI% run --template-group %TEMPLATE_GROUP% --check-job-status
+if not "%JOB_ID%"=="" (
+    echo Check job status: %UKBE_CLI% run --project-root "%PROJECT_ROOT%" --template-group %TEMPLATE_GROUP% --job-id %JOB_ID% --check-job-status
+) else (
+    echo Re-run with the same seed or pass --job-id to inspect a specific existing job.
+)
 exit /b %EXIT_CODE%
 
 :success

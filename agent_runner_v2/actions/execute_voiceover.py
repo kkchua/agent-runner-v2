@@ -16,33 +16,9 @@ from datetime import datetime
 from pathlib import Path
 
 from ..action_result import ActionResult
+from ..runtime_context import write_meta_sidecar
 
 _PACKAGE_ROOT = Path(__file__).resolve().parent.parent
-
-
-def _write_meta(
-    project_root: Path,
-    output_dir: Path,
-    status: str,
-    remark: str,
-    artifacts: dict,
-) -> None:
-    """Write meta.json sidecar."""
-    meta_path = output_dir / "meta.json"
-    output_dir.mkdir(parents=True, exist_ok=True)
-    meta = {
-        "schema_version": "v2",
-        "coder_result": {
-            "status": status,
-            "remark": remark,
-            "artifacts": artifacts,
-            "recorded_at": datetime.now().astimezone().isoformat(timespec="seconds"),
-        },
-    }
-    meta_path.write_text(
-        json.dumps(meta, ensure_ascii=False, indent=2) + "\n",
-        encoding="utf-8",
-    )
 
 
 def _generate_elevenlabs(
@@ -210,7 +186,7 @@ def execute_voiceover(
 
     # Validate provider
     if tts_provider == "elevenlabs" and not elevenlabs_key:
-        _write_meta(project_root, output_dir, "REJECTED", "ELEVENLABS_API_KEY not set", {})
+        write_meta_sidecar(output_dir / "meta.json", status="REJECTED", remark="ELEVENLABS_API_KEY not set", artifacts={})
         return ActionResult(
             status="REJECTED",
             remark="ELEVENLABS_API_KEY not set in environment",
@@ -219,7 +195,7 @@ def execute_voiceover(
         )
 
     if tts_provider == "openai" and not openai_key:
-        _write_meta(project_root, output_dir, "REJECTED", "OPENAI_API_KEY not set", {})
+        write_meta_sidecar(output_dir / "meta.json", status="REJECTED", remark="OPENAI_API_KEY not set", artifacts={})
         return ActionResult(
             status="REJECTED",
             remark="OPENAI_API_KEY not set in environment",
@@ -268,7 +244,7 @@ def execute_voiceover(
                 "status": "failed",
                 "error": f"unknown_provider: {tts_provider}",
             })
-            _write_meta(project_root, output_dir, "REJECTED", f"Unknown TTS provider: {tts_provider}", {})
+            write_meta_sidecar(output_dir / "meta.json", status="REJECTED", remark=f"Unknown TTS provider: {tts_provider}", artifacts={})
             return ActionResult(
                 status="REJECTED",
                 remark=f"Unknown TTS provider: {tts_provider}",
@@ -291,7 +267,7 @@ def execute_voiceover(
                 "status": "failed",
                 "error": f"{tts_provider}_generation_failed",
             })
-            _write_meta(project_root, output_dir, "REJECTED", f"Failed to generate audio for scene {scene_num}", {})
+            write_meta_sidecar(output_dir / "meta.json", status="REJECTED", remark=f"Failed to generate audio for scene {scene_num}", artifacts={})
             return ActionResult(
                 status="REJECTED",
                 remark=f"Failed to generate audio for scene {scene_num}",
@@ -318,7 +294,7 @@ def execute_voiceover(
 
     if failed > 0:
         remark = f"Voiceover generation: {succeeded} succeeded, {failed} failed"
-        _write_meta(project_root, output_dir, "REJECTED", remark, {})
+        write_meta_sidecar(output_dir / "meta.json", status="REJECTED", remark=remark, artifacts={})
         return ActionResult(
             status="REJECTED",
             remark=remark,
@@ -328,7 +304,7 @@ def execute_voiceover(
 
     remark = f"Voiceover generation complete: {succeeded} scenes using {tts_provider}"
     artifacts = {"GENERATED_AUDIO_FOLDER": str(output_dir_rel)}
-    _write_meta(project_root, output_dir, "APPROVED", remark, artifacts)
+    write_meta_sidecar(output_dir / "meta.json", status="APPROVED", remark=remark, artifacts=artifacts)
 
     return ActionResult(
         status="APPROVED",

@@ -1,0 +1,29 @@
+Runner Gate (MANDATORY)
+- Treat this step as authorization to generate one root-cause analysis artifact.
+
+Role:
+- You are the root-cause analyst.
+- Your job is to isolate the smallest credible fix scope from the bug report and reproduction note.
+
+Inputs:
+- Bug report: {BUG_REPORT_FILE}
+- Reproduction note: {REPRO_FILE}
+- Documentation references:
+  - {SYSTEM_OVERVIEW}
+  - {DEVELOPER_GUIDE}
+  - {RUNBOOK}
+
+Freshness requirement (MANDATORY)
+- Re-read {BUG_REPORT_FILE} and {REPRO_FILE} from disk before making any decision.
+- Do not rely on prior memory.
+
+Task:
+- Generate exactly one root-cause document at {ROOT_CAUSE_FILE_PATH}.
+- Identify affected code paths, likely modules, and documentation implications.
+- Do not write code.
+
+Completion rule:
+- Return APPROVED only if the root-cause file and meta.json sidecar exist on disk.
+
+ABSOLUTE OUTPUT RULE
+- Return ONLY valid JSON.

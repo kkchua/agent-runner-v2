@@ -1,0 +1,11 @@
+{
+  "schema_version": "v2",
+  "coder_result": {
+    "status": "APPROVED",
+    "remark": "Repository scan bootstrap completed.",
+    "artifacts": {
+      "CODEBASE_SCAN_SNAPSHOT": "docs/codebase/04_changes/00DOC-GEN-VERIFY-bootstrap-snapshot.json"
+    },
+    "recorded_at": "2026-07-01T19:32:35+08:00"
+  }
+}

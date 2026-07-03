@@ -24,6 +24,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -34,7 +35,6 @@ from .bundle_loader import (
     load_workflow_module,
     resolve_workflow_root,
 )
-from .coder_adapters import CoderInvocationError, dataclass_dict
 from .exceptions import ArtifactMissingError, MetaJsonInvalidError, MetaJsonMissingError, PreflightBlockedError
 from .job_state import (
     REVIEW_DECISIONS,
@@ -89,11 +89,19 @@ from .step_runner import (
     run_action,
     run_step,
 )
+from .documentation_guardrails import (
+    EXECUTION_SCAFFOLD_WORKFLOW,
+    MASTER_BOOTSTRAP_WORKFLOW,
+    generated_doc_manifest,
+    managed_banner,
+)
 
 __version__ = "0.1.0"
 from .execution_request import ExecutionRequest
 from .execution_result import ExecutionFailure, ExecutionResult
 from .workflow_router import route_after_failure, route_after_step
+from .workflow_specs import reconcile_step_execution_spec
+from .workflow_specs import build_step_execution_spec, get_template_group_cfg
 
 
 # ---------------------------------------------------------------------------
@@ -119,6 +127,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         p = argparse.ArgumentParser(description="Initialize the runner home and workspace configuration.")
         p.add_argument("--project-root", default=".", help="Workspace directory to initialize.")
         p.add_argument("--workflow", default="default", help="Workflow name to seed.")
+        p.add_argument("--bundle-domain", default="general", help="Domain bundle to record for this workspace (e.g. frontend, backend, content).")
+        p.add_argument("--bundle-profile", default="core+workflow", help="Bundle profile to record for this workspace.")
         ns = p.parse_args(raw[1:])
         ns.command = "init"
         return ns
@@ -176,6 +186,18 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         ns.submit_argv = raw[1:]
         return ns
 
+    if command == "workflow-spec":
+        ns = argparse.Namespace()
+        ns.command = "workflow-spec"
+        ns.workflow_spec_argv = raw[1:]
+        return ns
+
+    if command == "sync-workflow-spec":
+        ns = argparse.Namespace()
+        ns.command = "sync-workflow-spec"
+        ns.workflow_spec_argv = raw[1:]
+        return ns
+
     if command == "approve":
         ns = argparse.Namespace()
         ns.command = "approve"
@@ -223,7 +245,12 @@ def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     if args.command == "init":
         workspace_root = Path(args.project_root or ".").resolve()
-        result = init_workspace(workspace_root, workflow_name=args.workflow or "default")
+        result = init_workspace(
+            workspace_root,
+            workflow_name=args.workflow or "default",
+            domain=args.bundle_domain or "general",
+            bundle_profile=args.bundle_profile or "core+workflow",
+        )
         print(json.dumps(result, indent=2, ensure_ascii=False))
         return 0
 
@@ -270,6 +297,14 @@ def main(argv: list[str] | None = None) -> int:
         from .submit_commands import main as _submit_main
         return _submit_main(args.submit_argv)
 
+    if args.command == "workflow-spec":
+        from .workflow_spec_commands import main as _workflow_spec_main
+        return _workflow_spec_main(args.workflow_spec_argv)
+
+    if args.command == "sync-workflow-spec":
+        from .workflow_spec_commands import main as _workflow_spec_main
+        return _workflow_spec_main(args.workflow_spec_argv)
+
     if args.command == "approve":
         from .approve_commands import main as _approve_main
         return _approve_main(args.approve_argv)
@@ -280,11 +315,15 @@ def main(argv: list[str] | None = None) -> int:
     workflow_bundle_root = _resolve_workflow_bundle_root(workspace_root, workflow_name, config)
     workflow_module = load_workflow_module(workspace_root, workflow_name, config=config)
 
-    # Set delivery root for cross-project scaffold workflows
+    # Set target root for cross-project workflows that write into a repository tree.
     delivery_root = None
     if args.target_project_root:
         delivery_root = Path(args.target_project_root).resolve()
-        if args.template_group.startswith("delivery_scaffold"):
+        if (
+            args.template_group.startswith("delivery_scaffold")
+            or args.template_group.startswith("codebase_")
+            or args.template_group.startswith("system_docs_")
+        ):
             # Create the delivery folder structure in the target project
             _ensure_delivery_folders(delivery_root)
 
@@ -534,26 +573,29 @@ def main(argv: list[str] | None = None) -> int:
                         "remark": f"Job {state['job_id']} is already completed.",
                         "job_status": get_job_status(state),
                         "job_id": state["job_id"],
+                        "current_step": state.get("current_step"),
+                        "progress": _step_progress_label(group_cfg, state.get("current_step")),
+                        "status_summary": _format_job_status_summary(state, group_cfg),
                     }, indent=2))
                     return 0
                 state = prepare_state_for_retry(group_name=args.template_group, state=state, step=step)
             elif completed_job_id:
                 state = ensure_backward_compatible_state(load_job(args.template_group, completed_job_id))
                 state = migrate_job_state(state)
+                state = reconcile_job_state(state, group_cfg)
                 print(json.dumps({
-                    "status": "REJECTED",
+                    "status": "APPROVED",
                     "remark": (
                         f"Job {state['job_id']} for this seed is already completed. "
                         "Use --new-job only if you intentionally want a duplicate execution cycle."
                     ),
                     "job_status": get_job_status(state),
                     "job_id": state["job_id"],
-                    "last_failure_class": "HUMAN_RETRY_REQUIRED",
-                    "last_failure_code": "JOB_ALREADY_COMPLETED_FOR_SEED",
-                    "last_failure_source": "runner",
-                    "return_code": 1,
+                    "current_step": state.get("current_step"),
+                    "progress": _step_progress_label(group_cfg, state.get("current_step")),
+                    "status_summary": _format_job_status_summary(state, group_cfg),
                 }, indent=2))
-                return 1
+                return 0
             else:
                 state = create_job(args.template_group, group_cfg, seed_artifacts)
                 if execution_binding is not None:
@@ -590,6 +632,9 @@ def main(argv: list[str] | None = None) -> int:
                     "remark": f"Job {state['job_id']} is already completed.",
                     "job_status": get_job_status(state),
                     "job_id": state["job_id"],
+                    "current_step": state.get("current_step"),
+                    "progress": _step_progress_label(group_cfg, state.get("current_step")),
+                    "status_summary": _format_job_status_summary(state, group_cfg),
                 }, indent=2))
                 return 0
             state = prepare_state_for_retry(group_name=args.template_group, state=state, step=step)
@@ -610,125 +655,21 @@ def main(argv: list[str] | None = None) -> int:
                 }
                 save_job(args.template_group, state["job_id"], state)
 
-        # --- Action step path (non-coder) ---
-        action_name = step_cfg.get("action")
-        if action_name:
-            max_rejects = (
-                args.max_rejects if args.max_rejects >= 0
-                else int(step_cfg.get("max_rejects", group_cfg["default_max_rejects"]))
-            )
-            enforce_retry_limit_before_run(state=state, step=step, max_rejects=max_rejects)
-
-            missing_required = _missing_artifacts(step_cfg.get("required_inputs", []), state)
-            if missing_required:
-                raise FileNotFoundError(
-                    f"Cannot run step {step!r}. Missing required input artifact(s): {', '.join(missing_required)}"
-                )
-
-            check_preflight_artifact_status(step_cfg=step_cfg, state=state)
-            ensure_planning_task_queue_integrity(state, step=step)
-            ensure_execution_task_binding_integrity(state, step=step)
-
-            # Build context so action can reference path variables
-            context = build_context(state, step=step, step_cfg=step_cfg)
-            if args.workflow_key:
-                context["WORKFLOW_KEY_OVERRIDE"] = args.workflow_key
-            else:
-                context["WORKFLOW_KEY_OVERRIDE"] = ""
-
-            step_dir = make_step_dir(group_cfg, state, step)
-
-            print(f"[{_now_iso()}] action={action_name} step={step} status=STARTING", flush=True)
-
-            _mark_review_started(state, step=step, step_cfg=step_cfg, coder_used="action")
-            save_job(args.template_group, state["job_id"], state)
-
-            try:
-                step_result = run_action(
-                    action_name=action_name,
-                    state=state,
-                    step=step,
-                    step_cfg=step_cfg,
-                    project_root=effective_root,
-                    context=context,
-                )
-            except Exception as exc:
-                print(f"[{_now_iso()}] action={action_name} step={step} status=FAILED error={type(exc).__name__}", flush=True)
-                state, exit_code = route_after_failure(
-                    group_name=args.template_group,
-                    state=state,
-                    step=step,
-                    coder_used="action",
-                    exc=exc,
-                    max_rejects=max_rejects,
-                    usage_data=default_usage_summary(),
-                )
-                print(json.dumps({
-                    "status": "REJECTED",
-                    "remark": str(exc),
-                    "job_status": get_job_status(state),
-                    "job_id": state["job_id"],
-                    "template_group": state["template_group"],
-                    "step": step,
-                    "coder_used": "action",
-                    "last_failure_class": state.get("last_failure_class"),
-                    "last_failure_code": state.get("last_failure_code"),
-                    "last_failure_source": state.get("last_failure_source"),
-                    "reject_count": state.get("reject_counts", {}).get(step, 0),
-                    "max_rejects": max_rejects,
-                    "step_dir": str(step_dir.relative_to(JOBS_ROOT)),
-                }, indent=2))
-                return exit_code
-
-            state, exit_code = route_after_step(
-                group_name=args.template_group,
-                group_cfg=group_cfg,
-                state=state,
-                step=step,
-                step_cfg=step_cfg,
-                step_result=step_result,
-                coder_used="action",
-                max_rejects=max_rejects,
-            )
-            print(json.dumps({
-                "status": step_result.status,
-                "remark": step_result.remark,
-                "job_status": get_job_status(state),
-                "job_id": state["job_id"],
-                "template_group": state["template_group"],
-                "step": step,
-                "coder_used": "action",
-                "artifacts": step_result.artifacts,
-            }, indent=2))
-            return exit_code
-
-        # --- Coder step path ---
-        coder_used, coder_alias, coder_config = _resolve_step_coder(
-            group_cfg=group_cfg, state=state, step=step, step_cfg=step_cfg,
-            cli_coder=args.coder or None,
-        )
-        # Show alias in STARTING log when an alias was resolved
-        coder_label = f"{coder_alias} ({coder_used})" if coder_alias else coder_used
         max_rejects = (
             args.max_rejects if args.max_rejects >= 0
             else int(step_cfg.get("max_rejects", group_cfg["default_max_rejects"]))
         )
         enforce_retry_limit_before_run(state=state, step=step, max_rejects=max_rejects)
-
-        missing_required = _missing_artifacts(step_cfg.get("required_inputs", []), state)
-        if missing_required:
-            raise FileNotFoundError(
-                f"Cannot run step {step!r}. Missing required input artifact(s): {', '.join(missing_required)}"
-            )
-
-        check_preflight_artifact_status(step_cfg=step_cfg, state=state)
-        ensure_planning_task_queue_integrity(state, step=step)
-        ensure_execution_task_binding_integrity(state, step=step)
-
-        model_id = (coder_config or {}).get("model") or None
-        prompt_path = resolve_prompt_path(step_cfg=step_cfg, coder=coder_used, model_id=model_id)
-        if not prompt_path.exists():
-            raise FileNotFoundError(f"Prompt file not found: {prompt_path}")
+        prepared = _prepare_step_execution(
+            template_group=args.template_group,
+            group_cfg=group_cfg,
+            state=state,
+            step=step,
+            step_cfg=step_cfg,
+            workflow_key_override=args.workflow_key or "",
+            cli_coder=args.coder or None,
+        )
+        coder_used = prepared.coder_used
 
     except PreflightBlockedError as exc:
         if state is not None and step:
@@ -786,43 +727,36 @@ def main(argv: list[str] | None = None) -> int:
         )
         return exit_code
 
-    # --- Prompt rendering ---
-    template_text = prompt_path.read_text(encoding="utf-8")
-    context = build_context(state, step=step, step_cfg=step_cfg)
+    step_dir = prepared.step_dir
+    if not prepared.action_name:
+        for line in prepared.context.get("ARTIFACT_FINGERPRINTS", "").splitlines():
+            print(f"[run_agent] {line[2:]}", flush=True)
 
-    # Inject CLI-level overrides into context
-    if args.workflow_key:
-        context["WORKFLOW_KEY_OVERRIDE"] = args.workflow_key
+        if args.dry_run:
+            print(json.dumps({
+                "status": "APPROVED",
+                "remark": f"Dry run complete for step {step!r} using coder {coder_used!r}.",
+                "template_group": args.template_group,
+                "job_id": state["job_id"],
+                "step": step,
+                "step_progress": _step_progress_label(group_cfg, step),
+                "coder_used": coder_used,
+                "step_dir": str(step_dir.relative_to(JOBS_ROOT)),
+            }, indent=2))
+            return 0
+
+        coder_label = f"{prepared.coder_alias} ({coder_used})" if prepared.coder_alias else coder_used
+        print(
+            f"[{_now_iso()}] coder={coder_label} step={step} "
+            f"progress=\"{_step_progress_label(group_cfg, step)}\" status=STARTING",
+            flush=True,
+        )
     else:
-        context["WORKFLOW_KEY_OVERRIDE"] = ""
-
-    # For refine steps: override REVIEW_FILE from loop_context to prevent stale review
-    loop_ctx = state.get("loop_context", {})
-    if step_cfg.get("loop_returns_to") and loop_ctx.get("active") and loop_ctx.get("loop_source_review"):
-        context["REVIEW_FILE"] = loop_ctx["loop_source_review"]
-
-    prompt_text = render_prompt(template_text, context)
-    checksum = prompt_checksum(prompt_text)
-
-    step_dir = make_step_dir(group_cfg, state, step)
-    _save_text(step_dir / "prompt.txt", prompt_text)
-
-    for line in context.get("ARTIFACT_FINGERPRINTS", "").splitlines():
-        print(f"[run_agent] {line[2:]}", flush=True)
-
-    if args.dry_run:
-        print(json.dumps({
-            "status": "APPROVED",
-            "remark": f"Dry run complete for step {step!r} using coder {coder_used!r}.",
-            "template_group": args.template_group,
-            "job_id": state["job_id"],
-            "step": step,
-            "coder_used": coder_used,
-            "step_dir": str(step_dir.relative_to(JOBS_ROOT)),
-        }, indent=2))
-        return 0
-
-    print(f"[{_now_iso()}] coder={coder_label} step={step} status=STARTING", flush=True)
+        print(
+            f"[{_now_iso()}] action={prepared.action_name} step={step} "
+            f"progress=\"{_step_progress_label(group_cfg, step)}\" status=STARTING",
+            flush=True,
+        )
 
     # Mark review state started (job.json only — no markdown writes in v2)
     _mark_review_started(state, step=step, step_cfg=step_cfg, coder_used=coder_used)
@@ -830,22 +764,18 @@ def main(argv: list[str] | None = None) -> int:
 
     # --- Core execution ---
     try:
-        step_result = run_step(
-            group_name=args.template_group,
+        step_result = _execute_prepared_step(
+            prepared=prepared,
+            template_group=args.template_group,
             group_cfg=group_cfg,
             state=state,
             step=step,
             step_cfg=step_cfg,
-            coder=coder_used,
-            coder_config=coder_config,
-            prompt_text=prompt_text,
-            checksum=checksum,
-            step_dir=step_dir,
-            project_root=effective_root,
-            context=context,
+            effective_root=effective_root,
         )
-    except (CoderInvocationError, MetaJsonMissingError, MetaJsonInvalidError, ArtifactMissingError) as exc:
-        print(f"[{_now_iso()}] coder={coder_used} step={step} status=FAILED error={type(exc).__name__}", flush=True)
+    except Exception as exc:
+        actor = f"action={prepared.action_name}" if prepared.action_name else f"coder={coder_used}"
+        print(f"[{_now_iso()}] {actor} step={step} status=FAILED error={type(exc).__name__}", flush=True)
         state, exit_code = route_after_failure(
             group_name=args.template_group,
             state=state,
@@ -862,6 +792,7 @@ def main(argv: list[str] | None = None) -> int:
             "job_id": state["job_id"],
             "template_group": state["template_group"],
             "step": step,
+            "step_progress": _step_progress_label(group_cfg, step),
             "coder_used": coder_used,
             "last_failure_class": state.get("last_failure_class"),
             "last_failure_code": state.get("last_failure_code"),
@@ -900,6 +831,7 @@ def main(argv: list[str] | None = None) -> int:
         "job_id": state["job_id"],
         "template_group": state["template_group"],
         "step": step,
+        "step_progress": _step_progress_label(group_cfg, step),
         "coder_used": coder_used,
         "reject_count": state.get("reject_counts", {}).get(step, 0),
         "max_rejects": max_rejects,
@@ -917,83 +849,144 @@ def _execute_step_command(request_path: Path, result_path: Path | None = None) -
     payload = json.loads(request_path.read_text(encoding="utf-8"))
     request = ExecutionRequest.from_dict(payload)
 
-    workspace_root = Path(request.workspace_root or request.project_root).resolve()
-    config = load_project_config(workspace_root)
-    workflow_name = request.workflow_name or str(config.get("default_workflow") or "default")
-    workflow_cfg_map = config.get("workflows") or {}
-    bundle_workflow_name = workflow_name if workflow_name in workflow_cfg_map else str(config.get("default_workflow") or "default")
-    workflow_cfg = workflow_cfg_map.get(bundle_workflow_name) or {}
-
-    # Prefer a user-customized global default workflow bundle when present.
-    # Otherwise use DB-provided step_execution_spec directly.
-    # If neither is available, fail fast.
-    workflow_module = None
-    global_default_root = resolve_workflow_root(workspace_root, "default", config=config)
-    global_default_module = global_default_root / "template_groups.py"
-    if global_default_module.exists():
-        workflow_bundle_root = global_default_root
-        workflow_module = load_workflow_module(workspace_root, "default", config=config)
-    elif request.step_execution_spec:
-        workflow_bundle_root = PACKAGE_ROOT.resolve()
-    else:
-        raise FileNotFoundError(
-            f"Workflow bundle not found at {global_default_module}. "
-            "Provide backend step_execution_spec or create %USERPROFILE%\\.ukbe-runner\\workflows\\default."
-        )
-
-    delivery_root = Path(request.target_project_root).resolve() if request.target_project_root else None
-    if delivery_root is not None and request.template_group.startswith("delivery_scaffold"):
-        _ensure_delivery_folders(delivery_root)
-
-    set_context(
-        workspace_root=workspace_root,
-        workflow_name=workflow_name,
-        workflow_root=workflow_bundle_root,
-        workflow_module=workflow_module,
-        delivery_root=delivery_root,
-    )
-    set_workflow_module(workflow_module)
-    effective_root = delivery_root if delivery_root is not None else workspace_root
-
-    if request.step_execution_spec:
-        group_cfg, step_cfg = _build_group_cfg_from_execution_spec(
-            request.step_execution_spec,
-            request.template_group,
-            request.step_name,
-        )
-    else:
-        group_cfg = _load_group(request.template_group)
-        step_cfg = group_cfg["step_configs"].get(request.step_name)
-        if not step_cfg:
-            raise ValueError(f"Step {request.step_name!r} is not defined for template group {request.template_group!r}")
-    _validate_static_reference_files(workspace_root, group_cfg, template_group=request.template_group)
-
-    state = _build_execution_state(request=request, group_cfg=group_cfg)
-
-    old_env: dict[str, str | None] = {}
     try:
-        for key, value in request.env_overrides.items():
-            old_env[key] = os.environ.get(key)
-            os.environ[key] = value
-        result = _execute_backend_step_request(
-            request=request,
-            group_cfg=group_cfg,
-            step_cfg=step_cfg,
-            state=state,
-            effective_root=effective_root,
-        )
-    finally:
-        for key, previous in old_env.items():
-            if previous is None:
-                os.environ.pop(key, None)
-            else:
-                os.environ[key] = previous
+        workspace_root = Path(request.workspace_root or request.project_root).resolve()
+        config = load_project_config(workspace_root)
+        workflow_name = request.workflow_name or str(config.get("default_workflow") or "default")
+        workflow_cfg_map = config.get("workflows") or {}
+        bundle_workflow_name = workflow_name if workflow_name in workflow_cfg_map else str(config.get("default_workflow") or "default")
 
-    payload = result.to_dict()
-    if result_path is not None:
-        result_path.write_text(json.dumps(payload, indent=2), encoding='utf-8')
-    print(json.dumps(payload, indent=2))
-    return 0 if result.status == 'completed' else 1
+        # Prefer a user-customized global default workflow bundle when present.
+        # Otherwise use DB-provided step_execution_spec directly.
+        # If neither is available, fail fast.
+        workflow_module = None
+        global_default_root = resolve_workflow_root(workspace_root, "default", config=config)
+        global_default_module = global_default_root / "template_groups.py"
+        if global_default_module.exists():
+            workflow_bundle_root = global_default_root
+            workflow_module = load_workflow_module(workspace_root, "default", config=config)
+        elif request.step_execution_spec:
+            workflow_bundle_root = PACKAGE_ROOT.resolve()
+        else:
+            raise FileNotFoundError(
+                f"Workflow bundle not found at {global_default_module}. "
+                "Provide backend step_execution_spec or create %USERPROFILE%\\.ukbe-runner\\workflows\\default."
+            )
+
+        delivery_root = Path(request.target_project_root).resolve() if request.target_project_root else None
+        if delivery_root is not None and (
+            request.template_group.startswith("delivery_scaffold")
+            or request.template_group.startswith("codebase_")
+            or request.template_group.startswith("system_docs_")
+        ):
+            _ensure_delivery_folders(delivery_root)
+
+        set_context(
+            workspace_root=workspace_root,
+            workflow_name=workflow_name,
+            workflow_root=workflow_bundle_root,
+            workflow_module=workflow_module,
+            delivery_root=delivery_root,
+        )
+        set_workflow_module(workflow_module)
+        effective_root = delivery_root if delivery_root is not None else workspace_root
+
+        spec_source = (request.step_spec_source or "backend").strip().lower()
+        if spec_source == "global":
+            group_cfg = _load_group(request.template_group)
+            step_cfg = group_cfg["step_configs"].get(request.step_name)
+            if not step_cfg:
+                raise ValueError(f"Step {request.step_name!r} is not defined for template group {request.template_group!r}")
+            request.step_execution_spec = build_step_execution_spec(
+                template_group=request.template_group,
+                step_name=request.step_name,
+                group_cfg=group_cfg,
+            )
+        elif request.step_execution_spec:
+            if spec_source == "hybrid":
+                try:
+                    request.step_execution_spec = reconcile_step_execution_spec(
+                        template_group=request.template_group,
+                        step_name=request.step_name,
+                        workspace_root=workspace_root,
+                        workflow_name=bundle_workflow_name or "default",
+                        backend_spec=dict(request.step_execution_spec or {}),
+                    )
+                except Exception:
+                    pass
+            group_cfg, step_cfg = _build_group_cfg_from_execution_spec(
+                request.step_execution_spec,
+                request.template_group,
+                request.step_name,
+            )
+        else:
+            group_cfg = _load_group(request.template_group)
+            step_cfg = group_cfg["step_configs"].get(request.step_name)
+            if not step_cfg:
+                raise ValueError(f"Step {request.step_name!r} is not defined for template group {request.template_group!r}")
+        _validate_static_reference_files(workspace_root, group_cfg, template_group=request.template_group)
+
+        state = _build_execution_state(request=request, group_cfg=group_cfg)
+        save_job(request.template_group, state["job_id"], state)
+
+        old_env: dict[str, str | None] = {}
+        try:
+            for key, value in request.env_overrides.items():
+                old_env[key] = os.environ.get(key)
+                os.environ[key] = value
+            result = _execute_backend_step_request(
+                request=request,
+                group_cfg=group_cfg,
+                step_cfg=step_cfg,
+                state=state,
+                effective_root=effective_root,
+            )
+        finally:
+            for key, previous in old_env.items():
+                if previous is None:
+                    os.environ.pop(key, None)
+                else:
+                    os.environ[key] = previous
+
+        result_payload = result.to_dict()
+        state["artifacts"].update(dict(result.artifacts or {}))
+        if result.failure is not None:
+            state["last_failure_class"] = result.failure.failure_class
+            state["last_failure_code"] = result.failure.failure_code
+            state["last_failure_reason"] = result.failure.failure_reason
+            state["last_failure_source"] = result.failure.failure_source
+        else:
+            state["last_failure_class"] = None
+            state["last_failure_code"] = None
+            state["last_failure_reason"] = None
+            state["last_failure_source"] = None
+        save_job(request.template_group, state["job_id"], state)
+        if result_path is not None:
+            result_path.write_text(json.dumps(result_payload, indent=2), encoding="utf-8")
+        print(json.dumps(result_payload, indent=2))
+        return 0 if result.status == "completed" else 1
+    except Exception as exc:
+        step_order = 1
+        if isinstance(request.step_execution_spec, dict):
+            step_order = int(request.step_execution_spec.get("step_order") or request.step_execution_spec.get("step_sequence_no") or 1)
+        crash_result = _build_worker_crash_result(
+            run={
+                "id": request.workflow_run_id or "",
+                "run_code": request.job_id or "",
+                "workflow_name": request.template_group,
+            },
+            step_run={
+                "id": request.workflow_step_run_id or "",
+                "step_name": request.step_name,
+                "sequence_no": step_order,
+                "coder": request.coder_override or "",
+            },
+            error=exc,
+        )
+        if result_path is not None:
+            result_path.write_text(json.dumps(crash_result, indent=2), encoding="utf-8")
+        print(json.dumps(crash_result, indent=2))
+        return 1
 
 
 def _build_group_cfg_from_execution_spec(spec: dict[str, Any], template_group: str, step_name: str) -> tuple[dict[str, Any], dict[str, Any]]:
@@ -1134,10 +1127,51 @@ def _worker_command(*, backend_url: str, worker_id: str, host_name: str | None, 
             return 0
 
 
-def _build_worker_request_payload(*, run: dict[str, Any], step_run: dict[str, Any], step_execution_spec: dict[str, Any] | None = None, backend_url: str = "") -> dict[str, Any]:
+def _build_worker_request_payload(
+    *,
+    run: dict[str, Any],
+    step_run: dict[str, Any],
+    step_execution_spec: dict[str, Any] | None = None,
+    backend_url: str = "",
+    step_spec_source: str = "backend",
+) -> dict[str, Any]:
     workflow_name = str(run.get("workflow_name") or "")
     project_root = str(run.get("project_root") or run.get("workspace_path") or ".")
+    template_group = str((step_execution_spec or {}).get("template_group") or workflow_name)
+    step_name = str(step_run.get("step_name") or "")
+    mode = (step_spec_source or "backend").strip().lower()
+    if mode not in {"global", "backend", "hybrid"}:
+        mode = "backend"
     spec = dict(step_execution_spec or {})
+    coder_override = step_run.get("coder")
+    workspace_path = Path(project_root).resolve()
+
+    if mode == "global":
+        try:
+            group_cfg = get_template_group_cfg(
+                template_group=template_group,
+                workspace_root=workspace_path,
+                workflow_name=workflow_name or "default",
+            )
+            spec = build_step_execution_spec(
+                template_group=template_group,
+                step_name=step_name,
+                group_cfg=group_cfg,
+            )
+            coder_override = None
+        except Exception:
+            spec = dict(step_execution_spec or {})
+    elif mode == "hybrid":
+        try:
+            spec = reconcile_step_execution_spec(
+                template_group=template_group,
+                step_name=step_name,
+                workspace_root=workspace_path,
+                workflow_name=workflow_name or "default",
+                backend_spec=spec,
+            )
+        except Exception:
+            spec = dict(step_execution_spec or {})
     input_artifacts = dict(run.get("input_payload") or {})
     required_artifact_keys = {
         item.get("artifact_key")
@@ -1160,11 +1194,12 @@ def _build_worker_request_payload(*, run: dict[str, Any], step_run: dict[str, An
         "workflow_run_id": run.get("id"),
         "workflow_step_run_id": step_run.get("id"),
         "job_id": run.get("run_code"),
-        "step_name": step_run.get("step_name"),
+        "step_name": step_name,
+        "step_spec_source": mode,
         "project_root": project_root,
         "workspace_root": project_root,
         "target_project_root": run.get("project_root"),
-        "coder_override": step_run.get("coder"),
+        "coder_override": coder_override,
         "workflow_key_override": "",
         "env_overrides": {
             **(run.get("env_overrides") or {}),
@@ -1253,25 +1288,37 @@ def _write_backend_job_json(
 
 
 def _submit_worker_result(*, client: BackendClient, run: dict[str, Any], step_run: dict[str, Any], result: dict[str, Any]) -> dict[str, Any]:
-    diagnostics = dict(result.get("diagnostics") or {})
+    normalized_artifacts: dict[str, str] = {}
     for artifact_key, file_path in (result.get("artifacts") or {}).items():
-        client.create_artifact(
-            run_id=str(run["id"]),
-            payload={
+        normalized_artifacts[artifact_key] = str(file_path).replace("\\", "/")
+
+    diagnostics = dict(result.get("diagnostics") or {})
+    artifact_errors: list[dict[str, str]] = []
+    for artifact_key, file_path in normalized_artifacts.items():
+        try:
+            client.create_artifact(
+                run_id=str(run["id"]),
+                payload={
+                    "artifact_key": artifact_key,
+                    "file_path": file_path,
+                    "role": "output",
+                    "workflow_step_run_id": str(step_run["id"]),
+                    "details": {},
+                },
+            )
+        except Exception as exc:
+            artifact_errors.append({
                 "artifact_key": artifact_key,
                 "file_path": file_path,
-                "role": "output",
-                "workflow_step_run_id": str(step_run["id"]),
-                "details": {},
-            },
-        )
+                "error": str(exc),
+            })
 
     review = result.get("review")
     complete_payload: dict[str, Any] = {
         "status": result.get("status", "failed"),
         "outcome": result.get("outcome"),
         "coder": result.get("coder_used"),
-        "output_payload": result.get("artifacts") or {},
+        "output_payload": normalized_artifacts,
         "error_message": (result.get("failure") or {}).get("failure_reason"),
     }
     if review:
@@ -1289,12 +1336,16 @@ def _submit_worker_result(*, client: BackendClient, run: dict[str, Any], step_ru
             "usage": result.get("usage"),
         },
     }
+    if artifact_errors:
+        event_payload["payload"]["artifact_registration_errors"] = artifact_errors
     client.create_event(run_id=str(run["id"]), payload=event_payload)
     return completion
 
 
 def _build_execution_state(*, request: ExecutionRequest, group_cfg: dict[str, Any]) -> dict[str, Any]:
-    bundle = get_workflow_module() or __import__(__package__ + ".template_groups", fromlist=["ARTIFACT_KEYS"])
+    bundle = get_workflow_module()
+    if bundle is None:
+        raise RuntimeError("Workflow module is not loaded. Runtime must use the global workflow bundle.")
     artifact_keys = list(bundle.ARTIFACT_KEYS)
     artifacts: dict[str, Any] = {key: None for key in artifact_keys}
     artifacts.update(dict(request.input_artifacts))
@@ -1396,25 +1447,197 @@ def _build_execution_state(*, request: ExecutionRequest, group_cfg: dict[str, An
         "backend_artifact_rules": dict((request.step_execution_spec or {}).get("artifact_rules") or {}),
         "backend_step_order": step_order,
         "backend_step_sequence": step_sequence,
-        "backend_step_dir_rel": f"{request.template_group}/{str(request.job_id or request.workflow_run_id or 'backend-job')}/{step_sequence:02d}_{request.step_name}",
+        "backend_step_dir_rel": str(
+            JOBS_ROOT
+            / request.template_group
+            / str(request.job_id or request.workflow_run_id or "backend-job")
+            / f"{step_sequence:02d}_{request.step_name}"
+        ),
     }
     state.update(request.state_overrides)
     return state
 
 
 DELIVERY_SCAFFOLD_PUBLISH_PATHS: dict[str, str] = {
-    "PROJECT_ANALYSIS": "docs/delivery/00_templates/project_analysis.md",
-    "DELIVERY_SOP": "docs/delivery/00_templates/WORKFLOW_SOP_v1.md",
-    "DELIVERY_STATUS_RULES": "docs/delivery/00_templates/DELIVERY_STATUS_RULES_v1.md",
-    "DELIVERY_TEMPLATE_REGISTRY": "docs/delivery/00_templates/template_registry.md",
-    "DELIVERY_INITIATIVE_TEMPLATE": "docs/delivery/00_templates/01_initiative.template.md",
-    "DELIVERY_PLAN_TEMPLATE": "docs/delivery/00_templates/02_plan.template.md",
-    "DELIVERY_TASK_GRAPH_TEMPLATE": "docs/delivery/00_templates/02b_task_graph.template.md",
-    "DELIVERY_TASK_TEMPLATE": "docs/delivery/00_templates/03_task.template.md",
-    "DELIVERY_IMPL_TEMPLATE": "docs/delivery/00_templates/04_implementation_plan.template.md",
-    "DELIVERY_REVIEW_TEMPLATE": "docs/delivery/00_templates/04_review.template.md",
-    "DELIVERY_MEMORY_TEMPLATE": "docs/delivery/00_templates/06_memory.template.md",
+    "PROJECT_ANALYSIS": "docs/system/00_governance/bootstrap/project_analysis.md",
+    "DELIVERY_SOP": "docs/system/00_governance/WORKFLOW_SOP_v1.md",
+    "DELIVERY_STATUS_RULES": "docs/system/00_governance/DELIVERY_STATUS_RULES_v1.md",
+    "CODEBASE_DOC_SOP": "docs/codebase/00_standards/CODEBASE_DOC_SOP_v1.md",
+    "CODEBASE_DOC_STATUS_RULES": "docs/codebase/00_standards/CODEBASE_DOC_STATUS_RULES_v1.md",
+    "EXISTING_REPO_WORKFLOW_SOP": "docs/operations/EXISTING_REPO_WORKFLOW_SOP.md",
+    "DELIVERY_VALIDATION_TEMPLATE": "docs/system/00_governance/bootstrap/templates/delivery/08_delivery_validation_template.md",
+    "DELIVERY_TEMPLATE_REGISTRY": "docs/system/00_governance/bootstrap/templates/delivery/01_delivery_template_registry.md",
+    "DELIVERY_INITIATIVE_TEMPLATE": "docs/system/00_governance/bootstrap/templates/delivery/02_delivery_initiative_template.md",
+    "DELIVERY_PLAN_TEMPLATE": "docs/system/00_governance/bootstrap/templates/delivery/03_delivery_plan_template.md",
+    "DELIVERY_TASK_GRAPH_TEMPLATE": "docs/system/00_governance/bootstrap/templates/delivery/04_delivery_task_graph_template.md",
+    "DELIVERY_TASK_TEMPLATE": "docs/system/00_governance/bootstrap/templates/delivery/05_delivery_task_template.md",
+    "DELIVERY_IMPL_TEMPLATE": "docs/system/00_governance/bootstrap/templates/delivery/06_delivery_impl_template.md",
+    "DELIVERY_REVIEW_TEMPLATE": "docs/system/00_governance/bootstrap/templates/delivery/07_delivery_review_template.md",
+    "DELIVERY_MEMORY_TEMPLATE": "docs/system/00_governance/bootstrap/templates/delivery/09_delivery_memory_template.md",
+    "CODEBASE_TEMPLATE_REGISTRY": "docs/system/00_governance/bootstrap/templates/codebase/01_codebase_template_registry.md",
+    "CODEBASE_INVENTORY_TEMPLATE": "docs/system/00_governance/bootstrap/templates/codebase/02_codebase_inventory_template.md",
+    "CODEBASE_MODULE_TEMPLATE": "docs/system/00_governance/bootstrap/templates/codebase/03_codebase_module_template.md",
+    "CODEBASE_COMPONENT_TEMPLATE": "docs/system/00_governance/bootstrap/templates/codebase/04_codebase_component_template.md",
+    "CODEBASE_CHANGE_TEMPLATE": "docs/system/00_governance/bootstrap/templates/codebase/05_codebase_change_template.md",
+    "CODEBASE_INVENTORY": "docs/codebase/01_inventory/codebase_inventory.md",
+    "DELIVERY_AGENTS_MD": "docs/delivery/00_standards/DELIVERY_AGENTS_MD.md",
+    "DELIVERY_AGENT_PLANNER": "docs/delivery/00_standards/DELIVERY_AGENT_PLANNER.md",
+    "DELIVERY_AGENT_TASK_DECOMPOSER": "docs/delivery/00_standards/DELIVERY_AGENT_TASK_DECOMPOSER.md",
+    "DELIVERY_AGENT_IMPL_PLANNER": "docs/delivery/00_standards/DELIVERY_AGENT_IMPL_PLANNER.md",
+    "DELIVERY_AGENT_EXECUTOR": "docs/delivery/00_standards/DELIVERY_AGENT_EXECUTOR.md",
+    "DELIVERY_AGENT_REVIEWER": "docs/delivery/00_standards/DELIVERY_AGENT_REVIEWER.md",
+    "DELIVERY_AGENT_MEMORY_MANAGER": "docs/delivery/00_standards/DELIVERY_AGENT_MEMORY_MANAGER.md",
 }
+
+
+@dataclass
+class PreparedStepExecution:
+    step_dir: Path
+    action_name: str = ""
+    coder_used: str = "action"
+    coder_alias: str | None = None
+    coder_config: dict[str, Any] | None = None
+    context: dict[str, str] = field(default_factory=dict)
+    prompt_path: Path | None = None
+    prompt_text: str = ""
+    checksum: str = ""
+
+
+def _prepare_step_execution(
+    *,
+    template_group: str,
+    group_cfg: dict[str, Any],
+    state: dict[str, Any],
+    step: str,
+    step_cfg: dict[str, Any],
+    workflow_key_override: str = "",
+    cli_coder: str | None = None,
+) -> PreparedStepExecution:
+    missing_required = _missing_artifacts(step_cfg.get("required_inputs", []), state)
+    if missing_required:
+        raise FileNotFoundError(
+            f"Cannot run step {step!r}. Missing required input artifact(s): {', '.join(missing_required)}"
+        )
+
+    check_preflight_artifact_status(step_cfg=step_cfg, state=state)
+    ensure_planning_task_queue_integrity(state, step=step)
+    ensure_execution_task_binding_integrity(state, step=step)
+
+    step_dir = make_step_dir(group_cfg, state, step)
+    step_dir.mkdir(parents=True, exist_ok=True)
+
+    context = build_context(state, step=step, step_cfg=step_cfg)
+    context["WORKFLOW_KEY_OVERRIDE"] = workflow_key_override or ""
+
+    loop_ctx = state.get("loop_context", {})
+    if step_cfg.get("loop_returns_to") and loop_ctx.get("active") and loop_ctx.get("loop_source_review"):
+        context["REVIEW_FILE"] = loop_ctx["loop_source_review"]
+
+    action_name = str(step_cfg.get("action") or "")
+    if action_name:
+        return PreparedStepExecution(
+            step_dir=step_dir,
+            action_name=action_name,
+            coder_used="action",
+            context=context,
+        )
+
+    coder_used, coder_alias, coder_config = _resolve_step_coder(
+        group_cfg=group_cfg,
+        state=state,
+        step=step,
+        step_cfg=step_cfg,
+        cli_coder=cli_coder,
+    )
+    model_id = (coder_config or {}).get("model") or None
+    prompt_path = resolve_prompt_path(step_cfg=step_cfg, coder=coder_used, model_id=model_id)
+    if not prompt_path.exists():
+        raise FileNotFoundError(f"Prompt file not found: {prompt_path}")
+
+    template_text = prompt_path.read_text(encoding="utf-8")
+    template_text = _augment_generated_doc_prompt(
+        template_text,
+        template_group=template_group,
+        step=step,
+        step_cfg=step_cfg,
+        state=state,
+    )
+    prompt_text = render_prompt(template_text, context)
+    checksum = prompt_checksum(prompt_text)
+    _save_text(step_dir / "prompt.txt", prompt_text)
+
+    return PreparedStepExecution(
+        step_dir=step_dir,
+        coder_used=coder_used,
+        coder_alias=coder_alias,
+        coder_config=coder_config,
+        context=context,
+        prompt_path=prompt_path,
+        prompt_text=prompt_text,
+        checksum=checksum,
+    )
+
+
+def _augment_generated_doc_prompt(
+    template_text: str,
+    *,
+    template_group: str,
+    step: str,
+    step_cfg: dict[str, Any],
+    state: dict[str, Any],
+) -> str:
+    if template_group not in {MASTER_BOOTSTRAP_WORKFLOW, EXECUTION_SCAFFOLD_WORKFLOW}:
+        return template_text
+
+    banner = managed_banner(workflow=template_group, step=step)
+    manifest = generated_doc_manifest(template_group=template_group, state=state)
+    return (
+        template_text
+        + "\n\n## Workflow-Generated Document Rule\n\n"
+        + "- Every markdown document written by this step is workflow-generated and protected.\n"
+        + f"- Add this exact banner immediately after the frontmatter of each generated markdown file:\n\n{banner}"
+        + "- If the file uses frontmatter, include `managed_by: workflow-generated` in that frontmatter.\n"
+        + "- Do not rename the target files.\n"
+        + "- Use the generated-doc inventory below as the authoritative protected set for this workflow.\n\n"
+        + manifest
+    )
+
+
+def _execute_prepared_step(
+    *,
+    prepared: PreparedStepExecution,
+    template_group: str,
+    group_cfg: dict[str, Any],
+    state: dict[str, Any],
+    step: str,
+    step_cfg: dict[str, Any],
+    effective_root: Path,
+) -> StepResult:
+    if prepared.action_name:
+        return run_action(
+            action_name=prepared.action_name,
+            state=state,
+            step=step,
+            step_cfg=step_cfg,
+            step_dir=prepared.step_dir,
+            project_root=effective_root,
+            context=prepared.context,
+        )
+
+    return run_step(
+        group_name=template_group,
+        group_cfg=group_cfg,
+        state=state,
+        step=step,
+        step_cfg=step_cfg,
+        coder=prepared.coder_used,
+        coder_config=prepared.coder_config,
+        prompt_text=prepared.prompt_text,
+        checksum=prepared.checksum,
+        step_dir=prepared.step_dir,
+        project_root=effective_root,
+        context=prepared.context,
+    )
 
 
 def _publish_backend_artifacts(*, state: dict[str, Any], step: str, artifacts: dict[str, str], project_root: Path) -> dict[str, str]:
@@ -1471,83 +1694,27 @@ def _execute_backend_step_request(
     effective_root: Path,
 ) -> ExecutionResult:
     step = request.step_name
-    action_name = step_cfg.get("action")
     coder_used = "action"
-    coder_config: dict[str, Any] | None = None
-
-    missing_required = _missing_artifacts(step_cfg.get("required_inputs", []), state)
-    if missing_required:
-        failure = ExecutionFailure(
-            failure_class="HUMAN_RETRY_REQUIRED",
-            failure_code="MISSING_REQUIRED_INPUT",
-            failure_reason=f"Missing required input artifact(s): {', '.join(missing_required)}",
-            failure_source="runner",
-        )
-        return ExecutionResult(status="failed", outcome="preflight_blocked", step_name=step, failure=failure)
-
-    check_preflight_artifact_status(step_cfg=step_cfg, state=state)
-    ensure_planning_task_queue_integrity(state, step=step)
-    ensure_execution_task_binding_integrity(state, step=step)
-
-    if action_name:
-        context = build_context(state, step=step, step_cfg=step_cfg)
-        context["WORKFLOW_KEY_OVERRIDE"] = request.workflow_key_override or ""
-        step_result = run_action(
-            action_name=action_name,
-            state=state,
-            step=step,
-            step_cfg=step_cfg,
-            project_root=effective_root,
-            context=context,
-        )
-        return ExecutionResult(
-            status="completed",
-            outcome=step_result.status.lower(),
-            step_name=step,
-            coder_used="action",
-            remark=step_result.remark,
-            artifacts=step_result.artifacts,
-            meta_json_path=step_result.meta_json_path,
-            usage=step_result.usage_data,
-            diagnostics={"workflow_run_id": request.workflow_run_id, "workflow_step_run_id": request.workflow_step_run_id},
-        )
-
-    coder_used, coder_alias, coder_config = _resolve_step_coder(
-        group_cfg=group_cfg,
-        state=state,
-        step=step,
-        step_cfg=step_cfg,
-        cli_coder=request.coder_override or None,
-    )
-    # Show alias in STARTING log when an alias was resolved
-    coder_label = f"{coder_alias} ({coder_used})" if coder_alias else coder_used
-    model_id = (coder_config or {}).get("model") or None
-    prompt_path = resolve_prompt_path(step_cfg=step_cfg, coder=coder_used, model_id=model_id)
-    if not prompt_path.exists():
-        raise FileNotFoundError(f"Prompt file not found: {prompt_path}")
-
-    template_text = prompt_path.read_text(encoding="utf-8")
-    context = build_context(state, step=step, step_cfg=step_cfg)
-    context["WORKFLOW_KEY_OVERRIDE"] = request.workflow_key_override or ""
-    prompt_text = render_prompt(template_text, context)
-    checksum = prompt_checksum(prompt_text)
-    step_dir = make_step_dir(group_cfg, state, step)
-    _save_text(step_dir / "prompt.txt", prompt_text)
 
     try:
-        step_result = run_step(
-            group_name=request.template_group,
+        prepared = _prepare_step_execution(
+            template_group=request.template_group,
             group_cfg=group_cfg,
             state=state,
             step=step,
             step_cfg=step_cfg,
-            coder=coder_used,
-            coder_config=coder_config,
-            prompt_text=prompt_text,
-            checksum=checksum,
-            step_dir=step_dir,
-            project_root=effective_root,
-            context=context,
+            workflow_key_override=request.workflow_key_override or "",
+            cli_coder=request.coder_override or None,
+        )
+        coder_used = prepared.coder_used
+        step_result = _execute_prepared_step(
+            prepared=prepared,
+            template_group=request.template_group,
+            group_cfg=group_cfg,
+            state=state,
+            step=step,
+            step_cfg=step_cfg,
+            effective_root=effective_root,
         )
     except PreflightBlockedError as exc:
         failure = ExecutionFailure(
@@ -1610,7 +1777,7 @@ def _execute_backend_step_request(
             "workflow_run_id": request.workflow_run_id,
             "workflow_step_run_id": request.workflow_step_run_id,
             "job_id": state.get("job_id"),
-            "step_dir": str(make_step_dir(group_cfg, state, step).relative_to(JOBS_ROOT)),
+            "step_dir": str(prepared.step_dir.relative_to(JOBS_ROOT)),
         },
     )
 
@@ -1622,7 +1789,6 @@ def _execute_backend_step_request(
 def _ensure_delivery_folders(target_root: Path) -> None:
     """Create the standard delivery and codebase documentation structure."""
     folders = [
-        "docs/delivery/00_templates",
         "docs/delivery/01_initiatives",
         "docs/delivery/02_plans",
         "docs/delivery/02_plans/artifacts",
@@ -1630,7 +1796,12 @@ def _ensure_delivery_folders(target_root: Path) -> None:
         "docs/delivery/04_implementation_plans",
         "docs/delivery/05_reviews",
         "docs/delivery/06_memory",
-        "docs/delivery/08_agents",
+        "docs/delivery/00_standards",
+        "docs/system/00_governance",
+        "docs/system/00_governance/bootstrap",
+        "docs/system/00_governance/bootstrap/templates",
+        "docs/system/00_governance/bootstrap/templates/delivery",
+        "docs/system/00_governance/bootstrap/templates/codebase",
         "docs/codebase/00_standards",
         "docs/codebase/00_templates",
         "docs/codebase/01_inventory",
@@ -1638,13 +1809,21 @@ def _ensure_delivery_folders(target_root: Path) -> None:
         "docs/codebase/03_components",
         "docs/codebase/04_changes",
         "docs/codebase/05_archives",
+        "docs/system/00_governance",
+        "docs/system/01_overview",
+        "docs/system/02_functional",
+        "docs/system/03_architecture",
+        "docs/engineering",
+        "docs/operations",
     ]
     for folder in folders:
         (target_root / folder).mkdir(parents=True, exist_ok=True)
 
 
 def _load_group(group_name: str) -> dict:
-    bundle = get_workflow_module() or __import__(__package__ + ".template_groups", fromlist=["TEMPLATE_GROUPS"])
+    bundle = get_workflow_module()
+    if bundle is None:
+        raise RuntimeError("Workflow module is not loaded. Runtime must use the global workflow bundle.")
     template_groups = bundle.TEMPLATE_GROUPS
     if group_name not in template_groups:
         valid = ", ".join(sorted(template_groups))
@@ -1656,7 +1835,9 @@ def _validate_static_reference_files(workspace_root: Path, group_cfg: dict | Non
     # Scaffold workflows generate the delivery docs — they don't need pre-existing reference files
     if template_group.startswith("delivery_scaffold"):
         return
-    bundle = get_workflow_module() or __import__(__package__ + ".template_groups", fromlist=["REFERENCE_FILES"])
+    bundle = get_workflow_module()
+    if bundle is None:
+        raise RuntimeError("Workflow module is not loaded. Runtime must use the global workflow bundle.")
     reference_files = bundle.REFERENCE_FILES
     if group_cfg is not None and "reference_files" in group_cfg:
         reference_files = group_cfg.get("reference_files") or {}
@@ -1850,16 +2031,37 @@ def _print_failure(
     }, indent=2))
 
 
+def _step_progress_parts(group_cfg: dict[str, Any], step: str | None) -> tuple[int | None, int]:
+    steps = list(group_cfg.get("steps") or [])
+    total = len(steps)
+    if not step or step not in steps:
+        return None, total
+    return steps.index(step) + 1, total
+
+
+def _step_progress_label(group_cfg: dict[str, Any], step: str | None) -> str:
+    index, total = _step_progress_parts(group_cfg, step)
+    if index is None or total <= 0:
+        return "step ? of ?"
+    return f"step {index} of {total}"
+
+
 def _format_job_status_summary(state: dict, group_cfg: dict) -> str:
+    current_step = state.get("current_step")
+    current_progress = _step_progress_label(group_cfg, current_step)
+    completed_steps = list(state.get("completed_steps", []))
+    total_steps = len(group_cfg.get("steps") or [])
     lines = [
         f"Job ID:        {state.get('job_id')}",
         f"Template:      {state.get('template_group')}",
         f"Status:        {get_job_status(state)}",
-        f"Current Step:  {state.get('current_step')}",
+        f"Current Step:  {current_step}",
+        f"Progress:      {current_progress}",
+        f"Completed:     {len(completed_steps)} of {total_steps}",
         "",
         "Completed Steps:",
     ]
-    for s in state.get("completed_steps", []):
+    for s in completed_steps:
         lines.append(f"  {s}")
     lines.append("")
     lines.append("Reject Counts:")

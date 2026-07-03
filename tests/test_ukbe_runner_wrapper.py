@@ -2,7 +2,12 @@ from __future__ import annotations
 
 import os
 import subprocess
+import sys
 from pathlib import Path
+
+import pytest
+
+pytestmark = pytest.mark.skipif(sys.platform.startswith("win"), reason="POSIX shell wrapper tests are not meaningful on Windows")
 
 
 def test_worker_start_reports_early_crash_and_cleans_pid(tmp_path):

@@ -10,6 +10,14 @@
     },   
     "qwen-architect": {
       "coder": "qwen",
+      "model": "glm-5"
+    }, 
+	"qwen-architect1": {
+      "coder": "qwen",
+      "model": "kimi-k2.5"
+    }, 
+	"qwen-architect2": {
+      "coder": "qwen",
       "model": "qwen3.7-plus"
     }, 
     "qwen-reviewer": {
@@ -19,6 +27,22 @@
     "qwen-developer": {
       "coder": "qwen",
       "model": "qwen3.5-plus"
+    }, 
+	"claude-architect": {
+      "coder": "claude",
+      "model": "qwen3.7-plus"
+    }, 
+	"claude-reviewer": {
+      "coder": "claude",
+      "model": "qwen3.6-plus"
+    }, 
+    "codex-architect": {
+      "coder": "codex",
+      "model": "gpt-5.4-nano"
+    }, 
+	"codex-reviewer": {
+      "coder": "codex",
+      "model": "gpt-5.4-nano"
     }, 
     "gpt-5.4-nano": {
       "coder": "qwen",

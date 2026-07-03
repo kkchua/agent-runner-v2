@@ -8,13 +8,12 @@ with Status changed from draft → Approved.
 """
 from __future__ import annotations
 
-import json
 import logging
 import re
-from datetime import datetime
 from pathlib import Path
 
 from ..action_result import ActionResult
+from ..runtime_context import write_meta_sidecar
 
 logger = logging.getLogger(__name__)
 
@@ -48,27 +47,6 @@ def _to_slug(title: str) -> str:
     return title
 
 
-def _write_meta(meta_rel: str, project_root: Path, status: str, remark: str, artifacts: dict) -> None:
-    if not meta_rel:
-        print("[promote_init] WARNING: INIT_FILE_METAJSON not in context — meta.json not written", flush=True)
-        return
-    meta_path = project_root / meta_rel
-    meta_path.parent.mkdir(parents=True, exist_ok=True)
-    meta_path.write_text(
-        json.dumps({
-            "schema_version": "v2",
-            "coder_result": {
-                "status": status,
-                "remark": remark,
-                "artifacts": artifacts,
-                "recorded_at": datetime.now().astimezone().isoformat(timespec="seconds"),
-            },
-        }, indent=2) + "\n",
-        encoding="utf-8",
-    )
-    print(f"[promote_init] wrote meta.json → {meta_rel}", flush=True)
-
-
 def promote_init(
     *,
     context: dict[str, str],
@@ -83,13 +61,15 @@ def promote_init(
     pre_init_rel = context.get("PRE_INIT_FILE", "")
     if not pre_init_rel:
         remark = "PRE_INIT_FILE not found in context"
-        _write_meta(meta_rel, project_root, "REJECTED", remark, {})
+        if meta_rel:
+            write_meta_sidecar(meta_rel, project_root=project_root, status="REJECTED", remark=remark, artifacts={})
         return ActionResult(status="REJECTED", remark=remark, artifacts={})
 
     pre_init_path = project_root / pre_init_rel
     if not pre_init_path.exists():
         remark = f"PRE_INIT_FILE does not exist: {pre_init_rel}"
-        _write_meta(meta_rel, project_root, "REJECTED", remark, {})
+        if meta_rel:
+            write_meta_sidecar(meta_rel, project_root=project_root, status="REJECTED", remark=remark, artifacts={})
         return ActionResult(status="REJECTED", remark=remark, artifacts={})
 
     content = pre_init_path.read_text(encoding="utf-8")
@@ -99,14 +79,16 @@ def promote_init(
     print(f"[promote_init] extracted init_id={init_id!r}", flush=True)
     if not init_id:
         remark = "Could not extract Initiative ID from PRE_INIT_FILE"
-        _write_meta(meta_rel, project_root, "REJECTED", remark, {})
+        if meta_rel:
+            write_meta_sidecar(meta_rel, project_root=project_root, status="REJECTED", remark=remark, artifacts={})
         return ActionResult(status="REJECTED", remark=remark, artifacts={})
 
     title = _extract_title(content)
     print(f"[promote_init] extracted title={title!r}", flush=True)
     if not title:
         remark = "Could not extract title (# Heading) from PRE_INIT_FILE"
-        _write_meta(meta_rel, project_root, "REJECTED", remark, {})
+        if meta_rel:
+            write_meta_sidecar(meta_rel, project_root=project_root, status="REJECTED", remark=remark, artifacts={})
         return ActionResult(status="REJECTED", remark=remark, artifacts={})
 
     slug = _to_slug(title)
@@ -120,7 +102,8 @@ def promote_init(
     init_file_rel = f"docs/delivery/01_initiatives/{filename}"
     print(f"[promote_init] wrote INIT_FILE → {init_file_rel}", flush=True)
 
-    _write_meta(meta_rel, project_root, "APPROVED", f"Promoted to {init_file_rel}", {"INIT_FILE": init_file_rel})
+    if meta_rel:
+        write_meta_sidecar(meta_rel, project_root=project_root, status="APPROVED", remark=f"Promoted to {init_file_rel}", artifacts={"INIT_FILE": init_file_rel})
 
     return ActionResult(
         status="APPROVED",

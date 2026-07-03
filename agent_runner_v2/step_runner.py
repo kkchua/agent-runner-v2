@@ -27,7 +27,22 @@ from typing import Any
 from .artifact_paths import compute_paths
 from .coder_adapters import CoderInvocationError, dataclass_dict, invoke_coder
 from .exceptions import ArtifactMissingError, MetaJsonInvalidError, MetaJsonMissingError
-from .runtime_context import JOBS_ROOT, RUNNER_ROOT, ARTIFACT_ROOT, PACKAGE_ROOT, PathProxy, get_workflow_module
+from .runtime_context import (
+    ARTIFACT_ROOT,
+    JOBS_ROOT,
+    PACKAGE_ROOT,
+    RUNNER_ROOT,
+    PathProxy,
+    artifact_rel_to_meta_rel,
+    get_workflow_module,
+    resolve_repo_or_runtime_path,
+)
+from .documentation_guardrails import (
+    MASTER_BOOTSTRAP_WORKFLOW,
+    master_bootstrap_artifact_candidates,
+    snapshot_paths,
+    workflow_generated_doc_paths,
+)
 
 
 RESULT_SCHEMA_PATH = PathProxy(lambda: Path(RUNNER_ROOT) / "llm_response_schema.json")
@@ -36,8 +51,15 @@ RESULT_SCHEMA_PATH = PathProxy(lambda: Path(RUNNER_ROOT) / "llm_response_schema.
 def _workflow_module():
     module = get_workflow_module()
     if module is None:
-        from . import template_groups as module  # type: ignore[no-redef]
+        raise RuntimeError("Workflow module is not loaded. Runtime must use the global workflow bundle.")
     return module
+
+
+def _path_for_report(path: Path, base: Path) -> str:
+    try:
+        return str(path.relative_to(base))
+    except ValueError:
+        return str(path)
 
 
 # ---------------------------------------------------------------------------
@@ -82,12 +104,20 @@ def run_step(
         ArtifactMissingError  — meta.json references paths that don't exist on disk
     """
     invoked_at = _now_iso()
+    protected_docs_before = _snapshot_protected_docs(
+        project_root=project_root,
+        template_group=group_name,
+        state=state,
+    )
 
     # Resolve meta.json path before invocation so it can be used as an early-exit signal.
     # Safe to compute here — context is pre-built and immutable; we do NOT call build_context() again.
     meta_path = _resolve_meta_json_path(step_cfg=step_cfg, context=context, project_root=project_root, step_dir=step_dir)
 
     try:
+        timeout_seconds = step_cfg.get("coder_timeout_seconds")
+        if not isinstance(timeout_seconds, int) or timeout_seconds <= 0:
+            timeout_seconds = None
         invocation = invoke_coder(
             coder=coder,
             step=step,
@@ -98,6 +128,7 @@ def run_step(
             now_iso_fn=_now_iso,
             coder_config=coder_config,
             sidecar_path=meta_path,
+            timeout_seconds_override=timeout_seconds,
         )
         print(
             f"[{_now_iso()}] coder={coder} step={step} status=COMPLETE "
@@ -131,8 +162,12 @@ def run_step(
     _save_json_atomic(step_dir / "step_manifest.json", dataclass_dict(invocation.manifest))
     _write_raw_events_jsonl(step_dir / "raw_events.jsonl", invocation.raw_events)
 
-    # Read and validate meta.json — raises on failure (no fallbacks)
-    meta = _read_and_validate_meta_json(meta_path)
+    # Read and validate meta.json. If the coder produced a direct result object
+    # instead of a wrapped v2 sidecar, repair it into the expected schema.
+    meta = _repair_or_validate_meta_json(
+        meta_path=meta_path,
+        parsed_result=invocation.parsed_result,
+    )
     coder_result = meta["coder_result"]
 
     # Validate artifact files exist on disk
@@ -148,6 +183,20 @@ def run_step(
             project_root=project_root,
             step=step,
         )
+
+    _assert_protected_docs_unchanged(
+        project_root=project_root,
+        template_group=group_name,
+        state=state,
+        artifacts=artifacts,
+        before_snapshot=protected_docs_before,
+    )
+
+    artifacts = _canonicalize_master_bootstrap_artifacts(
+        artifacts=artifacts,
+        project_root=project_root,
+        state=state,
+    )
 
     # Print Doc ID and sidecar file path to console for visibility
     result_key = step_cfg.get("result_meta_key") or step_cfg.get("result_meta_key_from_context", "")
@@ -177,7 +226,7 @@ def run_step(
         remark=str(coder_result.get("remark") or ""),
         artifacts=artifacts,
         reject_code=coder_result.get("reject_code") or None,
-        meta_json_path=str(meta_path.relative_to(project_root)) if meta_path.is_relative_to(project_root) else str(meta_path),
+        meta_json_path=_path_for_report(meta_path, project_root),
         usage_data=dataclass_dict(invocation.usage),
     )
 
@@ -192,6 +241,7 @@ def run_action(
     state: dict,
     step: str,
     step_cfg: dict,
+    step_dir: Path,
     project_root: Path,
     context: dict[str, str],
 ) -> StepResult:
@@ -206,9 +256,19 @@ def run_action(
     from .runner_actions import execute as execute_action
 
     invoked_at = _now_iso()
+    protected_docs_before = _snapshot_protected_docs(
+        project_root=project_root,
+        template_group=str(state.get("template_group") or ""),
+        state=state,
+    )
 
     # Resolve meta.json path so the action can use it from context.
-    meta_path = _resolve_meta_json_path(step_cfg=step_cfg, context=context, project_root=project_root)
+    meta_path = _resolve_meta_json_path(
+        step_cfg=step_cfg,
+        context=context,
+        project_root=project_root,
+        step_dir=step_dir,
+    )
 
     # Execute the action
     result = execute_action(
@@ -230,6 +290,14 @@ def run_action(
     artifacts = dict(coder_result.get("artifacts") or {})
     _validate_artifact_files_exist(artifacts=artifacts, project_root=project_root)
 
+    _assert_protected_docs_unchanged(
+        project_root=project_root,
+        template_group=str(state.get("template_group") or ""),
+        state=state,
+        artifacts=artifacts,
+        before_snapshot=protected_docs_before,
+    )
+
     # Enrich sidecar with runner_data
     enrich_sidecar(
         meta_path=meta_path,
@@ -246,7 +314,7 @@ def run_action(
         remark=str(coder_result.get("remark") or ""),
         artifacts=artifacts,
         reject_code=coder_result.get("reject_code") or None,
-        meta_json_path=str(meta_path.relative_to(project_root)) if meta_path.is_relative_to(project_root) else str(meta_path),
+        meta_json_path=_path_for_report(meta_path, project_root),
         usage_data={},
     )
 
@@ -274,20 +342,22 @@ def _resolve_meta_json_path(
     if from_ctx_key:
         artifact_path_str = context.get(from_ctx_key, "")
         if artifact_path_str:
-            p = PurePath(artifact_path_str)
-            meta_rel = str(p.parent / f"{p.stem}.meta.json")
-            return project_root / meta_rel
+            meta_rel = artifact_rel_to_meta_rel(artifact_path_str)
+            return resolve_repo_or_runtime_path(meta_rel, project_root=project_root, runtime_root=JOBS_ROOT)
 
     result_key = step_cfg.get("result_meta_key")
     if result_key:
         meta_rel = context.get(f"{result_key}_METAJSON", "")
         if meta_rel:
-            return project_root / meta_rel
+            return resolve_repo_or_runtime_path(meta_rel, project_root=project_root, runtime_root=JOBS_ROOT)
 
     # Fallback: use step directory for producing steps (artifact not yet created)
     if step_dir is not None:
         fallback = step_dir / "meta.json"
-        print(f"[step_runner] meta.json fallback to step dir: {fallback.relative_to(project_root)}", flush=True)
+        print(
+            f"[step_runner] meta.json fallback to step dir: {_path_for_report(fallback, project_root)}",
+            flush=True,
+        )
         return fallback
 
     raise MetaJsonMissingError(
@@ -359,6 +429,88 @@ def _read_and_validate_meta_json(path: Path) -> dict:
     return meta
 
 
+def _coerce_direct_result_to_meta(
+    *,
+    payload: dict[str, Any],
+    expected_meta_path: Path,
+) -> dict[str, Any] | None:
+    """Convert a direct coder result object into a v2 meta.json payload.
+
+    Accepts payloads shaped like:
+    {
+      "status": "APPROVED|REJECTED",
+      "remark": "...",
+      "artifacts": {...},
+      "reject_code": "..."
+    }
+    """
+    if not isinstance(payload, dict):
+        return None
+
+    status = str(payload.get("status") or "").strip().upper()
+    artifacts = payload.get("artifacts")
+    if status not in ("APPROVED", "REJECTED") or not isinstance(artifacts, dict):
+        return None
+
+    coder_result: dict[str, Any] = {
+        "status": status,
+        "remark": str(payload.get("remark") or ""),
+        "artifacts": artifacts,
+        "recorded_at": dt.datetime.now().astimezone().isoformat(timespec="seconds"),
+    }
+    reject_code = str(payload.get("reject_code") or "").strip()
+    if reject_code:
+        coder_result["reject_code"] = reject_code
+
+    return {
+        "schema_version": "v2",
+        "coder_result": coder_result,
+    }
+
+
+def _repair_or_validate_meta_json(
+    *,
+    meta_path: Path,
+    parsed_result: dict[str, Any] | None,
+) -> dict[str, Any]:
+    """Validate meta.json, repairing common direct-result sidecar mistakes when possible."""
+    try:
+        return _read_and_validate_meta_json(meta_path)
+    except MetaJsonMissingError:
+        repaired = _coerce_direct_result_to_meta(
+            payload=parsed_result or {},
+            expected_meta_path=meta_path,
+        )
+        if repaired is None:
+            raise
+        _save_json_atomic(meta_path, repaired)
+        return _read_and_validate_meta_json(meta_path)
+    except MetaJsonInvalidError as exc:
+        repaired: dict[str, Any] | None = None
+
+        if meta_path.exists() and meta_path.is_file():
+            try:
+                existing = json.loads(meta_path.read_text(encoding="utf-8"))
+            except (json.JSONDecodeError, OSError):
+                existing = None
+            repaired = _coerce_direct_result_to_meta(
+                payload=existing if isinstance(existing, dict) else {},
+                expected_meta_path=meta_path,
+            )
+
+        if repaired is None:
+            repaired = _coerce_direct_result_to_meta(
+                payload=parsed_result or {},
+                expected_meta_path=meta_path,
+            )
+
+        if repaired is None:
+            raise exc
+
+        _save_json_atomic(meta_path, repaired)
+        return _read_and_validate_meta_json(meta_path)
+
+
 def _validate_artifact_files_exist(
     *,
     artifacts: dict[str, str],
@@ -377,9 +529,110 @@ def _validate_artifact_files_exist(
         )
 
 
+def _snapshot_protected_docs(*, project_root: Path, template_group: str, state: dict) -> dict[str, str]:
+    protected_paths = workflow_generated_doc_paths(template_group=template_group, state=state)
+    return snapshot_paths(project_root=project_root, rel_paths=protected_paths)
+
+
+def _assert_protected_docs_unchanged(
+    *,
+    project_root: Path,
+    template_group: str,
+    state: dict,
+    artifacts: dict[str, str],
+    before_snapshot: dict[str, str],
+) -> None:
+    protected_paths = workflow_generated_doc_paths(template_group=template_group, state=state)
+    if not protected_paths:
+        return
+
+    def _abs_norm(path_value: str) -> str:
+        path = Path(path_value)
+        if not path.is_absolute():
+            path = project_root / path
+        return str(path.resolve()).replace("\\", "/")
+
+    allowed = {_abs_norm(path) for path in artifacts.values() if path}
+    after_snapshot = snapshot_paths(project_root=project_root, rel_paths=protected_paths)
+    changed = [
+        path
+        for path in protected_paths
+        if _abs_norm(path) not in allowed and before_snapshot.get(path) != after_snapshot.get(path)
+    ]
+    if changed:
+        raise ArtifactMissingError(
+            "Protected workflow-generated documents were modified outside the step outputs: "
+            + ", ".join(changed),
+            missing=changed,
+        )
+
+
+def _canonicalize_master_bootstrap_artifacts(
+    *,
+    artifacts: dict[str, str],
+    project_root: Path,
+    state: dict,
+) -> dict[str, str]:
+    if state.get("template_group") != MASTER_BOOTSTRAP_WORKFLOW:
+        return dict(artifacts)
+
+    job_id = str(state.get("job_id") or "").strip()
+    mode = str((state.get("current_step_cfg") or {}).get("mode") or state.get("current_mode") or "bootstrap")
+    candidates = master_bootstrap_artifact_candidates(job_id=job_id, mode=mode)
+    normalized = dict(artifacts)
+
+    for artifact_key, path_candidates in candidates.items():
+        if not path_candidates:
+            continue
+        canonical_rel = path_candidates[0]
+        canonical_abs = project_root / canonical_rel
+        current_rel = str(normalized.get(artifact_key) or "").strip()
+
+        chosen_rel = ""
+        if current_rel:
+            current_abs = project_root / current_rel
+            if current_abs.exists() and current_abs.is_file():
+                chosen_rel = current_rel
+
+        if not chosen_rel:
+            for candidate_rel in path_candidates:
+                candidate_abs = project_root / candidate_rel
+                if candidate_abs.exists() and candidate_abs.is_file():
+                    chosen_rel = candidate_rel
+                    break
+
+        if not chosen_rel:
+            continue
+
+        chosen_abs = project_root / chosen_rel
+        if chosen_rel != canonical_rel:
+            canonical_abs.parent.mkdir(parents=True, exist_ok=True)
+            canonical_abs.write_text(chosen_abs.read_text(encoding="utf-8"), encoding="utf-8")
+        normalized[artifact_key] = canonical_rel
+
+    return normalized
+
+
 def _backend_artifact_rules(state: dict[str, Any]) -> dict[str, Any]:
     rules = state.get("backend_artifact_rules") or {}
     return rules if isinstance(rules, dict) else {}
+
+
+def _normalize_backend_job_path(path_str: str) -> str:
+    if not path_str:
+        return path_str
+    p = Path(path_str)
+    if p.is_absolute():
+        return str(p)
+    posix = path_str.replace("\\", "/")
+    marker = ".ukbe-runner/jobs/"
+    if posix.startswith(marker):
+        suffix = posix[len(marker):]
+        return str(JOBS_ROOT / Path(suffix))
+    repo_prefixes = ("docs/", "archive/", "scripts/", "temp/")
+    if posix.startswith(repo_prefixes):
+        return path_str
+    return str(JOBS_ROOT / Path(path_str))
 
 
 def _resolve_backend_artifact_rule_path(*, state: dict, artifact_key: str, step: str, prefer_final: bool = False) -> str:
@@ -401,7 +654,7 @@ def _resolve_backend_artifact_rule_path(*, state: dict, artifact_key: str, step:
     step_dir_rel = str(state.get("backend_step_dir_rel") or "").strip()
     step_sequence = int(state.get("backend_step_sequence") or step_index)
     step_dir_name = PurePath(step_dir_rel).name if step_dir_rel else f"{step_sequence:02d}_{step}"
-    return str(template).format(
+    resolved = str(template).format(
         workflow_name=str(state.get("template_group") or ""),
         template_group=str(state.get("template_group") or ""),
         job_id=run_id,
@@ -411,6 +664,7 @@ def _resolve_backend_artifact_rule_path(*, state: dict, artifact_key: str, step:
         step_dir=step_dir_name,
         step_dir_rel=step_dir_rel,
     )
+    return _normalize_backend_job_path(resolved)
 
 
 def _set_backend_artifact_rule_aliases(*, ctx: dict[str, str], state: dict, step: str, artifacts: dict[str, Any], produces: list[str]) -> bool:
@@ -430,6 +684,7 @@ def _set_backend_artifact_rule_aliases(*, ctx: dict[str, str], state: dict, step
                 step=step,
                 prefer_final=not is_produced,
             )
+        artifact_value = _normalize_backend_job_path(str(artifact_value)) if artifact_value else ""
         if artifact_value:
             ctx[f"{artifact_key}_PATH"] = str(artifact_value)
         meta_strategy = str(rule.get("meta_path_strategy") or "artifact_sidecar")
@@ -438,6 +693,7 @@ def _set_backend_artifact_rule_aliases(*, ctx: dict[str, str], state: dict, step
         else:
             p = PurePath(str(artifact_value))
             meta_path = str(p.parent / f"{p.stem}.meta.json") if artifact_value else ""
+        meta_path = _normalize_backend_job_path(meta_path) if meta_path else ""
         if meta_path:
             ctx[f"{artifact_key}_METAJSON"] = meta_path
         if is_produced and not artifacts.get(artifact_key) and artifact_value:
@@ -450,34 +706,65 @@ def _set_backend_artifact_rule_aliases(*, ctx: dict[str, str], state: dict, step
 
 
 DELIVERY_SCAFFOLD_OUTPUT_PATHS: dict[str, str] = {
-    "PROJECT_ANALYSIS": "docs/delivery/project_analysis.md",
-    "DELIVERY_SOP": "docs/delivery/00_templates/WORKFLOW_SOP_v1.md",
-    "DELIVERY_STATUS_RULES": "docs/delivery/00_templates/DELIVERY_STATUS_RULES_v1.md",
-    "DELIVERY_VALIDATION_TEMPLATE": "docs/delivery/00_templates/05_validation.template.md",
-    "DELIVERY_TEMPLATE_REGISTRY": "docs/delivery/00_templates/template_registry.md",
-    "DELIVERY_INITIATIVE_TEMPLATE": "docs/delivery/00_templates/01_initiative.template.md",
-    "DELIVERY_PLAN_TEMPLATE": "docs/delivery/00_templates/02_plan.template.md",
-    "DELIVERY_TASK_GRAPH_TEMPLATE": "docs/delivery/00_templates/02b_task_graph.template.md",
-    "DELIVERY_TASK_TEMPLATE": "docs/delivery/00_templates/03_task.template.md",
-    "DELIVERY_IMPL_TEMPLATE": "docs/delivery/00_templates/04_implementation_plan.template.md",
-    "DELIVERY_REVIEW_TEMPLATE": "docs/delivery/00_templates/04_review.template.md",
-    "DELIVERY_MEMORY_TEMPLATE": "docs/delivery/00_templates/06_memory.template.md",
-    "DELIVERY_AGENTS_MD": "docs/delivery/08_agents/AGENTS.md",
-    "DELIVERY_AGENT_PLANNER": "docs/delivery/08_agents/AGENT-planner.md",
-    "DELIVERY_AGENT_TASK_DECOMPOSER": "docs/delivery/08_agents/AGENT-task-decomposer.md",
-    "DELIVERY_AGENT_IMPL_PLANNER": "docs/delivery/08_agents/AGENT-implementation-planner.md",
-    "DELIVERY_AGENT_EXECUTOR": "docs/delivery/08_agents/AGENT-executor.md",
-    "DELIVERY_AGENT_REVIEWER": "docs/delivery/08_agents/AGENT-reviewer.md",
-    "DELIVERY_AGENT_MEMORY_MANAGER": "docs/delivery/08_agents/AGENT-memory-manager.md",
+    "PROJECT_ANALYSIS": "docs/system/00_governance/bootstrap/project_analysis.md",
+    "DELIVERY_SOP": "docs/system/00_governance/bootstrap/WORKFLOW_SOP_v1.md",
+    "DELIVERY_STATUS_RULES": "docs/system/00_governance/bootstrap/DELIVERY_STATUS_RULES_v1.md",
+    "DELIVERY_VALIDATION_TEMPLATE": "docs/system/00_governance/bootstrap/templates/delivery/08_delivery_validation_template.md",
+    "DELIVERY_TEMPLATE_REGISTRY": "docs/system/00_governance/bootstrap/templates/delivery/01_delivery_template_registry.md",
+    "DELIVERY_INITIATIVE_TEMPLATE": "docs/system/00_governance/bootstrap/templates/delivery/02_delivery_initiative_template.md",
+    "DELIVERY_PLAN_TEMPLATE": "docs/system/00_governance/bootstrap/templates/delivery/03_delivery_plan_template.md",
+    "DELIVERY_TASK_GRAPH_TEMPLATE": "docs/system/00_governance/bootstrap/templates/delivery/04_delivery_task_graph_template.md",
+    "DELIVERY_TASK_TEMPLATE": "docs/system/00_governance/bootstrap/templates/delivery/05_delivery_task_template.md",
+    "DELIVERY_IMPL_TEMPLATE": "docs/system/00_governance/bootstrap/templates/delivery/06_delivery_impl_template.md",
+    "DELIVERY_REVIEW_TEMPLATE": "docs/system/00_governance/bootstrap/templates/delivery/07_delivery_review_template.md",
+    "DELIVERY_MEMORY_TEMPLATE": "docs/system/00_governance/bootstrap/templates/delivery/09_delivery_memory_template.md",
+    "DELIVERY_AGENTS_MD": "docs/delivery/00_standards/DELIVERY_AGENTS_MD.md",
+    "DELIVERY_AGENT_PLANNER": "docs/delivery/00_standards/DELIVERY_AGENT_PLANNER.md",
+    "DELIVERY_AGENT_TASK_DECOMPOSER": "docs/delivery/00_standards/DELIVERY_AGENT_TASK_DECOMPOSER.md",
+    "DELIVERY_AGENT_IMPL_PLANNER": "docs/delivery/00_standards/DELIVERY_AGENT_IMPL_PLANNER.md",
+    "DELIVERY_AGENT_EXECUTOR": "docs/delivery/00_standards/DELIVERY_AGENT_EXECUTOR.md",
+    "DELIVERY_AGENT_REVIEWER": "docs/delivery/00_standards/DELIVERY_AGENT_REVIEWER.md",
+    "DELIVERY_AGENT_MEMORY_MANAGER": "docs/delivery/00_standards/DELIVERY_AGENT_MEMORY_MANAGER.md",
     "CODEBASE_DOC_SOP": "docs/codebase/00_standards/CODEBASE_DOC_SOP_v1.md",
     "CODEBASE_DOC_STATUS_RULES": "docs/codebase/00_standards/CODEBASE_DOC_STATUS_RULES_v1.md",
-    "CODEBASE_TEMPLATE_REGISTRY": "docs/codebase/00_templates/codebase_template_registry.md",
-    "CODEBASE_INVENTORY_TEMPLATE": "docs/codebase/00_templates/01_codebase_inventory.template.md",
-    "CODEBASE_MODULE_TEMPLATE": "docs/codebase/00_templates/02_module_doc.template.md",
-    "CODEBASE_COMPONENT_TEMPLATE": "docs/codebase/00_templates/03_component_doc.template.md",
-    "CODEBASE_CHANGE_TEMPLATE": "docs/codebase/00_templates/04_change_impact.template.md",
+    "CODEBASE_TEMPLATE_REGISTRY": "docs/system/00_governance/bootstrap/templates/codebase/01_codebase_template_registry.md",
+    "CODEBASE_INVENTORY_TEMPLATE": "docs/system/00_governance/bootstrap/templates/codebase/02_codebase_inventory_template.md",
+    "CODEBASE_MODULE_TEMPLATE": "docs/system/00_governance/bootstrap/templates/codebase/03_codebase_module_template.md",
+    "CODEBASE_COMPONENT_TEMPLATE": "docs/system/00_governance/bootstrap/templates/codebase/04_codebase_component_template.md",
+    "CODEBASE_CHANGE_TEMPLATE": "docs/system/00_governance/bootstrap/templates/codebase/05_codebase_change_template.md",
     "CODEBASE_INVENTORY": "docs/codebase/01_inventory/codebase_inventory.md",
     "DELIVERY_FOLDER_MAP": "docs/delivery/DELIVERY_FOLDER_MAP.json",
+    "EXISTING_REPO_WORKFLOW_SOP": "docs/system/00_governance/bootstrap/EXISTING_REPO_WORKFLOW_SOP.md",
+}
+
+MASTER_DOCS_OUTPUT_PATHS: dict[str, str] = {
+    "PROJECT_ANALYSIS": "docs/system/00_governance/bootstrap/project_analysis.md",
+    "SYSTEM_DOCS_INDEX": "docs/system/00_governance/bootstrap/README.md",
+    "SYSTEM_DOCS_CHANGE_LOG": "docs/system/00_governance/bootstrap/{job_id}-{mode}-change-log.md",
+    "SYSTEM_DOCS_VALIDATION": "docs/system/00_governance/bootstrap/{job_id}-{mode}-validation.md",
+    "SYSTEM_DOC_STANDARD": "docs/system/00_governance/bootstrap/DOCUMENTATION_STANDARD.md",
+    "BUNDLE_TAXONOMY": "docs/system/00_governance/bootstrap/BUNDLE_TAXONOMY.md",
+    "BUNDLE_MIGRATION_PLAN": "docs/system/00_governance/bootstrap/BUNDLE_MIGRATION_PLAN.md",
+    "SYSTEM_OVERVIEW": "docs/system/00_governance/bootstrap/SYSTEM_OVERVIEW.md",
+    "BUSINESS_CAPABILITIES": "docs/system/00_governance/bootstrap/BUSINESS_CAPABILITIES.md",
+    "FUNCTIONAL_SPEC": "docs/system/00_governance/bootstrap/FUNCTIONAL_SPEC.md",
+    "NON_FUNCTIONAL_REQUIREMENTS": "docs/system/00_governance/bootstrap/NON_FUNCTIONAL_REQUIREMENTS.md",
+    "SYSTEM_CONTEXT": "docs/system/00_governance/bootstrap/SYSTEM_CONTEXT.md",
+    "COMPONENT_ARCHITECTURE": "docs/system/00_governance/bootstrap/COMPONENT_ARCHITECTURE.md",
+    "DECISION_LOG": "docs/system/00_governance/bootstrap/DECISION_LOG.md",
+    "SYSTEM_FILE_STRUCTURE": "docs/system/00_governance/bootstrap/SYSTEM_FILE_STRUCTURE.md",
+    "DEVELOPER_GUIDE": "docs/system/00_governance/bootstrap/DEVELOPER_GUIDE.md",
+    "RUNBOOK": "docs/system/00_governance/bootstrap/RUNBOOK.md",
+    "EXISTING_REPO_WORKFLOW_SOP": "docs/system/00_governance/bootstrap/EXISTING_REPO_WORKFLOW_SOP.md",
+    "CODEBASE_SCAN_SNAPSHOT": "docs/codebase/04_changes/{job_id}-{mode}-snapshot.json",
+    "BOOTSTRAP_SUMMARY": "docs/system/00_governance/bootstrap/{job_id}-bootstrap-summary.md",
+}
+
+BUG_FIX_OUTPUT_PATHS: dict[str, str] = {
+    "BUG_REPORT_FILE": "docs/delivery/04_implementation_plans/{step_dir_rel}/BUG_REPORT.md",
+    "REPRO_FILE": "docs/delivery/04_implementation_plans/{step_dir_rel}/BUG_REPRODUCTION.md",
+    "ROOT_CAUSE_FILE": "docs/delivery/04_implementation_plans/{step_dir_rel}/ROOT_CAUSE.md",
+    "PATCH_FILE": "docs/delivery/04_implementation_plans/{step_dir_rel}/PATCH.md",
 }
 
 
@@ -523,7 +810,7 @@ def _set_delivery_scaffold_aliases(*, ctx: dict[str, str], state: dict, step: st
         step_dir_rel = f"{template_group}/{job_id}/{idx:02d}_{step}"
 
     # Resolve step-relative paths to absolute paths in the global job directory
-    step_dir_abs = str(JOBS_ROOT / step_dir_rel) if step_dir_rel else ""
+    step_dir_abs = _normalize_backend_job_path(step_dir_rel) if step_dir_rel else ""
     step_dir_meta = f"{step_dir_abs}/meta.json" if step_dir_rel else ""
     run_id = str(state.get("job_id") or state.get("workflow_run_id") or "delivery-scaffold-run")
     step_index = (step_names.index(step) + 1) if step in step_names else 1
@@ -550,6 +837,87 @@ def _set_delivery_scaffold_aliases(*, ctx: dict[str, str], state: dict, step: st
                 ctx[artifact_key] = output_path
                 ctx[f"{artifact_key}_PATH"] = output_path
                 ctx[f"{artifact_key}_METAJSON"] = step_dir_meta or str(PurePath(output_path).parent / f"{PurePath(output_path).stem}.meta.json")
+
+
+def _set_bug_fix_aliases(*, ctx: dict[str, str], state: dict, step: str, artifacts: dict[str, Any], produces: list[str]) -> None:
+    if not str(state.get("template_group") or "").startswith("bug_fix"):
+        return
+
+    step_names = list(_workflow_module().TEMPLATE_GROUPS.get(state.get("template_group", ""), {}).get("steps", []))
+    step_dir_rel = str(state.get("backend_step_dir_rel") or "").strip()
+    if not step_dir_rel:
+        try:
+            idx = step_names.index(step) + 1
+        except ValueError:
+            idx = 1
+        template_group = state.get("template_group", "")
+        job_id = state.get("job_id", "")
+        step_dir_rel = f"{template_group}/{job_id}/{idx:02d}_{step}"
+
+    step_dir_abs = _normalize_backend_job_path(step_dir_rel) if step_dir_rel else ""
+    step_dir_meta = f"{step_dir_abs}/meta.json" if step_dir_rel else ""
+    run_id = str(state.get("job_id") or state.get("workflow_run_id") or "bug-fix-run")
+    step_index = (step_names.index(step) + 1) if step in step_names else 1
+
+    for artifact_key, rel_path in BUG_FIX_OUTPUT_PATHS.items():
+        artifact_value = artifacts.get(artifact_key) or rel_path.format(
+            run_id=run_id,
+            step=step,
+            step_index=step_index,
+            step_dir_rel=step_dir_rel,
+        )
+        ctx[f"{artifact_key}_PATH"] = str(artifact_value)
+        p = PurePath(str(artifact_value))
+        default_meta = step_dir_meta if artifact_key in produces and step_dir_meta else str(p.parent / f"{p.stem}.meta.json")
+        ctx[f"{artifact_key}_METAJSON"] = default_meta
+
+    for artifact_key in produces:
+        if artifact_key in BUG_FIX_OUTPUT_PATHS and not artifacts.get(artifact_key):
+            output_path = BUG_FIX_OUTPUT_PATHS[artifact_key].format(
+                run_id=run_id,
+                step=step,
+                step_index=step_index,
+                step_dir_rel=step_dir_rel,
+            )
+            if step_dir_rel and output_path.startswith(step_dir_rel):
+                output_path = output_path.replace(step_dir_rel, step_dir_abs, 1)
+            ctx[artifact_key] = output_path
+            ctx[f"{artifact_key}_PATH"] = output_path
+            ctx[f"{artifact_key}_METAJSON"] = step_dir_meta or str(PurePath(output_path).parent / f"{PurePath(output_path).stem}.meta.json")
+
+
+def _set_master_docs_aliases(*, ctx: dict[str, str], state: dict, step: str, artifacts: dict[str, Any], produces: list[str]) -> None:
+    if state.get("template_group") != "00_master_docs_bootstrap_v1":
+        return
+
+    step_names = list(_workflow_module().TEMPLATE_GROUPS.get(state.get("template_group", ""), {}).get("steps", []))
+    step_dir_rel = str(state.get("backend_step_dir_rel") or "").strip()
+    if not step_dir_rel:
+        try:
+            idx = step_names.index(step) + 1
+        except ValueError:
+            idx = 1
+        template_group = state.get("template_group", "")
+        job_id = state.get("job_id", "")
+        step_dir_rel = f"{template_group}/{job_id}/{idx:02d}_{step}"
+
+    step_dir_abs = _normalize_backend_job_path(step_dir_rel) if step_dir_rel else ""
+    step_dir_meta = f"{step_dir_abs}/meta.json" if step_dir_rel else ""
+
+    mode = str(
+        state.get("current_step_cfg", {}).get("mode")
+        or state.get("current_mode")
+        or "bootstrap"
+    )
+    job_id = str(state.get("job_id") or "00DOC")
+
+    for artifact_key, rel_path in MASTER_DOCS_OUTPUT_PATHS.items():
+        artifact_value = artifacts.get(artifact_key) or rel_path.format(job_id=job_id, mode=mode)
+        ctx[artifact_key] = str(artifact_value)
+        ctx[f"{artifact_key}_PATH"] = str(artifact_value)
+        if artifact_value:
+            p = PurePath(str(artifact_value))
+            ctx[f"{artifact_key}_METAJSON"] = step_dir_meta or str(p.parent / f"{p.stem}.meta.json")
 
 
 def _validate_template_conformance(
@@ -727,8 +1095,7 @@ def build_context(
         if value:
             ctx[key] = value
             ctx[f"{key}_ABS_PATH"] = str(ARTIFACT_ROOT / value)
-            p = PurePath(value)
-            ctx[f"{key}_METAJSON"] = str(p.parent / f"{p.stem}.meta.json")
+            ctx[f"{key}_METAJSON"] = artifact_rel_to_meta_rel(value)
         else:
             ctx[f"{key}_ABS_PATH"] = ""
             ctx[f"{key}_METAJSON"] = ""
@@ -753,7 +1120,7 @@ def build_context(
                 template_group = state.get("template_group", "")
                 job_id = state.get("job_id", "")
                 step_dir_rel = f"{template_group}/{job_id}/{idx:02d}_{step}"
-            ctx[f"{result_key}_METAJSON"] = f"{step_dir_rel}/meta.json"
+            ctx[f"{result_key}_METAJSON"] = _normalize_backend_job_path(f"{step_dir_rel}/meta.json")
             print(f"[step_runner] Producing step {step}: {result_key}_METAJSON -> {ctx[f'{result_key}_METAJSON']}", flush=True)
 
     ctx["ARTIFACT_FINGERPRINTS"] = _format_artifact_fingerprint_block(artifacts)
@@ -787,8 +1154,7 @@ def build_context(
     ctx["REVIEW_FILE_PATH"] = review_suggested
     # Provide meta.json path for the suggested review file
     if review_suggested:
-        p = PurePath(review_suggested)
-        ctx["REVIEW_FILE_SUGGESTED_METAJSON"] = str(p.parent / f"{p.stem}.meta.json")
+        ctx["REVIEW_FILE_SUGGESTED_METAJSON"] = artifact_rel_to_meta_rel(review_suggested)
         ctx["REVIEW_FILE_METAJSON"] = ctx["REVIEW_FILE_SUGGESTED_METAJSON"]
         print(f"[step_runner] REVIEW PATH: {review_suggested}", flush=True)
         print(f"[step_runner] REVIEW Sidecar PATH: {ctx['REVIEW_FILE_SUGGESTED_METAJSON']}", flush=True)
@@ -801,8 +1167,7 @@ def build_context(
         validation_path = _build_validation_file_path(state=state, step=step, step_cfg=step_cfg)
         ctx["VALIDATION_FILE_PATH"] = validation_path
         if validation_path:
-            p = PurePath(validation_path)
-            ctx["VALIDATION_FILE_METAJSON"] = str(p.parent / f"{p.stem}.meta.json")
+            ctx["VALIDATION_FILE_METAJSON"] = artifact_rel_to_meta_rel(validation_path)
         else:
             ctx["VALIDATION_FILE_METAJSON"] = ""
     else:
@@ -813,8 +1178,7 @@ def build_context(
         change_path = _build_codebase_change_impact_path(state=state)
         ctx["CODEBASE_CHANGE_IMPACT_PATH"] = change_path
         if change_path:
-            p = PurePath(change_path)
-            ctx["CODEBASE_CHANGE_IMPACT_METAJSON"] = str(p.parent / f"{p.stem}.meta.json")
+            ctx["CODEBASE_CHANGE_IMPACT_METAJSON"] = artifact_rel_to_meta_rel(change_path)
         else:
             ctx["CODEBASE_CHANGE_IMPACT_METAJSON"] = ""
     else:
@@ -900,6 +1264,20 @@ def build_context(
         artifacts=artifacts,
         produces=produces,
     )
+    _set_master_docs_aliases(
+        ctx=ctx,
+        state=state,
+        step=step,
+        artifacts=artifacts,
+        produces=produces,
+    )
+    _set_bug_fix_aliases(
+        ctx=ctx,
+        state=state,
+        step=step,
+        artifacts=artifacts,
+        produces=produces,
+    )
 
     # Print expected output paths BEFORE the agent starts (for visibility)
     if produces:
@@ -912,8 +1290,7 @@ def build_context(
         if pre_init_path:
             ctx["PRE_INIT_FILE_PATH"] = pre_init_path
             pre_init_meta = str(backend_ctx.get("PRE_INIT_FILE_METAJSON") or "")
-            p = PurePath(pre_init_path)
-            ctx["PRE_INIT_FILE_METAJSON"] = pre_init_meta or str(p.parent / f"{p.stem}.meta.json")
+            ctx["PRE_INIT_FILE_METAJSON"] = pre_init_meta or artifact_rel_to_meta_rel(pre_init_path)
             print(f"[step_runner] PRE_INIT PATH: {pre_init_path}", flush=True)
             print(f"[step_runner] PRE_INIT Sidecar PATH: {ctx['PRE_INIT_FILE_METAJSON']}", flush=True)
 
@@ -925,7 +1302,7 @@ def build_context(
             ctx["PLAN_FILE_PATH"] = plan_path
             plan_meta = str(backend_ctx.get("PLAN_FILE_METAJSON") or "")
             p = PurePath(plan_path)
-            ctx["PLAN_FILE_METAJSON"] = plan_meta or str(p.parent / f"{p.stem}.meta.json")
+            ctx["PLAN_FILE_METAJSON"] = plan_meta or artifact_rel_to_meta_rel(plan_path)
             stem_match = re.match(r"(PLAN-\d{8}-\d+)", p.stem)
             ctx["PLAN_ID"] = str(backend_ctx.get("PLAN_ID") or (stem_match.group(1) if stem_match else ""))
             print(f"[step_runner] PLAN ID: {ctx['PLAN_ID']}", flush=True)
@@ -939,8 +1316,7 @@ def build_context(
         if tg_path:
             ctx["TASK_GRAPH_FILE_PATH"] = tg_path
             tg_meta = str(backend_ctx.get("TASK_GRAPH_FILE_METAJSON") or "")
-            p = PurePath(tg_path)
-            ctx["TASK_GRAPH_FILE_METAJSON"] = tg_meta or str(p.parent / f"{p.stem}.meta.json")
+            ctx["TASK_GRAPH_FILE_METAJSON"] = tg_meta or artifact_rel_to_meta_rel(tg_path)
             print(f"[step_runner] TASK_GRAPH PATH: {tg_path}", flush=True)
             print(f"[step_runner] TASK_GRAPH Sidecar PATH: {ctx['TASK_GRAPH_FILE_METAJSON']}", flush=True)
 
@@ -960,8 +1336,7 @@ def build_context(
         if impl_path:
             ctx["IMPL_FILE_PATH"] = impl_path
             impl_meta = str(backend_ctx.get("IMPL_FILE_METAJSON") or "")
-            p = PurePath(impl_path)
-            ctx["IMPL_FILE_METAJSON"] = impl_meta or str(p.parent / f"{p.stem}.meta.json")
+            ctx["IMPL_FILE_METAJSON"] = impl_meta or artifact_rel_to_meta_rel(impl_path)
             print(f"[step_runner] IMPL PATH: {impl_path}", flush=True)
             print(f"[step_runner] IMPL Sidecar PATH: {ctx['IMPL_FILE_METAJSON']}", flush=True)
 
@@ -1180,6 +1555,7 @@ def _review_filename_date_code() -> str:
 
 def _review_step_code(step: str) -> str:
     return {
+        "review_master_system_docs": "rmaster",
         "review_impl": "rimpl",
         "review_pre_init": "rpre",
         "review_planner": "rplan",
@@ -1228,6 +1604,11 @@ def _build_review_target_identifier(*, artifact_key: str, artifact_path: str) ->
 
 
 def _build_new_review_file_path(*, state: dict, step: str, step_cfg: dict) -> str:
+    template_group = str(state.get("template_group") or "")
+    if template_group == MASTER_BOOTSTRAP_WORKFLOW and step == "05_review_master_system_docs":
+        job_id = str(state.get("job_id") or "00DOC")
+        return str(PurePath(f"docs/system/00_governance/bootstrap/{job_id}-bootstrap-validation.md"))
+
     artifact_key = _review_target_artifact_key(step_cfg)
     if not artifact_key:
         return ""
@@ -1278,6 +1659,17 @@ def _suggested_review_file_path(
 
 
 def _build_validation_file_path(*, state: dict, step: str, step_cfg: dict) -> str:
+    template_group = str(state.get("template_group") or "")
+    if template_group.startswith("codebase_"):
+        mode = str(step_cfg.get("mode") or ("bootstrap" if "bootstrap" in template_group else "reconcile"))
+        validation_dir = ARTIFACT_ROOT / "docs/codebase/04_changes"
+        candidate = validation_dir / f"{str(state.get('job_id') or 'codebase-scan')}-{mode}-validation.md"
+        seq = 2
+        while candidate.exists():
+            candidate = validation_dir / f"{str(state.get('job_id') or 'codebase-scan')}-{mode}-validation_{seq:02d}.md"
+            seq += 1
+        return str(PurePath(str(candidate.relative_to(ARTIFACT_ROOT))))
+
     impl_path = (state.get("artifacts") or {}).get("IMPL_FILE")
     if not impl_path:
         return ""
@@ -1396,6 +1788,17 @@ def _build_impl_file_path(*, state: dict) -> str:
 
 def _build_codebase_change_impact_path(*, state: dict) -> str:
     """Compute a collision-free path for a codebase documentation change record."""
+    template_group = str(state.get("template_group") or "")
+    if template_group.startswith("codebase_"):
+        mode = "bootstrap" if "bootstrap" in template_group else "reconcile"
+        change_dir = ARTIFACT_ROOT / "docs/codebase/04_changes"
+        candidate = change_dir / f"{str(state.get('job_id') or 'codebase-scan')}-{mode}.md"
+        seq = 2
+        while candidate.exists():
+            candidate = change_dir / f"{str(state.get('job_id') or 'codebase-scan')}-{mode}_{seq:02d}.md"
+            seq += 1
+        return str(PurePath(str(candidate.relative_to(ARTIFACT_ROOT))))
+
     from .job_state import task_execution_binding_current_item, task_queue_current_item
 
     current_item = task_queue_current_item(state) or task_execution_binding_current_item(state)

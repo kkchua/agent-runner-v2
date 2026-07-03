@@ -1,0 +1,2673 @@
+{
+  "schema_version": "v2",
+  "validated_at": "2026-07-04T07:26:51+08:00",
+  "project_root": "D:\\MyProjectSpace\\01_Workflows\\agent-runner-v2",
+  "delivery_root": "docs/delivery",
+  "summary": {
+    "total_checks": 392,
+    "passed": 392,
+    "failed": 0,
+    "pass_rate": 100.0
+  },
+  "checks": [
+    {
+      "check": "folder_structure",
+      "path": "docs/delivery/01_initiatives",
+      "ok": true,
+      "detail": "exists (0 items)"
+    },
+    {
+      "check": "folder_structure",
+      "path": "docs/delivery/02_plans",
+      "ok": true,
+      "detail": "exists (0 items)"
+    },
+    {
+      "check": "folder_structure",
+      "path": "docs/delivery/03_tasks",
+      "ok": true,
+      "detail": "exists (0 items)"
+    },
+    {
+      "check": "folder_structure",
+      "path": "docs/delivery/04_implementation_plans",
+      "ok": true,
+      "detail": "exists (0 items)"
+    },
+    {
+      "check": "folder_structure",
+      "path": "docs/delivery/05_reviews",
+      "ok": true,
+      "detail": "exists (18 items)"
+    },
+    {
+      "check": "folder_structure",
+      "path": "docs/delivery/06_memory",
+      "ok": true,
+      "detail": "exists (0 items)"
+    },
+    {
+      "check": "folder_structure",
+      "path": "docs/codebase/00_standards",
+      "ok": true,
+      "detail": "exists (2 items)"
+    },
+    {
+      "check": "folder_structure",
+      "path": "docs/codebase/00_templates",
+      "ok": true,
+      "detail": "exists (0 items)"
+    },
+    {
+      "check": "folder_structure",
+      "path": "docs/codebase/01_inventory",
+      "ok": true,
+      "detail": "exists (1 items)"
+    },
+    {
+      "check": "folder_structure",
+      "path": "docs/codebase/02_modules",
+      "ok": true,
+      "detail": "exists (49 items)"
+    },
+    {
+      "check": "folder_structure",
+      "path": "docs/codebase/03_components",
+      "ok": true,
+      "detail": "exists (6 items)"
+    },
+    {
+      "check": "folder_structure",
+      "path": "docs/codebase/04_changes",
+      "ok": true,
+      "detail": "exists (12 items)"
+    },
+    {
+      "check": "folder_structure",
+      "path": "docs/codebase/05_archives",
+      "ok": true,
+      "detail": "exists (0 items)"
+    },
+    {
+      "check": "folder_structure",
+      "path": "docs/system/00_governance",
+      "ok": true,
+      "detail": "exists (1 items)"
+    },
+    {
+      "check": "folder_structure",
+      "path": "docs/system/00_governance/bootstrap",
+      "ok": true,
+      "detail": "exists (28 items)"
+    },
+    {
+      "check": "file_exists",
+      "path": "docs/codebase/00_standards/CODEBASE_DOC_SOP_v1.md",
+      "ok": true,
+      "detail": "exists (18017 bytes)"
+    },
+    {
+      "check": "file_exists",
+      "path": "docs/codebase/00_standards/CODEBASE_DOC_STATUS_RULES_v1.md",
+      "ok": true,
+      "detail": "exists (10817 bytes)"
+    },
+    {
+      "check": "file_exists",
+      "path": "docs/system/00_governance/bootstrap/templates/codebase/01_codebase_template_registry.md",
+      "ok": true,
+      "detail": "exists (5485 bytes)"
+    },
+    {
+      "check": "file_exists",
+      "path": "docs/system/00_governance/bootstrap/templates/codebase/02_codebase_inventory_template.md",
+      "ok": true,
+      "detail": "exists (5312 bytes)"
+    },
+    {
+      "check": "file_exists",
+      "path": "docs/system/00_governance/bootstrap/templates/codebase/03_codebase_module_template.md",
+      "ok": true,
+      "detail": "exists (3754 bytes)"
+    },
+    {
+      "check": "file_exists",
+      "path": "docs/system/00_governance/bootstrap/templates/codebase/04_codebase_component_template.md",
+      "ok": true,
+      "detail": "exists (2933 bytes)"
+    },
+    {
+      "check": "file_exists",
+      "path": "docs/system/00_governance/bootstrap/templates/codebase/05_codebase_change_template.md",
+      "ok": true,
+      "detail": "exists (4521 bytes)"
+    },
+    {
+      "check": "file_exists",
+      "path": "docs/codebase/01_inventory/codebase_inventory.md",
+      "ok": true,
+      "detail": "exists (61292 bytes)"
+    },
+    {
+      "check": "file_exists",
+      "path": "docs/system/00_governance/bootstrap/project_analysis.md",
+      "ok": true,
+      "detail": "exists (10474 bytes)"
+    },
+    {
+      "check": "file_exists",
+      "path": "docs/system/00_governance/bootstrap/DOCUMENTATION_STANDARD.md",
+      "ok": true,
+      "detail": "exists (8158 bytes)"
+    },
+    {
+      "check": "file_exists",
+      "path": "docs/system/00_governance/bootstrap/README.md",
+      "ok": true,
+      "detail": "exists (5334 bytes)"
+    },
+    {
+      "check": "file_exists",
+      "path": "docs/system/00_governance/bootstrap/SYSTEM_OVERVIEW.md",
+      "ok": true,
+      "detail": "exists (8508 bytes)"
+    },
+    {
+      "check": "file_exists",
+      "path": "docs/system/00_governance/bootstrap/BUSINESS_CAPABILITIES.md",
+      "ok": true,
+      "detail": "exists (7882 bytes)"
+    },
+    {
+      "check": "file_exists",
+      "path": "docs/system/00_governance/bootstrap/FUNCTIONAL_SPEC.md",
+      "ok": true,
+      "detail": "exists (11465 bytes)"
+    },
+    {
+      "check": "file_exists",
+      "path": "docs/system/00_governance/bootstrap/NON_FUNCTIONAL_REQUIREMENTS.md",
+      "ok": true,
+      "detail": "exists (8828 bytes)"
+    },
+    {
+      "check": "file_exists",
+      "path": "docs/system/00_governance/bootstrap/SYSTEM_CONTEXT.md",
+      "ok": true,
+      "detail": "exists (8418 bytes)"
+    },
+    {
+      "check": "file_exists",
+      "path": "docs/system/00_governance/bootstrap/COMPONENT_ARCHITECTURE.md",
+      "ok": true,
+      "detail": "exists (10173 bytes)"
+    },
+    {
+      "check": "file_exists",
+      "path": "docs/system/00_governance/bootstrap/DECISION_LOG.md",
+      "ok": true,
+      "detail": "exists (5511 bytes)"
+    },
+    {
+      "check": "file_exists",
+      "path": "docs/system/00_governance/bootstrap/SYSTEM_FILE_STRUCTURE.md",
+      "ok": true,
+      "detail": "exists (11443 bytes)"
+    },
+    {
+      "check": "file_exists",
+      "path": "docs/system/00_governance/bootstrap/DEVELOPER_GUIDE.md",
+      "ok": true,
+      "detail": "exists (6911 bytes)"
+    },
+    {
+      "check": "file_exists",
+      "path": "docs/system/00_governance/bootstrap/RUNBOOK.md",
+      "ok": true,
+      "detail": "exists (7670 bytes)"
+    },
+    {
+      "check": "file_exists",
+      "path": "docs/system/00_governance/bootstrap/EXISTING_REPO_WORKFLOW_SOP.md",
+      "ok": true,
+      "detail": "exists (12392 bytes)"
+    },
+    {
+      "check": "file_exists",
+      "path": "docs\\system\\00_governance\\bootstrap\\templates\\delivery\\01_delivery_template_registry.md",
+      "ok": true,
+      "detail": "exists (5795 bytes)"
+    },
+    {
+      "check": "file_exists",
+      "path": "docs\\system\\00_governance\\bootstrap\\templates\\delivery\\02_delivery_initiative_template.md",
+      "ok": true,
+      "detail": "exists (3370 bytes)"
+    },
+    {
+      "check": "file_exists",
+      "path": "docs\\system\\00_governance\\bootstrap\\templates\\delivery\\03_delivery_plan_template.md",
+      "ok": true,
+      "detail": "exists (4820 bytes)"
+    },
+    {
+      "check": "file_exists",
+      "path": "docs\\system\\00_governance\\bootstrap\\templates\\delivery\\04_delivery_task_graph_template.md",
+      "ok": true,
+      "detail": "exists (3631 bytes)"
+    },
+    {
+      "check": "file_exists",
+      "path": "docs\\system\\00_governance\\bootstrap\\templates\\delivery\\05_delivery_task_template.md",
+      "ok": true,
+      "detail": "exists (4341 bytes)"
+    },
+    {
+      "check": "file_exists",
+      "path": "docs\\system\\00_governance\\bootstrap\\templates\\delivery\\06_delivery_impl_template.md",
+      "ok": true,
+      "detail": "exists (4461 bytes)"
+    },
+    {
+      "check": "file_exists",
+      "path": "docs\\system\\00_governance\\bootstrap\\templates\\delivery\\07_delivery_review_template.md",
+      "ok": true,
+      "detail": "exists (4148 bytes)"
+    },
+    {
+      "check": "file_exists",
+      "path": "docs\\system\\00_governance\\bootstrap\\templates\\delivery\\08_delivery_validation_template.md",
+      "ok": true,
+      "detail": "exists (4580 bytes)"
+    },
+    {
+      "check": "file_exists",
+      "path": "docs\\system\\00_governance\\bootstrap\\templates\\delivery\\09_delivery_memory_template.md",
+      "ok": true,
+      "detail": "exists (2953 bytes)"
+    },
+    {
+      "check": "file_exists",
+      "path": "docs\\delivery\\00_standards\\DELIVERY_AGENTS_MD.md",
+      "ok": true,
+      "detail": "exists (9428 bytes)"
+    },
+    {
+      "check": "file_exists",
+      "path": "docs\\delivery\\00_standards\\DELIVERY_AGENT_PLANNER.md",
+      "ok": true,
+      "detail": "exists (7562 bytes)"
+    },
+    {
+      "check": "file_exists",
+      "path": "docs\\delivery\\00_standards\\DELIVERY_AGENT_TASK_DECOMPOSER.md",
+      "ok": true,
+      "detail": "exists (8253 bytes)"
+    },
+    {
+      "check": "file_exists",
+      "path": "docs\\delivery\\00_standards\\DELIVERY_AGENT_IMPL_PLANNER.md",
+      "ok": true,
+      "detail": "exists (7286 bytes)"
+    },
+    {
+      "check": "file_exists",
+      "path": "docs\\delivery\\00_standards\\DELIVERY_AGENT_EXECUTOR.md",
+      "ok": true,
+      "detail": "exists (8928 bytes)"
+    },
+    {
+      "check": "file_exists",
+      "path": "docs\\delivery\\00_standards\\DELIVERY_AGENT_REVIEWER.md",
+      "ok": true,
+      "detail": "exists (8622 bytes)"
+    },
+    {
+      "check": "file_exists",
+      "path": "docs\\delivery\\00_standards\\DELIVERY_AGENT_MEMORY_MANAGER.md",
+      "ok": true,
+      "detail": "exists (8761 bytes)"
+    },
+    {
+      "check": "file_exists",
+      "path": "docs/system/00_governance/bootstrap/WORKFLOW_SOP_v1.md",
+      "ok": true,
+      "detail": "exists (21783 bytes)"
+    },
+    {
+      "check": "file_exists",
+      "path": "docs/system/00_governance/bootstrap/DELIVERY_STATUS_RULES_v1.md",
+      "ok": true,
+      "detail": "exists (10122 bytes)"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/system/00_governance/bootstrap/project_analysis.md",
+      "section": "Repo Overview",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/system/00_governance/bootstrap/project_analysis.md",
+      "section": "Codebase Structure",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/system/00_governance/bootstrap/project_analysis.md",
+      "section": "Operational Risks",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/system/00_governance/bootstrap/project_analysis.md",
+      "section": "Architectural Observations",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/system/00_governance/bootstrap/project_analysis.md",
+      "section": "Architecture Posture",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/system/00_governance/bootstrap/DOCUMENTATION_STANDARD.md",
+      "section": "Purpose",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/system/00_governance/bootstrap/DOCUMENTATION_STANDARD.md",
+      "section": "Audience Model",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/system/00_governance/bootstrap/DOCUMENTATION_STANDARD.md",
+      "section": "Document Set",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/system/00_governance/bootstrap/DOCUMENTATION_STANDARD.md",
+      "section": "Update Triggers",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/system/00_governance/bootstrap/DOCUMENTATION_STANDARD.md",
+      "section": "Validation",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/system/00_governance/bootstrap/DOCUMENTATION_STANDARD.md",
+      "section": "Architecture Baseline",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/system/00_governance/bootstrap/DOCUMENTATION_STANDARD.md",
+      "section": "Repo-Selected Profile",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/system/00_governance/bootstrap/DOCUMENTATION_STANDARD.md",
+      "section": "Migration Mode",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/system/00_governance/bootstrap/DOCUMENTATION_STANDARD.md",
+      "section": "Conditional Standards",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/system/00_governance/bootstrap/README.md",
+      "section": "System Documentation Index",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/system/00_governance/bootstrap/README.md",
+      "section": "Audience Views",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/system/00_governance/bootstrap/README.md",
+      "section": "Document Map",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/system/00_governance/bootstrap/SYSTEM_OVERVIEW.md",
+      "section": "Purpose",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/system/00_governance/bootstrap/SYSTEM_OVERVIEW.md",
+      "section": "Scope",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/system/00_governance/bootstrap/SYSTEM_OVERVIEW.md",
+      "section": "Primary Flows",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/system/00_governance/bootstrap/SYSTEM_OVERVIEW.md",
+      "section": "Key Risks",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/system/00_governance/bootstrap/SYSTEM_OVERVIEW.md",
+      "section": "Architecture Profile",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/system/00_governance/bootstrap/SYSTEM_FILE_STRUCTURE.md",
+      "section": "Repository Structure",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/system/00_governance/bootstrap/SYSTEM_FILE_STRUCTURE.md",
+      "section": "Top-Level Directories",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/system/00_governance/bootstrap/SYSTEM_FILE_STRUCTURE.md",
+      "section": "Documentation Locations",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/system/00_governance/bootstrap/DEVELOPER_GUIDE.md",
+      "section": "Development Workflow",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/system/00_governance/bootstrap/DEVELOPER_GUIDE.md",
+      "section": "Key Commands",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/system/00_governance/bootstrap/DEVELOPER_GUIDE.md",
+      "section": "Documentation Responsibilities",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/system/00_governance/bootstrap/DEVELOPER_GUIDE.md",
+      "section": "Architecture Posture",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/system/00_governance/bootstrap/RUNBOOK.md",
+      "section": "Operations Scope",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/system/00_governance/bootstrap/RUNBOOK.md",
+      "section": "Routine Procedures",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/system/00_governance/bootstrap/RUNBOOK.md",
+      "section": "Failure Handling",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/system/00_governance/bootstrap/EXISTING_REPO_WORKFLOW_SOP.md",
+      "section": "Purpose",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/system/00_governance/bootstrap/EXISTING_REPO_WORKFLOW_SOP.md",
+      "section": "First-Time Setup",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/system/00_governance/bootstrap/EXISTING_REPO_WORKFLOW_SOP.md",
+      "section": "Normal Governed Delivery",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/system/00_governance/bootstrap/EXISTING_REPO_WORKFLOW_SOP.md",
+      "section": "Drift Reconciliation",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/system/00_governance/bootstrap/EXISTING_REPO_WORKFLOW_SOP.md",
+      "section": "Governance Refresh",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/system/00_governance/bootstrap/EXISTING_REPO_WORKFLOW_SOP.md",
+      "section": "Batch Files",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/system/00_governance/bootstrap/EXISTING_REPO_WORKFLOW_SOP.md",
+      "section": "Notes",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs\\system\\00_governance\\bootstrap\\templates\\delivery\\01_delivery_template_registry.md",
+      "section": "Metadata",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs\\system\\00_governance\\bootstrap\\templates\\delivery\\01_delivery_template_registry.md",
+      "section": "Registry Overview",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs\\system\\00_governance\\bootstrap\\templates\\delivery\\01_delivery_template_registry.md",
+      "section": "Template Families",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs\\system\\00_governance\\bootstrap\\templates\\delivery\\01_delivery_template_registry.md",
+      "section": "Usage Rules",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs\\system\\00_governance\\bootstrap\\templates\\delivery\\01_delivery_template_registry.md",
+      "section": "Cross-References",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs\\system\\00_governance\\bootstrap\\templates\\delivery\\02_delivery_initiative_template.md",
+      "section": "Metadata",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs\\system\\00_governance\\bootstrap\\templates\\delivery\\02_delivery_initiative_template.md",
+      "section": "Initiative Description",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs\\system\\00_governance\\bootstrap\\templates\\delivery\\02_delivery_initiative_template.md",
+      "section": "Scope",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs\\system\\00_governance\\bootstrap\\templates\\delivery\\02_delivery_initiative_template.md",
+      "section": "Documentation Scope",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs\\system\\00_governance\\bootstrap\\templates\\delivery\\02_delivery_initiative_template.md",
+      "section": "Dependencies",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs\\system\\00_governance\\bootstrap\\templates\\delivery\\02_delivery_initiative_template.md",
+      "section": "Acceptance Criteria",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs\\system\\00_governance\\bootstrap\\templates\\delivery\\02_delivery_initiative_template.md",
+      "section": "Notes",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs\\system\\00_governance\\bootstrap\\templates\\delivery\\03_delivery_plan_template.md",
+      "section": "Metadata",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs\\system\\00_governance\\bootstrap\\templates\\delivery\\03_delivery_plan_template.md",
+      "section": "Plan Objective",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs\\system\\00_governance\\bootstrap\\templates\\delivery\\03_delivery_plan_template.md",
+      "section": "Strategy Overview",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs\\system\\00_governance\\bootstrap\\templates\\delivery\\03_delivery_plan_template.md",
+      "section": "Scope Mapping",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs\\system\\00_governance\\bootstrap\\templates\\delivery\\03_delivery_plan_template.md",
+      "section": "Task Breakdown",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs\\system\\00_governance\\bootstrap\\templates\\delivery\\03_delivery_plan_template.md",
+      "section": "Documentation Strategy",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs\\system\\00_governance\\bootstrap\\templates\\delivery\\03_delivery_plan_template.md",
+      "section": "Risks",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs\\system\\00_governance\\bootstrap\\templates\\delivery\\03_delivery_plan_template.md",
+      "section": "Deliverables",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs\\system\\00_governance\\bootstrap\\templates\\delivery\\03_delivery_plan_template.md",
+      "section": "Acceptance Criteria",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs\\system\\00_governance\\bootstrap\\templates\\delivery\\03_delivery_plan_template.md",
+      "section": "Notes",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs\\system\\00_governance\\bootstrap\\templates\\delivery\\04_delivery_task_graph_template.md",
+      "section": "Metadata",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs\\system\\00_governance\\bootstrap\\templates\\delivery\\04_delivery_task_graph_template.md",
+      "section": "Task Graph Objective",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs\\system\\00_governance\\bootstrap\\templates\\delivery\\04_delivery_task_graph_template.md",
+      "section": "Task Graph",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs\\system\\00_governance\\bootstrap\\templates\\delivery\\04_delivery_task_graph_template.md",
+      "section": "Execution Flow",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs\\system\\00_governance\\bootstrap\\templates\\delivery\\04_delivery_task_graph_template.md",
+      "section": "Documentation Workstream",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs\\system\\00_governance\\bootstrap\\templates\\delivery\\04_delivery_task_graph_template.md",
+      "section": "Success Criteria",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs\\system\\00_governance\\bootstrap\\templates\\delivery\\04_delivery_task_graph_template.md",
+      "section": "Notes",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs\\system\\00_governance\\bootstrap\\templates\\delivery\\05_delivery_task_template.md",
+      "section": "Metadata",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs\\system\\00_governance\\bootstrap\\templates\\delivery\\05_delivery_task_template.md",
+      "section": "Objective",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs\\system\\00_governance\\bootstrap\\templates\\delivery\\05_delivery_task_template.md",
+      "section": "Inputs",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs\\system\\00_governance\\bootstrap\\templates\\delivery\\05_delivery_task_template.md",
+      "section": "Outputs",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs\\system\\00_governance\\bootstrap\\templates\\delivery\\05_delivery_task_template.md",
+      "section": "Execution Steps",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs\\system\\00_governance\\bootstrap\\templates\\delivery\\05_delivery_task_template.md",
+      "section": "Validation Criteria",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs\\system\\00_governance\\bootstrap\\templates\\delivery\\05_delivery_task_template.md",
+      "section": "Documentation Impact",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs\\system\\00_governance\\bootstrap\\templates\\delivery\\05_delivery_task_template.md",
+      "section": "Dependencies",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs\\system\\00_governance\\bootstrap\\templates\\delivery\\05_delivery_task_template.md",
+      "section": "Notes",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs\\system\\00_governance\\bootstrap\\templates\\delivery\\06_delivery_impl_template.md",
+      "section": "Metadata",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs\\system\\00_governance\\bootstrap\\templates\\delivery\\06_delivery_impl_template.md",
+      "section": "Implementation Objective",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs\\system\\00_governance\\bootstrap\\templates\\delivery\\06_delivery_impl_template.md",
+      "section": "Changes Overview",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs\\system\\00_governance\\bootstrap\\templates\\delivery\\06_delivery_impl_template.md",
+      "section": "Implementation Steps",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs\\system\\00_governance\\bootstrap\\templates\\delivery\\06_delivery_impl_template.md",
+      "section": "Documentation Update Plan",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs\\system\\00_governance\\bootstrap\\templates\\delivery\\06_delivery_impl_template.md",
+      "section": "Risk Assessment",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs\\system\\00_governance\\bootstrap\\templates\\delivery\\06_delivery_impl_template.md",
+      "section": "Validation Criteria",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs\\system\\00_governance\\bootstrap\\templates\\delivery\\06_delivery_impl_template.md",
+      "section": "Notes",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs\\system\\00_governance\\bootstrap\\templates\\delivery\\07_delivery_review_template.md",
+      "section": "Metadata",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs\\system\\00_governance\\bootstrap\\templates\\delivery\\07_delivery_review_template.md",
+      "section": "Review Scope",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs\\system\\00_governance\\bootstrap\\templates\\delivery\\07_delivery_review_template.md",
+      "section": "Findings",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs\\system\\00_governance\\bootstrap\\templates\\delivery\\07_delivery_review_template.md",
+      "section": "Documentation Compliance",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs\\system\\00_governance\\bootstrap\\templates\\delivery\\07_delivery_review_template.md",
+      "section": "Verdict",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs\\system\\00_governance\\bootstrap\\templates\\delivery\\07_delivery_review_template.md",
+      "section": "Notes",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs\\system\\00_governance\\bootstrap\\templates\\delivery\\08_delivery_validation_template.md",
+      "section": "Metadata",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs\\system\\00_governance\\bootstrap\\templates\\delivery\\08_delivery_validation_template.md",
+      "section": "Validation Scope",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs\\system\\00_governance\\bootstrap\\templates\\delivery\\08_delivery_validation_template.md",
+      "section": "Code Validation",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs\\system\\00_governance\\bootstrap\\templates\\delivery\\08_delivery_validation_template.md",
+      "section": "Documentation Synchronization Validation",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs\\system\\00_governance\\bootstrap\\templates\\delivery\\08_delivery_validation_template.md",
+      "section": "Validation Issues",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs\\system\\00_governance\\bootstrap\\templates\\delivery\\08_delivery_validation_template.md",
+      "section": "Validation Summary",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs\\system\\00_governance\\bootstrap\\templates\\delivery\\08_delivery_validation_template.md",
+      "section": "Verdict",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs\\system\\00_governance\\bootstrap\\templates\\delivery\\08_delivery_validation_template.md",
+      "section": "Approval",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs\\system\\00_governance\\bootstrap\\templates\\delivery\\08_delivery_validation_template.md",
+      "section": "Notes",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs\\system\\00_governance\\bootstrap\\templates\\delivery\\09_delivery_memory_template.md",
+      "section": "Metadata",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs\\system\\00_governance\\bootstrap\\templates\\delivery\\09_delivery_memory_template.md",
+      "section": "Context",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs\\system\\00_governance\\bootstrap\\templates\\delivery\\09_delivery_memory_template.md",
+      "section": "Lessons Learned",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs\\system\\00_governance\\bootstrap\\templates\\delivery\\09_delivery_memory_template.md",
+      "section": "Reusable Patterns",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs\\system\\00_governance\\bootstrap\\templates\\delivery\\09_delivery_memory_template.md",
+      "section": "Anti-Patterns",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs\\system\\00_governance\\bootstrap\\templates\\delivery\\09_delivery_memory_template.md",
+      "section": "Documentation Notes",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs\\system\\00_governance\\bootstrap\\templates\\delivery\\09_delivery_memory_template.md",
+      "section": "Related Memories",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs\\system\\00_governance\\bootstrap\\templates\\delivery\\09_delivery_memory_template.md",
+      "section": "Notes",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/system/00_governance/bootstrap/templates/codebase/01_codebase_template_registry.md",
+      "section": "Metadata",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/system/00_governance/bootstrap/templates/codebase/01_codebase_template_registry.md",
+      "section": "Registry Overview",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/system/00_governance/bootstrap/templates/codebase/01_codebase_template_registry.md",
+      "section": "Template Families",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/system/00_governance/bootstrap/templates/codebase/01_codebase_template_registry.md",
+      "section": "Usage Rules",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/system/00_governance/bootstrap/templates/codebase/01_codebase_template_registry.md",
+      "section": "Cross-References",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/system/00_governance/bootstrap/templates/codebase/02_codebase_inventory_template.md",
+      "section": "Metadata",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/system/00_governance/bootstrap/templates/codebase/02_codebase_inventory_template.md",
+      "section": "Template Fields",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/system/00_governance/bootstrap/templates/codebase/02_codebase_inventory_template.md",
+      "section": "Entry Template",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/system/00_governance/bootstrap/templates/codebase/02_codebase_inventory_template.md",
+      "section": "Status Definitions",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/system/00_governance/bootstrap/templates/codebase/02_codebase_inventory_template.md",
+      "section": "File Type Coverage",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/system/00_governance/bootstrap/templates/codebase/03_codebase_module_template.md",
+      "section": "Metadata",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/system/00_governance/bootstrap/templates/codebase/03_codebase_module_template.md",
+      "section": "Module Overview",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/system/00_governance/bootstrap/templates/codebase/03_codebase_module_template.md",
+      "section": "File Inventory",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/system/00_governance/bootstrap/templates/codebase/03_codebase_module_template.md",
+      "section": "Architecture",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/system/00_governance/bootstrap/templates/codebase/03_codebase_module_template.md",
+      "section": "Key Components",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/system/00_governance/bootstrap/templates/codebase/03_codebase_module_template.md",
+      "section": "Public API",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/system/00_governance/bootstrap/templates/codebase/03_codebase_module_template.md",
+      "section": "Dependencies",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/system/00_governance/bootstrap/templates/codebase/03_codebase_module_template.md",
+      "section": "Testing",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/system/00_governance/bootstrap/templates/codebase/03_codebase_module_template.md",
+      "section": "Change Log",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/system/00_governance/bootstrap/templates/codebase/03_codebase_module_template.md",
+      "section": "Notes",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/system/00_governance/bootstrap/templates/codebase/04_codebase_component_template.md",
+      "section": "Metadata",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/system/00_governance/bootstrap/templates/codebase/04_codebase_component_template.md",
+      "section": "Component Overview",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/system/00_governance/bootstrap/templates/codebase/04_codebase_component_template.md",
+      "section": "File Coverage",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/system/00_governance/bootstrap/templates/codebase/04_codebase_component_template.md",
+      "section": "Interface",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/system/00_governance/bootstrap/templates/codebase/04_codebase_component_template.md",
+      "section": "Implementation Details",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/system/00_governance/bootstrap/templates/codebase/04_codebase_component_template.md",
+      "section": "Dependencies",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/system/00_governance/bootstrap/templates/codebase/04_codebase_component_template.md",
+      "section": "Testing",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/system/00_governance/bootstrap/templates/codebase/04_codebase_component_template.md",
+      "section": "Change Log",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/system/00_governance/bootstrap/templates/codebase/04_codebase_component_template.md",
+      "section": "Notes",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/system/00_governance/bootstrap/templates/codebase/05_codebase_change_template.md",
+      "section": "Metadata",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/system/00_governance/bootstrap/templates/codebase/05_codebase_change_template.md",
+      "section": "Change Summary",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/system/00_governance/bootstrap/templates/codebase/05_codebase_change_template.md",
+      "section": "Changed Files",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/system/00_governance/bootstrap/templates/codebase/05_codebase_change_template.md",
+      "section": "Documentation Updates",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/system/00_governance/bootstrap/templates/codebase/05_codebase_change_template.md",
+      "section": "Stale Documentation Removal",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/system/00_governance/bootstrap/templates/codebase/05_codebase_change_template.md",
+      "section": "Documentation Freshness Verification",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/system/00_governance/bootstrap/templates/codebase/05_codebase_change_template.md",
+      "section": "Cross-References",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/system/00_governance/bootstrap/templates/codebase/05_codebase_change_template.md",
+      "section": "Notes",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/system/00_governance/bootstrap/WORKFLOW_SOP_v1.md",
+      "section": "Purpose",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/system/00_governance/bootstrap/WORKFLOW_SOP_v1.md",
+      "section": "Core Principle",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/system/00_governance/bootstrap/WORKFLOW_SOP_v1.md",
+      "section": "Authority Precedence",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/system/00_governance/bootstrap/WORKFLOW_SOP_v1.md",
+      "section": "Workflow State Machine",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/system/00_governance/bootstrap/WORKFLOW_SOP_v1.md",
+      "section": "Agent Roles",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/system/00_governance/bootstrap/WORKFLOW_SOP_v1.md",
+      "section": "Workflow Phases",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/system/00_governance/bootstrap/WORKFLOW_SOP_v1.md",
+      "section": "Standard Rules",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/system/00_governance/bootstrap/WORKFLOW_SOP_v1.md",
+      "section": "Folder Structure",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/system/00_governance/bootstrap/WORKFLOW_SOP_v1.md",
+      "section": "Validation",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/system/00_governance/bootstrap/DELIVERY_STATUS_RULES_v1.md",
+      "section": "Core Principles",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/system/00_governance/bootstrap/DELIVERY_STATUS_RULES_v1.md",
+      "section": "Global Workflow Discipline",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/system/00_governance/bootstrap/DELIVERY_STATUS_RULES_v1.md",
+      "section": "Lifecycle Rules",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/system/00_governance/bootstrap/DELIVERY_STATUS_RULES_v1.md",
+      "section": "Authority Model",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/system/00_governance/bootstrap/DELIVERY_STATUS_RULES_v1.md",
+      "section": "Approval Gates",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/system/00_governance/bootstrap/DELIVERY_STATUS_RULES_v1.md",
+      "section": "Forbidden Transitions",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/system/00_governance/bootstrap/DELIVERY_STATUS_RULES_v1.md",
+      "section": "Document-First",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/system/00_governance/bootstrap/DELIVERY_STATUS_RULES_v1.md",
+      "section": "Traceability",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/codebase/00_standards/CODEBASE_DOC_SOP_v1.md",
+      "section": "Purpose",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/codebase/00_standards/CODEBASE_DOC_SOP_v1.md",
+      "section": "Coverage Model",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/codebase/00_standards/CODEBASE_DOC_SOP_v1.md",
+      "section": "Documentation Modes",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/codebase/00_standards/CODEBASE_DOC_SOP_v1.md",
+      "section": "Freshness Rules",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/codebase/00_standards/CODEBASE_DOC_SOP_v1.md",
+      "section": "Stale Content Policy",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/codebase/00_standards/CODEBASE_DOC_SOP_v1.md",
+      "section": "Workflow Integration",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/codebase/00_standards/CODEBASE_DOC_SOP_v1.md",
+      "section": "File-Type Rules",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/codebase/00_standards/CODEBASE_DOC_SOP_v1.md",
+      "section": "Validation",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/codebase/00_standards/CODEBASE_DOC_STATUS_RULES_v1.md",
+      "section": "Core Principles",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/codebase/00_standards/CODEBASE_DOC_STATUS_RULES_v1.md",
+      "section": "Inventory Status Model",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/codebase/00_standards/CODEBASE_DOC_STATUS_RULES_v1.md",
+      "section": "Document Status Model",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/codebase/00_standards/CODEBASE_DOC_STATUS_RULES_v1.md",
+      "section": "Supersession Rules",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/codebase/00_standards/CODEBASE_DOC_STATUS_RULES_v1.md",
+      "section": "Update Triggers",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/codebase/00_standards/CODEBASE_DOC_STATUS_RULES_v1.md",
+      "section": "Traceability",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "file_section",
+      "path": "docs/codebase/00_standards/CODEBASE_DOC_STATUS_RULES_v1.md",
+      "section": "Removal Rules",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "codebase_file_exists",
+      "artifact_key": "CODEBASE_DOC_SOP",
+      "path": "docs/codebase/00_standards/CODEBASE_DOC_SOP_v1.md",
+      "ok": true,
+      "detail": "exists (18017 bytes)"
+    },
+    {
+      "check": "codebase_file_exists",
+      "artifact_key": "CODEBASE_DOC_STATUS_RULES",
+      "path": "docs/codebase/00_standards/CODEBASE_DOC_STATUS_RULES_v1.md",
+      "ok": true,
+      "detail": "exists (10817 bytes)"
+    },
+    {
+      "check": "codebase_file_exists",
+      "artifact_key": "CODEBASE_TEMPLATE_REGISTRY",
+      "path": "docs/system/00_governance/bootstrap/templates/codebase/01_codebase_template_registry.md",
+      "ok": true,
+      "detail": "exists (5485 bytes)"
+    },
+    {
+      "check": "codebase_template_section",
+      "path": "docs/system/00_governance/bootstrap/templates/codebase/01_codebase_template_registry.md",
+      "section": "Metadata",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "codebase_template_section",
+      "path": "docs/system/00_governance/bootstrap/templates/codebase/01_codebase_template_registry.md",
+      "section": "Registry Overview",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "codebase_template_section",
+      "path": "docs/system/00_governance/bootstrap/templates/codebase/01_codebase_template_registry.md",
+      "section": "Template Families",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "codebase_template_section",
+      "path": "docs/system/00_governance/bootstrap/templates/codebase/01_codebase_template_registry.md",
+      "section": "Usage Rules",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "codebase_template_section",
+      "path": "docs/system/00_governance/bootstrap/templates/codebase/01_codebase_template_registry.md",
+      "section": "Cross-References",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "codebase_file_exists",
+      "artifact_key": "CODEBASE_INVENTORY_TEMPLATE",
+      "path": "docs/system/00_governance/bootstrap/templates/codebase/02_codebase_inventory_template.md",
+      "ok": true,
+      "detail": "exists (5312 bytes)"
+    },
+    {
+      "check": "codebase_template_section",
+      "path": "docs/system/00_governance/bootstrap/templates/codebase/02_codebase_inventory_template.md",
+      "section": "Metadata",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "codebase_template_section",
+      "path": "docs/system/00_governance/bootstrap/templates/codebase/02_codebase_inventory_template.md",
+      "section": "Template Fields",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "codebase_template_section",
+      "path": "docs/system/00_governance/bootstrap/templates/codebase/02_codebase_inventory_template.md",
+      "section": "Entry Template",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "codebase_template_section",
+      "path": "docs/system/00_governance/bootstrap/templates/codebase/02_codebase_inventory_template.md",
+      "section": "Status Definitions",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "codebase_template_section",
+      "path": "docs/system/00_governance/bootstrap/templates/codebase/02_codebase_inventory_template.md",
+      "section": "File Type Coverage",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "codebase_file_exists",
+      "artifact_key": "CODEBASE_MODULE_TEMPLATE",
+      "path": "docs/system/00_governance/bootstrap/templates/codebase/03_codebase_module_template.md",
+      "ok": true,
+      "detail": "exists (3754 bytes)"
+    },
+    {
+      "check": "codebase_template_section",
+      "path": "docs/system/00_governance/bootstrap/templates/codebase/03_codebase_module_template.md",
+      "section": "Metadata",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "codebase_template_section",
+      "path": "docs/system/00_governance/bootstrap/templates/codebase/03_codebase_module_template.md",
+      "section": "Module Overview",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "codebase_template_section",
+      "path": "docs/system/00_governance/bootstrap/templates/codebase/03_codebase_module_template.md",
+      "section": "File Inventory",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "codebase_template_section",
+      "path": "docs/system/00_governance/bootstrap/templates/codebase/03_codebase_module_template.md",
+      "section": "Architecture",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "codebase_template_section",
+      "path": "docs/system/00_governance/bootstrap/templates/codebase/03_codebase_module_template.md",
+      "section": "Key Components",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "codebase_template_section",
+      "path": "docs/system/00_governance/bootstrap/templates/codebase/03_codebase_module_template.md",
+      "section": "Public API",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "codebase_template_section",
+      "path": "docs/system/00_governance/bootstrap/templates/codebase/03_codebase_module_template.md",
+      "section": "Dependencies",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "codebase_template_section",
+      "path": "docs/system/00_governance/bootstrap/templates/codebase/03_codebase_module_template.md",
+      "section": "Testing",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "codebase_template_section",
+      "path": "docs/system/00_governance/bootstrap/templates/codebase/03_codebase_module_template.md",
+      "section": "Change Log",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "codebase_template_section",
+      "path": "docs/system/00_governance/bootstrap/templates/codebase/03_codebase_module_template.md",
+      "section": "Notes",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "codebase_file_exists",
+      "artifact_key": "CODEBASE_COMPONENT_TEMPLATE",
+      "path": "docs/system/00_governance/bootstrap/templates/codebase/04_codebase_component_template.md",
+      "ok": true,
+      "detail": "exists (2933 bytes)"
+    },
+    {
+      "check": "codebase_template_section",
+      "path": "docs/system/00_governance/bootstrap/templates/codebase/04_codebase_component_template.md",
+      "section": "Metadata",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "codebase_template_section",
+      "path": "docs/system/00_governance/bootstrap/templates/codebase/04_codebase_component_template.md",
+      "section": "Component Overview",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "codebase_template_section",
+      "path": "docs/system/00_governance/bootstrap/templates/codebase/04_codebase_component_template.md",
+      "section": "File Coverage",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "codebase_template_section",
+      "path": "docs/system/00_governance/bootstrap/templates/codebase/04_codebase_component_template.md",
+      "section": "Interface",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "codebase_template_section",
+      "path": "docs/system/00_governance/bootstrap/templates/codebase/04_codebase_component_template.md",
+      "section": "Implementation Details",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "codebase_template_section",
+      "path": "docs/system/00_governance/bootstrap/templates/codebase/04_codebase_component_template.md",
+      "section": "Dependencies",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "codebase_template_section",
+      "path": "docs/system/00_governance/bootstrap/templates/codebase/04_codebase_component_template.md",
+      "section": "Testing",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "codebase_template_section",
+      "path": "docs/system/00_governance/bootstrap/templates/codebase/04_codebase_component_template.md",
+      "section": "Change Log",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "codebase_template_section",
+      "path": "docs/system/00_governance/bootstrap/templates/codebase/04_codebase_component_template.md",
+      "section": "Notes",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "codebase_file_exists",
+      "artifact_key": "CODEBASE_CHANGE_TEMPLATE",
+      "path": "docs/system/00_governance/bootstrap/templates/codebase/05_codebase_change_template.md",
+      "ok": true,
+      "detail": "exists (4521 bytes)"
+    },
+    {
+      "check": "codebase_template_section",
+      "path": "docs/system/00_governance/bootstrap/templates/codebase/05_codebase_change_template.md",
+      "section": "Metadata",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "codebase_template_section",
+      "path": "docs/system/00_governance/bootstrap/templates/codebase/05_codebase_change_template.md",
+      "section": "Change Summary",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "codebase_template_section",
+      "path": "docs/system/00_governance/bootstrap/templates/codebase/05_codebase_change_template.md",
+      "section": "Changed Files",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "codebase_template_section",
+      "path": "docs/system/00_governance/bootstrap/templates/codebase/05_codebase_change_template.md",
+      "section": "Documentation Updates",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "codebase_template_section",
+      "path": "docs/system/00_governance/bootstrap/templates/codebase/05_codebase_change_template.md",
+      "section": "Stale Documentation Removal",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "codebase_template_section",
+      "path": "docs/system/00_governance/bootstrap/templates/codebase/05_codebase_change_template.md",
+      "section": "Documentation Freshness Verification",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "codebase_template_section",
+      "path": "docs/system/00_governance/bootstrap/templates/codebase/05_codebase_change_template.md",
+      "section": "Cross-References",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "codebase_template_section",
+      "path": "docs/system/00_governance/bootstrap/templates/codebase/05_codebase_change_template.md",
+      "section": "Notes",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "codebase_file_exists",
+      "artifact_key": "CODEBASE_INVENTORY",
+      "path": "docs/codebase/01_inventory/codebase_inventory.md",
+      "ok": true,
+      "detail": "exists (61292 bytes)"
+    },
+    {
+      "check": "codebase_sop_section",
+      "path": "docs/codebase/00_standards/CODEBASE_DOC_SOP_v1.md",
+      "section": "Purpose",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "codebase_sop_section",
+      "path": "docs/codebase/00_standards/CODEBASE_DOC_SOP_v1.md",
+      "section": "Coverage Model",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "codebase_sop_section",
+      "path": "docs/codebase/00_standards/CODEBASE_DOC_SOP_v1.md",
+      "section": "Documentation Modes",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "codebase_sop_section",
+      "path": "docs/codebase/00_standards/CODEBASE_DOC_SOP_v1.md",
+      "section": "Freshness Rules",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "codebase_sop_section",
+      "path": "docs/codebase/00_standards/CODEBASE_DOC_SOP_v1.md",
+      "section": "Stale Content Policy",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "codebase_sop_section",
+      "path": "docs/codebase/00_standards/CODEBASE_DOC_SOP_v1.md",
+      "section": "Workflow Integration",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "codebase_sop_section",
+      "path": "docs/codebase/00_standards/CODEBASE_DOC_SOP_v1.md",
+      "section": "File-Type Rules",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "codebase_sop_section",
+      "path": "docs/codebase/00_standards/CODEBASE_DOC_SOP_v1.md",
+      "section": "Validation",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "codebase_status_section",
+      "path": "docs/codebase/00_standards/CODEBASE_DOC_STATUS_RULES_v1.md",
+      "section": "Core Principles",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "codebase_status_section",
+      "path": "docs/codebase/00_standards/CODEBASE_DOC_STATUS_RULES_v1.md",
+      "section": "Inventory Status Model",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "codebase_status_section",
+      "path": "docs/codebase/00_standards/CODEBASE_DOC_STATUS_RULES_v1.md",
+      "section": "Document Status Model",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "codebase_status_section",
+      "path": "docs/codebase/00_standards/CODEBASE_DOC_STATUS_RULES_v1.md",
+      "section": "Supersession Rules",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "codebase_status_section",
+      "path": "docs/codebase/00_standards/CODEBASE_DOC_STATUS_RULES_v1.md",
+      "section": "Update Triggers",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "codebase_status_section",
+      "path": "docs/codebase/00_standards/CODEBASE_DOC_STATUS_RULES_v1.md",
+      "section": "Traceability",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "codebase_status_section",
+      "path": "docs/codebase/00_standards/CODEBASE_DOC_STATUS_RULES_v1.md",
+      "section": "Removal Rules",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "codebase_inventory_has_current_status",
+      "path": "docs/codebase/01_inventory/codebase_inventory.md",
+      "ok": true,
+      "detail": "present"
+    },
+    {
+      "check": "codebase_inventory_has_needs_update_status",
+      "path": "docs/codebase/01_inventory/codebase_inventory.md",
+      "ok": true,
+      "detail": "present"
+    },
+    {
+      "check": "codebase_inventory_has_doc_mode",
+      "path": "docs/codebase/01_inventory/codebase_inventory.md",
+      "ok": true,
+      "detail": "present"
+    },
+    {
+      "check": "codebase_inventory_has_owner_doc_path",
+      "path": "docs/codebase/01_inventory/codebase_inventory.md",
+      "ok": true,
+      "detail": "present"
+    },
+    {
+      "check": "codebase_inventory_has_last_verified_by_change",
+      "path": "docs/codebase/01_inventory/codebase_inventory.md",
+      "ok": true,
+      "detail": "present"
+    },
+    {
+      "check": "deprecated_master_prompts_absent",
+      "path": "docs/delivery/07_master_prompts",
+      "ok": true,
+      "detail": "absent as expected"
+    },
+    {
+      "check": "system_file_exists",
+      "artifact_key": "PROJECT_ANALYSIS",
+      "path": "docs/system/00_governance/bootstrap/project_analysis.md",
+      "ok": true,
+      "detail": "exists (10474 bytes)"
+    },
+    {
+      "check": "system_doc_section",
+      "path": "docs/system/00_governance/bootstrap/project_analysis.md",
+      "section": "Repo Overview",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "system_doc_section",
+      "path": "docs/system/00_governance/bootstrap/project_analysis.md",
+      "section": "Codebase Structure",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "system_doc_section",
+      "path": "docs/system/00_governance/bootstrap/project_analysis.md",
+      "section": "Operational Risks",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "system_doc_section",
+      "path": "docs/system/00_governance/bootstrap/project_analysis.md",
+      "section": "Architectural Observations",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "system_doc_section",
+      "path": "docs/system/00_governance/bootstrap/project_analysis.md",
+      "section": "Architecture Posture",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "system_file_exists",
+      "artifact_key": "SYSTEM_DOC_STANDARD",
+      "path": "docs/system/00_governance/bootstrap/DOCUMENTATION_STANDARD.md",
+      "ok": true,
+      "detail": "exists (8158 bytes)"
+    },
+    {
+      "check": "system_doc_section",
+      "path": "docs/system/00_governance/bootstrap/DOCUMENTATION_STANDARD.md",
+      "section": "Purpose",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "system_doc_section",
+      "path": "docs/system/00_governance/bootstrap/DOCUMENTATION_STANDARD.md",
+      "section": "Audience Model",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "system_doc_section",
+      "path": "docs/system/00_governance/bootstrap/DOCUMENTATION_STANDARD.md",
+      "section": "Document Set",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "system_doc_section",
+      "path": "docs/system/00_governance/bootstrap/DOCUMENTATION_STANDARD.md",
+      "section": "Update Triggers",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "system_doc_section",
+      "path": "docs/system/00_governance/bootstrap/DOCUMENTATION_STANDARD.md",
+      "section": "Validation",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "system_doc_section",
+      "path": "docs/system/00_governance/bootstrap/DOCUMENTATION_STANDARD.md",
+      "section": "Architecture Baseline",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "system_doc_section",
+      "path": "docs/system/00_governance/bootstrap/DOCUMENTATION_STANDARD.md",
+      "section": "Repo-Selected Profile",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "system_doc_section",
+      "path": "docs/system/00_governance/bootstrap/DOCUMENTATION_STANDARD.md",
+      "section": "Migration Mode",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "system_doc_section",
+      "path": "docs/system/00_governance/bootstrap/DOCUMENTATION_STANDARD.md",
+      "section": "Conditional Standards",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "system_file_exists",
+      "artifact_key": "SYSTEM_DOCS_INDEX",
+      "path": "docs/system/00_governance/bootstrap/README.md",
+      "ok": true,
+      "detail": "exists (5334 bytes)"
+    },
+    {
+      "check": "system_doc_section",
+      "path": "docs/system/00_governance/bootstrap/README.md",
+      "section": "System Documentation Index",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "system_doc_section",
+      "path": "docs/system/00_governance/bootstrap/README.md",
+      "section": "Audience Views",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "system_doc_section",
+      "path": "docs/system/00_governance/bootstrap/README.md",
+      "section": "Document Map",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "system_file_exists",
+      "artifact_key": "SYSTEM_OVERVIEW",
+      "path": "docs/system/00_governance/bootstrap/SYSTEM_OVERVIEW.md",
+      "ok": true,
+      "detail": "exists (8508 bytes)"
+    },
+    {
+      "check": "system_doc_section",
+      "path": "docs/system/00_governance/bootstrap/SYSTEM_OVERVIEW.md",
+      "section": "Purpose",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "system_doc_section",
+      "path": "docs/system/00_governance/bootstrap/SYSTEM_OVERVIEW.md",
+      "section": "Scope",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "system_doc_section",
+      "path": "docs/system/00_governance/bootstrap/SYSTEM_OVERVIEW.md",
+      "section": "Primary Flows",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "system_doc_section",
+      "path": "docs/system/00_governance/bootstrap/SYSTEM_OVERVIEW.md",
+      "section": "Key Risks",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "system_doc_section",
+      "path": "docs/system/00_governance/bootstrap/SYSTEM_OVERVIEW.md",
+      "section": "Architecture Profile",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "system_file_exists",
+      "artifact_key": "BUSINESS_CAPABILITIES",
+      "path": "docs/system/00_governance/bootstrap/BUSINESS_CAPABILITIES.md",
+      "ok": true,
+      "detail": "exists (7882 bytes)"
+    },
+    {
+      "check": "system_file_exists",
+      "artifact_key": "FUNCTIONAL_SPEC",
+      "path": "docs/system/00_governance/bootstrap/FUNCTIONAL_SPEC.md",
+      "ok": true,
+      "detail": "exists (11465 bytes)"
+    },
+    {
+      "check": "system_file_exists",
+      "artifact_key": "NON_FUNCTIONAL_REQUIREMENTS",
+      "path": "docs/system/00_governance/bootstrap/NON_FUNCTIONAL_REQUIREMENTS.md",
+      "ok": true,
+      "detail": "exists (8828 bytes)"
+    },
+    {
+      "check": "system_file_exists",
+      "artifact_key": "SYSTEM_CONTEXT",
+      "path": "docs/system/00_governance/bootstrap/SYSTEM_CONTEXT.md",
+      "ok": true,
+      "detail": "exists (8418 bytes)"
+    },
+    {
+      "check": "system_file_exists",
+      "artifact_key": "COMPONENT_ARCHITECTURE",
+      "path": "docs/system/00_governance/bootstrap/COMPONENT_ARCHITECTURE.md",
+      "ok": true,
+      "detail": "exists (10173 bytes)"
+    },
+    {
+      "check": "system_file_exists",
+      "artifact_key": "DECISION_LOG",
+      "path": "docs/system/00_governance/bootstrap/DECISION_LOG.md",
+      "ok": true,
+      "detail": "exists (5511 bytes)"
+    },
+    {
+      "check": "system_file_exists",
+      "artifact_key": "SYSTEM_FILE_STRUCTURE",
+      "path": "docs/system/00_governance/bootstrap/SYSTEM_FILE_STRUCTURE.md",
+      "ok": true,
+      "detail": "exists (11443 bytes)"
+    },
+    {
+      "check": "system_doc_section",
+      "path": "docs/system/00_governance/bootstrap/SYSTEM_FILE_STRUCTURE.md",
+      "section": "Repository Structure",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "system_doc_section",
+      "path": "docs/system/00_governance/bootstrap/SYSTEM_FILE_STRUCTURE.md",
+      "section": "Top-Level Directories",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "system_doc_section",
+      "path": "docs/system/00_governance/bootstrap/SYSTEM_FILE_STRUCTURE.md",
+      "section": "Documentation Locations",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "system_file_exists",
+      "artifact_key": "DEVELOPER_GUIDE",
+      "path": "docs/system/00_governance/bootstrap/DEVELOPER_GUIDE.md",
+      "ok": true,
+      "detail": "exists (6911 bytes)"
+    },
+    {
+      "check": "system_doc_section",
+      "path": "docs/system/00_governance/bootstrap/DEVELOPER_GUIDE.md",
+      "section": "Development Workflow",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "system_doc_section",
+      "path": "docs/system/00_governance/bootstrap/DEVELOPER_GUIDE.md",
+      "section": "Key Commands",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "system_doc_section",
+      "path": "docs/system/00_governance/bootstrap/DEVELOPER_GUIDE.md",
+      "section": "Documentation Responsibilities",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "system_doc_section",
+      "path": "docs/system/00_governance/bootstrap/DEVELOPER_GUIDE.md",
+      "section": "Architecture Posture",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "system_file_exists",
+      "artifact_key": "RUNBOOK",
+      "path": "docs/system/00_governance/bootstrap/RUNBOOK.md",
+      "ok": true,
+      "detail": "exists (7670 bytes)"
+    },
+    {
+      "check": "system_doc_section",
+      "path": "docs/system/00_governance/bootstrap/RUNBOOK.md",
+      "section": "Operations Scope",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "system_doc_section",
+      "path": "docs/system/00_governance/bootstrap/RUNBOOK.md",
+      "section": "Routine Procedures",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "system_doc_section",
+      "path": "docs/system/00_governance/bootstrap/RUNBOOK.md",
+      "section": "Failure Handling",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "system_file_exists",
+      "artifact_key": "EXISTING_REPO_WORKFLOW_SOP",
+      "path": "docs/system/00_governance/bootstrap/EXISTING_REPO_WORKFLOW_SOP.md",
+      "ok": true,
+      "detail": "exists (12392 bytes)"
+    },
+    {
+      "check": "system_doc_section",
+      "path": "docs/system/00_governance/bootstrap/EXISTING_REPO_WORKFLOW_SOP.md",
+      "section": "Purpose",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "system_doc_section",
+      "path": "docs/system/00_governance/bootstrap/EXISTING_REPO_WORKFLOW_SOP.md",
+      "section": "First-Time Setup",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "system_doc_section",
+      "path": "docs/system/00_governance/bootstrap/EXISTING_REPO_WORKFLOW_SOP.md",
+      "section": "Normal Governed Delivery",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "system_doc_section",
+      "path": "docs/system/00_governance/bootstrap/EXISTING_REPO_WORKFLOW_SOP.md",
+      "section": "Drift Reconciliation",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "system_doc_section",
+      "path": "docs/system/00_governance/bootstrap/EXISTING_REPO_WORKFLOW_SOP.md",
+      "section": "Governance Refresh",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "system_doc_section",
+      "path": "docs/system/00_governance/bootstrap/EXISTING_REPO_WORKFLOW_SOP.md",
+      "section": "Batch Files",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "system_doc_section",
+      "path": "docs/system/00_governance/bootstrap/EXISTING_REPO_WORKFLOW_SOP.md",
+      "section": "Notes",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "sop_exists",
+      "path": "docs/system/00_governance/bootstrap/WORKFLOW_SOP_v1.md",
+      "ok": true,
+      "detail": "exists (21783 bytes)"
+    },
+    {
+      "check": "sop_section",
+      "path": "docs/system/00_governance/bootstrap/WORKFLOW_SOP_v1.md",
+      "section": "Purpose",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "sop_section",
+      "path": "docs/system/00_governance/bootstrap/WORKFLOW_SOP_v1.md",
+      "section": "Core Principle",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "sop_section",
+      "path": "docs/system/00_governance/bootstrap/WORKFLOW_SOP_v1.md",
+      "section": "Authority Precedence",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "sop_section",
+      "path": "docs/system/00_governance/bootstrap/WORKFLOW_SOP_v1.md",
+      "section": "Workflow State Machine",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "sop_section",
+      "path": "docs/system/00_governance/bootstrap/WORKFLOW_SOP_v1.md",
+      "section": "Agent Roles",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "sop_section",
+      "path": "docs/system/00_governance/bootstrap/WORKFLOW_SOP_v1.md",
+      "section": "Workflow Phases",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "sop_section",
+      "path": "docs/system/00_governance/bootstrap/WORKFLOW_SOP_v1.md",
+      "section": "Standard Rules",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "sop_section",
+      "path": "docs/system/00_governance/bootstrap/WORKFLOW_SOP_v1.md",
+      "section": "Folder Structure",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "sop_section",
+      "path": "docs/system/00_governance/bootstrap/WORKFLOW_SOP_v1.md",
+      "section": "Validation",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "sop_state_machine",
+      "path": "docs/system/00_governance/bootstrap/WORKFLOW_SOP_v1.md",
+      "ok": true,
+      "detail": "state machine notation found"
+    },
+    {
+      "check": "status_rules_exists",
+      "path": "docs/system/00_governance/bootstrap/DELIVERY_STATUS_RULES_v1.md",
+      "ok": true,
+      "detail": "exists (10122 bytes)"
+    },
+    {
+      "check": "status_rules_section",
+      "path": "docs/system/00_governance/bootstrap/DELIVERY_STATUS_RULES_v1.md",
+      "section": "Core Principles",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "status_rules_section",
+      "path": "docs/system/00_governance/bootstrap/DELIVERY_STATUS_RULES_v1.md",
+      "section": "Global Workflow Discipline",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "status_rules_section",
+      "path": "docs/system/00_governance/bootstrap/DELIVERY_STATUS_RULES_v1.md",
+      "section": "Lifecycle Rules",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "status_rules_section",
+      "path": "docs/system/00_governance/bootstrap/DELIVERY_STATUS_RULES_v1.md",
+      "section": "Authority Model",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "status_rules_section",
+      "path": "docs/system/00_governance/bootstrap/DELIVERY_STATUS_RULES_v1.md",
+      "section": "Approval Gates",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "status_rules_section",
+      "path": "docs/system/00_governance/bootstrap/DELIVERY_STATUS_RULES_v1.md",
+      "section": "Forbidden Transitions",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "status_rules_section",
+      "path": "docs/system/00_governance/bootstrap/DELIVERY_STATUS_RULES_v1.md",
+      "section": "Document-First",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "status_rules_section",
+      "path": "docs/system/00_governance/bootstrap/DELIVERY_STATUS_RULES_v1.md",
+      "section": "Traceability",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "check": "status_rules_forbidden_transitions",
+      "path": "docs/system/00_governance/bootstrap/DELIVERY_STATUS_RULES_v1.md",
+      "ok": true,
+      "detail": "forbidden transition rules found"
+    },
+    {
+      "check": "agents_registry_exists",
+      "path": "docs\\delivery\\00_standards\\DELIVERY_AGENTS_MD.md",
+      "ok": true,
+      "detail": "exists (9428 bytes)"
+    },
+    {
+      "check": "agents_registry_entries",
+      "path": "docs\\delivery\\00_standards\\DELIVERY_AGENTS_MD.md",
+      "ok": true,
+      "detail": "found 28 agent(s) in registry: **Executor**, **Impl Planner**, **Memory Manager**, **Planner**, **Reviewer**, **Task Decomposer**, -------, ----------, -----------, ---------------, Authority boundary, Codebase Documentation SOP, Codebase Documentation Status Rules, Contract Field, Delivery Status Rules, Delivery Template Registry, Delivery Workflow SOP, Input, Invariant, Output, Project Analysis, Reference, `AGENT-EXECUTOR`, `AGENT-IMPL-PLANNER`, `AGENT-MEMORY-MANAGER`, `AGENT-PLANNER`, `AGENT-REVIEWER`, `AGENT-TASK-DECOMPOSER`"
+    },
+    {
+      "check": "agent_contract_exists",
+      "path": "docs\\delivery\\00_standards\\DELIVERY_AGENT_PLANNER.md",
+      "ok": true,
+      "detail": "exists (7562 bytes)"
+    },
+    {
+      "check": "agent_contract_metadata",
+      "path": "docs\\delivery\\00_standards\\DELIVERY_AGENT_PLANNER.md",
+      "ok": true,
+      "detail": "Agent contract marker: present, Agent identifier: present"
+    },
+    {
+      "check": "agent_contract_exists",
+      "path": "docs\\delivery\\00_standards\\DELIVERY_AGENT_TASK_DECOMPOSER.md",
+      "ok": true,
+      "detail": "exists (8253 bytes)"
+    },
+    {
+      "check": "agent_contract_metadata",
+      "path": "docs\\delivery\\00_standards\\DELIVERY_AGENT_TASK_DECOMPOSER.md",
+      "ok": true,
+      "detail": "Agent contract marker: present, Agent identifier: present"
+    },
+    {
+      "check": "agent_contract_exists",
+      "path": "docs\\delivery\\00_standards\\DELIVERY_AGENT_IMPL_PLANNER.md",
+      "ok": true,
+      "detail": "exists (7286 bytes)"
+    },
+    {
+      "check": "agent_contract_metadata",
+      "path": "docs\\delivery\\00_standards\\DELIVERY_AGENT_IMPL_PLANNER.md",
+      "ok": true,
+      "detail": "Agent contract marker: present, Agent identifier: present"
+    },
+    {
+      "check": "agent_contract_exists",
+      "path": "docs\\delivery\\00_standards\\DELIVERY_AGENT_EXECUTOR.md",
+      "ok": true,
+      "detail": "exists (8928 bytes)"
+    },
+    {
+      "check": "agent_contract_metadata",
+      "path": "docs\\delivery\\00_standards\\DELIVERY_AGENT_EXECUTOR.md",
+      "ok": true,
+      "detail": "Agent contract marker: present, Agent identifier: present"
+    },
+    {
+      "check": "agent_contract_exists",
+      "path": "docs\\delivery\\00_standards\\DELIVERY_AGENT_REVIEWER.md",
+      "ok": true,
+      "detail": "exists (8622 bytes)"
+    },
+    {
+      "check": "agent_contract_metadata",
+      "path": "docs\\delivery\\00_standards\\DELIVERY_AGENT_REVIEWER.md",
+      "ok": true,
+      "detail": "Agent contract marker: present, Agent identifier: present"
+    },
+    {
+      "check": "agent_contract_exists",
+      "path": "docs\\delivery\\00_standards\\DELIVERY_AGENT_MEMORY_MANAGER.md",
+      "ok": true,
+      "detail": "exists (8761 bytes)"
+    },
+    {
+      "check": "agent_contract_metadata",
+      "path": "docs\\delivery\\00_standards\\DELIVERY_AGENT_MEMORY_MANAGER.md",
+      "ok": true,
+      "detail": "Agent contract marker: present, Agent identifier: present"
+    },
+    {
+      "check": "cross_ref_plan_initiative",
+      "path": "docs\\system\\00_governance\\bootstrap\\templates\\delivery\\03_delivery_plan_template.md",
+      "ok": true,
+      "detail": "plan references initiative"
+    },
+    {
+      "check": "cross_ref_plan_doc_strategy",
+      "path": "docs\\system\\00_governance\\bootstrap\\templates\\delivery\\03_delivery_plan_template.md",
+      "ok": true,
+      "detail": "plan includes documentation strategy"
+    },
+    {
+      "check": "cross_ref_task_plan",
+      "path": "docs\\system\\00_governance\\bootstrap\\templates\\delivery\\05_delivery_task_template.md",
+      "ok": true,
+      "detail": "task references plan"
+    },
+    {
+      "check": "cross_ref_task_doc_impact",
+      "path": "docs\\system\\00_governance\\bootstrap\\templates\\delivery\\05_delivery_task_template.md",
+      "ok": true,
+      "detail": "task includes documentation impact"
+    },
+    {
+      "check": "cross_ref_validation_doc_sync",
+      "path": "docs\\system\\00_governance\\bootstrap\\templates\\delivery\\08_delivery_validation_template.md",
+      "ok": true,
+      "detail": "validation includes documentation sync"
+    },
+    {
+      "check": "cross_ref_registry_completeness",
+      "path": "docs\\system\\00_governance\\bootstrap\\templates\\delivery\\01_delivery_template_registry.md",
+      "ok": true,
+      "detail": "all types registered"
+    }
+  ]
+}

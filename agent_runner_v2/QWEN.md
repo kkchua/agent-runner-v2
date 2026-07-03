@@ -40,6 +40,12 @@ Prompt/templates are loaded from the runtime bundle, not directly from the packa
 
 The bootstrap files only seed those runtime bundles.
 
+## Runtime Path Convention
+
+- Use `%USERPROFILE%\.ukbe-runner\jobs\...` for workflow job state and meta.json sidecars.
+- Use `%USERPROFILE%\.ukbe-runner\workflows\...` for active runtime workflow bundles.
+- Do not create runtime job folders in the repository root.
+
 ## Important Modules
 
 | File | Responsibility |

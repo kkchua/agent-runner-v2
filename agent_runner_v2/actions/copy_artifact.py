@@ -23,6 +23,7 @@ from datetime import datetime
 from pathlib import Path
 
 from ..action_result import ActionResult
+from ..runtime_context import write_meta_sidecar
 
 logger = logging.getLogger(__name__)
 
@@ -62,27 +63,6 @@ def _upsert_metadata_field(content: str, field: str, value: str) -> str:
     return content
 
 
-def _write_meta(meta_rel: str, project_root: Path, status: str, remark: str, artifacts: dict) -> None:
-    if not meta_rel:
-        print("[copy_artifact] WARNING: meta.json path not in context — skipping", flush=True)
-        return
-    meta_path = project_root / meta_rel
-    meta_path.parent.mkdir(parents=True, exist_ok=True)
-    meta_path.write_text(
-        json.dumps({
-            "schema_version": "v2",
-            "coder_result": {
-                "status": status,
-                "remark": remark,
-                "artifacts": artifacts,
-                "recorded_at": datetime.now().astimezone().isoformat(timespec="seconds"),
-            },
-        }, indent=2) + "\n",
-        encoding="utf-8",
-    )
-    print(f"[copy_artifact] wrote meta.json → {meta_rel}", flush=True)
-
-
 def copy_artifact(
     *,
     context: dict[str, str],
@@ -101,19 +81,22 @@ def copy_artifact(
 
     if not source_key or not dest_artifact_key or not dest_dir_rel:
         remark = "Step config missing required keys: source, dest_artifact, dest_dir"
-        _write_meta(meta_rel, project_root, "REJECTED", remark, {})
+        if meta_rel:
+            write_meta_sidecar(meta_rel, project_root=project_root, status="REJECTED", remark=remark, artifacts={})
         return ActionResult(status="REJECTED", remark=remark, artifacts={})
 
     source_rel = context.get(source_key, "")
     if not source_rel:
         remark = f"{source_key} not found in context"
-        _write_meta(meta_rel, project_root, "REJECTED", remark, {})
+        if meta_rel:
+            write_meta_sidecar(meta_rel, project_root=project_root, status="REJECTED", remark=remark, artifacts={})
         return ActionResult(status="REJECTED", remark=remark, artifacts={})
 
     source_path = project_root / source_rel
     if not source_path.exists():
         remark = f"{source_key} file not found: {source_rel}"
-        _write_meta(meta_rel, project_root, "REJECTED", remark, {})
+        if meta_rel:
+            write_meta_sidecar(meta_rel, project_root=project_root, status="REJECTED", remark=remark, artifacts={})
         return ActionResult(status="REJECTED", remark=remark, artifacts={})
 
     content = source_path.read_text(encoding="utf-8")
@@ -123,12 +106,14 @@ def copy_artifact(
         init_id = _extract_init_id(content)
         if not init_id:
             remark = "Could not extract Initiative ID from source file"
-            _write_meta(meta_rel, project_root, "REJECTED", remark, {})
+            if meta_rel:
+                write_meta_sidecar(meta_rel, project_root=project_root, status="REJECTED", remark=remark, artifacts={})
             return ActionResult(status="REJECTED", remark=remark, artifacts={})
         title = _extract_title(content)
         if not title:
             remark = "Could not extract title (# Heading) from source file"
-            _write_meta(meta_rel, project_root, "REJECTED", remark, {})
+            if meta_rel:
+                write_meta_sidecar(meta_rel, project_root=project_root, status="REJECTED", remark=remark, artifacts={})
             return ActionResult(status="REJECTED", remark=remark, artifacts={})
         filename = f"{init_id}_{_to_slug(title)}.md"
     else:
@@ -146,5 +131,6 @@ def copy_artifact(
 
     print(f"[copy_artifact] copied {source_rel} → {dest_rel}", flush=True)
 
-    _write_meta(meta_rel, project_root, "APPROVED", f"Copied to {dest_rel}", {dest_artifact_key: dest_rel})
+    if meta_rel:
+        write_meta_sidecar(meta_rel, project_root=project_root, status="APPROVED", remark=f"Copied to {dest_rel}", artifacts={dest_artifact_key: dest_rel})
     return ActionResult(status="APPROVED", remark=f"Copied to {dest_rel}", artifacts={dest_artifact_key: dest_rel})
