@@ -69,7 +69,9 @@ SIDECAR_POLL_INTERVAL_SECONDS = 3.0
 SIDECAR_SETTLE_DELAY_SECONDS = 1.0  # Increased from 0.5s to ensure coder finishes writing meta.json
 
 
-def _coder_timeout_seconds() -> int:
+def _coder_timeout_seconds(override: int | None = None) -> int:
+    if isinstance(override, int) and override > 0:
+        return override
     raw = os.environ.get("AGENT_RUNNER_CODER_TIMEOUT_SECONDS", "").strip()
     if not raw:
         return DEFAULT_CODER_TIMEOUT_SECONDS
@@ -192,6 +194,30 @@ def _restore_terminal_settings(saved: Any) -> None:
         pass
 
 
+def _terminate_process_tree(proc: subprocess.Popen[Any]) -> None:
+    """Terminate a process and its children, using taskkill on Windows."""
+    if os.name == "nt":
+        try:
+            subprocess.run(
+                ["taskkill", "/PID", str(proc.pid), "/T", "/F"],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                check=False,
+                timeout=10,
+            )
+            return
+        except Exception:
+            pass
+    try:
+        proc.terminate()
+        proc.wait(timeout=5)
+    except Exception:
+        try:
+            proc.kill()
+        except Exception:
+            pass
+
+
 def _run_with_sidecar_poll(
     cmd: list[str],
     *,
@@ -284,11 +310,7 @@ def _run_with_sidecar_poll(
             time_remaining = deadline - time.monotonic()
             if time_remaining <= 0:
                 print(f"[coder_adapters] poll #{poll_count}: TIMEOUT after {timeout_seconds}s, terminating process", flush=True)
-                proc.terminate()
-                try:
-                    proc.wait(timeout=5)
-                except subprocess.TimeoutExpired:
-                    proc.kill()
+                _terminate_process_tree(proc)
                 t_out.join(timeout=2)
                 t_err.join(timeout=2)
                 raise subprocess.TimeoutExpired(cmd, timeout_seconds)
@@ -319,19 +341,7 @@ def _run_with_sidecar_poll(
                                 sidecar_triggered = True
                                 label = f" step={step}" if step else ""
                                 print(f"[coder_adapters] sidecar detected — coder completed work, terminating process{label}", flush=True)
-                                # Gracefully terminate the process (it didn't exit but has completed the work)
-                                proc.terminate()
-                                try:
-                                    term_result = proc.wait(timeout=10)
-                                    print(f"[coder_adapters] process terminated gracefully with code {term_result}", flush=True)
-                                except subprocess.TimeoutExpired:
-                                    print(f"[coder_adapters] process did not exit after terminate, killing...", flush=True)
-                                    proc.kill()
-                                    try:
-                                        kill_result = proc.wait(timeout=5)
-                                        print(f"[coder_adapters] process killed with code {kill_result}", flush=True)
-                                    except subprocess.TimeoutExpired:
-                                        print(f"[coder_adapters] WARNING: process did not exit even after kill!", flush=True)
+                                _terminate_process_tree(proc)
                                 break
                             else:
                                 print(f"[coder_adapters] poll #{poll_count}: sidecar exists but JSON validation failed", flush=True)
@@ -419,6 +429,7 @@ def invoke_coder(
     now_iso_fn,
     coder_config: dict[str, Any] | None = None,
     sidecar_path: Path | None = None,
+    timeout_seconds_override: int | None = None,
 ) -> InvocationResult:
     _ensure_env_loaded()
     cc = coder_config or {}
@@ -430,13 +441,13 @@ def invoke_coder(
     started_at = now_iso_fn()
     started_monotonic = time.monotonic()
     if coder == "codex":
-        result = _invoke_codex(step=step, prompt_text=prompt_text, cwd=cwd, schema_path=schema_path, sidecar_path=sidecar_path)
+        result = _invoke_codex(step=step, prompt_text=prompt_text, cwd=cwd, schema_path=schema_path, sidecar_path=sidecar_path, timeout_seconds_override=timeout_seconds_override)
     elif coder == "claude":
-        result = _invoke_claude(step=step, prompt_text=prompt_text, cwd=cwd, schema_path=schema_path, sidecar_path=sidecar_path, coder_config=cc)
+        result = _invoke_claude(step=step, prompt_text=prompt_text, cwd=cwd, schema_path=schema_path, sidecar_path=sidecar_path, coder_config=cc, timeout_seconds_override=timeout_seconds_override)
     elif coder == "qwen":
-        result = _invoke_qwen(step=step, prompt_text=prompt_text, cwd=cwd, coder_config=cc, sidecar_path=sidecar_path)
+        result = _invoke_qwen(step=step, prompt_text=prompt_text, cwd=cwd, coder_config=cc, sidecar_path=sidecar_path, timeout_seconds_override=timeout_seconds_override)
     else:
-        result = _invoke_plain(coder=coder, step=step, prompt_text=prompt_text, cwd=cwd, sidecar_path=sidecar_path)
+        result = _invoke_plain(coder=coder, step=step, prompt_text=prompt_text, cwd=cwd, sidecar_path=sidecar_path, timeout_seconds_override=timeout_seconds_override)
     finished_at = now_iso_fn()
     duration_ms = int((time.monotonic() - started_monotonic) * 1000)
 
@@ -477,9 +488,9 @@ def invoke_coder(
     )
 
 
-def _invoke_plain(*, coder: str, step: str, prompt_text: str, cwd: Path, sidecar_path: Path | None = None) -> dict[str, Any]:
+def _invoke_plain(*, coder: str, step: str, prompt_text: str, cwd: Path, sidecar_path: Path | None = None, timeout_seconds_override: int | None = None) -> dict[str, Any]:
     command = [coder]
-    timeout_seconds = _coder_timeout_seconds()
+    timeout_seconds = _coder_timeout_seconds(timeout_seconds_override)
     try:
         return_code, stdout, stderr = _run_with_sidecar_poll(
             command,
@@ -521,7 +532,7 @@ def _invoke_plain(*, coder: str, step: str, prompt_text: str, cwd: Path, sidecar
     }
 
 
-def _invoke_codex(*, step: str, prompt_text: str, cwd: Path, schema_path: Path, sidecar_path: Path | None = None) -> dict[str, Any]:
+def _invoke_codex(*, step: str, prompt_text: str, cwd: Path, schema_path: Path, sidecar_path: Path | None = None, timeout_seconds_override: int | None = None) -> dict[str, Any]:
     with tempfile.NamedTemporaryFile("w+", encoding="utf-8", delete=False) as temp_output:
         output_path = Path(temp_output.name)
     command = [
@@ -536,7 +547,7 @@ def _invoke_codex(*, step: str, prompt_text: str, cwd: Path, schema_path: Path, 
         str(output_path),
         "-",
     ]
-    timeout_seconds = _coder_timeout_seconds()
+    timeout_seconds = _coder_timeout_seconds(timeout_seconds_override)
     try:
         try:
             return_code, stdout, stderr = _run_with_sidecar_poll(
@@ -615,7 +626,7 @@ def _extract_codex_error_from_events(lines: list[str]) -> str | None:
     return last_error
 
 
-def _invoke_claude(*, step: str, prompt_text: str, cwd: Path, schema_path: Path, sidecar_path: Path | None = None, coder_config: dict[str, Any] | None = None) -> dict[str, Any]:
+def _invoke_claude(*, step: str, prompt_text: str, cwd: Path, schema_path: Path, sidecar_path: Path | None = None, coder_config: dict[str, Any] | None = None, timeout_seconds_override: int | None = None) -> dict[str, Any]:
     schema_text = schema_path.read_text(encoding="utf-8")
     cc = coder_config or {}
     command = ["claude"]
@@ -624,7 +635,7 @@ def _invoke_claude(*, step: str, prompt_text: str, cwd: Path, schema_path: Path,
         command.extend(["--model", cc["model"]])
     command.extend(["--dangerously-skip-permissions"])
     command.extend(["--print", "--output-format", "json"])
-    timeout_seconds = _coder_timeout_seconds()
+    timeout_seconds = _coder_timeout_seconds(timeout_seconds_override)
     try:
         return_code, stdout, stderr = _run_with_sidecar_poll(
             command,
@@ -659,7 +670,7 @@ def _invoke_claude(*, step: str, prompt_text: str, cwd: Path, schema_path: Path,
     }
 
 
-def _invoke_qwen(*, step: str, prompt_text: str, cwd: Path, coder_config: dict[str, Any] | None = None, sidecar_path: Path | None = None) -> dict[str, Any]:
+def _invoke_qwen(*, step: str, prompt_text: str, cwd: Path, coder_config: dict[str, Any] | None = None, sidecar_path: Path | None = None, timeout_seconds_override: int | None = None) -> dict[str, Any]:
     cc = coder_config or {}
     command = ["qwen", "-y"]
 
@@ -675,14 +686,14 @@ def _invoke_qwen(*, step: str, prompt_text: str, cwd: Path, coder_config: dict[s
     if cc.get("openai_base_url"):
         command.extend(["--openai-base-url", cc["openai_base_url"]])
 
-    # Pass prompt via stdin instead of CLI arg to avoid Windows CreateProcess
-    # 8191-char command-line limit — the prompt is far too long for argv.
-    command.append("-p")
+    # Enable prompt mode via the long-form flag and keep the actual prompt on
+    # stdin. This avoids the short `-p` form that can be mis-handled on Windows.
+    command.append("--prompt")
 
     # Log the actual command for debugging (mask API key)
     _log_command_for_step(step, command, cc)
 
-    timeout_seconds = _coder_timeout_seconds()
+    timeout_seconds = _coder_timeout_seconds(timeout_seconds_override)
     try:
         return_code, stdout, stderr = _run_with_sidecar_poll(
             command,
@@ -704,8 +715,11 @@ def _invoke_qwen(*, step: str, prompt_text: str, cwd: Path, coder_config: dict[s
 
     # FAST FAIL: Detect empty output immediately to provide clear diagnostics
     # (skip when sidecar-triggered — stdout may be empty but sidecar has the result)
+    sidecar_valid = bool(
+        sidecar_path is not None and sidecar_path.exists() and _is_valid_sidecar_json(sidecar_path)
+    )
     print(f"[_invoke_qwen] return_code={return_code}, stdout_len={len(stdout.strip())}, sidecar_path={sidecar_path}", flush=True)
-    if not stdout.strip() and not (sidecar_path is not None and sidecar_path.exists() and _is_valid_sidecar_json(sidecar_path)):
+    if not stdout.strip() and not sidecar_valid:
         print(f"[_invoke_qwen] FAIL: no stdout and sidecar not valid", flush=True)
         raise CoderInvocationError(
             message="Qwen completed but produced no output (empty stdout). "
@@ -723,7 +737,9 @@ def _invoke_qwen(*, step: str, prompt_text: str, cwd: Path, coder_config: dict[s
     payload = _parse_json_payload(stdout)
     raw_events = _payload_to_raw_events(payload, stdout)
     try:
-        if payload is not None:
+        if sidecar_valid:
+            parsed_result = {}
+        elif payload is not None:
             parsed_result = _extract_result_from_qwen_payload(payload)
         elif stdout.strip():
             parsed_result = _extract_json_object(stdout)

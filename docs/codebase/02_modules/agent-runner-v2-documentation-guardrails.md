@@ -6,8 +6,8 @@ module_path: "agent_runner_v2/documentation_guardrails.py"
 module_area: "support"
 documentation_mode: "summary"
 owner_doc_path: "docs/codebase/02_modules/agent-runner-v2-documentation-guardrails.md"
-last_verified_by_change: "00_master_docs_bootstrap_v1 / 00DOC-GEN-20260702-005 / 2026-07-02T18:00:53+08:00"
-created: "2026-07-02T18:00:53+08:00"
+last_verified_by_change: "00_master_docs_bootstrap_v1 / 00DOC-GEN-20260704-001 / 2026-07-04T06:01:39+08:00"
+created: "2026-07-04T06:01:39+08:00"
 owner: "00_master_docs_bootstrap_v1"
 ---
 
@@ -45,9 +45,15 @@ This module belongs to the `support` area and is documented as `summary`.
 |----------|-----------|---------|
 | `managed_banner` | `()` | public function |
 | `master_bootstrap_doc_paths` | `()` | public function |
+| `legacy_master_bootstrap_doc_paths` | `()` | public function |
+| `scan_workflow_generated_paths` | `()` | public function |
+| `workflow_canonical_doc_paths` | `()` | public function |
+| `workflow_legacy_doc_paths` | `()` | public function |
 | `master_bootstrap_artifact_candidates` | `()` | public function |
 | `execution_scaffold_doc_paths` | `()` | public function |
 | `workflow_generated_doc_paths` | `()` | public function |
+| `workflow_stale_generated_doc_paths` | `()` | public function |
+| `workflow_owned_doc_paths_for_cleanup` | `()` | public function |
 | `generated_doc_manifest` | `()` | public function |
 | `snapshot_paths` | `()` | public function |
 
@@ -58,6 +64,7 @@ This module belongs to the `support` area and is documented as `summary`.
 | `MASTER_BOOTSTRAP_WORKFLOW` | constant | module configuration |
 | `EXECUTION_SCAFFOLD_WORKFLOW` | constant | module configuration |
 | `WORKFLOW_GENERATED_MARKER` | constant | module configuration |
+| `DEFAULT_LEGACY_QUARANTINE_DIR` | constant | module configuration |
 
 ## 3. Internal Implementation
 
@@ -96,6 +103,7 @@ Tracked at a baseline level by the repository scan.
 | Test File | Coverage Area |
 |-----------|--------------|
 | `tests/test_documentation_governance.py` | `agent_runner_v2.documentation_guardrails` |
+| `tests/test_documentation_guardrails_cleanup.py` | `agent_runner_v2.documentation_guardrails` |
 
 ### 6.2 Known Gaps
 
@@ -105,4 +113,4 @@ Auto-generated baseline. Review and refine as the codebase evolves.
 
 | Date | Change | Verified By |
 |------|--------|-------------|
-| 2026-07-02 | Initial baseline generated from repository scan | 00_master_docs_bootstrap_v1 |
+| 2026-07-04 | Initial baseline generated from repository scan | 00_master_docs_bootstrap_v1 |

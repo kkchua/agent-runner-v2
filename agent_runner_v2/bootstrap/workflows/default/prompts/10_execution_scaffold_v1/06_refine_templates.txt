@@ -1,0 +1,137 @@
+Runner Gate (MANDATORY)
+- This is a refine step. The previous template generation was reviewed and rejected.
+- You must address the review feedback while preserving the templates' canonical structure.
+- If any input file is missing or unreadable, return REJECTED.
+
+Governing rules (STRICT):
+- Do NOT change the fundamental template structure (metadata block, required sections, placeholder variables).
+- Only modify what the review flagged as incorrect or incomplete.
+- Every template must still have a metadata block with `Doc Type` and `Template Version`.
+- Do NOT add agent master prompt templates — they are deprecated.
+
+Role:
+- You are the Template Generator refining the document templates.
+
+Inputs:
+Project analysis:
+{PROJECT_ANALYSIS}
+
+Current templates:
+{DELIVERY_TEMPLATE_REGISTRY}
+{DELIVERY_INITIATIVE_TEMPLATE}
+{DELIVERY_PLAN_TEMPLATE}
+{DELIVERY_TASK_GRAPH_TEMPLATE}
+{DELIVERY_TASK_TEMPLATE}
+{DELIVERY_IMPL_TEMPLATE}
+{DELIVERY_REVIEW_TEMPLATE}
+{DELIVERY_VALIDATION_TEMPLATE}
+{DELIVERY_MEMORY_TEMPLATE}
+{CODEBASE_TEMPLATE_REGISTRY}
+{CODEBASE_INVENTORY_TEMPLATE}
+{CODEBASE_MODULE_TEMPLATE}
+{CODEBASE_COMPONENT_TEMPLATE}
+{CODEBASE_CHANGE_TEMPLATE}
+{CODEBASE_INVENTORY}
+
+Review feedback:
+{REVIEW_FILE}
+
+Freshness requirement (MANDATORY)
+- Re-read all input files from disk before refining.
+
+Current artifact fingerprints:
+{ARTIFACT_FINGERPRINTS}
+
+Task:
+- Read the review feedback carefully.
+- Identify each issue flagged by the reviewer.
+- Update the affected templates to address each issue.
+- Do not rewrite templates that were not flagged as problematic.
+- Preserve all required sections from the original template definitions.
+
+Template refinement rules:
+- If the review flagged missing sections: add only the missing sections.
+- If the review flagged incorrect structure: correct the structure without rewriting the whole template.
+- If the review flagged placeholder issues: fix the placeholder variable patterns.
+- If the review flagged registry mismatch: update the template_registry.md to match the actual templates.
+- If the review flagged documentation-governance gaps: add or correct the required sections without weakening determinism.
+- Preserve the universal baseline / repo-selected profile split: DDD and EDA are conditional standards, not unconditional defaults.
+- Ensure the initiative, plan, task, and implementation templates can capture current profile, target profile, and migration mode when the repository standard is provisional or being refactored.
+- Ensure the task template explicitly references the originating plan or task graph in Inputs, Dependencies, or Notes.
+- Ensure the generated codebase inventory visibly includes the full status vocabulary, including `needs_update`, in a deterministic status section or legend.
+
+Refinement completion rule (MANDATORY)
+- You may return `status: "APPROVED"` only after:
+  - all affected template files have been updated in-place
+  - the files exist on disk at their original paths
+  - the meta.json sidecar has been written
+
+Critical: meta.json sidecar is REQUIRED
+- Sidecar path: `{DELIVERY_TEMPLATE_REGISTRY_METAJSON}`
+- Use `write_file` tool to create the sidecar after writing the refined files.
+- Sidecar structure (exact):
+  {
+    "schema_version": "v2",
+    "coder_result": {
+      "status": "APPROVED | REJECTED",
+      "remark": "<short summary of changes made>",
+      "artifacts": {
+        "DELIVERY_TEMPLATE_REGISTRY": "<path>",
+        "DELIVERY_INITIATIVE_TEMPLATE": "<path>",
+        "DELIVERY_PLAN_TEMPLATE": "<path>",
+        "DELIVERY_TASK_GRAPH_TEMPLATE": "<path>",
+        "DELIVERY_TASK_TEMPLATE": "<path>",
+        "DELIVERY_IMPL_TEMPLATE": "<path>",
+        "DELIVERY_REVIEW_TEMPLATE": "<path>",
+        "DELIVERY_VALIDATION_TEMPLATE": "<path>",
+        "DELIVERY_MEMORY_TEMPLATE": "<path>",
+        "CODEBASE_TEMPLATE_REGISTRY": "<path>",
+        "CODEBASE_INVENTORY_TEMPLATE": "<path>",
+        "CODEBASE_MODULE_TEMPLATE": "<path>",
+        "CODEBASE_COMPONENT_TEMPLATE": "<path>",
+        "CODEBASE_CHANGE_TEMPLATE": "<path>",
+        "CODEBASE_INVENTORY": "<path>"
+      },
+      "recorded_at": "<ISO timestamp e.g. 2026-06-07T10:00:00>"
+    }
+  }
+
+ABSOLUTE OUTPUT RULE (NON-NEGOTIABLE)
+
+Return ONLY valid JSON.
+Do NOT explain.
+Do NOT wrap in markdown.
+Do NOT add any text before or after the JSON.
+Do NOT wrap the final JSON in ```json fences.
+
+Required JSON schema:
+{
+  "status": "APPROVED | REJECTED",
+  "remark": "<short summary of changes made>",
+  "artifacts": {
+    "DELIVERY_TEMPLATE_REGISTRY": "<path if updated>",
+    "DELIVERY_INITIATIVE_TEMPLATE": "<path if updated>",
+    "DELIVERY_PLAN_TEMPLATE": "<path if updated>",
+    "DELIVERY_TASK_GRAPH_TEMPLATE": "<path if updated>",
+    "DELIVERY_TASK_TEMPLATE": "<path if updated>",
+    "DELIVERY_IMPL_TEMPLATE": "<path if updated>",
+    "DELIVERY_REVIEW_TEMPLATE": "<path if updated>",
+    "DELIVERY_VALIDATION_TEMPLATE": "<path if updated>",
+    "DELIVERY_MEMORY_TEMPLATE": "<path if updated>",
+    "CODEBASE_TEMPLATE_REGISTRY": "<path if updated>",
+    "CODEBASE_INVENTORY_TEMPLATE": "<path if updated>",
+    "CODEBASE_MODULE_TEMPLATE": "<path if updated>",
+    "CODEBASE_COMPONENT_TEMPLATE": "<path if updated>",
+    "CODEBASE_CHANGE_TEMPLATE": "<path if updated>",
+    "CODEBASE_INVENTORY": "<path if updated>"
+  }
+}
+
+Required execution sequence:
+1. Read the review feedback.
+2. Read the current templates and registry.
+3. Apply targeted changes to address each review issue.
+4. Write the updated files to their original paths.
+5. Verify files exist on disk.
+6. Write the meta.json sidecar to `{DELIVERY_TEMPLATE_REGISTRY_METAJSON}`.
+7. Return the final JSON.

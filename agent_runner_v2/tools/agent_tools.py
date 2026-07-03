@@ -10,6 +10,7 @@ Also POSTs to the backend API when BACKEND_URL and WORKFLOW_STEP_RUN_ID are set.
 """
 import json
 import os
+import sys
 import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
@@ -52,8 +53,13 @@ def _post_progress(step: str, index: int, item: str, status: str, notes: str = "
             method="POST",
         )
         urllib.request.urlopen(req, timeout=5)
-    except Exception:
-        pass
+    except Exception as exc:
+        print(
+            f"[agent_tools] warning: backend progress update failed for step={step!r} "
+            f"index={index} status={status!r}: {exc}",
+            file=sys.stderr,
+            flush=True,
+        )
 
 
 def create_todos(step_id: str, todos: list) -> dict:

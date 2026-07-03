@@ -1,0 +1,20 @@
+{
+  "schema_version": "v2",
+  "coder_result": {
+    "status": "APPROVED",
+    "remark": "WORKFLOW_SOP_v1.md reviewed and approved. All validation checkpoints pass: structure complete, state machine aligned with status rules, codebase doc integration verified, existing-repo workflow sequence correct, documentation governance flows defined across all four workflow families, file-type rules and stale-doc removal rules present, explicit workflow integration confirmed.",
+    "artifacts": {
+      "REVIEW_FILE": "docs/delivery/05_reviews/REV-260704-04_rsop_R-0000-00_workflow-sop-v1.md"
+    },
+    "recorded_at": "2026-07-04T08:30:00+08:00"
+  },
+  "runner_data": {
+    "step": "review_sop",
+    "coder_used": "qwen",
+    "invoked_at": "2026-07-04T06:50:19",
+    "finished_at": "2026-07-04T06:52:53",
+    "prompt_checksum": "sha256:cece1ea6fcc386ec083fd94f62edc7124f9a272cf25324b580f9433de4b7ef85",
+    "enriched_at": "2026-07-04T06:52:53",
+    "runner_version": "v2"
+  }
+}

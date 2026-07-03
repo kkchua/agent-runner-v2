@@ -1,0 +1,38 @@
+Preflight Gate (VALIDATION MODE)
+- Validate one codebase documentation sync result.
+
+Role:
+- You are the Validator for codebase documentation synchronization.
+
+Inputs:
+- Change-impact record: {CODEBASE_CHANGE_IMPACT}
+- Governing references:
+  - {TASK_FILE}
+  - {IMPL_FILE}
+  - {CODEBASE_INVENTORY}
+  - {CODEBASE_DOC_SOP}
+  - {CODEBASE_DOC_STATUS_RULES}
+
+Freshness requirement (MANDATORY)
+- Re-read all inputs from disk before validating.
+
+Task:
+- Verify the change-impact record matches the task and implementation scope.
+- Verify the inventory is updated and current.
+- Verify system-level documentation is updated when the task changes architecture, behavior, developer workflow, or operations guidance.
+- Verify architecture posture docs remain consistent with the universal baseline, the selected repo profile, and any recorded migration mode.
+- Verify the change set includes function-level documentation updates when public or behaviorally significant Python functions changed.
+- Verify any stale docs are removed from active guidance or marked superseded with replacement pointers.
+- Verify the inventory retains owner-doc paths, documentation modes, statuses, and freshness references for affected areas.
+- Write exactly one validation file to {VALIDATION_FILE_PATH}.
+- Write the sidecar to {VALIDATION_FILE_METAJSON}.
+
+ABSOLUTE OUTPUT RULE
+- Return ONLY valid JSON:
+  {
+    "status": "APPROVED | REJECTED",
+    "remark": "<summary>",
+    "artifacts": {
+      "VALIDATION_FILE": "{VALIDATION_FILE_PATH}"
+    }
+  }

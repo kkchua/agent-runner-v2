@@ -1,0 +1,20 @@
+{
+  "schema_version": "v2",
+  "coder_result": {
+    "status": "APPROVED",
+    "remark": "WORKFLOW_SOP_v1.md correctly adapted to project analysis, complete, operationally usable. Status rules consistent. Existing-repo SOP operator sequence correct. Documentation governance flows defined across all phases. File-type rules and stale-doc removal rules present.",
+    "artifacts": {
+      "REVIEW_FILE": "docs/delivery/05_reviews/REV-260704-01_rsop_R-0000-00_workflow-sop-v1.md"
+    },
+    "recorded_at": "2026-07-04T00:00:00+08:00"
+  },
+  "runner_data": {
+    "step": "review_sop",
+    "coder_used": "qwen",
+    "invoked_at": "2026-07-04T00:18:31",
+    "finished_at": "2026-07-04T00:21:40",
+    "prompt_checksum": "sha256:57241d71ffd33efb17517ad0e24a024a7a56d868621cb035a03ec2433a6b8552",
+    "enriched_at": "2026-07-04T00:21:40",
+    "runner_version": "v2"
+  }
+}

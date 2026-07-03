@@ -1,360 +1,319 @@
 ---
-title: "Runbook: agent-runner-v2"
 template_id: "OPS-01-RB"
+title: "Runbook - agent-runner-v2"
 status: "active"
-managed_by: workflow-generated
-created: "2026-07-02T20:00:00+08:00"
+generated: "2026-07-04T10:00:00+08:00"
 workflow: "00_master_docs_bootstrap_v1"
 step: "04_generate_architecture_docs"
-change_id: "00DOC-GEN-20260702-005"
+change_id: "00DOC-GEN-20260704-001"
+managed_by: workflow-generated
 ---
-
-# Runbook: agent-runner-v2
 
 > Managed by workflow: `00_master_docs_bootstrap_v1` / step: `04_generate_architecture_docs`
 > This file is workflow-generated and protected from manual edits.
 
-## 1. Operational Overview
+# Runbook: agent-runner-v2
 
-### 1.1 Key Concepts
+## Operations Scope
 
-| Concept | Description |
-|---------|-------------|
-| **Job** | A workflow execution instance with unique ID |
-| **Step** | A single unit of work within a workflow |
-| **Sidecar** | The `meta.json` file containing step results |
-| **Runner Home** | Global runtime directory (`%USERPROFILE%\.ukbe-runner\`) |
-| **Workflow Bundle** | A collection of templates and prompts for a workflow |
-| **Action** | Deterministic operation performed by the runner |
+This runbook covers operational procedures for the agent-runner-v2 workflow execution platform, including local execution, worker mode operation, and daemon supervision.
 
-### 1.2 Runtime Paths
+## Routine Procedures
 
-| Path | Windows | Description |
-|------|---------|-------------|
-| Runner Home | `%USERPROFILE%\.ukbe-runner\` | Global runtime directory |
-| Jobs | `%USERPROFILE%\.ukbe-runner\jobs\<group>\<job-id>\` | Job state |
-| Workflows | `%USERPROFILE%\.ukbe-runner\workflows\<workflow>\` | Workflow bundles |
-| Logs | `%USERPROFILE%\.ukbe-runner\logs\` | Execution logs |
+### Daily Operations
 
-## 2. Job State Management
-
-### 2.1 Where Job State Lives
-
-Job state is stored in JSON files:
-
-```
-%USERPROFILE%\.ukbe-runner\jobs\<group>\<job-id>\
-├── job.json              # Main job state
-├── <step-01>\            # Step directory
-│   ├── meta.json         # Step result sidecar
-│   ├── prompt.txt        # Rendered prompt
-│   └── debug\            # Debug outputs
-└── ...
-```
-
-### 2.2 Key Job State Fields
-
-```json
-{
-  "job_id": "uuid",
-  "job_status": "IN_PROGRESS",
-  "template_group": "workflow_name",
-  "current_step": "step_name",
-  "completed_steps": [...],
-  "artifacts": {...},
-  "retry_history": [...],
-  "schema_version": 6,
-  "runner_version": "v2"
-}
-```
-
-### 2.3 Job Status Values
-
-| Status | Meaning | Next Action |
-|--------|---------|-------------|
-| `CREATED` | Job initialized | Run first step |
-| `IN_PROGRESS` | Step executing | Wait for completion |
-| `WAITING_FOR_AUTO_RETRY` | Failed, will retry | Automatic retry |
-| `WAITING_FOR_HUMAN_INTERVENTION` | Failed, needs help | Manual intervention |
-| `WAITING_FOR_HUMAN_APPROVAL` | Step complete, needs approval | Approve or reject |
-| `COMPLETED` | Workflow finished | Archive job |
-| `FAILED` | Terminal failure | Investigate |
-
-### 2.4 Inspecting Job State
+#### Check Daemon Status
 
 ```bash
-# Read job state (Windows PowerShell)
-Get-Content "$env:USERPROFILE\.ukbe-runner\jobs\default\<job-id>\job.json" | ConvertFrom-Json
+# View daemon logs
+type "%USERPROFILE%\.ukbe-runner\logs\daemon-<worker-id>.log"
 
-# Read step result
-Get-Content "$env:USERPROFILE\.ukbe-runner\jobs\default\<job-id>\<step>\meta.json" | ConvertFrom-Json
-
-# List all jobs
-Get-ChildItem "$env:USERPROFILE\.ukbe-runner\jobs\default\" | Select-Object Name
+# Check for running daemon processes
+tasklist | findstr python
 ```
 
-## 3. Runtime Bundle Management
-
-### 3.1 Where Bundles Live
-
-| Location | Path | Purpose |
-|----------|------|---------|
-| Bootstrap | `agent_runner_v2/bootstrap/workflows/default/` | Package source |
-| Runtime | `%USERPROFILE%\.ukbe-runner\workflows\default\` | Active execution |
-
-### 3.2 Bundle Initialization
-
-Initialize or refresh the runtime bundle:
+#### Verify Worker Health
 
 ```bash
+# Test worker connectivity
+ukbe-run-agent worker --backend-url <url> --worker-id <id> --once
+```
+
+#### Monitor Job Queue
+
+```bash
+# Check job status
+ukbe-run-agent run --template-group <group> --job-id <id> --check-job-status
+
+# Show job details
+ukbe-run-agent run --template-group <group> --job-id <id> --show-job
+```
+
+### Weekly Operations
+
+#### Log Rotation
+
+Daemon and job logs accumulate in `%USERPROFILE%\.ukbe-runner\logs\`:
+
+```batch
+REM Rotate logs (manual)
+move "%USERPROFILE%\.ukbe-runner\logs\daemon-*.log" "\archive\logs\"
+```
+
+#### Workflow Bundle Verification
+
+Ensure runtime bundles match expected state:
+
+```python
+# Check workflow bundle checksums
+import hashlib
+from pathlib import Path
+
+workflow_root = Path.home() / ".ukbe-runner" / "workflows" / "default"
+template_groups = workflow_root / "template_groups.py"
+print(f"template_groups.py exists: {template_groups.exists()}")
+```
+
+### Monthly Operations
+
+#### Cleanup Old Jobs
+
+Job state persists indefinitely. Clean up completed jobs:
+
+```batch
+REM Remove old job directories (careful!)
+REM Only remove jobs with terminal status (COMPLETED, FAILED, ABORTED)
+```
+
+#### Update Workflow Bundles
+
+If bootstrap source has been updated:
+
+```bash
+# Re-seed workflow bundles
 ukbe-run-agent init
 ```
 
-This seeds the runtime home from the package bootstrap.
+## Failure Handling
 
-### 3.3 Bundle Updates
+### Job State Locations
 
-To update the runtime bundle after package upgrade:
+| Location | Purpose |
+|----------|---------|
+| `%USERPROFILE%\.ukbe-runner\jobs\<group>\<job-id>\job.json` | Job state persistence |
+| `%USERPROFILE%\.ukbe-runner\jobs\<group>\<job-id>\<step>\meta.json` | Step result sidecars |
+| `%USERPROFILE%\.ukbe-runner\logs\` | Execution logs |
 
+### Common Failure Scenarios
+
+#### Scenario 1: meta.json Missing
+
+**Symptoms:**
+- Error: `MetaJsonMissingError`
+- Step shows as failed
+- No artifacts produced
+
+**Diagnosis:**
 ```bash
-# Backup existing
-mv "%USERPROFILE%\.ukbe-runner\workflows\default" "%USERPROFILE%\.ukbe-runner\workflows\default.backup"
-
-# Reinitialize
-ukbe-run-agent init
-
-# Restore custom prompts if needed
+# Check if meta.json exists
+if exist "%USERPROFILE%\.ukbe-runner\jobs\<group>\<job>\<step>\meta.json" (
+    echo meta.json exists
+) else (
+    echo meta.json MISSING
+)
 ```
 
-## 4. Logs and Debugging
+**Recovery:**
+1. Check coder logs for write errors
+2. Verify disk space
+3. Re-run step: `run-reset-step.bat` or `--step <step>` to retry
 
-### 4.1 Log Locations
+#### Scenario 2: Artifact Missing
 
-| Log | Path | Contents |
-|-----|------|----------|
-| Runner Log | `%USERPROFILE%\.ukbe-runner\logs\ukbe-runner-*.log` | General execution |
-| Step Debug | `%USERPROFILE%\.ukbe-runner\jobs\...\<step>\debug\` | Step-specific debug |
+**Symptoms:**
+- Error: `ArtifactMissingError`
+- meta.json exists but claims non-existent artifacts
 
-### 4.2 Log Levels
-
-| Level | Usage |
-|-------|-------|
-| DEBUG | Detailed execution flow |
-| INFO | Normal operations |
-| WARNING | Recoverable issues |
-| ERROR | Failures requiring attention |
-
-### 4.3 Debug Commands
-
+**Diagnosis:**
 ```bash
-# Enable debug logging
-$env:AGENT_RUNNER_LOG_LEVEL = "debug"
-
-# View recent logs
-Get-Content "$env:USERPROFILE\.ukbe-runner\logs\ukbe-runner-$(Get-Date -Format 'yyyyMMdd').log" -Tail 50
-
-# Monitor logs in real-time
-Get-Content "$env:USERPROFILE\.ukbe-runner\logs\ukbe-runner-$(Get-Date -Format 'yyyyMMdd').log" -Wait
+# Check claimed artifact paths
+# Read meta.json and verify each artifact exists
 ```
 
-## 5. Troubleshooting
+**Recovery:**
+1. Verify artifact was created by coder
+2. Check file permissions
+3. Re-run step if needed
 
-### 5.1 Workflow Bundle Not Found
+#### Scenario 3: Backend Connection Failure
 
 **Symptoms:**
-```
-Error: Workflow bundle not found: default
-```
+- Worker cannot claim work
+- Daemon shows connection errors
+- `BackendClient` timeout errors
 
-**Resolution:**
+**Diagnosis:**
 ```bash
-# Reinitialize runner
-ukbe-run-agent init
-
-# Verify paths
-Test-Path "$env:USERPROFILE\.ukbe-runner\workflows\default\template_groups.py"
+# Test backend connectivity
+curl <backend-url>/health
 ```
 
-### 5.2 Meta.json Not Written
-
-**Symptoms:**
-Step fails with `MetaJsonMissingError`
-
-**Resolution:**
-1. Check coder timeout (default 600s)
-2. Check step directory exists
-3. Check disk space
-4. Review coder logs in debug directory
-
-### 5.3 Artifact Validation Failure
-
-**Symptoms:**
-```
-Error: ArtifactMissingError: <path> not found
-```
-
-**Resolution:**
-1. Check artifact path in `meta.json`
-2. Verify path is relative to project root
-3. Check file actually exists
-4. Review coder output
-
-### 5.4 Daemon Issues
-
-**Symptoms:**
-Daemon fails to start or crashes
-
-**Resolution:**
-```bash
-# Check daemon status
-ukbe-run-agent daemon --status
-
-# Restart daemon
-ukbe-run-agent daemon --stop
-ukbe-run-agent daemon --start
-
-# Check daemon logs
-cat "%USERPROFILE%\.ukbe-runner\logs\daemon.log"
-```
-
-### 5.5 Backend Connection Issues
-
-**Symptoms:**
-Worker mode cannot connect to backend
-
-**Resolution:**
+**Recovery:**
 1. Verify backend URL
 2. Check network connectivity
-3. Verify worker registration
-4. Check backend health endpoint
+3. Restart worker: `ukbe-run-agent worker --backend-url <url> --worker-id <id>`
 
-## 6. Operational Procedures
+#### Scenario 4: Coder Timeout
 
-### 6.1 Restart Failed Step
+**Symptoms:**
+- Step hangs indefinitely
+- `CoderInvocationError` with timeout message
 
-```bash
-# Reset step and retry
-ukbe-run-agent run --job-id <job-id> --retry
+**Diagnosis:**
+Check `AGENT_RUNNER_CODER_TIMEOUT_SECONDS` environment variable (default: 600s)
+
+**Recovery:**
+1. Increase timeout: `set AGENT_RUNNER_CODER_TIMEOUT_SECONDS=900`
+2. Check LLM provider status
+3. Re-run step
+
+#### Scenario 5: Daemon Child Process Failure
+
+**Symptoms:**
+- Daemon log shows child exit with error
+- Step shows as failed but daemon continues
+
+**Diagnosis:**
+```batch
+# Check daemon logs
+type "%USERPROFILE%\.ukbe-runner\logs\daemon-<worker-id>.log"
 ```
 
-### 6.2 Approve Step
+**Recovery:**
+1. Daemon automatically restarts polling
+2. Check child process logs
+3. Verify step configuration
+
+### Failure Classification
+
+| Class | Meaning | Auto-Recovery |
+|-------|---------|---------------|
+| `AUTO_RETRYABLE` | Transient failure (timeout, backend unavailable) | Yes, with backoff |
+| `HUMAN_RETRY_REQUIRED` | Logic error, needs human review | No |
+| `FATAL` | Unrecoverable error | No |
+
+### Retry Limits
+
+| Type | Default Limit | Configurable |
+|------|---------------|--------------|
+| Auto-retry | 3 | Per-step in template group |
+| Human retry | Unlimited | Per-step in template group |
+
+## Troubleshooting Commands
+
+### Job State Inspection
 
 ```bash
-# Approve a waiting step
-ukbe-run-agent approve <job-id> --step <step-name>
+# Show job state
+ukbe-run-agent run --template-group <group> --job-id <id> --show-job
 
-# Or use batch script
-run-approve-step.bat <job-id> <step-name>
+# Check job status
+ukbe-run-agent run --template-group <group> --job-id <id> --check-job-status
 ```
 
-### 6.3 Cleanup Old Jobs
+### Log Inspection
+
+```batch
+REM View daemon logs
+type "%USERPROFILE%\.ukbe-runner\logs\daemon-<worker-id>.log"
+
+REM View job logs (in job directory)
+type "%USERPROFILE%\.ukbe-runner\jobs\<group>\<job>\logs\*.log"
+```
+
+### Meta.json Inspection
 
 ```bash
-# List old jobs
-Get-ChildItem "$env:USERPROFILE\.ukbe-runner\jobs\default\" |
-    Where-Object { $_.LastWriteTime -lt (Get-Date).AddDays(-30) }
-
-# Archive old jobs (manual)
-Compress-Archive -Path "$env:USERPROFILE\.ukbe-runner\jobs\default\<job-id>" `
-    -DestinationPath "D:\archives\<job-id>.zip"
-
-# Remove old jobs (caution!)
-Remove-Item -Recurse "$env:USERPROFILE\.ukbe-runner\jobs\default\<job-id>"
+# Read step result
+type "%USERPROFILE%\.ukbe-runner\jobs\<group>\<job>\<step>\meta.json"
 ```
 
-### 6.4 Backup Runner Home
+### Dry Run Testing
 
 ```bash
-# Backup entire runner home
-Compress-Archive -Path "$env:USERPROFILE\.ukbe-runner\" `
-    -DestinationPath "D:\backups\ukbe-runner-$(Get-Date -Format 'yyyyMMdd').zip"
-
-# Backup just jobs
-Compress-Archive -Path "$env:USERPROFILE\.ukbe-runner\jobs\" `
-    -DestinationPath "D:\backups\jobs-$(Get-Date -Format 'yyyyMMdd').zip"
+# Test prompt rendering without invoking coder
+ukbe-run-agent run --template-group <group> --step <step> --dry-run
 ```
 
-## 7. Performance Monitoring
+## Runtime Bundle Locations
 
-### 7.1 Step Duration
+### Global Runner Home
 
-Check step duration in `meta.json`:
+```
+%USERPROFILE%\.ukbe-runner\
+├───config.json              # User configuration
+├───jobs\                    # Job state persistence
+│   └───<template_group>\    # e.g., 00_master_docs_bootstrap_v1
+│       └───<job_id>\        # e.g., 00DOC-GEN-20260703-007
+│           ├───job.json     # Job state
+│           └───<step_id>\   # Per-step directories
+│               └───meta.json
+├───workflows\               # Runtime workflow bundles
+│   └───<workflow_name>\     # e.g., default
+│       ├───template_groups.py
+│       ├───*.json
+│       └───prompts\         # Prompt templates
+│           └───<workflow_family>\
+│               └───*.txt
+└───logs\                    # Execution logs
+    ├───daemon-<worker-id>.log
+    └───...
+```
 
+### Sidecar Locations
+
+Step results are stored as `meta.json` sidecars:
+
+```
+%USERPROFILE%\.ukbe-runner\jobs\<group>\<job>\<step>\meta.json
+```
+
+**Sidecar Schema (v2):**
 ```json
 {
-  "usage": {
-    "duration_ms": 45000,
-    "started_at": "2026-07-02T10:00:00",
-    "finished_at": "2026-07-02T10:00:45"
+  "schema_version": "v2",
+  "coder_result": {
+    "status": "APPROVED",
+    "remark": "...",
+    "artifacts": {...},
+    "recorded_at": "..."
   }
 }
 ```
 
-### 7.2 Usage Data
+## Emergency Procedures
 
-Aggregate usage from `job.json`:
+### Daemon Won't Start
 
-```json
-{
-  "usage_summary": {
-    "total_tokens": 15000,
-    "total_cost": 0.45,
-    "steps_completed": 5
-  }
-}
-```
+1. Check for existing daemon process
+2. Kill if necessary: `taskkill /F /IM python.exe`
+3. Clear daemon logs
+4. Restart: `ukbe-run-agent daemon <worker-id>`
 
-### 7.3 Disk Space
+### Workflow Bundle Corruption
 
-Monitor runner home size:
+1. Backup custom workflows if needed
+2. Remove corrupt bundle: `rmdir /S "%USERPROFILE%\.ukbe-runner\workflows\<name>"`
+3. Re-seed: `ukbe-run-agent init`
 
-```bash
-# Get runner home size
-(Get-ChildItem "$env:USERPROFILE\.ukbe-runner\" -Recurse |
-    Measure-Object -Property Length -Sum).Sum / 1MB
+### Job State Corruption
 
-# Get jobs size
-(Get-ChildItem "$env:USERPROFILE\.ukbe-runner\jobs\" -Recurse |
-    Measure-Object -Property Length -Sum).Sum / 1MB
-```
-
-## 8. Emergency Procedures
-
-### 8.1 Stop All Jobs
-
-```bash
-# Stop daemon
-ukbe-run-agent daemon --stop
-
-# Kill any lingering processes
-Get-Process | Where-Object { $_.Name -like "*ukbe*" } | Stop-Process -Force
-```
-
-### 8.2 Recover Corrupted State
-
-```bash
-# If job.json is corrupted, check for backup
-Test-Path "$env:USERPROFILE\.ukbe-runner\jobs\default\<job-id>\job.json.bak"
-
-# Restore from backup
-Copy-Item "$env:USERPROFILE\.ukbe-runner\jobs\default\<job-id>\job.json.bak" `
-    "$env:USERPROFILE\.ukbe-runner\jobs\default\<job-id>\job.json"
-```
-
-### 8.3 Reset Runner Home
-
-**Caution: Destroys all job state and workflows!**
-
-```bash
-# Backup first
-Compress-Archive -Path "$env:USERPROFILE\.ukbe-runner\" `
-    -DestinationPath "D:\backups\ukbe-runner-emergency-$(Get-Date -Format 'yyyyMMdd-HHmm').zip"
-
-# Remove and reinitialize
-Remove-Item -Recurse "$env:USERPROFILE\.ukbe-runner\"
-ukbe-run-agent init
-```
+1. Identify corrupt job: `--show-job` shows invalid JSON
+2. Archive if needed
+3. Create new job: `--new-job` flag
 
 ---
 
-*Generated by workflow `00_master_docs_bootstrap_v1` step `04_generate_architecture_docs`*
+*Generated: 2026-07-04T10:00:00+08:00*
+*Workflow: 00_master_docs_bootstrap_v1 / Step: 04_generate_architecture_docs*
+*Change ID: 00DOC-GEN-20260704-001*

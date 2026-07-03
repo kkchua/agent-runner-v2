@@ -14,6 +14,7 @@ from pathlib import Path, PurePosixPath
 from typing import Any
 
 from .runtime_context import get_context, get_workflow_module
+from .bundle_loader import load_project_config
 
 
 EXCLUDED_DIRS = {
@@ -309,6 +310,7 @@ def _workflow_family_records() -> list[dict[str, Any]]:
 def build_snapshot(project_root: Path, *, mode: str, job_id: str, step: str, workflow_name: str | None = None) -> dict[str, Any]:
     now = _today_iso()
     workflow_name = str(workflow_name or get_context().workflow_name or mode)
+    project_config = load_project_config(project_root)
     files = _iter_repo_files(project_root)
     items = [_classify_file(project_root, path) for path in files]
     python_modules = []
@@ -332,6 +334,12 @@ def build_snapshot(project_root: Path, *, mode: str, job_id: str, step: str, wor
         "generated_at": now,
         "mode": mode,
         "workflow_name": workflow_name,
+        "bundle_profile": str(project_config.get("bundle_profile") or "core+workflow"),
+        "bundle_domain": str(project_config.get("bundle_domain") or "general"),
+        "bundle_manifest": str(project_config.get("bundle_manifest") or ""),
+        "architecture_profile": str(project_config.get("architecture_profile") or "provisional"),
+        "architecture_target_profile": str(project_config.get("architecture_target_profile") or "repo-selected"),
+        "architecture_migration_mode": str(project_config.get("architecture_migration_mode") or "targeted_migration"),
         "job_id": job_id,
         "step": step,
         "project_root": str(project_root),
@@ -364,7 +372,7 @@ def render_inventory(snapshot: dict[str, Any], *, title: str) -> str:
     sections = [
         _frontmatter([
             f'title: "Codebase Inventory - {title}"',
-            'template_id: "CB-01"',
+            'template_id: "CODEBASE-INV-v1"',
             'status: "active"',
             f'generated: "{generated_at}"',
             f'workflow: "{workflow_name}"',
@@ -446,7 +454,15 @@ def render_inventory(snapshot: dict[str, Any], *, title: str) -> str:
         ],
     ))
 
-    sections.append("## 10. Verification Log\n\n")
+    sections.append("## 10. Status Legend\n\n")
+    sections.append(
+        "- `current`: documentation is up to date and matches the source\n"
+        "- `needs_update`: source changed and documentation is stale\n"
+        "- `pending_review`: documentation exists but has not been verified\n"
+        "- `superseded`: documentation is obsolete or replaced\n\n"
+    )
+
+    sections.append("## 11. Verification Log\n\n")
     sections.append(table(
         ["Date", "Verified By", "Scope", "Result"],
         [[generated_at[:10], workflow_name, "repository scan", "complete"]],

@@ -1,276 +1,169 @@
 ---
-title: "System Context: agent-runner-v2"
-template_id: "SYS-03-SC"
+template_id: "SYS-03-CTX"
+title: "System Context - agent-runner-v2"
 status: "active"
-managed_by: workflow-generated
-created: "2026-07-02T20:00:00+08:00"
+generated: "2026-07-04T10:00:00+08:00"
 workflow: "00_master_docs_bootstrap_v1"
 step: "04_generate_architecture_docs"
-change_id: "00DOC-GEN-20260702-005"
+change_id: "00DOC-GEN-20260704-001"
+managed_by: workflow-generated
 ---
-
-# System Context: agent-runner-v2
 
 > Managed by workflow: `00_master_docs_bootstrap_v1` / step: `04_generate_architecture_docs`
 > This file is workflow-generated and protected from manual edits.
 
-## 1. System Boundary
+# System Context
 
-### 1.1 Scope
+## Context Statement
 
-The **agent-runner-v2** system is a standalone Python LLM workflow orchestration engine that:
+Agent-runner-v2 is a standalone Python-based LLM workflow orchestration engine that operates within a local development workstation environment, interacting with external LLM providers and optional backend services to execute structured multi-step workflows.
 
-- Orchestrates complex multi-step delivery workflows across multiple LLM backends
-- Enforces strict v2 sidecar contracts (`meta.json`) for all step results
-- Provides deterministic runner actions for repository operations
-- Supports local CLI execution, backend-connected worker modes, and daemon supervision
-- Manages workflow state through explicit job lifecycle transitions
+The system boundary encompasses the Python package, runtime workflow bundles, job state persistence, and CLI entry points. External entities include LLM providers (Claude, Codex, Qwen), the filesystem, and an optional backend API for distributed execution.
 
-### 1.2 In-Scope
+## Primary Context Elements
 
-| Capability | Description |
-|------------|-------------|
-| Workflow Execution | Multi-step workflow orchestration with review loops and retries |
-| LLM Integration | Claude, Codex, Qwen, and aliased model invocation |
-| Sidecar Contract | Strict `meta.json` validation as the only result channel |
-| Runner Actions | Deterministic file/system operations via action modules |
-| Job State Management | JSON-based state machine with schema versioning |
-| Backend Integration | Worker mode for backend-driven step execution |
-| Bundle Management | Bootstrap seeding and runtime workflow bundle loading |
-| Documentation Sync | Automated codebase and system documentation synchronization |
+### System Under Design
 
-### 1.3 Out-of-Scope
+| Aspect | Description |
+|--------|-------------|
+| **Name** | agent-runner-v2 |
+| **Type** | Python CLI application and library |
+| **Scope** | LLM workflow orchestration with step-level routing |
+| **Deployment** | Local workstation (Windows, macOS, Linux) |
 
-| Capability | Rationale |
+### External Entities
+
+| Entity | Role | Interface |
+|--------|------|-----------|
+| **LLM Providers** | Generate code/text outputs | CLI invocation via `claude`, `codex`, `qwen` commands |
+| **Filesystem** | Store jobs, logs, artifacts, bundles | Standard file I/O via `pathlib` |
+| **Backend API** | Queue and distribute work (optional) | HTTP REST API via `backend_client.py` |
+| **User/Operator** | Initiate workflows, approve steps | CLI (`ukbe-run-agent`) |
+| **Environment** | Configuration via env vars | `AGENT_RUNNER_*` variables |
+
+### Data Flows
+
+| Flow | Direction | Description |
+|------|-----------|-------------|
+| **Workflow Definition** | Internal → Runtime | Bootstrap templates copied to `~/.ukbe-runner/workflows/` |
+| **Job State** | Internal ↔ Persistent | JSON read/write to `~/.ukbe-runner/jobs/<job-id>/job.json` |
+| **Prompts** | Template → LLM | Rendered `.txt` files passed to coder adapters |
+| **Results** | LLM → Internal | `meta.json` sidecar as structured result channel |
+| **Artifacts** | Internal → Filesystem | Markdown, JSON, code files written to repo |
+| **Backend Sync** | Optional bidirectional | Poll for work, submit results, heartbeats |
+
+### System Boundary
+
+**Inside Boundary:**
+- Python package (`agent_runner_v2/`)
+- CLI entry point (`ukbe-run-agent`)
+- Runtime workflow bundles (loaded from disk)
+- Job state management and persistence
+- Deterministic action system
+- Prompt rendering and template processing
+
+**Outside Boundary:**
+- LLM provider implementations (external processes)
+- Backend API server (if used)
+- Target project repositories (workflow inputs/outputs)
+- Version control systems (git operations)
+- User's development environment (IDEs, editors)
+
+## Context Diagram
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                     agent-runner-v2 System                     │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────┐ │
+│  │   CLI Layer  │  │ Step Runner  │  │   Workflow Router    │ │
+│  │  run_agent   │──│  step_runner │──│   workflow_router  │ │
+│  └──────────────┘  └──────────────┘  └──────────────────────┘ │
+│         │                 │                      │            │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────┐ │
+│  │  Job State   │  │   Actions    │  │   Bundle Loader      │ │
+│  │  job_state   │  │   actions/   │  │   bundle_loader      │ │
+│  └──────────────┘  └──────────────┘  └──────────────────────┘ │
+│         │                 │                      │            │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────┐ │
+│  │Runtime Context│  │Coder Adapters│  │   Backend Client     │ │
+│  │runtime_context│ │ coder_adapters│ │   backend_client     │ │
+│  └──────────────┘  └──────────────┘  └──────────────────────┘ │
+└─────────────────────────────────────────────────────────────────┘
+        │                  │                  │
+        ▼                  ▼                  ▼
+   ┌─────────┐      ┌──────────┐      ┌──────────┐
+   │Filesystem│      │  LLM     │      │ Backend  │
+   │~/.ukbe- │      │ Providers│      │   API    │
+   │runner/  │      │(Claude,  │      │(optional)│
+   └─────────┘      │ Codex,   │      └──────────┘
+                    │  Qwen)   │
+                    └──────────┘
+```
+
+## Key Interfaces
+
+### LLM Provider Interface
+
+| Provider | Command | Timeout Config |
+|----------|---------|--------------|
+| Claude | `claude` | `coder_timeout_seconds` in step config |
+| Codex | `codex` | `coder_timeout_seconds` in step config |
+| Qwen | `qwen` | `coder_timeout_seconds` in step config |
+
+**Contract:**
+- Input: Prompt text via stdin or temp file
+- Output: Results written to `meta.json` sidecar
+- Exit code: 0 for success, non-zero for failure
+
+### Backend API Interface
+
+| Endpoint | Purpose |
+|----------|---------|
+| `GET /api/v1/workflow-steps/available` | Poll for available work |
+| `POST /api/v1/workflow-steps/{id}/claim` | Claim a step for execution |
+| `POST /api/v1/workflow-steps/{id}/submit` | Submit step results |
+| `POST /api/v1/workflow-steps/{id}/heartbeat` | Send heartbeat during execution |
+
+**Authentication:** API key via `UKBE_API_KEY` environment variable.
+
+### Filesystem Interface
+
+| Path | Purpose |
+|------|---------|
+| `~/.ukbe-runner/config.json` | Global runner configuration |
+| `~/.ukbe-runner/jobs/<job-id>/` | Job state, sidecars, logs |
+| `~/.ukbe-runner/workflows/<workflow>/` | Runtime workflow bundles |
+| `~/.ukbe-runner/logs/` | Execution logs |
+| `<project-root>/` | Target repository for workflows |
+
+## Assumptions and Constraints
+
+### Assumptions
+
+1. LLM providers are installed and available in PATH
+2. User has write access to `~/.ukbe-runner/` directory
+3. Python 3.11+ is available
+4. Target project repositories are accessible
+
+### Constraints
+
+| Constraint | Rationale |
 |------------|-----------|
-| LLM Training | The system consumes LLM APIs, does not train models |
-| Persistent Database | Job state is file-based JSON, not a database |
-| Real-time Collaboration | Single-user/single-process execution model |
-| Web UI | CLI-focused, no built-in web interface |
-| General Compute | Actions are domain-specific, not arbitrary code execution |
+| Single workstation focus | Designed for individual developer workflows, not multi-user coordination |
+| Windows path handling | Some code paths have Windows-specific normalization |
+| v2 meta.json contract | Strict sidecar schema, no backward compatibility for legacy formats |
+| No silent recovery | Hard failures must be explicitly routed |
+| No markdown write-backs | Runner does not modify markdown files (coders own content) |
 
-## 2. External Systems
+## Related Documentation
 
-| System | Type | Interface | Purpose |
-|--------|------|-----------|---------|
-| **Backend API** | HTTP/REST | `backend_client.py` | Work distribution, step claiming, result submission |
-| **Claude API** | HTTP/REST | `coder_adapters.py` | Primary LLM invocation for complex tasks |
-| **Codex API** | HTTP/REST | `coder_adapters.py` | Code-focused LLM tasks |
-| **Qwen Code** | Local Tool | `coder_adapters.py` | Local-first execution via CLI |
-| **File System** | Local I/O | Pathlib, `actions/` | Artifact persistence, state storage |
-| **ComfyUI** | HTTP/REST | `actions/submit_comfyui.py` | Image generation workflow execution |
-| **VideoXpress** | HTTP/REST | `actions/*.py` | Video generation and assembly |
-
-## 3. Actors and Stakeholders
-
-### 3.1 Primary Actors
-
-| Actor | Role | Interactions |
-|-------|------|--------------|
-| **Developer** | End user | Runs workflows locally via CLI, reviews artifacts, approves steps |
-| **Backend Service** | Orchestrator | Distributes work to workers, manages job queue |
-| **Daemon Supervisor** | Process manager | Long-running worker process with heartbeat |
-| **LLM Provider** | Compute | Executes prompts, returns structured results |
-
-### 3.2 Stakeholder Concerns
-
-| Stakeholder | Concerns |
-|-------------|----------|
-| **Developers** | Reliable workflow execution, clear failure messages, actionable retries |
-| **Operators** | Observability, log access, job state inspection, emergency procedures |
-| **Maintainers** | Contract stability, schema versioning, backward compatibility |
-| **Integrators** | Backend API contract, worker mode behavior, step result format |
-
-## 4. Context Diagram
-
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                         agent-runner-v2                                  │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐    │
-│  │  run_agent  │  │ step_runner │  │workflow_router│ │ job_state   │    │
-│  │   (CLI)     │  │  (invoke)   │  │   (route)   │  │  (state)    │    │
-│  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘    │
-│         │                │                │                │            │
-│         └────────────────┴────────────────┴────────────────┘            │
-│                                   │                                     │
-│                          ┌────────┴────────┐                            │
-│                          │  coder_adapters │                           │
-│                          │ (Claude/Codex/  │                           │
-│                          │    Qwen)        │                           │
-│                          └────────┬────────┘                            │
-└───────────────────────────────────┼───────────────────────────────────────┘
-                                    │
-           ┌────────────────────────┼────────────────────────┐
-           │                        │                        │
-           ▼                        ▼                        ▼
-    ┌─────────────┐          ┌─────────────┐          ┌─────────────┐
-    │   Claude    │          │    Codex    │          │    Qwen     │
-    │    API      │          │    API      │          │    Code     │
-    └─────────────┘          └─────────────┘          └─────────────┘
-
-           ┌─────────────────────────────────────────────────┐
-           │              Backend API                         │
-           │  (Work distribution, claiming, submission)      │
-           └─────────────────────────────────────────────────┘
-                                    │
-           ┌────────────────────────┴────────────────────────┐
-           ▼                                                   ▼
-    ┌─────────────┐                                    ┌─────────────┐
-    │   Worker    │                                    │   Daemon    │
-    │   Process   │                                    │ Supervisor  │
-    └─────────────┘                                    └─────────────┘
-
-           ┌─────────────────────────────────────────────────┐
-           │              File System                         │
-           │  (%USERPROFILE%\.ukbe-runner\)                   │
-           │  - jobs/<group>/<job>/job.json                  │
-           │  - workflows/<workflow>/template_groups.py      │
-           │  - logs/*.log                                   │
-           └─────────────────────────────────────────────────┘
-```
-
-## 5. Runtime Contexts
-
-The system operates in three distinct runtime contexts:
-
-| Context | Command | Execution Model |
-|---------|---------|-----------------|
-| **Local Execution** | `ukbe-run-agent run` | Synchronous, blocking CLI execution with job state tracking |
-| **Backend Worker** | `ukbe-run-agent worker`, `poll`, `execute-step` | Asynchronous, backend-driven single-step execution |
-| **Daemon Supervisor** | `ukbe-run-agent daemon` | Long-running process managing multiple worker lifecycles |
-
-### 5.1 Local Execution Flow
-
-```
-Developer → ukbe-run-agent run → Load Config → Resolve Job
-                                    ↓
-                              Pre-flight Check
-                                    ↓
-                              Render Prompt
-                                    ↓
-                              Invoke Coder
-                                    ↓
-                              Read meta.json
-                                    ↓
-                              Validate Artifacts
-                                    ↓
-                              Route After Step
-                                    ↓
-                              Update Job State
-                                    ↓
-                              Exit (continue/retry/fail)
-```
-
-### 5.2 Backend Worker Flow
-
-```
-Backend → Poll for Work → Claim Step → Execute Step
-                              ↓
-                         Submit Result
-                              ↓
-                         Wait for Next
-```
-
-## 6. Data Flow
-
-### 6.1 Normal Execution Flow
-
-| Step | Data | Source | Destination |
-|------|------|--------|-------------|
-| 1 | Job Config | `config.json` | `run_agent.py` |
-| 2 | Job State | `job.json` | `job_state.py` |
-| 3 | Prompt Template | `prompts/<step>.txt` | `step_runner.py` |
-| 4 | Rendered Prompt | `step_runner.py` | LLM Provider |
-| 5 | LLM Response | LLM Provider | Coder Process |
-| 6 | Sidecar Result | Coder Process | `meta.json` |
-| 7 | Validation | `step_runner.py` | `meta.json` (enriched) |
-| 8 | Routing Decision | `workflow_router.py` | `job.json` (updated) |
-| 9 | Artifacts | `meta.json` | Filesystem |
-
-### 6.2 Failure Handling Flow
-
-| Failure Type | Detection | Routing | Recovery |
-|--------------|-----------|---------|----------|
-| **Coder Timeout** | `coder_adapters.py` | `route_after_failure()` | AUTO_RETRYABLE → Retry with backoff |
-| **Meta.json Missing** | `step_runner.py` | `route_after_failure()` | HUMAN_RETRY_REQUIRED → Intervention |
-| **Artifact Missing** | `step_runner.py` | `route_after_failure()` | Depends on step config |
-| **Validation Error** | `step_runner.py` | `route_after_failure()` | FATAL → Terminal failure |
-
-## 7. Deployment Context
-
-### 7.1 Installation
-
-```bash
-pip install -e ".[dev]"
-ukbe-run-agent init
-```
-
-### 7.2 Runtime Dependencies
-
-| Dependency | Purpose | Version |
-|------------|---------|---------|
-| Python | Runtime | 3.11+ |
-| Jinja2 | Prompt templating | Latest |
-| Pathlib | Cross-platform paths | Built-in |
-| Requests | Backend API calls | Latest |
-
-### 7.3 Runtime File Structure
-
-After initialization, the runner home contains:
-
-```
-%USERPROFILE%\.ukbe-runner\
-├── config.json                    # Global configuration
-├── jobs\                         # Job state directory
-│   └── <workflow-group>\         # Group-scoped jobs
-│       └── <job-id>\             # Individual job
-│           ├── job.json          # Job state (schema v6)
-│           └── <step>/           # Step directories
-│               └── meta.json     # Step result sidecar
-├── workflows\                    # Runtime workflow bundles
-│   └── default\                  # Active workflow
-│       ├── template_groups.py    # Workflow definitions
-│       └── prompts/              # Prompt templates
-└── logs\                         # Execution logs
-```
-
-## 8. Key Constraints
-
-### 8.1 Contract Constraints
-
-| Constraint | Enforcement | Violation |
-|------------|-------------|-----------|
-| meta.json is ONLY channel | `step_runner.py` | Hard failure, no fallback |
-| No markdown write-backs | Code review | Manual edits rejected |
-| Explicit failure routing | `workflow_router.py` | Silent failures prevented |
-| Blocking issues owned by coder | `step_runner.py` | Empty blocking_issues list |
-| Schema version tracking | `job_state.py` | Migration required |
-
-### 8.2 Operational Constraints
-
-| Constraint | Source | Implication |
-|------------|--------|-------------|
-| Bootstrap vs Runtime split | Architecture | Two sources of truth, sync on init |
-| Job state immutability | Design | State transitions are append-only |
-| Coder timeout | Configuration | 600s default, configurable per-step |
-| Review loop budget | Template config | Max attempts prevents infinite loops |
-
-## 9. Bootstrap/Runtime Duality
-
-A key architectural characteristic is the split between **packaged bootstrap source** and **runtime workflow bundles**:
-
-| Aspect | Bootstrap Source | Runtime Bundle |
-|--------|-----------------|------------------|
-| Location | `agent_runner_v2/bootstrap/` | `%USERPROFILE%\.ukbe-runner\workflows\` |
-| Purpose | Seeds initial runtime | Actually loaded at execution |
-| Updates | Via package update | Via `init` or manual sync |
-| Version | Package version | User-managed |
-
-This split enables:
-- Safe workflow customization without package modification
-- Version isolation between projects
-- Rollback capability via bundle management
+- [SYSTEM_OVERVIEW.md](SYSTEM_OVERVIEW.md) — System purpose and primary flows
+- [COMPONENT_ARCHITECTURE.md](COMPONENT_ARCHITECTURE.md) — Detailed component design
+- [FUNCTIONAL_SPEC.md](FUNCTIONAL_SPEC.md) — Functional capabilities
+- [NON_FUNCTIONAL_REQUIREMENTS.md](NON_FUNCTIONAL_REQUIREMENTS.md) — Quality attributes
 
 ---
 
-*Generated by workflow `00_master_docs_bootstrap_v1` step `04_generate_architecture_docs`*
+*Generated: 2026-07-04T10:00:00+08:00*
+*Workflow: 00_master_docs_bootstrap_v1 / Step: 04_generate_architecture_docs*
+*Change ID: 00DOC-GEN-20260704-001*

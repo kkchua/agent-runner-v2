@@ -5,6 +5,7 @@ from __future__ import annotations
 import importlib
 import json
 from pathlib import Path
+from os import fspath
 
 from agent_runner_v2.workflow_router import _resolve_reject_route
 from agent_runner_v2.documentation_guardrails import (
@@ -16,6 +17,7 @@ from agent_runner_v2 import system_docs
 from conftest import load_bootstrap_workflow_module
 
 validate_delivery_docs_module = importlib.import_module("agent_runner_v2.actions.validate_delivery_docs")
+documentation_validation_core = importlib.import_module("agent_runner_v2.actions.documentation_validation_core")
 template_groups = load_bootstrap_workflow_module()
 
 
@@ -84,6 +86,7 @@ def test_validation_rules_cover_pending_review_and_owner_fields():
     runbook_sections = validate_delivery_docs_module.SYSTEM_DOC_REQUIRED_SECTIONS["docs/system/00_governance/bootstrap/RUNBOOK.md"]
 
     assert "Documentation Synchronization Validation" in required_sections
+    assert "Metadata" in inventory_sections
     assert "File Type Coverage" in inventory_sections
     assert "Module Overview" in module_sections
     assert "Component Overview" in component_sections
@@ -91,6 +94,10 @@ def test_validation_rules_cover_pending_review_and_owner_fields():
     assert "Registry Overview" in delivery_registry_sections
     assert "Audience Views" in system_sections
     assert "Repo Overview" in analysis_sections
+    assert "Architecture Posture" in analysis_sections
+    assert "Architecture Baseline" in validate_delivery_docs_module.SYSTEM_DOC_REQUIRED_SECTIONS["docs/system/00_governance/bootstrap/DOCUMENTATION_STANDARD.md"]
+    assert "Architecture Profile" in validate_delivery_docs_module.SYSTEM_DOC_REQUIRED_SECTIONS["docs/system/00_governance/bootstrap/SYSTEM_OVERVIEW.md"]
+    assert "Architecture Posture" in validate_delivery_docs_module.SYSTEM_DOC_REQUIRED_SECTIONS["docs/system/00_governance/bootstrap/DEVELOPER_GUIDE.md"]
     assert "First-Time Setup" in operator_sections
     assert "Failure Handling" in runbook_sections
 
@@ -98,6 +105,13 @@ def test_validation_rules_cover_pending_review_and_owner_fields():
 def test_delivery_scaffold_paths_match_generated_layout():
     assert validate_delivery_docs_module.REQUIRED_TEMPLATES["DELIVERY_TEMPLATE_REGISTRY"] == "01_delivery_template_registry.md"
     assert validate_delivery_docs_module.REQUIRED_TEMPLATES["DELIVERY_TASK_TEMPLATE"] == "05_delivery_task_template.md"
+    template_paths = validate_delivery_docs_module._delivery_template_paths()
+    assert fspath(template_paths["DELIVERY_TEMPLATE_REGISTRY"]).replace("\\", "/").endswith(
+        "docs/system/00_governance/bootstrap/templates/delivery/01_delivery_template_registry.md"
+    )
+    assert fspath(template_paths["DELIVERY_TASK_TEMPLATE"]).replace("\\", "/").endswith(
+        "docs/system/00_governance/bootstrap/templates/delivery/05_delivery_task_template.md"
+    )
     assert validate_delivery_docs_module.REQUIRED_CODEBASE_FILES["CODEBASE_TEMPLATE_REGISTRY"].endswith(
         "docs/system/00_governance/bootstrap/templates/codebase/01_codebase_template_registry.md"
     )
@@ -107,6 +121,16 @@ def test_delivery_scaffold_paths_match_generated_layout():
     assert validate_delivery_docs_module.DELIVERY_AGENT_ROOT.as_posix() == "docs/delivery/00_standards"
     assert Path("docs/delivery/00_standards/DELIVERY_AGENTS_MD.md").as_posix().endswith("DELIVERY_AGENTS_MD.md")
     assert Path("docs/delivery/00_standards/DELIVERY_AGENT_REVIEWER.md").as_posix().endswith("DELIVERY_AGENT_REVIEWER.md")
+
+
+def test_delivery_validator_no_longer_requires_legacy_engineering_and_operations_folders():
+    assert "docs/engineering" not in validate_delivery_docs_module.DELIVERY_FOLDERS
+    assert "docs/operations" not in validate_delivery_docs_module.DELIVERY_FOLDERS
+
+
+def test_documentation_validation_core_is_shared():
+    assert documentation_validation_core.DocumentationValidationPlan.__module__.endswith("documentation_validation_core")
+    assert callable(documentation_validation_core.validate_documentation_plan)
 
 
 def test_generated_doc_inventory_covers_master_and_scaffold_outputs():
@@ -151,6 +175,17 @@ def test_scaffold_generation_prompts_require_v2_sidecars():
         assert "schema_version" in text
         assert '"v2"' in text
         assert "coder_result" in text
+
+
+def test_template_generation_prompts_require_plan_and_inventory_status_vocabulary():
+    prompt_root = Path("agent_runner_v2/bootstrap/workflows/default/prompts/10_execution_scaffold_v1")
+    generate_text = (prompt_root / "03_generate_templates.txt").read_text(encoding="utf-8")
+    refine_text = (prompt_root / "06_refine_templates.txt").read_text(encoding="utf-8")
+
+    assert "explicitly reference the originating plan or task graph" in generate_text
+    assert "needs_update" in generate_text
+    assert "explicitly references the originating plan or task graph" in refine_text
+    assert "needs_update" in refine_text
 
 
 def test_generated_doc_banner_instruction_is_injected_for_workflow_prompts():
@@ -204,6 +239,67 @@ def test_master_docs_prompts_require_v2_sidecars_and_expected_artifact_keys():
             assert expected_key in text
     architecture_prompt = (prompt_root / "04_generate_architecture_docs.txt").read_text(encoding="utf-8")
     assert "Do NOT write a plain top-level" in architecture_prompt
+    assert "`docs/system/00_governance/bootstrap/project_analysis.md` is read-only in this step." in architecture_prompt
+    assert "The only writable outputs are the files listed" in architecture_prompt
+    assert "repo-selected architecture posture" in architecture_prompt
+
+    overview_prompt = (prompt_root / "03_generate_system_overview_docs.txt").read_text(encoding="utf-8")
+    assert "`docs/system/00_governance/bootstrap/project_analysis.md` is read-only in this step." in overview_prompt
+    assert "The only writable outputs are the eight files" in overview_prompt
+    assert "Development Workflow" in architecture_prompt
+    assert "First-Time Setup" in architecture_prompt
+    assert "Normal Governed Delivery" in architecture_prompt
+    assert "Architecture Baseline" in overview_prompt
+
+
+def test_codebase_inventory_generation_uses_registry_template_id():
+    from agent_runner_v2 import codebase_docs
+
+    snapshot = {
+        "generated_at": "2026-07-03T00:00:00+08:00",
+        "workflow_name": "00_master_docs_bootstrap_v1",
+        "mode": "bootstrap",
+        "job_id": "00DOC-GEN-TEST",
+        "step": "01_generate_codebase_baseline",
+        "items": [],
+        "counts": {},
+    }
+    rendered = codebase_docs.render_inventory(snapshot, title="agent-runner-v2")
+
+    assert 'template_id: "CODEBASE-INV-v1"' in rendered.splitlines()[:8]
+    assert "needs_update" in rendered
+
+
+def test_scaffold_prompts_require_baseline_and_profile_handling():
+    prompt_root = Path("agent_runner_v2/bootstrap/workflows/default/prompts")
+
+    analysis_text = (prompt_root / "10_execution_scaffold_v1" / "01_project_analysis.txt").read_text(encoding="utf-8")
+    sop_text = (prompt_root / "10_execution_scaffold_v1" / "02_generate_sop.txt").read_text(encoding="utf-8")
+    planner_text = (prompt_root / "30_delivery_planning_v1" / "02_planner.txt").read_text(encoding="utf-8")
+    task_text = (prompt_root / "30_delivery_planning_v1" / "06_task.txt").read_text(encoding="utf-8")
+    review_text = (prompt_root / "40_documentation_sync_v1" / "02_review_docs.txt").read_text(encoding="utf-8")
+    validate_text = (prompt_root / "40_documentation_sync_v1" / "04_validate_doc_sync.txt").read_text(encoding="utf-8")
+
+    assert "Architecture Posture" in analysis_text
+    assert "repo-selected profile" in analysis_text
+    assert "Operational Risks" in analysis_text
+    assert "Architectural Observations" in analysis_text
+    assert "Universal Baseline" in sop_text
+    assert "Repo-Selected Profile" in sop_text
+    assert "Migration Mode" in sop_text
+    assert "conditional standards" in sop_text.lower()
+    assert "repo-selected architecture profile" in planner_text
+    assert "migration mode" in planner_text.lower()
+    assert "architecture posture updates" in task_text
+    assert "repo-selected architecture posture" in review_text
+    assert "architecture posture docs remain consistent" in validate_text
+
+
+def test_sop_review_prompt_allows_active_workflow_generated_docs():
+    text = Path("agent_runner_v2/bootstrap/workflows/default/prompts/10_execution_scaffold_v1/03_review_sop.txt").read_text(encoding="utf-8")
+
+    assert '"active"' in text
+    assert "workflow-generated SOPs" in text
 
 
 def test_qwen_sidecar_validity_short_circuits_stdout_json_parse(monkeypatch, tmp_path):

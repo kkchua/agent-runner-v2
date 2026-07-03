@@ -13,31 +13,7 @@ from datetime import datetime
 from pathlib import Path
 
 from ..action_result import ActionResult
-
-
-def _write_meta(
-    project_root: Path,
-    output_dir: Path,
-    status: str,
-    remark: str,
-    artifacts: dict,
-) -> None:
-    """Write meta.json sidecar."""
-    meta_path = output_dir / "meta.json"
-    output_dir.mkdir(parents=True, exist_ok=True)
-    meta = {
-        "schema_version": "v2",
-        "coder_result": {
-            "status": status,
-            "remark": remark,
-            "artifacts": artifacts,
-            "recorded_at": datetime.now().astimezone().isoformat(timespec="seconds"),
-        },
-    }
-    meta_path.write_text(
-        json.dumps(meta, ensure_ascii=False, indent=2) + "\n",
-        encoding="utf-8",
-    )
+from ..runtime_context import write_meta_sidecar
 
 
 def _check_ffmpeg() -> bool:
@@ -201,7 +177,7 @@ def assemble_video(
         audio_path = audio_folder / f"scene_{scene_num:02d}_voiceover.mp3"
 
         if not clip_path.exists():
-            _write_meta(project_root, output_path.parent, "REJECTED", f"Clip not found: {clip_path}", {})
+            write_meta_sidecar(output_path.parent / "meta.json", status="REJECTED", remark=f"Clip not found: {clip_path}", artifacts={})
             return ActionResult(
                 status="REJECTED",
                 remark=f"Video clip not found for scene {scene_num}",
@@ -210,7 +186,7 @@ def assemble_video(
             )
 
         if not audio_path.exists():
-            _write_meta(project_root, output_path.parent, "REJECTED", f"Audio not found: {audio_path}", {})
+            write_meta_sidecar(output_path.parent / "meta.json", status="REJECTED", remark=f"Audio not found: {audio_path}", artifacts={})
             return ActionResult(
                 status="REJECTED",
                 remark=f"Audio not found for scene {scene_num}",
@@ -258,7 +234,7 @@ def assemble_video(
         )
 
         if result.returncode != 0:
-            _write_meta(project_root, output_path.parent, "REJECTED", f"Video concat failed: {result.stderr}", {})
+            write_meta_sidecar(output_path.parent / "meta.json", status="REJECTED", remark=f"Video concat failed: {result.stderr}", artifacts={})
             return ActionResult(
                 status="REJECTED",
                 remark=f"Video concatenation failed: {result.stderr[:200]}",
@@ -305,7 +281,7 @@ def assemble_video(
         temp_video.unlink(missing_ok=True)
 
         if result.returncode != 0:
-            _write_meta(project_root, output_path.parent, "REJECTED", f"Final assembly failed: {result.stderr}", {})
+            write_meta_sidecar(output_path.parent / "meta.json", status="REJECTED", remark=f"Final assembly failed: {result.stderr}", artifacts={})
             return ActionResult(
                 status="REJECTED",
                 remark=f"Final assembly failed: {result.stderr[:200]}",
@@ -314,7 +290,7 @@ def assemble_video(
             )
 
     except subprocess.TimeoutExpired:
-        _write_meta(project_root, output_path.parent, "REJECTED", "ffmpeg timeout", {})
+        write_meta_sidecar(output_path.parent / "meta.json", status="REJECTED", remark="ffmpeg timeout", artifacts={})
         return ActionResult(
             status="REJECTED",
             remark="Video assembly timed out",
@@ -322,7 +298,7 @@ def assemble_video(
             reject_code="TIMEOUT",
         )
     except Exception as e:
-        _write_meta(project_root, output_path.parent, "REJECTED", f"Exception: {e}", {})
+        write_meta_sidecar(output_path.parent / "meta.json", status="REJECTED", remark=f"Exception: {e}", artifacts={})
         return ActionResult(
             status="REJECTED",
             remark=f"Assembly error: {e}",
@@ -334,7 +310,7 @@ def assemble_video(
     output_rel = str(output_path.relative_to(project_root))
     remark = f"Final video assembled: {output_rel} ({len(scenes)} scenes)"
     artifacts = {"FINAL_VIDEO_FILE": output_rel}
-    _write_meta(project_root, output_path.parent, "APPROVED", remark, artifacts)
+    write_meta_sidecar(output_path.parent / "meta.json", status="APPROVED", remark=remark, artifacts=artifacts)
 
     return ActionResult(
         status="APPROVED",

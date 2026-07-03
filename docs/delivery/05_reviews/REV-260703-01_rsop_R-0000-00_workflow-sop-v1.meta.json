@@ -1,0 +1,20 @@
+{
+  "schema_version": "v2",
+  "coder_result": {
+    "status": "APPROVED",
+    "remark": "WORKFLOW_SOP_v1.md and all supporting governance artifacts are complete, consistent, and operationally usable. All evaluation criteria passed: adaptation to project analysis, completeness, status-model correctness, operational clarity, documentation governance flows, file-type rules, stale-doc removal rules, and existing-repo workflow sequence.",
+    "artifacts": {
+      "REVIEW_FILE": "docs/delivery/05_reviews/REV-260703-01_rsop_R-0000-00_workflow-sop-v1.md"
+    },
+    "recorded_at": "2026-07-03T00:00:00+08:00"
+  },
+  "runner_data": {
+    "step": "review_sop",
+    "coder_used": "qwen",
+    "invoked_at": "2026-07-03T23:28:40",
+    "finished_at": "2026-07-03T23:30:59",
+    "prompt_checksum": "sha256:3696ebabc8ceeb2e3d866baf9178ad33a13114ce0167095e2f65b5243e2b3e7a",
+    "enriched_at": "2026-07-03T23:30:59",
+    "runner_version": "v2"
+  }
+}

@@ -61,7 +61,7 @@ def test_run_supervisor_spawns_child_and_emits_child_heartbeat(monkeypatch, tmp_
     monkeypatch.setattr('agent_runner_v2.backend_client.BackendClient', FakeClient)
     monkeypatch.setattr('agent_runner_v2.run_agent._submit_worker_result', lambda **kwargs: submissions.append(kwargs))
 
-    def fake_spawn_child(*, claim, runtime_root, cli_pythonpath, logger, backend_url):
+    def fake_spawn_child(*, claim, runtime_root, cli_pythonpath, logger, backend_url, step_spec_source):
         child_dir = runtime_root / 'step-1'
         child_dir.mkdir(parents=True, exist_ok=True)
         result_path = child_dir / 'result.json'
@@ -97,6 +97,7 @@ def test_run_supervisor_spawns_child_and_emits_child_heartbeat(monkeypatch, tmp_
         worker_id='worker-1',
         worker_label='live',
         backend_url='http://127.0.0.1:8100',
+        step_spec_source='backend',
         poll_seconds=1,
         max_parallel=1,
         stalled_seconds=30,

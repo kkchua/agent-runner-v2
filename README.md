@@ -82,6 +82,8 @@ ukbe-run-agent daemon kode-worker-01 --backend-url http://127.0.0.1:8100
 
 ## Documentation
 
+- Daemon mode quickstart: [docs/operations/DAEMON_MODE_QUICKSTART.md](docs/operations/DAEMON_MODE_QUICKSTART.md)
+- Existing repo workflow SOP: [docs/operations/EXISTING_REPO_WORKFLOW_SOP.md](docs/operations/EXISTING_REPO_WORKFLOW_SOP.md)
 - Submit job manual: [docs/submit_job_manual.md](docs/submit_job_manual.md)
 - Operator manual: [docs/worker_supervisor_manual.md](docs/worker_supervisor_manual.md)
 - Delivery scaffold workflow guide: [HOW_TO_GUIDE.md](HOW_TO_GUIDE.md)

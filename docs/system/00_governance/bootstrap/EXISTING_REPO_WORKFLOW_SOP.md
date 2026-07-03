@@ -1,274 +1,206 @@
 ---
-title: "Existing Repo Workflow SOP: agent-runner-v2"
-template_id: "OPS-02-WSOP"
+title: "Existing Repository Workflow SOP v1"
+template_id: "EXISTING-REPO-WORKFLOW-SOP-v1"
 status: "active"
+version: "1.0"
+generated: "2026-07-04T07:00:00+08:00"
+workflow: "10_execution_scaffold_v1"
+step: "generate_sop"
 managed_by: workflow-generated
-created: "2026-07-02T20:00:00+08:00"
-workflow: "00_master_docs_bootstrap_v1"
-step: "04_generate_architecture_docs"
-change_id: "00DOC-GEN-20260702-005"
 ---
 
-# Existing Repo Workflow SOP: agent-runner-v2
-
-> Managed by workflow: `00_master_docs_bootstrap_v1` / step: `04_generate_architecture_docs`
+> Managed by workflow: `10_execution_scaffold_v1` / step: `generate_sop`
 > This file is workflow-generated and protected from manual edits.
 
-## 1. Workflow Families
-
-The following workflow families are available in the default bundle:
-
-| Family | Steps | Prefix | Purpose |
-|--------|-------|--------|---------|
-| `00_master_docs_bootstrap_v1` | 10 | `00` | Master documentation bootstrap |
-| `10_execution_scaffold_v1` | 13 | `10` | Delivery scaffold generation |
-| `20_initiative_intake_v1` | 5 | `20` | Initiative intake and refinement |
-| `21_bug_fix_intake_v1` | 7 | `21` | Bug fix workflow |
-| `30_delivery_planning_v1` | 10 | `30` | Plan generation, task graph, contracts |
-| `31_task_execution_v1` | 12 | `31` | Implementation planning, execution, validation |
-| `40_documentation_sync_v1` | 4 | `40` | Documentation synchronization |
-| `image_csv_gen_v1` | 5 | - | Image CSV generation pipeline |
-| `image_csv_gen_v2` | 5 | - | Enhanced image CSV generation |
-| `tiktok_video_pipeline_v1` | 10 | - | TikTok video production pipeline |
-| `videoxpress_gen_v1` | 9 | - | Video generation workflow |
-
-## 2. Workflow Selection Guide
-
-| Use Case | Workflow Family | Entry Point |
-|----------|-----------------|-------------|
-| Generate system documentation | `00_master_docs_bootstrap_v1` | `run-00_master_docs_bootstrap_v1.bat` |
-| Set up delivery governance | `10_execution_scaffold_v1` | `run-10_execution_scaffold_v1.bat` |
-| Start new initiative | `20_initiative_intake_v1` | `scripts/submit-initiative-intake.sh` |
-| Fix a bug | `21_bug_fix_intake_v1` | Manual submission |
-| Create delivery plan | `30_delivery_planning_v1` | `scripts/submit-delivery-planning.sh` |
-| Execute development task | `31_task_execution_v1` | `scripts/examples/submit-task-execution.sh` |
-| Sync documentation | `40_documentation_sync_v1` | Manual submission |
-| Generate image dataset | `image_csv_gen_v2` | Manual submission |
-| Create TikTok video | `tiktok_video_pipeline_v1` | Manual submission |
-| Generate video content | `videoxpress_gen_v1` | Manual submission |
+# Existing Repository Workflow SOP v1
 
-## 3. Standard Operating Procedure
+## Purpose
 
-### 3.1 Prerequisites
+This SOP defines the exact sequence of operations for onboarding and reconciling a **pre-existing repository** under the agent-runner-v2 governance system. It covers four scenarios:
 
-1. Runner initialized: `ukbe-run-agent init`
-2. Job directory exists or will be created
-3. Required artifacts from previous steps (if applicable)
+1. **First-time setup** — bringing an existing repo under governance for the first time.
+2. **Normal governed delivery** — running delivery workflows on a governed repo.
+3. **Drift reconciliation** — recovering when documentation has diverged from code.
+4. **Governance refresh** — updating governance artifacts when the governance system itself changes.
 
-### 3.2 Running a Workflow
-
-#### Option A: Using Batch Scripts (Windows)
+This SOP applies when the target repository already has source code, documentation, or both before the governance system is introduced. For greenfield repos with no existing content, use the standard `10_execution_scaffold_v1` workflow directly.
 
-```bash
-# Example: Master docs bootstrap
-run-00_master_docs_bootstrap_v1.bat
+## First-Time Setup
 
-# Example: Delivery scaffold
-run-10_execution_scaffold_v1.bat
-```
-
-#### Option B: Using Shell Scripts (WSL/Unix)
-
-```bash
-# Example: Initiative intake
-./scripts/submit-initiative-intake.sh
-
-# Example: Delivery planning
-./scripts/submit-delivery-planning.sh
-```
-
-#### Option C: Direct CLI
-
-```bash
-# Run a workflow
-ukbe-run-agent run <workflow-name>
-
-# Run specific step
-ukbe-run-agent run <workflow-name> --step <step-name>
-
-# Resume job
-ukbe-run-agent run <workflow-name> --job-id <job-id>
-```
-
-### 3.3 Step-by-Step Execution
-
-```
-1. Identify workflow family based on use case
-2. Check for existing job (resume vs new)
-3. Run workflow via appropriate script or CLI
-4. Monitor execution for approvals/rejections
-5. Review artifacts produced
-6. Approve steps as needed
-7. Complete or escalate based on results
-```
-
-## 4. Artifact Management
-
-### 4.1 Standard Artifact Keys
-
-| Key | Description | Example Path |
-|-----|-------------|--------------|
-| `DRAFT_INIT_FILE` | Draft initiative | `docs/delivery/initiatives/...` |
-| `PRE_INIT_FILE` | Pre-initiative document | `docs/delivery/initiatives/...` |
-| `INIT_FILE` | Initiative document | `docs/delivery/initiatives/...` |
-| `PLAN_FILE` | Delivery plan | `docs/delivery/plans/...` |
-| `TASK_GRAPH_FILE` | Task graph | `docs/delivery/task-graphs/...` |
-| `TASK_FILE` | Task contract | `docs/delivery/tasks/...` |
-| `IMPL_FILE` | Implementation | `src/...` |
-| `REVIEW_FILE` | Review document | `docs/delivery/reviews/...` |
-| `VALIDATION_FILE` | Validation result | `docs/delivery/validations/...` |
+When onboarding a pre-existing repository, run these workflows in **exact order**:
 
-### 4.2 Artifact Path Resolution
+### Step 1: Bootstrap System Docs (`00_master_docs_bootstrap_v1`)
 
-Artifacts are resolved relative to:
-- Project root (default)
-- Delivery root (if set)
-- Artifact root (step-specific)
+This workflow scans the existing repository and generates the foundational documentation layer:
 
-### 4.3 Promoting Artifacts
+1. **Scans all source files** — identifies every Python module, script, config, test, and workflow template.
+2. **Creates the inventory** — produces `docs/codebase/01_inventory/codebase_inventory.md` with every tracked file.
+3. **Generates module docs** — creates `docs/codebase/02_modules/` files at stub/summary/full depth per complexity.
+4. **Generates component docs** — creates `docs/codebase/03_components/` files for logical groupings.
+5. **Produces sidecar** — writes `meta.json` confirming bootstrap completeness.
 
-```bash
-# Promote artifact to next stage
-ukbe-run-agent run promote --from <source> --to <target>
+**Output:** A complete codebase documentation layer covering all existing source files.
 
-# Or use action directly
-python -m agent_runner_v2.actions.promote_artifact ...
-```
+### Step 2: Execution Scaffold (`10_execution_scaffold_v1`)
 
-## 5. Workflow Customization
+This workflow generates the delivery governance infrastructure:
 
-### 5.1 Customizing Prompts
+1. **Generates delivery SOPs** — `WORKFLOW_SOP_v1.md` and `DELIVERY_STATUS_RULES_v1.md`.
+2. **Generates codebase SOPs** — `CODEBASE_DOC_SOP_v1.md` and `CODEBASE_DOC_STATUS_RULES_v1.md`.
+3. **Generates existing-repo workflow SOP** — `EXISTING_REPO_WORKFLOW_SOP.md`.
+4. **Generates agent contracts** — all agent role documents under `docs/delivery/00_standards/`.
+5. **Generates templates** — delivery and codebase template families under `docs/system/00_governance/bootstrap/templates/`.
+6. **Validates existing docs** — checks that the bootstrap-generated codebase docs conform to the new SOP standards; merges without overwriting.
+7. **Produces sidecar** — writes `meta.json` confirming scaffold completeness.
 
-1. Edit prompt in runtime bundle:
-   `%USERPROFILE%\.ukbe-runner\workflows\default\prompts\<workflow>\<step>.txt`
+**Output:** A complete delivery governance layer with all SOPs, agent contracts, and templates.
 
-2. Changes take effect immediately (no restart needed)
+### Verification After First-Time Setup
 
-### 5.2 Customizing Step Config
+After both workflows complete, verify:
 
-Edit `template_groups.py` in runtime bundle:
+1. `docs/codebase/01_inventory/codebase_inventory.md` exists and covers all source files.
+2. `docs/codebase/02_modules/` has docs for all modules.
+3. `docs/codebase/03_components/` has docs for all component groupings.
+4. `docs/system/00_governance/bootstrap/WORKFLOW_SOP_v1.md` exists.
+5. `docs/system/00_governance/bootstrap/DELIVERY_STATUS_RULES_v1.md` exists.
+6. `docs/system/00_governance/bootstrap/EXISTING_REPO_WORKFLOW_SOP.md` exists.
+7. `docs/codebase/00_standards/CODEBASE_DOC_SOP_v1.md` exists.
+8. `docs/codebase/00_standards/CODEBASE_DOC_STATUS_RULES_v1.md` exists.
+9. `docs/delivery/00_standards/` has all agent contract documents.
+10. Both sidecar `meta.json` files report `APPROVED`.
 
-```python
-"my_step": {
-    "prompt": "prompts/my_workflow/my_step.txt",
-    "coder": "claude",
-    "coder_timeout_seconds": 900,  # Custom timeout
-    "action": "my_custom_action",
-}
-```
+## Normal Governed Delivery
 
-### 5.3 Adding Workflow Families
+Once the repository is governed, all delivery work follows the standard lifecycle. Run these workflows in **exact order**:
 
-1. Create folder: `%USERPROFILE%\.ukbe-runner\workflows\default\prompts\my_workflow\`
-2. Add prompts: `01_step.txt`, `02_step.txt`, etc.
-3. Add to `template_groups.py`:
-```python
-MY_WORKFLOW = {
-    "steps": {...},
-    "transitions": [...],
-}
-TEMPLATE_GROUPS["my_workflow_v1"] = MY_WORKFLOW
-```
+### Step 1: Initiative Intake (`20_initiative_intake_v1`)
 
-## 6. Integration with Development Workflow
+1. Capture the requirement as an initiative document.
+2. Identify **documentation scope** — which modules/components will be affected?
+3. **Flag stale-guidance risk** for any existing docs that reference affected areas.
+4. Submit for approval gate.
 
-### 6.1 Git Workflow
+**Output:** Initiative document at `docs/delivery/01_initiatives/` with documentation scope and stale-guidance risk assessment.
 
-| Workflow Stage | Git Action |
-|----------------|------------|
-| Before workflow | Commit current work |
-| During workflow | Monitor, don't commit |
-| After approval | Commit generated artifacts |
-| Review phase | Review diff before commit |
+### Step 2: Delivery Planning (`30_delivery_planning_v1`)
 
-### 6.2 CI/CD Integration
+1. Convert the initiative into a plan with solution strategy.
+2. Decompose the plan into a task-graph with dependencies.
+3. Decompose each graph node into a task spec with acceptance criteria.
+4. **Convert documentation scope into plan/task obligations** — every task that modifies code must include doc-update obligations.
+5. Submit for approval gate.
 
-```yaml
-# Example GitHub Actions step
-- name: Run Documentation Sync
-  run: |
-    pip install -e ".[dev]"
-    ukbe-run-agent init
-    ukbe-run-agent run 40_documentation_sync_v1 --step 01_sync_docs
-```
+**Output:** Plan document at `docs/delivery/02_plans/`, task graph, and per-task specs at `docs/delivery/03_tasks/`.
 
-### 6.3 IDE Integration
+### Step 3: Task Execution (`31_task_execution_v1`)
 
-Recommended setup:
-- Monitor `%USERPROFILE%\.ukbe-runner\logs\` for real-time status
-- Use file watchers on `meta.json` for step completion
-- Configure artifact directories for quick access
+1. For each task: produce an implementation plan.
+2. Executor implements the solution and **updates all affected codebase docs**.
+3. Reviewer reviews implementation and documentation updates.
+4. Validator validates deliverables and doc accuracy.
+5. Memory Manager records delivery memory.
 
-## 7. Troubleshooting Workflows
+**Output:** Code changes, documentation updates, review records, validation records, and memory records.
 
-### 7.1 Workflow Not Found
+**This three-step sequence applies to all delivery work — features, bug fixes, refactors, and documentation corrections.**
 
-**Symptoms:**
-```
-Error: Template group not found: my_workflow
-```
+## Drift Reconciliation
 
-**Resolution:**
-1. Check workflow name spelling
-2. Verify `template_groups.py` includes the workflow
-3. Check runtime bundle is up to date: `ukbe-run-agent init`
+When documentation has diverged from code (e.g., code changed without doc updates, or docs were manually edited incorrectly), use the documentation sync workflow.
 
-### 7.2 Step Not Found
+### Step: Documentation Sync (`40_documentation_sync_v1`)
 
-**Symptoms:**
-```
-Error: Step not found: my_step
-```
+**`40_documentation_sync_v1` is the single current-truth synchronization workflow.** It reconciles the actual codebase state against all active documentation.
 
-**Resolution:**
-1. Check step name in `template_groups.py`
-2. Verify prompt file exists: `prompts/<workflow>/<step>.txt`
-3. Check for step naming conventions (prefix with numbers)
+1. **Scan** — walks all source files and compares against the inventory.
+2. **Detect** — identifies missing docs (new files without docs), orphaned docs (docs for deleted files), and stale docs (docs that don't match current source).
+3. **Report** — produces a drift report listing all discrepancies with severity levels.
+4. **Flag** — updates inventory entries to `stale_pending` for docs that need correction.
 
-### 7.3 Artifact Key Not Found
+After the sync completes:
 
-**Symptoms:**
-Validation fails for expected artifact
+- If the drift report shows **critical stale guidance** (active misdirection), create an emergency correction task.
+- If the drift report shows **high/medium/low staleness**, create a delivery initiative to batch-correct the flagged docs.
+- **If system docs (`docs/system/`) or operations guidance (`docs/delivery/`) are stale because the runner behavior or agent contracts changed, run `10_execution_scaffold_v1` again to refresh them.**
 
-**Resolution:**
-1. Check `ARTIFACT_KEYS` in `template_groups.py`
-2. Verify artifact is produced by coder
-3. Check artifact path is relative to project root
+### When to Run Drift Reconciliation
 
-### 7.4 Prompt Not Found
+| Trigger | When |
+|---------|------|
+| Scheduled | At least once per sprint or delivery milestone |
+| Post-delivery | After any delivery task that modified multiple modules |
+| Manual | When a developer suspects doc inaccuracy |
+| Pre-release | Before any release tag to ensure docs match released code |
+| On-demand | When `40_documentation_sync_v1` is invoked directly |
 
-**Symptoms:**
-```
-Error: Prompt file not found: prompts/my_workflow/my_step.txt
-```
+### Drift Recovery Sequence
 
-**Resolution:**
-1. Create missing prompt file
-2. Check path in step config
-3. Verify runtime bundle structure
+When drift is detected, follow this sequence:
 
-## 8. Best Practices
+1. Run `40_documentation_sync_v1` to produce the drift report.
+2. Review the drift report and categorize discrepancies by severity.
+3. For critical items: create an emergency correction initiative.
+4. For high/medium items: create a standard delivery initiative via `20_initiative_intake_v1`.
+5. For system docs staleness: run `10_execution_scaffold_v1` to refresh governance artifacts.
+6. Verify that the drift report shows zero critical/high items after reconciliation.
 
-### 8.1 Naming Conventions
+## Governance Refresh
 
-- Workflows: `NN_description_vN` (e.g., `20_initiative_intake_v1`)
-- Steps: `NN_step_name` (e.g., `01_pre_init`)
-- Jobs: Use UUIDs or descriptive IDs with timestamps
+When the governance system itself is updated (new SOP version, new agent contracts, new templates), re-run `10_execution_scaffold_v1` on the target repository. The scaffold workflow:
 
-### 8.2 Documentation Hygiene
+1. **Reads existing docs** before writing.
+2. **Compares** new output against existing output.
+3. **Merges** changes — only updates files that have meaningful diffs.
+4. **Preserves** manually added content that falls outside the generated sections.
+5. **Supersedes** old versions per the supersession rules in `CODEBASE_DOC_STATUS_RULES_v1.md`.
 
-- Commit generated docs before starting new workflows
-- Review diff before committing workflow-generated changes
-- Keep `meta.json` files for audit trail
-- Archive old job directories periodically
+**Never manually edit generated governance files.** If a governance file needs correction, modify the template or SOP source and re-run the scaffold.
 
-### 8.3 Backup Strategy
+### Governance Refresh Triggers
 
-- Backup runner home weekly
-- Keep job directories until workflow completed
-- Use version control for workflow customizations
-- Document custom prompts in project README
+| Trigger | Action |
+|---------|--------|
+| New SOP version released | Re-run `10_execution_scaffold_v1` |
+| New agent contracts added | Re-run `10_execution_scaffold_v1` |
+| Template structure changed | Re-run `10_execution_scaffold_v1` |
+| Architecture profile selection changed | Re-run `10_execution_scaffold_v1` |
+| Migration mode changed | Re-run `10_execution_scaffold_v1` |
+| Scheduled governance audit | Re-run `10_execution_scaffold_v1` |
 
----
+## Batch Files
 
-*Generated by workflow `00_master_docs_bootstrap_v1` step `04_generate_architecture_docs`*
+The repository includes batch files to streamline these sequences:
+
+| Batch File | Purpose |
+|-----------|---------|
+| `run-00_master_docs_bootstrap_v1.bat` | Runs `00_master_docs_bootstrap_v1` workflow locally |
+| `run-10_execution_scaffold_v1.bat` | Runs `10_execution_scaffold_v1` workflow locally |
+| `submit-00_master_docs_bootstrap_v1.bat` | Submits `00_master_docs_bootstrap_v1` to backend |
+| `submit-10_execution_scaffold_v1.bat` | Submits `10_execution_scaffold_v1` to backend |
+| `sync-workflows-to-backend.bat` | Syncs repo bootstrap to runtime bundle |
+| `run-approve-step.bat` | Approves a pending workflow step |
+| `run-reset-step.bat` | Resets a workflow step for retry |
+| `run-daemon.bat` | Launches daemon mode |
+| `run-cleanup-generated-docs.bat` | Cleans up generated documentation |
+| `test-runner.bat` / `test-runner.ps1` | Runs the test suite |
+
+Each batch file can be configured via variables at the top of the file. When targeting a different repo, verify that the target repo's governance level matches the intended scope (full scaffold vs. merge-extend).
+
+## Notes
+
+1. **`07_master_prompts` is deprecated.** Do not reference or generate any artifacts under this path. All prompt templates belong to specific workflow families under `agent_runner_v2/bootstrap/workflows/`.
+
+2. **Self-hosting awareness.** This repo is both the runner package and a consumer of its own scaffolding. When running scaffold against this repo itself, the governance docs are generated into the same tree that powers the scaffold — no conflicts occur because the scaffold writes to `docs/` and the runner source is in `agent_runner_v2/`.
+
+3. **Cross-project scope.** When scaffolding into a different repo via `--target-project-root`, the codebase docs in the target repo are owned by the target repo's governance, not by this runner's governance. The runner generates the scaffolding; the target repo maintains it going forward.
+
+4. **Content-generation workflows** (`image_csv_gen_v1/v2`, `tiktok_video_pipeline_v1`, `videoxpress_gen_v1`) share the same governance umbrella as software-delivery workflows. They use the same initiative→plan→task→execution lifecycle but may have different acceptance criteria specific to content generation.
+
+5. **Bootstrap source vs. runtime bundle.** The repo bootstrap (`agent_runner_v2/bootstrap/`) is the seed. The runtime bundle (`%USERPROFILE%\.ukbe-runner\workflows\`) is the active source. Changes flow from repo bootstrap to runtime bundle via `sync-workflows-to-backend.bat` or manual installation. The reverse direction (runtime to repo) is not supported — runtime changes are ephemeral.
+
+6. **Architecture profiles are conditional.** DDD, EDA, layered, and clean architecture standards are conditional profile choices, not universal defaults. A repository without an explicit profile selection operates on the universal baseline alone.
+
+7. **`40_documentation_sync_v1` is the single source of truth.** For current-state reconciliation of documentation against code, this is the only workflow. No other workflow performs this function.
+
+8. **System docs refresh.** When system behavior or operations guidance is stale (because the runner changed, agent contracts changed, or governance templates changed), re-run `10_execution_scaffold_v1` to refresh. Do not manually edit generated governance files.

@@ -20,11 +20,18 @@ from pathlib import Path
 from typing import Callable
 
 from .action_result import ActionResult
+from .actions.finalize_bootstrap import finalize_bootstrap
 from .actions.copy_artifact import copy_artifact
 from .actions.promote_artifact import promote_artifact
 from .actions.promote_init import promote_init
+from .actions.prepare_delivery_scaffold import prepare_delivery_scaffold
+from .actions.scan_repo_codebase import scan_repo_codebase
 from .actions.submit_comfyui import submit_comfyui
+from .actions.sync_codebase_docs import sync_codebase_docs
+from .actions.sync_system_docs import sync_system_docs
+from .actions.validate_codebase_docs import validate_codebase_docs
 from .actions.validate_delivery_docs import validate_delivery_docs
+from .actions.validate_system_docs import validate_system_docs
 from .actions.execute_t2i import execute_t2i
 from .actions.execute_i2v import execute_i2v
 from .actions.execute_voiceover import execute_voiceover
@@ -39,10 +46,17 @@ logger = logging.getLogger(__name__)
 
 ACTION_REGISTRY: dict[str, Callable] = {
     "copy_artifact": copy_artifact,
+    "finalize_bootstrap": finalize_bootstrap,
     "promote_artifact": promote_artifact,
     "promote_init": promote_init,
+    "prepare_delivery_scaffold": prepare_delivery_scaffold,
+    "scan_repo_codebase": scan_repo_codebase,
     "submit_comfyui": submit_comfyui,
+    "sync_codebase_docs": sync_codebase_docs,
+    "sync_system_docs": sync_system_docs,
+    "validate_codebase_docs": validate_codebase_docs,
     "validate_delivery_docs": validate_delivery_docs,
+    "validate_system_docs": validate_system_docs,
     "execute_t2i": execute_t2i,
     "execute_i2v": execute_i2v,
     "execute_voiceover": execute_voiceover,

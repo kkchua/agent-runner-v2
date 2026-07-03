@@ -16,33 +16,9 @@ from datetime import datetime
 from pathlib import Path
 
 from ..action_result import ActionResult
+from ..runtime_context import write_meta_sidecar
 
 _PACKAGE_ROOT = Path(__file__).resolve().parent.parent
-
-
-def _write_meta(
-    project_root: Path,
-    output_dir: Path,
-    status: str,
-    remark: str,
-    artifacts: dict,
-) -> None:
-    """Write meta.json sidecar."""
-    meta_path = output_dir / "meta.json"
-    output_dir.mkdir(parents=True, exist_ok=True)
-    meta = {
-        "schema_version": "v2",
-        "coder_result": {
-            "status": status,
-            "remark": remark,
-            "artifacts": artifacts,
-            "recorded_at": datetime.now().astimezone().isoformat(timespec="seconds"),
-        },
-    }
-    meta_path.write_text(
-        json.dumps(meta, ensure_ascii=False, indent=2) + "\n",
-        encoding="utf-8",
-    )
 
 
 def _post_json(
@@ -140,7 +116,7 @@ def execute_t2i(
             password = password or os.environ.get(config.get("password_env", "COMFYUI_PASSWORD"), "")
 
     if not base_url:
-        _write_meta(project_root, output_dir, "REJECTED", "COMFYUI_BASE_URL not configured", {})
+        write_meta_sidecar(output_dir / "meta.json", status="REJECTED", remark="COMFYUI_BASE_URL not configured", artifacts={})
         return ActionResult(
             status="REJECTED",
             remark="COMFYUI_BASE_URL not set in .env or config",
@@ -156,7 +132,7 @@ def execute_t2i(
     )
 
     if not workflow_key:
-        _write_meta(project_root, output_dir, "REJECTED", "No workflow key configured", {})
+        write_meta_sidecar(output_dir / "meta.json", status="REJECTED", remark="No workflow key configured", artifacts={})
         return ActionResult(
             status="REJECTED",
             remark="No T2I workflow key configured",
@@ -165,7 +141,7 @@ def execute_t2i(
         )
 
     if not email or not password:
-        _write_meta(project_root, output_dir, "REJECTED", "Missing ComfyUI credentials", {})
+        write_meta_sidecar(output_dir / "meta.json", status="REJECTED", remark="Missing ComfyUI credentials", artifacts={})
         return ActionResult(
             status="REJECTED",
             remark="Missing ComfyUI credentials",
@@ -185,7 +161,7 @@ def execute_t2i(
         login_resp = json.loads(login_body)
         token = login_resp["token"]
     except Exception as exc:
-        _write_meta(project_root, output_dir, "REJECTED", f"Authentication failed: {exc}", {})
+        write_meta_sidecar(output_dir / "meta.json", status="REJECTED", remark=f"Authentication failed: {exc}", artifacts={})
         return ActionResult(
             status="REJECTED",
             remark=f"Authentication failed: {exc}",
@@ -262,7 +238,7 @@ def execute_t2i(
                 "response": err_body,
             })
             # Fail fast
-            _write_meta(project_root, output_dir, "REJECTED", f"HTTP error on scene {scene_num}", {})
+            write_meta_sidecar(output_dir / "meta.json", status="REJECTED", remark=f"HTTP error on scene {scene_num}", artifacts={})
             return ActionResult(
                 status="REJECTED",
                 remark=f"HTTP error on scene {scene_num}: {e.code}",
@@ -277,7 +253,7 @@ def execute_t2i(
                 "error": f"exception: {e}",
             })
             # Fail fast
-            _write_meta(project_root, output_dir, "REJECTED", f"Exception on scene {scene_num}: {e}", {})
+            write_meta_sidecar(output_dir / "meta.json", status="REJECTED", remark=f"Exception on scene {scene_num}: {e}", artifacts={})
             return ActionResult(
                 status="REJECTED",
                 remark=f"Exception on scene {scene_num}: {e}",
@@ -303,7 +279,7 @@ def execute_t2i(
 
     if failed > 0:
         remark = f"T2I generation: {succeeded} succeeded, {failed} failed"
-        _write_meta(project_root, output_dir, "REJECTED", remark, {})
+        write_meta_sidecar(output_dir / "meta.json", status="REJECTED", remark=remark, artifacts={})
         return ActionResult(
             status="REJECTED",
             remark=remark,
@@ -313,7 +289,7 @@ def execute_t2i(
 
     remark = f"T2I generation complete: {succeeded} scenes"
     artifacts = {"GENERATED_IMAGES_FOLDER": str(output_dir_rel)}
-    _write_meta(project_root, output_dir, "APPROVED", remark, artifacts)
+    write_meta_sidecar(output_dir / "meta.json", status="APPROVED", remark=remark, artifacts=artifacts)
 
     return ActionResult(
         status="APPROVED",

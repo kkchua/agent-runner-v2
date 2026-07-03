@@ -3,10 +3,10 @@ title: "Component Documentation: tests suite"
 template_id: "CB-03"
 status: "active"
 component_id: "tests-suite"
-created: "2026-07-02T18:00:53+08:00"
+created: "2026-07-04T06:01:39+08:00"
 owner: "00_master_docs_bootstrap_v1"
-last_verified_by_change: "00_master_docs_bootstrap_v1 / 00DOC-GEN-20260702-005 / 2026-07-02T18:00:53+08:00"
-modules: ["tests/conftest.py", "tests/test_backend_worker_mode.py", "tests/test_bundle_loader.py", "tests/test_codebase_docs.py", "tests/test_daemon.py", "tests/test_documentation_governance.py", "tests/test_run_agent_status.py", "tests/test_runtime_context_paths.py", "tests/test_tool_instruction_block.py", "tests/test_ukbe_runner_wrapper.py"]
+last_verified_by_change: "00_master_docs_bootstrap_v1 / 00DOC-GEN-20260704-001 / 2026-07-04T06:01:39+08:00"
+modules: ["tests/conftest.py", "tests/test_backend_worker_mode.py", "tests/test_bundle_loader.py", "tests/test_codebase_docs.py", "tests/test_daemon.py", "tests/test_documentation_governance.py", "tests/test_documentation_guardrails_cleanup.py", "tests/test_run_agent_status.py", "tests/test_runtime_context_paths.py", "tests/test_tool_instruction_block.py", "tests/test_ukbe_runner_wrapper.py"]
 ---
 
 # Component Documentation: tests suite
@@ -27,6 +27,7 @@ Repository test suite coverage grouped as a single logical component.
 | `tests/test_codebase_docs.py` | test coverage |
 | `tests/test_daemon.py` | test coverage |
 | `tests/test_documentation_governance.py` | test coverage |
+| `tests/test_documentation_guardrails_cleanup.py` | test coverage |
 | `tests/test_run_agent_status.py` | test coverage |
 | `tests/test_runtime_context_paths.py` | test coverage |
 | `tests/test_tool_instruction_block.py` | test coverage |
@@ -52,6 +53,7 @@ Repository files are scanned, normalized into inventory rows, and rendered into 
 | `tests/test_codebase_docs.py` | outbound | markdown | test coverage |
 | `tests/test_daemon.py` | outbound | markdown | test coverage |
 | `tests/test_documentation_governance.py` | outbound | markdown | test coverage |
+| `tests/test_documentation_guardrails_cleanup.py` | outbound | markdown | test coverage |
 | `tests/test_run_agent_status.py` | outbound | markdown | test coverage |
 | `tests/test_runtime_context_paths.py` | outbound | markdown | test coverage |
 | `tests/test_tool_instruction_block.py` | outbound | markdown | test coverage |
@@ -99,4 +101,4 @@ Auto-generated baseline; extend with component-specific checks as needed.
 
 | Date | Change | Modules Affected | Verified By |
 |------|--------|-----------------|-------------|
-| 2026-07-02 | Initial baseline generated from repository scan | 10 modules/files | 00_master_docs_bootstrap_v1 |
+| 2026-07-04 | Initial baseline generated from repository scan | 11 modules/files | 00_master_docs_bootstrap_v1 |

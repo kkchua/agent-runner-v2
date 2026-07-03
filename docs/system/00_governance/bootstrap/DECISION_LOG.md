@@ -1,345 +1,108 @@
 ---
-title: "Decision Log: agent-runner-v2"
 template_id: "SYS-03-DL"
+title: "Decision Log - agent-runner-v2"
 status: "active"
-managed_by: workflow-generated
-created: "2026-07-02T20:00:00+08:00"
+generated: "2026-07-04T10:00:00+08:00"
 workflow: "00_master_docs_bootstrap_v1"
 step: "04_generate_architecture_docs"
-change_id: "00DOC-GEN-20260702-005"
+change_id: "00DOC-GEN-20260704-001"
+managed_by: workflow-generated
 ---
-
-# Decision Log: agent-runner-v2
 
 > Managed by workflow: `00_master_docs_bootstrap_v1` / step: `04_generate_architecture_docs`
 > This file is workflow-generated and protected from manual edits.
 
-This document records significant architectural and design decisions made during the development of agent-runner-v2.
+# Decision Log: agent-runner-v2
 
-## Architecture Decisions
+## Decision Table
 
-### AD-001: V2 Sidecar-Only Contract
+| ID | Date | Decision | Context | Rationale | Status |
+|----|------|----------|---------|-----------|--------|
+| ARCH-001 | 2024-Q2 | Extract from UKBE | Create standalone runner | Enable independent deployment and versioning | Implemented |
+| ARCH-002 | 2024-Q2 | v2 Runtime Model | Replace v1 recovery-heavy model | Eliminate silent failures, explicit routing only | Implemented |
+| ARCH-003 | 2024-Q2 | meta.json Sidecar | Sole structured result channel | Remove ambiguity, enable strict validation | Implemented |
+| ARCH-004 | 2024-Q2 | Bootstrap/Runtime Split | Package seeds global runner home | Enable runtime customization without code changes | Implemented |
+| ARCH-005 | 2024-Q3 | Multi-Coder Support | Claude, Codex, Qwen adapters | Support diverse LLM providers | Implemented |
+| ARCH-006 | 2024-Q3 | Three Execution Modes | Local, Worker, Daemon | Cover development to production deployment | Implemented |
+| ARCH-007 | 2024-Q3 | Windows-First Paths | Primary Windows deployment | Match primary use case, cross-platform secondary | Implemented |
+| ARCH-008 | 2024-Q4 | Documentation Guardrails | Protect workflow-generated docs | Prevent documentation drift | Implemented |
+| ARCH-009 | 2025-Q1 | Template-Based Workflows | Externalize prompt templates | Enable workflow customization | Implemented |
+| ARCH-010 | 2025-Q1 | Schema Versioning | Job state schema evolution | Enable backward compatibility | Implemented |
+| ARCH-011 | 2025-Q2 | Action Pattern | Deterministic non-coder steps | Consistent I/O contracts across step types | Implemented |
+| ARCH-012 | 2025-Q2 | Review/Refine Loops | Explicit loop context in job state | Support iterative refinement workflows | Implemented |
+| ARCH-013 | 2025-Q3 | Task Execution Binding | Planning/execution split | Enable separate planning and execution jobs | Implemented |
+| ARCH-014 | 2025-Q3 | Backend Integration | HTTP API for distributed execution | Support worker pools and centralized control | Implemented |
+| ARCH-015 | 2025-Q4 | Daemon Supervisor | Child process management | Reliable long-running workstation supervision | Implemented |
+| ARCH-016 | 2026-Q1 | Bundle Taxonomy | Structured bundle organization | Support domain-specific workflow extensions | Implemented |
+| ARCH-017 | 2026-Q2 | Documentation Bootstrap | Automated system doc generation | Ensure docs stay synchronized with code | In Progress |
 
-**Status:** Accepted
+## Key Decisions Explained
 
-**Context:**
-In v1, the runner relied on multiple communication channels between the runner and coder: stdout parsing, file existence checks, and sidecar JSON. This led to ambiguity in result interpretation and complex fallback logic.
+### ARCH-003: meta.json as Sole Communication Channel
 
-**Decision:**
-In v2, `meta.json` is the ONLY structured result channel. All artifacts, status, remarks, and usage data flow through this single sidecar file. The runner never parses coder stdout for results.
+**Context:** Early versions attempted to parse coder output from stdout or support multiple result formats.
 
-**Consequences:**
-- **Positive:** Clear contract, unambiguous result interpretation
-- **Positive:** Easier testing and validation
-- **Negative:** Coder must always write valid `meta.json`
-- **Negative:** Hard failures if sidecar missing (no graceful degradation)
-
-### AD-002: No Markdown Write-Backs
-
-**Status:** Accepted
-
-**Context:**
-In v1, the runner would write metadata back to markdown files (review stamps, created timestamps, status badges). This caused race conditions and violated single-responsibility principles.
-
-**Decision:**
-The runner never writes to markdown files. All metadata lives in `job.json` or `meta.json`. Markdown files are read-only inputs or coder-generated outputs.
-
-**Consequences:**
-- **Positive:** Clear separation of concerns
-- **Positive:** No race conditions on file writes
-- **Positive:** Markdown can be versioned without runner noise
-- **Negative:** Documentation tools must read `job.json` for metadata
-
-### AD-003: Bootstrap/Runtime Split
-
-**Status:** Accepted
-
-**Context:**
-Workflow templates and prompts need to be customizable per-project but also updatable with the package.
-
-**Decision:**
-Maintain two distinct sources:
-1. **Bootstrap source** in the package (`agent_runner_v2/bootstrap/`) — seeds new installations
-2. **Runtime bundles** in user home (`~/.ukbe-runner/workflows/`) — actually loaded at runtime
+**Decision:** All step results must be written to a `meta.json` sidecar file.
 
 **Consequences:**
-- **Positive:** Safe customization without package modification
-- **Positive:** Version isolation between projects
-- **Positive:** Rollback capability
-- **Negative:** Potential drift between bootstrap and runtime
-- **Negative:** Additional complexity in bundle loading
+- (+) Unambiguous result validation
+- (+) Structured artifact claims
+- (+) Clear separation between output and result
+- (-) Requires coder discipline to write sidecar
+- (-) Additional file I/O per step
 
-### AD-004: Explicit Failure Routing
+### ARCH-004: Bootstrap/Runtime Split
 
-**Status:** Accepted
+**Context:** Need to package workflow definitions while allowing customization.
 
-**Context:**
-Silent failures and automatic recovery paths can mask issues and make debugging difficult.
-
-**Decision:**
-All failures route explicitly through `route_after_failure()`. No silent recovery. Failure classification (`AUTO_RETRYABLE`, `HUMAN_RETRY_REQUIRED`, `FATAL`) determines next steps.
+**Decision:** Package contains bootstrap source; `init` command seeds global runner home; runtime loads from global home.
 
 **Consequences:**
-- **Positive:** Predictable failure handling
-- **Positive:** Clear audit trail
-- **Positive:** No hidden recovery masking root causes
-- **Negative:** More intervention required for transient failures
+- (+) Users customize workflows without forking code
+- (+) Clean separation between core and extensions
+- (+) Versioned bootstrap updates
+- (-) Requires `init` step before first use
+- (-) Two sources of truth (package vs global home)
 
-### AD-005: Blocking Issues Owned by Coder
+### ARCH-006: Three Execution Modes
 
-**Status:** Accepted
+**Context:** Different use cases require different deployment patterns.
 
-**Context:**
-In v1, the runner extracted blocking issues from content and decided when to escalate. This duplicated the coder's content analysis.
-
-**Decision:**
-`blocking_issues` is always empty in runner context. The coder owns all content analysis and blocking determination. The runner trusts the coder's REJECTED status.
+**Decision:** Support Local (development), Worker (backend-driven), and Daemon (supervised) modes.
 
 **Consequences:**
-- **Positive:** Single responsibility for content decisions
-- **Positive:** Simpler runner logic
-- **Positive:** Coder can use any blocking criteria
-- **Negative:** Less runner visibility into why blocks occur
+- (+) Single codebase covers all deployment scenarios
+- (+) Consistent workflow execution across modes
+- (+) Gradual operational complexity (local → worker → daemon)
+- (-) Increased CLI complexity
+- (-) Mode-specific code paths to maintain
 
-### AD-006: Multi-Provider Coder Support
+### ARCH-008: Documentation Guardrails
 
-**Status:** Accepted
+**Context:** Workflow-generated documentation can be accidentally modified.
 
-**Context:**
-Different tasks may benefit from different LLM providers (Claude for reasoning, Codex for code, Qwen for local execution).
-
-**Decision:**
-Support multiple coder providers through a unified adapter interface. Each provider implements the same contract: prompt in, sidecar out.
+**Decision:** Track generated documents, inject managed-by banners, prevent manual edits.
 
 **Consequences:**
-- **Positive:** Flexibility to choose best tool for task
-- **Positive:** Fallback options if one provider unavailable
-- **Positive:** Local-first option with Qwen
-- **Negative:** Provider-specific tuning required
-- **Negative:** Testing matrix expansion
-
-### AD-007: Deterministic Runner Actions
-
-**Status:** Accepted
-
-**Context:**
-Workflow steps need reproducible, testable operations on the repository.
-
-**Decision:**
-All file/system operations go through deterministic action modules in `actions/`. Actions are pure functions with explicit inputs/outputs.
-
-**Consequences:**
-- **Positive:** Testable operations
-- **Positive:** Reproducible executions
-- **Positive:** Clear audit trail
-- **Negative:** More boilerplate for new operations
-- **Negative:** Limited to pre-defined actions
-
-### AD-008: Backend Worker Mode
-
-**Status:** Accepted
-
-**Context:**
-For team workflows and centralized job management, a backend-driven execution model is needed alongside local CLI.
-
-**Decision:**
-Implement worker mode where a backend service distributes work. Workers poll for steps, execute, and submit results. Daemon mode supervises workers.
-
-**Consequences:**
-- **Positive:** Scalable team workflows
-- **Positive:** Centralized job management
-- **Positive:** Workstation supervision via daemon
-- **Negative:** Network dependency
-- **Negative:** Additional infrastructure complexity
-
-### AD-009: Schema Versioning for Job State
-
-**Status:** Accepted
-
-**Context:**
-Job state format evolves over time. Need to support existing jobs while adding new fields.
-
-**Decision:**
-Use explicit schema versioning (`CURRENT_SCHEMA_VERSION = 6`). Include migration functions (`migrate_job_state()`) for backward compatibility.
-
-**Consequences:**
-- **Positive:** Safe evolution of job format
-- **Positive:** Existing jobs remain usable
-- **Positive:** Clear upgrade path
-- **Negative:** Migration code accumulates
-- **Negative:** Testing complexity for old versions
-
-### AD-010: Template Groups as Python Modules
-
-**Status:** Accepted
-
-**Context:**
-Workflow definitions need to be programmatically inspectable and importable.
-
-**Decision:**
-Define workflows in `template_groups.py` Python modules rather than JSON/YAML. This enables programmatic inspection, type hints, and complex logic.
-
-**Consequences:**
-- **Positive:** Full Python power in workflow definitions
-- **Positive:** Import-time validation
-- **Positive:** IDE support
-- **Negative:** Python knowledge required for customization
-- **Negative:** Security considerations with user code
-
-## Technology Decisions
-
-### TD-001: Python 3.11+ Requirement
-
-**Status:** Accepted
-
-**Context:**
-Modern Python features improve code quality and maintainability.
-
-**Decision:**
-Require Python 3.11+ for features like `tomllib`, improved `typing`, and `asyncio` enhancements.
-
-**Consequences:**
-- **Positive:** Access to modern Python features
-- **Positive:** Better type annotation support
-- **Negative:** Older system compatibility
-
-### TD-002: Jinja2 for Prompt Templating
-
-**Status:** Accepted
-
-**Context:**
-Workflow prompts need dynamic content insertion with conditionals and loops.
-
-**Decision:**
-Use Jinja2 for prompt template rendering. Templates are plain text files with Jinja2 syntax.
-
-**Consequences:**
-- **Positive:** Powerful templating with conditionals, loops
-- **Positive:** Familiar syntax
-- **Positive:** Sandboxed execution
-- **Negative:** Jinja2 dependency
-
-### TD-003: JSON for State Storage
-
-****Status:** Accepted
-
-**Context:**
-Job state needs to be human-readable, editable, and tool-processable.
-
-**Decision:**
-Use JSON for job state (`job.json`) and sidecars (`meta.json`). Avoid binary formats.
-
-**Consequences:**
-- **Positive:** Human-readable and editable
-- **Positive:** Universal tooling support
-- **Positive:** Line-oriented for version control
-- **Negative:** No native datetime types
-- **Negative:** Verbose for large states
-
-### TD-004: Pathlib for Path Operations
-
-**Status:** Accepted
-
-**Context:**
-Cross-platform path handling is error-prone with string manipulation.
-
-**Decision:**
-Use `pathlib.Path` for all path operations. No string path manipulation.
-
-**Consequences:**
-- **Positive:** Cross-platform compatibility
-- **Positive:** Type safety
-- **Positive:** Clear path semantics
-- **Negative:** Slight performance overhead
-
-## Deferred Decisions
-
-### DD-001: Bundle Taxonomy Evolution
-
-**Status:** Deferred
-
-**Context:**
-Bundle organization (core, domain, workflow) may need refinement as usage patterns emerge.
-
-**Decision:**
-Keep current flat structure under `workflows/`. Revisit if bundle count grows significantly.
-
-**Trigger for Revisit:**
-More than 20 workflow families or clear categorization needs.
-
-### DD-002: Template Groups Splitting
-
-**Status:** Deferred
-
-**Context:**
-`template_groups.py` may grow too large as workflow families are added.
-
-**Decision:**
-Keep single file per workflow bundle. Consider splitting if file exceeds 5,000 lines.
-
-**Trigger for Revisit:**
-Template groups file exceeds 5,000 lines or load time becomes noticeable.
-
-### DD-003: ComfyUI Integration Depth
-
-**Status:** Deferred
-
-**Context:**
-Current ComfyUI integration is via HTTP submission. Deeper integration may be beneficial.
-
-**Decision:**
-Keep current submission-only model. Revisit if workflow needs require more control.
-
-**Trigger for Revisit:**
-Need for progress polling, result retrieval, or workflow manipulation.
-
-## Rejected Alternatives
-
-### RA-001: SQLite for Job State
-
-**Status:** Rejected
-
-**Context:**
-Considered SQLite for job state storage instead of JSON files.
-
-**Reason for Rejection:**
-JSON files provide better debuggability, easier manual intervention, and simpler backup. SQLite adds unnecessary complexity for the query patterns needed.
-
-**Consequences of Rejection:**
-- Job state remains file-based
-- Manual editing and inspection remain easy
-- No SQL dependency
-
-### RA-002: Asyncio Throughout
-
-**Status:** Rejected
-
-**Context:**
-Considered using `asyncio` for all I/O operations.
-
-**Reason for Rejection:**
-Most operations are sequential by nature. Asyncio adds complexity without clear benefit for the current use cases. Keep synchronous code with threading where needed (daemon).
-
-**Consequences of Rejection:**
-- Simpler code flow
-- Easier debugging
-- Threading used only in daemon mode
-
-### RA-003: Protobuf for Sidecar
-
-**Status:** Rejected
-
-**Context:**
-Considered Protocol Buffers for sidecar format instead of JSON.
-
-**Reason for Rejection:**
-JSON is human-readable, editable, and universally supported. Protobuf would require code generation and complicate debugging. Performance gains not needed for this use case.
-
-**Consequences of Rejection:**
-- Sidecar remains JSON
-- Human inspection and editing possible
-- No code generation step
+- (+) Clear ownership of generated docs
+- (+) Prevents documentation drift
+- (+) Audit trail of doc generation
+- (-) Additional complexity in doc operations
+- (-) Requires workflow adherence to guardrails
+
+## Follow-Up Decisions
+
+| ID | Topic | Status | Notes |
+|----|-------|--------|-------|
+| FUP-001 | Cross-Platform Path Handling | Pending | Evaluate full Linux/macOS support |
+| FUP-002 | Async Coder Invocation | Pending | Consider async/await for concurrent steps |
+| FUP-003 | Workflow Hot-Reload | Pending | Reload bundles without restart |
+| FUP-004 | Distributed State | Pending | Shared job state across workers |
+| FUP-005 | Plugin Architecture | Pending | Third-party action registration |
+| FUP-006 | Metrics and Observability | Pending | Structured logging, metrics export |
 
 ---
 
-*Generated by workflow `00_master_docs_bootstrap_v1` step `04_generate_architecture_docs`*
+*Generated: 2026-07-04T10:00:00+08:00*
+*Workflow: 00_master_docs_bootstrap_v1 / Step: 04_generate_architecture_docs*
+*Change ID: 00DOC-GEN-20260704-001*
