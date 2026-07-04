@@ -121,6 +121,7 @@ Previous baseline: `00DOC-GEN-20260704-002` (master docs bootstrap). This invent
 | scripts/*.sh, scripts/*.bat | .sh, .bat | summary | current | docs/codebase/03_components/scripts-suite.md | 10SCAFFOLD-GEN-20260704-001 |
 | scripts/README.md | .md | summary | current | docs/codebase/03_components/scripts-suite.md | 10SCAFFOLD-GEN-20260704-001 |
 | submit-*.bat, sync-*.bat, test-runner.bat | .bat | summary | current | docs/codebase/03_components/scripts-suite.md | 10SCAFFOLD-GEN-20260704-001 |
+| run-40_documentation_sync_v1.bat | .bat | summary | current | docs/codebase/03_components/scripts-suite.md | 10SCAFFOLD-GEN-20260704-001 |
 | sample-run-delivery.bat | .bat | summary | current | docs/codebase/03_components/scripts-suite.md | 10SCAFFOLD-GEN-20260704-001 |
 
 ## 6. Test Files
@@ -173,12 +174,12 @@ Previous baseline: `00DOC-GEN-20260704-002` (master docs bootstrap). This invent
 | Python source modules | 53 | 53 | 0 | 0 | 0 |
 | Bootstrap workflow files | 80 | 80 | 0 | 0 | 0 |
 | Configuration / data files | 10 | 10 | 0 | 0 | 0 |
-| Scripts | 43 | 43 | 0 | 0 | 0 |
+| Scripts | 44 | 44 | 0 | 0 | 0 |
 | Test files | 12 | 12 | 0 | 0 | 0 |
 | Documentation files (existing) | 76 | 76 | 0 | 0 | 0 |
 | Documentation files (newly generated) | 14 | 14 | 0 | 0 | 0 |
 | Other files | 5 | 5 | 0 | 0 | 0 |
-| **Total** | **293** | **293** | **0** | **0** | **0** |
+| **Total** | **294** | **294** | **0** | **0** | **0** |
 
 ## 10. Status Definitions
 
