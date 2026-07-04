@@ -3,9 +3,9 @@ title: "Component Documentation: tests suite"
 template_id: "CB-03"
 status: "active"
 component_id: "tests-suite"
-created: "2026-07-04T10:47:08+08:00"
-owner: "00_master_docs_bootstrap_v1"
-last_verified_by_change: "00_master_docs_bootstrap_v1 / 00DOC-GEN-20260704-002 / 2026-07-04T10:47:08+08:00"
+created: "2026-07-04T13:29:07+08:00"
+owner: "40_documentation_sync_v1"
+last_verified_by_change: "40_documentation_sync_v1 / 40DOCSYNC-GEN-20260704-001 / 2026-07-04T13:29:07+08:00"
 modules: ["tests/conftest.py", "tests/test_architecture_site.py", "tests/test_backend_worker_mode.py", "tests/test_bundle_loader.py", "tests/test_codebase_docs.py", "tests/test_daemon.py", "tests/test_documentation_governance.py", "tests/test_documentation_guardrails_cleanup.py", "tests/test_run_agent_status.py", "tests/test_runtime_context_paths.py", "tests/test_tool_instruction_block.py", "tests/test_ukbe_runner_wrapper.py"]
 ---
 
@@ -103,4 +103,4 @@ Auto-generated baseline; extend with component-specific checks as needed.
 
 | Date | Change | Modules Affected | Verified By |
 |------|--------|-----------------|-------------|
-| 2026-07-04 | Initial baseline generated from repository scan | 12 modules/files | 00_master_docs_bootstrap_v1 |
+| 2026-07-04 | Initial baseline generated from repository scan | 12 modules/files | 40_documentation_sync_v1 |

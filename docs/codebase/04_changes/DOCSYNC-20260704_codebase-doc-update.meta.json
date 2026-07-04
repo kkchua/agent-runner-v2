@@ -2,20 +2,20 @@
   "schema_version": "v2",
   "coder_result": {
     "status": "APPROVED",
-    "remark": "Codebase docs bootstrap completed.",
+    "remark": "Codebase docs reconcile completed.",
     "artifacts": {
-      "CODEBASE_CHANGE_IMPACT": "docs/codebase/04_changes/00DOC-GEN-20260704-002-bootstrap.md",
+      "CODEBASE_CHANGE_IMPACT": "docs/codebase/04_changes/40DOCSYNC-GEN-20260704-001-reconcile.md",
       "CODEBASE_INVENTORY": "docs/codebase/01_inventory/codebase_inventory.md"
     },
-    "recorded_at": "2026-07-04T10:47:09+08:00"
+    "recorded_at": "2026-07-04T13:29:18+08:00"
   },
   "runner_data": {
-    "step": "01_generate_codebase_baseline",
+    "step": "sync_docs",
     "coder_used": "action",
-    "invoked_at": "2026-07-04T10:47:08",
-    "finished_at": "2026-07-04T10:47:09",
+    "invoked_at": "2026-07-04T13:29:07",
+    "finished_at": "2026-07-04T13:29:18",
     "prompt_checksum": "sha256:n/a",
-    "enriched_at": "2026-07-04T10:47:10",
+    "enriched_at": "2026-07-04T13:29:18",
     "runner_version": "v2"
   }
 }
