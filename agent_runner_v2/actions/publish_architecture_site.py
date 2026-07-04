@@ -23,7 +23,10 @@ def publish_architecture_site(*, context: dict[str, str], state: dict, step_cfg:
     mode = str(step_cfg.get("mode") or "publish")
     job_id = str(state.get("job_id") or "SITE")
     step = str(state.get("current_step") or "publish_architecture_site")
-    meta_rel = context.get("ARCHITECTURE_SITE_METAJSON", "")
+    meta_rel = (
+        context.get("ARCHITECTURE_SITE_INDEX_METAJSON", "")
+        or context.get("ARCHITECTURE_SITE_METAJSON", "")
+    )
 
     snapshot = build_snapshot(
         project_root,
@@ -68,4 +71,3 @@ def publish_architecture_site(*, context: dict[str, str], state: dict, step_cfg:
             "ARCHITECTURE_SITE_MANIFEST": "docs/site/architecture/manifest.json",
         },
     )
-

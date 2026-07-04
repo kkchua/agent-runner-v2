@@ -4,6 +4,8 @@ from pathlib import Path
 
 from agent_runner_v2.actions.validate_architecture_site import validate_architecture_site
 from agent_runner_v2.architecture_site import SITE_PAGES, render_architecture_site
+from agent_runner_v2.actions.publish_architecture_site import publish_architecture_site
+from agent_runner_v2.runtime_context import set_workflow_module
 from conftest import load_bootstrap_workflow_module
 
 
@@ -75,3 +77,21 @@ def test_architecture_site_workflow_registry_is_action_only():
     assert workflow["steps"] == ["build_site", "validate_site"]
     assert workflow["step_configs"]["build_site"]["action"] == "publish_architecture_site"
     assert workflow["step_configs"]["validate_site"]["action"] == "validate_architecture_site"
+
+
+def test_publish_architecture_site_writes_sidecar_for_index_metajson(tmp_path):
+    context = {"ARCHITECTURE_SITE_INDEX_METAJSON": "docs/site/architecture/index.meta.json"}
+    state = {"job_id": "50SITE-TEST", "template_group": "50_architecture_site_v1", "current_step": "build_site"}
+    set_workflow_module(load_bootstrap_workflow_module())
+
+    result = publish_architecture_site(
+        context=context,
+        state=state,
+        step_cfg={"mode": "publish"},
+        project_root=tmp_path,
+    )
+
+    assert result.status == "APPROVED"
+    assert (tmp_path / "docs/site/architecture/index.html").exists()
+    assert (tmp_path / "docs/site/architecture/manifest.json").exists()
+    assert (tmp_path / "docs/site/architecture/index.meta.json").exists()
