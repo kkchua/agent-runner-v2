@@ -33,6 +33,7 @@ from .bundle_loader import (
     init_workspace,
     load_project_config,
     load_workflow_module,
+    publish_bootstrap_bundle,
     resolve_workflow_root,
 )
 from .exceptions import ArtifactMissingError, MetaJsonInvalidError, MetaJsonMissingError, PreflightBlockedError
@@ -133,6 +134,15 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         p.add_argument("--bundle-profile", default="core+workflow", help="Bundle profile to record for this workspace.")
         ns = p.parse_args(raw[1:])
         ns.command = "init"
+        return ns
+
+    if command == "bootstrap-publish":
+        p = argparse.ArgumentParser(description="Publish repo-local bootstrap docs into the packaged core bundle.")
+        p.add_argument("--project-root", default=".", help="Workspace directory containing the repo-local bootstrap docs.")
+        p.add_argument("--source-root", default="", help="Optional explicit source directory to publish.")
+        p.add_argument("--bundle-root", default="", help="Optional explicit package bundle destination.")
+        ns = p.parse_args(raw[1:])
+        ns.command = "bootstrap-publish"
         return ns
 
     if command == "execute-step":
@@ -252,6 +262,18 @@ def main(argv: list[str] | None = None) -> int:
             workflow_name=args.workflow or "default",
             domain=args.bundle_domain or "general",
             bundle_profile=args.bundle_profile or "core+workflow",
+        )
+        print(json.dumps(result, indent=2, ensure_ascii=False))
+        return 0
+
+    if args.command == "bootstrap-publish":
+        workspace_root = Path(args.project_root or ".").resolve()
+        source_root = Path(args.source_root).resolve() if args.source_root else None
+        bundle_root = Path(args.bundle_root).resolve() if args.bundle_root else None
+        result = publish_bootstrap_bundle(
+            workspace_root,
+            source_root=source_root,
+            package_root=bundle_root,
         )
         print(json.dumps(result, indent=2, ensure_ascii=False))
         return 0
