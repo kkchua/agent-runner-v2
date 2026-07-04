@@ -48,7 +48,7 @@ Input:
 
 References:
 
-Output template (MANDATORY):\n- Follow: `docs/system/00_governance/bootstrap/templates/delivery/06_delivery_impl_template.md`\n- Use this template structure exactly for output.
+Output template (MANDATORY):\n- Follow: `{SYSTEM_TEMPLATE_ROOT}/delivery/06_delivery_impl_template.md`\n- Use this template structure exactly for output.
 {TASK_GRAPH_FILE}
 {PLAN_FILE}
 
@@ -192,7 +192,7 @@ Critical: Sidecar file is REQUIRED for APPROVED
       "status": "APPROVED",
       "remark": "Brief summary of what was done",
       "artifacts": {
-        "IMPL_FILE": "docs/delivery/04_implementation_plans/IMPL-20260415-01.md"
+        "IMPL_FILE": "{DELIVERY_DOC_ROOT}/04_implementation_plans/IMPL-20260415-01.md"
       },
       "recorded_at": "2026-04-15T10:30:00"
     }

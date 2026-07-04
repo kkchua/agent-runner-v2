@@ -19,6 +19,8 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
+from .doc_paths import delivery_doc_rel
+
 from .exceptions import ArtifactMissingError, MetaJsonInvalidError, MetaJsonMissingError, PreflightBlockedError
 from .documentation_guardrails import MASTER_BOOTSTRAP_WORKFLOW, master_bootstrap_artifact_candidates
 from .runtime_context import JOBS_ROOT, PROJECT_ROOT, get_workflow_module
@@ -1647,13 +1649,13 @@ def force_approve_step(
 
 def _derive_init_path_from_pre_init(pre_init_path: str) -> str:
     rel = Path(pre_init_path)
-    if rel.parent != Path("docs/delivery/01_initiatives/pre_init"):
+    if rel.parent != Path(delivery_doc_rel("01_initiatives/pre_init")):
         raise ValueError(f"Unexpected PRE_INIT_FILE path for promotion: {pre_init_path!r}")
     name = rel.name
     if not name.startswith("PRE-INIT-"):
         raise ValueError(f"Unexpected PRE_INIT_FILE name for promotion: {pre_init_path!r}")
     init_name = "INIT-" + name.removeprefix("PRE-INIT-")
-    return str(Path("docs/delivery/01_initiatives") / init_name)
+    return str(Path(delivery_doc_rel("01_initiatives")) / init_name)
 
 
 def _promote_pre_init_to_init(state: dict[str, Any]) -> str:

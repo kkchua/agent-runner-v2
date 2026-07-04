@@ -18,7 +18,8 @@ Task:
 - Delivery documents govern initiative/plan/task/implementation/review/validation flow.
 - Codebase documents govern documentation coverage across all file types, freshness rules, supersession rules, and task/workflow integration.
 - The existing-repo workflow SOP must give operators the exact onboarding and reconciliation sequence to run on a pre-existing repository.
-- The codebase SOP and status rules must define the full lifecycle contract across `20_initiative_intake_v1`, `30_delivery_planning_v1`, `31_task_execution_v1`, and `40_documentation_sync_v1`.
+- The codebase SOP and status rules must define the full lifecycle contract across `20_initiative_intake_v1`, `30_delivery_planning_v1`, `31_task_execution_v1`, and the repo-wide reconciliation workflow `40_documentation_sync_v1`.
+- The architecture communication phase lives in `50_architecture_site_v1`, which publishes browsable HTML views for stakeholders, developers, operators, and functional consumers.
 - Define a universal ecosystem baseline that applies to every repository, then explain how repo-selected architecture profiles and migration modes refine that baseline.
 - Make clear that DDD, EDA, and similar architecture standards are conditional profile choices rather than universal defaults.
 - `07_master_prompts` is deprecated and must not appear.
@@ -82,6 +83,7 @@ Required lifecycle coverage:
 - `30_delivery_planning_v1` must convert documentation scope into plan/task obligations.
 - `31_task_execution_v1` must execute and validate codebase documentation updates as part of task completion.
 - `40_documentation_sync_v1` must reconcile current code against active documentation and flag stale guidance.
+- `50_architecture_site_v1` must publish the browsable architecture site after the repository posture and docs are synchronized.
 
 Required existing-repo workflow SOP sections:
 - Purpose
@@ -96,7 +98,7 @@ Required existing-repo workflow sequence:
 - first-time setup must run `00_master_docs_bootstrap_v1`, then `10_execution_scaffold_v1`
 - normal governed delivery must run `20_initiative_intake_v1`, then `30_delivery_planning_v1`, then `31_task_execution_v1`
 - drift recovery must use `40_documentation_sync_v1` and refresh system docs when system behavior or operations guidance is stale
-- the SOP must describe `40_documentation_sync_v1` as the single current-truth synchronization workflow
+- the SOP must describe `40_documentation_sync_v1` as the repo-wide reconciliation workflow and `50_architecture_site_v1` as the next-phase architecture communication workflow
 
 Completion rule (MANDATORY)
 - Return APPROVED only after all five files exist and the sidecar exists at `{DELIVERY_SOP_METAJSON}`.

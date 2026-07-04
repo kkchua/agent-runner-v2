@@ -7,6 +7,8 @@ from .validate_delivery_docs import validate_delivery_docs
 from .validate_system_docs import validate_system_docs
 from .finalize_bootstrap import finalize_bootstrap
 from .prepare_delivery_scaffold import prepare_delivery_scaffold
+from .publish_architecture_site import publish_architecture_site
+from .validate_architecture_site import validate_architecture_site
 
 __all__ = [
     "submit_comfyui",
@@ -18,4 +20,6 @@ __all__ = [
     "validate_system_docs",
     "finalize_bootstrap",
     "prepare_delivery_scaffold",
+    "publish_architecture_site",
+    "validate_architecture_site",
 ]

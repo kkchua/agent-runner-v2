@@ -16,12 +16,12 @@ Execution rules:
 - Fix only the reviewed master/system document set.
 - Preserve the existing file paths.
 - Do not introduce new workflow scope.
-- Do not edit delivery-history docs under `docs/delivery`.
+- Do not edit delivery-history docs under `{DELIVERY_DOC_ROOT}`.
 - Update the changed master/system docs so they align with the repository scan and the review findings.
 
 Required outputs after refinement:
-- `docs/system/00_governance/bootstrap/project_analysis.md`
-- `docs/system/00_governance/bootstrap/README.md`
+- `{SYSTEM_DOC_ROOT}/project_analysis.md`
+- `{SYSTEM_DOC_ROOT}/README.md`
 - the existing `SYSTEM_DOCS_CHANGE_LOG` artifact path must still exist and reflect the current doc set
 
 Critical: meta.json sidecar is REQUIRED

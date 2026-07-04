@@ -103,8 +103,8 @@ Required compact format
   - `- Audit-trail extension: excluded`
   - `- Future lifecycle/versioning system: excluded`
 - In `## Documentation Strategy`, use compact bullets such as:
-  - `- System docs: docs/system/00_governance/bootstrap/SYSTEM_OVERVIEW.md and docs/system/00_governance/bootstrap/RUNBOOK.md must be updated if behavior or operations change`
-  - `- Codebase areas: api/workflows/docs/codebase inventory`
+  - `- System docs: {SYSTEM_DOC_ROOT}/SYSTEM_OVERVIEW.md and {SYSTEM_DOC_ROOT}/RUNBOOK.md must be updated if behavior or operations change`
+  - `- Codebase areas: api/workflows/{CODEBASE_DOC_ROOT}/01_inventory/codebase_inventory.md`
   - `- Documentation mode: module docs for Python packages; inventory entries for config/assets; change-impact record mandatory`
   - `- Stale guidance handling: supersede legacy docs if behavior is replaced`
 
@@ -163,16 +163,16 @@ Deliverable specification requirement (MANDATORY)
 - Paths must follow UKBE delivery structure
 
 Example:
-- docs/delivery/01_initiatives/INIT-YYYYMMDD-NN_<slug>.md
-- docs/delivery/02_plans/PLAN-YYYYMMDD-NN_<slug>.md
-- docs/delivery/03_tasks/TASK-YYYYMMDD-NN_<slug>.md
+- {DELIVERY_DOC_ROOT}/01_initiatives/INIT-YYYYMMDD-NN_<slug>.md
+- {DELIVERY_DOC_ROOT}/02_plans/PLAN-YYYYMMDD-NN_<slug>.md
+- {DELIVERY_DOC_ROOT}/03_tasks/TASK-YYYYMMDD-NN_<slug>.md
 
 If any deliverable does not specify a concrete output path, the plan is invalid.
 
 
 Output requirements:
 - Output document type: 02_plan
-- Save to: docs/delivery/02_plans/
+- Save to: {DELIVERY_DOC_ROOT}/02_plans/
 - Naming convention: PLAN-YYYYMMDD-NN_<slug>.md
 - Markdown only
 - Return the created plan path in artifacts.PLAN_FILE after saving.

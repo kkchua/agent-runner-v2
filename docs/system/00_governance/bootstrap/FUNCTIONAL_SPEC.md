@@ -1,11 +1,11 @@
 ---
 template_id: "SYS-00-FS"
-title: "Functional Specification - agent-runner-v2"
+title: "Functional Specification"
 status: "active"
-generated: "2026-07-04T08:00:00+08:00"
+generated: "2026-07-04T12:00:00+08:00"
 workflow: "00_master_docs_bootstrap_v1"
 step: "03_generate_system_overview_docs"
-change_id: "00DOC-GEN-20260704-001"
+change_id: "00DOC-GEN-20260704-002"
 managed_by: workflow-generated
 ---
 
@@ -16,429 +16,305 @@ managed_by: workflow-generated
 
 ## System Purpose
 
-Agent-runner-v2 provides structured workflow execution for LLM-assisted automation. It manages the lifecycle of multi-step workflows, orchestrates LLM invocations, handles step-level routing, and maintains state across execution contexts.
-
-**Key Functions:**
-- Load and execute workflow definitions
-- Invoke LLM coders with rendered prompts
-- Validate step outputs via artifact checking
-- Route to next steps based on results
-- Persist state for recovery and inspection
-
-## Actors
-
-### Primary Actors
-
-| Actor | Role | Goals |
-|-------|------|-------|
-| **Workflow Operator** | Runs workflows locally | Execute workflows, monitor progress, approve steps |
-| **Backend System** | Distributes work | Queue work, track execution, collect results |
-| **Worker Process** | Processes backend work | Claim work, execute steps, submit results |
-| **Daemon Process** | Supervises execution | Continuous work processing, child management |
-
-### Secondary Actors
-
-| Actor | Role | Goals |
-|-------|------|-------|
-| **LLM Provider** | Generates outputs | Provide code, text, or analysis on request |
-| **Reviewers** | Approve/reject outputs | Ensure quality before progression |
-| **Administrators** | Configure system | Set up runners, manage credentials |
+`agent-runner-v2` provides a runtime environment for executing structured LLM workflows with deterministic routing, artifact validation, and multi-provider LLM support.
 
 ## Functional Capabilities
 
-### F1: Workflow Execution
+### FC-1: Workflow Execution
 
-**Description:** Load workflow bundles and execute steps in sequence.
+**Description**: Execute multi-step workflows defined in template groups.
 
-**Inputs:**
-- Workflow name (e.g., `delivery_planning_v1`)
-- Job ID (generated or provided)
-- Input artifacts (file paths)
-- Configuration overrides
+**Inputs**:
+- Workflow name (template group)
+- Initial artifact values
+- Optional job ID for resumption
 
-**Process:**
-1. Load workflow bundle from runtime location
-2. Resolve template group and step configuration
-3. Create or restore job state
-4. Execute current step (coder or action)
-5. Validate outputs
-6. Route to next step
-
-**Outputs:**
+**Outputs**:
 - Updated job state
 - Generated artifacts
 - Execution logs
 
-**Error Handling:**
-- Missing workflow: Error with available workflows list
-- Invalid step: Error with valid step names
-- Execution failure: Retry or route to failure handling
+**Behaviors**:
+- Load workflow definition from runtime bundle
+- Execute steps sequentially
+- Validate artifacts after each step
+- Route to next step based on result
 
-### F2: Prompt Rendering
+### FC-2: Prompt Rendering
 
-**Description:** Build context from artifacts and render prompt templates.
+**Description**: Render step prompts with template substitution.
 
-**Inputs:**
-- Prompt template file (`.txt`)
-- Artifact paths from job state
-- Reference files configuration
-- Context variables
+**Inputs**:
+- Prompt template path
+- Context variables (artifacts, state)
 
-**Process:**
-1. Compute artifact paths relative to project root
-2. Load and include artifact contents
-3. Apply reference file mappings
-4. Substitute context variables
-5. Compute prompt checksum
-
-**Outputs:**
+**Outputs**:
 - Rendered prompt text
-- Checksum for caching/verification
+- Prompt checksum
 
-**Error Handling:**
-- Missing artifact: Preflight error before invocation
-- Missing template: Error with search paths
-- Render error: Exception with context
+**Behaviors**:
+- Load template from workflow bundle
+- Substitute variable references
+- Compute checksum for caching
+- Support literal aliases for common paths
 
-### F3: Coder Invocation
+### FC-3: Coder Invocation
 
-**Description:** Invoke LLM coders (Claude, Codex, Qwen) with prompts.
+**Description**: Invoke LLM providers with adapter pattern.
 
-**Inputs:**
-- Coder name (e.g., `claude-sonnet`, `codex`, `qwen`)
-- Rendered prompt text
+**Supported Providers**:
+| Provider | Adapter | Models |
+|----------|---------|--------|
+| Claude | `coder_adapters.py` | claude-sonnet-4, claude-opus-4 |
+| Codex | `coder_adapters.py` | codex-mini, codex-latest |
+| Qwen | `coder_adapters.py` | qwen-coder |
+
+**Inputs**:
+- Provider/model selection
+- Rendered prompt
 - Timeout configuration
-- Schema for response validation
 
-**Process:**
-1. Resolve coder configuration from model mapping
-2. Invoke appropriate adapter
-3. Wait for response (with timeout)
-4. Parse and validate response
-5. Extract metadata
+**Outputs**:
+- LLM response
+- Usage data (tokens, duration)
 
-**Outputs:**
-- Invocation result with status
-- Usage data (tokens, cost)
-- Response metadata
+### FC-4: Meta.json Processing
 
-**Error Handling:**
-- Timeout: Classify as auto-retryable
-- Invalid response: Schema validation error
-- Coder error: Invocation error with details
+**Description**: Parse and validate step results from `meta.json` sidecar.
 
-### F4: Meta.json Validation
+**Schema** (v2):
+```json
+{
+  "schema_version": "v2",
+  "coder_result": {
+    "status": "APPROVED | REJECTED",
+    "remark": "<summary>",
+    "artifacts": {"<key>": "<path>"},
+    "recorded_at": "ISO8601"
+  }
+}
+```
 
-**Description:** Read and validate sidecar results from coder execution.
+**Behaviors**:
+- Validate schema version
+- Extract status, remark, artifacts
+- Verify artifact file existence
+- Enrich with usage data
 
-**Inputs:**
-- Expected meta.json path
-- Result schema
-- Expected artifacts
+### FC-5: Routing
 
-**Process:**
-1. Read meta.json from step directory
-2. Validate against schema (v2)
-3. Verify status (APPROVED/REJECTED)
-4. Check artifact existence
-5. Enrich with usage data
+**Description**: Route job state after step completion.
 
-**Outputs:**
-- Validated StepResult
-- Artifact path mappings
+**Routes**:
+| Result | Action | Exit Code |
+|--------|--------|-----------|
+| APPROVED | Advance step, update artifacts | 0 |
+| REJECTED | Check review/refine config, loop or advance | 0 or 1 |
+| Failure | Classify, retry or escalate | 1 or 2 |
 
-**Error Handling:**
-- Missing meta.json: Fatal error, route to failure
-- Invalid JSON: Parse error with details
-- Schema violation: Validation error with path
-- Missing artifacts: ArtifactMissingError
+**Review/Refine Loops**:
+- Configured via `on_reject_refine`
+- Track iteration count
+- Max iterations triggers replan or human intervention
 
-### F5: Step Routing
+### FC-6: Job State Management
 
-**Description:** Route job state after step completion.
+**Description**: Persist and manage job execution state.
 
-**Inputs:**
-- Step result (APPROVED/REJECTED)
-- Job configuration
-- Current step context
-- Retry history
+**State Elements**:
+- `completed_steps`: List of finished steps
+- `failed_steps`: List of failed steps
+- `artifacts`: Map of artifact keys to paths
+- `reject_counts`: Per-step rejection tracking
+- `retry_history`: Execution attempts
+- `review_state`: Current review decisions
 
-**Process:**
-1. Record step usage in job state
-2. If APPROVED: Advance to next step
-3. If REJECTED: Classify rejection code
-4. Apply retry logic (auto/human)
-5. Update routing decision in state
+**Behaviors**:
+- Load existing job or create new
+- Save after each step
+- Support job resumption
+- Migrate legacy formats
 
-**Outputs:**
-- Updated job state
-- Next step or terminal status
-- Exit code (0=continue, 1=intervention, 2=fatal)
+### FC-7: Artifact Validation
 
-**Routing Logic:**
+**Description**: Validate artifact existence and conformance.
 
-| Result | Action |
-|--------|--------|
-| APPROVED | Advance step, continue workflow |
-| REJECTED (auto-retryable) | Retry step with retry count |
-| REJECTED (human-required) | Wait for human decision |
-| REJECTED (replan) | Enter replan workflow |
+**Checks**:
+- File existence for declared artifacts
+- Path format validation
+- Protected document guards
+- Template conformance (for generated docs)
 
-### F6: Action Execution
+### FC-8: Daemon Operation
 
-**Description:** Execute deterministic runner actions (non-LLM steps).
+**Description**: Run workstation as supervised worker node.
 
-**Inputs:**
-- Action name (e.g., `scan_repo_codebase`)
-- Action configuration
-- Context artifacts
+**Behaviors**:
+- Claim work from backend
+- Spawn child processes for steps
+- Track child state
+- Emit heartbeats
+- Handle graceful shutdown
 
-**Process:**
-1. Load action module from `actions/` package
-2. Execute action function
-3. Generate meta.json sidecar
-4. Return action result
+### FC-9: Backend Integration
 
-**Outputs:**
-- Generated files/artifacts
-- Action result metadata
+**Description**: Connect to external backend for distributed execution.
 
-**Built-in Actions:**
+**Behaviors**:
+- Poll for available work
+- Submit step results
+- Report worker status
+- Handle authentication
 
+### FC-10: Runner Actions
+
+**Description**: Execute deterministic actions (non-LLM steps).
+
+**Action Types**:
 | Action | Purpose |
 |--------|---------|
-| `scan_repo_codebase` | Repository analysis and inventory |
-| `sync_codebase_docs` | Documentation synchronization |
-| `validate_codebase_docs` | Documentation validation |
-| `prepare_delivery_scaffold` | Scaffold setup for delivery |
-| `promote_artifact` | Artifact promotion between stages |
-| `execute_t2i` | Text-to-image generation |
-| `execute_i2v` | Image-to-video generation |
-| `execute_voiceover` | Voiceover generation |
-| `assemble_video` | Video composition |
-| `submit_comfyui` | ComfyUI submission |
+| `copy_artifact` | File copying |
+| `prepare_delivery_scaffold` | Scaffold generation |
+| `scan_repo_codebase` | Repository analysis |
+| `sync_codebase_docs` | Doc synchronization |
+| `validate_codebase_docs` | Doc validation |
+| `finalize_bootstrap` | Bootstrap completion |
 
-### F7: State Management
+## Actors
 
-**Description:** Persist and restore job state across execution.
+### Actor: Developer
 
-**Inputs:**
-- Job ID
-- State mutations
-- Step completions
+**Description**: Local workflow execution and development.
 
-**Process:**
-1. Create job with initial state
-2. Save state after each step
-3. Load state on resume
-4. Migrate state if schema changes
+**Goals**:
+- Run workflows locally
+- Debug step failures
+- Inspect job state
+- Test workflow changes
 
-**State Contents:**
-- Current step
-- Completed steps
-- Artifact paths
-- Retry counts
-- Usage tracking
-- Failure history
-- Loop context
-- Review state
+**Interactions**:
+- `ukbe-run-agent run`: Execute workflow
+- `ukbe-run-agent show-job`: Inspect state
+- `ukbe-run-agent retry`: Retry failed steps
 
-**Storage:**
-- Location: `%USERPROFILE%\.ukbe-runner\jobs\<group>\<job_id>\`
-- Format: JSON with schema versioning
-- Backup: Automatic on migration
+### Actor: Operator
 
-### F8: Backend Integration
+**Description**: Production worker operation and monitoring.
 
-**Description:** Connect to backend for distributed execution.
+**Goals**:
+- Maintain worker availability
+- Monitor execution health
+- Handle escalations
+- Manage daemon lifecycle
 
-**Inputs:**
-- Backend URL
-- Worker ID
-- Authentication credentials
+**Interactions**:
+- `ukbe-run-agent worker`: Worker loop
+- `ukbe-run-agent daemon`: Daemon supervision
+- Log monitoring
 
-**Operations:**
-- Poll for available work
-- Claim workflow step
-- Submit step results
-- Emit heartbeats
+### Actor: Workflow Author
 
-**Process (Worker):**
-1. Poll backend for pending work
-2. Claim work item
-3. Execute step locally
-4. Submit result to backend
+**Description**: Creates and maintains workflow definitions.
 
-**Process (Daemon):**
-1. Continuous poll loop
-2. Spawn child for each work item
-3. Monitor child process
-4. Submit result on child completion
-5. Handle child failures
+**Goals**:
+- Define workflow steps
+- Author prompt templates
+- Configure routing
+- Test workflows
+
+**Interactions**:
+- Edit `template_groups.py`
+- Edit `prompts/*.txt`
+- Test with `ukbe-run-agent run`
+
+### Actor: Backend System
+
+**Description**: External system that assigns and tracks work.
+
+**Goals**:
+- Distribute work to workers
+- Collect step results
+- Track job progress
+
+**Interactions**:
+- REST API for work claiming
+- REST API for result submission
 
 ## Core Behaviors
 
-### B1: Workflow Initialization
+### Behavior: Step Execution Loop
 
-**Trigger:** `ukbe-run-agent init`
+```
+WHILE step_remaining:
+    1. LOAD step configuration
+    2. RENDER prompt with context
+    3. INVOKE coder or action
+    4. READ meta.json sidecar
+    5. VALIDATE artifacts
+    6. ROUTE based on result
+    7. SAVE job state
+```
 
-**Behavior:**
-1. Create runner home directory structure
-2. Seed workflow bundles from package
-3. Create initial configuration files
-4. Set up log directories
+### Behavior: Review/Refine Cycle
 
-**Result:** Runner home ready for execution
+```
+ON step_result.status == REJECTED:
+    IF on_reject_refine configured:
+        IF iteration < max_iterations:
+            1. INCREMENT iteration counter
+            2. RENDER refine prompt
+            3. INVOKE coder
+            4. RETURN to validation
+        ELSE:
+            1. TRIGGER replan or human intervention
+    ELSE:
+        1. ADVANCE to next step (rejection recorded)
+```
 
-### B2: Single Step Execution
+### Behavior: Failure Recovery
 
-**Trigger:** `ukbe-run-agent execute-step --request-file <file>`
+```
+ON exception:
+    1. CLASSIFY exception type
+    2. IF AUTO_RETRYABLE:
+         a. INCREMENT retry counter
+         b. IF retries < max:
+              RETRY step
+         c. ELSE:
+              ESCALATE to human
+    3. IF HUMAN_RETRY_REQUIRED:
+         a. SET status WAITING_FOR_HUMAN_APPROVAL
+         b. EXIT for intervention
+    4. IF FATAL:
+         a. SET job status FAILED
+         b. EXIT with error
+```
 
-**Behavior:**
-1. Parse execution request JSON
-2. Load workflow and resolve step
-3. Render prompt
-4. Invoke coder or action
-5. Validate result
-6. Write result JSON
+### Behavior: Daemon Work Claiming
 
-**Result:** Step executed, result available
+```
+WHILE daemon_running:
+    1. POLL backend for available work
+    2. IF work available:
+         a. CLAIM work item
+         b. SPAWN execute-step child process
+         c. MONITOR child execution
+         d. SUBMIT result on completion
+    3. ELSE:
+         a. SLEEP for poll interval
+    4. EMIT heartbeat
+```
 
-### B3: Full Workflow Execution
+## Functional Constraints
 
-**Trigger:** `ukbe-run-agent run --template-group <group>`
-
-**Behavior:**
-1. Create or load job
-2. Execute current step
-3. Route to next step
-4. Repeat until terminal
-5. Report final status
-
-**Result:** Workflow completed or awaiting approval
-
-### B4: Job Inspection
-
-**Trigger:** `ukbe-run-agent run --job-id <id> --show-job`
-
-**Behavior:**
-1. Load job state
-2. Display step history
-3. Show artifact paths
-4. Report current status
-
-**Result:** Job state visible
-
-### B5: Step Approval
-
-**Trigger:** `ukbe-run-agent run --job-id <id> --approve-step`
-
-**Behavior:**
-1. Load job state
-2. Verify step awaiting approval
-3. Apply human decision
-4. Advance workflow
-
-**Result:** Workflow continues past review gate
-
-### B6: Step Reset
-
-**Trigger:** `ukbe-run-agent run --job-id <id> --reset-step <step>`
-
-**Behavior:**
-1. Load job state
-2. Mark step incomplete
-3. Clear associated artifacts
-4. Reset routing state
-
-**Result:** Step ready for re-execution
-
-### B7: Backend Polling
-
-**Trigger:** `ukbe-run-agent poll --backend-url <url>`
-
-**Behavior:**
-1. Connect to backend
-2. Poll for available work
-3. Execute single work item
-4. Submit result
-5. Exit
-
-**Result:** One work item processed
-
-### B8: Continuous Worker
-
-**Trigger:** `ukbe-run-agent worker --backend-url <url>`
-
-**Behavior:**
-1. Register worker with backend
-2. Poll loop for work
-3. Execute claimed work
-4. Submit results
-5. Continue until interrupted
-
-**Result:** Continuous work processing
-
-### B9: Daemon Supervision
-
-**Trigger:** `ukbe-run-agent daemon <worker-id>`
-
-**Behavior:**
-1. Start supervisor process
-2. Claim work from backend
-3. Spawn child process per work item
-4. Monitor child execution
-5. Restart failed children
-6. Log all activity
-
-**Result:** Continuous supervised execution
-
-## Workflow Families
-
-### Delivery Planning (`30_delivery_planning_v1`)
-
-**Steps:**
-1. `02_planner` — Generate delivery plan
-2. `03_review_planner` — Review plan quality
-3. `03_refine_plan` — Refine based on review
-4. `04_task_graph` — Generate task graph
-5. `05_review_task_graph` — Review task decomposition
-6. `05_refine_task_graph` — Refine tasks
-7. `06_task` — Generate task contract
-8. `07_review_task` — Review task contract
-9. `07_refine_task` — Refine task
-
-**Purpose:** Turn initiatives into executable task plans
-
-### Task Execution (`31_task_execution_v1`)
-
-**Steps:**
-1. `08_impl_task` — Generate implementation plan
-2. `09_review_impl_task` — Review implementation
-3. `09_refine_impl` — Refine implementation
-4. `10_executor` — Execute implementation
-5. `11_validate` — Validate results
-
-**Purpose:** Implement and validate tasks
-
-### Documentation Bootstrap (`00_master_docs_bootstrap_v1`)
-
-**Steps:**
-1. `00_scan_repo_codebase` — Scan repository
-2. `01_generate_codebase_baseline` — Generate inventory
-3. `02_generate_project_analysis` — Analyze project
-4. `03_generate_system_overview_docs` — Generate overview docs
-5. `04_generate_architecture_docs` — Generate architecture docs
-6. `05_review_master_system_docs` — Review documentation
-7. `06_refine_master_system_docs` — Refine documentation
-8. `07_validate_codebase_baseline` — Validate codebase
-9. `08_validate_master_system_docs` — Validate system docs
-10. `09_finalize_bootstrap` — Complete bootstrap
-
-**Purpose:** Generate master system documentation
+| Constraint | Description |
+|------------|-------------|
+| Sidecar-only | `meta.json` is only structured output channel |
+| No markdown write-backs | Runner never modifies markdown files |
+| Explicit routing | All paths must be explicitly defined |
+| Hard failures | Invalid sidecar causes immediate failure |
+| Artifact existence | Declared artifacts must exist after step |
 
 ---
 
-*Generated: 2026-07-04T08:00:00+08:00*
-*Workflow: 00_master_docs_bootstrap_v1 / Step: 03_generate_system_overview_docs*
-*Change ID: 00DOC-GEN-20260704-001*
+*This functional specification defines the behaviors of agent-runner-v2. See `SYSTEM_OVERVIEW.md` for high-level context and `NON_FUNCTIONAL_REQUIREMENTS.md` for quality attributes.*

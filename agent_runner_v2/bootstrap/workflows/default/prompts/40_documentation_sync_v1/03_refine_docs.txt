@@ -15,7 +15,7 @@ Freshness requirement (MANDATORY)
 Task:
 - Update {CODEBASE_CHANGE_IMPACT} in place.
 - Update any affected inventory/module/component docs in place.
-- Update any affected system docs under `docs/system/`, `docs/engineering/`, or `docs/operations/` in place.
+- Update any affected system docs under `{SYSTEM_DOC_ROOT}/`, `{DOCS_ROOT}/engineering/`, or `{DOCS_ROOT}/operations/` in place.
 - Fix every blocking review finding.
 - Keep stale-doc handling explicit: remove it from active guidance or mark it superseded.
 - Preserve file-to-doc mapping, owner-doc paths, and last-verified-by-change data when correcting the docs.

@@ -2,10 +2,10 @@
 title: "Change Impact: agent-runner-v2 codebase bootstrap"
 template_id: "CB-04"
 status: "active"
-change_id: "00DOC-GEN-20260703-006"
+change_id: "00DOC-GEN-20260704-002"
 task_id: "00_master_docs_bootstrap_v1"
 initiative_id: "codebase-doc-bootstrap"
-created: "2026-07-03T22:32:55+08:00"
+created: "2026-07-04T10:47:08+08:00"
 author: "00_master_docs_bootstrap_v1"
 ---
 
@@ -49,14 +49,17 @@ Keep `/docs/codebase` synchronized with the current repository state even when c
 | `agent_runner_v2/actions/prepare_delivery_scaffold.py` | modify | part of repository scan baseline | medium |
 | `agent_runner_v2/actions/promote_artifact.py` | modify | part of repository scan baseline | medium |
 | `agent_runner_v2/actions/promote_init.py` | modify | part of repository scan baseline | medium |
+| `agent_runner_v2/actions/publish_architecture_site.py` | modify | part of repository scan baseline | medium |
 | `agent_runner_v2/actions/scan_repo_codebase.py` | modify | part of repository scan baseline | medium |
 | `agent_runner_v2/actions/submit_comfyui.py` | modify | part of repository scan baseline | medium |
 | `agent_runner_v2/actions/sync_codebase_docs.py` | modify | part of repository scan baseline | medium |
 | `agent_runner_v2/actions/sync_system_docs.py` | modify | part of repository scan baseline | medium |
+| `agent_runner_v2/actions/validate_architecture_site.py` | modify | part of repository scan baseline | medium |
 | `agent_runner_v2/actions/validate_codebase_docs.py` | modify | part of repository scan baseline | medium |
 | `agent_runner_v2/actions/validate_delivery_docs.py` | modify | part of repository scan baseline | medium |
 | `agent_runner_v2/actions/validate_system_docs.py` | modify | part of repository scan baseline | medium |
 | `agent_runner_v2/approve_commands.py` | modify | part of repository scan baseline | medium |
+| `agent_runner_v2/architecture_site.py` | modify | part of repository scan baseline | medium |
 | `agent_runner_v2/artifact_paths.py` | modify | part of repository scan baseline | medium |
 | `agent_runner_v2/backend_client.py` | modify | part of repository scan baseline | medium |
 | `agent_runner_v2/bootstrap/workflows/default/job_schema.json` | modify | part of repository scan baseline | medium |
@@ -147,6 +150,7 @@ Keep `/docs/codebase` synchronized with the current repository state even when c
 | `agent_runner_v2/coder_adapters.py` | modify | part of repository scan baseline | medium |
 | `agent_runner_v2/comfyui_config.json` | modify | part of repository scan baseline | medium |
 | `agent_runner_v2/daemon.py` | modify | part of repository scan baseline | medium |
+| `agent_runner_v2/doc_paths.py` | modify | part of repository scan baseline | medium |
 | `agent_runner_v2/documentation_guardrails.py` | modify | part of repository scan baseline | medium |
 | `agent_runner_v2/engine_commands.py` | modify | part of repository scan baseline | medium |
 | `agent_runner_v2/exceptions.py` | modify | part of repository scan baseline | medium |
@@ -201,14 +205,17 @@ Keep `/docs/codebase` synchronized with the current repository state even when c
 | `docs/codebase/02_modules/agent-runner-v2-actions-prepare-delivery-scaffold.md` | modify | part of repository scan baseline | medium |
 | `docs/codebase/02_modules/agent-runner-v2-actions-promote-artifact.md` | modify | part of repository scan baseline | medium |
 | `docs/codebase/02_modules/agent-runner-v2-actions-promote-init.md` | modify | part of repository scan baseline | medium |
+| `docs/codebase/02_modules/agent-runner-v2-actions-publish-architecture-site.md` | modify | part of repository scan baseline | medium |
 | `docs/codebase/02_modules/agent-runner-v2-actions-scan-repo-codebase.md` | modify | part of repository scan baseline | medium |
 | `docs/codebase/02_modules/agent-runner-v2-actions-submit-comfyui.md` | modify | part of repository scan baseline | medium |
 | `docs/codebase/02_modules/agent-runner-v2-actions-sync-codebase-docs.md` | modify | part of repository scan baseline | medium |
 | `docs/codebase/02_modules/agent-runner-v2-actions-sync-system-docs.md` | modify | part of repository scan baseline | medium |
+| `docs/codebase/02_modules/agent-runner-v2-actions-validate-architecture-site.md` | modify | part of repository scan baseline | medium |
 | `docs/codebase/02_modules/agent-runner-v2-actions-validate-codebase-docs.md` | modify | part of repository scan baseline | medium |
 | `docs/codebase/02_modules/agent-runner-v2-actions-validate-delivery-docs.md` | modify | part of repository scan baseline | medium |
 | `docs/codebase/02_modules/agent-runner-v2-actions-validate-system-docs.md` | modify | part of repository scan baseline | medium |
 | `docs/codebase/02_modules/agent-runner-v2-approve-commands.md` | modify | part of repository scan baseline | medium |
+| `docs/codebase/02_modules/agent-runner-v2-architecture-site.md` | modify | part of repository scan baseline | medium |
 | `docs/codebase/02_modules/agent-runner-v2-artifact-paths.md` | modify | part of repository scan baseline | medium |
 | `docs/codebase/02_modules/agent-runner-v2-backend-client.md` | modify | part of repository scan baseline | medium |
 | `docs/codebase/02_modules/agent-runner-v2-bootstrap-workflows-default-template-groups.md` | modify | part of repository scan baseline | medium |
@@ -218,6 +225,7 @@ Keep `/docs/codebase` synchronized with the current repository state even when c
 | `docs/codebase/02_modules/agent-runner-v2-codebase-docs.md` | modify | part of repository scan baseline | medium |
 | `docs/codebase/02_modules/agent-runner-v2-coder-adapters.md` | modify | part of repository scan baseline | medium |
 | `docs/codebase/02_modules/agent-runner-v2-daemon.md` | modify | part of repository scan baseline | medium |
+| `docs/codebase/02_modules/agent-runner-v2-doc-paths.md` | modify | part of repository scan baseline | medium |
 | `docs/codebase/02_modules/agent-runner-v2-documentation-guardrails.md` | modify | part of repository scan baseline | medium |
 | `docs/codebase/02_modules/agent-runner-v2-engine-commands.md` | modify | part of repository scan baseline | medium |
 | `docs/codebase/02_modules/agent-runner-v2-exceptions.md` | modify | part of repository scan baseline | medium |
@@ -244,11 +252,10 @@ Keep `/docs/codebase` synchronized with the current repository state even when c
 | `docs/codebase/03_components/scripts-suite.md` | modify | part of repository scan baseline | medium |
 | `docs/codebase/03_components/tests-suite.md` | modify | part of repository scan baseline | medium |
 | `docs/codebase/03_components/workflow-families.md` | modify | part of repository scan baseline | medium |
-| `docs/codebase/04_changes/00DOC-GEN-20260703-005-bootstrap-snapshot.json` | modify | part of repository scan baseline | medium |
-| `docs/codebase/04_changes/00DOC-GEN-20260703-005-bootstrap.md` | modify | part of repository scan baseline | medium |
-| `docs/codebase/04_changes/00DOC-GEN-20260703-006-bootstrap-snapshot.json` | modify | part of repository scan baseline | medium |
-| `docs/codebase/04_changes/DOCSYNC-20260703_codebase-doc-update.meta.json` | modify | part of repository scan baseline | medium |
-| `docs/system/00_governance/bootstrap/project_analysis.md` | modify | part of repository scan baseline | medium |
+| `docs/codebase/04_changes/00DOC-GEN-20260704-001-bootstrap-snapshot.json` | modify | part of repository scan baseline | medium |
+| `docs/codebase/04_changes/00DOC-GEN-20260704-001-bootstrap.md` | modify | part of repository scan baseline | medium |
+| `docs/codebase/04_changes/00DOC-GEN-20260704-002-bootstrap-snapshot.json` | modify | part of repository scan baseline | medium |
+| `docs/codebase/04_changes/DOCSYNC-20260704_codebase-doc-update.meta.json` | modify | part of repository scan baseline | medium |
 | `HOW_TO_GUIDE.md` | modify | part of repository scan baseline | medium |
 | `pyproject.toml` | modify | part of repository scan baseline | medium |
 | `QWEN.md` | modify | part of repository scan baseline | medium |
@@ -282,6 +289,7 @@ Keep `/docs/codebase` synchronized with the current repository state even when c
 | `sync-workflows-to-backend.bat` | modify | part of repository scan baseline | medium |
 | `test-runner.bat` | modify | part of repository scan baseline | medium |
 | `tests/conftest.py` | modify | part of repository scan baseline | medium |
+| `tests/test_architecture_site.py` | modify | part of repository scan baseline | medium |
 | `tests/test_backend_worker_mode.py` | modify | part of repository scan baseline | medium |
 | `tests/test_bundle_loader.py` | modify | part of repository scan baseline | medium |
 | `tests/test_codebase_docs.py` | modify | part of repository scan baseline | medium |
@@ -326,14 +334,17 @@ Keep `/docs/codebase` synchronized with the current repository state even when c
 | `agent-runner-v2-actions-prepare-delivery-scaffold.md` | `docs/codebase/02_modules/agent-runner-v2-actions-prepare-delivery-scaffold.md` | module/component/inventory | draft |
 | `agent-runner-v2-actions-promote-artifact.md` | `docs/codebase/02_modules/agent-runner-v2-actions-promote-artifact.md` | module/component/inventory | draft |
 | `agent-runner-v2-actions-promote-init.md` | `docs/codebase/02_modules/agent-runner-v2-actions-promote-init.md` | module/component/inventory | draft |
+| `agent-runner-v2-actions-publish-architecture-site.md` | `docs/codebase/02_modules/agent-runner-v2-actions-publish-architecture-site.md` | module/component/inventory | draft |
 | `agent-runner-v2-actions-scan-repo-codebase.md` | `docs/codebase/02_modules/agent-runner-v2-actions-scan-repo-codebase.md` | module/component/inventory | draft |
 | `agent-runner-v2-actions-submit-comfyui.md` | `docs/codebase/02_modules/agent-runner-v2-actions-submit-comfyui.md` | module/component/inventory | draft |
 | `agent-runner-v2-actions-sync-codebase-docs.md` | `docs/codebase/02_modules/agent-runner-v2-actions-sync-codebase-docs.md` | module/component/inventory | draft |
 | `agent-runner-v2-actions-sync-system-docs.md` | `docs/codebase/02_modules/agent-runner-v2-actions-sync-system-docs.md` | module/component/inventory | draft |
+| `agent-runner-v2-actions-validate-architecture-site.md` | `docs/codebase/02_modules/agent-runner-v2-actions-validate-architecture-site.md` | module/component/inventory | draft |
 | `agent-runner-v2-actions-validate-codebase-docs.md` | `docs/codebase/02_modules/agent-runner-v2-actions-validate-codebase-docs.md` | module/component/inventory | draft |
 | `agent-runner-v2-actions-validate-delivery-docs.md` | `docs/codebase/02_modules/agent-runner-v2-actions-validate-delivery-docs.md` | module/component/inventory | draft |
 | `agent-runner-v2-actions-validate-system-docs.md` | `docs/codebase/02_modules/agent-runner-v2-actions-validate-system-docs.md` | module/component/inventory | draft |
 | `agent-runner-v2-approve-commands.md` | `docs/codebase/02_modules/agent-runner-v2-approve-commands.md` | module/component/inventory | draft |
+| `agent-runner-v2-architecture-site.md` | `docs/codebase/02_modules/agent-runner-v2-architecture-site.md` | module/component/inventory | draft |
 | `agent-runner-v2-artifact-paths.md` | `docs/codebase/02_modules/agent-runner-v2-artifact-paths.md` | module/component/inventory | draft |
 | `agent-runner-v2-backend-client.md` | `docs/codebase/02_modules/agent-runner-v2-backend-client.md` | module/component/inventory | draft |
 | `agent-runner-v2-bootstrap-workflows-default-template-groups.md` | `docs/codebase/02_modules/agent-runner-v2-bootstrap-workflows-default-template-groups.md` | module/component/inventory | draft |
@@ -343,6 +354,7 @@ Keep `/docs/codebase` synchronized with the current repository state even when c
 | `agent-runner-v2-codebase-docs.md` | `docs/codebase/02_modules/agent-runner-v2-codebase-docs.md` | module/component/inventory | draft |
 | `agent-runner-v2-coder-adapters.md` | `docs/codebase/02_modules/agent-runner-v2-coder-adapters.md` | module/component/inventory | draft |
 | `agent-runner-v2-daemon.md` | `docs/codebase/02_modules/agent-runner-v2-daemon.md` | module/component/inventory | draft |
+| `agent-runner-v2-doc-paths.md` | `docs/codebase/02_modules/agent-runner-v2-doc-paths.md` | module/component/inventory | draft |
 | `agent-runner-v2-documentation-guardrails.md` | `docs/codebase/02_modules/agent-runner-v2-documentation-guardrails.md` | module/component/inventory | draft |
 | `agent-runner-v2-engine-commands.md` | `docs/codebase/02_modules/agent-runner-v2-engine-commands.md` | module/component/inventory | draft |
 | `agent-runner-v2-exceptions.md` | `docs/codebase/02_modules/agent-runner-v2-exceptions.md` | module/component/inventory | draft |
@@ -387,14 +399,17 @@ Keep `/docs/codebase` synchronized with the current repository state even when c
 | `agent-runner-v2-actions-prepare-delivery-scaffold.md` | `docs/codebase/02_modules/agent-runner-v2-actions-prepare-delivery-scaffold.md` | full document | repository reconciliation |
 | `agent-runner-v2-actions-promote-artifact.md` | `docs/codebase/02_modules/agent-runner-v2-actions-promote-artifact.md` | full document | repository reconciliation |
 | `agent-runner-v2-actions-promote-init.md` | `docs/codebase/02_modules/agent-runner-v2-actions-promote-init.md` | full document | repository reconciliation |
+| `agent-runner-v2-actions-publish-architecture-site.md` | `docs/codebase/02_modules/agent-runner-v2-actions-publish-architecture-site.md` | full document | repository reconciliation |
 | `agent-runner-v2-actions-scan-repo-codebase.md` | `docs/codebase/02_modules/agent-runner-v2-actions-scan-repo-codebase.md` | full document | repository reconciliation |
 | `agent-runner-v2-actions-submit-comfyui.md` | `docs/codebase/02_modules/agent-runner-v2-actions-submit-comfyui.md` | full document | repository reconciliation |
 | `agent-runner-v2-actions-sync-codebase-docs.md` | `docs/codebase/02_modules/agent-runner-v2-actions-sync-codebase-docs.md` | full document | repository reconciliation |
 | `agent-runner-v2-actions-sync-system-docs.md` | `docs/codebase/02_modules/agent-runner-v2-actions-sync-system-docs.md` | full document | repository reconciliation |
+| `agent-runner-v2-actions-validate-architecture-site.md` | `docs/codebase/02_modules/agent-runner-v2-actions-validate-architecture-site.md` | full document | repository reconciliation |
 | `agent-runner-v2-actions-validate-codebase-docs.md` | `docs/codebase/02_modules/agent-runner-v2-actions-validate-codebase-docs.md` | full document | repository reconciliation |
 | `agent-runner-v2-actions-validate-delivery-docs.md` | `docs/codebase/02_modules/agent-runner-v2-actions-validate-delivery-docs.md` | full document | repository reconciliation |
 | `agent-runner-v2-actions-validate-system-docs.md` | `docs/codebase/02_modules/agent-runner-v2-actions-validate-system-docs.md` | full document | repository reconciliation |
 | `agent-runner-v2-approve-commands.md` | `docs/codebase/02_modules/agent-runner-v2-approve-commands.md` | full document | repository reconciliation |
+| `agent-runner-v2-architecture-site.md` | `docs/codebase/02_modules/agent-runner-v2-architecture-site.md` | full document | repository reconciliation |
 | `agent-runner-v2-artifact-paths.md` | `docs/codebase/02_modules/agent-runner-v2-artifact-paths.md` | full document | repository reconciliation |
 | `agent-runner-v2-backend-client.md` | `docs/codebase/02_modules/agent-runner-v2-backend-client.md` | full document | repository reconciliation |
 | `agent-runner-v2-bootstrap-workflows-default-template-groups.md` | `docs/codebase/02_modules/agent-runner-v2-bootstrap-workflows-default-template-groups.md` | full document | repository reconciliation |
@@ -404,6 +419,7 @@ Keep `/docs/codebase` synchronized with the current repository state even when c
 | `agent-runner-v2-codebase-docs.md` | `docs/codebase/02_modules/agent-runner-v2-codebase-docs.md` | full document | repository reconciliation |
 | `agent-runner-v2-coder-adapters.md` | `docs/codebase/02_modules/agent-runner-v2-coder-adapters.md` | full document | repository reconciliation |
 | `agent-runner-v2-daemon.md` | `docs/codebase/02_modules/agent-runner-v2-daemon.md` | full document | repository reconciliation |
+| `agent-runner-v2-doc-paths.md` | `docs/codebase/02_modules/agent-runner-v2-doc-paths.md` | full document | repository reconciliation |
 | `agent-runner-v2-documentation-guardrails.md` | `docs/codebase/02_modules/agent-runner-v2-documentation-guardrails.md` | full document | repository reconciliation |
 | `agent-runner-v2-engine-commands.md` | `docs/codebase/02_modules/agent-runner-v2-engine-commands.md` | full document | repository reconciliation |
 | `agent-runner-v2-exceptions.md` | `docs/codebase/02_modules/agent-runner-v2-exceptions.md` | full document | repository reconciliation |

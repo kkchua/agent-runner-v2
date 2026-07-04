@@ -10,6 +10,7 @@ from datetime import datetime
 from pathlib import Path
 
 from ..action_result import ActionResult
+from ..doc_paths import system_doc_rel
 from ..codebase_docs import build_snapshot
 from ..runtime_context import resolve_step_meta_rel, write_meta_sidecar
 from ..system_docs import render_system_docs_validation
@@ -22,19 +23,19 @@ from .documentation_validation_core import (
 
 
 SYSTEM_DOC_REQUIRED_SECTIONS: dict[str, list[str]] = {
-    "docs/system/00_governance/bootstrap/project_analysis.md": [
+    system_doc_rel("project_analysis.md"): [
         "Repo Overview",
         "Codebase Structure",
         "Operational Risks",
         "Architectural Observations",
         "Architecture Posture",
     ],
-    "docs/system/00_governance/bootstrap/README.md": [
+    system_doc_rel("README.md"): [
         "System Documentation Index",
         "Audience Views",
         "Document Map",
     ],
-    "docs/system/00_governance/bootstrap/DOCUMENTATION_STANDARD.md": [
+    system_doc_rel("DOCUMENTATION_STANDARD.md"): [
         "Purpose",
         "Audience Model",
         "Document Set",
@@ -45,30 +46,30 @@ SYSTEM_DOC_REQUIRED_SECTIONS: dict[str, list[str]] = {
         "Migration Mode",
         "Conditional Standards",
     ],
-    "docs/system/00_governance/bootstrap/SYSTEM_OVERVIEW.md": [
+    system_doc_rel("SYSTEM_OVERVIEW.md"): [
         "Purpose",
         "Scope",
         "Primary Flows",
         "Key Risks",
         "Architecture Profile",
     ],
-    "docs/system/00_governance/bootstrap/SYSTEM_FILE_STRUCTURE.md": [
+    system_doc_rel("SYSTEM_FILE_STRUCTURE.md"): [
         "Repository Structure",
         "Top-Level Directories",
         "Documentation Locations",
     ],
-    "docs/system/00_governance/bootstrap/DEVELOPER_GUIDE.md": [
+    system_doc_rel("DEVELOPER_GUIDE.md"): [
         "Development Workflow",
         "Key Commands",
         "Documentation Responsibilities",
         "Architecture Posture",
     ],
-    "docs/system/00_governance/bootstrap/RUNBOOK.md": [
+    system_doc_rel("RUNBOOK.md"): [
         "Operations Scope",
         "Routine Procedures",
         "Failure Handling",
     ],
-    "docs/system/00_governance/bootstrap/EXISTING_REPO_WORKFLOW_SOP.md": [
+    system_doc_rel("EXISTING_REPO_WORKFLOW_SOP.md"): [
         "Purpose",
         "First-Time Setup",
         "Normal Governed Delivery",
@@ -82,7 +83,7 @@ SYSTEM_DOC_REQUIRED_SECTIONS: dict[str, list[str]] = {
 
 def _system_extra_checks(project_root: Path) -> list[dict[str, object]]:
     checks: list[dict[str, object]] = []
-    index_path = "docs/system/00_governance/bootstrap/README.md"
+    index_path = system_doc_rel("README.md")
     index_text = read_file(project_root, index_path)
     if index_text is not None:
         checks.append({"check": "index_mentions_documentation_standard", "path": index_path, "ok": "DOCUMENTATION_STANDARD.md" in index_text, "detail": "present" if "DOCUMENTATION_STANDARD.md" in index_text else "missing"})
@@ -105,49 +106,49 @@ def validate_system_docs(*, context: dict[str, str], state: dict, step_cfg: dict
     )
 
     required_files = (
-        "docs/system/00_governance/bootstrap/project_analysis.md",
-        "docs/system/00_governance/bootstrap/README.md",
-        "docs/system/00_governance/bootstrap/DOCUMENTATION_STANDARD.md",
-        "docs/system/00_governance/bootstrap/BUNDLE_TAXONOMY.md",
-        "docs/system/00_governance/bootstrap/BUNDLE_MIGRATION_PLAN.md",
-        "docs/system/00_governance/bootstrap/SYSTEM_OVERVIEW.md",
-        "docs/system/00_governance/bootstrap/BUSINESS_CAPABILITIES.md",
-        "docs/system/00_governance/bootstrap/FUNCTIONAL_SPEC.md",
-        "docs/system/00_governance/bootstrap/NON_FUNCTIONAL_REQUIREMENTS.md",
-        "docs/system/00_governance/bootstrap/SYSTEM_CONTEXT.md",
-        "docs/system/00_governance/bootstrap/COMPONENT_ARCHITECTURE.md",
-        "docs/system/00_governance/bootstrap/DECISION_LOG.md",
-        "docs/system/00_governance/bootstrap/SYSTEM_FILE_STRUCTURE.md",
-        "docs/system/00_governance/bootstrap/DEVELOPER_GUIDE.md",
-        "docs/system/00_governance/bootstrap/RUNBOOK.md",
-        "docs/system/00_governance/bootstrap/EXISTING_REPO_WORKFLOW_SOP.md",
-        f"docs/system/00_governance/bootstrap/{job_id}-{mode}-change-log.md",
+        system_doc_rel("project_analysis.md"),
+        system_doc_rel("README.md"),
+        system_doc_rel("DOCUMENTATION_STANDARD.md"),
+        system_doc_rel("BUNDLE_TAXONOMY.md"),
+        system_doc_rel("BUNDLE_MIGRATION_PLAN.md"),
+        system_doc_rel("SYSTEM_OVERVIEW.md"),
+        system_doc_rel("BUSINESS_CAPABILITIES.md"),
+        system_doc_rel("FUNCTIONAL_SPEC.md"),
+        system_doc_rel("NON_FUNCTIONAL_REQUIREMENTS.md"),
+        system_doc_rel("SYSTEM_CONTEXT.md"),
+        system_doc_rel("COMPONENT_ARCHITECTURE.md"),
+        system_doc_rel("DECISION_LOG.md"),
+        system_doc_rel("SYSTEM_FILE_STRUCTURE.md"),
+        system_doc_rel("DEVELOPER_GUIDE.md"),
+        system_doc_rel("RUNBOOK.md"),
+        system_doc_rel("EXISTING_REPO_WORKFLOW_SOP.md"),
+        system_doc_rel(f"{job_id}-{mode}-change-log.md"),
     )
 
     plan = DocumentationValidationPlan(
         required_files=required_files,
         section_requirements=SYSTEM_DOC_REQUIRED_SECTIONS,
         template_ids={
-            "docs/system/00_governance/bootstrap/README.md": "SYS-00-IDX",
-            "docs/system/00_governance/bootstrap/DOCUMENTATION_STANDARD.md": "SYS-00-DS",
-            "docs/system/00_governance/bootstrap/BUNDLE_TAXONOMY.md": "SYS-00-BT",
-            "docs/system/00_governance/bootstrap/BUNDLE_MIGRATION_PLAN.md": "SYS-00-BMP",
-            "docs/system/00_governance/bootstrap/SYSTEM_OVERVIEW.md": "SYS-00-SO",
-            "docs/system/00_governance/bootstrap/BUSINESS_CAPABILITIES.md": "SYS-00-BC",
-            "docs/system/00_governance/bootstrap/FUNCTIONAL_SPEC.md": "SYS-00-FS",
-            "docs/system/00_governance/bootstrap/NON_FUNCTIONAL_REQUIREMENTS.md": "SYS-00-NFR",
-            "docs/system/00_governance/bootstrap/SYSTEM_CONTEXT.md": "SYS-03-CTX",
-            "docs/system/00_governance/bootstrap/COMPONENT_ARCHITECTURE.md": "SYS-03-CA",
-            "docs/system/00_governance/bootstrap/DECISION_LOG.md": "SYS-03-DL",
-            "docs/system/00_governance/bootstrap/SYSTEM_FILE_STRUCTURE.md": "SYS-03-SF",
-            "docs/system/00_governance/bootstrap/DEVELOPER_GUIDE.md": "ENG-01-DG",
-            "docs/system/00_governance/bootstrap/RUNBOOK.md": "OPS-01-RB",
+            system_doc_rel("README.md"): "SYS-00-IDX",
+            system_doc_rel("DOCUMENTATION_STANDARD.md"): "SYS-00-DS",
+            system_doc_rel("BUNDLE_TAXONOMY.md"): "SYS-00-BT",
+            system_doc_rel("BUNDLE_MIGRATION_PLAN.md"): "SYS-00-BMP",
+            system_doc_rel("SYSTEM_OVERVIEW.md"): "SYS-00-SO",
+            system_doc_rel("BUSINESS_CAPABILITIES.md"): "SYS-00-BC",
+            system_doc_rel("FUNCTIONAL_SPEC.md"): "SYS-00-FS",
+            system_doc_rel("NON_FUNCTIONAL_REQUIREMENTS.md"): "SYS-00-NFR",
+            system_doc_rel("SYSTEM_CONTEXT.md"): "SYS-03-CTX",
+            system_doc_rel("COMPONENT_ARCHITECTURE.md"): "SYS-03-CA",
+            system_doc_rel("DECISION_LOG.md"): "SYS-03-DL",
+            system_doc_rel("SYSTEM_FILE_STRUCTURE.md"): "SYS-03-SF",
+            system_doc_rel("DEVELOPER_GUIDE.md"): "ENG-01-DG",
+            system_doc_rel("RUNBOOK.md"): "OPS-01-RB",
         },
         extra_checkers=(_system_extra_checks,),
     )
 
     checks = validate_documentation_plan(project_root=project_root, plan=plan)
-    validation_path = project_root / "docs/system/00_governance/bootstrap" / f"{job_id}-{mode}-validation.md"
+    validation_path = project_root / system_doc_rel(f"{job_id}-{mode}-validation.md")
     validation_path.parent.mkdir(parents=True, exist_ok=True)
     rendered_checks = [
         (

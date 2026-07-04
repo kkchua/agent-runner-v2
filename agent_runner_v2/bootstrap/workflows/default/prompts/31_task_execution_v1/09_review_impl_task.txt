@@ -35,7 +35,7 @@ Governing references:
 {TASK_GRAPH_FILE}
 
 Output template (MANDATORY):
-- Follow: `docs/system/00_governance/bootstrap/templates/delivery/07_delivery_review_template.md`
+- Follow: `{SYSTEM_TEMPLATE_ROOT}/delivery/07_delivery_review_template.md`
 - Use this template structure exactly for review document output.
 
 Freshness requirement (MANDATORY)
@@ -77,7 +77,7 @@ Critical: Sidecar file is REQUIRED for review step
       "status": "APPROVED" | "REJECTED",
       "remark": "Brief summary of review decision",
       "artifacts": {
-        "REVIEW_FILE": "docs/delivery/05_reviews/REV-20260415-01.md"
+        "REVIEW_FILE": "{DELIVERY_DOC_ROOT}/05_reviews/REV-20260415-01.md"
       },
       "recorded_at": "2026-04-15T10:30:00"
     }

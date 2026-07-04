@@ -53,7 +53,7 @@ Validation Duties
 
 Validation Record
 
-* Follow: `docs/system/00_governance/bootstrap/templates/delivery/08_delivery_validation_template.md`
+* Follow: `{SYSTEM_TEMPLATE_ROOT}/delivery/08_delivery_validation_template.md`
 * Write exactly one markdown file to: {VALIDATION_FILE_PATH}
 * The validation record must separate implementation/test findings from documentation-sync findings.
 

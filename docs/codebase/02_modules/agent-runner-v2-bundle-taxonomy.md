@@ -6,8 +6,8 @@ module_path: "agent_runner_v2/bundle_taxonomy.py"
 module_area: "support"
 documentation_mode: "summary"
 owner_doc_path: "docs/codebase/02_modules/agent-runner-v2-bundle-taxonomy.md"
-last_verified_by_change: "00_master_docs_bootstrap_v1 / 00DOC-GEN-20260704-001 / 2026-07-04T06:01:39+08:00"
-created: "2026-07-04T06:01:39+08:00"
+last_verified_by_change: "00_master_docs_bootstrap_v1 / 00DOC-GEN-20260704-002 / 2026-07-04T10:47:08+08:00"
+created: "2026-07-04T10:47:08+08:00"
 owner: "00_master_docs_bootstrap_v1"
 ---
 
@@ -31,6 +31,7 @@ This module belongs to the `support` area and is documented as `summary`.
 | `dataclasses` | stdlib module | imported dependency |
 | `pathlib` | stdlib module | imported dependency |
 | `typing` | stdlib module | imported dependency |
+| `doc_paths` | external module | repository dependency |
 
 ## 2. Public API
 

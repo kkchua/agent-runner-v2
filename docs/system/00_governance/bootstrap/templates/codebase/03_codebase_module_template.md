@@ -1,11 +1,11 @@
 ---
-template_id: CODEBASE-MOD-v1
-status: active
-generated: "2026-07-03T23:30:00+08:00"
+title: Codebase Module Template
+managed_by: workflow-generated
 workflow: 10_execution_scaffold_v1
 step: generate_templates
-managed_by: workflow-generated
-version: 1.0.0
+created: 2026-07-04
+template_id: CODEBASE-MOD-v1
+version: 1
 ---
 
 > Managed by workflow: `10_execution_scaffold_v1` / step: `generate_templates`
@@ -13,123 +13,109 @@ version: 1.0.0
 
 # Codebase Module Template
 
+> Artifact key: `CODEBASE_MODULE_TEMPLATE`
+
 ## Metadata
 
 | Field | Value |
-|-------|-------|
-| **Template ID** | `CODEBASE-MOD-v1` |
-| **Module ID** | `[MODULE-XXXX-v1]` |
-| **Module Name** | `[module.name.path]` |
-| **Status** | `current` / `needs_update` / `pending_review` / `superseded` |
-| **Documentation Mode** | `stub` / `summary` / `full` |
-| **Last Updated** | `[YYYY-MM-DDTHH:MM:SS+TZ]` |
-| **Last Verified By** | `[CHANGE-XXXX-v1 or SCAN-ID]` |
-| **Owner Doc** | `[Path to this module doc]` |
-| **Workflow** | `10_execution_scaffold_v1` |
-| **Step** | `generate_templates` |
-| **Managed By** | workflow-generated |
+|---|---|
+| Template ID | `CODEBASE-MOD-v1` |
+| Owner Workflow | `10_execution_scaffold_v1` |
+| Owner Step | `generate_templates` |
+| Scope | Universal baseline — applies to all governed repositories |
+| Status | `active` |
+| Last Verified | 2026-07-04 |
+
+This template defines the canonical structure for per-module reference documentation. Every module doc instance must conform to this structure.
+
+---
+
+## Instance Preamble
+
+```yaml
+---
+title: Module — {MODULE_NAME}
+managed_by: workflow-generated
+workflow: 10_execution_scaffold_v1
+step: codebase_doc
+created: {DATE}
+template_id: CODEBASE-MOD-v1
+module_id: {MODULE_ID}
+status: current
+last_verified_by_change: {CHANGE_ID}
+---
+```
+
+## Metadata
+
+| Field | Value |
+|---|---|
+| Module ID | `{MODULE_ID}` |
+| Module Name | `{MODULE_NAME}` |
+| File Path | `{MODULE_PATH}` |
+| Created | `{DATE}` |
+| Last Updated | `{DATE}` |
+| Last Verified by Change | `{CHANGE_ID_OR_SHA}` |
+| Status | `current` / `needs_update` / `pending_review` / `superseded` |
+| Owner Doc Path | `{DOC_PATH}` |
+| Documentation Mode | `documented` |
 
 ## Module Overview
 
-<!-- High-level overview of this module. -->
-
 | Field | Value |
-|-------|-------|
-| **Module Path** | `[Relative path from repo root]` |
-| **Primary Language** | `[Python / JavaScript / etc.]` |
-| **Purpose** | `[What this module does]` |
-| **Public API** | `[Yes / No — does this module expose a public API?]` |
-| **Entry Point** | `[Primary entry function/class]` |
-| **Complexity** | `[Low / Medium / High]` |
+|---|---|
+| Purpose | `{PURPOSE}` |
+| Responsibility | `{RESPONSIBILITY}` |
+| Key Abstractions | `{ABSTRACTIONS}` |
+| Architecture Profile | `{PROFILE_IF_APPLICABLE}` |
 
 ## File Inventory
 
-<!-- All files that belong to this module. -->
-
-| File | Type | Lines | Purpose | Status |
-|------|------|-------|---------|--------|
-| `[path]` | `[source / test / config]` | `[count]` | `[Purpose]` | `[current / needs_update]` |
+| File | Role | Status |
+|---|---|---|
+| `{FILE_PATH}` | `{ROLE}` | `current` / `needs_update` / `pending_review` |
 
 ## Architecture
 
-<!-- How this module fits into the overall architecture. -->
-
-### Module Role
-[What role this module plays in the system]
-
-### Design Patterns
-| Pattern | Where Used | Purpose |
-|---------|-----------|---------|
-| `[Pattern]` | `[Location]` | `[Purpose]` |
-
-### Architecture Profile
-| Dimension | Value |
-|-----------|-------|
-| **Current Profile** | `[e.g., modular-monolith]` |
-| **DDD/EDA Relevance** | `[Applicable / Not applicable]` |
+| Aspect | Description |
+|---|---|
+| Internal Structure | `{DESCRIPTION}` |
+| Design Patterns | `{PATTERNS}` |
+| Key Invariants | `{INVARIANTS}` |
 
 ## Key Components
 
-<!-- Key classes, functions, or sub-modules within this module. -->
-
-| Component | Type | Description | Visibility |
-|-----------|------|-------------|-----------|
-| `[Name]` | `[class / function / sub-module]` | `[Description]` | `[public / private]` |
+| Component | Description | Location |
+|---|---|---|
+| `{COMPONENT}` | `{DESCRIPTION}` | `{LOCATION}` |
 
 ## Public API
 
-<!-- Publicly accessible interface of this module. -->
-
-### Functions
-
-| Function | Signature | Description |
-|----------|-----------|-------------|
-| `[name]` | `[signature]` | `[Description]` |
-
-### Classes
-
-| Class | Description | Key Methods |
-|-------|-------------|-------------|
-| `[Name]` | `[Description]` | `[method1, method2]` |
-
-### Exports
-
-| Export | Type | Description |
-|--------|------|-------------|
-| `[name]` | `[function / class / constant]` | `[Description]` |
+| Symbol | Type | Signature | Description |
+|---|---|---|---|
+| `{SYMBOL}` | `function` / `class` / `constant` | `{SIGNATURE}` | `{DESCRIPTION}` |
 
 ## Dependencies
 
-<!-- What this module depends on and what depends on it. -->
-
-### Outgoing Dependencies
-
-| Module | Type | Usage |
-|--------|------|-------|
-| `[module path]` | `[import / runtime]` | `[How it's used]` |
-
-### Incoming Dependencies (Reverse)
-
-| Module | Type | Usage |
-|--------|------|-------|
-| `[module path]` | `[import / runtime]` | `[How it uses this module]` |
+| Dependency | Type | Direction | Notes |
+|---|---|---|---|
+| `{DEPENDENCY}` | `internal` / `external` | `imports` / `imported_by` | `{NOTES}` |
 
 ## Testing
 
-<!-- Test coverage for this module. -->
-
-| Test File | Coverage | Status |
-|-----------|----------|--------|
-| `[path]` | `[Percentage or description]` | `[Pass / Fail / N/A]` |
+| Aspect | Details |
+|---|---|
+| Test Location | `{TEST_PATH}` |
+| Test Coverage | `{COVERAGE}` |
+| Key Test Cases | `{CASES}` |
 
 ## Change Log
 
-<!-- History of changes to this module and its documentation. -->
-
-| Date | Change | Change ID | Doc Updated |
-|------|--------|-----------|-------------|
-| `[Date]` | `[Description]` | `[CHANGE-XXXX-v1]` | `[Yes / No]` |
+| Date | Change ID | Description | Author |
+|---|---|---|---|
+| `{DATE}` | `{CHANGE_ID}` | `{DESCRIPTION}` | `{AUTHOR}` |
 
 ## Notes
 
-<!-- Additional context, decisions, or references. -->
+- {NOTE_1}
+- {NOTE_2}

@@ -34,7 +34,7 @@ Validation Duties
    - Read {CODEBASE_CHANGE_IMPACT} and {CODEBASE_INVENTORY}.
    - Confirm the change-impact record matches the implemented task scope.
    - Confirm the inventory reflects the current state of affected codebase areas.
-   - Confirm required system docs under `docs/system/`, `docs/engineering/`, and `docs/operations/` were updated when the task changed architecture, behavior, developer workflow, or operations guidance.
+   - Confirm required system docs under `{SYSTEM_DOC_ROOT}`, `{DOCS_ROOT}/engineering/`, and `{DOCS_ROOT}/operations/` were updated when the task changed architecture, behavior, developer workflow, or operations guidance.
    - Confirm stale docs were removed from active guidance or marked superseded with replacement pointers.
    - Confirm non-Python file changes are represented in the documentation set where applicable.
 3. Verify docstring linkage (MANDATORY):
@@ -57,7 +57,7 @@ Validation Duties
 
 Validation Record
 
-* Follow: `docs/system/00_governance/bootstrap/templates/delivery/08_delivery_validation_template.md`
+* Follow: `{SYSTEM_TEMPLATE_ROOT}/delivery/08_delivery_validation_template.md`
 * Write exactly one markdown file to: {VALIDATION_FILE_PATH}
 * The validation record must separate implementation/test findings from documentation-sync findings.
 

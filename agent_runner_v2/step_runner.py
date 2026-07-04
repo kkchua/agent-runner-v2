@@ -27,6 +27,15 @@ from typing import Any
 from .artifact_paths import compute_paths
 from .coder_adapters import CoderInvocationError, dataclass_dict, invoke_coder
 from .exceptions import ArtifactMissingError, MetaJsonInvalidError, MetaJsonMissingError
+from .doc_paths import (
+    docs_root_rel,
+    architecture_site_rel,
+    codebase_doc_rel,
+    delivery_doc_rel,
+    master_bootstrap_docs,
+    prompt_literal_aliases,
+    system_doc_rel,
+)
 from .runtime_context import (
     ARTIFACT_ROOT,
     JOBS_ROOT,
@@ -706,65 +715,51 @@ def _set_backend_artifact_rule_aliases(*, ctx: dict[str, str], state: dict, step
 
 
 DELIVERY_SCAFFOLD_OUTPUT_PATHS: dict[str, str] = {
-    "PROJECT_ANALYSIS": "docs/system/00_governance/bootstrap/project_analysis.md",
-    "DELIVERY_SOP": "docs/system/00_governance/bootstrap/WORKFLOW_SOP_v1.md",
-    "DELIVERY_STATUS_RULES": "docs/system/00_governance/bootstrap/DELIVERY_STATUS_RULES_v1.md",
-    "DELIVERY_VALIDATION_TEMPLATE": "docs/system/00_governance/bootstrap/templates/delivery/08_delivery_validation_template.md",
-    "DELIVERY_TEMPLATE_REGISTRY": "docs/system/00_governance/bootstrap/templates/delivery/01_delivery_template_registry.md",
-    "DELIVERY_INITIATIVE_TEMPLATE": "docs/system/00_governance/bootstrap/templates/delivery/02_delivery_initiative_template.md",
-    "DELIVERY_PLAN_TEMPLATE": "docs/system/00_governance/bootstrap/templates/delivery/03_delivery_plan_template.md",
-    "DELIVERY_TASK_GRAPH_TEMPLATE": "docs/system/00_governance/bootstrap/templates/delivery/04_delivery_task_graph_template.md",
-    "DELIVERY_TASK_TEMPLATE": "docs/system/00_governance/bootstrap/templates/delivery/05_delivery_task_template.md",
-    "DELIVERY_IMPL_TEMPLATE": "docs/system/00_governance/bootstrap/templates/delivery/06_delivery_impl_template.md",
-    "DELIVERY_REVIEW_TEMPLATE": "docs/system/00_governance/bootstrap/templates/delivery/07_delivery_review_template.md",
-    "DELIVERY_MEMORY_TEMPLATE": "docs/system/00_governance/bootstrap/templates/delivery/09_delivery_memory_template.md",
-    "DELIVERY_AGENTS_MD": "docs/delivery/00_standards/DELIVERY_AGENTS_MD.md",
-    "DELIVERY_AGENT_PLANNER": "docs/delivery/00_standards/DELIVERY_AGENT_PLANNER.md",
-    "DELIVERY_AGENT_TASK_DECOMPOSER": "docs/delivery/00_standards/DELIVERY_AGENT_TASK_DECOMPOSER.md",
-    "DELIVERY_AGENT_IMPL_PLANNER": "docs/delivery/00_standards/DELIVERY_AGENT_IMPL_PLANNER.md",
-    "DELIVERY_AGENT_EXECUTOR": "docs/delivery/00_standards/DELIVERY_AGENT_EXECUTOR.md",
-    "DELIVERY_AGENT_REVIEWER": "docs/delivery/00_standards/DELIVERY_AGENT_REVIEWER.md",
-    "DELIVERY_AGENT_MEMORY_MANAGER": "docs/delivery/00_standards/DELIVERY_AGENT_MEMORY_MANAGER.md",
-    "CODEBASE_DOC_SOP": "docs/codebase/00_standards/CODEBASE_DOC_SOP_v1.md",
-    "CODEBASE_DOC_STATUS_RULES": "docs/codebase/00_standards/CODEBASE_DOC_STATUS_RULES_v1.md",
-    "CODEBASE_TEMPLATE_REGISTRY": "docs/system/00_governance/bootstrap/templates/codebase/01_codebase_template_registry.md",
-    "CODEBASE_INVENTORY_TEMPLATE": "docs/system/00_governance/bootstrap/templates/codebase/02_codebase_inventory_template.md",
-    "CODEBASE_MODULE_TEMPLATE": "docs/system/00_governance/bootstrap/templates/codebase/03_codebase_module_template.md",
-    "CODEBASE_COMPONENT_TEMPLATE": "docs/system/00_governance/bootstrap/templates/codebase/04_codebase_component_template.md",
-    "CODEBASE_CHANGE_TEMPLATE": "docs/system/00_governance/bootstrap/templates/codebase/05_codebase_change_template.md",
-    "CODEBASE_INVENTORY": "docs/codebase/01_inventory/codebase_inventory.md",
-    "DELIVERY_FOLDER_MAP": "docs/delivery/DELIVERY_FOLDER_MAP.json",
-    "EXISTING_REPO_WORKFLOW_SOP": "docs/system/00_governance/bootstrap/EXISTING_REPO_WORKFLOW_SOP.md",
+    **{
+        "PROJECT_ANALYSIS": system_doc_rel("project_analysis.md"),
+        "DELIVERY_SOP": system_doc_rel("WORKFLOW_SOP_v1.md"),
+        "DELIVERY_STATUS_RULES": system_doc_rel("DELIVERY_STATUS_RULES_v1.md"),
+        "DELIVERY_VALIDATION_TEMPLATE": system_doc_rel("templates/delivery/08_delivery_validation_template.md"),
+        "DELIVERY_TEMPLATE_REGISTRY": system_doc_rel("templates/delivery/01_delivery_template_registry.md"),
+        "DELIVERY_INITIATIVE_TEMPLATE": system_doc_rel("templates/delivery/02_delivery_initiative_template.md"),
+        "DELIVERY_PLAN_TEMPLATE": system_doc_rel("templates/delivery/03_delivery_plan_template.md"),
+        "DELIVERY_TASK_GRAPH_TEMPLATE": system_doc_rel("templates/delivery/04_delivery_task_graph_template.md"),
+        "DELIVERY_TASK_TEMPLATE": system_doc_rel("templates/delivery/05_delivery_task_template.md"),
+        "DELIVERY_IMPL_TEMPLATE": system_doc_rel("templates/delivery/06_delivery_impl_template.md"),
+        "DELIVERY_REVIEW_TEMPLATE": system_doc_rel("templates/delivery/07_delivery_review_template.md"),
+        "DELIVERY_MEMORY_TEMPLATE": system_doc_rel("templates/delivery/09_delivery_memory_template.md"),
+        "DELIVERY_AGENTS_MD": delivery_doc_rel("00_standards/DELIVERY_AGENTS_MD.md"),
+        "DELIVERY_AGENT_PLANNER": delivery_doc_rel("00_standards/DELIVERY_AGENT_PLANNER.md"),
+        "DELIVERY_AGENT_TASK_DECOMPOSER": delivery_doc_rel("00_standards/DELIVERY_AGENT_TASK_DECOMPOSER.md"),
+        "DELIVERY_AGENT_IMPL_PLANNER": delivery_doc_rel("00_standards/DELIVERY_AGENT_IMPL_PLANNER.md"),
+        "DELIVERY_AGENT_EXECUTOR": delivery_doc_rel("00_standards/DELIVERY_AGENT_EXECUTOR.md"),
+        "DELIVERY_AGENT_REVIEWER": delivery_doc_rel("00_standards/DELIVERY_AGENT_REVIEWER.md"),
+        "DELIVERY_AGENT_MEMORY_MANAGER": delivery_doc_rel("00_standards/DELIVERY_AGENT_MEMORY_MANAGER.md"),
+        "CODEBASE_DOC_SOP": codebase_doc_rel("00_standards/CODEBASE_DOC_SOP_v1.md"),
+        "CODEBASE_DOC_STATUS_RULES": codebase_doc_rel("00_standards/CODEBASE_DOC_STATUS_RULES_v1.md"),
+        "CODEBASE_TEMPLATE_REGISTRY": system_doc_rel("templates/codebase/01_codebase_template_registry.md"),
+        "CODEBASE_INVENTORY_TEMPLATE": system_doc_rel("templates/codebase/02_codebase_inventory_template.md"),
+        "CODEBASE_MODULE_TEMPLATE": system_doc_rel("templates/codebase/03_codebase_module_template.md"),
+        "CODEBASE_COMPONENT_TEMPLATE": system_doc_rel("templates/codebase/04_codebase_component_template.md"),
+        "CODEBASE_CHANGE_TEMPLATE": system_doc_rel("templates/codebase/05_codebase_change_template.md"),
+        "CODEBASE_INVENTORY": codebase_doc_rel("01_inventory/codebase_inventory.md"),
+        "DELIVERY_FOLDER_MAP": delivery_doc_rel("DELIVERY_FOLDER_MAP.json"),
+        "EXISTING_REPO_WORKFLOW_SOP": system_doc_rel("EXISTING_REPO_WORKFLOW_SOP.md"),
+    }
 }
 
 MASTER_DOCS_OUTPUT_PATHS: dict[str, str] = {
-    "PROJECT_ANALYSIS": "docs/system/00_governance/bootstrap/project_analysis.md",
-    "SYSTEM_DOCS_INDEX": "docs/system/00_governance/bootstrap/README.md",
-    "SYSTEM_DOCS_CHANGE_LOG": "docs/system/00_governance/bootstrap/{job_id}-{mode}-change-log.md",
-    "SYSTEM_DOCS_VALIDATION": "docs/system/00_governance/bootstrap/{job_id}-{mode}-validation.md",
-    "SYSTEM_DOC_STANDARD": "docs/system/00_governance/bootstrap/DOCUMENTATION_STANDARD.md",
-    "BUNDLE_TAXONOMY": "docs/system/00_governance/bootstrap/BUNDLE_TAXONOMY.md",
-    "BUNDLE_MIGRATION_PLAN": "docs/system/00_governance/bootstrap/BUNDLE_MIGRATION_PLAN.md",
-    "SYSTEM_OVERVIEW": "docs/system/00_governance/bootstrap/SYSTEM_OVERVIEW.md",
-    "BUSINESS_CAPABILITIES": "docs/system/00_governance/bootstrap/BUSINESS_CAPABILITIES.md",
-    "FUNCTIONAL_SPEC": "docs/system/00_governance/bootstrap/FUNCTIONAL_SPEC.md",
-    "NON_FUNCTIONAL_REQUIREMENTS": "docs/system/00_governance/bootstrap/NON_FUNCTIONAL_REQUIREMENTS.md",
-    "SYSTEM_CONTEXT": "docs/system/00_governance/bootstrap/SYSTEM_CONTEXT.md",
-    "COMPONENT_ARCHITECTURE": "docs/system/00_governance/bootstrap/COMPONENT_ARCHITECTURE.md",
-    "DECISION_LOG": "docs/system/00_governance/bootstrap/DECISION_LOG.md",
-    "SYSTEM_FILE_STRUCTURE": "docs/system/00_governance/bootstrap/SYSTEM_FILE_STRUCTURE.md",
-    "DEVELOPER_GUIDE": "docs/system/00_governance/bootstrap/DEVELOPER_GUIDE.md",
-    "RUNBOOK": "docs/system/00_governance/bootstrap/RUNBOOK.md",
-    "EXISTING_REPO_WORKFLOW_SOP": "docs/system/00_governance/bootstrap/EXISTING_REPO_WORKFLOW_SOP.md",
-    "CODEBASE_SCAN_SNAPSHOT": "docs/codebase/04_changes/{job_id}-{mode}-snapshot.json",
-    "BOOTSTRAP_SUMMARY": "docs/system/00_governance/bootstrap/{job_id}-bootstrap-summary.md",
+    **master_bootstrap_docs(job_id="{job_id}", mode="{mode}"),
+    "SYSTEM_DOCS_CHANGE_LOG": system_doc_rel("{job_id}-{mode}-change-log.md"),
+    "SYSTEM_DOCS_VALIDATION": system_doc_rel("{job_id}-{mode}-validation.md"),
+    "CODEBASE_SCAN_SNAPSHOT": codebase_doc_rel("04_changes/{job_id}-{mode}-snapshot.json"),
 }
 
 BUG_FIX_OUTPUT_PATHS: dict[str, str] = {
-    "BUG_REPORT_FILE": "docs/delivery/04_implementation_plans/{step_dir_rel}/BUG_REPORT.md",
-    "REPRO_FILE": "docs/delivery/04_implementation_plans/{step_dir_rel}/BUG_REPRODUCTION.md",
-    "ROOT_CAUSE_FILE": "docs/delivery/04_implementation_plans/{step_dir_rel}/ROOT_CAUSE.md",
-    "PATCH_FILE": "docs/delivery/04_implementation_plans/{step_dir_rel}/PATCH.md",
+    "BUG_REPORT_FILE": delivery_doc_rel("04_implementation_plans/{step_dir_rel}/BUG_REPORT.md"),
+    "REPRO_FILE": delivery_doc_rel("04_implementation_plans/{step_dir_rel}/BUG_REPRODUCTION.md"),
+    "ROOT_CAUSE_FILE": delivery_doc_rel("04_implementation_plans/{step_dir_rel}/ROOT_CAUSE.md"),
+    "PATCH_FILE": delivery_doc_rel("04_implementation_plans/{step_dir_rel}/PATCH.md"),
 }
 
 
@@ -1088,6 +1083,14 @@ def build_context(
     """Build the full context dict for prompt rendering."""
     bundle = _workflow_module()
     ctx: dict[str, str] = dict(bundle.REFERENCE_FILES)
+    ctx["SYSTEM_DOC_ROOT"] = system_doc_rel()
+    ctx["DOCS_ROOT"] = docs_root_rel()
+    ctx["SYSTEM_TEMPLATE_ROOT"] = system_doc_rel("templates")
+    ctx["SYSTEM_DELIVERY_TEMPLATE_ROOT"] = system_doc_rel("templates/delivery")
+    ctx["SYSTEM_CODEBASE_TEMPLATE_ROOT"] = system_doc_rel("templates/codebase")
+    ctx["CODEBASE_DOC_ROOT"] = codebase_doc_rel()
+    ctx["DELIVERY_DOC_ROOT"] = delivery_doc_rel()
+    ctx["ARCHITECTURE_SITE_ROOT"] = architecture_site_rel()
     artifacts = state.get("artifacts") or {}
 
     for key in bundle.ARTIFACT_KEYS:
@@ -1134,7 +1137,7 @@ def build_context(
         ctx["CONTEXT_PACK_FILE_PATH"] = ""
 
     # Task ID starting sequence: scan existing task docs to avoid collision
-    task_dir = ARTIFACT_ROOT / "docs/delivery/03_tasks"
+    task_dir = ARTIFACT_ROOT / delivery_doc_rel("03_tasks")
     date_code = dt.datetime.now().strftime("%Y%m%d")
     highest_task_seq = 0
     if task_dir.exists():
@@ -1247,7 +1250,7 @@ def build_context(
         task_path, meta_path = compute_paths(
             node_id=current_task_node_id,
             title=current_task_title,
-            output_dir="docs/delivery/03_tasks",
+            output_dir=delivery_doc_rel("03_tasks"),
         )
         ctx["TASK_FILE_PATH"] = task_path
         ctx["TASK_FILE_METAJSON"] = meta_path
@@ -1478,7 +1481,7 @@ def render_prompt(template_text: str, context: dict[str, str]) -> str:
     _tools_dir = context.get("TOOLS_DIR", "")
     print(f"[render_prompt] step_runner={_src}", flush=True)
     print(f"[render_prompt] TOOLS_DIR={_tools_dir!r}", flush=True)
-    rendered = template_text
+    rendered = _rewrite_prompt_literals(template_text)
     for key, value in context.items():
         rendered = rendered.replace(f"{{{key}}}", _stringify_prompt_value(value))
     if _tools_dir:
@@ -1489,6 +1492,13 @@ def render_prompt(template_text: str, context: dict[str, str]) -> str:
         print("[render_prompt] TOOL_INSTRUCTION appended", flush=True)
     else:
         print("[render_prompt] TOOLS_DIR empty — TOOL_INSTRUCTION skipped", flush=True)
+    return rendered
+
+
+def _rewrite_prompt_literals(template_text: str) -> str:
+    rendered = template_text
+    for literal, token in sorted(prompt_literal_aliases().items(), key=lambda item: len(item[0]), reverse=True):
+        rendered = rendered.replace(literal, token)
     return rendered
 
 
@@ -1607,7 +1617,7 @@ def _build_new_review_file_path(*, state: dict, step: str, step_cfg: dict) -> st
     template_group = str(state.get("template_group") or "")
     if template_group == MASTER_BOOTSTRAP_WORKFLOW and step == "05_review_master_system_docs":
         job_id = str(state.get("job_id") or "00DOC")
-        return str(PurePath(f"docs/system/00_governance/bootstrap/{job_id}-bootstrap-validation.md"))
+        return system_doc_rel(f"{job_id}-bootstrap-validation.md")
 
     artifact_key = _review_target_artifact_key(step_cfg)
     if not artifact_key:
@@ -1620,7 +1630,7 @@ def _build_new_review_file_path(*, state: dict, step: str, step_cfg: dict) -> st
         return ""
     tid = _build_review_target_identifier(artifact_key=artifact_key, artifact_path=artifact_path)
     slug = _derive_review_slug_from_artifact_path(artifact_path)
-    review_dir = ARTIFACT_ROOT / "docs/delivery/05_reviews"
+    review_dir = ARTIFACT_ROOT / delivery_doc_rel("05_reviews")
     date_code = _review_filename_date_code()
 
     # Find highest sequence number already used for this date (any slug/step/tid)
@@ -1662,7 +1672,7 @@ def _build_validation_file_path(*, state: dict, step: str, step_cfg: dict) -> st
     template_group = str(state.get("template_group") or "")
     if template_group.startswith("codebase_"):
         mode = str(step_cfg.get("mode") or ("bootstrap" if "bootstrap" in template_group else "reconcile"))
-        validation_dir = ARTIFACT_ROOT / "docs/codebase/04_changes"
+        validation_dir = ARTIFACT_ROOT / codebase_doc_rel("04_changes")
         candidate = validation_dir / f"{str(state.get('job_id') or 'codebase-scan')}-{mode}-validation.md"
         seq = 2
         while candidate.exists():
@@ -1675,7 +1685,7 @@ def _build_validation_file_path(*, state: dict, step: str, step_cfg: dict) -> st
         return ""
     tid = _build_review_target_identifier(artifact_key="IMPL_FILE", artifact_path=impl_path)
     slug = _derive_review_slug_from_artifact_path(impl_path)
-    review_dir = ARTIFACT_ROOT / "docs/delivery/05_reviews"
+    review_dir = ARTIFACT_ROOT / delivery_doc_rel("05_reviews")
     seq = 1
     while True:
         candidate = review_dir / f"VALIDATION-{_review_filename_date_code()}-{tid}_{slug}.md"
@@ -1693,7 +1703,7 @@ def _build_pre_init_file_path(*, state: dict) -> str:
     """
     draft_path = (state.get("artifacts") or {}).get("DRAFT_INIT_FILE", "")
     slug = _derive_review_slug_from_artifact_path(draft_path) if draft_path else "pre-init"
-    pre_init_dir = ARTIFACT_ROOT / "docs/delivery/01_initiatives/pre_init"
+    pre_init_dir = ARTIFACT_ROOT / delivery_doc_rel("01_initiatives/pre_init")
     date_code = dt.datetime.now().strftime("%Y%m%d")
 
     # Find highest sequence number already used for this date (any slug)
@@ -1720,7 +1730,7 @@ def _build_plan_file_path(*, state: dict) -> str:
     """
     init_path = (state.get("artifacts") or {}).get("INIT_FILE", "")
     slug = _derive_review_slug_from_artifact_path(init_path) if init_path else "plan"
-    plan_dir = ARTIFACT_ROOT / "docs/delivery/02_plans"
+    plan_dir = ARTIFACT_ROOT / delivery_doc_rel("02_plans")
     date_code = dt.datetime.now().strftime("%Y%m%d")
 
     # Find highest sequence number already used for this date (any slug)
@@ -1751,7 +1761,7 @@ def _build_task_graph_file_path(*, state: dict) -> str:
     plan_stem = Path(plan_path).stem  # e.g. "PLAN-20260413-01_slug"
     m = re.match(r"(PLAN-\d{8}-\d+)", plan_stem)
     plan_id = m.group(1) if m else "PLAN-00000000-00"
-    tg_dir = ARTIFACT_ROOT / "docs/delivery/02_plans/artifacts"
+    tg_dir = ARTIFACT_ROOT / delivery_doc_rel("02_plans/artifacts")
     date_code = dt.datetime.now().strftime("%Y%m%d")
     candidate = tg_dir / f"TASK-GRAPH-{date_code}-{plan_id}.md"
     return str(PurePath(str(candidate.relative_to(ARTIFACT_ROOT))))
@@ -1760,7 +1770,7 @@ def _build_task_graph_file_path(*, state: dict) -> str:
 def _build_impl_file_path(*, state: dict) -> str:
     """Compute a collision-free path for a new implementation plan file.
 
-    Naming: docs/delivery/04_implementation_plans/IMPL-YYYYMMDD-NN_title-slug.md
+    Naming: `delivery_doc_rel("04_implementation_plans")` / IMPL-YYYYMMDD-NN_title-slug.md
     Sequence number is global per date (not per-slug) to avoid ID collisions.
     """
     from .job_state import task_execution_binding_current_item, task_queue_current_item
@@ -1768,7 +1778,7 @@ def _build_impl_file_path(*, state: dict) -> str:
     current_item = task_queue_current_item(state) or task_execution_binding_current_item(state)
     title = str((current_item or {}).get("title") or "")
     slug = _normalize_review_slug(title, max_length=60) if title else "impl"
-    impl_dir = ARTIFACT_ROOT / "docs/delivery/04_implementation_plans"
+    impl_dir = ARTIFACT_ROOT / delivery_doc_rel("04_implementation_plans")
     date_code = dt.datetime.now().strftime("%Y%m%d")  # YYYYMMDD — matches existing naming convention
 
     # Find highest sequence number already used for this date (any slug)
@@ -1791,7 +1801,7 @@ def _build_codebase_change_impact_path(*, state: dict) -> str:
     template_group = str(state.get("template_group") or "")
     if template_group.startswith("codebase_"):
         mode = "bootstrap" if "bootstrap" in template_group else "reconcile"
-        change_dir = ARTIFACT_ROOT / "docs/codebase/04_changes"
+        change_dir = ARTIFACT_ROOT / codebase_doc_rel("04_changes")
         candidate = change_dir / f"{str(state.get('job_id') or 'codebase-scan')}-{mode}.md"
         seq = 2
         while candidate.exists():
@@ -1806,7 +1816,7 @@ def _build_codebase_change_impact_path(*, state: dict) -> str:
     title = str((current_item or {}).get("title") or "").strip()
     slug = _normalize_review_slug(title, max_length=60) if title else "codebase-doc-update"
     base = task_id or f"DOCSYNC-{dt.datetime.now().strftime('%Y%m%d')}"
-    change_dir = ARTIFACT_ROOT / "docs/codebase/04_changes"
+    change_dir = ARTIFACT_ROOT / codebase_doc_rel("04_changes")
     candidate = change_dir / f"{base}_{slug}.md"
     seq = 2
     while candidate.exists():

@@ -3,10 +3,10 @@ You are generating the bootstrap project analysis for the current repository.
 This step is intentionally narrow. Produce only the analysis baseline that later master-doc steps will build on.
 
 Inputs you must read first:
-- `docs/codebase/01_inventory/codebase_inventory.md`
-- `docs/codebase/04_changes/` latest change impact document
-- `docs/codebase/02_modules/`
-- `docs/codebase/03_components/`
+- `{CODEBASE_DOC_ROOT}/01_inventory/codebase_inventory.md`
+- `{CODEBASE_DOC_ROOT}/04_changes/` latest change impact document
+- `{CODEBASE_DOC_ROOT}/02_modules/`
+- `{CODEBASE_DOC_ROOT}/03_components/`
 - relevant source files under `agent_runner_v2/`
 - relevant workflow and launcher entrypoints under `scripts/` and repository root
 
@@ -19,7 +19,7 @@ Primary objectives:
 6. Capture the repository architecture posture so downstream docs can distinguish the universal baseline from any repo-selected profile.
 
 Write or refresh:
-- `docs/system/00_governance/bootstrap/project_analysis.md`
+- `{SYSTEM_DOC_ROOT}/project_analysis.md`
 
 Required content for `project_analysis.md`:
 - YAML frontmatter with this exact template identifier: `template_id: "SYS-00-PA"` plus the standard generated-doc metadata
@@ -74,7 +74,7 @@ Meta contract:
       "status": "APPROVED" | "REJECTED",
       "remark": "<summary>",
       "artifacts": {
-        "PROJECT_ANALYSIS": "docs/system/00_governance/bootstrap/project_analysis.md"
+        "PROJECT_ANALYSIS": "{SYSTEM_DOC_ROOT}/project_analysis.md"
       },
       "recorded_at": "2026-07-01T00:00:00"
     }
@@ -88,6 +88,6 @@ ABSOLUTE OUTPUT RULE
     "status": "APPROVED | REJECTED",
     "remark": "<summary>",
     "artifacts": {
-      "PROJECT_ANALYSIS": "docs/system/00_governance/bootstrap/project_analysis.md"
+      "PROJECT_ANALYSIS": "{SYSTEM_DOC_ROOT}/project_analysis.md"
     }
   }

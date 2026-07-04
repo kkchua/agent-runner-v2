@@ -1,177 +1,173 @@
 ---
-template_id: REVIEW-v1
-review_id: "REV-260704-02"
-title: "Template Registry Review - Delivery and Codebase Templates"
-status: "complete"
-review_type: "rtmpl"
-reviewed_by: "Reviewer (claude)"
-created: "2026-07-04T00:00:00+08:00"
-workflow: "10_execution_scaffold_v1"
-step: "review_templates"
-managed_by: "workflow-generated"
+title: "Review — Template Registry Completeness"
+managed_by: workflow-generated
+workflow: 10_execution_scaffold_v1
+step: review_templates
+created: 2026-07-04
+template_id: DELIVERY-REV-v1
+review_id: REV-260704-02
+status: completed
+verdict: approved
 ---
 
 > Managed by workflow: `10_execution_scaffold_v1` / step: `review_templates`
 > This file is workflow-generated and protected from manual edits.
 
-# Review: Delivery and Codebase Template Registry
+# Review: Delivery & Codebase Template Registry Completeness
 
-## Review Scope
+## Metadata
 
-| Artifact | Path | Checksum Verified |
-|----------|------|-------------------|
-| Governing Reference | `docs/system/00_governance/bootstrap/project_analysis.md` | ce10f3fe |
-| Delivery Template Registry | `01_delivery_template_registry.md` | 8fec4f26 |
-| Delivery Templates | `02_delivery_initiative_template.md` through `09_delivery_memory_template.md` | All verified |
-| Codebase Template Registry | `01_codebase_template_registry.md` | 0624245f |
-| Codebase Templates | `02_codebase_inventory_template.md` through `05_codebase_change_template.md` | All verified |
-| Codebase Inventory | `docs/codebase/01_inventory/codebase_inventory.md` | 25434d22 |
+| Field | Value |
+|---|---|
+| Review ID | `REV-260704-02` |
+| Review Type | `combined` |
+| Scope Description | Template set completeness, registry alignment, section compliance, project alignment |
+| Files Reviewed | 16 template files + project analysis + codebase inventory |
+| Documentation Files Reviewed | 18 |
 
-## Verdict: APPROVED
+## Summary
 
-**Decision**: The template set is complete, consistent, and coherent for this project's complexity level.
+| Field | Value |
+|---|---|
+| Overall Assessment | All templates are complete, consistent, and aligned with project complexity |
+| Critical Issues | 0 |
+| Major Issues | 0 |
+| Minor Issues | 1 (non-blocking) |
+| Recommendations | 1 |
 
-All required templates are present, registry entries match actual files, template_ids are consistent, and documentation-governance sections are adequate across the full set.
+## 1. Registry Completeness
 
-## Review Findings
+### Delivery Template Registry
 
-### 1. File Completeness
+The registry (`01_delivery_template_registry.md`) lists 9 entries covering the full delivery lifecycle:
 
-| Check | Result |
-|-------|--------|
-| All 8 delivery template files exist (02-09) | PASS |
-| All 5 codebase template files exist (02-05) | PASS |
-| Delivery registry matches template files | PASS |
-| Codebase registry matches template files | PASS |
-| Codebase inventory exists and is populated | PASS |
-| Governing project_analysis.md readable | PASS |
+| # | Artifact Key | Template ID | File Exists | Sections OK |
+|---|---|---|---|---|
+| 1 | DELIVERY_TEMPLATE_REGISTRY | DELIVERY-REG-v1 | Yes | Yes |
+| 2 | DELIVERY_INITIATIVE_TEMPLATE | DELIVERY-INIT-v1 | Yes | Yes |
+| 3 | DELIVERY_PLAN_TEMPLATE | DELIVERY-PLAN-v1 | Yes | Yes |
+| 4 | DELIVERY_TASK_GRAPH_TEMPLATE | DELIVERY-TG-v1 | Yes | Yes |
+| 5 | DELIVERY_TASK_TEMPLATE | DELIVERY-TASK-v1 | Yes | Yes |
+| 6 | DELIVERY_IMPL_TEMPLATE | DELIVERY-IMPL-v1 | Yes | Yes |
+| 7 | DELIVERY_REVIEW_TEMPLATE | DELIVERY-REV-v1 | Yes | Yes |
+| 8 | DELIVERY_VALIDATION_TEMPLATE | DELIVERY-VAL-v1 | Yes | Yes |
+| 9 | DELIVERY_MEMORY_TEMPLATE | DELIVERY-MEM-v1 | Yes | Yes |
 
-### 2. Template ID Consistency
+**Verdict: COMPLETE** — All 9 registry entries have corresponding files with matching template_ids.
 
-| Expected template_id | Actual template_id | File | Status |
-|---------------------|-------------------|------|--------|
-| DELIVERY-REGISTRY-v1 | DELIVERY-REGISTRY-v1 | 01_delivery_template_registry.md | PASS |
-| DELIVERY-INITIATIVE-v1 | DELIVERY-INITIATIVE-v1 | 02_delivery_initiative_template.md | PASS |
-| DELIVERY-PLAN-v1 | DELIVERY-PLAN-v1 | 03_delivery_plan_template.md | PASS |
-| DELIVERY-TASK-GRAPH-v1 | DELIVERY-TASK-GRAPH-v1 | 04_delivery_task_graph_template.md | PASS |
-| DELIVERY-TASK-v1 | DELIVERY-TASK-v1 | 05_delivery_task_template.md | PASS |
-| DELIVERY-IMPL-v1 | DELIVERY-IMPL-v1 | 06_delivery_impl_template.md | PASS |
-| DELIVERY-REVIEW-v1 | DELIVERY-REVIEW-v1 | 07_delivery_review_template.md | PASS |
-| DELIVERY-VALIDATION-v1 | DELIVERY-VALIDATION-v1 | 08_delivery_validation_template.md | PASS |
-| DELIVERY-MEMORY-v1 | DELIVERY-MEMORY-v1 | 09_delivery_memory_template.md | PASS |
-| CODEBASE-REGISTRY-v1 | CODEBASE-REGISTRY-v1 | 01_codebase_template_registry.md | PASS |
-| CODEBASE-INV-v1 | CODEBASE-INV-v1 | 02_codebase_inventory_template.md | PASS |
-| CODEBASE-MOD-v1 | CODEBASE-MOD-v1 | 03_codebase_module_template.md | PASS |
-| CODEBASE-COMP-v1 | CODEBASE-COMP-v1 | 04_codebase_component_template.md | PASS |
-| CODEBASE-CHANGE-v1 | CODEBASE-CHANGE-v1 | 05_codebase_change_template.md | PASS |
-| CODEBASE-INV-v1 | CODEBASE-INV-v1 | codebase_inventory.md (instance) | PASS |
+### Codebase Template Registry
 
-### 3. Structure and Section Completeness
+The registry (`01_codebase_template_registry.md`) lists 6 entries:
 
-All templates contain required sections:
+| # | Artifact Key | Template ID | File Exists | Sections OK |
+|---|---|---|---|---|
+| 1 | CODEBASE_TEMPLATE_REGISTRY | CODEBASE-REG-v1 | Yes | Yes |
+| 2 | CODEBASE_INVENTORY_TEMPLATE | CODEBASE-INV-TEMPLATE-v1 | Yes | Yes |
+| 3 | CODEBASE_MODULE_TEMPLATE | CODEBASE-MOD-v1 | Yes | Yes |
+| 4 | CODEBASE_COMPONENT_TEMPLATE | CODEBASE-COMP-v1 | Yes | Yes |
+| 5 | CODEBASE_CHANGE_TEMPLATE | CODEBASE-CHG-v1 | Yes | Yes |
+| 6 | CODEBASE_INVENTORY | CODEBASE-INV-v1 | Yes | Yes |
 
-| Template | Frontmatter | Metadata | Objective/Scope | Documentation Section | Acceptance/Success Criteria | Notes | Status |
-|----------|-------------|----------|-----------------|----------------------|---------------------------|-------|--------|
-| 02 Initiative | PASS | PASS | PASS | PASS (Doc Scope, Stale-Guidance Risk) | PASS | PASS | PASS |
-| 03 Plan | PASS | PASS | PASS | PASS (Doc Strategy, Baseline Obligations) | PASS | PASS | PASS |
-| 04 Task Graph | PASS | PASS | PASS | PASS (Doc Workstream, Coverage Matrix) | PASS | PASS | PASS |
-| 05 Task | PASS | PASS | PASS | PASS (Doc Impact, Obligations, Validation) | PASS | PASS | PASS |
-| 06 Impl | PASS | PASS | PASS | PASS (Doc Update Plan, Stale Detection) | PASS | PASS | PASS |
-| 07 Review | PASS | PASS | PASS | PASS (Doc Compliance) | PASS | PASS | PASS |
-| 08 Validation | PASS | PASS | PASS | PASS (Doc Sync Validation) | PASS | PASS | PASS |
-| 09 Memory | PASS | PASS | PASS | PASS (Doc Notes, Stale Guidance) | PASS | PASS | PASS |
-| CB-02 Inventory | PASS | PASS | PASS | N/A (template definition) | PASS | PASS | PASS |
-| CB-03 Module | PASS | PASS | PASS | PASS (Architecture Profile, Change Log) | PASS | PASS | PASS |
-| CB-04 Component | PASS | PASS | PASS | PASS (Key Design Decisions, Change Log) | PASS | PASS | PASS |
-| CB-05 Change | PASS | PASS | PASS | PASS (Doc Updates, Freshness Verification) | PASS | PASS | PASS |
+**Verdict: COMPLETE** — All 6 registry entries have corresponding files with matching template_ids.
 
-### 4. Placeholder Quality
+## 2. Template ID Consistency
 
-| Check | Result | Notes |
-|-------|--------|-------|
-| Bracket-style placeholders `[PLACEHOLDER]` | PASS | Consistent across all templates |
-| Enum values for status fields | PASS | Defined sets (draft/active/completed, etc.) |
-| ISO timestamp format examples | PASS | `YYYY-MM-DDTHH:MM:SS+TZ` format |
-| HTML comment hints for sections | PASS | Present on key sections |
-| Table column structures | PASS | Clear column definitions with example rows |
+Every template file was verified to carry its declared `template_id` in both:
+- YAML frontmatter (for machine validation)
+- Metadata table (for human readability)
 
-### 5. Cross-Reference Integrity
+All 16 template files have consistent `template_id` values matching their registry entries. No mismatches found.
 
-| Check | Result | Notes |
-|-------|--------|-------|
-| Delivery registry references codebase templates | PASS | Uses relative paths `../codebase/` |
-| Codebase registry references delivery templates | PASS | Uses relative paths `../delivery/` |
-| Template IDs used consistently in cross-references | PASS | All references use canonical template_id values |
-| Project analysis cross-reference | NOTE | Delivery registry references `../../../../delivery/project_analysis.md` — legacy path; current location is `../project_analysis.md`. Legacy path still exists so not blocking. |
+## 3. Section Completeness
 
-### 6. Alignment with Project Analysis
+Each template was checked for required documentation-governance sections:
 
-The project analysis classifies this as **High complexity** with 49 Python modules, 17 action modules, 80 bootstrap workflow assets, and 11+ workflow families. The template set addresses this complexity:
+### Delivery Templates
 
-| Project Analysis Requirement | Template Coverage | Status |
-|------------------------------|-------------------|--------|
-| Initiative intake and scope capture | 02_delivery_initiative_template.md | PASS |
-| Delivery planning with task breakdown | 03_delivery_plan_template.md | PASS |
-| Task decomposition and dependencies | 04_delivery_task_graph_template.md | PASS |
-| Task-level execution tracking | 05_delivery_task_template.md | PASS |
-| Implementation tracking | 06_delivery_impl_template.md | PASS |
-| Review gates | 07_delivery_review_template.md | PASS |
-| Validation of code + doc sync | 08_delivery_validation_template.md | PASS |
-| Memory and lessons learned | 09_delivery_memory_template.md | PASS |
-| Codebase inventory | 02_codebase_inventory_template.md + codebase_inventory.md | PASS |
-| Module documentation | 03_codebase_module_template.md | PASS |
-| Component documentation | 04_codebase_component_template.md | PASS |
-| Change impact tracking | 05_codebase_change_template.md | PASS |
+| Template | Lifecycle Sections | Doc Governance Sections | Status |
+|---|---|---|---|
+| Initiative | Scope, acceptance criteria, dependencies | Documentation Scope, stale-guidance risk | PASS |
+| Plan | Strategy, task breakdown, deliverables | Doc strategy, baseline vs profile-specific obligations, freshness risks | PASS |
+| Task Graph | Task nodes, dependency edges, execution flow | Documentation workstream (≥1 baseline entry required) | PASS |
+| Task | Objective, inputs/outputs, execution steps | Documentation Impact (mandatory), validation expectations | PASS |
+| Impl | Implementation steps, code changes | Documentation Update Plan (mandatory), module freshness, code-doc sync | PASS |
+| Review | Findings, code quality | Documentation Compliance (7 checks), verdict | PASS |
+| Validation | Code validation (functional, quality, regression) | Doc sync validation (module freshness, change-impact, stale detection, protected-doc compliance, freshness risks) | PASS |
+| Memory | Outcomes, lessons, patterns | Documentation Notes, observations, debt tracking | PASS |
 
-### 7. Documentation Governance Sections
+### Codebase Templates
 
-Every delivery template that produces code changes includes documentation-impact sections:
+| Template | Core Sections | Governance Sections | Status |
+|---|---|---|---|
+| Inventory Template | Field definitions, entry template, status defs | File type coverage, conditional profile metadata | PASS |
+| Module | Overview, API, dependencies, testing | Change log, last_verified_by_change, status vocabulary | PASS |
+| Component | Overview, interface, dependencies, testing | Change log, last_verified_by_change, status vocabulary | PASS |
+| Change | Changed files, doc updates, stale removal | Doc freshness verification, three mandatory categories | PASS |
 
-- **Initiative (02)**: Documentation Scope, Stale-Guidance Risk, Documentation Artifacts Required
-- **Plan (03)**: Documentation Strategy, Baseline Obligations, Profile-Specific Obligations, Freshness Risks, Review Gates
-- **Task Graph (04)**: Documentation Workstream, Coverage Matrix, Workstream Rules (every code task MUST have corresponding doc task)
-- **Task (05)**: Documentation Impact, Required Updates, Obligations, Validation Expectations
-- **Impl (06)**: Documentation Update Plan, Stale Detection, Validation Criteria (Code + Doc + Integration)
-- **Review (07)**: Documentation Compliance checklist (module docs, component docs, inventory, change record, template IDs, cross-references)
-- **Validation (08)**: Documentation Synchronization Validation, Completeness, Accuracy, Freshness Verification
-- **Memory (09)**: Documentation Notes, Stale Guidance Detected
+**Verdict: ALL PASS** — Every template has its required sections with usable placeholder content.
 
-Codebase templates include architecture profile fields, change logs, and cross-references to delivery documents.
+## 4. Placeholder Quality
 
-### 8. Non-Blocking Observations
+All placeholder fields use consistent `{UPPER_SNAKE_CASE}` notation with clear semantic meaning. Placeholders are specific enough to guide instantiation:
+- Conditional fields are explicitly marked (e.g., `current_profile`, `target_profile`, `migration_mode`)
+- Enum choices are provided inline (e.g., `yes / no`, `create / modify / delete`)
+- Mandatory sections state their requirements explicitly (e.g., "This section is **mandatory**")
 
-These are noted for future refinement but do not block approval:
+**Verdict: GOOD** — Placeholders are coherent and usable.
 
-1. **Cosmetic typo in codebase_inventory_template.md** line 82: `[neds_update]` should read `[needs_update]` in the status lifecycle ASCII diagram comment. Does not affect functionality.
-2. **Legacy cross-reference path** in delivery template registry: `../../../../delivery/project_analysis.md` references the legacy location. The current location is `../project_analysis.md`. Both exist so this is not blocking.
-3. **No deprecated agent master prompt templates**: Confirmed — no deprecated templates are present in the set.
+## 5. Alignment with Project Analysis
 
-### 9. Registry Entry Count Verification
+The project analysis (`01_PROJECT_ANALYSIS.md`) characterizes the project as:
+- **Complexity**: Medium-high
+- **Recommended scope**: Full scaffold (delivery + codebase templates)
+- **Agent roles**: All 6 standard roles
+- **Migration mode**: Active (existing 86-file corpus)
 
-The project analysis states 8 delivery templates. The registry lists 8 delivery templates (IDs 02-09), and 5 codebase templates (02-05). Count matches.
+| Requirement from Analysis | Template Coverage | Status |
+|---|---|---|
+| Full delivery lifecycle | 9 delivery templates | PASS |
+| Codebase documentation | 5 codebase templates + live inventory | PASS |
+| All 6 agent roles | Templates reference Planner, Task Decomposer, Impl Planner, Executor, Reviewer, Memory Manager | PASS |
+| Migration mode support | Conditional profile/migration fields across initiative, plan, task, impl templates | PASS |
+| Dual source-of-truth | Templates distinguish packaged bootstrap from runtime bundle | PASS |
+| Zero runtime deps | No template introduces runtime dependencies | PASS |
+| Windows-first | No POSIX assumptions in templates | PASS |
 
-### 10. Frontmatter Completeness
+**Verdict: ALIGNED** — Template set matches the recommended full scaffold scope.
 
-All templates include required frontmatter fields:
-- `template_id` — present in all 14 templates + 1 inventory instance
-- `status` — present in all
-- `generated` — present in all
-- `workflow` — present in all
-- `step` — present in all
-- `managed_by` — present in all
-- `version` — present in all templates
+## 6. Documentation Governance Compliance
 
-### Review Summary
+| Governance Rule | Coverage |
+|---|---|
+| Every instance carries `template_id` | All 16 templates define and require it |
+| Section headings are fixed | All templates define fixed headings with append-only rule |
+| Profile fields are conditional | Initiative, plan, task, impl templates have conditional fields |
+| Documentation obligations are deterministic | Task and impl templates mandate explicit doc impact statements |
+| Validation covers code AND docs | Validation template has separate code and doc-sync sections |
+| Registry is append-only | Registry states append-only rule within major version |
+| Template instances are workflow-generated | All templates carry `managed_by: workflow-generated` |
 
-| Dimension | Result |
-|-----------|--------|
-| File Completeness | PASS — all 15 files present |
-| Template ID Consistency | PASS — all match registry |
-| Structure/Sections | PASS — all required sections present |
-| Placeholder Quality | PASS — consistent and usable |
-| Cross-Reference Integrity | PASS — all references valid |
-| Project Alignment | PASS — covers all complexity requirements |
-| Doc-Governance Coverage | PASS — all templates include doc sections |
-| Deprecated Templates | PASS — none present |
+**Verdict: COMPLIANT** — All governance rules are enforced by template structure.
 
-**Overall: APPROVED**
+## 7. Findings
+
+| Finding ID | Severity | Category | Title | Description | Resolution |
+|---|---|---|---|---|---|
+| OBS-001 | recommendation | documentation | Cross-reference path for PROJECT_ANALYSIS | The delivery template registry cross-reference lists `docs/system/00_governance/bootstrap/project_analysis.md` but the actual file is at `docs/codebase/01_inventory/01_PROJECT_ANALYSIS.md`. The codebase template registry cross-reference has the same issue. Non-blocking — both paths resolve to the same logical document but the canonical location is in `docs/codebase/`. | Update cross-reference paths in both registries to point to `docs/codebase/01_inventory/01_PROJECT_ANALYSIS.md`. |
+
+## Verdict
+
+| Field | Value |
+|---|---|
+| Verdict | `approved` |
+| Rationale | All 16 templates (9 delivery + 5 codebase + live inventory + 2 registries) are present, complete, and consistent. Registry entries match actual files. All template_ids are consistent. All required sections are present with usable placeholders. Template set is aligned with the medium-high complexity of the project as characterized by the project analysis. One minor recommendation noted (cross-reference path alignment) but no blocking issues. |
+| Conditions for Approval | None — approved as-is. Recommendation OBS-001 may be addressed in a future update. |
+
+## Cross-References
+
+| Reference | Location |
+|---|---|
+| Delivery Template Registry | `docs/system/00_governance/bootstrap/templates/delivery/01_delivery_template_registry.md` |
+| Codebase Template Registry | `docs/system/00_governance/bootstrap/templates/codebase/01_codebase_template_registry.md` |
+| Project Analysis | `docs/codebase/01_inventory/01_PROJECT_ANALYSIS.md` |
+| Codebase Inventory | `docs/codebase/01_inventory/codebase_inventory.md` |

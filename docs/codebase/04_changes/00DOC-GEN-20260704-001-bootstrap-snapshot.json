@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-04T06:00:58+08:00",
+  "generated_at": "2026-07-04T10:33:07+08:00",
   "mode": "bootstrap",
   "workflow_name": "00_master_docs_bootstrap_v1",
   "bundle_profile": "core+workflow",
@@ -229,6 +229,15 @@
       "last_verified_by_change": "bootstrap/reconcile scan"
     },
     {
+      "rel_path": "agent_runner_v2/actions/publish_architecture_site.py",
+      "category": "python modules",
+      "subcategory": "actions",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-actions-publish-architecture-site.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
       "rel_path": "agent_runner_v2/actions/scan_repo_codebase.py",
       "category": "python modules",
       "subcategory": "actions",
@@ -265,6 +274,15 @@
       "last_verified_by_change": "bootstrap/reconcile scan"
     },
     {
+      "rel_path": "agent_runner_v2/actions/validate_architecture_site.py",
+      "category": "python modules",
+      "subcategory": "actions",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-actions-validate-architecture-site.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
       "rel_path": "agent_runner_v2/actions/validate_codebase_docs.py",
       "category": "python modules",
       "subcategory": "actions",
@@ -298,6 +316,15 @@
       "doc_mode": "summary",
       "status": "current",
       "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-approve-commands.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/architecture_site.py",
+      "category": "python modules",
+      "subcategory": "support",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-architecture-site.md",
       "last_verified_by_change": "bootstrap/reconcile scan"
     },
     {
@@ -1111,6 +1138,15 @@
       "last_verified_by_change": "bootstrap/reconcile scan"
     },
     {
+      "rel_path": "agent_runner_v2/doc_paths.py",
+      "category": "python modules",
+      "subcategory": "support",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-doc-paths.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
       "rel_path": "agent_runner_v2/documentation_guardrails.py",
       "category": "python modules",
       "subcategory": "support",
@@ -1480,1122 +1516,6 @@
       "last_verified_by_change": "bootstrap/reconcile scan"
     },
     {
-      "rel_path": "docs/codebase/00_standards/CODEBASE_DOC_SOP_v1.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/codebase/00_standards/CODEBASE_DOC_STATUS_RULES_v1.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/codebase/01_inventory/codebase_inventory.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/codebase/02_modules/agent-runner-v2-action-result.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/codebase/02_modules/agent-runner-v2-actions-assemble-video.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/codebase/02_modules/agent-runner-v2-actions-copy-artifact.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/codebase/02_modules/agent-runner-v2-actions-documentation-validation-core.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/codebase/02_modules/agent-runner-v2-actions-execute-i2v.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/codebase/02_modules/agent-runner-v2-actions-execute-t2i.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/codebase/02_modules/agent-runner-v2-actions-execute-voiceover.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/codebase/02_modules/agent-runner-v2-actions-finalize-bootstrap.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/codebase/02_modules/agent-runner-v2-actions-init.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/codebase/02_modules/agent-runner-v2-actions-prepare-delivery-scaffold.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/codebase/02_modules/agent-runner-v2-actions-promote-artifact.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/codebase/02_modules/agent-runner-v2-actions-promote-init.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/codebase/02_modules/agent-runner-v2-actions-scan-repo-codebase.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/codebase/02_modules/agent-runner-v2-actions-submit-comfyui.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/codebase/02_modules/agent-runner-v2-actions-sync-codebase-docs.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/codebase/02_modules/agent-runner-v2-actions-sync-system-docs.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/codebase/02_modules/agent-runner-v2-actions-validate-codebase-docs.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/codebase/02_modules/agent-runner-v2-actions-validate-delivery-docs.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/codebase/02_modules/agent-runner-v2-actions-validate-system-docs.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/codebase/02_modules/agent-runner-v2-approve-commands.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/codebase/02_modules/agent-runner-v2-artifact-paths.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/codebase/02_modules/agent-runner-v2-backend-client.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/codebase/02_modules/agent-runner-v2-bootstrap-workflows-default-template-groups.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/codebase/02_modules/agent-runner-v2-bundle-loader.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/codebase/02_modules/agent-runner-v2-bundle-taxonomy.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/codebase/02_modules/agent-runner-v2-cleanup-generated-docs.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/codebase/02_modules/agent-runner-v2-codebase-docs.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/codebase/02_modules/agent-runner-v2-coder-adapters.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/codebase/02_modules/agent-runner-v2-daemon.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/codebase/02_modules/agent-runner-v2-documentation-guardrails.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/codebase/02_modules/agent-runner-v2-engine-commands.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/codebase/02_modules/agent-runner-v2-exceptions.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/codebase/02_modules/agent-runner-v2-execution-request.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/codebase/02_modules/agent-runner-v2-execution-result.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/codebase/02_modules/agent-runner-v2-init.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/codebase/02_modules/agent-runner-v2-job-state.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/codebase/02_modules/agent-runner-v2-model-config.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/codebase/02_modules/agent-runner-v2-run-agent.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/codebase/02_modules/agent-runner-v2-runner-actions.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/codebase/02_modules/agent-runner-v2-runner-logger.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/codebase/02_modules/agent-runner-v2-runtime-context.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/codebase/02_modules/agent-runner-v2-step-runner.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/codebase/02_modules/agent-runner-v2-submit-commands.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/codebase/02_modules/agent-runner-v2-submitter.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/codebase/02_modules/agent-runner-v2-system-docs.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/codebase/02_modules/agent-runner-v2-tools-agent-tools.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/codebase/02_modules/agent-runner-v2-workflow-router.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/codebase/02_modules/agent-runner-v2-workflow-spec-commands.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/codebase/02_modules/agent-runner-v2-workflow-specs.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/codebase/03_components/actions-package.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/codebase/03_components/codebase-governance.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/codebase/03_components/config-and-data.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/codebase/03_components/scripts-suite.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/codebase/03_components/tests-suite.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/codebase/03_components/workflow-families.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/codebase/04_changes/00DOC-GEN-20260703-005-bootstrap-snapshot.json",
-      "category": "configuration/data files",
-      "subcategory": "config",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/config-and-data.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/codebase/04_changes/00DOC-GEN-20260703-005-bootstrap.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/codebase/04_changes/00DOC-GEN-20260703-006-bootstrap-snapshot.json",
-      "category": "configuration/data files",
-      "subcategory": "config",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/config-and-data.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/codebase/04_changes/00DOC-GEN-20260703-006-bootstrap.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/codebase/04_changes/00DOC-GEN-20260703-007-bootstrap-snapshot.json",
-      "category": "configuration/data files",
-      "subcategory": "config",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/config-and-data.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/codebase/04_changes/00DOC-GEN-20260703-007-bootstrap-validation.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/codebase/04_changes/00DOC-GEN-20260703-007-bootstrap.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/codebase/04_changes/DOCSYNC-20260703_codebase-doc-update.meta.json",
-      "category": "configuration/data files",
-      "subcategory": "config",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/config-and-data.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/delivery/00_standards/DELIVERY_AGENT_EXECUTOR.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/delivery/00_standards/DELIVERY_AGENT_IMPL_PLANNER.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/delivery/00_standards/DELIVERY_AGENT_MEMORY_MANAGER.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/delivery/00_standards/DELIVERY_AGENT_PLANNER.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/delivery/00_standards/DELIVERY_AGENT_REVIEWER.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/delivery/00_standards/DELIVERY_AGENT_TASK_DECOMPOSER.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/delivery/00_standards/DELIVERY_AGENTS_MD.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/delivery/05_reviews/REV-260703-01_rsop_R-0000-00_workflow-sop-v1.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/delivery/05_reviews/REV-260703-01_rsop_R-0000-00_workflow-sop-v1.meta.json",
-      "category": "configuration/data files",
-      "subcategory": "config",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/config-and-data.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/delivery/05_reviews/REV-260703-02_rtmpl_R-0000-00_01-delivery-template-registry.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/delivery/05_reviews/REV-260703-02_rtmpl_R-0000-00_01-delivery-template-registry.meta.json",
-      "category": "configuration/data files",
-      "subcategory": "config",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/config-and-data.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/delivery/05_reviews/REV-260703-03_ragent_R-0000-00_delivery-agents-md.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/delivery/05_reviews/REV-260703-03_ragent_R-0000-00_delivery-agents-md.meta.json",
-      "category": "configuration/data files",
-      "subcategory": "config",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/config-and-data.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/delivery/05_reviews/REV-260704-01_rsop_R-0000-00_workflow-sop-v1.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/delivery/05_reviews/REV-260704-01_rsop_R-0000-00_workflow-sop-v1.meta.json",
-      "category": "configuration/data files",
-      "subcategory": "config",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/config-and-data.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/delivery/05_reviews/REV-260704-02_rtmpl_R-0000-00_01-delivery-template-registry.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/delivery/05_reviews/REV-260704-02_rtmpl_R-0000-00_01-delivery-template-registry.meta.json",
-      "category": "configuration/data files",
-      "subcategory": "config",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/config-and-data.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/delivery/05_reviews/REV-260704-03_ragent_R-0000-00_delivery-agents-md.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/delivery/05_reviews/REV-260704-03_ragent_R-0000-00_delivery-agents-md.meta.json",
-      "category": "configuration/data files",
-      "subcategory": "config",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/config-and-data.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/delivery/DELIVERY_FOLDER_MAP.json",
-      "category": "configuration/data files",
-      "subcategory": "config",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/config-and-data.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/delivery/project_analysis.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/system/00_governance/bootstrap/00DOC-GEN-20260703-007-bootstrap-change-log.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/system/00_governance/bootstrap/00DOC-GEN-20260703-007-bootstrap-summary.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/system/00_governance/bootstrap/00DOC-GEN-20260703-007-bootstrap-validation.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/system/00_governance/bootstrap/00DOC-GEN-20260703-007-bootstrap-validation.meta.json",
-      "category": "configuration/data files",
-      "subcategory": "config",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/config-and-data.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/system/00_governance/bootstrap/BUNDLE_MIGRATION_PLAN.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/system/00_governance/bootstrap/BUNDLE_TAXONOMY.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/system/00_governance/bootstrap/BUSINESS_CAPABILITIES.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/system/00_governance/bootstrap/COMPONENT_ARCHITECTURE.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/system/00_governance/bootstrap/DECISION_LOG.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/system/00_governance/bootstrap/DELIVERY_STATUS_RULES_v1.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/system/00_governance/bootstrap/DEVELOPER_GUIDE.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/system/00_governance/bootstrap/DOCUMENTATION_STANDARD.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/system/00_governance/bootstrap/EXISTING_REPO_WORKFLOW_SOP.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/system/00_governance/bootstrap/FUNCTIONAL_SPEC.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/system/00_governance/bootstrap/meta.json",
-      "category": "configuration/data files",
-      "subcategory": "config",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/config-and-data.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/system/00_governance/bootstrap/NON_FUNCTIONAL_REQUIREMENTS.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/system/00_governance/bootstrap/project_analysis.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/system/00_governance/bootstrap/README.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/system/00_governance/bootstrap/RUNBOOK.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/system/00_governance/bootstrap/SYSTEM_CONTEXT.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/system/00_governance/bootstrap/SYSTEM_FILE_STRUCTURE.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/system/00_governance/bootstrap/SYSTEM_OVERVIEW.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/system/00_governance/bootstrap/templates/codebase/01_codebase_template_registry.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/system/00_governance/bootstrap/templates/codebase/02_codebase_inventory_template.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/system/00_governance/bootstrap/templates/codebase/03_codebase_module_template.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/system/00_governance/bootstrap/templates/codebase/04_codebase_component_template.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/system/00_governance/bootstrap/templates/codebase/05_codebase_change_template.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/system/00_governance/bootstrap/templates/delivery/01_delivery_template_registry.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/system/00_governance/bootstrap/templates/delivery/02_delivery_initiative_template.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/system/00_governance/bootstrap/templates/delivery/03_delivery_plan_template.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/system/00_governance/bootstrap/templates/delivery/04_delivery_task_graph_template.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/system/00_governance/bootstrap/templates/delivery/05_delivery_task_template.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/system/00_governance/bootstrap/templates/delivery/06_delivery_impl_template.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/system/00_governance/bootstrap/templates/delivery/07_delivery_review_template.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/system/00_governance/bootstrap/templates/delivery/08_delivery_validation_template.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/system/00_governance/bootstrap/templates/delivery/09_delivery_memory_template.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/system/00_governance/bootstrap/WORKFLOW_SOP_v1.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
       "rel_path": "HOW_TO_GUIDE.md",
       "category": "documentation files",
       "subcategory": "docs",
@@ -2920,6 +1840,15 @@
       "last_verified_by_change": "bootstrap/reconcile scan"
     },
     {
+      "rel_path": "tests/test_architecture_site.py",
+      "category": "test files",
+      "subcategory": "tests",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/tests-suite.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
       "rel_path": "tests/test_backend_worker_mode.py",
       "category": "test files",
       "subcategory": "tests",
@@ -3036,6 +1965,7 @@
       "constants": [],
       "test_references": [
         "tests/conftest.py",
+        "tests/test_architecture_site.py",
         "tests/test_backend_worker_mode.py",
         "tests/test_bundle_loader.py",
         "tests/test_codebase_docs.py",
@@ -3084,10 +2014,12 @@
       "external_imports": [
         "finalize_bootstrap",
         "prepare_delivery_scaffold",
+        "publish_architecture_site",
         "scan_repo_codebase",
         "submit_comfyui",
         "sync_codebase_docs",
         "sync_system_docs",
+        "validate_architecture_site",
         "validate_codebase_docs",
         "validate_delivery_docs",
         "validate_system_docs"
@@ -3097,6 +2029,7 @@
       "constants": [],
       "test_references": [
         "tests/conftest.py",
+        "tests/test_architecture_site.py",
         "tests/test_backend_worker_mode.py",
         "tests/test_bundle_loader.py",
         "tests/test_codebase_docs.py",
@@ -3473,6 +2406,40 @@
       "test_references": []
     },
     {
+      "rel_path": "agent_runner_v2/actions/publish_architecture_site.py",
+      "module_name": "agent_runner_v2.actions.publish_architecture_site",
+      "module_area": "actions",
+      "doc_mode": "full",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-actions-publish-architecture-site.md",
+      "summary": "Auto-generated baseline module documentation.",
+      "module_doc": "",
+      "stdlib_imports": [
+        "__future__",
+        "json",
+        "pathlib"
+      ],
+      "local_imports": [],
+      "external_imports": [
+        "action_result",
+        "architecture_site",
+        "codebase_docs",
+        "runtime_context"
+      ],
+      "public_functions": [
+        {
+          "name": "publish_architecture_site",
+          "signature": "()",
+          "summary": ""
+        }
+      ],
+      "public_classes": [],
+      "constants": [],
+      "test_references": [
+        "tests/test_architecture_site.py",
+        "tests/test_documentation_governance.py"
+      ]
+    },
+    {
       "rel_path": "agent_runner_v2/actions/scan_repo_codebase.py",
       "module_name": "agent_runner_v2.actions.scan_repo_codebase",
       "module_area": "actions",
@@ -3561,6 +2528,7 @@
       "external_imports": [
         "action_result",
         "codebase_docs",
+        "doc_paths",
         "runtime_context"
       ],
       "public_functions": [
@@ -3573,7 +2541,8 @@
       "public_classes": [],
       "constants": [],
       "test_references": [
-        "tests/test_bundle_loader.py"
+        "tests/test_bundle_loader.py",
+        "tests/test_documentation_governance.py"
       ]
     },
     {
@@ -3595,6 +2564,7 @@
       "external_imports": [
         "action_result",
         "codebase_docs",
+        "doc_paths",
         "runtime_context",
         "system_docs"
       ],
@@ -3609,6 +2579,38 @@
       "constants": [],
       "test_references": [
         "tests/test_bundle_loader.py"
+      ]
+    },
+    {
+      "rel_path": "agent_runner_v2/actions/validate_architecture_site.py",
+      "module_name": "agent_runner_v2.actions.validate_architecture_site",
+      "module_area": "actions",
+      "doc_mode": "full",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-actions-validate-architecture-site.md",
+      "summary": "Auto-generated baseline module documentation.",
+      "module_doc": "",
+      "stdlib_imports": [
+        "__future__",
+        "pathlib"
+      ],
+      "local_imports": [],
+      "external_imports": [
+        "action_result",
+        "architecture_site",
+        "runtime_context"
+      ],
+      "public_functions": [
+        {
+          "name": "validate_architecture_site",
+          "signature": "()",
+          "summary": ""
+        }
+      ],
+      "public_classes": [],
+      "constants": [],
+      "test_references": [
+        "tests/test_architecture_site.py",
+        "tests/test_documentation_governance.py"
       ]
     },
     {
@@ -3629,6 +2631,7 @@
       "external_imports": [
         "action_result",
         "codebase_docs",
+        "doc_paths",
         "runtime_context"
       ],
       "public_functions": [
@@ -3641,7 +2644,8 @@
       "public_classes": [],
       "constants": [],
       "test_references": [
-        "tests/test_bundle_loader.py"
+        "tests/test_bundle_loader.py",
+        "tests/test_documentation_governance.py"
       ]
     },
     {
@@ -3664,6 +2668,7 @@
       "local_imports": [],
       "external_imports": [
         "action_result",
+        "doc_paths",
         "documentation_validation_core",
         "runtime_context"
       ],
@@ -3712,6 +2717,7 @@
       "external_imports": [
         "action_result",
         "codebase_docs",
+        "doc_paths",
         "documentation_validation_core",
         "runtime_context",
         "system_docs"
@@ -3759,6 +2765,41 @@
       "public_classes": [],
       "constants": [],
       "test_references": []
+    },
+    {
+      "rel_path": "agent_runner_v2/architecture_site.py",
+      "module_name": "agent_runner_v2.architecture_site",
+      "module_area": "support",
+      "doc_mode": "summary",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-architecture-site.md",
+      "summary": "Auto-generated baseline module documentation.",
+      "module_doc": "",
+      "stdlib_imports": [
+        "__future__",
+        "html",
+        "pathlib",
+        "typing"
+      ],
+      "local_imports": [],
+      "external_imports": [
+        "doc_paths"
+      ],
+      "public_functions": [
+        {
+          "name": "render_architecture_site",
+          "signature": "(snapshot, project_root)",
+          "summary": ""
+        }
+      ],
+      "public_classes": [],
+      "constants": [
+        "SITE_ROOT",
+        "SITE_PAGES"
+      ],
+      "test_references": [
+        "tests/test_architecture_site.py",
+        "tests/test_documentation_governance.py"
+      ]
     },
     {
       "rel_path": "agent_runner_v2/artifact_paths.py",
@@ -3850,6 +2891,7 @@
       "constants": [],
       "test_references": [
         "tests/conftest.py",
+        "tests/test_architecture_site.py",
         "tests/test_bundle_loader.py",
         "tests/test_documentation_governance.py"
       ]
@@ -3977,7 +3019,9 @@
         "typing"
       ],
       "local_imports": [],
-      "external_imports": [],
+      "external_imports": [
+        "doc_paths"
+      ],
       "public_functions": [
         {
           "name": "bundle_manifest",
@@ -4072,6 +3116,7 @@
       "local_imports": [],
       "external_imports": [
         "bundle_loader",
+        "doc_paths",
         "runtime_context"
       ],
       "public_functions": [
@@ -4239,6 +3284,108 @@
       ]
     },
     {
+      "rel_path": "agent_runner_v2/doc_paths.py",
+      "module_name": "agent_runner_v2.doc_paths",
+      "module_area": "support",
+      "doc_mode": "summary",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-doc-paths.md",
+      "summary": "Auto-generated baseline module documentation.",
+      "module_doc": "",
+      "stdlib_imports": [
+        "__future__",
+        "pathlib"
+      ],
+      "local_imports": [],
+      "external_imports": [],
+      "public_functions": [
+        {
+          "name": "repo_doc_rel",
+          "signature": "()",
+          "summary": ""
+        },
+        {
+          "name": "docs_root_rel",
+          "signature": "()",
+          "summary": ""
+        },
+        {
+          "name": "system_doc_rel",
+          "signature": "()",
+          "summary": ""
+        },
+        {
+          "name": "system_template_rel",
+          "signature": "()",
+          "summary": ""
+        },
+        {
+          "name": "system_delivery_template_rel",
+          "signature": "()",
+          "summary": ""
+        },
+        {
+          "name": "system_codebase_template_rel",
+          "signature": "()",
+          "summary": ""
+        },
+        {
+          "name": "codebase_doc_rel",
+          "signature": "()",
+          "summary": ""
+        },
+        {
+          "name": "delivery_doc_rel",
+          "signature": "()",
+          "summary": ""
+        },
+        {
+          "name": "architecture_site_rel",
+          "signature": "()",
+          "summary": ""
+        },
+        {
+          "name": "master_bootstrap_docs",
+          "signature": "()",
+          "summary": ""
+        },
+        {
+          "name": "delivery_scaffold_docs",
+          "signature": "()",
+          "summary": ""
+        },
+        {
+          "name": "codebase_docs",
+          "signature": "()",
+          "summary": ""
+        },
+        {
+          "name": "architecture_site_pages",
+          "signature": "()",
+          "summary": ""
+        },
+        {
+          "name": "prompt_literal_aliases",
+          "signature": "()",
+          "summary": "Map literal repo-relative paths to prompt placeholders."
+        }
+      ],
+      "public_classes": [],
+      "constants": [
+        "SYSTEM_DOC_ROOT",
+        "DOCS_ROOT",
+        "SYSTEM_TEMPLATE_ROOT",
+        "SYSTEM_DELIVERY_TEMPLATE_ROOT",
+        "SYSTEM_CODEBASE_TEMPLATE_ROOT",
+        "CODEBASE_DOC_ROOT",
+        "DELIVERY_DOC_ROOT",
+        "ARCHITECTURE_SITE_ROOT"
+      ],
+      "test_references": [
+        "tests/test_documentation_governance.py",
+        "tests/test_documentation_guardrails_cleanup.py"
+      ]
+    },
+    {
       "rel_path": "agent_runner_v2/documentation_guardrails.py",
       "module_name": "agent_runner_v2.documentation_guardrails",
       "module_area": "support",
@@ -4252,7 +3399,9 @@
         "typing"
       ],
       "local_imports": [],
-      "external_imports": [],
+      "external_imports": [
+        "doc_paths"
+      ],
       "public_functions": [
         {
           "name": "managed_banner",
@@ -4295,6 +3444,11 @@
           "summary": ""
         },
         {
+          "name": "architecture_site_doc_paths",
+          "signature": "()",
+          "summary": ""
+        },
+        {
           "name": "workflow_generated_doc_paths",
           "signature": "()",
           "summary": ""
@@ -4324,6 +3478,7 @@
       "constants": [
         "MASTER_BOOTSTRAP_WORKFLOW",
         "EXECUTION_SCAFFOLD_WORKFLOW",
+        "ARCHITECTURE_SITE_WORKFLOW",
         "WORKFLOW_GENERATED_MARKER",
         "DEFAULT_LEGACY_QUARANTINE_DIR"
       ],
@@ -4503,6 +3658,7 @@
       ],
       "local_imports": [],
       "external_imports": [
+        "doc_paths",
         "documentation_guardrails",
         "exceptions",
         "runtime_context"
@@ -4896,6 +4052,7 @@
       "external_imports": [
         "backend_client",
         "bundle_loader",
+        "doc_paths",
         "documentation_guardrails",
         "exceptions",
         "execution_request",
@@ -4961,10 +4118,12 @@
         "actions.prepare_delivery_scaffold",
         "actions.promote_artifact",
         "actions.promote_init",
+        "actions.publish_architecture_site",
         "actions.scan_repo_codebase",
         "actions.submit_comfyui",
         "actions.sync_codebase_docs",
         "actions.sync_system_docs",
+        "actions.validate_architecture_site",
         "actions.validate_codebase_docs",
         "actions.validate_delivery_docs",
         "actions.validate_system_docs"
@@ -5121,6 +4280,31 @@
           "summary": "Resolve a path using the repo/runtime namespace convention."
         },
         {
+          "name": "repo_doc_root",
+          "signature": "()",
+          "summary": ""
+        },
+        {
+          "name": "system_doc_root",
+          "signature": "()",
+          "summary": ""
+        },
+        {
+          "name": "codebase_doc_root",
+          "signature": "()",
+          "summary": ""
+        },
+        {
+          "name": "delivery_doc_root",
+          "signature": "()",
+          "summary": ""
+        },
+        {
+          "name": "architecture_site_root",
+          "signature": "()",
+          "summary": ""
+        },
+        {
           "name": "artifact_rel_to_meta_rel",
           "signature": "(artifact_rel)",
           "summary": "Return the meta.json sibling path for a repo/runtime-relative artifact."
@@ -5188,6 +4372,7 @@
       "external_imports": [
         "artifact_paths",
         "coder_adapters",
+        "doc_paths",
         "documentation_guardrails",
         "exceptions",
         "runtime_context"
@@ -5354,7 +4539,9 @@
         "pathlib"
       ],
       "local_imports": [],
-      "external_imports": [],
+      "external_imports": [
+        "doc_paths"
+      ],
       "public_functions": [
         {
           "name": "render_system_index",
@@ -5438,7 +4625,11 @@
         }
       ],
       "public_classes": [],
-      "constants": [],
+      "constants": [
+        "SYSTEM_BOOTSTRAP_ROOT",
+        "CODEBASE_ROOT",
+        "DELIVERY_ROOT"
+      ],
       "test_references": [
         "tests/test_bundle_loader.py",
         "tests/test_documentation_governance.py"
@@ -6264,37 +5455,17 @@
       "family_name": "40_documentation_sync_v1",
       "job_prefix": "40DOCSYNC",
       "job_init_step": "sync_docs",
-      "job_init_inputs": [
-        "TASK_FILE",
-        "IMPL_FILE"
-      ],
+      "job_init_inputs": [],
       "visibility": "canonical",
       "steps": [
         {
           "step": "sync_docs",
           "kind": "action",
-          "coder": "qwen-architect",
+          "coder": "",
           "prompt_file": "",
           "produces": [
-            "CODEBASE_CHANGE_IMPACT"
-          ]
-        },
-        {
-          "step": "review_docs",
-          "kind": "coder",
-          "coder": "qwen-reviewer",
-          "prompt_file": "prompts\\40_documentation_sync_v1\\02_review_docs.txt",
-          "produces": [
-            "REVIEW_FILE"
-          ]
-        },
-        {
-          "step": "refine_docs",
-          "kind": "coder",
-          "coder": "qwen-architect",
-          "prompt_file": "prompts\\40_documentation_sync_v1\\03_refine_docs.txt",
-          "produces": [
-            "CODEBASE_CHANGE_IMPACT"
+            "CODEBASE_CHANGE_IMPACT",
+            "CODEBASE_INVENTORY"
           ]
         },
         {
@@ -6308,6 +5479,36 @@
         }
       ],
       "component_id": "40_documentation_sync_v1",
+      "owner_doc_path": "docs/codebase/03_components/workflow-families.md"
+    },
+    {
+      "family_name": "50_architecture_site_v1",
+      "job_prefix": "50SITE",
+      "job_init_step": "build_site",
+      "job_init_inputs": [],
+      "visibility": "canonical",
+      "steps": [
+        {
+          "step": "build_site",
+          "kind": "action",
+          "coder": "",
+          "prompt_file": "",
+          "produces": [
+            "ARCHITECTURE_SITE_INDEX",
+            "ARCHITECTURE_SITE_MANIFEST"
+          ]
+        },
+        {
+          "step": "validate_site",
+          "kind": "action",
+          "coder": "",
+          "prompt_file": "",
+          "produces": [
+            "VALIDATION_FILE"
+          ]
+        }
+      ],
+      "component_id": "50_architecture_site_v1",
       "owner_doc_path": "docs/codebase/03_components/workflow-families.md"
     },
     {
@@ -6558,25 +5759,25 @@
       "total": 5
     },
     "configuration/data files": {
-      "current": 20,
+      "current": 7,
       "needs_update": 0,
       "pending_review": 0,
       "superseded": 0,
-      "total": 20
+      "total": 7
     },
     "documentation files": {
-      "current": 126,
+      "current": 15,
       "needs_update": 0,
       "pending_review": 0,
       "superseded": 0,
-      "total": 126
+      "total": 15
     },
     "python modules": {
-      "current": 49,
+      "current": 53,
       "needs_update": 0,
       "pending_review": 0,
       "superseded": 0,
-      "total": 49
+      "total": 53
     },
     "bootstrap workflow files": {
       "current": 80,
@@ -6593,11 +5794,11 @@
       "total": 43
     },
     "test files": {
-      "current": 11,
+      "current": 12,
       "needs_update": 0,
       "pending_review": 0,
       "superseded": 0,
-      "total": 11
+      "total": 12
     }
   }
 }

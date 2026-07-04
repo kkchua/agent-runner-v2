@@ -31,11 +31,13 @@ from .actions.sync_codebase_docs import sync_codebase_docs
 from .actions.sync_system_docs import sync_system_docs
 from .actions.validate_codebase_docs import validate_codebase_docs
 from .actions.validate_delivery_docs import validate_delivery_docs
+from .actions.validate_architecture_site import validate_architecture_site
 from .actions.validate_system_docs import validate_system_docs
 from .actions.execute_t2i import execute_t2i
 from .actions.execute_i2v import execute_i2v
 from .actions.execute_voiceover import execute_voiceover
 from .actions.assemble_video import assemble_video
+from .actions.publish_architecture_site import publish_architecture_site
 
 logger = logging.getLogger(__name__)
 
@@ -56,11 +58,13 @@ ACTION_REGISTRY: dict[str, Callable] = {
     "sync_system_docs": sync_system_docs,
     "validate_codebase_docs": validate_codebase_docs,
     "validate_delivery_docs": validate_delivery_docs,
+    "validate_architecture_site": validate_architecture_site,
     "validate_system_docs": validate_system_docs,
     "execute_t2i": execute_t2i,
     "execute_i2v": execute_i2v,
     "execute_voiceover": execute_voiceover,
     "assemble_video": assemble_video,
+    "publish_architecture_site": publish_architecture_site,
 }
 
 

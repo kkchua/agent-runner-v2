@@ -1,6 +1,6 @@
 {
   "schema_version": "v2",
-  "validated_at": "2026-07-04T07:26:51+08:00",
+  "validated_at": "2026-07-04T11:46:02+08:00",
   "project_root": "D:\\MyProjectSpace\\01_Workflows\\agent-runner-v2",
   "delivery_root": "docs/delivery",
   "summary": {
@@ -38,7 +38,7 @@
       "check": "folder_structure",
       "path": "docs/delivery/05_reviews",
       "ok": true,
-      "detail": "exists (18 items)"
+      "detail": "exists (6 items)"
     },
     {
       "check": "folder_structure",
@@ -62,13 +62,13 @@
       "check": "folder_structure",
       "path": "docs/codebase/01_inventory",
       "ok": true,
-      "detail": "exists (1 items)"
+      "detail": "exists (2 items)"
     },
     {
       "check": "folder_structure",
       "path": "docs/codebase/02_modules",
       "ok": true,
-      "detail": "exists (49 items)"
+      "detail": "exists (53 items)"
     },
     {
       "check": "folder_structure",
@@ -80,7 +80,7 @@
       "check": "folder_structure",
       "path": "docs/codebase/04_changes",
       "ok": true,
-      "detail": "exists (12 items)"
+      "detail": "exists (6 items)"
     },
     {
       "check": "folder_structure",
@@ -90,255 +90,255 @@
     },
     {
       "check": "folder_structure",
-      "path": "docs/system/00_governance",
+      "path": "docs/system/00_governance/bootstrap",
       "ok": true,
-      "detail": "exists (1 items)"
+      "detail": "exists (23 items)"
     },
     {
       "check": "folder_structure",
-      "path": "docs/system/00_governance/bootstrap",
+      "path": "docs/system/00_governance/bootstrap/templates",
       "ok": true,
-      "detail": "exists (28 items)"
+      "detail": "exists (2 items)"
     },
     {
       "check": "file_exists",
       "path": "docs/codebase/00_standards/CODEBASE_DOC_SOP_v1.md",
       "ok": true,
-      "detail": "exists (18017 bytes)"
+      "detail": "exists (10461 bytes)"
     },
     {
       "check": "file_exists",
       "path": "docs/codebase/00_standards/CODEBASE_DOC_STATUS_RULES_v1.md",
       "ok": true,
-      "detail": "exists (10817 bytes)"
+      "detail": "exists (8319 bytes)"
     },
     {
       "check": "file_exists",
       "path": "docs/system/00_governance/bootstrap/templates/codebase/01_codebase_template_registry.md",
       "ok": true,
-      "detail": "exists (5485 bytes)"
+      "detail": "exists (5602 bytes)"
     },
     {
       "check": "file_exists",
       "path": "docs/system/00_governance/bootstrap/templates/codebase/02_codebase_inventory_template.md",
       "ok": true,
-      "detail": "exists (5312 bytes)"
+      "detail": "exists (5967 bytes)"
     },
     {
       "check": "file_exists",
       "path": "docs/system/00_governance/bootstrap/templates/codebase/03_codebase_module_template.md",
       "ok": true,
-      "detail": "exists (3754 bytes)"
+      "detail": "exists (2788 bytes)"
     },
     {
       "check": "file_exists",
       "path": "docs/system/00_governance/bootstrap/templates/codebase/04_codebase_component_template.md",
       "ok": true,
-      "detail": "exists (2933 bytes)"
+      "detail": "exists (2771 bytes)"
     },
     {
       "check": "file_exists",
       "path": "docs/system/00_governance/bootstrap/templates/codebase/05_codebase_change_template.md",
       "ok": true,
-      "detail": "exists (4521 bytes)"
+      "detail": "exists (4378 bytes)"
     },
     {
       "check": "file_exists",
       "path": "docs/codebase/01_inventory/codebase_inventory.md",
       "ok": true,
-      "detail": "exists (61292 bytes)"
+      "detail": "exists (20541 bytes)"
     },
     {
       "check": "file_exists",
       "path": "docs/system/00_governance/bootstrap/project_analysis.md",
       "ok": true,
-      "detail": "exists (10474 bytes)"
+      "detail": "exists (10097 bytes)"
     },
     {
       "check": "file_exists",
       "path": "docs/system/00_governance/bootstrap/DOCUMENTATION_STANDARD.md",
       "ok": true,
-      "detail": "exists (8158 bytes)"
+      "detail": "exists (7376 bytes)"
     },
     {
       "check": "file_exists",
       "path": "docs/system/00_governance/bootstrap/README.md",
       "ok": true,
-      "detail": "exists (5334 bytes)"
+      "detail": "exists (4216 bytes)"
     },
     {
       "check": "file_exists",
       "path": "docs/system/00_governance/bootstrap/SYSTEM_OVERVIEW.md",
       "ok": true,
-      "detail": "exists (8508 bytes)"
+      "detail": "exists (6581 bytes)"
     },
     {
       "check": "file_exists",
       "path": "docs/system/00_governance/bootstrap/BUSINESS_CAPABILITIES.md",
       "ok": true,
-      "detail": "exists (7882 bytes)"
+      "detail": "exists (7082 bytes)"
     },
     {
       "check": "file_exists",
       "path": "docs/system/00_governance/bootstrap/FUNCTIONAL_SPEC.md",
       "ok": true,
-      "detail": "exists (11465 bytes)"
+      "detail": "exists (7855 bytes)"
     },
     {
       "check": "file_exists",
       "path": "docs/system/00_governance/bootstrap/NON_FUNCTIONAL_REQUIREMENTS.md",
       "ok": true,
-      "detail": "exists (8828 bytes)"
+      "detail": "exists (6700 bytes)"
     },
     {
       "check": "file_exists",
       "path": "docs/system/00_governance/bootstrap/SYSTEM_CONTEXT.md",
       "ok": true,
-      "detail": "exists (8418 bytes)"
+      "detail": "exists (4368 bytes)"
     },
     {
       "check": "file_exists",
       "path": "docs/system/00_governance/bootstrap/COMPONENT_ARCHITECTURE.md",
       "ok": true,
-      "detail": "exists (10173 bytes)"
+      "detail": "exists (8363 bytes)"
     },
     {
       "check": "file_exists",
       "path": "docs/system/00_governance/bootstrap/DECISION_LOG.md",
       "ok": true,
-      "detail": "exists (5511 bytes)"
+      "detail": "exists (4582 bytes)"
     },
     {
       "check": "file_exists",
       "path": "docs/system/00_governance/bootstrap/SYSTEM_FILE_STRUCTURE.md",
       "ok": true,
-      "detail": "exists (11443 bytes)"
+      "detail": "exists (8175 bytes)"
     },
     {
       "check": "file_exists",
       "path": "docs/system/00_governance/bootstrap/DEVELOPER_GUIDE.md",
       "ok": true,
-      "detail": "exists (6911 bytes)"
+      "detail": "exists (6937 bytes)"
     },
     {
       "check": "file_exists",
       "path": "docs/system/00_governance/bootstrap/RUNBOOK.md",
       "ok": true,
-      "detail": "exists (7670 bytes)"
+      "detail": "exists (6108 bytes)"
     },
     {
       "check": "file_exists",
       "path": "docs/system/00_governance/bootstrap/EXISTING_REPO_WORKFLOW_SOP.md",
       "ok": true,
-      "detail": "exists (12392 bytes)"
+      "detail": "exists (15746 bytes)"
     },
     {
       "check": "file_exists",
       "path": "docs\\system\\00_governance\\bootstrap\\templates\\delivery\\01_delivery_template_registry.md",
       "ok": true,
-      "detail": "exists (5795 bytes)"
+      "detail": "exists (7110 bytes)"
     },
     {
       "check": "file_exists",
       "path": "docs\\system\\00_governance\\bootstrap\\templates\\delivery\\02_delivery_initiative_template.md",
       "ok": true,
-      "detail": "exists (3370 bytes)"
+      "detail": "exists (3706 bytes)"
     },
     {
       "check": "file_exists",
       "path": "docs\\system\\00_governance\\bootstrap\\templates\\delivery\\03_delivery_plan_template.md",
       "ok": true,
-      "detail": "exists (4820 bytes)"
+      "detail": "exists (4906 bytes)"
     },
     {
       "check": "file_exists",
       "path": "docs\\system\\00_governance\\bootstrap\\templates\\delivery\\04_delivery_task_graph_template.md",
       "ok": true,
-      "detail": "exists (3631 bytes)"
+      "detail": "exists (3985 bytes)"
     },
     {
       "check": "file_exists",
       "path": "docs\\system\\00_governance\\bootstrap\\templates\\delivery\\05_delivery_task_template.md",
       "ok": true,
-      "detail": "exists (4341 bytes)"
+      "detail": "exists (4426 bytes)"
     },
     {
       "check": "file_exists",
       "path": "docs\\system\\00_governance\\bootstrap\\templates\\delivery\\06_delivery_impl_template.md",
       "ok": true,
-      "detail": "exists (4461 bytes)"
+      "detail": "exists (4745 bytes)"
     },
     {
       "check": "file_exists",
       "path": "docs\\system\\00_governance\\bootstrap\\templates\\delivery\\07_delivery_review_template.md",
       "ok": true,
-      "detail": "exists (4148 bytes)"
+      "detail": "exists (3648 bytes)"
     },
     {
       "check": "file_exists",
       "path": "docs\\system\\00_governance\\bootstrap\\templates\\delivery\\08_delivery_validation_template.md",
       "ok": true,
-      "detail": "exists (4580 bytes)"
+      "detail": "exists (5482 bytes)"
     },
     {
       "check": "file_exists",
       "path": "docs\\system\\00_governance\\bootstrap\\templates\\delivery\\09_delivery_memory_template.md",
       "ok": true,
-      "detail": "exists (2953 bytes)"
+      "detail": "exists (3439 bytes)"
     },
     {
       "check": "file_exists",
       "path": "docs\\delivery\\00_standards\\DELIVERY_AGENTS_MD.md",
       "ok": true,
-      "detail": "exists (9428 bytes)"
+      "detail": "exists (6719 bytes)"
     },
     {
       "check": "file_exists",
       "path": "docs\\delivery\\00_standards\\DELIVERY_AGENT_PLANNER.md",
       "ok": true,
-      "detail": "exists (7562 bytes)"
+      "detail": "exists (7052 bytes)"
     },
     {
       "check": "file_exists",
       "path": "docs\\delivery\\00_standards\\DELIVERY_AGENT_TASK_DECOMPOSER.md",
       "ok": true,
-      "detail": "exists (8253 bytes)"
+      "detail": "exists (7823 bytes)"
     },
     {
       "check": "file_exists",
       "path": "docs\\delivery\\00_standards\\DELIVERY_AGENT_IMPL_PLANNER.md",
       "ok": true,
-      "detail": "exists (7286 bytes)"
+      "detail": "exists (7627 bytes)"
     },
     {
       "check": "file_exists",
       "path": "docs\\delivery\\00_standards\\DELIVERY_AGENT_EXECUTOR.md",
       "ok": true,
-      "detail": "exists (8928 bytes)"
+      "detail": "exists (8532 bytes)"
     },
     {
       "check": "file_exists",
       "path": "docs\\delivery\\00_standards\\DELIVERY_AGENT_REVIEWER.md",
       "ok": true,
-      "detail": "exists (8622 bytes)"
+      "detail": "exists (8453 bytes)"
     },
     {
       "check": "file_exists",
       "path": "docs\\delivery\\00_standards\\DELIVERY_AGENT_MEMORY_MANAGER.md",
       "ok": true,
-      "detail": "exists (8761 bytes)"
+      "detail": "exists (8704 bytes)"
     },
     {
       "check": "file_exists",
       "path": "docs/system/00_governance/bootstrap/WORKFLOW_SOP_v1.md",
       "ok": true,
-      "detail": "exists (21783 bytes)"
+      "detail": "exists (9292 bytes)"
     },
     {
       "check": "file_exists",
       "path": "docs/system/00_governance/bootstrap/DELIVERY_STATUS_RULES_v1.md",
       "ok": true,
-      "detail": "exists (10122 bytes)"
+      "detail": "exists (8383 bytes)"
     },
     {
       "check": "file_section",
@@ -1584,21 +1584,21 @@
       "artifact_key": "CODEBASE_DOC_SOP",
       "path": "docs/codebase/00_standards/CODEBASE_DOC_SOP_v1.md",
       "ok": true,
-      "detail": "exists (18017 bytes)"
+      "detail": "exists (10461 bytes)"
     },
     {
       "check": "codebase_file_exists",
       "artifact_key": "CODEBASE_DOC_STATUS_RULES",
       "path": "docs/codebase/00_standards/CODEBASE_DOC_STATUS_RULES_v1.md",
       "ok": true,
-      "detail": "exists (10817 bytes)"
+      "detail": "exists (8319 bytes)"
     },
     {
       "check": "codebase_file_exists",
       "artifact_key": "CODEBASE_TEMPLATE_REGISTRY",
       "path": "docs/system/00_governance/bootstrap/templates/codebase/01_codebase_template_registry.md",
       "ok": true,
-      "detail": "exists (5485 bytes)"
+      "detail": "exists (5602 bytes)"
     },
     {
       "check": "codebase_template_section",
@@ -1640,7 +1640,7 @@
       "artifact_key": "CODEBASE_INVENTORY_TEMPLATE",
       "path": "docs/system/00_governance/bootstrap/templates/codebase/02_codebase_inventory_template.md",
       "ok": true,
-      "detail": "exists (5312 bytes)"
+      "detail": "exists (5967 bytes)"
     },
     {
       "check": "codebase_template_section",
@@ -1682,7 +1682,7 @@
       "artifact_key": "CODEBASE_MODULE_TEMPLATE",
       "path": "docs/system/00_governance/bootstrap/templates/codebase/03_codebase_module_template.md",
       "ok": true,
-      "detail": "exists (3754 bytes)"
+      "detail": "exists (2788 bytes)"
     },
     {
       "check": "codebase_template_section",
@@ -1759,7 +1759,7 @@
       "artifact_key": "CODEBASE_COMPONENT_TEMPLATE",
       "path": "docs/system/00_governance/bootstrap/templates/codebase/04_codebase_component_template.md",
       "ok": true,
-      "detail": "exists (2933 bytes)"
+      "detail": "exists (2771 bytes)"
     },
     {
       "check": "codebase_template_section",
@@ -1829,7 +1829,7 @@
       "artifact_key": "CODEBASE_CHANGE_TEMPLATE",
       "path": "docs/system/00_governance/bootstrap/templates/codebase/05_codebase_change_template.md",
       "ok": true,
-      "detail": "exists (4521 bytes)"
+      "detail": "exists (4378 bytes)"
     },
     {
       "check": "codebase_template_section",
@@ -1892,7 +1892,7 @@
       "artifact_key": "CODEBASE_INVENTORY",
       "path": "docs/codebase/01_inventory/codebase_inventory.md",
       "ok": true,
-      "detail": "exists (61292 bytes)"
+      "detail": "exists (20541 bytes)"
     },
     {
       "check": "codebase_sop_section",
@@ -2040,7 +2040,7 @@
       "artifact_key": "PROJECT_ANALYSIS",
       "path": "docs/system/00_governance/bootstrap/project_analysis.md",
       "ok": true,
-      "detail": "exists (10474 bytes)"
+      "detail": "exists (10097 bytes)"
     },
     {
       "check": "system_doc_section",
@@ -2082,7 +2082,7 @@
       "artifact_key": "SYSTEM_DOC_STANDARD",
       "path": "docs/system/00_governance/bootstrap/DOCUMENTATION_STANDARD.md",
       "ok": true,
-      "detail": "exists (8158 bytes)"
+      "detail": "exists (7376 bytes)"
     },
     {
       "check": "system_doc_section",
@@ -2152,7 +2152,7 @@
       "artifact_key": "SYSTEM_DOCS_INDEX",
       "path": "docs/system/00_governance/bootstrap/README.md",
       "ok": true,
-      "detail": "exists (5334 bytes)"
+      "detail": "exists (4216 bytes)"
     },
     {
       "check": "system_doc_section",
@@ -2180,7 +2180,7 @@
       "artifact_key": "SYSTEM_OVERVIEW",
       "path": "docs/system/00_governance/bootstrap/SYSTEM_OVERVIEW.md",
       "ok": true,
-      "detail": "exists (8508 bytes)"
+      "detail": "exists (6581 bytes)"
     },
     {
       "check": "system_doc_section",
@@ -2222,49 +2222,49 @@
       "artifact_key": "BUSINESS_CAPABILITIES",
       "path": "docs/system/00_governance/bootstrap/BUSINESS_CAPABILITIES.md",
       "ok": true,
-      "detail": "exists (7882 bytes)"
+      "detail": "exists (7082 bytes)"
     },
     {
       "check": "system_file_exists",
       "artifact_key": "FUNCTIONAL_SPEC",
       "path": "docs/system/00_governance/bootstrap/FUNCTIONAL_SPEC.md",
       "ok": true,
-      "detail": "exists (11465 bytes)"
+      "detail": "exists (7855 bytes)"
     },
     {
       "check": "system_file_exists",
       "artifact_key": "NON_FUNCTIONAL_REQUIREMENTS",
       "path": "docs/system/00_governance/bootstrap/NON_FUNCTIONAL_REQUIREMENTS.md",
       "ok": true,
-      "detail": "exists (8828 bytes)"
+      "detail": "exists (6700 bytes)"
     },
     {
       "check": "system_file_exists",
       "artifact_key": "SYSTEM_CONTEXT",
       "path": "docs/system/00_governance/bootstrap/SYSTEM_CONTEXT.md",
       "ok": true,
-      "detail": "exists (8418 bytes)"
+      "detail": "exists (4368 bytes)"
     },
     {
       "check": "system_file_exists",
       "artifact_key": "COMPONENT_ARCHITECTURE",
       "path": "docs/system/00_governance/bootstrap/COMPONENT_ARCHITECTURE.md",
       "ok": true,
-      "detail": "exists (10173 bytes)"
+      "detail": "exists (8363 bytes)"
     },
     {
       "check": "system_file_exists",
       "artifact_key": "DECISION_LOG",
       "path": "docs/system/00_governance/bootstrap/DECISION_LOG.md",
       "ok": true,
-      "detail": "exists (5511 bytes)"
+      "detail": "exists (4582 bytes)"
     },
     {
       "check": "system_file_exists",
       "artifact_key": "SYSTEM_FILE_STRUCTURE",
       "path": "docs/system/00_governance/bootstrap/SYSTEM_FILE_STRUCTURE.md",
       "ok": true,
-      "detail": "exists (11443 bytes)"
+      "detail": "exists (8175 bytes)"
     },
     {
       "check": "system_doc_section",
@@ -2292,7 +2292,7 @@
       "artifact_key": "DEVELOPER_GUIDE",
       "path": "docs/system/00_governance/bootstrap/DEVELOPER_GUIDE.md",
       "ok": true,
-      "detail": "exists (6911 bytes)"
+      "detail": "exists (6937 bytes)"
     },
     {
       "check": "system_doc_section",
@@ -2327,7 +2327,7 @@
       "artifact_key": "RUNBOOK",
       "path": "docs/system/00_governance/bootstrap/RUNBOOK.md",
       "ok": true,
-      "detail": "exists (7670 bytes)"
+      "detail": "exists (6108 bytes)"
     },
     {
       "check": "system_doc_section",
@@ -2355,7 +2355,7 @@
       "artifact_key": "EXISTING_REPO_WORKFLOW_SOP",
       "path": "docs/system/00_governance/bootstrap/EXISTING_REPO_WORKFLOW_SOP.md",
       "ok": true,
-      "detail": "exists (12392 bytes)"
+      "detail": "exists (15746 bytes)"
     },
     {
       "check": "system_doc_section",
@@ -2410,7 +2410,7 @@
       "check": "sop_exists",
       "path": "docs/system/00_governance/bootstrap/WORKFLOW_SOP_v1.md",
       "ok": true,
-      "detail": "exists (21783 bytes)"
+      "detail": "exists (9292 bytes)"
     },
     {
       "check": "sop_section",
@@ -2485,7 +2485,7 @@
       "check": "status_rules_exists",
       "path": "docs/system/00_governance/bootstrap/DELIVERY_STATUS_RULES_v1.md",
       "ok": true,
-      "detail": "exists (10122 bytes)"
+      "detail": "exists (8383 bytes)"
     },
     {
       "check": "status_rules_section",
@@ -2553,19 +2553,19 @@
       "check": "agents_registry_exists",
       "path": "docs\\delivery\\00_standards\\DELIVERY_AGENTS_MD.md",
       "ok": true,
-      "detail": "exists (9428 bytes)"
+      "detail": "exists (6719 bytes)"
     },
     {
       "check": "agents_registry_entries",
       "path": "docs\\delivery\\00_standards\\DELIVERY_AGENTS_MD.md",
       "ok": true,
-      "detail": "found 28 agent(s) in registry: **Executor**, **Impl Planner**, **Memory Manager**, **Planner**, **Reviewer**, **Task Decomposer**, -------, ----------, -----------, ---------------, Authority boundary, Codebase Documentation SOP, Codebase Documentation Status Rules, Contract Field, Delivery Status Rules, Delivery Template Registry, Delivery Workflow SOP, Input, Invariant, Output, Project Analysis, Reference, `AGENT-EXECUTOR`, `AGENT-IMPL-PLANNER`, `AGENT-MEMORY-MANAGER`, `AGENT-PLANNER`, `AGENT-REVIEWER`, `AGENT-TASK-DECOMPOSER`"
+      "detail": "found 28 agent(s) in registry: Agent ID, Codebase Doc SOP, Codebase Doc Status Rules, Codebase Template Registry, Delivery Status Rules, Delivery Template Registry, Delivery Workflow SOP, Doc Type, Executor, Field, Impl Planner, Last Verified, Memory Manager, Owner Step, Owner Workflow, Planner, Project Analysis, Reference, Reviewer, Scope, Status, Task Decomposer, `DELIVERY-EXECUTOR`, `DELIVERY-IMPL-PLAN`, `DELIVERY-MEM-MGR`, `DELIVERY-PLANNER`, `DELIVERY-REVIEWER`, `DELIVERY-TASK-DECOMP`"
     },
     {
       "check": "agent_contract_exists",
       "path": "docs\\delivery\\00_standards\\DELIVERY_AGENT_PLANNER.md",
       "ok": true,
-      "detail": "exists (7562 bytes)"
+      "detail": "exists (7052 bytes)"
     },
     {
       "check": "agent_contract_metadata",
@@ -2577,7 +2577,7 @@
       "check": "agent_contract_exists",
       "path": "docs\\delivery\\00_standards\\DELIVERY_AGENT_TASK_DECOMPOSER.md",
       "ok": true,
-      "detail": "exists (8253 bytes)"
+      "detail": "exists (7823 bytes)"
     },
     {
       "check": "agent_contract_metadata",
@@ -2589,7 +2589,7 @@
       "check": "agent_contract_exists",
       "path": "docs\\delivery\\00_standards\\DELIVERY_AGENT_IMPL_PLANNER.md",
       "ok": true,
-      "detail": "exists (7286 bytes)"
+      "detail": "exists (7627 bytes)"
     },
     {
       "check": "agent_contract_metadata",
@@ -2601,7 +2601,7 @@
       "check": "agent_contract_exists",
       "path": "docs\\delivery\\00_standards\\DELIVERY_AGENT_EXECUTOR.md",
       "ok": true,
-      "detail": "exists (8928 bytes)"
+      "detail": "exists (8532 bytes)"
     },
     {
       "check": "agent_contract_metadata",
@@ -2613,7 +2613,7 @@
       "check": "agent_contract_exists",
       "path": "docs\\delivery\\00_standards\\DELIVERY_AGENT_REVIEWER.md",
       "ok": true,
-      "detail": "exists (8622 bytes)"
+      "detail": "exists (8453 bytes)"
     },
     {
       "check": "agent_contract_metadata",
@@ -2625,7 +2625,7 @@
       "check": "agent_contract_exists",
       "path": "docs\\delivery\\00_standards\\DELIVERY_AGENT_MEMORY_MANAGER.md",
       "ok": true,
-      "detail": "exists (8761 bytes)"
+      "detail": "exists (8704 bytes)"
     },
     {
       "check": "agent_contract_metadata",

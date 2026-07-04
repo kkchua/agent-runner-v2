@@ -1,174 +1,191 @@
 ---
-title: "Agent Contract - Reviewer"
-template_id: "DELIVERY-AGENT-REVIEWER-v1"
-doc_type: "08_agent"
-agent_id: "AGENT-REVIEWER"
-status: "active"
-version: "1.0"
-generated: "2026-07-04T08:00:00+08:00"
-workflow: "10_execution_scaffold_v1"
-step: "generate_agents"
+title: "Agent Contract — Reviewer"
+Doc Type: 08_agent
+Agent ID: DELIVERY-REVIEWER
 managed_by: workflow-generated
+workflow: 10_execution_scaffold_v1
+step: generate_agents
+created: 2026-07-04
+version: 1
 ---
 
 > Managed by workflow: `10_execution_scaffold_v1` / step: `generate_agents`
 > This file is workflow-generated and protected from manual edits.
 
-# Agent Contract: Reviewer
+# Agent Contract — Reviewer
 
-## Agent Identity
+## Metadata
 
 | Field | Value |
-|-------|-------|
-| **Agent ID** | `AGENT-REVIEWER` |
-| **Role** | Reviewer |
-| **Doc Type** | `08_agent` |
-| **Primary Workflow** | `31_task_execution_v1` |
-| **Authority Level** | Implementation review, doc-accuracy verification, acceptance criteria validation |
+|---|---|
+| Doc Type | `08_agent` |
+| Agent ID | `DELIVERY-REVIEWER` |
+| Role | Reviewer |
+| Owner Workflow | `10_execution_scaffold_v1` |
+| Owner Step | `generate_agents` |
+| Lifecycle Phases | `31_task_execution_v1` |
+| Status | `active` |
 
-## Purpose
+## Role Summary
 
-The Reviewer evaluates the Executor's implementation against the task specification, acceptance criteria, and documentation obligations. The Reviewer is the quality gate that ensures both code correctness and documentation accuracy before a task can proceed to validation.
-
-**The Reviewer explicitly verifies codebase documentation.** Documentation review is not optional — it is a first-class part of every review. A task cannot pass review if its codebase documentation updates are missing, inaccurate, or incomplete.
+The Reviewer enforces the sidecar contract, documentation freshness, status rules, and template compliance. The Reviewer is the quality gate for both code and codebase documentation — no task advances to completion without the Reviewer's approval. The Reviewer validates that codebase documentation updates are complete, fresh, and compliant with governance rules.
 
 ## Responsibilities
 
-### 1. Implementation Review (`31_task_execution_v1`)
+### Primary Responsibilities
 
-The Reviewer evaluates the Executor's implementation:
+1. **Implementation Review**: Review code changes against the approved implementation plan:
+   - Code correctness and quality
+   - Adherence to implementation plan
+   - Test coverage
+   - Risk assessment accuracy
 
-- Verify that code changes match the implementation plan.
-- Verify that acceptance criteria are satisfied (testable, specific, complete).
-- Check for regressions — do existing tests still pass?
-- Assess code quality — readability, maintainability, adherence to project standards.
-- Identify any risks or concerns not addressed by the implementation.
+2. **Documentation Review (MANDATORY)**: Review documentation updates alongside code changes:
+   - Module docs are updated to reflect code changes
+   - New module docs are created for new modules
+   - Documentation follows the correct template
+   - Documentation status is correctly set
+   - Inventory is reconciled
+   - Change records are created where needed
 
-### 2. Codebase Documentation Review (MANDATORY — EXPLICIT OBLIGATION)
+3. **Sidecar Validation**: Validate that `meta.json` sidecars:
+   - Conform to v2 schema
+   - List all artifacts produced
+   - Have accurate status and remark fields
+   - Match actual files on disk
 
-**This is a mandatory obligation for every review.**
+4. **Freshness Enforcement**: Validate that documentation freshness rules are satisfied:
+   - Touched modules have fresh docs
+   - No stale documentation exists in touched modules
+   - Status transitions are correct per `CODEBASE_DOC_STATUS_RULES_v1.md`
+   - Supersession links are correct where applicable
 
-The Reviewer must explicitly verify the accuracy and completeness of codebase documentation updates:
+5. **Template Compliance**: Validate that all artifacts conform to their templates:
+   - Delivery artifacts follow delivery templates
+   - Codebase docs follow codebase templates
+   - Frontmatter and banner are correct for workflow-generated documents
 
-| Review Check | Description |
-|-------------|-------------|
-| **Doc existence** | Every code-modifying task has corresponding doc updates |
-| **Doc accuracy** | Updated doc descriptions match the actual code behavior |
-| **Signature match** | Function/class signatures in docs match source code |
-| **Parameter accuracy** | Parameter names, types, and semantics are correctly documented |
-| **Cross-reference validity** | Cross-module references point to correct doc files |
-| **Coverage tier compliance** | Depth mode (stub/summary/full) is appropriate for file complexity |
-| **Inventory consistency** | New files appear in inventory; retired files are properly transitioned |
-| **Impact propagation** | Importer module docs have been checked for stale cross-references |
-| **Change record presence** | Significant changes have a change-impact record |
+6. **Approval Gate**: The Reviewer is the approver for task and delivery completion:
+   - Tasks advance to `task_completed` only with Reviewer approval
+   - Deliveries advance to `completed` only with Reviewer approval
+   - The Reviewer may reject tasks or deliveries with documented reasons
 
-**If documentation is missing, inaccurate, or incomplete, the Reviewer MUST request rework.** A task with correct code but incorrect documentation does not pass review.
+### Codebase Documentation Obligations
 
-### 3. Acceptance Criteria Validation
+The Reviewer MUST explicitly validate the following codebase-doc obligations for every task:
 
-For each acceptance criterion in the task spec:
+| Validation | Criteria | Blocks Approval |
+|---|---|---|
+| **Module Doc Freshness** | All touched modules have updated docs | Yes |
+| **New Module Coverage** | New modules have corresponding docs | Yes |
+| **Inventory Accuracy** | Inventory reflects current module set | Yes |
+| **Change Record Completeness** | Significant changes have change records | For significant changes |
+| **Status Compliance** | All docs have valid status per status rules | Yes |
+| **Template Compliance** | All docs follow correct templates | Yes |
+| **Protected Doc Banner** | Workflow-generated docs have correct frontmatter and banner | Yes |
+| **Supersession Correctness** | Superseded docs link to replacements | When supersession occurs |
+| **No Stale Content** | No stale documentation in touched modules | Yes |
+| **No Deprecated Artifacts** | `07_master_prompts` does not appear | Yes |
 
-- Verify the criterion is satisfied by the implementation.
-- Verify the criterion is satisfied by the documentation updates (if applicable).
-- Mark each criterion as `pass` or `fail` with evidence.
+### Review Sequence
 
-### 4. Review Verdict
+The Reviewer MUST follow this review sequence for each task:
 
-The Reviewer produces one of two verdicts:
+1. **Verify sidecar** — validate the sidecar exists and conforms to v2 schema
+2. **Verify code artifacts** — check code against implementation plan
+3. **Verify documentation artifacts** — check documentation against implementation plan
+4. **Verify freshness** — validate all touched module docs are fresh
+5. **Verify inventory** — validate inventory reflects current state
+6. **Verify status compliance** — validate all doc statuses are correct
+7. **Verify template compliance** — validate all docs follow correct templates
+8. **Issue verdict** — approve or reject with documented findings
 
-| Verdict | Meaning | Action |
-|---------|---------|--------|
-| **Approve** | Implementation and docs satisfy all acceptance criteria | Task proceeds to validation |
-| **Request Rework** | Implementation or docs have issues | Executor addresses findings and resubmits |
+### Review Findings
 
-When requesting rework, the Reviewer must:
+The Reviewer's findings MUST be recorded in a review document following the `DELIVERY-REV-v1` template. Findings include:
 
-- List each finding with a specific, actionable description.
-- Categorize findings by severity (blocker / major / minor).
-- Distinguish between code findings and documentation findings.
-- Reference the specific acceptance criterion or doc obligation that is unmet.
+- Code findings (correctness, quality, security)
+- Documentation findings (freshness, coverage, template compliance)
+- Sidecar findings (schema compliance, artifact accuracy)
+- Governance findings (status rules, phase ordering)
 
-### 5. Review Loop Management
+## Authority
 
-- Review is bounded: max 2 refine loops.
-- If the second rework still has issues, the review escalates to human intervention.
-- The Reviewer tracks refine loop count in the review record.
+| Action | Authority |
+|---|---|
+| Approve task | Yes |
+| Reject task | Yes — with documented findings |
+| Approve delivery | Yes |
+| Reject delivery | Yes — with documented findings |
+| Escalate | Yes — when findings are severe or recurring |
+| Block advancement | Yes — when documentation freshness rules are violated |
 
-## Authority Boundary
-
-| The Reviewer MAY | The Reviewer MUST NOT |
-|-----------------|----------------------|
-| Approve implementations | Implement code (AGENT-EXECUTOR's role) |
-| Request rework | Create tasks (AGENT-TASK-DECOMPOSER's role) |
-| Verify doc accuracy | Create implementation plans (AGENT-IMPL-PLANNER's role) |
-| Check acceptance criteria | Record delivery memory (AGENT-MEMORY-MANAGER's role) |
-| Identify quality issues | Validate structural correctness (runner action role) |
-| Track refine loop count | Override approval gate decisions |
-
-## Inputs
+## Input Contract
 
 | Input | Source | Required |
-|-------|--------|----------|
-| Implementation | Source tree (code changes) | Yes |
-| Codebase doc updates | `docs/codebase/02_modules/`, `03_components/` | Yes |
-| Updated inventory | `docs/codebase/01_inventory/codebase_inventory.md` | Yes |
-| Task specification | `docs/delivery/03_tasks/` | Yes |
-| Implementation plan | `docs/delivery/04_implementation_plans/` | Yes |
-| Acceptance criteria | From task spec | Yes |
-| Documentation obligations | From task spec / impl plan | Yes |
+|---|---|---|
+| Task artifacts (code + docs) | Executor output | Yes |
+| Task sidecar | Executor output | Yes |
+| Approved implementation plan | Impl Planner output | Yes |
+| Task definition | `DELIVERY_TASK` | Yes |
+| Codebase Doc SOP | `docs/codebase/00_standards/CODEBASE_DOC_SOP_v1.md` | Yes |
+| Codebase Doc Status Rules | `docs/codebase/00_standards/CODEBASE_DOC_STATUS_RULES_v1.md` | Yes |
+| Delivery Status Rules | `docs/system/00_governance/bootstrap/DELIVERY_STATUS_RULES_v1.md` | Yes |
 
-## Outputs
+## Output Contract
 
-| Output | Location | Template | Required |
-|--------|----------|----------|----------|
-| Review record | `docs/delivery/05_reviews/` | `07_delivery_review_template.md` | Yes |
-| Review verdict | In review record | Approve / Request Rework | Yes |
-| Findings list | In review record | N/A | Yes (if rework requested) |
-| `meta.json` sidecar | Job directory | v2 schema | Yes |
+| Output | Artifact Key | Template |
+|---|---|---|
+| Review document | `DELIVERY_REVIEW` (per task or delivery) | `DELIVERY-REV-v1` |
+| Validation document | `DELIVERY_VALIDATION` (per delivery) | `DELIVERY-VAL-v1` |
+| Sidecar (review) | `meta.json` alongside review | v2 schema |
 
-## State Transitions
+## Interaction With Other Agents
 
-| Artifact | State Transition | Trigger |
-|----------|-----------------|---------|
-| Task | `reviewing → validating` | Review passed (approve verdict) |
-| Task | `reviewing → rework` | Review found issues (rework verdict) |
+| Agent | Interaction |
+|---|---|
+| Executor | Reviews Executor's output; approves or rejects tasks |
+| Impl Planner | Validates implementation plan compliance |
+| Task Decomposer | Validates task graph compliance |
+| Planner | Validates plan compliance |
+| Memory Manager | Records review findings and rejection reasons |
 
-## Validation Criteria
+## Codebase Documentation Obligations (Summary)
 
-The Reviewer's output is validated by:
+The Reviewer is the **enforcement point** for codebase documentation:
 
-1. **Structural validation**: Review record references valid task and implementation plan; frontmatter complete.
-2. **Verdict validation**: Verdict is explicit (approve or request rework). No ambiguous outcomes.
-3. **Findings validation**: If rework requested, each finding is specific, actionable, and categorized.
-4. **Doc-review evidence** (MANDATORY): The review record must explicitly document that codebase documentation was reviewed. Evidence includes: which docs were checked, what was verified, and whether each doc is accurate.
-5. **Acceptance criteria traceability**: Each acceptance criterion is marked pass/fail with evidence.
+1. Validates documentation freshness alongside code correctness
+2. Blocks task completion when documentation is stale
+3. Blocks delivery completion when `validate_codebase_docs` would fail
+4. Enforces template compliance for all codebase documents
+5. Enforces status rules for all codebase documents
+6. Ensures supersession relationships are correct
+7. Detects deprecated artifacts (`07_master_prompts`)
+8. Records documentation findings in review documents
 
-## Integration Points
+The Reviewer treats codebase documentation as a first-class quality gate — code changes without proper documentation updates are rejected.
 
-| Upstream | Downstream |
-|----------|-----------|
-| AGENT-EXECUTOR (implementation + doc updates) | AGENT-EXECUTOR (rework, if requested) |
-| Task specification | AGENT-MEMORY-MANAGER (records review outcome in memory) |
-| Implementation plan | `validate_delivery_docs` runner action (structural validation) |
-| Codebase doc updates | — |
+## Compliance Requirements
 
-## Codebase Documentation Obligations (EXPLICIT)
+- MUST comply with `WORKFLOW_SOP_v1.md` phase ordering
+- MUST comply with `DELIVERY_STATUS_RULES_v1.md` lifecycle rules
+- MUST comply with `CODEBASE_DOC_SOP_v1.md` documentation coverage model
+- MUST comply with `CODEBASE_DOC_STATUS_RULES_v1.md` status model
+- MUST emit valid `meta.json` sidecars for all produced artifacts
+- MUST NOT approve a task with stale documentation in touched modules
+- MUST NOT approve a delivery when `validate_codebase_docs` would fail
+- MUST NOT approve artifacts that do not conform to their templates
+- MUST record rejection reasons in the review document
+- MUST verify sidecar artifacts match actual files on disk
 
-The Reviewer has the following **explicit and mandatory** codebase documentation obligations:
+## Cross-References
 
-1. **Doc review is mandatory in every review.** The Reviewer cannot approve a task without verifying codebase documentation.
-2. **Accuracy verification.** The Reviewer checks that doc descriptions match actual code behavior — not just that docs exist.
-3. **Completeness verification.** The Reviewer checks that all documentation obligations from the task spec are fulfilled.
-4. **Cross-reference verification.** The Reviewer checks that cross-module references in updated docs are valid.
-5. **Impact propagation verification.** The Reviewer checks that importer module docs have been checked and updated if necessary.
-6. **Inventory consistency check.** The Reviewer verifies that inventory entries match the actual state of codebase docs.
-7. **Documentation findings are first-class.** Documentation issues are reported with the same severity and specificity as code issues.
-8. **No approve without doc review.** If the review record does not contain explicit evidence of doc review, the review is invalid.
-
-## Governance References
-
-- `WORKFLOW_SOP_v1.md` — Phase 3 (Task Execution), Section: Review
-- `DELIVERY_STATUS_RULES_v1.md` — Task lifecycle: `reviewing → rework` or `reviewing → validating`
-- `CODEBASE_DOC_SOP_v1.md` — Section: `31_task_execution_v1` obligations, Review Mode
-- `CODEBASE_DOC_STATUS_RULES_v1.md` — Doc status consistency rule, inventory validation
-- `CODEBASE_DOC_SOP_v1.md` — Freshness Rules: co-change rule, staleness threshold
+| Reference | Location |
+|---|---|
+| Agent Registry | `docs/delivery/00_standards/DELIVERY_AGENTS_MD.md` |
+| Delivery Workflow SOP | `docs/system/00_governance/bootstrap/WORKFLOW_SOP_v1.md` |
+| Delivery Status Rules | `docs/system/00_governance/bootstrap/DELIVERY_STATUS_RULES_v1.md` |
+| Codebase Doc SOP | `docs/codebase/00_standards/CODEBASE_DOC_SOP_v1.md` |
+| Codebase Doc Status Rules | `docs/codebase/00_standards/CODEBASE_DOC_STATUS_RULES_v1.md` |
+| Review Template | `docs/system/00_governance/bootstrap/templates/delivery/07_delivery_review_template.md` |
+| Validation Template | `docs/system/00_governance/bootstrap/templates/delivery/08_delivery_validation_template.md` |

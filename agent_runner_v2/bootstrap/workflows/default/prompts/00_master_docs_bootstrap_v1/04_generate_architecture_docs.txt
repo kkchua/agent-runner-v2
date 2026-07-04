@@ -3,34 +3,34 @@ You are generating the architecture, engineering, and operations master docs for
 This step completes the richer architectural synthesis. Keep the result grounded in the repo code, the codebase baseline, and the previously generated analysis and overview docs.
 
 Inputs you must read first:
-- `docs/system/00_governance/bootstrap/project_analysis.md`
-- `docs/system/00_governance/bootstrap/README.md`
-- `docs/codebase/01_inventory/codebase_inventory.md`
-- `docs/codebase/04_changes/` latest change impact document
-- `docs/codebase/02_modules/`
-- `docs/codebase/03_components/`
+- `{SYSTEM_DOC_ROOT}/project_analysis.md`
+- `{SYSTEM_DOC_ROOT}/README.md`
+- `{CODEBASE_DOC_ROOT}/01_inventory/codebase_inventory.md`
+- `{CODEBASE_DOC_ROOT}/04_changes/` latest change impact document
+- `{CODEBASE_DOC_ROOT}/02_modules/`
+- `{CODEBASE_DOC_ROOT}/03_components/`
 - relevant source files under `agent_runner_v2/`
 - relevant workflow and launcher entrypoints under `scripts/` and repository root
 
 Write or refresh these docs:
-- `docs/system/00_governance/bootstrap/SYSTEM_CONTEXT.md`
-- `docs/system/00_governance/bootstrap/COMPONENT_ARCHITECTURE.md`
-- `docs/system/00_governance/bootstrap/DECISION_LOG.md`
-- `docs/system/00_governance/bootstrap/SYSTEM_FILE_STRUCTURE.md`
-- `docs/system/00_governance/bootstrap/DEVELOPER_GUIDE.md`
-- `docs/system/00_governance/bootstrap/RUNBOOK.md`
-- `docs/system/00_governance/bootstrap/EXISTING_REPO_WORKFLOW_SOP.md` if the workflow guidance needs refresh
-- `docs/system/00_governance/bootstrap/{job-id}-bootstrap-change-log.md`
+- `{SYSTEM_DOC_ROOT}/SYSTEM_CONTEXT.md`
+- `{SYSTEM_DOC_ROOT}/COMPONENT_ARCHITECTURE.md`
+- `{SYSTEM_DOC_ROOT}/DECISION_LOG.md`
+- `{SYSTEM_DOC_ROOT}/SYSTEM_FILE_STRUCTURE.md`
+- `{SYSTEM_DOC_ROOT}/DEVELOPER_GUIDE.md`
+- `{SYSTEM_DOC_ROOT}/RUNBOOK.md`
+- `{SYSTEM_DOC_ROOT}/EXISTING_REPO_WORKFLOW_SOP.md` if the workflow guidance needs refresh
+- `{SYSTEM_DOC_ROOT}/{job-id}-bootstrap-change-log.md`
 
 Workflow-owned artifact contract:
-- `SYSTEM_DOCS_CHANGE_LOG` -> `docs/system/00_governance/bootstrap/{job-id}-bootstrap-change-log.md`
-- `SYSTEM_CONTEXT` -> `docs/system/00_governance/bootstrap/SYSTEM_CONTEXT.md`
-- `COMPONENT_ARCHITECTURE` -> `docs/system/00_governance/bootstrap/COMPONENT_ARCHITECTURE.md`
-- `DECISION_LOG` -> `docs/system/00_governance/bootstrap/DECISION_LOG.md`
-- `SYSTEM_FILE_STRUCTURE` -> `docs/system/00_governance/bootstrap/SYSTEM_FILE_STRUCTURE.md`
-- `DEVELOPER_GUIDE` -> `docs/system/00_governance/bootstrap/DEVELOPER_GUIDE.md`
-- `RUNBOOK` -> `docs/system/00_governance/bootstrap/RUNBOOK.md`
-- `EXISTING_REPO_WORKFLOW_SOP` -> `docs/system/00_governance/bootstrap/EXISTING_REPO_WORKFLOW_SOP.md`
+- `SYSTEM_DOCS_CHANGE_LOG` -> `{SYSTEM_DOC_ROOT}/{job-id}-bootstrap-change-log.md`
+- `SYSTEM_CONTEXT` -> `{SYSTEM_DOC_ROOT}/SYSTEM_CONTEXT.md`
+- `COMPONENT_ARCHITECTURE` -> `{SYSTEM_DOC_ROOT}/COMPONENT_ARCHITECTURE.md`
+- `DECISION_LOG` -> `{SYSTEM_DOC_ROOT}/DECISION_LOG.md`
+- `SYSTEM_FILE_STRUCTURE` -> `{SYSTEM_DOC_ROOT}/SYSTEM_FILE_STRUCTURE.md`
+- `DEVELOPER_GUIDE` -> `{SYSTEM_DOC_ROOT}/DEVELOPER_GUIDE.md`
+- `RUNBOOK` -> `{SYSTEM_DOC_ROOT}/RUNBOOK.md`
+- `EXISTING_REPO_WORKFLOW_SOP` -> `{SYSTEM_DOC_ROOT}/EXISTING_REPO_WORKFLOW_SOP.md`
 
 Primary objectives:
 1. Explain the actual architecture and responsibility boundaries.
@@ -38,10 +38,11 @@ Primary objectives:
 3. Produce a bootstrap change log that summarizes what this bootstrap pass refreshed.
 4. Keep the document set aligned with the current repo code and the earlier bootstrap outputs.
 5. Preserve the repo-selected architecture posture from project analysis so the generated architecture docs can explain when the repository is following the ecosystem baseline versus a targeted migration path.
+6. Include enough information for the next-phase HTML architecture site to explain the major pieces of the app to developers, stakeholders, functional consumers, and operators.
 
 Hard ownership rule:
-- `docs/system/00_governance/bootstrap/project_analysis.md` is read-only in this step.
-- `docs/system/00_governance/bootstrap/README.md` and the overview docs from step 03 are read-only inputs in this step.
+- `{SYSTEM_DOC_ROOT}/project_analysis.md` is read-only in this step.
+- `{SYSTEM_DOC_ROOT}/README.md` and the overview docs from step 03 are read-only inputs in this step.
 - Do not create, modify, or refresh `project_analysis.md` or any step 03 overview docs here.
 - The only writable outputs are the files listed in "Write or refresh these docs" and the bootstrap change log.
 - In particular, do not touch `project_analysis.md`, `README.md`, `DOCUMENTATION_STANDARD.md`, `BUNDLE_TAXONOMY.md`, `BUNDLE_MIGRATION_PLAN.md`, `SYSTEM_OVERVIEW.md`, `BUSINESS_CAPABILITIES.md`, `FUNCTIONAL_SPEC.md`, or `NON_FUNCTIONAL_REQUIREMENTS.md`.
@@ -65,7 +66,7 @@ Required content rules:
 - `RUNBOOK.md` should tell operators where job state, runtime bundles, logs, and sidecars live.
 - `EXISTING_REPO_WORKFLOW_SOP.md` should preserve the existing-repo onboarding and reconciliation sequence and explain how 00_ and 10_ workflows are rerun after drift or contract changes.
 - `EXISTING_REPO_WORKFLOW_SOP.md` must include the exact top-level sections `Purpose`, `First-Time Setup`, `Normal Governed Delivery`, `Drift Reconciliation`, `Governance Refresh`, `Batch Files`, and `Notes` in that order.
-- `EXISTING_REPO_WORKFLOW_SOP.md` must explicitly describe the first-time setup chain (`00_master_docs_bootstrap_v1` then `10_execution_scaffold_v1`) and the normal governed delivery chain (`20_initiative_intake_v1` then `30_delivery_planning_v1` then `31_task_execution_v1`), plus the drift-recovery path via `40_documentation_sync_v1`.
+- `EXISTING_REPO_WORKFLOW_SOP.md` must explicitly describe the first-time setup chain (`00_master_docs_bootstrap_v1` then `10_execution_scaffold_v1`) and the normal governed delivery chain (`20_initiative_intake_v1` then `30_delivery_planning_v1` then `31_task_execution_v1`), plus the drift-recovery path via `40_documentation_sync_v1` and the architecture communication phase via `50_architecture_site_v1`.
 - the bootstrap change log should summarize refreshed documents, key findings, and remaining follow-up items if any.
 - Each file must include workflow-generated YAML frontmatter with a stable `template_id` and the workflow metadata already used elsewhere in this bootstrap set.
 - Use these section headings exactly in the generated docs:
@@ -90,13 +91,13 @@ Meta contract:
       "remark": "<summary>",
       "artifacts": {
         "SYSTEM_DOCS_CHANGE_LOG": "{SYSTEM_DOCS_CHANGE_LOG_PATH}",
-        "SYSTEM_CONTEXT": "docs/system/00_governance/bootstrap/SYSTEM_CONTEXT.md",
-        "COMPONENT_ARCHITECTURE": "docs/system/00_governance/bootstrap/COMPONENT_ARCHITECTURE.md",
-        "DECISION_LOG": "docs/system/00_governance/bootstrap/DECISION_LOG.md",
-        "SYSTEM_FILE_STRUCTURE": "docs/system/00_governance/bootstrap/SYSTEM_FILE_STRUCTURE.md",
-        "DEVELOPER_GUIDE": "docs/system/00_governance/bootstrap/DEVELOPER_GUIDE.md",
-        "RUNBOOK": "docs/system/00_governance/bootstrap/RUNBOOK.md",
-        "EXISTING_REPO_WORKFLOW_SOP": "docs/system/00_governance/bootstrap/EXISTING_REPO_WORKFLOW_SOP.md"
+        "SYSTEM_CONTEXT": "{SYSTEM_DOC_ROOT}/SYSTEM_CONTEXT.md",
+        "COMPONENT_ARCHITECTURE": "{SYSTEM_DOC_ROOT}/COMPONENT_ARCHITECTURE.md",
+        "DECISION_LOG": "{SYSTEM_DOC_ROOT}/DECISION_LOG.md",
+        "SYSTEM_FILE_STRUCTURE": "{SYSTEM_DOC_ROOT}/SYSTEM_FILE_STRUCTURE.md",
+        "DEVELOPER_GUIDE": "{SYSTEM_DOC_ROOT}/DEVELOPER_GUIDE.md",
+        "RUNBOOK": "{SYSTEM_DOC_ROOT}/RUNBOOK.md",
+        "EXISTING_REPO_WORKFLOW_SOP": "{SYSTEM_DOC_ROOT}/EXISTING_REPO_WORKFLOW_SOP.md"
       },
       "recorded_at": "2026-07-01T00:00:00"
     }
@@ -111,12 +112,12 @@ ABSOLUTE OUTPUT RULE
     "remark": "<summary>",
     "artifacts": {
       "SYSTEM_DOCS_CHANGE_LOG": "{SYSTEM_DOCS_CHANGE_LOG_PATH}",
-      "SYSTEM_CONTEXT": "docs/system/00_governance/bootstrap/SYSTEM_CONTEXT.md",
-      "COMPONENT_ARCHITECTURE": "docs/system/00_governance/bootstrap/COMPONENT_ARCHITECTURE.md",
-      "DECISION_LOG": "docs/system/00_governance/bootstrap/DECISION_LOG.md",
-      "SYSTEM_FILE_STRUCTURE": "docs/system/00_governance/bootstrap/SYSTEM_FILE_STRUCTURE.md",
-      "DEVELOPER_GUIDE": "docs/system/00_governance/bootstrap/DEVELOPER_GUIDE.md",
-      "RUNBOOK": "docs/system/00_governance/bootstrap/RUNBOOK.md",
-      "EXISTING_REPO_WORKFLOW_SOP": "docs/system/00_governance/bootstrap/EXISTING_REPO_WORKFLOW_SOP.md"
+      "SYSTEM_CONTEXT": "{SYSTEM_DOC_ROOT}/SYSTEM_CONTEXT.md",
+      "COMPONENT_ARCHITECTURE": "{SYSTEM_DOC_ROOT}/COMPONENT_ARCHITECTURE.md",
+      "DECISION_LOG": "{SYSTEM_DOC_ROOT}/DECISION_LOG.md",
+      "SYSTEM_FILE_STRUCTURE": "{SYSTEM_DOC_ROOT}/SYSTEM_FILE_STRUCTURE.md",
+      "DEVELOPER_GUIDE": "{SYSTEM_DOC_ROOT}/DEVELOPER_GUIDE.md",
+      "RUNBOOK": "{SYSTEM_DOC_ROOT}/RUNBOOK.md",
+      "EXISTING_REPO_WORKFLOW_SOP": "{SYSTEM_DOC_ROOT}/EXISTING_REPO_WORKFLOW_SOP.md"
     }
   }

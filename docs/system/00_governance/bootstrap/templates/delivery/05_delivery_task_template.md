@@ -1,11 +1,11 @@
 ---
-template_id: DELIVERY-TASK-v1
-status: active
-generated: "2026-07-03T23:30:00+08:00"
+title: Delivery Task Template
+managed_by: workflow-generated
 workflow: 10_execution_scaffold_v1
 step: generate_templates
-managed_by: workflow-generated
-version: 1.0.0
+created: 2026-07-04
+template_id: DELIVERY-TASK-v1
+version: 1
 ---
 
 > Managed by workflow: `10_execution_scaffold_v1` / step: `generate_templates`
@@ -13,127 +13,150 @@ version: 1.0.0
 
 # Delivery Task Template
 
+> Artifact key: `DELIVERY_TASK_TEMPLATE`
+
 ## Metadata
 
 | Field | Value |
-|-------|-------|
-| **Template ID** | `DELIVERY-TASK-v1` |
-| **Task ID** | `[TASK-XXXX-v1]` |
-| **Title** | `[Task Title]` |
-| **Status** | `pending` / `blocked` / `active` / `in-review` / `complete` / `failed` / `skipped` |
-| **Priority** | `P1` (critical) / `P2` (high) / `P3` (normal) |
-| **Plan ID** | `[PLAN-XXXX-v1]` |
-| **Task Graph ID** | `[TASK-GRAPH-XXXX-v1]` |
-| **Created** | `[YYYY-MM-DDTHH:MM:SS+TZ]` |
-| **Updated** | `[YYYY-MM-DDTHH:MM:SS+TZ]` |
-| **Author** | `[Agent or human author]` |
-| **Assignee** | `[Agent role or human]` |
-| **Workflow** | `10_execution_scaffold_v1` |
-| **Step** | `task_execution_v1` |
-| **Managed By** | workflow-generated |
-| **Current Profile** | `[Architecture profile]` |
-| **Target Profile** | `[Target architecture, if changing]` |
-| **Migration Mode** | `[greenfield / incremental / refactoring / legacy-merge]` |
+|---|---|
+| Template ID | `DELIVERY-TASK-v1` |
+| Owner Workflow | `10_execution_scaffold_v1` |
+| Owner Step | `generate_templates` |
+| Scope | Universal baseline — applies to all governed repositories |
+| Status | `active` |
+| Last Verified | 2026-07-04 |
+
+This template defines the canonical structure for an atomic delivery task. Every task artifact must conform to this structure.
+
+---
+
+## Instance Preamble
+
+```yaml
+---
+title: Task — {TASK_ID}
+managed_by: workflow-generated
+workflow: 10_execution_scaffold_v1
+step: task_execution_v1
+created: {DATE}
+template_id: DELIVERY-TASK-v1
+task_id: {TASK_ID}
+plan_id: {PLAN_ID}
+graph_id: {GRAPH_ID}
+initiative_id: {INITIATIVE_ID}
+status: pending
+current_profile: {CURRENT_PROFILE}
+target_profile: {TARGET_PROFILE}
+migration_mode: {MIGRATION_MODE}
+---
+```
+
+## Metadata
+
+| Field | Value |
+|---|---|
+| Task ID | `{TASK_ID}` |
+| Plan ID | `{PLAN_ID}` |
+| Task Graph ID | `{GRAPH_ID}` |
+| Initiative ID | `{INITIATIVE_ID}` |
+| Created | `{DATE}` |
+| Author / Agent | Task Decomposer |
+| Assigned To | `{AGENT_ROLE}` |
+| Status | `pending` / `in_progress` / `review` / `approved` / `rejected` |
+| Current Architecture Profile | `{CURRENT_PROFILE}` |
+| Target Architecture Profile | `{TARGET_PROFILE}` |
+| Migration Mode | `{MIGRATION_MODE}` |
 
 ## Objective
 
-<!-- What this task achieves. -->
-
-**Objective**: [What this task accomplishes]
-
-**Task Type**: `[code / doc / config / review / refactor]`
+| Field | Value |
+|---|---|
+| Objective | `{OBJECTIVE}` |
+| Success Definition | `{WHAT_DONE_LOOKS_LIKE}` |
 
 ## Task Description
 
-<!-- Detailed description of the task. -->
-
-[Provide a clear, actionable description of what needs to be done.]
+| Field | Value |
+|---|---|
+| Summary | `{ONE_PARAGRAPH_SUMMARY}` |
+| Detailed Description | `{DETAILED_DESCRIPTION}` |
+| Context / Background | `{CONTEXT}` |
 
 ## Inputs
 
-<!-- What this task needs to start. -->
+| Input | Source | Path / Reference |
+|---|---|---|
+| Source Plan | `DELIVERY_PLAN_TEMPLATE` | `{PLAN_PATH}` |
+| Source Task Graph | `DELIVERY_TASK_GRAPH_TEMPLATE` | `{GRAPH_PATH}` |
+| {INPUT} | {SOURCE} | {PATH} |
 
-| Input | Source | Description |
-|-------|--------|-------------|
-| `[Input name]` | `[File / Initiative / Plan / Task Graph]` | `[Description]` |
-
-### Originating References
-
-| Reference Type | ID | Path |
-|---------------|----|------|
-| **Plan** | `[PLAN-XXXX-v1]` | `[path to plan document]` |
-| **Task Graph** | `[TASK-GRAPH-XXXX-v1]` | `[path to task graph document]` |
+**Note:** This task explicitly references plan `{PLAN_ID}` and task graph `{GRAPH_ID}` as its origin.
 
 ## Outputs
 
-<!-- What this task produces. -->
-
-| Output | Type | Path | Description |
-|--------|------|------|-------------|
-| `[Output name]` | `[file / doc / config]` | `[Path]` | `[Description]` |
+| Output | Type | Path | Status |
+|---|---|---|---|
+| `{OUTPUT}` | `code` / `doc` / `config` / `sidecar` | `{PATH}` | `pending` |
 
 ## Acceptance Criteria
 
-<!-- Conditions that must be met for the task to be considered complete. -->
-
-- [ ] `[Criterion 1]`
-- [ ] `[Criterion 2]`
-- [ ] All code changes are validated
-- [ ] All documentation is synchronized
-- [ ] Review gate passed
+| # | Criterion | Verification Method |
+|---|---|---|
+| 1 | {CRITERION} | {METHOD} |
 
 ## Execution Steps
 
-<!-- Step-by-step instructions for completing the task. -->
-
-| Step | Action | Output | Validation |
-|------|--------|--------|-----------|
-| 1 | `[Action]` | `[Output]` | `[Check]` |
-| 2 | `[Action]` | `[Output]` | `[Check]` |
+| Step | Description | Expected Output | Verification |
+|---|---|---|---|
+| 1 | {DESCRIPTION} | {OUTPUT} | {METHOD} |
+| 2 | {DESCRIPTION} | {OUTPUT} | {METHOD} |
 
 ## Validation Criteria
 
-<!-- How to verify the task output is correct. -->
-
-- [ ] Code compiles/passes linting
-- [ ] Tests pass (existing and new)
-- [ ] Documentation is updated and consistent
-- [ ] No regression in existing functionality
-- [ ] Validation record exists in sidecar
+| # | Criterion | Type | Method |
+|---|---|---|---|
+| 1 | {CRITERION} | `code` / `doc` / `sidecar` | {METHOD} |
+| 2 | Documentation impact section is complete | `doc` | Manual review |
+| 3 | Sidecar contract satisfied | `sidecar` | `validate_delivery_docs` |
 
 ## Documentation Impact
 
-<!-- Deterministic documentation obligations and validation expectations. -->
+This section is **mandatory** for every task instance. "No documentation impact" is a valid answer but must be stated explicitly.
 
-### Required Documentation Updates
+| Field | Value |
+|---|---|
+| Documentation Required | `yes` / `no` |
+| Impact Type | `create` / `update` / `retire` / `none` |
 
-| Document | Path | Update Type | Status |
-|----------|------|-------------|--------|
-| `[Document name]` | `[Path]` | `[create / update / remove]` | `[pending / complete]` |
+### Documentation Actions
+
+| Action | Document Path | Type | Description |
+|---|---|---|---|
+| {ACTION} | `{PATH}` | `create` / `update` / `retire` | {DESCRIPTION} |
 
 ### Documentation Obligations
 
-- [ ] **Module docs**: Update `docs/codebase/02_modules/` for any changed modules
-- [ ] **Component docs**: Update `docs/codebase/03_components/` for any changed components
-- [ ] **Inventory**: Update `docs/codebase/01_inventory/codebase_inventory.md`
-- [ ] **Change record**: Create entry in `docs/codebase/04_changes/`
-- [ ] **Cross-references**: Verify all cross-references remain valid
+| Obligation | Scope | Verification |
+|---|---|---|
+| {OBLIGATION} | {SCOPE} | {METHOD} |
 
-### Documentation Validation Expectations
+### Validation Expectations for Documentation
 
-| Validation | Check | Status |
-|------------|-------|--------|
-| Template ID consistency | All docs use registry template IDs | `[ ]` |
-| Status currency | All statuses reflect current state | `[ ]` |
-| Cross-reference validity | All links resolve | `[ ]` |
-| Stale content removal | Outdated content is removed | `[ ]` |
+| Expectation | Verification Method | Gate |
+|---|---|---|
+| {EXPECTATION} | {METHOD} | `{GATE_TYPE}` |
 
 ## Dependencies
 
-| Type | ID | Description | Status | Blocker |
-|------|----|-------------|--------|---------|
-| `[task / initiative / external]` | `[ID]` | `[Description]` | `[Status]` | `[Yes / No]` |
+| Dependency | Type | Status | Notes |
+|---|---|---|---|
+| Plan `{PLAN_ID}` | `origin` | `approved` | Source plan for this task |
+| Task Graph `{GRAPH_ID}` | `origin` | `approved` | Source task graph for this task |
+| {DEPENDENCY} | `blocking` / `advisory` | {STATUS} | {NOTES} |
 
 ## Notes
 
-<!-- Additional context, decisions, or references. -->
+- This task is part of plan `{PLAN_ID}` and task graph `{GRAPH_ID}`.
+- Documentation obligations in this task MUST be fulfilled before the task can advance to `approved` status.
+- If documentation impact is `none`, the "No documentation impact" statement MUST appear in the Documentation Impact section.
+- {NOTE_2}

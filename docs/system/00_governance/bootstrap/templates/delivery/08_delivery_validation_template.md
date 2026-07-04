@@ -1,11 +1,11 @@
 ---
-template_id: DELIVERY-VALIDATION-v1
-status: active
-generated: "2026-07-03T23:30:00+08:00"
+title: Delivery Validation Template
+managed_by: workflow-generated
 workflow: 10_execution_scaffold_v1
 step: generate_templates
-managed_by: workflow-generated
-version: 1.0.0
+created: 2026-07-04
+template_id: DELIVERY-VAL-v1
+version: 1
 ---
 
 > Managed by workflow: `10_execution_scaffold_v1` / step: `generate_templates`
@@ -13,118 +13,164 @@ version: 1.0.0
 
 # Delivery Validation Template
 
+> Artifact key: `DELIVERY_VALIDATION_TEMPLATE`
+
 ## Metadata
 
 | Field | Value |
-|-------|-------|
-| **Template ID** | `DELIVERY-VALIDATION-v1` |
-| **Validation ID** | `[VALID-XXXX-v1]` |
-| **Title** | `[Validation Title]` |
-| **Status** | `draft` / `in-progress` / `complete` / `failed` |
-| **Task ID** | `[TASK-XXXX-v1]` |
-| **Impl ID** | `[IMPL-XXXX-v1]` |
-| **Review ID** | `[REVIEW-XXXX-v1]` |
-| **Validator** | `[Agent role or human]` |
-| **Created** | `[YYYY-MM-DDTHH:MM:SS+TZ]` |
-| **Updated** | `[YYYY-MM-DDTHH:MM:SS+TZ]` |
-| **Workflow** | `10_execution_scaffold_v1` |
-| **Step** | `task_execution_v1` |
-| **Managed By** | workflow-generated |
+|---|---|
+| Template ID | `DELIVERY-VAL-v1` |
+| Owner Workflow | `10_execution_scaffold_v1` |
+| Owner Step | `generate_templates` |
+| Scope | Universal baseline — applies to all governed repositories |
+| Status | `active` |
+| Last Verified | 2026-07-04 |
+
+This template defines the canonical structure for delivery validation. Every validation artifact must conform to this structure. Validation MUST cover both code changes AND documentation synchronization.
+
+---
+
+## Instance Preamble
+
+```yaml
+---
+title: Validation — {VALIDATION_ID}
+managed_by: workflow-generated
+workflow: 10_execution_scaffold_v1
+step: validation
+created: {DATE}
+template_id: DELIVERY-VAL-v1
+validation_id: {VALIDATION_ID}
+task_id: {TASK_ID}
+impl_id: {IMPL_ID}
+initiative_id: {INITIATIVE_ID}
+status: draft
+verdict: pending
+---
+```
+
+## Metadata
+
+| Field | Value |
+|---|---|
+| Validation ID | `{VALIDATION_ID}` |
+| Task ID | `{TASK_ID}` |
+| Implementation Plan ID | `{IMPL_ID}` |
+| Initiative ID | `{INITIATIVE_ID}` |
+| Created | `{DATE}` |
+| Validator / Agent | `{ROLE}` |
+| Status | `draft` / `in_progress` / `completed` |
+| Verdict | `approved` / `rejected` / `pending` |
 
 ## Validation Scope
 
-<!-- What is being validated. -->
-
-| Artifact | Type | Path | Version |
-|----------|------|------|---------|
-| `[Artifact name]` | `[code / doc / config]` | `[Path]` | `[Version/commit]` |
+| Field | Value |
+|---|---|
+| Scope Description | `{DESCRIPTION}` |
+| Validation Type | `combined` (code + documentation synchronization) |
+| Code Files Validated | `{COUNT}` |
+| Documentation Files Validated | `{COUNT}` |
 
 ## Code Validation
 
-<!-- Validate the code changes. -->
+### Functional Validation
 
-| Check | Result | Details |
-|-------|--------|---------|
-| **Syntax / Compilation** | `[Pass / Fail]` | `[Details]` |
-| **Linting** | `[Pass / Fail]` | `[Details]` |
-| **Unit Tests** | `[Pass / Fail]` | `[Details]` |
-| **Integration Tests** | `[Pass / Fail / N/A]` | `[Details]` |
-| **Regression Check** | `[Pass / Fail]` | `[Details]` |
-| **Edge Case Coverage** | `[Pass / Fail]` | `[Details]` |
-| **Security Scan** | `[Pass / Fail / N/A]` | `[Details]` |
+| Test ID | Description | Expected Result | Actual Result | Status |
+|---|---|---|---|---|
+| `CV-001` | {DESCRIPTION} | {EXPECTED} | {ACTUAL} | `pass` / `fail` / `skip` |
 
-### Code Validation Issues
+### Code Quality Validation
 
-| ID | Issue | Severity | File | Resolution |
-|----|-------|----------|------|-----------|
-| `[CV-001]` | `[Description]` | `[Critical / High / Medium / Low]` | `[Path]` | `[Resolved / Open]` |
+| Check | Method | Result | Notes |
+|---|---|---|---|
+| Linting | `{TOOL}` | `pass` / `fail` | {NOTES} |
+| Type Checking | `{TOOL}` | `pass` / `fail` / `n/a` | {NOTES} |
+| Unit Tests | `pytest` / `{TOOL}` | `pass` / `fail` | {NOTES} |
+| Integration Tests | `{TOOL}` | `pass` / `fail` / `n/a` | {NOTES} |
+| Coverage | `{TOOL}` | `{PERCENTAGE}` | {NOTES} |
+| Sidecar Schema | `validate_delivery_docs` | `pass` / `fail` | {NOTES} |
+
+### Regression Validation
+
+| Check | Method | Result | Notes |
+|---|---|---|---|
+| Existing tests still pass | `pytest` | `pass` / `fail` | {NOTES} |
+| No unintended behavior changes | `{METHOD}` | `pass` / `fail` | {NOTES} |
 
 ## Documentation Synchronization Validation
 
-<!-- Validate that documentation is synchronized with code changes. -->
+### Module Doc Freshness
 
-### Documentation Completeness
+| Module | Doc Path | Last Code Change | Doc Last Updated | Fresh? | Action |
+|---|---|---|---|---|---|
+| `{MODULE}` | `{DOC_PATH}` | `{DATE_OR_SHA}` | `{DATE_OR_SHA}` | `yes` / `no` | `{ACTION}` |
 
-| Document | Expected | Present | Content Valid | Notes |
-|----------|----------|---------|--------------|-------|
-| **Module docs** | `[Yes / No]` | `[Yes / No]` | `[Yes / No]` | `[Notes]` |
-| **Component docs** | `[Yes / No]` | `[Yes / No]` | `[Yes / No]` | `[Notes]` |
-| **Inventory** | `[Yes / No]` | `[Yes / No]` | `[Yes / No]` | `[Notes]` |
-| **Change record** | `[Yes / No]` | `[Yes / No]` | `[Yes / No]` | `[Notes]` |
+### Change-Impact Record Validation
 
-### Documentation Accuracy
+| Check | Result | Notes |
+|---|---|---|
+| Change-impact record exists for this delivery | `pass` / `fail` | {NOTES} |
+| Change-impact record references correct files | `pass` / `fail` | {NOTES} |
+| Change-impact record lists documentation updates | `pass` / `fail` / `n/a` | {NOTES} |
 
-| Check | Result | Details |
-|-------|--------|---------|
-| **Template ID consistency** | `[Pass / Fail]` | `[All docs use registry template IDs]` |
-| **Status currency** | `[Pass / Fail]` | `[Statuses reflect current state]` |
-| **Cross-reference validity** | `[Pass / Fail]` | `[All links resolve]` |
-| **Stale content detection** | `[Pass / Fail]` | `[No outdated content remains]` |
-| **Metadata completeness** | `[Pass / Fail]` | `[All required metadata fields present]` |
+### Stale Documentation Detection
 
-### Documentation Synchronization Issues
+| Document | Staleness Indicator | Severity | Action Required |
+|---|---|---|---|
+| `{DOC_PATH}` | `{INDICATOR}` | `high` / `medium` / `low` | `{ACTION}` |
 
-| ID | Issue | Severity | Document | Resolution |
-|----|-------|----------|---------|-----------|
-| `[DV-001]` | `[Description]` | `[Critical / High / Medium / Low]` | `[Path]` | `[Resolved / Open]` |
+### Protected-Doc Compliance
+
+| Check | Result | Notes |
+|---|---|---|
+| All generated docs carry workflow banner | `pass` / `fail` | {NOTES} |
+| All generated docs carry `managed_by` frontmatter | `pass` / `fail` | {NOTES} |
+| No manual edits to protected docs | `pass` / `fail` | {NOTES} |
+
+### Documentation Freshness Risk Assessment
+
+| Risk | Status | Mitigation Applied | Notes |
+|---|---|---|---|
+| Module doc drift | `mitigated` / `unmitigated` | {MITIGATION} | {NOTES} |
+| Stale guidance | `mitigated` / `unmitigated` | {MITIGATION} | {NOTES} |
+| Bundle map divergence | `mitigated` / `unmitigated` / `n/a` | {MITIGATION} | {NOTES} |
 
 ## Validation Issues
 
-<!-- Consolidated list of all validation issues. -->
-
-| ID | Category | Issue | Severity | Artifact | Status | Resolution |
-|----|----------|-------|----------|---------|--------|-----------|
-| `[V-001]` | `[code / doc]` | `[Description]` | `[Critical / High / Medium / Low]` | `[Path]` | `[Open / Resolved]` | `[How resolved]` |
+| Issue ID | Category | Severity | Description | File | Resolution | Status |
+|---|---|---|---|---|---|---|
+| `{ISSUE_ID}` | `code` / `doc` / `sidecar` | `critical` / `major` / `minor` | `{DESCRIPTION}` | `{FILE}` | `{RESOLUTION}` | `open` / `resolved` / `deferred` |
 
 ## Validation Summary
 
-| Dimension | Result | Issues |
-|-----------|--------|--------|
-| **Code Validation** | `[Pass / Fail]` | `[N issues]` |
-| **Documentation Validation** | `[Pass / Fail]` | `[N issues]` |
-| **Overall** | `[Pass / Fail]` | `[N total issues]` |
+| Category | Total Checks | Passed | Failed | Skipped |
+|---|---|---|---|---|
+| Code Validation | `{N}` | `{N}` | `{N}` | `{N}` |
+| Documentation Synchronization | `{N}` | `{N}` | `{N}` | `{N}` |
+| **Overall** | `{N}` | `{N}` | `{N}` | `{N}` |
 
 ## Verdict
 
-| Aspect | Verdict |
-|--------|---------|
-| **Code Quality** | `[Valid / Invalid]` |
-| **Documentation Sync** | `[Valid / Invalid]` |
-| **Overall Validation** | `[Valid / Invalid]` |
-
-### Conditions for Validity
-<!-- Items that must be resolved for the validation to pass. -->
-
-- [ ] `[Condition 1]`
-- [ ] `[Condition 2]`
+| Field | Value |
+|---|---|
+| Verdict | `approved` / `rejected` |
+| Code Validation Verdict | `pass` / `fail` |
+| Documentation Sync Verdict | `pass` / `fail` |
+| Rationale | `{RATIONALE}` |
+| Blocking Issues | `{ISSUES}` |
+| Conditions (if conditional approval) | `{CONDITIONS}` |
 
 ## Approval
 
-| Role | Name / Agent | Status | Date | Notes |
-|------|-------------|--------|------|-------|
-| **Validator** | `[Agent role]` | `[Approved / Rejected]` | `[Date]` | `[Notes]` |
-| **Approver** | `[Agent role / Human]` | `[Approved / Rejected / Pending]` | `[Date]` | `[Notes]` |
+| Field | Value |
+|---|---|
+| Approved By | `{ROLE_OR_AGENT}` |
+| Approved At | `{TIMESTAMP}` |
+| Approval Basis | `{BASIS}` |
 
 ## Notes
 
-<!-- Additional context, decisions, or references. -->
+- Validation MUST cover both code validation AND documentation synchronization validation.
+- A validation that passes code checks but fails documentation synchronization is a `rejected` verdict.
+- Documentation freshness risks identified in the plan MUST be explicitly checked here.
+- {NOTE_2}

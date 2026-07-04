@@ -3,10 +3,10 @@ title: "Component Documentation: actions package"
 template_id: "CB-03"
 status: "active"
 component_id: "actions-package"
-created: "2026-07-04T06:01:39+08:00"
+created: "2026-07-04T10:47:08+08:00"
 owner: "00_master_docs_bootstrap_v1"
-last_verified_by_change: "00_master_docs_bootstrap_v1 / 00DOC-GEN-20260704-001 / 2026-07-04T06:01:39+08:00"
-modules: ["agent_runner_v2/actions/__init__.py", "agent_runner_v2/actions/assemble_video.py", "agent_runner_v2/actions/copy_artifact.py", "agent_runner_v2/actions/documentation_validation_core.py", "agent_runner_v2/actions/execute_i2v.py", "agent_runner_v2/actions/execute_t2i.py", "agent_runner_v2/actions/execute_voiceover.py", "agent_runner_v2/actions/finalize_bootstrap.py", "agent_runner_v2/actions/prepare_delivery_scaffold.py", "agent_runner_v2/actions/promote_artifact.py", "agent_runner_v2/actions/promote_init.py", "agent_runner_v2/actions/scan_repo_codebase.py", "agent_runner_v2/actions/submit_comfyui.py", "agent_runner_v2/actions/sync_codebase_docs.py", "agent_runner_v2/actions/sync_system_docs.py", "agent_runner_v2/actions/validate_codebase_docs.py", "agent_runner_v2/actions/validate_delivery_docs.py", "agent_runner_v2/actions/validate_system_docs.py"]
+last_verified_by_change: "00_master_docs_bootstrap_v1 / 00DOC-GEN-20260704-002 / 2026-07-04T10:47:08+08:00"
+modules: ["agent_runner_v2/actions/__init__.py", "agent_runner_v2/actions/assemble_video.py", "agent_runner_v2/actions/copy_artifact.py", "agent_runner_v2/actions/documentation_validation_core.py", "agent_runner_v2/actions/execute_i2v.py", "agent_runner_v2/actions/execute_t2i.py", "agent_runner_v2/actions/execute_voiceover.py", "agent_runner_v2/actions/finalize_bootstrap.py", "agent_runner_v2/actions/prepare_delivery_scaffold.py", "agent_runner_v2/actions/promote_artifact.py", "agent_runner_v2/actions/promote_init.py", "agent_runner_v2/actions/publish_architecture_site.py", "agent_runner_v2/actions/scan_repo_codebase.py", "agent_runner_v2/actions/submit_comfyui.py", "agent_runner_v2/actions/sync_codebase_docs.py", "agent_runner_v2/actions/sync_system_docs.py", "agent_runner_v2/actions/validate_architecture_site.py", "agent_runner_v2/actions/validate_codebase_docs.py", "agent_runner_v2/actions/validate_delivery_docs.py", "agent_runner_v2/actions/validate_system_docs.py"]
 ---
 
 # Component Documentation: actions package
@@ -32,10 +32,12 @@ Deterministic action modules that implement non-coder steps and their I/O contra
 | `agent_runner_v2/actions/prepare_delivery_scaffold.py` | deterministic runner action |
 | `agent_runner_v2/actions/promote_artifact.py` | deterministic runner action |
 | `agent_runner_v2/actions/promote_init.py` | deterministic runner action |
+| `agent_runner_v2/actions/publish_architecture_site.py` | deterministic runner action |
 | `agent_runner_v2/actions/scan_repo_codebase.py` | deterministic runner action |
 | `agent_runner_v2/actions/submit_comfyui.py` | deterministic runner action |
 | `agent_runner_v2/actions/sync_codebase_docs.py` | deterministic runner action |
 | `agent_runner_v2/actions/sync_system_docs.py` | deterministic runner action |
+| `agent_runner_v2/actions/validate_architecture_site.py` | deterministic runner action |
 | `agent_runner_v2/actions/validate_codebase_docs.py` | deterministic runner action |
 | `agent_runner_v2/actions/validate_delivery_docs.py` | deterministic runner action |
 | `agent_runner_v2/actions/validate_system_docs.py` | deterministic runner action |
@@ -65,10 +67,12 @@ Repository files are scanned, normalized into inventory rows, and rendered into 
 | `agent_runner_v2/actions/prepare_delivery_scaffold.py` | outbound | markdown | deterministic runner action |
 | `agent_runner_v2/actions/promote_artifact.py` | outbound | markdown | deterministic runner action |
 | `agent_runner_v2/actions/promote_init.py` | outbound | markdown | deterministic runner action |
+| `agent_runner_v2/actions/publish_architecture_site.py` | outbound | markdown | deterministic runner action |
 | `agent_runner_v2/actions/scan_repo_codebase.py` | outbound | markdown | deterministic runner action |
 | `agent_runner_v2/actions/submit_comfyui.py` | outbound | markdown | deterministic runner action |
 | `agent_runner_v2/actions/sync_codebase_docs.py` | outbound | markdown | deterministic runner action |
 | `agent_runner_v2/actions/sync_system_docs.py` | outbound | markdown | deterministic runner action |
+| `agent_runner_v2/actions/validate_architecture_site.py` | outbound | markdown | deterministic runner action |
 | `agent_runner_v2/actions/validate_codebase_docs.py` | outbound | markdown | deterministic runner action |
 | `agent_runner_v2/actions/validate_delivery_docs.py` | outbound | markdown | deterministic runner action |
 | `agent_runner_v2/actions/validate_system_docs.py` | outbound | markdown | deterministic runner action |
@@ -115,4 +119,4 @@ Auto-generated baseline; extend with component-specific checks as needed.
 
 | Date | Change | Modules Affected | Verified By |
 |------|--------|-----------------|-------------|
-| 2026-07-04 | Initial baseline generated from repository scan | 18 modules/files | 00_master_docs_bootstrap_v1 |
+| 2026-07-04 | Initial baseline generated from repository scan | 20 modules/files | 00_master_docs_bootstrap_v1 |

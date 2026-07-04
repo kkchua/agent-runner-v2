@@ -6,8 +6,8 @@ module_path: "agent_runner_v2/job_state.py"
 module_area: "state"
 documentation_mode: "full"
 owner_doc_path: "docs/codebase/02_modules/agent-runner-v2-job-state.md"
-last_verified_by_change: "00_master_docs_bootstrap_v1 / 00DOC-GEN-20260704-001 / 2026-07-04T06:01:39+08:00"
-created: "2026-07-04T06:01:39+08:00"
+last_verified_by_change: "00_master_docs_bootstrap_v1 / 00DOC-GEN-20260704-002 / 2026-07-04T10:47:08+08:00"
+created: "2026-07-04T10:47:08+08:00"
 owner: "00_master_docs_bootstrap_v1"
 ---
 
@@ -36,6 +36,7 @@ This module belongs to the `state` area and is documented as `full`.
 | `re` | stdlib module | imported dependency |
 | `tempfile` | stdlib module | imported dependency |
 | `typing` | stdlib module | imported dependency |
+| `doc_paths` | external module | repository dependency |
 | `documentation_guardrails` | external module | repository dependency |
 | `exceptions` | external module | repository dependency |
 | `runtime_context` | external module | repository dependency |

@@ -1,156 +1,170 @@
 ---
-title: "Agent Contract - Task Decomposer"
-template_id: "DELIVERY-AGENT-TASK-DECOMPOSER-v1"
-doc_type: "08_agent"
-agent_id: "AGENT-TASK-DECOMPOSER"
-status: "active"
-version: "1.0"
-generated: "2026-07-04T08:00:00+08:00"
-workflow: "10_execution_scaffold_v1"
-step: "generate_agents"
+title: "Agent Contract — Task Decomposer"
+Doc Type: 08_agent
+Agent ID: DELIVERY-TASK-DECOMP
 managed_by: workflow-generated
+workflow: 10_execution_scaffold_v1
+step: generate_agents
+created: 2026-07-04
+version: 1
 ---
 
 > Managed by workflow: `10_execution_scaffold_v1` / step: `generate_agents`
 > This file is workflow-generated and protected from manual edits.
 
-# Agent Contract: Task Decomposer
+# Agent Contract — Task Decomposer
 
-## Agent Identity
+## Metadata
 
 | Field | Value |
-|-------|-------|
-| **Agent ID** | `AGENT-TASK-DECOMPOSER` |
-| **Role** | Task Decomposer |
-| **Doc Type** | `08_agent` |
-| **Primary Workflow** | `30_delivery_planning_v1` |
-| **Authority Level** | Task-graph decomposition, task spec creation, documentation-obligation conversion |
+|---|---|
+| Doc Type | `08_agent` |
+| Agent ID | `DELIVERY-TASK-DECOMP` |
+| Role | Task Decomposer |
+| Owner Workflow | `10_execution_scaffold_v1` |
+| Owner Step | `generate_agents` |
+| Lifecycle Phases | `30_delivery_planning_v1` |
+| Status | `active` |
 
-## Purpose
+## Role Summary
 
-The Task Decomposer converts an approved plan into a task-graph of ordered dependencies and individual task specifications. Each task spec includes acceptance criteria and — critically — documentation-update obligations derived from the Planner's documentation scope.
-
-The Task Decomposer is the bridge between strategic planning and tactical execution. It ensures that documentation obligations captured by the Planner are translated into concrete, actionable work items that the Executor must complete alongside code changes.
+The Task Decomposer breaks an approved delivery plan into a task graph with explicit dependencies, documentation update obligations per task, and validation criteria. The Task Decomposer ensures that documentation work is not an afterthought — it is decomposed into atomic task-level deliverables with the same rigor as code work.
 
 ## Responsibilities
 
-### 1. Task-Graph Decomposition (`30_delivery_planning_v1`)
+### Primary Responsibilities
 
-The Task Decomposer breaks the plan into an ordered task-graph:
+1. **Task Graph Construction**: Decompose the approved delivery plan into a directed acyclic graph (DAG) of tasks. Each task is an atomic unit of work with defined inputs, outputs, and validation criteria.
 
-- Identify discrete units of work that can be independently executed.
-- Define dependency ordering between tasks (what must complete before what).
-- Identify parallel tracks where tasks can execute concurrently.
-- Produce the task-graph document following `04_delivery_task_graph_template.md`.
-- Ensure no circular dependencies exist in the graph.
+2. **Documentation-Scope Decomposition (MANDATORY)**: For each task in the graph, decompose the plan-level documentation obligations into task-level documentation deliverables. Every task MUST have explicit documentation obligations — even if the obligation is "no documentation impact" (which must be stated explicitly).
 
-### 2. Documentation-Scope-to-Obligation Conversion (MANDATORY)
+3. **Dependency Resolution**: Determine task ordering based on:
+   - Code dependencies (task B depends on task A's code output)
+   - Documentation dependencies (task B's documentation depends on task A's code being complete)
+   - Validation dependencies (review of task A must complete before task B begins)
 
-**This is a mandatory obligation for every task-graph decomposition.**
+4. **Validation Criteria Definition**: For each task, define:
+   - Code validation criteria (tests pass, builds succeed, etc.)
+   - Documentation validation criteria (module doc updated, inventory reconciled, etc.)
 
-The Task Decomposer must convert the Planner's documentation scope into concrete, task-level documentation obligations:
+5. **Task Graph Validation Gate**: The Task Decomposer is the approver for the task graph. The task graph MUST pass structural validation before execution begins.
 
-1. **Parse the documentation scope** from the initiative/plan.
-2. **Map each affected doc file** to the task(s) that will cause it to become stale.
-3. **Create doc-update subtasks** or inline doc-update obligations within each code-modifying task.
-4. **Include doc-creation obligations** for new modules or components introduced by the plan.
-5. **Account for impact propagation** — when a module that is imported by other modules changes, all importing modules' docs must be checked for stale cross-reference information.
+### Documentation-Scope Capture Obligations
 
-**Rule:** Every task that modifies source code must have a corresponding documentation-update obligation. A task that modifies code without a doc-update obligation is incomplete and will be rejected by validation.
+The Task Decomposer MUST explicitly capture the following for every task:
 
-### 3. Task Spec Creation
+| Obligation | Description |
+|---|---|
+| **Documentation Deliverables** | Which documents this task creates, updates, or retires |
+| **Documentation Dependencies** | Which other tasks' code output this task's documentation depends on |
+| **Documentation Validation** | How the reviewer will verify the documentation is correct |
+| **Coverage Impact** | Whether this task closes a coverage gap or introduces new modules to document |
+| **Status Transitions** | Whether this task triggers document status transitions (e.g., active → stale) |
 
-For each node in the task-graph, the Task Decomposer creates a task specification:
+### Documentation-Decomposition Obligations
 
-- Define the task's purpose and scope.
-- Write specific, testable acceptance criteria.
-- Include documentation-update acceptance criteria alongside code acceptance criteria.
-- Reference the parent plan in the task's frontmatter.
-- Identify which codebase docs must be updated (from the doc-scope-to-obligation conversion).
-- Produce task documents at `docs/delivery/03_tasks/`.
+When decomposing the delivery plan into tasks, the Task Decomposer MUST:
 
-### 4. Doc-Obligation Decomposition Detail
+1. **Pair code tasks with documentation tasks** — when a task changes code, there must be a corresponding documentation task (either in the same task or a dependent task)
+2. **Order documentation after code** — documentation updates that depend on code output must be sequenced after the code task
+3. **Group related documentation** — when multiple tasks touch the same module, their documentation obligations should be coordinated to avoid redundant updates
+4. **Identify documentation-only tasks** — some tasks may be purely documentation (e.g., "reconcile inventory after module restructuring")
+5. **Explicitly state "no documentation impact"** — if a task genuinely has no documentation impact, this must be stated in the task definition
 
-For each task that modifies source code, the documentation obligations must include:
+## Authority
 
-| Obligation Field | Description |
-|-----------------|-------------|
-| **Affected doc files** | Specific paths to codebase docs that must be updated |
-| **Update type** | Create new doc / Update existing doc / Flag as stale_pending |
-| **Depth mode** | Stub / Summary / Full (per CODEBASE_DOC_SOP_v1.md coverage model) |
-| **Coverage tier** | A / B / C / D (per CODEBASE_DOC_SOP_v1.md coverage model) |
-| **Impact propagation targets** | Other module docs that may need cross-reference updates |
-| **Acceptance criteria** | Specific, verifiable conditions for doc-update completion |
+| Action | Authority |
+|---|---|
+| Approve task graph | Yes |
+| Reject task graph | Yes — with documented reason |
+| Approve plan | No — that is the Planner's authority |
+| Approve implementation | No — that is the Reviewer's authority |
+| Escalate | Yes — when plan is ambiguous or task boundaries are unclear |
 
-## Authority Boundary
-
-| The Task Decomposer MAY | The Task Decomposer MUST NOT |
-|------------------------|------------------------------|
-| Define task ordering and dependencies | Create initiatives (AGENT-PLANNER's role) |
-| Decompose plan into tasks | Create delivery plans (AGENT-PLANNER's role) |
-| Convert doc-scope to doc-obligations | Create implementation plans (AGENT-IMPL-PLANNER's role) |
-| Define acceptance criteria per task | Implement code changes (AGENT-EXECUTOR's role) |
-| Identify parallel execution tracks | Review implementations (AGENT-REVIEWER's role) |
-| Create doc-creation obligations | Record delivery memory (AGENT-MEMORY-MANAGER's role) |
-
-## Inputs
+## Input Contract
 
 | Input | Source | Required |
-|-------|--------|----------|
-| Approved plan | `docs/delivery/02_plans/` | Yes |
-| Parent initiative | `docs/delivery/01_initiatives/` | Yes |
-| Documentation scope | From initiative/plan | Yes |
+|---|---|---|
+| Approved delivery plan | Planner output | Yes |
+| Approved initiative | Planner output | Yes |
 | Codebase inventory | `docs/codebase/01_inventory/codebase_inventory.md` | Yes |
-| Existing module/component docs | `docs/codebase/02_modules/`, `03_components/` | Yes (for impact propagation) |
+| Existing module docs | `docs/codebase/02_modules/` | Yes |
+| Delivery Workflow SOP | `docs/system/00_governance/bootstrap/WORKFLOW_SOP_v1.md` | Yes |
+| Codebase Doc SOP | `docs/codebase/00_standards/CODEBASE_DOC_SOP_v1.md` | Yes |
 
-## Outputs
+## Output Contract
 
-| Output | Location | Template | Required |
-|--------|----------|----------|----------|
-| Task-graph document | `docs/delivery/` (per template) | `04_delivery_task_graph_template.md` | Yes |
-| Task specifications | `docs/delivery/03_tasks/` | `05_delivery_task_template.md` | Yes |
-| Doc-update obligations | Embedded in task specs | N/A | Yes |
-| `meta.json` sidecar | Job directory | v2 schema | Yes |
+| Output | Artifact Key | Template |
+|---|---|---|
+| Task graph document | `DELIVERY_TASK_GRAPH` (per instance) | `DELIVERY-TG-v1` |
+| Per-task definitions | `DELIVERY_TASK` (per task) | `DELIVERY-TASK-v1` |
+| Sidecar (task graph) | `meta.json` alongside task graph | v2 schema |
 
-## State Transitions
+### Task Graph Structure
 
-| Artifact | State Transition | Trigger |
-|----------|-----------------|---------|
-| Plan | `active → task_graph_ready` | Task-graph decomposition complete |
-| Plan | `task_graph_ready → task_graph_validated` | Task-graph reviewed and approved |
-| Tasks | `draft → active` | Task approved (acceptance criteria validated) |
+Each task in the graph MUST include:
 
-## Validation Criteria
+```yaml
+task:
+  id: <unique-task-id>
+  title: <short-description>
+  type: code | documentation | mixed
+  depends_on: [<task-id>, ...]
+  documentation_obligations:
+    create: [<doc-path>, ...]
+    update: [<doc-path>, ...]
+    retire: [<doc-path>, ...]
+    no_impact: <boolean>
+    validation_criteria: <description>
+  code_obligations:
+    files_changed: [<file-path>, ...]
+    tests_required: <boolean>
+  validation:
+    code_criteria: <description>
+    doc_criteria: <description>
+```
 
-The Task Decomposer's output is validated by:
+## Interaction With Other Agents
 
-1. **Structural validation**: Task-graph has no circular dependencies; all tasks have acceptance criteria; frontmatter is complete.
-2. **Dependency validation**: Task ordering is correct; parallel tracks are correctly identified.
-3. **Doc-obligation validation** (MANDATORY): Every code-modifying task has at least one documentation-update obligation. Tasks without doc obligations are rejected.
-4. **Traceability validation**: Tasks reference parent plan; plan references parent initiative.
-5. **Impact propagation validation**: When a changed module is imported by others, the task includes obligations to check importer docs.
+| Agent | Interaction |
+|---|---|
+| Planner | Receives approved plan; provides task graph for review |
+| Impl Planner | Receives task graph; produces per-task implementation plans |
+| Executor | Executes tasks from the validated task graph |
+| Reviewer | Validates task graph structure and documentation coverage |
+| Memory Manager | Records decomposition decisions and dependency rationale |
 
-## Integration Points
+## Codebase Documentation Obligations (Summary)
 
-| Upstream | Downstream |
-|----------|-----------|
-| AGENT-PLANNER (initiative + plan + doc-scope) | AGENT-IMPL-PLANNER (receives task specs with doc obligations) |
-| Codebase inventory | AGENT-EXECUTOR (receives tasks to implement with doc obligations) |
-| Module/component docs | AGENT-REVIEWER (validates task specs against acceptance criteria) |
+The Task Decomposer is the **decomposition point** for documentation obligations:
 
-## Codebase Documentation Obligations
+1. Receives plan-level documentation obligations from the Planner
+2. Decomposes them into task-level documentation deliverables
+3. Establishes documentation dependencies between tasks
+4. Defines documentation validation criteria per task
+5. Ensures no task executes without explicit documentation obligations
 
-The Task Decomposer has the following codebase documentation obligations:
+The Task Decomposer does NOT execute documentation updates — that is the Executor's responsibility. But the Task Decomposer ensures every documentation obligation is atomized, ordered, and trackable.
 
-1. **Doc-scope-to-obligation conversion is mandatory.** Every documentation scope item from the Planner must be converted into concrete task-level obligations.
-2. **Doc-obligations are first-class.** Documentation-update obligations appear in task acceptance criteria, not as afterthoughts.
-3. **Impact propagation is required.** When a module with importers changes, doc-update obligations must include checking the importers' docs for stale cross-references.
-4. **Doc-creation obligations for new modules.** If the plan introduces new source files, the task-graph includes obligations to create corresponding module/component docs.
-5. **Coverage tier and depth mode assignment.** Each doc-obligation specifies the coverage tier and depth mode per the CODEBASE_DOC_SOP_v1.md coverage model.
+## Compliance Requirements
 
-## Governance References
+- MUST comply with `WORKFLOW_SOP_v1.md` phase ordering
+- MUST comply with `DELIVERY_STATUS_RULES_v1.md` lifecycle rules
+- MUST comply with `CODEBASE_DOC_SOP_v1.md` documentation coverage model
+- MUST comply with `CODEBASE_DOC_STATUS_RULES_v1.md` status model
+- MUST emit valid `meta.json` sidecars for all produced artifacts
+- MUST NOT skip documentation-scope decomposition
+- MUST NOT produce cyclic task dependencies
+- MUST NOT produce a task graph where any task lacks explicit documentation obligations
 
-- `WORKFLOW_SOP_v1.md` — Phase 2 (Delivery Planning), Section: Task decomposition
-- `DELIVERY_STATUS_RULES_v1.md` — Plan and Task lifecycle rules
-- `CODEBASE_DOC_SOP_v1.md` — Section: `30_delivery_planning_v1` obligations
-- `CODEBASE_DOC_STATUS_RULES_v1.md` — Inventory status model, update triggers
+## Cross-References
+
+| Reference | Location |
+|---|---|
+| Agent Registry | `docs/delivery/00_standards/DELIVERY_AGENTS_MD.md` |
+| Delivery Workflow SOP | `docs/system/00_governance/bootstrap/WORKFLOW_SOP_v1.md` |
+| Delivery Status Rules | `docs/system/00_governance/bootstrap/DELIVERY_STATUS_RULES_v1.md` |
+| Codebase Doc SOP | `docs/codebase/00_standards/CODEBASE_DOC_SOP_v1.md` |
+| Codebase Doc Status Rules | `docs/codebase/00_standards/CODEBASE_DOC_STATUS_RULES_v1.md` |
+| Task Graph Template | `docs/system/00_governance/bootstrap/templates/delivery/04_delivery_task_graph_template.md` |
+| Task Template | `docs/system/00_governance/bootstrap/templates/delivery/05_delivery_task_template.md` |

@@ -53,7 +53,7 @@ References:
 Note: Use {TASK_GRAPH_FILE} and {PLAN_FILE} only for ID/lineage preservation. Do not re-read their content unless needed.
 
 Output template (MANDATORY):
-- Follow: `docs/system/00_governance/bootstrap/templates/delivery/06_delivery_impl_template.md`
+- Follow: `{SYSTEM_TEMPLATE_ROOT}/delivery/06_delivery_impl_template.md`
 - Use this template structure exactly for implementation plan output.
 
 Freshness requirement (MANDATORY)
@@ -136,8 +136,8 @@ Task completion rule (MANDATORY)
 
 Critical: meta.json file is REQUIRED
 - You MUST create the meta.json file at: {IMPL_FILE_METAJSON}
-- Example: IMPL_FILE = `docs/delivery/04_implementation_plans/IMPL-20260415-01.md`
-  â†’ meta.json = `docs/delivery/04_implementation_plans/IMPL-20260415-01.meta.json`
+- Example: IMPL_FILE = `{DELIVERY_DOC_ROOT}/04_implementation_plans/IMPL-20260415-01.md`
+  â†’ meta.json = `{DELIVERY_DOC_ROOT}/04_implementation_plans/IMPL-20260415-01.meta.json`
 - meta.json structure (exact, no deviations):
   {
     "schema_version": "v2",
@@ -146,7 +146,7 @@ Critical: meta.json file is REQUIRED
       "status": "APPROVED",
       "remark": "Brief summary of what was done",
       "artifacts": {
-        "IMPL_FILE": "docs/delivery/04_implementation_plans/IMPL-20260415-01.md"
+        "IMPL_FILE": "{DELIVERY_DOC_ROOT}/04_implementation_plans/IMPL-20260415-01.md"
       },
       "recorded_at": "2026-04-15T10:30:00"
     }

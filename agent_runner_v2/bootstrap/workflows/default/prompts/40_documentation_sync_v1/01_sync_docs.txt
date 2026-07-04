@@ -25,9 +25,9 @@ Task:
 - Update relevant audience-facing system documentation when the implemented change affects system behavior, architecture, developer workflow, or operations.
 - Treat `40_documentation_sync_v1` as the single current-truth reconciliation workflow for active guidance.
 - Treat all changed file types as in scope, not only Python.
-- Update `docs/codebase/01_inventory/codebase_inventory.md` in place.
-- Update any relevant docs under `docs/codebase/02_modules/` and `docs/codebase/03_components/`.
-- Update any relevant docs under `docs/system/`, `docs/engineering/`, and `docs/operations/`.
+- Update `{CODEBASE_DOC_ROOT}/01_inventory/codebase_inventory.md` in place.
+- Update any relevant docs under `{CODEBASE_DOC_ROOT}/02_modules/` and `{CODEBASE_DOC_ROOT}/03_components/`.
+- Update any relevant docs under `{SYSTEM_DOC_ROOT}/`, `{DOCS_ROOT}/engineering/`, and `{DOCS_ROOT}/operations/`.
 - Use the task and implementation plan as the authority for which docs must change; do not invent or skip doc obligations.
 - Create exactly one change-impact record at {CODEBASE_CHANGE_IMPACT_PATH}.
 - The change-impact record must include:

@@ -1,11 +1,11 @@
 ---
-template_id: DELIVERY-REVIEW-v1
-status: active
-generated: "2026-07-03T23:30:00+08:00"
+title: Delivery Review Template
+managed_by: workflow-generated
 workflow: 10_execution_scaffold_v1
 step: generate_templates
-managed_by: workflow-generated
-version: 1.0.0
+created: 2026-07-04
+template_id: DELIVERY-REV-v1
+version: 1
 ---
 
 > Managed by workflow: `10_execution_scaffold_v1` / step: `generate_templates`
@@ -13,114 +13,119 @@ version: 1.0.0
 
 # Delivery Review Template
 
+> Artifact key: `DELIVERY_REVIEW_TEMPLATE`
+
 ## Metadata
 
 | Field | Value |
-|-------|-------|
-| **Template ID** | `DELIVERY-REVIEW-v1` |
-| **Review ID** | `[REVIEW-XXXX-v1]` |
-| **Title** | `[Review Title]` |
-| **Status** | `draft` / `in-progress` / `complete` / `rejected` |
-| **Task ID** | `[TASK-XXXX-v1]` |
-| **Impl ID** | `[IMPL-XXXX-v1]` |
-| **Reviewer** | `[Agent role or human]` |
-| **Created** | `[YYYY-MM-DDTHH:MM:SS+TZ]` |
-| **Updated** | `[YYYY-MM-DDTHH:MM:SS+TZ]` |
-| **Workflow** | `10_execution_scaffold_v1` |
-| **Step** | `task_execution_v1` |
-| **Managed By** | workflow-generated |
+|---|---|
+| Template ID | `DELIVERY-REV-v1` |
+| Owner Workflow | `10_execution_scaffold_v1` |
+| Owner Step | `generate_templates` |
+| Scope | Universal baseline — applies to all governed repositories |
+| Status | `active` |
+| Last Verified | 2026-07-04 |
+
+This template defines the canonical structure for a delivery review. Every review artifact must conform to this structure.
+
+---
+
+## Instance Preamble
+
+```yaml
+---
+title: Review — {REVIEW_ID}
+managed_by: workflow-generated
+workflow: 10_execution_scaffold_v1
+step: review
+created: {DATE}
+template_id: DELIVERY-REV-v1
+review_id: {REVIEW_ID}
+task_id: {TASK_ID}
+impl_id: {IMPL_ID}
+initiative_id: {INITIATIVE_ID}
+status: draft
+verdict: pending
+---
+```
+
+## Metadata
+
+| Field | Value |
+|---|---|
+| Review ID | `{REVIEW_ID}` |
+| Task ID | `{TASK_ID}` |
+| Implementation Plan ID | `{IMPL_ID}` |
+| Initiative ID | `{INITIATIVE_ID}` |
+| Created | `{DATE}` |
+| Reviewer / Agent | Reviewer |
+| Status | `draft` / `in_progress` / `completed` |
+| Verdict | `approved` / `rejected` / `pending` |
 
 ## Review Scope
 
-<!-- What is being reviewed. -->
-
-| Artifact | Type | Path | Version |
-|----------|------|------|---------|
-| `[Artifact name]` | `[code / doc / config]` | `[Path]` | `[Version/commit]` |
+| Field | Value |
+|---|---|
+| Review Type | `code` / `doc` / `combined` |
+| Scope Description | `{DESCRIPTION}` |
+| Files Reviewed | `{COUNT}` |
+| Documentation Files Reviewed | `{COUNT}` |
 
 ## Summary
 
-<!-- High-level summary of the review. -->
-
-**Overall Assessment**: [Pass / Pass with comments / Fail]
-
-**Review Duration**: [Estimated time spent]
-
-**Review Depth**: [Surface / Standard / Deep]
+| Field | Value |
+|---|---|
+| Overall Assessment | `{ASSESSMENT}` |
+| Critical Issues | `{COUNT}` |
+| Major Issues | `{COUNT}` |
+| Minor Issues | `{COUNT}` |
+| Recommendations | `{COUNT}` |
 
 ## Findings
 
-<!-- Detailed findings organized by severity. -->
-
-### Critical Findings
-
-| ID | Finding | Severity | File | Line | Recommendation |
-|----|---------|----------|------|------|---------------|
-| `[F-001]` | `[Description]` | `[Critical]` | `[Path]` | `[Line]` | `[Fix needed]` |
-
-### High Findings
-
-| ID | Finding | Severity | File | Line | Recommendation |
-|----|---------|----------|------|------|---------------|
-| `[F-002]` | `[Description]` | `[High]` | `[Path]` | `[Line]` | `[Fix needed]` |
-
-### Medium Findings
-
-| ID | Finding | Severity | File | Line | Recommendation |
-|----|---------|----------|------|------|---------------|
-| `[F-003]` | `[Description]` | `[Medium]` | `[Path]` | `[Line]` | `[Suggestion]` |
-
-### Low / Informational
-
-| ID | Finding | Severity | File | Line | Recommendation |
-|----|---------|----------|------|------|---------------|
-| `[F-004]` | `[Description]` | `[Low]` | `[Path]` | `[Line]` | `[Note]` |
+| Finding ID | Severity | Category | Title | Description | File | Line | Resolution |
+|---|---|---|---|---|---|---|---|
+| `{FINDING_ID}` | `critical` / `major` / `minor` / `recommendation` | `correctness` / `security` / `performance` / `documentation` / `style` | `{TITLE}` | `{DESCRIPTION}` | `{FILE}` | `{LINE}` | `{RESOLUTION}` |
 
 ## Code Quality Assessment
 
 | Dimension | Rating | Notes |
-|-----------|--------|-------|
-| **Correctness** | `[Pass / Fail / Pass with comments]` | `[Notes]` |
-| **Readability** | `[Good / Fair / Poor]` | `[Notes]` |
-| **Testability** | `[Good / Fair / Poor]` | `[Notes]` |
-| **Maintainability** | `[Good / Fair / Poor]` | `[Notes]` |
-| **Security** | `[Good / Fair / Poor]` | `[Notes]` |
-| **Performance** | `[Good / Fair / Poor]` | `[Notes]` |
+|---|---|---|
+| Correctness | `pass` / `fail` / `partial` | {NOTES} |
+| Security | `pass` / `fail` / `partial` | {NOTES} |
+| Performance | `pass` / `fail` / `partial` | {NOTES} |
+| Maintainability | `pass` / `fail` / `partial` | {NOTES} |
+| Test Coverage | `pass` / `fail` / `partial` | {NOTES} |
+| Error Handling | `pass` / `fail` / `partial` | {NOTES} |
 
 ## Documentation Compliance
 
-<!-- Assess whether documentation is synchronized with code changes. -->
-
 | Check | Status | Notes |
-|-------|--------|-------|
-| **Module docs updated** | `[Compliant / Non-compliant / N/A]` | `[Notes]` |
-| **Component docs updated** | `[Compliant / Non-compliant / N/A]` | `[Notes]` |
-| **Inventory updated** | `[Compliant / Non-compliant / N/A]` | `[Notes]` |
-| **Change record exists** | `[Compliant / Non-compliant / N/A]` | `[Notes]` |
-| **Template IDs correct** | `[Compliant / Non-compliant / N/A]` | `[Notes]` |
-| **No stale content** | `[Compliant / Non-compliant / N/A]` | `[Notes]` |
-| **Cross-references valid** | `[Compliant / Non-compliant / N/A]` | `[Notes]` |
+|---|---|---|
+| Touched modules have fresh docs | `pass` / `fail` / `n/a` | {NOTES} |
+| Change-impact record created | `pass` / `fail` | {NOTES} |
+| Documentation update plan executed | `pass` / `fail` / `n/a` | {NOTES} |
+| Protected-doc banners present | `pass` / `fail` / `n/a` | {NOTES} |
+| Sidecar contract satisfied | `pass` / `fail` | {NOTES} |
+| Stale docs removed | `pass` / `fail` / `n/a` | {NOTES} |
+| Profile-specific doc obligations met | `pass` / `fail` / `n/a` | {NOTES} |
 
 ## Verdict
 
-| Dimension | Verdict |
-|-----------|---------|
-| **Code Quality** | `[Approved / Approved with conditions / Rejected]` |
-| **Documentation Compliance** | `[Approved / Approved with conditions / Rejected]` |
-| **Overall** | `[Approved / Approved with conditions / Rejected]` |
-
-### Conditions for Approval
-<!-- Items that must be resolved before final approval. -->
-
-- [ ] `[Condition 1]`
-- [ ] `[Condition 2]`
+| Field | Value |
+|---|---|
+| Verdict | `approved` / `rejected` |
+| Rationale | `{RATIONALE}` |
+| Conditions for Approval | `{CONDITIONS}` |
+| Rejection Reasons (if rejected) | `{REASONS}` |
 
 ## Resolution Tracker
 
-| Finding ID | Status | Resolution | Resolved By |
-|------------|--------|-----------|-------------|
-| `[F-001]` | `[Open / Resolved / Deferred / N/A]` | `[How resolved]` | `[Who]` |
+| Finding ID | Resolution Status | Resolved By | Verified | Notes |
+|---|---|---|---|---|
+| `{FINDING_ID}` | `resolved` / `deferred` / `wont_fix` | `{RESOLVER}` | `yes` / `no` | {NOTES} |
 
 ## Notes
 
-<!-- Additional context, decisions, or references. -->
+- {NOTE_1}
+- {NOTE_2}

@@ -10,6 +10,7 @@ from datetime import datetime
 from pathlib import Path
 
 from ..action_result import ActionResult
+from ..doc_paths import codebase_doc_rel
 from ..codebase_docs import build_snapshot, render_validation
 from ..runtime_context import resolve_step_meta_rel, write_meta_sidecar
 
@@ -32,10 +33,10 @@ def validate_codebase_docs(*, context: dict[str, str], state: dict, step_cfg: di
         workflow_name=str(state.get("template_group") or mode),
     )
 
-    inventory_path = project_root / "docs/codebase/01_inventory/codebase_inventory.md"
-    module_dir = project_root / "docs/codebase/02_modules"
-    component_dir = project_root / "docs/codebase/03_components"
-    change_dir = project_root / "docs/codebase/04_changes"
+    inventory_path = project_root / codebase_doc_rel("01_inventory/codebase_inventory.md")
+    module_dir = project_root / codebase_doc_rel("02_modules")
+    component_dir = project_root / codebase_doc_rel("03_components")
+    change_dir = project_root / codebase_doc_rel("04_changes")
     change_path = change_dir / f"{job_id}-{mode}.md"
 
     checks: list[tuple[str, bool, str]] = []

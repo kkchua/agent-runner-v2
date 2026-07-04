@@ -10,6 +10,7 @@ from datetime import datetime
 from pathlib import Path
 
 from ..action_result import ActionResult
+from ..doc_paths import codebase_doc_rel
 from ..codebase_docs import (
     build_snapshot,
     render_change_impact,
@@ -37,15 +38,15 @@ def _component_specs(snapshot: dict, project_root: Path) -> list[dict[str, objec
         item.rel_path
         for item in snapshot["items"]
         if item.category == "documentation files"
-        and not item.rel_path.startswith("docs/codebase/02_modules/")
-        and not item.rel_path.startswith("docs/codebase/03_components/")
-        and not item.rel_path.startswith("docs/codebase/04_changes/")
+        and not item.rel_path.startswith(codebase_doc_rel("02_modules"))
+        and not item.rel_path.startswith(codebase_doc_rel("03_components"))
+        and not item.rel_path.startswith(codebase_doc_rel("04_changes"))
     ]
 
     return [
         {
             "name": "workflow families",
-            "path": "docs/codebase/03_components/workflow-families.md",
+            "path": codebase_doc_rel("03_components/workflow-families.md"),
             "overview": "Repository workflow families, their step sequences, and their current bootstrap/runtime contracts.",
             "modules": workflow_modules,
             "rows": [
@@ -55,35 +56,35 @@ def _component_specs(snapshot: dict, project_root: Path) -> list[dict[str, objec
         },
         {
             "name": "actions package",
-            "path": "docs/codebase/03_components/actions-package.md",
+            "path": codebase_doc_rel("03_components/actions-package.md"),
             "overview": "Deterministic action modules that implement non-coder steps and their I/O contracts.",
             "modules": action_modules,
             "rows": [{"module": module, "role": "deterministic runner action"} for module in action_modules],
         },
         {
             "name": "tests suite",
-            "path": "docs/codebase/03_components/tests-suite.md",
+            "path": codebase_doc_rel("03_components/tests-suite.md"),
             "overview": "Repository test suite coverage grouped as a single logical component.",
             "modules": tests,
             "rows": [{"module": test, "role": "test coverage"} for test in tests],
         },
         {
             "name": "scripts suite",
-            "path": "docs/codebase/03_components/scripts-suite.md",
+            "path": codebase_doc_rel("03_components/scripts-suite.md"),
             "overview": "Shell and batch scripts used to run and operate the repository workflows.",
             "modules": scripts,
             "rows": [{"module": script, "role": "automation / entrypoint"} for script in scripts],
         },
         {
             "name": "config and data",
-            "path": "docs/codebase/03_components/config-and-data.md",
+            "path": codebase_doc_rel("03_components/config-and-data.md"),
             "overview": "Configuration and structured data files that define runtime and documentation behavior.",
             "modules": config,
             "rows": [{"module": cfg, "role": "configuration / structured data"} for cfg in config],
         },
         {
             "name": "codebase governance",
-            "path": "docs/codebase/03_components/codebase-governance.md",
+            "path": codebase_doc_rel("03_components/codebase-governance.md"),
             "overview": "The codebase documentation standards, templates, inventory, and validation rules that govern `/docs/codebase`.",
             "modules": docs,
             "rows": [{"module": doc, "role": "documentation artifact"} for doc in docs],
@@ -106,10 +107,10 @@ def sync_codebase_docs(*, context: dict[str, str], state: dict, step_cfg: dict, 
     )
     repo_name = project_root.name or "repository"
 
-    inventory_path = project_root / "docs/codebase/01_inventory/codebase_inventory.md"
-    module_dir = project_root / "docs/codebase/02_modules"
-    component_dir = project_root / "docs/codebase/03_components"
-    change_dir = project_root / "docs/codebase/04_changes"
+    inventory_path = project_root / codebase_doc_rel("01_inventory/codebase_inventory.md")
+    module_dir = project_root / codebase_doc_rel("02_modules")
+    component_dir = project_root / codebase_doc_rel("03_components")
+    change_dir = project_root / codebase_doc_rel("04_changes")
     for folder in (inventory_path.parent, module_dir, component_dir, change_dir):
         folder.mkdir(parents=True, exist_ok=True)
 

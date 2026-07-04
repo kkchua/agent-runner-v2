@@ -7,6 +7,13 @@ system_docs.py - Deterministic renderers for audience-oriented system documentat
 from datetime import datetime
 from pathlib import PurePosixPath
 
+from .doc_paths import codebase_doc_rel, delivery_doc_rel, system_doc_rel
+
+
+SYSTEM_BOOTSTRAP_ROOT = system_doc_rel()
+CODEBASE_ROOT = codebase_doc_rel()
+DELIVERY_ROOT = delivery_doc_rel()
+
 
 def _today_iso() -> str:
     return datetime.now().astimezone().isoformat(timespec="seconds")
@@ -114,7 +121,7 @@ def render_system_index(snapshot: dict, *, repo_name: str) -> str:
         + "- Stakeholders and sponsors: bootstrap system docs\n"
         + "- Functional analysts and QA: bootstrap system docs\n"
         + "- Architects and senior engineers: bootstrap system docs\n"
-        + "- Developers and maintainers: bootstrap system docs and `docs/codebase/`\n"
+        + f"- Developers and maintainers: bootstrap system docs and `{CODEBASE_ROOT}`\n"
         + "- Operators and support engineers: bootstrap system docs\n\n"
         + "## Document Set\n\n"
         + "- [`DOCUMENTATION_STANDARD.md`](./DOCUMENTATION_STANDARD.md)\n"
@@ -157,9 +164,9 @@ def render_documentation_standard(snapshot: dict) -> str:
         + "## Validation\n\n"
         + "This standard defines the target software documentation set for stakeholder, functional, architecture, engineering, and operations audiences.\n\n"
         + "## Layer Model\n\n"
-        + "- `docs/system/00_governance/bootstrap/` contains business, functional, architecture, and governance narrative documents.\n"
-        + "- `docs/codebase/` contains generated inventory, module docs, component docs, and change records.\n"
-        + "- `docs/delivery/` contains delivery workflow outputs and generated agents.\n\n"
+        + f"- `{SYSTEM_BOOTSTRAP_ROOT}` contains business, functional, architecture, and governance narrative documents.\n"
+        + f"- `{CODEBASE_ROOT}` contains generated inventory, module docs, component docs, and change records.\n"
+        + f"- `{DELIVERY_ROOT}` contains delivery workflow outputs and generated agents.\n\n"
         + "## Architecture Baseline\n\n"
         + "The ecosystem baseline applies to every repository: documentation first, traceable updates, deterministic validation, secure defaults, and visible operational readiness.\n\n"
         + "## Repo-Selected Profile\n\n"
@@ -208,7 +215,7 @@ def render_bundle_taxonomy(snapshot: dict) -> str:
         + "- If the repo profile is provisional, the universal baseline stays active while the target profile is recorded for migration.\n\n"
         + "## Migration Phases\n\n"
         + "1. Establish the core bundle as the authoritative global system-doc source.\n"
-        + "2. Keep repo-local `docs/delivery/` and `docs/codebase/` generated from workflow bundles.\n"
+        + f"2. Keep repo-local `{DELIVERY_ROOT}` and `{CODEBASE_ROOT}` generated from workflow bundles.\n"
         + "3. Record bundle selection in `~/.ukbe-runner` during init.\n"
         + "4. Add optional domain overlays only after core and workflow bundles are stable.\n"
     )
@@ -364,7 +371,7 @@ def render_system_context(snapshot: dict, *, repo_name: str) -> str:
 
 def render_component_architecture(snapshot: dict) -> str:
     workflow = _workflow_label(snapshot)
-    rows = [[area, str(count), "See docs/codebase/03_components or module docs"] for area, count in _module_area_rows(snapshot)]
+    rows = [[area, str(count), f"See {codebase_doc_rel('03_components')} or module docs"] for area, count in _module_area_rows(snapshot)]
     return (
         _frontmatter(title="Component Architecture", workflow=workflow, step=snapshot["step"], audience="architect", template_id="SYS-03-CA")
         + _banner(workflow=workflow, step=snapshot["step"])
@@ -374,7 +381,7 @@ def render_component_architecture(snapshot: dict) -> str:
         + "## Architectural Notes\n\n"
         + "- The system mixes workflow orchestration, deterministic actions, runtime context management, and generated documentation.\n"
         + "- DDD, EDA, API-first, or monolith-style guidance should be interpreted through the repo-selected profile, not treated as a universal default.\n"
-        + "- Detailed file-level ownership stays in `docs/codebase/`, while this document stays at the component boundary level.\n"
+        + f"- Detailed file-level ownership stays in `{CODEBASE_ROOT}`, while this document stays at the component boundary level.\n"
     )
 
 
@@ -412,9 +419,9 @@ def render_system_file_structure(snapshot: dict) -> str:
         + _table(["Top-Level Path", "Observed File Count"], rows)
         + "## Structure Guidance\n\n"
         + "- `agent_runner_v2/` contains implementation modules.\n"
-        + "- `docs/system/00_governance/bootstrap/` should hold generated master-doc narratives and governance artifacts.\n"
-        + "- `docs/codebase/` should hold generated technical reference artifacts.\n"
-        + "- `docs/delivery/` should hold delivery workflow outputs and operational handoff material.\n"
+        + f"- `{SYSTEM_BOOTSTRAP_ROOT}` should hold generated master-doc narratives and governance artifacts.\n"
+        + f"- `{CODEBASE_ROOT}` should hold generated technical reference artifacts.\n"
+        + f"- `{DELIVERY_ROOT}` should hold delivery workflow outputs and operational handoff material.\n"
     )
 
 
@@ -430,13 +437,13 @@ def render_developer_guide(snapshot: dict) -> str:
         + "## Documentation Responsibilities\n\n"
         + "## Architecture Posture\n\n"
         + "## Start Here\n\n"
-        + "- Read `docs/system/00_governance/bootstrap/COMPONENT_ARCHITECTURE.md` for the high-level system shape.\n"
-        + "- Read `docs/codebase/01_inventory/codebase_inventory.md` for the file-level map.\n"
-        + "- Use `docs/codebase/02_modules/` for module contracts and dependencies.\n\n"
+        + f"- Read `{system_doc_rel('COMPONENT_ARCHITECTURE.md')}` for the high-level system shape.\n"
+        + f"- Read `{codebase_doc_rel('01_inventory/codebase_inventory.md')}` for the file-level map.\n"
+        + f"- Use `{codebase_doc_rel('02_modules')}` for module contracts and dependencies.\n\n"
         + "## Workflow Families\n\n"
         + _table(["Workflow Family", "Step Count"], workflow_rows)
         + "## Working Rules\n\n"
-        + "- Refresh `docs/codebase/` after code drift or implementation changes.\n"
+        + f"- Refresh `{CODEBASE_ROOT}` after code drift or implementation changes.\n"
         + "- Update system-level docs when product behavior, architecture, or operating model changes.\n"
         + "- Record the universal baseline, repo profile, and migration mode in project analysis before treating DDD or EDA as active standards.\n"
         + "- Treat `core` docs as universal, `domain` docs as optional overlays, and `workflow` prompts/templates as executable assets.\n"
@@ -462,7 +469,7 @@ def render_runbook(snapshot: dict) -> str:
         + "- Inspect `%USERPROFILE%\\.ukbe-runner\\jobs\\<template_group>\\<job_id>\\` for job-state troubleshooting.\n"
         + "- The global runner home is `%USERPROFILE%\\.ukbe-runner`; that is where job state, bundles, logs, and sidecars are expected.\n"
         + "- Bundle inventory lives under `%USERPROFILE%\\.ukbe-runner\\bundles\\` and the active runtime workflow bundle under `%USERPROFILE%\\.ukbe-runner\\workflows\\`.\n"
-        + "- Inspect `docs/codebase/04_changes/` and `docs/system/00_governance/bootstrap/` for generated documentation runs.\n\n"
+        + f"- Inspect `{codebase_doc_rel('04_changes')}` and `{SYSTEM_BOOTSTRAP_ROOT}` for generated documentation runs.\n\n"
         + "## Python Execution SOP\n\n"
         + "1. Use the repository venv explicitly for any Python command run from this workspace.\n"
         + "2. Prefer `.venv\\Scripts\\python.exe -m pytest` for tests and `.venv\\Scripts\\python.exe -m py_compile <file>` for syntax checks.\n"
@@ -474,8 +481,8 @@ def render_runbook(snapshot: dict) -> str:
             [
                 ["Job status", "%USERPROFILE%\\.ukbe-runner\\jobs\\...\\job.json", "Verify current step, failures, and artifacts"],
                 ["Bundle manifest", "%USERPROFILE%\\.ukbe-runner\\bundles\\bundle-set.json", "Verify installed core/domain/workflow bundle selection"],
-                ["Generated codebase docs", "docs/codebase/", "Verify low-level documentation refresh"],
-                ["Generated system docs", "docs/system/00_governance/bootstrap/", "Verify audience-facing documentation refresh"],
+                ["Generated codebase docs", CODEBASE_ROOT, "Verify low-level documentation refresh"],
+                ["Generated system docs", SYSTEM_BOOTSTRAP_ROOT, "Verify audience-facing documentation refresh"],
             ],
         )
     )
