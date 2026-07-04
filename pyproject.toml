@@ -26,6 +26,8 @@ ukbe-run-agent = "agent_runner_v2.run_agent:main"
 agent_runner_v2 = [
     "*.json",
     "*.md",
+    "bootstrap/bundles/core/current/*",
+    "bootstrap/bundles/core/current/**/*",
     "bootstrap/workflows/default/*.json",
     "bootstrap/workflows/default/*.py",
     "bootstrap/workflows/default/prompts/*/*.txt",

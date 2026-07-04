@@ -9,16 +9,20 @@ from pathlib import Path
 from types import ModuleType
 
 from .bundle_taxonomy import (
+    CORE_BUNDLE_NAME,
     DEFAULT_BUNDLE_PROFILE,
     DEFAULT_DOMAIN_BUNDLE,
     bundle_manifest,
     bundle_manifest_path,
 )
+from .doc_paths import system_doc_rel
 from .runtime_context import DEFAULT_RUNNER_HOME, PACKAGE_ROOT
 
 
 GLOBAL_RUNNER_HOME = Path.home() / DEFAULT_RUNNER_HOME
 BOOTSTRAP_ROOT = PACKAGE_ROOT / "bootstrap" / "workflows" / "default"
+BOOTSTRAP_SOURCE_ROOT = Path(system_doc_rel())
+PACKAGE_BOOTSTRAP_ROOT = PACKAGE_ROOT / "bootstrap" / "bundles" / CORE_BUNDLE_NAME / "current"
 
 
 def bundles_root() -> Path:
@@ -55,6 +59,83 @@ def global_workflows_root() -> Path:
 
 def global_workflow_root(workflow_name: str) -> Path:
     return global_workflows_root() / workflow_name
+
+
+def package_bootstrap_root() -> Path:
+    return PACKAGE_BOOTSTRAP_ROOT
+
+
+def global_bootstrap_root() -> Path:
+    return bundles_root() / CORE_BUNDLE_NAME / "current"
+
+
+def bootstrap_source_root(workspace_root: Path) -> Path:
+    return (workspace_root / BOOTSTRAP_SOURCE_ROOT).resolve()
+
+
+def _replace_tree(source_root: Path, target_root: Path) -> None:
+    if not source_root.exists():
+        raise FileNotFoundError(f"Source tree does not exist: {source_root}")
+    if target_root.exists():
+        shutil.rmtree(target_root)
+    target_root.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copytree(source_root, target_root)
+
+
+def _tree_has_files(root: Path) -> bool:
+    if not root.exists():
+        return False
+    return any(path.is_file() for path in root.rglob("*"))
+
+
+def publish_bootstrap_bundle(
+    workspace_root: Path,
+    *,
+    source_root: Path | None = None,
+    package_root: Path | None = None,
+) -> dict:
+    workspace_root = workspace_root.resolve()
+    source_root = (source_root or bootstrap_source_root(workspace_root)).resolve()
+    package_root = (package_root or package_bootstrap_root()).resolve()
+    _replace_tree(source_root, package_root)
+    return {
+        "workspace_root": str(workspace_root),
+        "source_root": str(source_root),
+        "package_bootstrap_root": str(package_root),
+        "bundle_name": CORE_BUNDLE_NAME,
+    }
+
+
+def install_bootstrap_bundle(
+    workspace_root: Path,
+    *,
+    package_root: Path | None = None,
+    runner_home: Path | None = None,
+) -> dict:
+    workspace_root = workspace_root.resolve()
+    package_root = (package_root or package_bootstrap_root()).resolve()
+    runner_home = (runner_home or GLOBAL_RUNNER_HOME).resolve()
+    if not _tree_has_files(package_root):
+        source_root = bootstrap_source_root(workspace_root)
+        if source_root.exists():
+            publish_bootstrap_bundle(
+                workspace_root,
+                source_root=source_root,
+                package_root=package_root,
+            )
+    if not _tree_has_files(package_root):
+        raise FileNotFoundError(
+            f"Packaged bootstrap bundle is missing or empty: {package_root}. "
+            "Run bootstrap-publish first or install a package build that includes the bundle."
+        )
+    global_root = runner_home / "bundles" / CORE_BUNDLE_NAME / "current"
+    _replace_tree(package_root, global_root)
+    return {
+        "workspace_root": str(workspace_root),
+        "package_bootstrap_root": str(package_root),
+        "global_bootstrap_root": str(global_root),
+        "bundle_name": CORE_BUNDLE_NAME,
+    }
 
 
 def resolve_workflow_root(workspace_root: Path, workflow_name: str, *, config: dict | None = None) -> Path:
@@ -154,6 +235,11 @@ def init_workspace(
     domain_dir.mkdir(parents=True, exist_ok=True)
     workflow_dir.mkdir(parents=True, exist_ok=True)
 
+    bootstrap_install = install_bootstrap_bundle(
+        workspace_root,
+        runner_home=runner_home,
+    )
+
     workflows_dir = global_workflows_root()
     workflows_dir.mkdir(parents=True, exist_ok=True)
     wf_root = seed_workflow_bundle(workflows_dir, workflow_name="example")
@@ -182,6 +268,7 @@ def init_workspace(
         "bundle_profile": bundle_profile,
         "bundle_domain": domain,
         "bundle_manifest": str(manifest_path),
+        "bootstrap_install": bootstrap_install,
         "workflow_root": str(wf_root),
         "config_path": str(config_path(workspace_root)),
     }

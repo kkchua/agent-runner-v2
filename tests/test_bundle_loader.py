@@ -7,9 +7,44 @@ from agent_runner_v2 import run_agent as run_agent_module
 from conftest import load_bootstrap_workflow_module
 
 
-def test_init_workspace_seeds_global_example_and_not_repo_workflows(tmp_path, monkeypatch):
+def test_publish_bootstrap_bundle_copies_repo_bootstrap_docs_into_package_bundle(tmp_path, monkeypatch):
+    workspace_root = tmp_path / "workspace"
+    source_root = workspace_root / "docs" / "system" / "00_governance" / "bootstrap"
+    source_root.mkdir(parents=True, exist_ok=True)
+    (source_root / "README.md").write_text("# Bootstrap\n", encoding="utf-8")
+    (source_root / "templates" / "delivery").mkdir(parents=True, exist_ok=True)
+    (source_root / "templates" / "delivery" / "01_delivery_template_registry.md").write_text("registry", encoding="utf-8")
+
+    package_root = tmp_path / "package"
+    monkeypatch.setattr(bundle_loader, "PACKAGE_ROOT", package_root)
+
+    result = bundle_loader.publish_bootstrap_bundle(workspace_root)
+
+    expected_root = package_root / "bootstrap" / "bundles" / "core" / "current"
+    assert (expected_root / "README.md").exists()
+    assert (expected_root / "templates" / "delivery" / "01_delivery_template_registry.md").exists()
+    assert result["package_bootstrap_root"] == str(expected_root)
+    assert result["bundle_name"] == "core"
+
+
+def test_init_workspace_installs_packaged_bootstrap_bundle_and_seeds_global_example(tmp_path, monkeypatch):
     fake_home = tmp_path / "home"
+    fake_package_root = tmp_path / "package"
+    package_bootstrap_root = fake_package_root / "bootstrap" / "bundles" / "core" / "current"
+    package_bootstrap_root.mkdir(parents=True, exist_ok=True)
+    (package_bootstrap_root / "README.md").write_text("# Packaged Bootstrap\n", encoding="utf-8")
     monkeypatch.setattr(bundle_loader, "GLOBAL_RUNNER_HOME", fake_home / ".ukbe-runner")
+    monkeypatch.setattr(bundle_loader, "PACKAGE_ROOT", fake_package_root)
+
+    seeded_workflow_root = fake_home / ".ukbe-runner" / "workflows" / "example"
+
+    def _fake_seed_workflow_bundle(target_root: Path, workflow_name: str = "example") -> Path:
+        wf_root = target_root / workflow_name
+        wf_root.mkdir(parents=True, exist_ok=True)
+        (wf_root / "template_groups.py").write_text("TEMPLATE_GROUPS = {}\n", encoding="utf-8")
+        return wf_root
+
+    monkeypatch.setattr(bundle_loader, "seed_workflow_bundle", _fake_seed_workflow_bundle)
 
     result = bundle_loader.init_workspace(tmp_path / "workspace")
 
@@ -17,14 +52,45 @@ def test_init_workspace_seeds_global_example_and_not_repo_workflows(tmp_path, mo
     assert (fake_home / ".ukbe-runner" / "logs").exists()
     assert (fake_home / ".ukbe-runner" / "runtime").exists()
     assert (fake_home / ".ukbe-runner" / "bundles" / "bundle-set.json").exists()
-    assert (fake_home / ".ukbe-runner" / "bundles" / "core" / "current").exists()
+    assert (fake_home / ".ukbe-runner" / "bundles" / "core" / "current" / "README.md").exists()
     assert (fake_home / ".ukbe-runner" / "bundles" / "domains" / "general" / "current").exists()
     assert not (tmp_path / "workspace" / ".ukbe-runner" / "workflows").exists()
     assert (fake_home / ".ukbe-runner" / "workflows" / "example" / "template_groups.py").exists()
-    assert result["workflow_root"] == str(fake_home / ".ukbe-runner" / "workflows" / "example")
+    assert result["workflow_root"] == str(seeded_workflow_root)
     assert result["runner_home"] == str(fake_home / ".ukbe-runner")
     assert result["bundle_domain"] == "general"
     assert result["bundle_profile"] == "core+workflow"
+    assert result["bootstrap_install"]["global_bootstrap_root"] == str(
+        fake_home / ".ukbe-runner" / "bundles" / "core" / "current"
+    )
+
+
+def test_init_workspace_auto_publishes_bootstrap_bundle_when_package_bundle_missing(tmp_path, monkeypatch):
+    fake_home = tmp_path / "home"
+    fake_package_root = tmp_path / "package"
+    workspace_root = tmp_path / "workspace"
+    source_root = workspace_root / "docs" / "system" / "00_governance" / "bootstrap"
+    source_root.mkdir(parents=True, exist_ok=True)
+    (source_root / "README.md").write_text("# Workspace Bootstrap\n", encoding="utf-8")
+
+    monkeypatch.setattr(bundle_loader, "GLOBAL_RUNNER_HOME", fake_home / ".ukbe-runner")
+    monkeypatch.setattr(bundle_loader, "PACKAGE_ROOT", fake_package_root)
+
+    def _fake_seed_workflow_bundle(target_root: Path, workflow_name: str = "example") -> Path:
+        wf_root = target_root / workflow_name
+        wf_root.mkdir(parents=True, exist_ok=True)
+        (wf_root / "template_groups.py").write_text("TEMPLATE_GROUPS = {}\n", encoding="utf-8")
+        return wf_root
+
+    monkeypatch.setattr(bundle_loader, "seed_workflow_bundle", _fake_seed_workflow_bundle)
+
+    result = bundle_loader.init_workspace(workspace_root)
+
+    expected_package_root = fake_package_root / "bootstrap" / "bundles" / "core" / "current"
+    expected_global_root = fake_home / ".ukbe-runner" / "bundles" / "core" / "current"
+    assert (expected_package_root / "README.md").exists()
+    assert (expected_global_root / "README.md").exists()
+    assert result["bootstrap_install"]["package_bootstrap_root"] == str(expected_package_root)
 
 
 def test_resolve_workflow_root_prefers_global_workflow(tmp_path, monkeypatch):
@@ -70,6 +136,13 @@ def test_run_agent_resolves_global_workflow_bundle_root(tmp_path, monkeypatch):
     )
 
     assert resolved == global_root.resolve()
+
+
+def test_run_agent_parse_args_supports_bootstrap_publish():
+    args = run_agent_module.parse_args(["bootstrap-publish", "--project-root", "D:\\repo"])
+
+    assert args.command == "bootstrap-publish"
+    assert args.project_root == "D:\\repo"
 
 
 def test_ensure_delivery_folders_omits_master_prompts_and_adds_codebase_docs(tmp_path):
