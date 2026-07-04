@@ -27,7 +27,7 @@ REM Path to the project to publish the architecture site into
 set "TARGET_PROJECT_ROOT=D:\MyProjectSpace\01_Workflows\agent-runner-v2"
 
 REM Job ID to resume (leave blank to auto-create a new job)
-set "JOB_ID=50SITE-GEN-20260704-001"
+set "JOB_ID="
 
 REM Set DRY_RUN=true to render prompts only (no coder invocation)
 set "DRY_RUN=false"
