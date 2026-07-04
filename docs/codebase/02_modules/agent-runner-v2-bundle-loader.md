@@ -6,9 +6,9 @@ module_path: "agent_runner_v2/bundle_loader.py"
 module_area: "bootstrap"
 documentation_mode: "full"
 owner_doc_path: "docs/codebase/02_modules/agent-runner-v2-bundle-loader.md"
-last_verified_by_change: "00_master_docs_bootstrap_v1 / 00DOC-GEN-20260704-002 / 2026-07-04T10:47:08+08:00"
-created: "2026-07-04T10:47:08+08:00"
-owner: "00_master_docs_bootstrap_v1"
+last_verified_by_change: "40_documentation_sync_v1 / 40DOCSYNC-GEN-20260704-001 / 2026-07-04T13:29:07+08:00"
+created: "2026-07-04T13:29:07+08:00"
+owner: "40_documentation_sync_v1"
 ---
 
 # Module Documentation: agent_runner_v2.bundle_loader
@@ -34,6 +34,7 @@ This module belongs to the `bootstrap` area and is documented as `full`.
 | `shutil` | stdlib module | imported dependency |
 | `types` | stdlib module | imported dependency |
 | `bundle_taxonomy` | external module | repository dependency |
+| `doc_paths` | external module | repository dependency |
 | `runtime_context` | external module | repository dependency |
 
 ## 2. Public API
@@ -57,6 +58,11 @@ This module belongs to the `bootstrap` area and is documented as `full`.
 | `workflow_root` | `(workspace_root, workflow_name)` | public function |
 | `global_workflows_root` | `()` | public function |
 | `global_workflow_root` | `(workflow_name)` | public function |
+| `package_bootstrap_root` | `()` | public function |
+| `global_bootstrap_root` | `()` | public function |
+| `bootstrap_source_root` | `(workspace_root)` | public function |
+| `publish_bootstrap_bundle` | `(workspace_root)` | public function |
+| `install_bootstrap_bundle` | `(workspace_root)` | public function |
 | `resolve_workflow_root` | `(workspace_root, workflow_name)` | public function |
 | `load_project_config` | `(workspace_root)` | public function |
 | `save_project_config` | `(workspace_root, config)` | public function |
@@ -70,6 +76,8 @@ This module belongs to the `bootstrap` area and is documented as `full`.
 |------|-------------|---------|
 | `GLOBAL_RUNNER_HOME` | constant | module configuration |
 | `BOOTSTRAP_ROOT` | constant | module configuration |
+| `BOOTSTRAP_SOURCE_ROOT` | constant | module configuration |
+| `PACKAGE_BOOTSTRAP_ROOT` | constant | module configuration |
 
 ## 3. Internal Implementation
 
@@ -118,4 +126,4 @@ Auto-generated baseline. Review and refine as the codebase evolves.
 
 | Date | Change | Verified By |
 |------|--------|-------------|
-| 2026-07-04 | Initial baseline generated from repository scan | 00_master_docs_bootstrap_v1 |
+| 2026-07-04 | Initial baseline generated from repository scan | 40_documentation_sync_v1 |

@@ -3,10 +3,10 @@ title: "Component Documentation: config and data"
 template_id: "CB-03"
 status: "active"
 component_id: "config-and-data"
-created: "2026-07-04T10:47:08+08:00"
-owner: "00_master_docs_bootstrap_v1"
-last_verified_by_change: "00_master_docs_bootstrap_v1 / 00DOC-GEN-20260704-002 / 2026-07-04T10:47:08+08:00"
-modules: [".env.example", "agent_runner_v2/comfyui_config.json", "agent_runner_v2/job_schema.json", "agent_runner_v2/llm_response_schema.json", "agent_runner_v2/model_mapping.json", "agent_runner_v2/usage_schema.json", "docs/codebase/04_changes/00DOC-GEN-20260704-001-bootstrap-snapshot.json", "docs/codebase/04_changes/00DOC-GEN-20260704-002-bootstrap-snapshot.json", "docs/codebase/04_changes/DOCSYNC-20260704_codebase-doc-update.meta.json", "pyproject.toml"]
+created: "2026-07-04T13:29:07+08:00"
+owner: "40_documentation_sync_v1"
+last_verified_by_change: "40_documentation_sync_v1 / 40DOCSYNC-GEN-20260704-001 / 2026-07-04T13:29:07+08:00"
+modules: [".env.example", "agent_runner_v2/bootstrap/bundles/core/current/00DOC-GEN-20260704-002-bootstrap-validation.meta.json", "agent_runner_v2/comfyui_config.json", "agent_runner_v2/job_schema.json", "agent_runner_v2/llm_response_schema.json", "agent_runner_v2/model_mapping.json", "agent_runner_v2/usage_schema.json", "docs/codebase/04_changes/00DOC-GEN-20260704-001-bootstrap-snapshot.json", "docs/codebase/04_changes/00DOC-GEN-20260704-002-bootstrap-snapshot.json", "docs/codebase/04_changes/DOCSYNC-20260704_codebase-doc-update.meta.json", "docs/delivery/05_reviews/REV-260704-01_rsop_R-0000-00_workflow-sop-v1.meta.json", "docs/delivery/05_reviews/REV-260704-02_rtmpl_R-0000-00_01-delivery-template-registry.meta.json", "docs/delivery/05_reviews/REV-260704-03_ragent_R-0000-00_delivery-agents-md.meta.json", "docs/delivery/DELIVERY_FOLDER_MAP.json", "docs/system/00_governance/bootstrap/00DOC-GEN-20260704-002-bootstrap-validation.meta.json", "pyproject.toml"]
 ---
 
 # Component Documentation: config and data
@@ -22,6 +22,7 @@ Configuration and structured data files that define runtime and documentation be
 | Module | Role in Component |
 |--------|-------------------|
 | `.env.example` | configuration / structured data |
+| `agent_runner_v2/bootstrap/bundles/core/current/00DOC-GEN-20260704-002-bootstrap-validation.meta.json` | configuration / structured data |
 | `agent_runner_v2/comfyui_config.json` | configuration / structured data |
 | `agent_runner_v2/job_schema.json` | configuration / structured data |
 | `agent_runner_v2/llm_response_schema.json` | configuration / structured data |
@@ -30,6 +31,11 @@ Configuration and structured data files that define runtime and documentation be
 | `docs/codebase/04_changes/00DOC-GEN-20260704-001-bootstrap-snapshot.json` | configuration / structured data |
 | `docs/codebase/04_changes/00DOC-GEN-20260704-002-bootstrap-snapshot.json` | configuration / structured data |
 | `docs/codebase/04_changes/DOCSYNC-20260704_codebase-doc-update.meta.json` | configuration / structured data |
+| `docs/delivery/05_reviews/REV-260704-01_rsop_R-0000-00_workflow-sop-v1.meta.json` | configuration / structured data |
+| `docs/delivery/05_reviews/REV-260704-02_rtmpl_R-0000-00_01-delivery-template-registry.meta.json` | configuration / structured data |
+| `docs/delivery/05_reviews/REV-260704-03_ragent_R-0000-00_delivery-agents-md.meta.json` | configuration / structured data |
+| `docs/delivery/DELIVERY_FOLDER_MAP.json` | configuration / structured data |
+| `docs/system/00_governance/bootstrap/00DOC-GEN-20260704-002-bootstrap-validation.meta.json` | configuration / structured data |
 | `pyproject.toml` | configuration / structured data |
 
 ## 2. Architecture
@@ -47,6 +53,7 @@ Repository files are scanned, normalized into inventory rows, and rendered into 
 | Interface | Direction | Protocol | Description |
 |-----------|-----------|----------|-------------|
 | `.env.example` | outbound | markdown | configuration / structured data |
+| `agent_runner_v2/bootstrap/bundles/core/current/00DOC-GEN-20260704-002-bootstrap-validation.meta.json` | outbound | markdown | configuration / structured data |
 | `agent_runner_v2/comfyui_config.json` | outbound | markdown | configuration / structured data |
 | `agent_runner_v2/job_schema.json` | outbound | markdown | configuration / structured data |
 | `agent_runner_v2/llm_response_schema.json` | outbound | markdown | configuration / structured data |
@@ -55,6 +62,11 @@ Repository files are scanned, normalized into inventory rows, and rendered into 
 | `docs/codebase/04_changes/00DOC-GEN-20260704-001-bootstrap-snapshot.json` | outbound | markdown | configuration / structured data |
 | `docs/codebase/04_changes/00DOC-GEN-20260704-002-bootstrap-snapshot.json` | outbound | markdown | configuration / structured data |
 | `docs/codebase/04_changes/DOCSYNC-20260704_codebase-doc-update.meta.json` | outbound | markdown | configuration / structured data |
+| `docs/delivery/05_reviews/REV-260704-01_rsop_R-0000-00_workflow-sop-v1.meta.json` | outbound | markdown | configuration / structured data |
+| `docs/delivery/05_reviews/REV-260704-02_rtmpl_R-0000-00_01-delivery-template-registry.meta.json` | outbound | markdown | configuration / structured data |
+| `docs/delivery/05_reviews/REV-260704-03_ragent_R-0000-00_delivery-agents-md.meta.json` | outbound | markdown | configuration / structured data |
+| `docs/delivery/DELIVERY_FOLDER_MAP.json` | outbound | markdown | configuration / structured data |
+| `docs/system/00_governance/bootstrap/00DOC-GEN-20260704-002-bootstrap-validation.meta.json` | outbound | markdown | configuration / structured data |
 | `pyproject.toml` | outbound | markdown | configuration / structured data |
 
 ## 3. Behavior
@@ -99,4 +111,4 @@ Auto-generated baseline; extend with component-specific checks as needed.
 
 | Date | Change | Modules Affected | Verified By |
 |------|--------|-----------------|-------------|
-| 2026-07-04 | Initial baseline generated from repository scan | 10 modules/files | 00_master_docs_bootstrap_v1 |
+| 2026-07-04 | Initial baseline generated from repository scan | 16 modules/files | 40_documentation_sync_v1 |

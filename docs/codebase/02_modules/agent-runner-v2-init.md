@@ -6,9 +6,9 @@ module_path: "agent_runner_v2/__init__.py"
 module_area: "package"
 documentation_mode: "stub"
 owner_doc_path: "docs/codebase/02_modules/agent-runner-v2-init.md"
-last_verified_by_change: "00_master_docs_bootstrap_v1 / 00DOC-GEN-20260704-002 / 2026-07-04T10:47:08+08:00"
-created: "2026-07-04T10:47:08+08:00"
-owner: "00_master_docs_bootstrap_v1"
+last_verified_by_change: "40_documentation_sync_v1 / 40DOCSYNC-GEN-20260704-001 / 2026-07-04T13:29:07+08:00"
+created: "2026-07-04T13:29:07+08:00"
+owner: "40_documentation_sync_v1"
 ---
 
 # Module Documentation: agent_runner_v2
@@ -105,4 +105,4 @@ Auto-generated baseline. Review and refine as the codebase evolves.
 
 | Date | Change | Verified By |
 |------|--------|-------------|
-| 2026-07-04 | Initial baseline generated from repository scan | 00_master_docs_bootstrap_v1 |
+| 2026-07-04 | Initial baseline generated from repository scan | 40_documentation_sync_v1 |

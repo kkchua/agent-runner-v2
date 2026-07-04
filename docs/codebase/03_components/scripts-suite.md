@@ -3,10 +3,10 @@ title: "Component Documentation: scripts suite"
 template_id: "CB-03"
 status: "active"
 component_id: "scripts-suite"
-created: "2026-07-04T10:47:08+08:00"
-owner: "00_master_docs_bootstrap_v1"
-last_verified_by_change: "00_master_docs_bootstrap_v1 / 00DOC-GEN-20260704-002 / 2026-07-04T10:47:08+08:00"
-modules: ["archive/batch/run-bug_fix_v1.bat", "archive/batch/run-codebase_bootstrap_v1.bat", "archive/batch/run-codebase_reconcile_v1.bat", "archive/batch/run-codebase_rescan_v1.bat", "archive/batch/run-codebase_sync_v1.bat", "archive/batch/run-documentation_bootstrap_v1.bat", "archive/batch/run-documentation_validation_v1.bat", "archive/batch/run-system_docs_bootstrap_v1.bat", "archive/batch/submit-bug_fix_v1.bat", "archive/batch/submit-codebase_bootstrap_v1.bat", "archive/batch/submit-codebase_reconcile_v1.bat", "archive/batch/submit-codebase_rescan_v1.bat", "archive/batch/submit-codebase_sync_v1.bat", "archive/batch/submit-documentation_bootstrap_v1.bat", "archive/batch/submit-documentation_validation_v1.bat", "run-00_master_docs_bootstrap_v1.bat", "run-10_execution_scaffold_v1.bat", "run-40_documentation_sync_v1.bat", "run-approve-step.bat", "run-cleanup-generated-docs.bat", "run-daemon.bat", "run-reset-step.bat", "sample-run-delivery.bat", "scripts/approve-run.sh", "scripts/examples/approve-run.sh", "scripts/examples/submit-delivery-planning.sh", "scripts/examples/submit-delivery-scaffold.sh", "scripts/examples/submit-image-csv-gen-v1.sh", "scripts/examples/submit-image-csv-gen-v2.sh", "scripts/examples/submit-initiative-intake.sh", "scripts/examples/submit-task-execution.sh", "scripts/README.md", "scripts/submit-delivery-planning.sh", "scripts/submit-delivery-scaffold.sh", "scripts/submit-initiative-intake.sh", "scripts/ukbe-daemon-wsl.sh", "scripts/ukbe-daemon.bat", "scripts/ukbe-run-delivery.bat", "scripts/ukbe-runner.sh", "submit-00_master_docs_bootstrap_v1.bat", "submit-10_execution_scaffold_v1.bat", "sync-10_execution_scaffold_v1-workflow-spec.bat", "sync-workflows-to-backend.bat", "test-runner.bat"]
+created: "2026-07-04T13:29:07+08:00"
+owner: "40_documentation_sync_v1"
+last_verified_by_change: "40_documentation_sync_v1 / 40DOCSYNC-GEN-20260704-001 / 2026-07-04T13:29:07+08:00"
+modules: ["archive/batch/run-bug_fix_v1.bat", "archive/batch/run-codebase_bootstrap_v1.bat", "archive/batch/run-codebase_reconcile_v1.bat", "archive/batch/run-codebase_rescan_v1.bat", "archive/batch/run-codebase_sync_v1.bat", "archive/batch/run-documentation_bootstrap_v1.bat", "archive/batch/run-documentation_validation_v1.bat", "archive/batch/run-system_docs_bootstrap_v1.bat", "archive/batch/submit-bug_fix_v1.bat", "archive/batch/submit-codebase_bootstrap_v1.bat", "archive/batch/submit-codebase_reconcile_v1.bat", "archive/batch/submit-codebase_rescan_v1.bat", "archive/batch/submit-codebase_sync_v1.bat", "archive/batch/submit-documentation_bootstrap_v1.bat", "archive/batch/submit-documentation_validation_v1.bat", "run-00_master_docs_bootstrap_v1.bat", "run-10_execution_scaffold_v1.bat", "run-40_documentation_sync_v1.bat", "run-50_architecture_site_v1.bat", "run-approve-step.bat", "run-bootstrap-publish.bat", "run-cleanup-generated-docs.bat", "run-daemon.bat", "run-reset-step.bat", "sample-run-delivery.bat", "scripts/approve-run.sh", "scripts/examples/approve-run.sh", "scripts/examples/submit-delivery-planning.sh", "scripts/examples/submit-delivery-scaffold.sh", "scripts/examples/submit-image-csv-gen-v1.sh", "scripts/examples/submit-image-csv-gen-v2.sh", "scripts/examples/submit-initiative-intake.sh", "scripts/examples/submit-task-execution.sh", "scripts/README.md", "scripts/submit-delivery-planning.sh", "scripts/submit-delivery-scaffold.sh", "scripts/submit-initiative-intake.sh", "scripts/ukbe-daemon-wsl.sh", "scripts/ukbe-daemon.bat", "scripts/ukbe-run-delivery.bat", "scripts/ukbe-runner.sh", "submit-00_master_docs_bootstrap_v1.bat", "submit-10_execution_scaffold_v1.bat", "sync-10_execution_scaffold_v1-workflow-spec.bat", "sync-workflows-to-backend.bat", "test-runner.bat"]
 ---
 
 # Component Documentation: scripts suite
@@ -39,7 +39,9 @@ Shell and batch scripts used to run and operate the repository workflows.
 | `run-00_master_docs_bootstrap_v1.bat` | automation / entrypoint |
 | `run-10_execution_scaffold_v1.bat` | automation / entrypoint |
 | `run-40_documentation_sync_v1.bat` | automation / entrypoint |
+| `run-50_architecture_site_v1.bat` | automation / entrypoint |
 | `run-approve-step.bat` | automation / entrypoint |
+| `run-bootstrap-publish.bat` | automation / entrypoint |
 | `run-cleanup-generated-docs.bat` | automation / entrypoint |
 | `run-daemon.bat` | automation / entrypoint |
 | `run-reset-step.bat` | automation / entrypoint |
@@ -98,7 +100,9 @@ Repository files are scanned, normalized into inventory rows, and rendered into 
 | `run-00_master_docs_bootstrap_v1.bat` | outbound | markdown | automation / entrypoint |
 | `run-10_execution_scaffold_v1.bat` | outbound | markdown | automation / entrypoint |
 | `run-40_documentation_sync_v1.bat` | outbound | markdown | automation / entrypoint |
+| `run-50_architecture_site_v1.bat` | outbound | markdown | automation / entrypoint |
 | `run-approve-step.bat` | outbound | markdown | automation / entrypoint |
+| `run-bootstrap-publish.bat` | outbound | markdown | automation / entrypoint |
 | `run-cleanup-generated-docs.bat` | outbound | markdown | automation / entrypoint |
 | `run-daemon.bat` | outbound | markdown | automation / entrypoint |
 | `run-reset-step.bat` | outbound | markdown | automation / entrypoint |
@@ -167,4 +171,4 @@ Auto-generated baseline; extend with component-specific checks as needed.
 
 | Date | Change | Modules Affected | Verified By |
 |------|--------|-----------------|-------------|
-| 2026-07-04 | Initial baseline generated from repository scan | 43 modules/files | 00_master_docs_bootstrap_v1 |
+| 2026-07-04 | Initial baseline generated from repository scan | 45 modules/files | 40_documentation_sync_v1 |
