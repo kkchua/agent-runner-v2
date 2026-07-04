@@ -6,8 +6,8 @@ module_path: "agent_runner_v2/actions/__init__.py"
 module_area: "actions"
 documentation_mode: "stub"
 owner_doc_path: "docs/codebase/02_modules/agent-runner-v2-actions-init.md"
-last_verified_by_change: "00_master_docs_bootstrap_v1 / 00DOC-GEN-20260704-001 / 2026-07-04T06:01:39+08:00"
-created: "2026-07-04T06:01:39+08:00"
+last_verified_by_change: "00_master_docs_bootstrap_v1 / 00DOC-GEN-20260704-002 / 2026-07-04T10:47:08+08:00"
+created: "2026-07-04T10:47:08+08:00"
 owner: "00_master_docs_bootstrap_v1"
 ---
 
@@ -29,10 +29,12 @@ This module belongs to the `actions` area and is documented as `stub`.
 |------------|------|---------|
 | `finalize_bootstrap` | external module | repository dependency |
 | `prepare_delivery_scaffold` | external module | repository dependency |
+| `publish_architecture_site` | external module | repository dependency |
 | `scan_repo_codebase` | external module | repository dependency |
 | `submit_comfyui` | external module | repository dependency |
 | `sync_codebase_docs` | external module | repository dependency |
 | `sync_system_docs` | external module | repository dependency |
+| `validate_architecture_site` | external module | repository dependency |
 | `validate_codebase_docs` | external module | repository dependency |
 | `validate_delivery_docs` | external module | repository dependency |
 | `validate_system_docs` | external module | repository dependency |
@@ -94,6 +96,7 @@ Tracked at a baseline level by the repository scan.
 | Test File | Coverage Area |
 |-----------|--------------|
 | `tests/conftest.py` | `agent_runner_v2` |
+| `tests/test_architecture_site.py` | `agent_runner_v2` |
 | `tests/test_backend_worker_mode.py` | `agent_runner_v2` |
 | `tests/test_bundle_loader.py` | `agent_runner_v2` |
 | `tests/test_codebase_docs.py` | `agent_runner_v2` |

@@ -187,6 +187,26 @@ def resolve_repo_or_runtime_path(
     return runtime_root / path
 
 
+def repo_doc_root(*parts: str) -> Path:
+    return get_workspace_root() / Path("docs").joinpath(*parts)
+
+
+def system_doc_root(*parts: str) -> Path:
+    return repo_doc_root("system", "00_governance", "bootstrap", *parts)
+
+
+def codebase_doc_root(*parts: str) -> Path:
+    return repo_doc_root("codebase", *parts)
+
+
+def delivery_doc_root(*parts: str) -> Path:
+    return repo_doc_root("delivery", *parts)
+
+
+def architecture_site_root(*parts: str) -> Path:
+    return repo_doc_root("site", "architecture", *parts)
+
+
 def artifact_rel_to_meta_rel(artifact_rel: str) -> str:
     """Return the meta.json sibling path for a repo/runtime-relative artifact."""
     rel = str(artifact_rel or "").strip()

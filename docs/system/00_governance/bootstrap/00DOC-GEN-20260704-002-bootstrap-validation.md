@@ -3,7 +3,7 @@ title: "System docs bootstrap validation"
 template_id: "SYS-00-VAL"
 status: "active"
 managed_by: "workflow-generated"
-generated: "2026-07-03T23:18:37+08:00"
+generated: "2026-07-04T11:06:05+08:00"
 workflow: "00_master_docs_bootstrap_v1"
 step: "08_validate_master_system_docs"
 audience: "all"
@@ -16,23 +16,23 @@ audience: "all"
 
 | Check | Status | Notes |
 |---|---|---|
-| file_exists @ docs/system/00_governance/bootstrap/project_analysis.md | pass | exists (10000 bytes) |
-| file_exists @ docs/system/00_governance/bootstrap/README.md | pass | exists (5300 bytes) |
-| file_exists @ docs/system/00_governance/bootstrap/DOCUMENTATION_STANDARD.md | pass | exists (8124 bytes) |
-| file_exists @ docs/system/00_governance/bootstrap/BUNDLE_TAXONOMY.md | pass | exists (7020 bytes) |
-| file_exists @ docs/system/00_governance/bootstrap/BUNDLE_MIGRATION_PLAN.md | pass | exists (4773 bytes) |
-| file_exists @ docs/system/00_governance/bootstrap/SYSTEM_OVERVIEW.md | pass | exists (8474 bytes) |
-| file_exists @ docs/system/00_governance/bootstrap/BUSINESS_CAPABILITIES.md | pass | exists (7848 bytes) |
-| file_exists @ docs/system/00_governance/bootstrap/FUNCTIONAL_SPEC.md | pass | exists (11431 bytes) |
-| file_exists @ docs/system/00_governance/bootstrap/NON_FUNCTIONAL_REQUIREMENTS.md | pass | exists (8794 bytes) |
-| file_exists @ docs/system/00_governance/bootstrap/SYSTEM_CONTEXT.md | pass | exists (4832 bytes) |
-| file_exists @ docs/system/00_governance/bootstrap/COMPONENT_ARCHITECTURE.md | pass | exists (10154 bytes) |
-| file_exists @ docs/system/00_governance/bootstrap/DECISION_LOG.md | pass | exists (5475 bytes) |
-| file_exists @ docs/system/00_governance/bootstrap/SYSTEM_FILE_STRUCTURE.md | pass | exists (11407 bytes) |
-| file_exists @ docs/system/00_governance/bootstrap/DEVELOPER_GUIDE.md | pass | exists (6875 bytes) |
-| file_exists @ docs/system/00_governance/bootstrap/RUNBOOK.md | pass | exists (7634 bytes) |
-| file_exists @ docs/system/00_governance/bootstrap/EXISTING_REPO_WORKFLOW_SOP.md | pass | exists (9372 bytes) |
-| file_exists @ docs/system/00_governance/bootstrap/00DOC-GEN-20260703-007-bootstrap-change-log.md | pass | exists (5698 bytes) |
+| file_exists @ docs/system/00_governance/bootstrap/project_analysis.md | pass | exists (10097 bytes) |
+| file_exists @ docs/system/00_governance/bootstrap/README.md | pass | exists (4216 bytes) |
+| file_exists @ docs/system/00_governance/bootstrap/DOCUMENTATION_STANDARD.md | pass | exists (7376 bytes) |
+| file_exists @ docs/system/00_governance/bootstrap/BUNDLE_TAXONOMY.md | pass | exists (8560 bytes) |
+| file_exists @ docs/system/00_governance/bootstrap/BUNDLE_MIGRATION_PLAN.md | pass | exists (7274 bytes) |
+| file_exists @ docs/system/00_governance/bootstrap/SYSTEM_OVERVIEW.md | pass | exists (6581 bytes) |
+| file_exists @ docs/system/00_governance/bootstrap/BUSINESS_CAPABILITIES.md | pass | exists (7082 bytes) |
+| file_exists @ docs/system/00_governance/bootstrap/FUNCTIONAL_SPEC.md | pass | exists (7855 bytes) |
+| file_exists @ docs/system/00_governance/bootstrap/NON_FUNCTIONAL_REQUIREMENTS.md | pass | exists (6700 bytes) |
+| file_exists @ docs/system/00_governance/bootstrap/SYSTEM_CONTEXT.md | pass | exists (4368 bytes) |
+| file_exists @ docs/system/00_governance/bootstrap/COMPONENT_ARCHITECTURE.md | pass | exists (8363 bytes) |
+| file_exists @ docs/system/00_governance/bootstrap/DECISION_LOG.md | pass | exists (4582 bytes) |
+| file_exists @ docs/system/00_governance/bootstrap/SYSTEM_FILE_STRUCTURE.md | pass | exists (8175 bytes) |
+| file_exists @ docs/system/00_governance/bootstrap/DEVELOPER_GUIDE.md | pass | exists (6937 bytes) |
+| file_exists @ docs/system/00_governance/bootstrap/RUNBOOK.md | pass | exists (6108 bytes) |
+| file_exists @ docs/system/00_governance/bootstrap/EXISTING_REPO_WORKFLOW_SOP.md | pass | exists (8373 bytes) |
+| file_exists @ docs/system/00_governance/bootstrap/00DOC-GEN-20260704-002-bootstrap-change-log.md | pass | exists (4988 bytes) |
 | file_section @ docs/system/00_governance/bootstrap/project_analysis.md | pass | found |
 | file_section @ docs/system/00_governance/bootstrap/project_analysis.md | pass | found |
 | file_section @ docs/system/00_governance/bootstrap/project_analysis.md | pass | found |

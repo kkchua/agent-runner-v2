@@ -11,6 +11,7 @@ from datetime import datetime
 from pathlib import Path
 
 from ..action_result import ActionResult
+from ..doc_paths import system_doc_rel
 from ..codebase_docs import build_snapshot
 from ..system_docs import (
     render_bundle_migration_plan,
@@ -38,7 +39,7 @@ def _write_text(path: Path, content: str) -> None:
 
 
 def _architecture_profile_from_project_analysis(project_root: Path) -> dict[str, str]:
-    analysis_path = project_root / "docs/system/00_governance/bootstrap/project_analysis.md"
+    analysis_path = project_root / system_doc_rel("project_analysis.md")
     if not analysis_path.exists():
         return {}
     text = analysis_path.read_text(encoding="utf-8")
@@ -61,7 +62,7 @@ def _architecture_profile_from_project_analysis(project_root: Path) -> dict[str,
         result["architecture_migration_mode"] = "targeted_migration"
     if "architecture_baseline" not in result:
         result["architecture_baseline"] = "universal baseline"
-    result["architecture_profile_source"] = "docs/system/00_governance/bootstrap/project_analysis.md"
+    result["architecture_profile_source"] = system_doc_rel("project_analysis.md")
     return result
 
 
@@ -81,31 +82,31 @@ def sync_system_docs(*, context: dict[str, str], state: dict, step_cfg: dict, pr
     repo_name = project_root.name or "repository"
 
     docs_to_write = {
-        "docs/system/00_governance/bootstrap/README.md": render_system_index(snapshot, repo_name=repo_name),
-        "docs/system/00_governance/bootstrap/DOCUMENTATION_STANDARD.md": render_documentation_standard(snapshot),
-        "docs/system/00_governance/bootstrap/BUNDLE_TAXONOMY.md": render_bundle_taxonomy(snapshot),
-        "docs/system/00_governance/bootstrap/BUNDLE_MIGRATION_PLAN.md": render_bundle_migration_plan(snapshot),
-        "docs/system/00_governance/bootstrap/SYSTEM_OVERVIEW.md": render_system_overview(snapshot, repo_name=repo_name),
-        "docs/system/00_governance/bootstrap/BUSINESS_CAPABILITIES.md": render_business_capabilities(snapshot),
-        "docs/system/00_governance/bootstrap/FUNCTIONAL_SPEC.md": render_functional_spec(snapshot, repo_name=repo_name),
-        "docs/system/00_governance/bootstrap/NON_FUNCTIONAL_REQUIREMENTS.md": render_nfr(snapshot),
-        "docs/system/00_governance/bootstrap/SYSTEM_CONTEXT.md": render_system_context(snapshot, repo_name=repo_name),
-        "docs/system/00_governance/bootstrap/COMPONENT_ARCHITECTURE.md": render_component_architecture(snapshot),
-        "docs/system/00_governance/bootstrap/DECISION_LOG.md": render_decision_log(snapshot),
-        "docs/system/00_governance/bootstrap/SYSTEM_FILE_STRUCTURE.md": render_system_file_structure(snapshot),
-        "docs/system/00_governance/bootstrap/DEVELOPER_GUIDE.md": render_developer_guide(snapshot),
-        "docs/system/00_governance/bootstrap/RUNBOOK.md": render_runbook(snapshot),
+        system_doc_rel("README.md"): render_system_index(snapshot, repo_name=repo_name),
+        system_doc_rel("DOCUMENTATION_STANDARD.md"): render_documentation_standard(snapshot),
+        system_doc_rel("BUNDLE_TAXONOMY.md"): render_bundle_taxonomy(snapshot),
+        system_doc_rel("BUNDLE_MIGRATION_PLAN.md"): render_bundle_migration_plan(snapshot),
+        system_doc_rel("SYSTEM_OVERVIEW.md"): render_system_overview(snapshot, repo_name=repo_name),
+        system_doc_rel("BUSINESS_CAPABILITIES.md"): render_business_capabilities(snapshot),
+        system_doc_rel("FUNCTIONAL_SPEC.md"): render_functional_spec(snapshot, repo_name=repo_name),
+        system_doc_rel("NON_FUNCTIONAL_REQUIREMENTS.md"): render_nfr(snapshot),
+        system_doc_rel("SYSTEM_CONTEXT.md"): render_system_context(snapshot, repo_name=repo_name),
+        system_doc_rel("COMPONENT_ARCHITECTURE.md"): render_component_architecture(snapshot),
+        system_doc_rel("DECISION_LOG.md"): render_decision_log(snapshot),
+        system_doc_rel("SYSTEM_FILE_STRUCTURE.md"): render_system_file_structure(snapshot),
+        system_doc_rel("DEVELOPER_GUIDE.md"): render_developer_guide(snapshot),
+        system_doc_rel("RUNBOOK.md"): render_runbook(snapshot),
     }
 
     doc_paths = list(docs_to_write.keys())
     for rel_path, content in docs_to_write.items():
         _write_text(project_root / rel_path, content)
 
-    change_log_path = project_root / "docs/system/00_governance/bootstrap" / f"{job_id}-{mode}-change-log.md"
+    change_log_path = project_root / system_doc_rel(f"{job_id}-{mode}-change-log.md")
     _write_text(change_log_path, render_system_docs_change_log(snapshot, repo_name=repo_name, doc_paths=doc_paths))
 
     artifacts = {
-        "SYSTEM_DOCS_INDEX": "docs/system/00_governance/bootstrap/README.md",
+        "SYSTEM_DOCS_INDEX": system_doc_rel("README.md"),
         "SYSTEM_DOCS_CHANGE_LOG": change_log_path.relative_to(project_root).as_posix(),
     }
     if meta_rel:

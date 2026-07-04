@@ -3,10 +3,10 @@ title: "Component Documentation: workflow families"
 template_id: "CB-03"
 status: "active"
 component_id: "workflow-families"
-created: "2026-07-04T06:01:39+08:00"
+created: "2026-07-04T10:47:08+08:00"
 owner: "00_master_docs_bootstrap_v1"
-last_verified_by_change: "00_master_docs_bootstrap_v1 / 00DOC-GEN-20260704-001 / 2026-07-04T06:01:39+08:00"
-modules: ["00_master_docs_bootstrap_v1", "10_execution_scaffold_v1", "20_initiative_intake_v1", "21_bug_fix_intake_v1", "30_delivery_planning_v1", "31_task_execution_v1", "40_documentation_sync_v1", "image_csv_gen_v2", "videoxpress_gen_v1", "tiktok_video_pipeline_v1"]
+last_verified_by_change: "00_master_docs_bootstrap_v1 / 00DOC-GEN-20260704-002 / 2026-07-04T10:47:08+08:00"
+modules: ["00_master_docs_bootstrap_v1", "10_execution_scaffold_v1", "20_initiative_intake_v1", "21_bug_fix_intake_v1", "30_delivery_planning_v1", "31_task_execution_v1", "40_documentation_sync_v1", "50_architecture_site_v1", "image_csv_gen_v2", "videoxpress_gen_v1", "tiktok_video_pipeline_v1"]
 ---
 
 # Component Documentation: workflow families
@@ -27,7 +27,8 @@ Repository workflow families, their step sequences, and their current bootstrap/
 | `21_bug_fix_intake_v1` | 21BUGFIX / 7 steps |
 | `30_delivery_planning_v1` | 30PLAN / 10 steps |
 | `31_task_execution_v1` | 31EXEC / 12 steps |
-| `40_documentation_sync_v1` | 40DOCSYNC / 4 steps |
+| `40_documentation_sync_v1` | 40DOCSYNC / 2 steps |
+| `50_architecture_site_v1` | 50SITE / 2 steps |
 | `image_csv_gen_v2` | IMGCSV / 3 steps |
 | `videoxpress_gen_v1` | VIDEXP / 9 steps |
 | `tiktok_video_pipeline_v1` | TIKTOK / 10 steps |
@@ -52,7 +53,8 @@ Repository files are scanned, normalized into inventory rows, and rendered into 
 | `21_bug_fix_intake_v1` | outbound | markdown | 21BUGFIX / 7 steps |
 | `30_delivery_planning_v1` | outbound | markdown | 30PLAN / 10 steps |
 | `31_task_execution_v1` | outbound | markdown | 31EXEC / 12 steps |
-| `40_documentation_sync_v1` | outbound | markdown | 40DOCSYNC / 4 steps |
+| `40_documentation_sync_v1` | outbound | markdown | 40DOCSYNC / 2 steps |
+| `50_architecture_site_v1` | outbound | markdown | 50SITE / 2 steps |
 | `image_csv_gen_v2` | outbound | markdown | IMGCSV / 3 steps |
 | `videoxpress_gen_v1` | outbound | markdown | VIDEXP / 9 steps |
 | `tiktok_video_pipeline_v1` | outbound | markdown | TIKTOK / 10 steps |
@@ -99,4 +101,4 @@ Auto-generated baseline; extend with component-specific checks as needed.
 
 | Date | Change | Modules Affected | Verified By |
 |------|--------|-----------------|-------------|
-| 2026-07-04 | Initial baseline generated from repository scan | 10 modules/files | 00_master_docs_bootstrap_v1 |
+| 2026-07-04 | Initial baseline generated from repository scan | 11 modules/files | 00_master_docs_bootstrap_v1 |

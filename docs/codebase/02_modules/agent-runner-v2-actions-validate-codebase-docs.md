@@ -6,8 +6,8 @@ module_path: "agent_runner_v2/actions/validate_codebase_docs.py"
 module_area: "actions"
 documentation_mode: "full"
 owner_doc_path: "docs/codebase/02_modules/agent-runner-v2-actions-validate-codebase-docs.md"
-last_verified_by_change: "00_master_docs_bootstrap_v1 / 00DOC-GEN-20260704-001 / 2026-07-04T06:01:39+08:00"
-created: "2026-07-04T06:01:39+08:00"
+last_verified_by_change: "00_master_docs_bootstrap_v1 / 00DOC-GEN-20260704-002 / 2026-07-04T10:47:08+08:00"
+created: "2026-07-04T10:47:08+08:00"
 owner: "00_master_docs_bootstrap_v1"
 ---
 
@@ -33,6 +33,7 @@ This module belongs to the `actions` area and is documented as `full`.
 | `pathlib` | stdlib module | imported dependency |
 | `action_result` | external module | repository dependency |
 | `codebase_docs` | external module | repository dependency |
+| `doc_paths` | external module | repository dependency |
 | `runtime_context` | external module | repository dependency |
 
 ## 2. Public API
@@ -92,6 +93,7 @@ Tracked at a baseline level by the repository scan.
 | Test File | Coverage Area |
 |-----------|--------------|
 | `tests/test_bundle_loader.py` | `agent_runner_v2.actions.validate_codebase_docs` |
+| `tests/test_documentation_governance.py` | `agent_runner_v2.actions.validate_codebase_docs` |
 
 ### 6.2 Known Gaps
 

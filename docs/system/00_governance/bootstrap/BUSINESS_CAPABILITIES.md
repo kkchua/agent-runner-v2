@@ -1,11 +1,11 @@
 ---
 template_id: "SYS-00-BC"
-title: "Business Capabilities - agent-runner-v2"
+title: "Business Capabilities"
 status: "active"
-generated: "2026-07-04T08:00:00+08:00"
+generated: "2026-07-04T12:00:00+08:00"
 workflow: "00_master_docs_bootstrap_v1"
 step: "03_generate_system_overview_docs"
-change_id: "00DOC-GEN-20260704-001"
+change_id: "00DOC-GEN-20260704-002"
 managed_by: workflow-generated
 ---
 
@@ -16,237 +16,179 @@ managed_by: workflow-generated
 
 ## Purpose
 
-This document maps the operational capabilities enabled by agent-runner-v2. It describes what the platform enables organizations to accomplish, not just its technical features.
-
-**Why:** Understanding capabilities (rather than just features) helps stakeholders evaluate fit, plan adoption, and identify opportunities for value creation.
+This document describes the operational capabilities enabled by the `agent-runner-v2` platform. It maps technical features to business outcomes and explains the value delivered to different stakeholder groups.
 
 ## Capability Map
 
-### Capability: Workflow Orchestration
-
-**Description:** Execute structured multi-step workflows with deterministic progression and state management.
-
-**Enables:**
-- Automating complex processes that require multiple steps
-- Ensuring consistent execution regardless of operator
-- Recovering from failures without losing progress
-- Reviewing and approving intermediate results
-
-**Operational Impact:**
-- Reduces manual coordination overhead
-- Increases process reliability
-- Enables parallel execution of independent steps
-- Provides audit trail of execution
-
-**Workflow Families Supported:**
-
-| Family | Steps | Use Case |
-|--------|-------|----------|
-| `00_master_docs_bootstrap_v1` | 10 | System documentation generation |
-| `10_execution_scaffold_v1` | 13 | Delivery scaffold setup |
-| `20_initiative_intake_v1` | 5 | Initiative capture and refinement |
-| `21_bug_fix_intake_v1` | 7 | Bug triage and resolution |
-| `30_delivery_planning_v1` | 10 | Plan and task generation |
-| `31_task_execution_v1` | 12 | Task implementation and validation |
-| `40_documentation_sync_v1` | 4 | Documentation synchronization |
-| `image_csv_gen_v2` | 5 | Image generation workflow |
-| `videoxpress_gen_v1` | 9 | Video content generation |
-| `tiktok_video_pipeline_v1` | 10 | TikTok content pipeline |
-
-### Capability: LLM Integration
-
-**Description:** Invoke multiple LLM providers (Claude, Codex, Qwen) with unified interfaces and result handling.
-
-**Enables:**
-- Using the best model for each task type
-- Switching models without workflow changes
-- Tracking usage and costs across providers
-- Standardizing result validation
-
-**Operational Impact:**
-- Optimizes cost/quality tradeoffs per step
-- Reduces vendor lock-in
-- Simplifies model experimentation
-- Centralizes usage tracking
-
-**Model Support:**
-
-| Provider | Models | Typical Use |
-|----------|--------|-------------|
-| Claude | Sonnet, Opus, Haiku | Complex reasoning, coding |
-| Codex | o3, o4-mini | Code generation, review |
-| Qwen | Qwen3 | Local/self-hosted execution |
-
-### Capability: Quality Assurance
-
-**Description:** Review loops, approval gates, and validation ensure output quality before progression.
-
-**Enables:**
-- Catching errors before they propagate
-- Human oversight of critical steps
-- Iterative refinement until standards met
-- Explicit rejection codes for targeted fixes
-
-**Operational Impact:**
-- Improves output quality
-- Reduces rework downstream
-- Provides clear quality criteria
-- Enables automated retry for fixable issues
-
-**Review Patterns:**
-
-| Pattern | Description | Example |
-|---------|-------------|---------|
-| Auto-retry | Automatic retry on transient failures | Timeout recovery |
-| Human review | Requires human approval to continue | Architecture decisions |
-| Replan | Workflow adaptation based on findings | Scope changes |
-
-### Capability: Distributed Execution
-
-**Description:** Backend-connected worker and daemon modes enable distributed, scalable execution.
-
-**Enables:**
-- Scaling beyond single workstation
-- Centralized queue management
-- Work distribution across multiple workers
-- Heartbeat monitoring and failure detection
-
-**Operational Impact:**
-- Increases throughput via parallel workers
-- Improves reliability through redundancy
-- Enables cloud deployment
-- Centralizes operational visibility
-
-**Execution Modes:**
-
-| Mode | Use Case | Scaling |
-|------|----------|---------|
-| Local (`run`) | Development, testing | Single workstation |
-| Worker (`worker`) | Backend-connected execution | Multi-worker pool |
-| Daemon (`daemon`) | Continuous supervision | Per-workstation daemon |
-
-### Capability: Content Generation
-
-**Description:** Specialized workflows for image, video, and audio content generation.
-
-**Enables:**
-- Automated content pipelines
-- Multi-modal asset creation
-- Integration with generation services (ComfyUI)
-- Asset assembly and composition
-
-**Operational Impact:**
-- Accelerates content production
-- Ensures consistent asset organization
-- Enables batch processing
-- Tracks generation results
-
-**Content Types:**
-
-| Type | Workflow | Output |
-|------|----------|--------|
-| Images | `image_csv_gen_v2` | Image CSV + generated images |
-| Videos | `videoxpress_gen_v1` | Composed video with voiceover |
-| TikTok | `tiktok_video_pipeline_v1` | Platform-optimized content |
-
-### Capability: Documentation Governance
-
-**Description:** Automated generation, synchronization, and validation of codebase and system documentation.
-
-**Enables:**
-- Keeping documentation synchronized with code
-- Generating documentation from code analysis
-- Validating documentation completeness
-- Protecting workflow-generated documents
-
-**Operational Impact:**
-- Reduces documentation drift
-- Ensures consistent documentation structure
-- Enforces documentation standards
-- Tracks documentation changes
-
-**Documentation Types:**
-
-| Type | Location | Content |
-|------|----------|---------|
-| System docs | `docs/system/` | Governance, standards, guides |
-| Codebase docs | `docs/codebase/` | Inventory, modules, components |
-| Delivery docs | `docs/delivery/` | Initiatives, plans, tasks |
+| Capability | Description | Business Outcome |
+|------------|-------------|------------------|
+| **Workflow Orchestration** | Multi-step workflow execution with deterministic routing | Consistent, repeatable process execution |
+| **LLM Provider Abstraction** | Unified interface to Claude, Codex, Qwen | Vendor flexibility, cost optimization |
+| **Review Loop Management** | Built-in refinement cycles with configurable limits | Quality assurance without infinite loops |
+| **Failure Classification** | Automatic categorization (retryable vs. fatal) | Efficient error handling |
+| **State Persistence** | Job state with artifact tracking | Resume capability, audit trail |
+| **Bootstrap Workflows** | Pre-defined templates for common patterns | Reduced time-to-value |
+| **Documentation Governance** | Automated doc generation and validation | Maintained documentation without drift |
 
 ## Operational Interpretation
 
-### For Development Teams
+### Capability: Workflow Orchestration
 
-**Capability:** Accelerated Delivery
-- Automated code generation and review
-- Consistent implementation patterns
-- Reduced boilerplate writing
-- Faster onboarding via generated docs
+**What It Enables**: Organizations can define and execute complex multi-step processes with consistent behavior across environments.
 
-**Metrics:**
-- Time from initiative to implementation
-- Code review cycle time
-- Documentation coverage percentage
+**Operational Impact**:
+- Delivery planning workflows decompose initiatives into implementable tasks
+- Code review workflows ensure quality gates before merge
+- Documentation workflows keep technical docs synchronized with code
 
-### For Content Teams
+**Metrics**:
+- Workflow completion rate
+- Average steps per workflow
+- Time from initiation to completion
 
-**Capability:** Scalable Content Production
-- Automated asset generation
-- Batch processing capabilities
-- Consistent output organization
-- Quality-controlled pipelines
+### Capability: LLM Provider Abstraction
 
-**Metrics:**
-- Assets generated per hour
-- Revision cycles per asset
-- Pipeline success rate
+**What It Enables**: Organizations can use the optimal LLM for each task without workflow changes.
 
-### For Operations Teams
+**Operational Impact**:
+- Cost optimization (route simple tasks to cheaper models)
+- Capability matching (complex tasks to more capable models)
+- Vendor independence (switch providers without workflow rewrite)
 
-**Capability:** Reliable Automation
-- Monitored execution with heartbeats
-- Automatic failure recovery
-- Centralized logging and visibility
-- Resource-efficient daemon mode
+**Metrics**:
+- Cost per workflow
+- Success rate by model
+- Model utilization distribution
 
-**Metrics:**
-- Worker utilization
-- Failure recovery rate
-- Mean time to completion
+### Capability: Review Loop Management
 
-### For Architecture Teams
+**What It Enables**: Iterative refinement of LLM outputs with human oversight and automatic limits.
 
-**Capability:** Consistent Patterns
-- Standardized workflow definitions
-- Documented architectural decisions
-- Enforced documentation standards
-- Traceable change history
+**Operational Impact**:
+- Quality assurance through structured review
+- Prevention of infinite refinement cycles
+- Clear escalation paths for complex cases
 
-**Metrics:**
-- ADR coverage
-- Documentation standard compliance
-- Workflow reuse across projects
+**Metrics**:
+- Average refinement iterations
+- Review rejection rate
+- Human intervention frequency
+
+### Capability: Failure Classification
+
+**What It Enables**: Automatic handling of transient failures with clear escalation for persistent issues.
+
+**Operational Impact**:
+- Reduced manual intervention for transient issues
+- Fast failure for configuration problems
+- Clear ownership for resolution
+
+**Failure Classes**:
+| Class | Description | Action |
+|-------|-------------|--------|
+| `AUTO_RETRYABLE` | Transient failures (network, rate limits) | Automatic retry with backoff |
+| `HUMAN_RETRY_REQUIRED` | Context or configuration issues | Alert human operator |
+| `FATAL` | Unrecoverable errors | Terminate workflow |
+
+### Capability: State Persistence
+
+**What It Enables**: Long-running workflows can be interrupted and resumed; audit trails for compliance.
+
+**Operational Impact**:
+- Workstation reboot doesn't lose progress
+- Historical analysis of execution patterns
+- Compliance evidence for regulated industries
+
+**State Elements**:
+- Completed steps
+- Artifact paths
+- Review decisions
+- Retry history
+- Model usage
+
+### Capability: Bootstrap Workflows
+
+**What It Enables**: Pre-built workflows for common patterns accelerate adoption.
+
+**Included Families**:
+| Family | Purpose | Time Savings |
+|--------|---------|--------------|
+| `initiative_intake_v1` | Requirements capture and refinement | 2-3 days |
+| `delivery_planning_v1` | Plan and task decomposition | 1-2 days |
+| `task_execution_v1` | Implementation and validation | 1-2 days |
+| `documentation_sync_v1` | Doc maintenance | Ongoing |
+| `architecture_site_v1` | Architecture visualization | 1 day |
+
+### Capability: Documentation Governance
+
+**What It Enables**: Documentation stays synchronized with code through automated generation and validation.
+
+**Operational Impact**:
+- Reduced documentation drift
+- Consistent documentation structure
+- Automatic validation of doc completeness
+
+**Governance Elements**:
+- Protected document sets
+- Template conformance validation
+- Change impact tracking
+
+## Actor Capabilities
+
+### Developer Capabilities
+
+| Capability | Description | Command |
+|------------|-------------|---------|
+| Local workflow run | Execute workflows without backend | `ukbe-run-agent run` |
+| Job inspection | View job state and history | `ukbe-run-agent show-job` |
+| Step retry | Retry failed steps | `ukbe-run-agent retry` |
+| Daemon control | Manage workstation daemon | `ukbe-run-agent daemon` |
+
+### Operator Capabilities
+
+| Capability | Description | Command |
+|------------|-------------|---------|
+| Worker registration | Connect to backend | `ukbe-run-agent worker` |
+| Work claiming | Poll for available work | `ukbe-run-agent poll` |
+| Step execution | Execute claimed steps | `ukbe-run-agent execute-step` |
+| Log streaming | Monitor execution | Daemon logs |
+
+### Workflow Author Capabilities
+
+| Capability | Description | Mechanism |
+|------------|-------------|-----------|
+| Template definition | Define step sequences | `template_groups.py` |
+| Prompt authoring | Create step prompts | `prompts/<step>.txt` |
+| Artifact declaration | Define inputs/outputs | `required_inputs`, `produces` |
+| Routing configuration | Configure review/refine | `on_reject_refine` |
 
 ## Capability Dependencies
 
 ```
 Workflow Orchestration
-    ↓
-LLM Integration → Quality Assurance
-    ↓
-Content Generation ← Distributed Execution
-    ↓
-Documentation Governance
+├── LLM Provider Abstraction
+│   └── Model Mapping Configuration
+├── State Persistence
+│   └── Job Schema Definition
+├── Review Loop Management
+│   └── Routing Configuration
+└── Failure Classification
+    └── Exception Hierarchy
+
+Bootstrap Workflows
+├── Documentation Governance
+│   └── Protected Document Model
+└── Workflow Orchestration
 ```
 
-**Flow Explanation:**
-1. **Workflow Orchestration** is foundational — all other capabilities build on it
-2. **LLM Integration** and **Quality Assurance** are complementary — LLM outputs need quality control
-3. **Distributed Execution** enables scale for both content and documentation
-4. **Documentation Governance** captures patterns and decisions for reuse
+## Capability Evolution
+
+| Phase | Capabilities | Target Users |
+|-------|--------------|--------------|
+| v0.1 (Current) | Core orchestration, local execution, daemon | Developers |
+| v0.2 (Planned) | Enhanced backend integration, metrics | Operators |
+| v1.0 (Target) | Full governance, audit, multi-tenant | Enterprise |
 
 ---
 
-*Generated: 2026-07-04T08:00:00+08:00*
-*Workflow: 00_master_docs_bootstrap_v1 / Step: 03_generate_system_overview_docs*
-*Change ID: 00DOC-GEN-20260704-001*
+*This capability map describes what the platform enables operationally. See `FUNCTIONAL_SPEC.md` for detailed functional behaviors.*

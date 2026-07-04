@@ -1,11 +1,11 @@
 ---
-template_id: CODEBASE-CHANGE-v1
-status: active
-generated: "2026-07-03T23:30:00+08:00"
+title: Codebase Change Template
+managed_by: workflow-generated
 workflow: 10_execution_scaffold_v1
 step: generate_templates
-managed_by: workflow-generated
-version: 1.0.0
+created: 2026-07-04
+template_id: CODEBASE-CHG-v1
+version: 1
 ---
 
 > Managed by workflow: `10_execution_scaffold_v1` / step: `generate_templates`
@@ -13,117 +13,139 @@ version: 1.0.0
 
 # Codebase Change Template
 
+> Artifact key: `CODEBASE_CHANGE_TEMPLATE`
+
 ## Metadata
 
 | Field | Value |
-|-------|-------|
-| **Template ID** | `CODEBASE-CHANGE-v1` |
-| **Change ID** | `[CHANGE-XXXX-v1]` |
-| **Title** | `[Change Title]` |
-| **Status** | `draft` / `in-progress` / `complete` / `rolled-back` |
-| **Task ID** | `[TASK-XXXX-v1]` |
-| **Impl ID** | `[IMPL-XXXX-v1]` |
-| **Author** | `[Agent role or human]` |
-| **Created** | `[YYYY-MM-DDTHH:MM:SS+TZ]` |
-| **Updated** | `[YYYY-MM-DDTHH:MM:SS+TZ]` |
-| **Workflow** | `10_execution_scaffold_v1` |
-| **Step** | `task_execution_v1` |
-| **Managed By** | workflow-generated |
+|---|---|
+| Template ID | `CODEBASE-CHG-v1` |
+| Owner Workflow | `10_execution_scaffold_v1` |
+| Owner Step | `generate_templates` |
+| Scope | Universal baseline — applies to all governed repositories |
+| Status | `active` |
+| Last Verified | 2026-07-04 |
+
+This template defines the canonical structure for change-impact records. Every change-impact artifact must conform to this structure. Change-impact records track three mandatory categories: changed files, updated documentation, and stale documentation removal.
+
+---
+
+## Instance Preamble
+
+```yaml
+---
+title: Change Impact — {CHANGE_ID}
+managed_by: workflow-generated
+workflow: 10_execution_scaffold_v1
+step: codebase_doc
+created: {DATE}
+template_id: CODEBASE-CHG-v1
+change_id: {CHANGE_ID}
+initiative_id: {INITIATIVE_ID}
+plan_id: {PLAN_ID}
+status: current
+---
+```
+
+## Metadata
+
+| Field | Value |
+|---|---|
+| Change ID | `{CHANGE_ID}` |
+| Initiative ID | `{INITIATIVE_ID}` |
+| Plan ID | `{PLAN_ID}` |
+| Created | `{DATE}` |
+| Author / Agent | `{ROLE}` |
+| Status | `current` / `needs_update` / `pending_review` / `superseded` |
+| Architecture Profile Impact | `{PROFILE_IF_CHANGING}` |
 
 ## Change Summary
 
-<!-- Summary of what changed and why. -->
-
-**Description**: [What changed]
-
-**Rationale**: [Why the change was made]
-
-**Impact Level**: `[Low / Medium / High]`
-
-### Architecture Profile Impact
-
-| Dimension | Value |
-|-----------|-------|
-| **Profile Changed** | `[Yes / No]` |
-| **Previous Profile** | `[Previous architecture standard, or "none"]` |
-| **New Profile** | `[New architecture standard, or unchanged]` |
-| **Migration Mode** | `[greenfield / incremental / refactoring / legacy-merge / none]` |
-| **DDD/EDA Impact** | `[Applicable / Not applicable — DDD/EDA are conditional standards, not universal defaults]` |
+| Field | Value |
+|---|---|
+| Title | `{TITLE}` |
+| Summary | `{SUMMARY}` |
+| Change Type | `feature` / `bugfix` / `refactor` / `docs_only` / `config` / `migration` |
+| Scope | `{SCOPE_DESCRIPTION}` |
 
 ## Changed Files
 
-<!-- All files that were changed, created, or deleted. -->
+This section tracks every source file modified, created, or deleted by this change.
 
-| File | Action | Type | Lines Changed | Description |
-|------|--------|------|--------------|-------------|
-| `[path]` | `[created / modified / deleted]` | `[source / test / config / doc]` | `[+N / -N]` | `[Brief description]` |
+| File Path | Change Type | Description | Module |
+|---|---|---|---|
+| `{FILE_PATH}` | `created` / `modified` / `deleted` | `{DESCRIPTION}` | `{MODULE}` |
 
-### Summary Statistics
+### Changed Files Summary
 
-| Metric | Count |
-|--------|-------|
-| **Files Created** | `[N]` |
-| **Files Modified** | `[N]` |
-| **Files Deleted** | `[N]` |
-| **Total Lines Added** | `[N]` |
-| **Total Lines Removed** | `[N]` |
+| Category | Count |
+|---|---|
+| Files Created | `{N}` |
+| Files Modified | `{N}` |
+| Files Deleted | `{N}` |
+| **Total** | `{N}` |
 
 ## Documentation Updates
 
-<!-- All documentation files that were updated as part of this change. -->
+This section tracks every documentation file that was created or updated as a result of this change.
 
-| Document | Action | Description | Validated |
-|----------|--------|-------------|-----------|
-| `[path]` | `[created / updated]` | `[What was updated]` | `[Yes / No]` |
+| Doc Path | Action | Description | Status |
+|---|---|---|---|
+| `{DOC_PATH}` | `created` / `updated` | `{DESCRIPTION}` | `current` / `pending_review` |
 
-### Documentation Update Matrix
+### Documentation Update Summary
 
-| Doc Type | Path | Updated | Validated |
-|----------|------|---------|-----------|
-| **Module doc** | `[docs/codebase/02_modules/*.md]` | `[Yes / No / N/A]` | `[Yes / No]` |
-| **Component doc** | `[docs/codebase/03_components/*.md]` | `[Yes / No / N/A]` | `[Yes / No]` |
-| **Inventory** | `[docs/codebase/01_inventory/codebase_inventory.md]` | `[Yes / No]` | `[Yes / No]` |
-| **This change record** | `[docs/codebase/04_changes/CHANGE-XXXX.md]` | `[Yes]` | `[Yes]` |
+| Category | Count |
+|---|---|
+| Docs Created | `{N}` |
+| Docs Updated | `{N}` |
+| **Total** | `{N}` |
 
 ## Stale Documentation Removal
 
-<!-- Documentation that was identified as stale and removed or flagged. -->
+This section tracks documentation that was identified as stale and removed or superseded as a result of this change.
 
-| Document | Reason for Removal | Action Taken | Validated |
-|----------|-------------------|-------------|-----------|
-| `[path]` | `[Reason content is outdated]` | `[removed / flagged / updated]` | `[Yes / No]` |
+| Stale Doc Path | Reason for Staleness | Action Taken | Superseded By |
+|---|---|---|---|
+| `{DOC_PATH}` | `{REASON}` | `removed` / `superseded` / `archived` | `{NEW_PATH_OR_NA}` |
 
-### Stale Documentation Detection
+### Stale Doc Removal Summary
 
-| Detection Method | Result |
-|-----------------|--------|
-| **Cross-reference validation** | `[All links valid / Broken links found]` |
-| **Content-to-code comparison** | `[Content accurate / Discrepancies found]` |
-| **Status currency check** | `[All current / Some stale]` |
+| Category | Count |
+|---|---|
+| Docs Removed | `{N}` |
+| Docs Superseded | `{N}` |
+| Docs Archived | `{N}` |
+| **Total** | `{N}` |
 
 ## Documentation Freshness Verification
 
-<!-- Verify that all documentation is fresh and synchronized. -->
+This section records the verification that all touched modules have fresh documentation after this change.
 
-| Verification Check | Result | Details |
-|-------------------|--------|---------|
-| **Template ID consistency** | `[Pass / Fail]` | `[All docs use registry template IDs]` |
-| **Status currency** | `[Pass / Fail]` | `[All statuses reflect current state]` |
-| **Cross-reference validity** | `[Pass / Fail]` | `[All links resolve]` |
-| **No stale content** | `[Pass / Fail]` | `[No outdated content remains]` |
-| **Inventory synchronization** | `[Pass / Fail]` | `[Inventory reflects all changed files]` |
+| Module | Doc Path | Verified? | Verification Method | Verified By |
+|---|---|---|---|---|
+| `{MODULE}` | `{DOC_PATH}` | `yes` / `no` | `{METHOD}` | `{VERIFIER}` |
+
+### Freshness Check Summary
+
+| Check | Result | Notes |
+|---|---|---|
+| All touched modules have current docs | `pass` / `fail` | {NOTES} |
+| No stale docs remain | `pass` / `fail` | {NOTES} |
+| Change-impact record complete | `pass` / `fail` | {NOTES} |
 
 ## Cross-References
 
-<!-- Related documents and records. -->
-
-| Reference Type | ID | Path |
-|---------------|----|------|
-| **Task** | `[TASK-XXXX-v1]` | `[path]` |
-| **Implementation** | `[IMPL-XXXX-v1]` | `[path]` |
-| **Review** | `[REVIEW-XXXX-v1]` | `[path]` |
-| **Validation** | `[VALID-XXXX-v1]` | `[path]` |
+| Reference | Location |
+|---|---|
+| Source Initiative | `{INITIATIVE_PATH}` |
+| Source Plan | `{PLAN_PATH}` |
+| Related Module Docs | `{MODULE_DOC_PATHS}` |
+| Related Component Docs | `{COMPONENT_DOC_PATHS}` |
 
 ## Notes
 
-<!-- Additional context, decisions, or references. -->
+- This change-impact record MUST include entries in all three mandatory sections: Changed Files, Documentation Updates, and Stale Documentation Removal.
+- If no documentation was updated, the Documentation Updates section MUST state "No documentation updates" explicitly.
+- If no stale documentation was removed, the Stale Documentation Removal section MUST state "No stale documentation removed" explicitly.
+- {NOTE_2}

@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import Any
 
 from ..action_result import ActionResult
+from ..doc_paths import codebase_doc_rel, delivery_doc_rel, system_doc_rel
 from ..runtime_context import write_meta_sidecar
 from .documentation_validation_core import DocumentationValidationPlan, validate_documentation_plan
 
@@ -25,26 +26,26 @@ logger = logging.getLogger(__name__)
 # --- Constants ---
 
 DELIVERY_FOLDERS = [
-    "docs/delivery/01_initiatives",
-    "docs/delivery/02_plans",
-    "docs/delivery/03_tasks",
-    "docs/delivery/04_implementation_plans",
-    "docs/delivery/05_reviews",
-    "docs/delivery/06_memory",
-    "docs/codebase/00_standards",
-    "docs/codebase/00_templates",
-    "docs/codebase/01_inventory",
-    "docs/codebase/02_modules",
-    "docs/codebase/03_components",
-    "docs/codebase/04_changes",
-    "docs/codebase/05_archives",
-    "docs/system/00_governance",
-    "docs/system/00_governance/bootstrap",
+    delivery_doc_rel("01_initiatives"),
+    delivery_doc_rel("02_plans"),
+    delivery_doc_rel("03_tasks"),
+    delivery_doc_rel("04_implementation_plans"),
+    delivery_doc_rel("05_reviews"),
+    delivery_doc_rel("06_memory"),
+    codebase_doc_rel("00_standards"),
+    codebase_doc_rel("00_templates"),
+    codebase_doc_rel("01_inventory"),
+    codebase_doc_rel("02_modules"),
+    codebase_doc_rel("03_components"),
+    codebase_doc_rel("04_changes"),
+    codebase_doc_rel("05_archives"),
+    system_doc_rel(),
+    system_doc_rel("templates"),
 ]
 
-DELIVERY_TEMPLATE_ROOT = Path("docs/system/00_governance/bootstrap/templates/delivery")
-CODEBASE_TEMPLATE_ROOT = Path("docs/system/00_governance/bootstrap/templates/codebase")
-DELIVERY_AGENT_ROOT = Path("docs/delivery/00_standards")
+DELIVERY_TEMPLATE_ROOT = Path(system_doc_rel("templates/delivery"))
+CODEBASE_TEMPLATE_ROOT = Path(system_doc_rel("templates/codebase"))
+DELIVERY_AGENT_ROOT = Path(delivery_doc_rel("00_standards"))
 
 REQUIRED_TEMPLATES = {
     "DELIVERY_TEMPLATE_REGISTRY": "01_delivery_template_registry.md",
@@ -59,31 +60,31 @@ REQUIRED_TEMPLATES = {
 }
 
 REQUIRED_CODEBASE_FILES = {
-    "CODEBASE_DOC_SOP": "docs/codebase/00_standards/CODEBASE_DOC_SOP_v1.md",
-    "CODEBASE_DOC_STATUS_RULES": "docs/codebase/00_standards/CODEBASE_DOC_STATUS_RULES_v1.md",
-    "CODEBASE_TEMPLATE_REGISTRY": "docs/system/00_governance/bootstrap/templates/codebase/01_codebase_template_registry.md",
-    "CODEBASE_INVENTORY_TEMPLATE": "docs/system/00_governance/bootstrap/templates/codebase/02_codebase_inventory_template.md",
-    "CODEBASE_MODULE_TEMPLATE": "docs/system/00_governance/bootstrap/templates/codebase/03_codebase_module_template.md",
-    "CODEBASE_COMPONENT_TEMPLATE": "docs/system/00_governance/bootstrap/templates/codebase/04_codebase_component_template.md",
-    "CODEBASE_CHANGE_TEMPLATE": "docs/system/00_governance/bootstrap/templates/codebase/05_codebase_change_template.md",
-    "CODEBASE_INVENTORY": "docs/codebase/01_inventory/codebase_inventory.md",
+    "CODEBASE_DOC_SOP": codebase_doc_rel("00_standards/CODEBASE_DOC_SOP_v1.md"),
+    "CODEBASE_DOC_STATUS_RULES": codebase_doc_rel("00_standards/CODEBASE_DOC_STATUS_RULES_v1.md"),
+    "CODEBASE_TEMPLATE_REGISTRY": system_doc_rel("templates/codebase/01_codebase_template_registry.md"),
+    "CODEBASE_INVENTORY_TEMPLATE": system_doc_rel("templates/codebase/02_codebase_inventory_template.md"),
+    "CODEBASE_MODULE_TEMPLATE": system_doc_rel("templates/codebase/03_codebase_module_template.md"),
+    "CODEBASE_COMPONENT_TEMPLATE": system_doc_rel("templates/codebase/04_codebase_component_template.md"),
+    "CODEBASE_CHANGE_TEMPLATE": system_doc_rel("templates/codebase/05_codebase_change_template.md"),
+    "CODEBASE_INVENTORY": codebase_doc_rel("01_inventory/codebase_inventory.md"),
 }
 
 REQUIRED_SYSTEM_FILES = {
-    "PROJECT_ANALYSIS": "docs/system/00_governance/bootstrap/project_analysis.md",
-    "SYSTEM_DOC_STANDARD": "docs/system/00_governance/bootstrap/DOCUMENTATION_STANDARD.md",
-    "SYSTEM_DOCS_INDEX": "docs/system/00_governance/bootstrap/README.md",
-    "SYSTEM_OVERVIEW": "docs/system/00_governance/bootstrap/SYSTEM_OVERVIEW.md",
-    "BUSINESS_CAPABILITIES": "docs/system/00_governance/bootstrap/BUSINESS_CAPABILITIES.md",
-    "FUNCTIONAL_SPEC": "docs/system/00_governance/bootstrap/FUNCTIONAL_SPEC.md",
-    "NON_FUNCTIONAL_REQUIREMENTS": "docs/system/00_governance/bootstrap/NON_FUNCTIONAL_REQUIREMENTS.md",
-    "SYSTEM_CONTEXT": "docs/system/00_governance/bootstrap/SYSTEM_CONTEXT.md",
-    "COMPONENT_ARCHITECTURE": "docs/system/00_governance/bootstrap/COMPONENT_ARCHITECTURE.md",
-    "DECISION_LOG": "docs/system/00_governance/bootstrap/DECISION_LOG.md",
-    "SYSTEM_FILE_STRUCTURE": "docs/system/00_governance/bootstrap/SYSTEM_FILE_STRUCTURE.md",
-    "DEVELOPER_GUIDE": "docs/system/00_governance/bootstrap/DEVELOPER_GUIDE.md",
-    "RUNBOOK": "docs/system/00_governance/bootstrap/RUNBOOK.md",
-    "EXISTING_REPO_WORKFLOW_SOP": "docs/system/00_governance/bootstrap/EXISTING_REPO_WORKFLOW_SOP.md",
+    "PROJECT_ANALYSIS": system_doc_rel("project_analysis.md"),
+    "SYSTEM_DOC_STANDARD": system_doc_rel("DOCUMENTATION_STANDARD.md"),
+    "SYSTEM_DOCS_INDEX": system_doc_rel("README.md"),
+    "SYSTEM_OVERVIEW": system_doc_rel("SYSTEM_OVERVIEW.md"),
+    "BUSINESS_CAPABILITIES": system_doc_rel("BUSINESS_CAPABILITIES.md"),
+    "FUNCTIONAL_SPEC": system_doc_rel("FUNCTIONAL_SPEC.md"),
+    "NON_FUNCTIONAL_REQUIREMENTS": system_doc_rel("NON_FUNCTIONAL_REQUIREMENTS.md"),
+    "SYSTEM_CONTEXT": system_doc_rel("SYSTEM_CONTEXT.md"),
+    "COMPONENT_ARCHITECTURE": system_doc_rel("COMPONENT_ARCHITECTURE.md"),
+    "DECISION_LOG": system_doc_rel("DECISION_LOG.md"),
+    "SYSTEM_FILE_STRUCTURE": system_doc_rel("SYSTEM_FILE_STRUCTURE.md"),
+    "DEVELOPER_GUIDE": system_doc_rel("DEVELOPER_GUIDE.md"),
+    "RUNBOOK": system_doc_rel("RUNBOOK.md"),
+    "EXISTING_REPO_WORKFLOW_SOP": system_doc_rel("EXISTING_REPO_WORKFLOW_SOP.md"),
 }
 
 
@@ -184,33 +185,33 @@ CODEBASE_STATUS_RULES_REQUIRED_SECTIONS = [
 ]
 
 SYSTEM_DOC_REQUIRED_SECTIONS: dict[str, list[str]] = {
-    "docs/system/00_governance/bootstrap/project_analysis.md": [
+    system_doc_rel("project_analysis.md"): [
         "Repo Overview",
         "Codebase Structure",
         "Operational Risks",
         "Architectural Observations",
         "Architecture Posture",
     ],
-    "docs/system/00_governance/bootstrap/DOCUMENTATION_STANDARD.md": [
+    system_doc_rel("DOCUMENTATION_STANDARD.md"): [
         "Purpose", "Audience Model", "Document Set", "Update Triggers", "Validation",
         "Architecture Baseline", "Repo-Selected Profile", "Migration Mode", "Conditional Standards",
     ],
-    "docs/system/00_governance/bootstrap/README.md": [
+    system_doc_rel("README.md"): [
         "System Documentation Index", "Audience Views", "Document Map",
     ],
-    "docs/system/00_governance/bootstrap/SYSTEM_OVERVIEW.md": [
+    system_doc_rel("SYSTEM_OVERVIEW.md"): [
         "Purpose", "Scope", "Primary Flows", "Key Risks", "Architecture Profile",
     ],
-    "docs/system/00_governance/bootstrap/SYSTEM_FILE_STRUCTURE.md": [
+    system_doc_rel("SYSTEM_FILE_STRUCTURE.md"): [
         "Repository Structure", "Top-Level Directories", "Documentation Locations",
     ],
-    "docs/system/00_governance/bootstrap/DEVELOPER_GUIDE.md": [
+    system_doc_rel("DEVELOPER_GUIDE.md"): [
         "Development Workflow", "Key Commands", "Documentation Responsibilities", "Architecture Posture",
     ],
-    "docs/system/00_governance/bootstrap/RUNBOOK.md": [
+    system_doc_rel("RUNBOOK.md"): [
         "Operations Scope", "Routine Procedures", "Failure Handling",
     ],
-    "docs/system/00_governance/bootstrap/EXISTING_REPO_WORKFLOW_SOP.md": [
+    system_doc_rel("EXISTING_REPO_WORKFLOW_SOP.md"): [
         "Purpose", "First-Time Setup", "Normal Governed Delivery",
         "Drift Reconciliation", "Governance Refresh", "Batch Files", "Notes",
     ],
@@ -407,10 +408,10 @@ def _validate_codebase_docs(project_root: Path) -> list[dict[str, Any]]:
                 "detail": "present" if ok else "missing",
             })
 
-    deprecated_dir = project_root / "docs" / "delivery" / "07_master_prompts"
+    deprecated_dir = project_root / delivery_doc_rel("07_master_prompts")
     results.append({
         "check": "deprecated_master_prompts_absent",
-        "path": "docs/delivery/07_master_prompts",
+        "path": delivery_doc_rel("07_master_prompts"),
         "ok": not deprecated_dir.exists(),
         "detail": "absent as expected" if not deprecated_dir.exists() else "deprecated folder still exists",
     })
@@ -454,7 +455,7 @@ def _validate_system_docs(project_root: Path) -> list[dict[str, Any]]:
 def _validate_sop(project_root: Path) -> list[dict[str, Any]]:
     """Validate WORKFLOW_SOP_v1.md structure."""
     results = []
-    sop_path = "docs/system/00_governance/bootstrap/WORKFLOW_SOP_v1.md"
+    sop_path = system_doc_rel("WORKFLOW_SOP_v1.md")
 
     ok, detail = _check_file_exists(project_root, sop_path)
     results.append({
@@ -496,7 +497,7 @@ def _validate_sop(project_root: Path) -> list[dict[str, Any]]:
 def _validate_status_rules(project_root: Path) -> list[dict[str, Any]]:
     """Validate DELIVERY_STATUS_RULES_v1.md structure."""
     results = []
-    rules_path = "docs/system/00_governance/bootstrap/DELIVERY_STATUS_RULES_v1.md"
+    rules_path = system_doc_rel("DELIVERY_STATUS_RULES_v1.md")
     ok, detail = _check_file_exists(project_root, rules_path)
     if ok:
         content = _read_file(project_root, rules_path)
@@ -740,8 +741,8 @@ def validate_delivery_docs(
             "DELIVERY_AGENT_MEMORY_MANAGER.md",
         ]]
         + [
-            "docs/system/00_governance/bootstrap/WORKFLOW_SOP_v1.md",
-            "docs/system/00_governance/bootstrap/DELIVERY_STATUS_RULES_v1.md",
+            system_doc_rel("WORKFLOW_SOP_v1.md"),
+            system_doc_rel("DELIVERY_STATUS_RULES_v1.md"),
         ]
     )
 
@@ -750,11 +751,11 @@ def validate_delivery_docs(
         str(DELIVERY_TEMPLATE_ROOT / name): sections
         for name, sections in TEMPLATE_SECTION_REQUIREMENTS.items()
     }.items()})
-    section_requirements.update({f"docs/system/00_governance/bootstrap/templates/codebase/{name}": sections for name, sections in CODEBASE_TEMPLATE_SECTION_REQUIREMENTS.items()})
-    section_requirements["docs/system/00_governance/bootstrap/WORKFLOW_SOP_v1.md"] = SOP_REQUIRED_SECTIONS
-    section_requirements["docs/system/00_governance/bootstrap/DELIVERY_STATUS_RULES_v1.md"] = STATUS_RULES_REQUIRED_SECTIONS
-    section_requirements["docs/codebase/00_standards/CODEBASE_DOC_SOP_v1.md"] = CODEBASE_SOP_REQUIRED_SECTIONS
-    section_requirements["docs/codebase/00_standards/CODEBASE_DOC_STATUS_RULES_v1.md"] = CODEBASE_STATUS_RULES_REQUIRED_SECTIONS
+    section_requirements.update({system_doc_rel(f"templates/codebase/{name}"): sections for name, sections in CODEBASE_TEMPLATE_SECTION_REQUIREMENTS.items()})
+    section_requirements[system_doc_rel("WORKFLOW_SOP_v1.md")] = SOP_REQUIRED_SECTIONS
+    section_requirements[system_doc_rel("DELIVERY_STATUS_RULES_v1.md")] = STATUS_RULES_REQUIRED_SECTIONS
+    section_requirements[codebase_doc_rel("00_standards/CODEBASE_DOC_SOP_v1.md")] = CODEBASE_SOP_REQUIRED_SECTIONS
+    section_requirements[codebase_doc_rel("00_standards/CODEBASE_DOC_STATUS_RULES_v1.md")] = CODEBASE_STATUS_RULES_REQUIRED_SECTIONS
 
     plan = DocumentationValidationPlan(
         required_folders=tuple(DELIVERY_FOLDERS),
@@ -783,7 +784,7 @@ def validate_delivery_docs(
         "schema_version": "v2",
         "validated_at": datetime.now().astimezone().isoformat(timespec="seconds"),
         "project_root": str(project_root),
-        "delivery_root": "docs/delivery",
+        "delivery_root": delivery_doc_rel(),
         "summary": {
             "total_checks": total,
             "passed": passed,
@@ -798,7 +799,7 @@ def validate_delivery_docs(
     folder_map_rel = (
         context.get("DELIVERY_FOLDER_MAP")
         or context.get("DELIVERY_FOLDER_MAP_PATH")
-        or "docs/delivery/DELIVERY_FOLDER_MAP.json"
+        or delivery_doc_rel("DELIVERY_FOLDER_MAP.json")
     )
     meta_json_rel = context.get("DELIVERY_FOLDER_MAP_METAJSON", "")
 

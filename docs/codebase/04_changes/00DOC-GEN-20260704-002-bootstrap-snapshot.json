@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-03T22:32:29+08:00",
+  "generated_at": "2026-07-04T10:46:55+08:00",
   "mode": "bootstrap",
   "workflow_name": "00_master_docs_bootstrap_v1",
   "bundle_profile": "core+workflow",
@@ -8,7 +8,7 @@
   "architecture_profile": "provisional",
   "architecture_target_profile": "repo-selected",
   "architecture_migration_mode": "targeted_migration",
-  "job_id": "00DOC-GEN-20260703-006",
+  "job_id": "00DOC-GEN-20260704-002",
   "step": "00_scan_repo_codebase",
   "project_root": "D:\\MyProjectSpace\\01_Workflows\\agent-runner-v2",
   "items": [
@@ -229,6 +229,15 @@
       "last_verified_by_change": "bootstrap/reconcile scan"
     },
     {
+      "rel_path": "agent_runner_v2/actions/publish_architecture_site.py",
+      "category": "python modules",
+      "subcategory": "actions",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-actions-publish-architecture-site.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
       "rel_path": "agent_runner_v2/actions/scan_repo_codebase.py",
       "category": "python modules",
       "subcategory": "actions",
@@ -265,6 +274,15 @@
       "last_verified_by_change": "bootstrap/reconcile scan"
     },
     {
+      "rel_path": "agent_runner_v2/actions/validate_architecture_site.py",
+      "category": "python modules",
+      "subcategory": "actions",
+      "doc_mode": "full",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-actions-validate-architecture-site.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
       "rel_path": "agent_runner_v2/actions/validate_codebase_docs.py",
       "category": "python modules",
       "subcategory": "actions",
@@ -298,6 +316,15 @@
       "doc_mode": "summary",
       "status": "current",
       "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-approve-commands.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/architecture_site.py",
+      "category": "python modules",
+      "subcategory": "support",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-architecture-site.md",
       "last_verified_by_change": "bootstrap/reconcile scan"
     },
     {
@@ -1111,6 +1138,15 @@
       "last_verified_by_change": "bootstrap/reconcile scan"
     },
     {
+      "rel_path": "agent_runner_v2/doc_paths.py",
+      "category": "python modules",
+      "subcategory": "support",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-doc-paths.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
       "rel_path": "agent_runner_v2/documentation_guardrails.py",
       "category": "python modules",
       "subcategory": "support",
@@ -1597,6 +1633,15 @@
       "last_verified_by_change": "bootstrap/reconcile scan"
     },
     {
+      "rel_path": "docs/codebase/02_modules/agent-runner-v2-actions-publish-architecture-site.md",
+      "category": "documentation files",
+      "subcategory": "docs",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
       "rel_path": "docs/codebase/02_modules/agent-runner-v2-actions-scan-repo-codebase.md",
       "category": "documentation files",
       "subcategory": "docs",
@@ -1633,6 +1678,15 @@
       "last_verified_by_change": "bootstrap/reconcile scan"
     },
     {
+      "rel_path": "docs/codebase/02_modules/agent-runner-v2-actions-validate-architecture-site.md",
+      "category": "documentation files",
+      "subcategory": "docs",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
       "rel_path": "docs/codebase/02_modules/agent-runner-v2-actions-validate-codebase-docs.md",
       "category": "documentation files",
       "subcategory": "docs",
@@ -1661,6 +1715,15 @@
     },
     {
       "rel_path": "docs/codebase/02_modules/agent-runner-v2-approve-commands.md",
+      "category": "documentation files",
+      "subcategory": "docs",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "docs/codebase/02_modules/agent-runner-v2-architecture-site.md",
       "category": "documentation files",
       "subcategory": "docs",
       "doc_mode": "summary",
@@ -1742,6 +1805,15 @@
     },
     {
       "rel_path": "docs/codebase/02_modules/agent-runner-v2-daemon.md",
+      "category": "documentation files",
+      "subcategory": "docs",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "docs/codebase/02_modules/agent-runner-v2-doc-paths.md",
       "category": "documentation files",
       "subcategory": "docs",
       "doc_mode": "summary",
@@ -1984,7 +2056,7 @@
       "last_verified_by_change": "bootstrap/reconcile scan"
     },
     {
-      "rel_path": "docs/codebase/04_changes/00DOC-GEN-20260703-005-bootstrap-snapshot.json",
+      "rel_path": "docs/codebase/04_changes/00DOC-GEN-20260704-001-bootstrap-snapshot.json",
       "category": "configuration/data files",
       "subcategory": "config",
       "doc_mode": "summary",
@@ -1993,7 +2065,7 @@
       "last_verified_by_change": "bootstrap/reconcile scan"
     },
     {
-      "rel_path": "docs/codebase/04_changes/00DOC-GEN-20260703-005-bootstrap.md",
+      "rel_path": "docs/codebase/04_changes/00DOC-GEN-20260704-001-bootstrap.md",
       "category": "documentation files",
       "subcategory": "docs",
       "doc_mode": "summary",
@@ -2002,21 +2074,12 @@
       "last_verified_by_change": "bootstrap/reconcile scan"
     },
     {
-      "rel_path": "docs/codebase/04_changes/DOCSYNC-20260703_codebase-doc-update.meta.json",
+      "rel_path": "docs/codebase/04_changes/DOCSYNC-20260704_codebase-doc-update.meta.json",
       "category": "configuration/data files",
       "subcategory": "config",
       "doc_mode": "summary",
       "status": "current",
       "owner_doc_path": "docs/codebase/03_components/config-and-data.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/system/00_governance/bootstrap/project_analysis.md",
-      "category": "documentation files",
-      "subcategory": "docs",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
       "last_verified_by_change": "bootstrap/reconcile scan"
     },
     {
@@ -2344,6 +2407,15 @@
       "last_verified_by_change": "bootstrap/reconcile scan"
     },
     {
+      "rel_path": "tests/test_architecture_site.py",
+      "category": "test files",
+      "subcategory": "tests",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/tests-suite.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
       "rel_path": "tests/test_backend_worker_mode.py",
       "category": "test files",
       "subcategory": "tests",
@@ -2460,6 +2532,7 @@
       "constants": [],
       "test_references": [
         "tests/conftest.py",
+        "tests/test_architecture_site.py",
         "tests/test_backend_worker_mode.py",
         "tests/test_bundle_loader.py",
         "tests/test_codebase_docs.py",
@@ -2508,10 +2581,12 @@
       "external_imports": [
         "finalize_bootstrap",
         "prepare_delivery_scaffold",
+        "publish_architecture_site",
         "scan_repo_codebase",
         "submit_comfyui",
         "sync_codebase_docs",
         "sync_system_docs",
+        "validate_architecture_site",
         "validate_codebase_docs",
         "validate_delivery_docs",
         "validate_system_docs"
@@ -2521,6 +2596,7 @@
       "constants": [],
       "test_references": [
         "tests/conftest.py",
+        "tests/test_architecture_site.py",
         "tests/test_backend_worker_mode.py",
         "tests/test_bundle_loader.py",
         "tests/test_codebase_docs.py",
@@ -2897,6 +2973,40 @@
       "test_references": []
     },
     {
+      "rel_path": "agent_runner_v2/actions/publish_architecture_site.py",
+      "module_name": "agent_runner_v2.actions.publish_architecture_site",
+      "module_area": "actions",
+      "doc_mode": "full",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-actions-publish-architecture-site.md",
+      "summary": "Auto-generated baseline module documentation.",
+      "module_doc": "",
+      "stdlib_imports": [
+        "__future__",
+        "json",
+        "pathlib"
+      ],
+      "local_imports": [],
+      "external_imports": [
+        "action_result",
+        "architecture_site",
+        "codebase_docs",
+        "runtime_context"
+      ],
+      "public_functions": [
+        {
+          "name": "publish_architecture_site",
+          "signature": "()",
+          "summary": ""
+        }
+      ],
+      "public_classes": [],
+      "constants": [],
+      "test_references": [
+        "tests/test_architecture_site.py",
+        "tests/test_documentation_governance.py"
+      ]
+    },
+    {
       "rel_path": "agent_runner_v2/actions/scan_repo_codebase.py",
       "module_name": "agent_runner_v2.actions.scan_repo_codebase",
       "module_area": "actions",
@@ -2985,6 +3095,7 @@
       "external_imports": [
         "action_result",
         "codebase_docs",
+        "doc_paths",
         "runtime_context"
       ],
       "public_functions": [
@@ -2997,7 +3108,8 @@
       "public_classes": [],
       "constants": [],
       "test_references": [
-        "tests/test_bundle_loader.py"
+        "tests/test_bundle_loader.py",
+        "tests/test_documentation_governance.py"
       ]
     },
     {
@@ -3019,6 +3131,7 @@
       "external_imports": [
         "action_result",
         "codebase_docs",
+        "doc_paths",
         "runtime_context",
         "system_docs"
       ],
@@ -3033,6 +3146,38 @@
       "constants": [],
       "test_references": [
         "tests/test_bundle_loader.py"
+      ]
+    },
+    {
+      "rel_path": "agent_runner_v2/actions/validate_architecture_site.py",
+      "module_name": "agent_runner_v2.actions.validate_architecture_site",
+      "module_area": "actions",
+      "doc_mode": "full",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-actions-validate-architecture-site.md",
+      "summary": "Auto-generated baseline module documentation.",
+      "module_doc": "",
+      "stdlib_imports": [
+        "__future__",
+        "pathlib"
+      ],
+      "local_imports": [],
+      "external_imports": [
+        "action_result",
+        "architecture_site",
+        "runtime_context"
+      ],
+      "public_functions": [
+        {
+          "name": "validate_architecture_site",
+          "signature": "()",
+          "summary": ""
+        }
+      ],
+      "public_classes": [],
+      "constants": [],
+      "test_references": [
+        "tests/test_architecture_site.py",
+        "tests/test_documentation_governance.py"
       ]
     },
     {
@@ -3053,6 +3198,7 @@
       "external_imports": [
         "action_result",
         "codebase_docs",
+        "doc_paths",
         "runtime_context"
       ],
       "public_functions": [
@@ -3065,7 +3211,8 @@
       "public_classes": [],
       "constants": [],
       "test_references": [
-        "tests/test_bundle_loader.py"
+        "tests/test_bundle_loader.py",
+        "tests/test_documentation_governance.py"
       ]
     },
     {
@@ -3088,6 +3235,7 @@
       "local_imports": [],
       "external_imports": [
         "action_result",
+        "doc_paths",
         "documentation_validation_core",
         "runtime_context"
       ],
@@ -3136,6 +3284,7 @@
       "external_imports": [
         "action_result",
         "codebase_docs",
+        "doc_paths",
         "documentation_validation_core",
         "runtime_context",
         "system_docs"
@@ -3183,6 +3332,41 @@
       "public_classes": [],
       "constants": [],
       "test_references": []
+    },
+    {
+      "rel_path": "agent_runner_v2/architecture_site.py",
+      "module_name": "agent_runner_v2.architecture_site",
+      "module_area": "support",
+      "doc_mode": "summary",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-architecture-site.md",
+      "summary": "Auto-generated baseline module documentation.",
+      "module_doc": "",
+      "stdlib_imports": [
+        "__future__",
+        "html",
+        "pathlib",
+        "typing"
+      ],
+      "local_imports": [],
+      "external_imports": [
+        "doc_paths"
+      ],
+      "public_functions": [
+        {
+          "name": "render_architecture_site",
+          "signature": "(snapshot, project_root)",
+          "summary": ""
+        }
+      ],
+      "public_classes": [],
+      "constants": [
+        "SITE_ROOT",
+        "SITE_PAGES"
+      ],
+      "test_references": [
+        "tests/test_architecture_site.py",
+        "tests/test_documentation_governance.py"
+      ]
     },
     {
       "rel_path": "agent_runner_v2/artifact_paths.py",
@@ -3274,6 +3458,7 @@
       "constants": [],
       "test_references": [
         "tests/conftest.py",
+        "tests/test_architecture_site.py",
         "tests/test_bundle_loader.py",
         "tests/test_documentation_governance.py"
       ]
@@ -3401,7 +3586,9 @@
         "typing"
       ],
       "local_imports": [],
-      "external_imports": [],
+      "external_imports": [
+        "doc_paths"
+      ],
       "public_functions": [
         {
           "name": "bundle_manifest",
@@ -3496,6 +3683,7 @@
       "local_imports": [],
       "external_imports": [
         "bundle_loader",
+        "doc_paths",
         "runtime_context"
       ],
       "public_functions": [
@@ -3663,6 +3851,108 @@
       ]
     },
     {
+      "rel_path": "agent_runner_v2/doc_paths.py",
+      "module_name": "agent_runner_v2.doc_paths",
+      "module_area": "support",
+      "doc_mode": "summary",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-doc-paths.md",
+      "summary": "Auto-generated baseline module documentation.",
+      "module_doc": "",
+      "stdlib_imports": [
+        "__future__",
+        "pathlib"
+      ],
+      "local_imports": [],
+      "external_imports": [],
+      "public_functions": [
+        {
+          "name": "repo_doc_rel",
+          "signature": "()",
+          "summary": ""
+        },
+        {
+          "name": "docs_root_rel",
+          "signature": "()",
+          "summary": ""
+        },
+        {
+          "name": "system_doc_rel",
+          "signature": "()",
+          "summary": ""
+        },
+        {
+          "name": "system_template_rel",
+          "signature": "()",
+          "summary": ""
+        },
+        {
+          "name": "system_delivery_template_rel",
+          "signature": "()",
+          "summary": ""
+        },
+        {
+          "name": "system_codebase_template_rel",
+          "signature": "()",
+          "summary": ""
+        },
+        {
+          "name": "codebase_doc_rel",
+          "signature": "()",
+          "summary": ""
+        },
+        {
+          "name": "delivery_doc_rel",
+          "signature": "()",
+          "summary": ""
+        },
+        {
+          "name": "architecture_site_rel",
+          "signature": "()",
+          "summary": ""
+        },
+        {
+          "name": "master_bootstrap_docs",
+          "signature": "()",
+          "summary": ""
+        },
+        {
+          "name": "delivery_scaffold_docs",
+          "signature": "()",
+          "summary": ""
+        },
+        {
+          "name": "codebase_docs",
+          "signature": "()",
+          "summary": ""
+        },
+        {
+          "name": "architecture_site_pages",
+          "signature": "()",
+          "summary": ""
+        },
+        {
+          "name": "prompt_literal_aliases",
+          "signature": "()",
+          "summary": "Map literal repo-relative paths to prompt placeholders."
+        }
+      ],
+      "public_classes": [],
+      "constants": [
+        "SYSTEM_DOC_ROOT",
+        "DOCS_ROOT",
+        "SYSTEM_TEMPLATE_ROOT",
+        "SYSTEM_DELIVERY_TEMPLATE_ROOT",
+        "SYSTEM_CODEBASE_TEMPLATE_ROOT",
+        "CODEBASE_DOC_ROOT",
+        "DELIVERY_DOC_ROOT",
+        "ARCHITECTURE_SITE_ROOT"
+      ],
+      "test_references": [
+        "tests/test_documentation_governance.py",
+        "tests/test_documentation_guardrails_cleanup.py"
+      ]
+    },
+    {
       "rel_path": "agent_runner_v2/documentation_guardrails.py",
       "module_name": "agent_runner_v2.documentation_guardrails",
       "module_area": "support",
@@ -3676,7 +3966,9 @@
         "typing"
       ],
       "local_imports": [],
-      "external_imports": [],
+      "external_imports": [
+        "doc_paths"
+      ],
       "public_functions": [
         {
           "name": "managed_banner",
@@ -3719,6 +4011,11 @@
           "summary": ""
         },
         {
+          "name": "architecture_site_doc_paths",
+          "signature": "()",
+          "summary": ""
+        },
+        {
           "name": "workflow_generated_doc_paths",
           "signature": "()",
           "summary": ""
@@ -3748,6 +4045,7 @@
       "constants": [
         "MASTER_BOOTSTRAP_WORKFLOW",
         "EXECUTION_SCAFFOLD_WORKFLOW",
+        "ARCHITECTURE_SITE_WORKFLOW",
         "WORKFLOW_GENERATED_MARKER",
         "DEFAULT_LEGACY_QUARANTINE_DIR"
       ],
@@ -3927,6 +4225,7 @@
       ],
       "local_imports": [],
       "external_imports": [
+        "doc_paths",
         "documentation_guardrails",
         "exceptions",
         "runtime_context"
@@ -4320,6 +4619,7 @@
       "external_imports": [
         "backend_client",
         "bundle_loader",
+        "doc_paths",
         "documentation_guardrails",
         "exceptions",
         "execution_request",
@@ -4385,10 +4685,12 @@
         "actions.prepare_delivery_scaffold",
         "actions.promote_artifact",
         "actions.promote_init",
+        "actions.publish_architecture_site",
         "actions.scan_repo_codebase",
         "actions.submit_comfyui",
         "actions.sync_codebase_docs",
         "actions.sync_system_docs",
+        "actions.validate_architecture_site",
         "actions.validate_codebase_docs",
         "actions.validate_delivery_docs",
         "actions.validate_system_docs"
@@ -4545,6 +4847,31 @@
           "summary": "Resolve a path using the repo/runtime namespace convention."
         },
         {
+          "name": "repo_doc_root",
+          "signature": "()",
+          "summary": ""
+        },
+        {
+          "name": "system_doc_root",
+          "signature": "()",
+          "summary": ""
+        },
+        {
+          "name": "codebase_doc_root",
+          "signature": "()",
+          "summary": ""
+        },
+        {
+          "name": "delivery_doc_root",
+          "signature": "()",
+          "summary": ""
+        },
+        {
+          "name": "architecture_site_root",
+          "signature": "()",
+          "summary": ""
+        },
+        {
           "name": "artifact_rel_to_meta_rel",
           "signature": "(artifact_rel)",
           "summary": "Return the meta.json sibling path for a repo/runtime-relative artifact."
@@ -4612,6 +4939,7 @@
       "external_imports": [
         "artifact_paths",
         "coder_adapters",
+        "doc_paths",
         "documentation_guardrails",
         "exceptions",
         "runtime_context"
@@ -4778,7 +5106,9 @@
         "pathlib"
       ],
       "local_imports": [],
-      "external_imports": [],
+      "external_imports": [
+        "doc_paths"
+      ],
       "public_functions": [
         {
           "name": "render_system_index",
@@ -4862,7 +5192,11 @@
         }
       ],
       "public_classes": [],
-      "constants": [],
+      "constants": [
+        "SYSTEM_BOOTSTRAP_ROOT",
+        "CODEBASE_ROOT",
+        "DELIVERY_ROOT"
+      ],
       "test_references": [
         "tests/test_bundle_loader.py",
         "tests/test_documentation_governance.py"
@@ -5688,37 +6022,17 @@
       "family_name": "40_documentation_sync_v1",
       "job_prefix": "40DOCSYNC",
       "job_init_step": "sync_docs",
-      "job_init_inputs": [
-        "TASK_FILE",
-        "IMPL_FILE"
-      ],
+      "job_init_inputs": [],
       "visibility": "canonical",
       "steps": [
         {
           "step": "sync_docs",
           "kind": "action",
-          "coder": "qwen-architect",
+          "coder": "",
           "prompt_file": "",
           "produces": [
-            "CODEBASE_CHANGE_IMPACT"
-          ]
-        },
-        {
-          "step": "review_docs",
-          "kind": "coder",
-          "coder": "qwen-reviewer",
-          "prompt_file": "prompts\\40_documentation_sync_v1\\02_review_docs.txt",
-          "produces": [
-            "REVIEW_FILE"
-          ]
-        },
-        {
-          "step": "refine_docs",
-          "kind": "coder",
-          "coder": "qwen-architect",
-          "prompt_file": "prompts\\40_documentation_sync_v1\\03_refine_docs.txt",
-          "produces": [
-            "CODEBASE_CHANGE_IMPACT"
+            "CODEBASE_CHANGE_IMPACT",
+            "CODEBASE_INVENTORY"
           ]
         },
         {
@@ -5732,6 +6046,36 @@
         }
       ],
       "component_id": "40_documentation_sync_v1",
+      "owner_doc_path": "docs/codebase/03_components/workflow-families.md"
+    },
+    {
+      "family_name": "50_architecture_site_v1",
+      "job_prefix": "50SITE",
+      "job_init_step": "build_site",
+      "job_init_inputs": [],
+      "visibility": "canonical",
+      "steps": [
+        {
+          "step": "build_site",
+          "kind": "action",
+          "coder": "",
+          "prompt_file": "",
+          "produces": [
+            "ARCHITECTURE_SITE_INDEX",
+            "ARCHITECTURE_SITE_MANIFEST"
+          ]
+        },
+        {
+          "step": "validate_site",
+          "kind": "action",
+          "coder": "",
+          "prompt_file": "",
+          "produces": [
+            "VALIDATION_FILE"
+          ]
+        }
+      ],
+      "component_id": "50_architecture_site_v1",
       "owner_doc_path": "docs/codebase/03_components/workflow-families.md"
     },
     {
@@ -5989,18 +6333,18 @@
       "total": 9
     },
     "documentation files": {
-      "current": 73,
+      "current": 76,
       "needs_update": 0,
       "pending_review": 0,
       "superseded": 0,
-      "total": 73
+      "total": 76
     },
     "python modules": {
-      "current": 49,
+      "current": 53,
       "needs_update": 0,
       "pending_review": 0,
       "superseded": 0,
-      "total": 49
+      "total": 53
     },
     "bootstrap workflow files": {
       "current": 80,
@@ -6017,11 +6361,11 @@
       "total": 43
     },
     "test files": {
-      "current": 11,
+      "current": 12,
       "needs_update": 0,
       "pending_review": 0,
       "superseded": 0,
-      "total": 11
+      "total": 12
     }
   }
 }

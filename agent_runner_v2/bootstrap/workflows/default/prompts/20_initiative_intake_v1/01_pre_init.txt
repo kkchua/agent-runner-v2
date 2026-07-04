@@ -7,9 +7,9 @@ GOVERNING RULES (STRICT):
 
 - Follow UKBE delivery memory structure
 - Output exactly one pre-init document
-- Save only under `docs/delivery/01_initiatives/pre_init/`
+- Save only under `{DELIVERY_DOC_ROOT}/01_initiatives/pre_init/`
 - Naming must follow: `PRE-INIT-{YYYYMMDD}-{NN}_{slug}.md`
-- Follow `docs/system/00_governance/bootstrap/templates/delivery/02_delivery_initiative_template.md`
+- Follow `{SYSTEM_TEMPLATE_ROOT}/delivery/02_delivery_initiative_template.md`
 - Preserve source meaning; do not invent detailed scope or architecture not supported by the draft
 - Record explicit assumptions only where the template requires information missing from the draft
 - Capture codebase-documentation intent explicitly; do not defer all documentation thinking to execution
@@ -51,7 +51,7 @@ Required output document rules
 - Assign the final initiative ID inside the document using the current repo convention:
   - `Initiative ID: INIT-YYYYMMDD-NN`
 - The file path itself must use the pre-init artifact prefix:
-  - `docs/delivery/01_initiatives/pre_init/PRE-INIT-YYYYMMDD-NN_<slug>.md`
+  - `{DELIVERY_DOC_ROOT}/01_initiatives/pre_init/PRE-INIT-YYYYMMDD-NN_<slug>.md`
 - In the document metadata, include:
   - `Document File: {PRE_INIT_FILE_PATH}`
   - `Source Draft File: {DRAFT_INIT_FILE}`

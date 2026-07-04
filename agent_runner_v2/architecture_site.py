@@ -1,0 +1,400 @@
+from __future__ import annotations
+
+"""
+architecture_site.py - Deterministic HTML renderer for repository architecture pages.
+"""
+
+from html import escape
+from pathlib import Path
+from typing import Any
+
+from .doc_paths import architecture_site_rel, codebase_doc_rel, system_doc_rel
+
+
+SITE_ROOT = Path(architecture_site_rel())
+SITE_PAGES = {
+    architecture_site_rel("index.html"): "Architecture Overview",
+    architecture_site_rel("stakeholders.html"): "Stakeholder View",
+    architecture_site_rel("developers.html"): "Developer View",
+    architecture_site_rel("functional.html"): "Functional View",
+    architecture_site_rel("runtime.html"): "Runtime View",
+    architecture_site_rel("components.html"): "Component View",
+}
+
+
+def _workflow_name(snapshot: dict[str, Any]) -> str:
+    return str(snapshot.get("workflow_name") or snapshot.get("mode") or "architecture_site")
+
+
+def _site_comment(workflow: str, step: str) -> str:
+    return f"<!-- Managed by workflow: {workflow} / step: {step} -->\n"
+
+
+def _page_shell(*, title: str, workflow: str, step: str, body: str) -> str:
+    nav = "\n".join(
+        f'<a href="{escape(Path(path).name)}">{escape(label)}</a>'
+        for path, label in SITE_PAGES.items()
+    )
+    return f"""<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{escape(title)}</title>
+  <style>
+    :root {{
+      color-scheme: light;
+      --bg: #0f172a;
+      --panel: #111827;
+      --panel-2: #172036;
+      --text: #e5eefb;
+      --muted: #9fb0cb;
+      --accent: #7dd3fc;
+      --accent-2: #f59e0b;
+      --line: rgba(148, 163, 184, 0.24);
+      --shadow: 0 20px 45px rgba(2, 6, 23, 0.32);
+    }}
+    * {{ box-sizing: border-box; }}
+    body {{
+      margin: 0;
+      font-family: Inter, Segoe UI, Arial, sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(125, 211, 252, 0.15), transparent 30%),
+        radial-gradient(circle at top right, rgba(245, 158, 11, 0.12), transparent 25%),
+        linear-gradient(180deg, #020617 0%, #0f172a 100%);
+      color: var(--text);
+    }}
+    .wrap {{ max-width: 1180px; margin: 0 auto; padding: 32px 20px 56px; }}
+    .hero {{
+      background: linear-gradient(180deg, rgba(17, 24, 39, 0.98), rgba(15, 23, 42, 0.98));
+      border: 1px solid var(--line);
+      border-radius: 28px;
+      padding: 28px;
+      box-shadow: var(--shadow);
+    }}
+    .eyebrow {{ text-transform: uppercase; letter-spacing: .18em; font-size: .72rem; color: var(--accent); }}
+    h1 {{ margin: 8px 0 12px; font-size: clamp(2rem, 4vw, 3.8rem); line-height: 1.05; }}
+    .lede {{ max-width: 900px; color: var(--muted); font-size: 1.06rem; line-height: 1.7; }}
+    .meta {{ display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }}
+    .pill {{
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 8px 12px; border-radius: 999px;
+      background: rgba(125, 211, 252, 0.08); border: 1px solid var(--line); color: var(--text);
+      font-size: .92rem;
+    }}
+    nav {{
+      display: flex; flex-wrap: wrap; gap: 10px; margin: 18px 0 28px;
+    }}
+    nav a {{
+      color: var(--text); text-decoration: none; padding: 10px 14px; border-radius: 999px;
+      background: rgba(255, 255, 255, 0.04); border: 1px solid var(--line);
+    }}
+    nav a:hover {{ border-color: rgba(125, 211, 252, 0.5); }}
+    section {{
+      margin-top: 24px; background: rgba(17, 24, 39, 0.88); border: 1px solid var(--line);
+      border-radius: 24px; padding: 24px;
+      box-shadow: var(--shadow);
+    }}
+    h2 {{ margin-top: 0; font-size: 1.5rem; }}
+    h3 {{ margin-bottom: 8px; }}
+    .grid {{
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+      gap: 14px;
+    }}
+    .card {{
+      background: linear-gradient(180deg, rgba(23, 32, 54, 0.9), rgba(17, 24, 39, 0.9));
+      border: 1px solid var(--line); border-radius: 18px; padding: 18px;
+    }}
+    ul {{ margin: 10px 0 0 20px; color: var(--muted); line-height: 1.7; }}
+    table {{ width: 100%; border-collapse: collapse; margin-top: 12px; }}
+    th, td {{ padding: 12px 10px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }}
+    th {{ color: var(--accent); font-size: .92rem; }}
+    td {{ color: var(--text); }}
+    .muted {{ color: var(--muted); }}
+    .footer {{ margin-top: 22px; color: var(--muted); font-size: .92rem; }}
+  </style>
+</head>
+<body>
+{_site_comment(workflow, step)}<div class="wrap">
+  <div class="hero">
+    <div class="eyebrow">Architecture site</div>
+    <h1>{escape(title)}</h1>
+    <p class="lede">{body.split('<!--BODY-->', 1)[0]}</p>
+    <div class="meta">
+      <span class="pill">Workflow: {escape(workflow)}</span>
+      <span class="pill">Step: {escape(step)}</span>
+    </div>
+  </div>
+  <nav>{nav}</nav>
+  <main>
+    {body.split('<!--BODY-->', 1)[1]}
+  </main>
+  <div class="footer">Generated by agent-runner-v2. Markdown remains the source of truth.</div>
+</div>
+</body>
+</html>
+"""
+
+
+def _card(title: str, text: str) -> str:
+    return f'<div class="card"><h3>{escape(title)}</h3><p class="muted">{escape(text)}</p></div>'
+
+
+def _table(headers: list[str], rows: list[list[str]]) -> str:
+    head = "".join(f"<th>{escape(h)}</th>" for h in headers)
+    body_rows = []
+    for row in rows:
+        body_rows.append("<tr>" + "".join(f"<td>{cell}</td>" for cell in row) + "</tr>")
+    return f"<table><thead><tr>{head}</tr></thead><tbody>{''.join(body_rows)}</tbody></table>"
+
+
+def _workflow_cards(snapshot: dict[str, Any]) -> list[str]:
+    cards: list[str] = []
+    for family in snapshot.get("workflow_families", []):
+        steps = family.get("steps") or []
+        cards.append(
+            _card(
+                f"{family['family_name']} ({family.get('job_prefix', '')})",
+                f"{len(steps)} step(s) | {family.get('visibility', 'visible')} | init: {family.get('job_init_step', '')}",
+            )
+        )
+    return cards
+
+
+def _module_area_rows(snapshot: dict[str, Any]) -> list[list[str]]:
+    rows: list[list[str]] = []
+    counts: dict[str, int] = {}
+    for module in snapshot.get("python_modules", []):
+        area = str(module.get("module_area") or "support")
+        counts[area] = counts.get(area, 0) + 1
+    for area, count in sorted(counts.items(), key=lambda item: item[0]):
+        rows.append([escape(area), str(count)])
+    return rows
+
+
+def render_architecture_site(snapshot: dict[str, Any], project_root: Path) -> dict[str, str]:
+    workflow = _workflow_name(snapshot)
+    project_name = project_root.name or "repository"
+    profile = str(snapshot.get("architecture_profile") or "provisional")
+    target_profile = str(snapshot.get("architecture_target_profile") or "repo-selected")
+    migration_mode = str(snapshot.get("architecture_migration_mode") or "targeted_migration")
+    page_paths: dict[str, str] = {}
+
+    index_body = """<!--BODY-->
+<section>
+  <h2>Architecture at a Glance</h2>
+  <div class="grid">
+    {profile_cards}
+  </div>
+</section>
+<section>
+  <h2>Major Pieces</h2>
+  <div class="grid">
+    {major_cards}
+  </div>
+</section>
+<section>
+  <h2>Audience Views</h2>
+  {audience_table}
+</section>
+<section>
+  <h2>Product Strategy</h2>
+  <ul>
+    <li>Documentation-first delivery with deterministic workflow gates.</li>
+    <li>Repo-selected architecture posture with a universal baseline for every repository.</li>
+    <li>Conditional standards such as DDD and EDA only when the selected profile calls for them.</li>
+    <li>Separate views for stakeholders, developers, operators, and functional consumers.</li>
+  </ul>
+</section>
+<section>
+  <h2>Source References</h2>
+  <ul>
+    <li><code>{system_project_analysis}</code></li>
+    <li><code>{system_overview}</code></li>
+    <li><code>{component_architecture}</code></li>
+    <li><code>{workflow_sop}</code></li>
+    <li><code>{codebase_inventory}</code></li>
+  </ul>
+</section>
+"""
+    index_body = index_body.format(
+        profile_cards="".join(
+            [
+                _card("Universal baseline", "Documentation-first, traceable, deterministic, and secure."),
+                _card("Current profile", profile),
+                _card("Target profile", target_profile),
+                _card("Migration mode", migration_mode),
+            ]
+        ),
+        major_cards="".join(
+            [
+                _card("Runner core", "CLI orchestration, step execution, routing, and job state."),
+                _card("Workflow bundles", "Prompt templates, step configs, schemas, and model routing."),
+                _card("Governance docs", "System docs, codebase docs, delivery docs, and validation rules."),
+                _card("Runtime modes", "Run, worker, poll, daemon, and workflow-spec commands."),
+            ]
+        ),
+        audience_table=_table(
+            ["Audience", "What this page answers"],
+            [
+                ["Stakeholders", "What the system is, why it exists, and what strategy it supports."],
+                ["Product / functional", "Capabilities, user outcomes, and workflow coverage."],
+                ["Developers", "Module layout, execution flow, and ownership boundaries."],
+                ["Operators", "Runtime modes, validation gates, and support procedures."],
+            ],
+        ),
+        system_project_analysis=system_doc_rel("project_analysis.md"),
+        system_overview=system_doc_rel("SYSTEM_OVERVIEW.md"),
+        component_architecture=system_doc_rel("COMPONENT_ARCHITECTURE.md"),
+        workflow_sop=system_doc_rel("EXISTING_REPO_WORKFLOW_SOP.md"),
+        codebase_inventory=codebase_doc_rel("01_inventory/codebase_inventory.md"),
+    )
+    page_paths[architecture_site_rel("index.html")] = _page_shell(
+        title=f"{project_name} architecture overview",
+        workflow=workflow,
+        step=str(snapshot.get("step") or "publish_site"),
+        body="A browsable architecture and product strategy site derived from the current repository docs and codebase scan." + index_body,
+    )
+
+    stakeholder_body = """<!--BODY-->
+<section>
+  <h2>What the repository does</h2>
+  <p class="muted">This repository provides the workflow engine, governance rules, and documentation machinery that keep delivery and codebase truth aligned.</p>
+</section>
+<section>
+  <h2>Strategic intent</h2>
+  <ul>
+    <li>Make architecture and product decisions visible to non-technical stakeholders.</li>
+    <li>Keep the repository auditable by capturing drift, decisions, and validation evidence.</li>
+    <li>Support incremental migration when the codebase standard is provisional or evolving.</li>
+  </ul>
+</section>
+"""
+    page_paths[architecture_site_rel("stakeholders.html")] = _page_shell(
+        title=f"{project_name} stakeholder view",
+        workflow=workflow,
+        step=str(snapshot.get("step") or "publish_site"),
+        body="A concise stakeholder-oriented summary of system purpose, strategic direction, and architectural posture." + stakeholder_body,
+    )
+
+    developer_body = """<!--BODY-->
+<section>
+  <h2>Code layout</h2>
+  {module_rows}
+</section>
+<section>
+  <h2>Execution model</h2>
+  <ul>
+    <li>Coder steps render prompts and return via meta.json sidecars.</li>
+    <li>Action steps execute deterministically without an LLM.</li>
+    <li>Workflow bundles are loaded from the runtime bundle, not the bootstrap source.</li>
+  </ul>
+</section>
+<section>
+  <h2>Working conventions</h2>
+  <ul>
+    <li>Markdown remains the source of truth; HTML is a published view.</li>
+    <li>Documentation freshness is validated through explicit workflow gates.</li>
+    <li>Repo-selected architecture profiles refine a universal baseline.</li>
+  </ul>
+</section>
+"""
+    page_paths[architecture_site_rel("developers.html")] = _page_shell(
+        title=f"{project_name} developer view",
+        workflow=workflow,
+        step=str(snapshot.get("step") or "publish_site"),
+        body="A developer-focused map of modules, workflow mechanics, and governance conventions." + developer_body.format(
+            module_rows=_table(["Area", "Module count"], _module_area_rows(snapshot))
+        ),
+    )
+
+    functional_rows = []
+    for family in snapshot.get("workflow_families", []):
+        flow_steps = []
+        for step in family.get("steps") or []:
+            if isinstance(step, dict):
+                flow_steps.append(str(step.get("step") or step.get("name") or ""))
+            else:
+                flow_steps.append(str(step))
+        functional_rows.append(
+            [
+                escape(str(family["family_name"])),
+                escape(str(family.get("job_prefix") or "")),
+                str(len(flow_steps)),
+                escape(" -> ".join(filter(None, flow_steps))),
+            ]
+        )
+    functional_body = f"""<!--BODY-->
+<section>
+  <h2>Capability map</h2>
+  {_table(["Workflow family", "Prefix", "Steps", "Step flow"], functional_rows)}
+</section>
+<section>
+  <h2>Product behavior</h2>
+  <ul>
+    <li>Initiative intake captures intent and documentation scope.</li>
+    <li>Delivery planning decomposes scope into tasks and documentation obligations.</li>
+    <li>Task execution produces implementation detail and updates docs alongside code.</li>
+    <li>Repository reconciliation refreshes the codebase inventory and stale guidance.</li>
+  </ul>
+</section>
+"""
+    page_paths[architecture_site_rel("functional.html")] = _page_shell(
+        title=f"{project_name} functional view",
+        workflow=workflow,
+        step=str(snapshot.get("step") or "publish_site"),
+        body="The functional view explains the major workflow families and how they support delivery and documentation." + functional_body,
+    )
+
+    runtime_body = """<!--BODY-->
+<section>
+  <h2>Runtime model</h2>
+  <ul>
+    <li>Local run mode executes one workflow at a time.</li>
+    <li>Worker and poll modes integrate with a backend task queue.</li>
+    <li>Daemon mode supervises runtime health and child processes.</li>
+  </ul>
+</section>
+<section>
+  <h2>Governance contracts</h2>
+  <ul>
+    <li>Meta.json is the structured handoff between coder/action and runner.</li>
+    <li>Validation occurs after artifact creation and before lifecycle promotion.</li>
+    <li>Repo-wide reconciliation is separate from delivery-stage documentation feedback.</li>
+  </ul>
+</section>
+"""
+    page_paths[architecture_site_rel("runtime.html")] = _page_shell(
+        title=f"{project_name} runtime view",
+        workflow=workflow,
+        step=str(snapshot.get("step") or "publish_site"),
+        body="Runtime modes, validation mechanics, and workflow orchestration details." + runtime_body,
+    )
+
+    components_body = """<!--BODY-->
+<section>
+  <h2>Component breakdown</h2>
+  {component_table}
+</section>
+<section>
+  <h2>Major module groupings</h2>
+  <div class="grid">
+    {group_cards}
+  </div>
+</section>
+"""
+    group_cards = "".join(_card(str(family["family_name"]), f"{len(family.get('steps') or [])} workflow steps · {family.get('job_prefix', '')}") for family in snapshot.get("workflow_families", []))
+    page_paths[architecture_site_rel("components.html")] = _page_shell(
+        title=f"{project_name} component view",
+        workflow=workflow,
+        step=str(snapshot.get("step") or "publish_site"),
+        body="A component-oriented map of the major execution, workflow, and governance building blocks." + components_body.format(
+            component_table=_table(
+                ["Component area", "Count"],
+                _module_area_rows(snapshot),
+            ),
+            group_cards=group_cards,
+        ),
+    )
+
+    return page_paths

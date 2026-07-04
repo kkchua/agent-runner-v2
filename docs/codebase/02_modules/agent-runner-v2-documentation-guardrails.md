@@ -6,8 +6,8 @@ module_path: "agent_runner_v2/documentation_guardrails.py"
 module_area: "support"
 documentation_mode: "summary"
 owner_doc_path: "docs/codebase/02_modules/agent-runner-v2-documentation-guardrails.md"
-last_verified_by_change: "00_master_docs_bootstrap_v1 / 00DOC-GEN-20260704-001 / 2026-07-04T06:01:39+08:00"
-created: "2026-07-04T06:01:39+08:00"
+last_verified_by_change: "00_master_docs_bootstrap_v1 / 00DOC-GEN-20260704-002 / 2026-07-04T10:47:08+08:00"
+created: "2026-07-04T10:47:08+08:00"
 owner: "00_master_docs_bootstrap_v1"
 ---
 
@@ -30,6 +30,7 @@ This module belongs to the `support` area and is documented as `summary`.
 | `__future__` | stdlib module | imported dependency |
 | `pathlib` | stdlib module | imported dependency |
 | `typing` | stdlib module | imported dependency |
+| `doc_paths` | external module | repository dependency |
 
 ## 2. Public API
 
@@ -51,6 +52,7 @@ This module belongs to the `support` area and is documented as `summary`.
 | `workflow_legacy_doc_paths` | `()` | public function |
 | `master_bootstrap_artifact_candidates` | `()` | public function |
 | `execution_scaffold_doc_paths` | `()` | public function |
+| `architecture_site_doc_paths` | `()` | public function |
 | `workflow_generated_doc_paths` | `()` | public function |
 | `workflow_stale_generated_doc_paths` | `()` | public function |
 | `workflow_owned_doc_paths_for_cleanup` | `()` | public function |
@@ -63,6 +65,7 @@ This module belongs to the `support` area and is documented as `summary`.
 |------|-------------|---------|
 | `MASTER_BOOTSTRAP_WORKFLOW` | constant | module configuration |
 | `EXECUTION_SCAFFOLD_WORKFLOW` | constant | module configuration |
+| `ARCHITECTURE_SITE_WORKFLOW` | constant | module configuration |
 | `WORKFLOW_GENERATED_MARKER` | constant | module configuration |
 | `DEFAULT_LEGACY_QUARANTINE_DIR` | constant | module configuration |
 

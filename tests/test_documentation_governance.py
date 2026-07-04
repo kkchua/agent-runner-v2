@@ -30,6 +30,9 @@ def test_delivery_planning_requires_codebase_governance_inputs():
     task_graph = template_groups.TEMPLATE_GROUPS["30_delivery_planning_v1"]["step_configs"]["task_graph"]
     task = template_groups.TEMPLATE_GROUPS["31_task_execution_v1"]["step_configs"]["task"]
     sync_docs = template_groups.TEMPLATE_GROUPS["40_documentation_sync_v1"]["step_configs"]["sync_docs"]
+    validate_sync = template_groups.TEMPLATE_GROUPS["40_documentation_sync_v1"]["step_configs"]["validate_doc_sync"]
+    build_site = template_groups.TEMPLATE_GROUPS["50_architecture_site_v1"]["step_configs"]["build_site"]
+    validate_site = template_groups.TEMPLATE_GROUPS["50_architecture_site_v1"]["step_configs"]["validate_site"]
 
     assert "CODEBASE_SCAN_SNAPSHOT" in master["required_inputs"]
     assert "CODEBASE_CHANGE_IMPACT" in master["required_inputs"]
@@ -46,7 +49,12 @@ def test_delivery_planning_requires_codebase_governance_inputs():
     assert "SYSTEM_OVERVIEW" in task_graph["required_inputs"]
     assert "CODEBASE_DOC_STATUS_RULES" in task_graph["required_inputs"]
     assert "System Documentation Impact" in task["template_ref"]["required_sections"]
-    assert "RUNBOOK" in sync_docs["required_inputs"]
+    assert sync_docs["action"] == "sync_codebase_docs"
+    assert sync_docs["required_inputs"] == []
+    assert validate_sync["action"] == "validate_codebase_docs"
+    assert validate_sync["required_inputs"] == ["CODEBASE_CHANGE_IMPACT", "CODEBASE_INVENTORY"]
+    assert build_site["action"] == "publish_architecture_site"
+    assert validate_site["action"] == "validate_architecture_site"
 
 
 def test_validator_routes_impl_and_doc_failures_differently():
@@ -239,12 +247,12 @@ def test_master_docs_prompts_require_v2_sidecars_and_expected_artifact_keys():
             assert expected_key in text
     architecture_prompt = (prompt_root / "04_generate_architecture_docs.txt").read_text(encoding="utf-8")
     assert "Do NOT write a plain top-level" in architecture_prompt
-    assert "`docs/system/00_governance/bootstrap/project_analysis.md` is read-only in this step." in architecture_prompt
+    assert "`{SYSTEM_DOC_ROOT}/project_analysis.md` is read-only in this step." in architecture_prompt
     assert "The only writable outputs are the files listed" in architecture_prompt
     assert "repo-selected architecture posture" in architecture_prompt
 
     overview_prompt = (prompt_root / "03_generate_system_overview_docs.txt").read_text(encoding="utf-8")
-    assert "`docs/system/00_governance/bootstrap/project_analysis.md` is read-only in this step." in overview_prompt
+    assert "`{SYSTEM_DOC_ROOT}/project_analysis.md` is read-only in this step." in overview_prompt
     assert "The only writable outputs are the eight files" in overview_prompt
     assert "Development Workflow" in architecture_prompt
     assert "First-Time Setup" in architecture_prompt
@@ -270,6 +278,21 @@ def test_codebase_inventory_generation_uses_registry_template_id():
     assert "needs_update" in rendered
 
 
+def test_html_files_are_classified_as_documentation(tmp_path):
+    from agent_runner_v2.codebase_docs import _classify_file
+
+    root = tmp_path
+    root.mkdir(parents=True, exist_ok=True)
+    html_path = root / "docs/site/architecture/index.html"
+    html_path.parent.mkdir(parents=True, exist_ok=True)
+    html_path.write_text("<html></html>", encoding="utf-8")
+    item = _classify_file(root, html_path)
+
+    assert item is not None
+    assert item.category == "documentation files"
+    assert item.status == "current"
+
+
 def test_scaffold_prompts_require_baseline_and_profile_handling():
     prompt_root = Path("agent_runner_v2/bootstrap/workflows/default/prompts")
 
@@ -293,6 +316,10 @@ def test_scaffold_prompts_require_baseline_and_profile_handling():
     assert "architecture posture updates" in task_text
     assert "repo-selected architecture posture" in review_text
     assert "architecture posture docs remain consistent" in validate_text
+    assert "next-phase HTML architecture site" in (prompt_root / "00_master_docs_bootstrap_v1" / "04_generate_architecture_docs.txt").read_text(encoding="utf-8")
+    sop_text_updated = (prompt_root / "10_execution_scaffold_v1" / "02_generate_sop.txt").read_text(encoding="utf-8")
+    assert "repo-wide reconciliation workflow" in sop_text_updated
+    assert "50_architecture_site_v1" in sop_text_updated
 
 
 def test_sop_review_prompt_allows_active_workflow_generated_docs():

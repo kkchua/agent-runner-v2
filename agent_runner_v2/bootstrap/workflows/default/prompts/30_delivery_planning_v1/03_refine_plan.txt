@@ -129,7 +129,7 @@ Valid final response example:
   "remark": "Updated the existing plan to remove the unapproved lifecycle state and named finalize_doc as the authorised finalization step.",
   "artifacts": {
     "INIT_FILE": null,
-    "PLAN_FILE": "docs/delivery/02_plans/PLAN-20260411-03_status-model-v1.md",
+    "PLAN_FILE": "{DELIVERY_DOC_ROOT}/02_plans/PLAN-20260411-03_status-model-v1.md",
     "TASK_GRAPH_FILE": null,
     "TASK_FILE": null,
     "IMPL_FILE": null,

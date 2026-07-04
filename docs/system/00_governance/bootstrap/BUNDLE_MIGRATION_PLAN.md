@@ -1,11 +1,11 @@
 ---
 template_id: "SYS-00-BMP"
-title: "Bundle Migration Plan - agent-runner-v2"
+title: "Bundle Migration Plan"
 status: "active"
-generated: "2026-07-04T08:00:00+08:00"
+generated: "2026-07-04T12:00:00+08:00"
 workflow: "00_master_docs_bootstrap_v1"
 step: "03_generate_system_overview_docs"
-change_id: "00DOC-GEN-20260704-001"
+change_id: "00DOC-GEN-20260704-002"
 managed_by: workflow-generated
 ---
 
@@ -16,163 +16,262 @@ managed_by: workflow-generated
 
 ## Purpose
 
-This document defines the migration path for bundle format evolution in agent-runner-v2. It records historical changes, current version status, and future migration steps.
+This document defines the migration strategy for workflow bundles and documentation evolution in agent-runner-v2. It establishes the rules for transitioning between bundle versions, updating runtime bundles, and maintaining consistency between packaged bootstrap and runtime sources.
 
-**Why:** Bundle formats evolve as the platform grows. A clear migration plan ensures smooth transitions and preserves backward compatibility where possible.
+## Audience Model
 
-## Current Version
+| Audience | Concern | Primary Sections |
+|----------|---------|------------------|
+| **Platform Maintainers** | How do I release bundle updates? | Version Strategy, Release Process |
+| **Repository Administrators** | How do I update my runtime bundles? | Runtime Update Procedures |
+| **Workflow Authors** | How do I migrate my workflows? | Workflow Migration Patterns |
+| **Operators** | How do I manage breaking changes? | Breaking Changes, Rollback Procedures |
 
-| Attribute | Value |
-|-----------|-------|
-| **Current Version** | v1 |
-| **Status** | Stable |
-| **Introduced** | 2026-07-03 |
-| **Deprecated** | — |
+## Current State
 
-## Version History
-
-### v1 (Current)
-
-**Introduced:** 2026-07-03  
-**Status:** Active and stable
-
-#### Features
-
-- Core bundle with system documentation
-- Workflow bundles with template groups and prompts
-- Domain bundles for specialized documentation
-- Bundle manifest (`bundle-set.json`) for selection tracking
-- Artifact key taxonomy for delivery workflows
-
-#### Structure
-
-```
-%USERPROFILE%\.ukbe-runner/
-├── bundles/
-│   └── core/                    # System documentation
-├── workflows/
-│   └── default/                 # Workflow definitions
-│       ├── template_groups.py
-│       ├── job_schema.json
-│       ├── llm_response_schema.json
-│       ├── model_mapping.json
-│       ├── usage_schema.json
-│       └── prompts/
-└── bundle-set.json              # Bundle selection manifest
-```
+| Component | Current Version | Status |
+|-----------|-----------------|--------|
+| Platform | 0.1.0 | Active development |
+| Bootstrap Bundle | 1.0.0 | Packaged with platform |
+| Runtime Bundle | 1.0.0 (if initialized) | User home directory |
+| Job Schema | 2 | v2 execution contract |
 
 ## Migration Scenarios
 
-### Scenario: New Bundle Version
+### Scenario 1: Platform Update with Bundle Changes
 
-When a v2 bundle format is introduced:
+**Trigger**: New platform release includes bootstrap workflow changes
 
-1. **Update package** — New bootstrap includes v2 structures
-2. **Runtime detection** — Runner detects bundle version at load
-3. **Migration path** — Automatic or manual migration as needed
-4. **Backward compatibility** — v1 bundles continue to work
+**Process**:
+1. Update platform package (`pip install -e .`)
+2. Run `ukbe-run-agent init` to re-seed runtime bundles
+3. Existing jobs continue with previous bundle version
+4. New jobs use updated bundle
 
-### Scenario: Domain Bundle Addition
+**Considerations**:
+- Existing job state is preserved
+- Re-initialization is required to see changes
+- No automatic migration of in-flight jobs
 
-When adding a new domain bundle:
+### Scenario 2: Runtime Bundle Refresh
 
-1. **Define domain** — Create domain taxonomy
-2. **Create templates** — Add domain-specific templates
-3. **Update manifest** — Register in bundle taxonomy
-4. **Document** — Update BUNDLE_TAXONOMY.md
+**Trigger**: Local bootstrap modifications need testing
 
-### Scenario: Workflow Family Addition
+**Process**:
+1. Modify files in `agent_runner_v2/bootstrap/workflows/default/`
+2. Run `ukbe-run-agent init` to copy to runtime home
+3. Test with new job
 
-When adding a new workflow family:
+**Considerations**:
+- Changes are local until committed
+- Runtime home is user-specific
+- Other users see changes only after pull + init
 
-1. **Define steps** — Add to template_groups.py
-2. **Create prompts** — Add prompt templates
-3. **Test** — Validate workflow execution
-4. **Document** — Update relevant documentation
+### Scenario 3: Workflow Family Version Bump
 
-## Backward Compatibility
+**Trigger**: Breaking changes to workflow definition
 
-### Compatibility Guarantees
+**Process**:
+1. Create new workflow family with incremented version (e.g., `v1` → `v2`)
+2. Maintain both versions during transition period
+3. Deprecate old version with timeline
+4. Remove old version after deprecation period
 
-| Version | Compatible With | Notes |
-|---------|-----------------|-------|
-| v1 | v1 | Current version |
+**Example**:
+```python
+# Old version
+"delivery_planning_v1": { ... }
 
-### Breaking Changes
+# New version
+"delivery_planning_v2": { ... }
+```
 
-No breaking changes are planned for v1.
+## Version Strategy
 
-Future v2 may introduce:
-- Revised schema structures
-- New artifact key categories
-- Enhanced domain bundle support
+### Platform Versioning
 
-## Future Considerations
+Follows semantic versioning:
 
-### Potential v2 Features
+| Version Component | Meaning | Example Change |
+|-------------------|---------|----------------|
+| Major | Breaking API changes | New job schema version |
+| Minor | New features, backward compatible | New workflow families |
+| Patch | Bug fixes | Prompt template fixes |
 
-1. **Hierarchical bundles** — Bundle inheritance and composition
-2. **Versioned workflows** — Workflow family versioning
-3. **Conditional prompts** — Platform-specific prompt variants
-4. **Plugin bundles** — Third-party extension support
+### Bundle Versioning
 
-### Migration Timeline
+Workflow families use integer versions:
+
+| Version | Meaning | Migration Required |
+|---------|---------|-------------------|
+| Same version | Compatible updates | No |
+| New version | Breaking changes | Yes, manual job migration |
+
+### Schema Versioning
+
+Job and response schemas use integer versions:
+
+| Schema | Current | Compatibility |
+|--------|---------|---------------|
+| `job_schema.json` | 2 | Required for state loading |
+| `llm_response_schema.json` | 2 | Required for coder output |
+
+## Runtime Update Procedures
+
+### Standard Update
+
+```bash
+# 1. Update platform package
+pip install -e .
+
+# 2. Re-initialize runtime bundles
+ukbe-run-agent init
+
+# 3. Verify update
+ukbe-run-agent show-config
+```
+
+### Selective Workflow Update
+
+To update only specific workflows (advanced):
+
+```bash
+# 1. Locate runtime workflow directory
+# %USERPROFILE%\.ukbe-runner\workflows\
+
+# 2. Replace specific workflow files
+
+# 3. Restart any running daemon
+ukbe-run-agent daemon-stop <worker-id>
+ukbe-run-agent daemon <worker-id>
+```
+
+### Version Verification
+
+```bash
+# Check platform version
+python -c "import agent_runner_v2; print(agent_runner_v2.__version__)"
+
+# Check runtime bundle version
+# (Review template_groups.py in runtime home)
+```
+
+## Breaking Changes
+
+### Definition
+
+A breaking change requires action by workflow authors or operators:
+
+| Change Type | Breaking? | Mitigation |
+|-------------|-----------|------------|
+| New step in workflow | No | Jobs continue; new steps run |
+| Removed step | Yes | Existing jobs may fail |
+| Renamed artifact key | Yes | Artifact references must update |
+| Changed step inputs | Yes | Caller configuration must update |
+| New required input | Yes | All job initiations must provide |
+
+### Breaking Change Process
+
+1. **Identify**: Mark as breaking in commit and changelog
+2. **Document**: Update this migration plan
+3. **Version**: Bump appropriate version component
+4. **Communicate**: Notify affected users
+5. **Timeline**: Provide migration window
+6. **Deprecate**: Remove after migration period
+
+## Rollback Procedures
+
+### Platform Rollback
+
+```bash
+# 1. Restore previous package version
+git checkout <previous-tag>
+pip install -e .
+
+# 2. Re-initialize (restores bundled bundles)
+ukbe-run-agent init
+
+# 3. Verify
+ukbe-run-agent --version
+```
+
+### Runtime Bundle Rollback
+
+```bash
+# 1. Stop any running daemon
+ukbe-run-agent daemon-stop <worker-id>
+
+# 2. Restore runtime bundles from backup
+# Copy from backup location to %USERPROFILE%\.ukbe-runner\workflows\
+
+# 3. Restart daemon if needed
+ukbe-run-agent daemon <worker-id>
+```
+
+### Job State Recovery
+
+If job state becomes incompatible:
+
+```bash
+# 1. Identify affected job
+ukbe-run-agent show-job --job-id <job-id>
+
+# 2. Create new job with compatible workflow
+ukbe-run-agent run --template-group <workflow>_v<version> --set <artifacts>
+
+# 3. Archive old job
+# Move job directory to archive location
+```
+
+## Workflow Migration Patterns
+
+### Pattern 1: Artifact Key Rename
+
+```python
+# Before
+"produces": ["OLD_ARTIFACT_NAME"]
+
+# After
+"produces": ["NEW_ARTIFACT_NAME"]
+
+# Migration: Update all references
+# - template_groups.py reference_files
+# - Job state artifacts
+# - Prompt template variable references
+```
+
+### Pattern 2: Step Reordering
+
+```python
+# Before: step "03_old_step"
+# After: step "04_new_step" with same purpose
+
+# Migration: Update job state step tracking
+# - completed_steps
+# - failed_steps
+# - retry_history
+```
+
+### Pattern 3: Input Changes
+
+```python
+# Before
+"required_inputs": ["INPUT_A"]
+
+# After
+"required_inputs": ["INPUT_A", "INPUT_B"]
+
+# Migration: Ensure all job initiations provide INPUT_B
+```
+
+## Timeline
 
 | Milestone | Target Date | Description |
 |-----------|-------------|-------------|
-| v1 stable | 2026-07-03 | Initial release |
-| v2 design | TBD | Design phase for next version |
-| v2 alpha | TBD | Alpha testing |
-| v1 deprecation | TBD | Announce v1 deprecation |
-| v1 EOL | TBD | End of life for v1 |
-
-## Migration Procedures
-
-### Bundle Initialization
-
-New installations receive the current bundle version:
-
-```bash
-ukbe-run-agent init
-```
-
-This seeds `%USERPROFILE%\.ukbe-runner\` with the current bundle format.
-
-### Bundle Update
-
-Updates are applied via:
-
-```bash
-ukbe-run-agent init --force
-```
-
-This refreshes the runtime bundle from the packaged bootstrap.
-
-**Note:** Customizations in the runtime bundle may be overwritten. Back up before forcing.
-
-### Bundle Validation
-
-Validate bundle integrity:
-
-```bash
-ukbe-run-agent validate-bundle
-```
-
-Checks:
-- Schema compliance
-- Required files present
-- Cross-references resolve
-
-## Rollback
-
-If a bundle update causes issues:
-
-1. **Restore from backup** — Manual restoration of `.ukbe-runner\`
-2. **Re-init with previous package** — Install previous package version
-3. **Report issue** — File issue with bundle version and error details
+| Bootstrap Complete | 2026-07-04 | System documentation generated |
+| v1.0.0 Release | TBD | First stable release |
+| v2 Planning | TBD | Evaluate schema v3, new patterns |
 
 ---
 
-*Generated: 2026-07-04T08:00:00+08:00*
-*Workflow: 00_master_docs_bootstrap_v1 / Step: 03_generate_system_overview_docs*
-*Change ID: 00DOC-GEN-20260704-001*
+*This migration plan is a living document. Update when making breaking changes or adding new migration patterns.*

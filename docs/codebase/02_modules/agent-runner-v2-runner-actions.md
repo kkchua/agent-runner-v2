@@ -6,8 +6,8 @@ module_path: "agent_runner_v2/runner_actions.py"
 module_area: "schema"
 documentation_mode: "summary"
 owner_doc_path: "docs/codebase/02_modules/agent-runner-v2-runner-actions.md"
-last_verified_by_change: "00_master_docs_bootstrap_v1 / 00DOC-GEN-20260704-001 / 2026-07-04T06:01:39+08:00"
-created: "2026-07-04T06:01:39+08:00"
+last_verified_by_change: "00_master_docs_bootstrap_v1 / 00DOC-GEN-20260704-002 / 2026-07-04T10:47:08+08:00"
+created: "2026-07-04T10:47:08+08:00"
 owner: "00_master_docs_bootstrap_v1"
 ---
 
@@ -41,10 +41,12 @@ This module belongs to the `schema` area and is documented as `summary`.
 | `actions.prepare_delivery_scaffold` | external module | repository dependency |
 | `actions.promote_artifact` | external module | repository dependency |
 | `actions.promote_init` | external module | repository dependency |
+| `actions.publish_architecture_site` | external module | repository dependency |
 | `actions.scan_repo_codebase` | external module | repository dependency |
 | `actions.submit_comfyui` | external module | repository dependency |
 | `actions.sync_codebase_docs` | external module | repository dependency |
 | `actions.sync_system_docs` | external module | repository dependency |
+| `actions.validate_architecture_site` | external module | repository dependency |
 | `actions.validate_codebase_docs` | external module | repository dependency |
 | `actions.validate_delivery_docs` | external module | repository dependency |
 | `actions.validate_system_docs` | external module | repository dependency |

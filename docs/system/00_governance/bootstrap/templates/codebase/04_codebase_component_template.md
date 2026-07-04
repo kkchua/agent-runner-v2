@@ -1,11 +1,11 @@
 ---
-template_id: CODEBASE-COMP-v1
-status: active
-generated: "2026-07-03T23:30:00+08:00"
+title: Codebase Component Template
+managed_by: workflow-generated
 workflow: 10_execution_scaffold_v1
 step: generate_templates
-managed_by: workflow-generated
-version: 1.0.0
+created: 2026-07-04
+template_id: CODEBASE-COMP-v1
+version: 1
 ---
 
 > Managed by workflow: `10_execution_scaffold_v1` / step: `generate_templates`
@@ -13,94 +13,103 @@ version: 1.0.0
 
 # Codebase Component Template
 
+> Artifact key: `CODEBASE_COMPONENT_TEMPLATE`
+
 ## Metadata
 
 | Field | Value |
-|-------|-------|
-| **Template ID** | `CODEBASE-COMP-v1` |
-| **Component ID** | `[COMP-XXXX-v1]` |
-| **Component Name** | `[Component Name]` |
-| **Status** | `current` / `needs_update` / `pending_review` / `superseded` |
-| **Documentation Mode** | `stub` / `summary` / `full` |
-| **Last Updated** | `[YYYY-MM-DDTHH:MM:SS+TZ]` |
-| **Last Verified By** | `[CHANGE-XXXX-v1 or SCAN-ID]` |
-| **Owner Doc** | `[Path to this component doc]` |
-| **Workflow** | `10_execution_scaffold_v1` |
-| **Step** | `generate_templates` |
-| **Managed By** | workflow-generated |
+|---|---|
+| Template ID | `CODEBASE-COMP-v1` |
+| Owner Workflow | `10_execution_scaffold_v1` |
+| Owner Step | `generate_templates` |
+| Scope | Universal baseline — applies to all governed repositories |
+| Status | `active` |
+| Last Verified | 2026-07-04 |
+
+This template defines the canonical structure for component grouping documentation. Every component doc instance must conform to this structure.
+
+---
+
+## Instance Preamble
+
+```yaml
+---
+title: Component — {COMPONENT_NAME}
+managed_by: workflow-generated
+workflow: 10_execution_scaffold_v1
+step: codebase_doc
+created: {DATE}
+template_id: CODEBASE-COMP-v1
+component_id: {COMPONENT_ID}
+status: current
+last_verified_by_change: {CHANGE_ID}
+---
+```
+
+## Metadata
+
+| Field | Value |
+|---|---|
+| Component ID | `{COMPONENT_ID}` |
+| Component Name | `{COMPONENT_NAME}` |
+| Created | `{DATE}` |
+| Last Updated | `{DATE}` |
+| Last Verified by Change | `{CHANGE_ID_OR_SHA}` |
+| Status | `current` / `needs_update` / `pending_review` / `superseded` |
+| Owner Doc Path | `{DOC_PATH}` |
+| Documentation Mode | `documented` |
 
 ## Component Overview
 
-<!-- High-level overview of this component. -->
-
 | Field | Value |
-|-------|-------|
-| **Component Type** | `[workflow-family / action-group / CLI-group / config-set / test-suite]` |
-| **Scope** | `[What this component encompasses]` |
-| **Complexity** | `[Low / Medium / High]` |
-| **Change Frequency** | `[Low / Medium / High]` |
+|---|---|
+| Purpose | `{PURPOSE}` |
+| Responsibility | `{RESPONSIBILITY}` |
+| Architectural Role | `{ROLE}` |
+| Architecture Profile | `{PROFILE_IF_APPLICABLE}` |
 
 ## File Coverage
 
-<!-- All files that belong to this component. -->
-
-| File | Type | Description | Status |
-|------|------|-------------|--------|
-| `[path]` | `[source / test / config / doc]` | `[Description]` | `[current / needs_update]` |
+| Module / File | Role in Component | Status |
+|---|---|---|
+| `{PATH}` | `{ROLE}` | `current` / `needs_update` / `pending_review` |
 
 ## Interface
 
-<!-- How this component is used by other parts of the system. -->
-
-### Entry Points
-
-| Entry Point | Type | Description |
-|-------------|------|-------------|
-| `[name]` | `[function / CLI command / API endpoint]` | `[Description]` |
-
-### Public Contract
-
-| Contract | Type | Description |
-|----------|------|-------------|
-| `[name]` | `[interface / API / data format]` | `[Description]` |
+| Interface Element | Type | Description | Consumers |
+|---|---|---|---|
+| `{ELEMENT}` | `function` / `class` / `event` / `api` | `{DESCRIPTION}` | `{CONSUMERS}` |
 
 ## Implementation Details
 
-<!-- How this component is implemented. -->
-
-### Core Logic
-[Description of the core implementation logic]
-
-### Key Design Decisions
-
-| Decision | Rationale | Trade-offs |
-|----------|-----------|-----------|
-| `[Decision]` | `[Why]` | `[Trade-offs]` |
+| Aspect | Description |
+|---|---|
+| Internal Architecture | `{DESCRIPTION}` |
+| Key Design Decisions | `{DECISIONS}` |
+| State Management | `{DESCRIPTION}` |
+| Error Handling | `{DESCRIPTION}` |
 
 ## Dependencies
 
-<!-- What this component depends on. -->
-
-| Module/Component | Type | Usage |
-|-----------------|------|-------|
-| `[name]` | `[import / runtime / data]` | `[How it's used]` |
+| Dependency | Type | Direction | Notes |
+|---|---|---|---|
+| `{DEPENDENCY}` | `internal` / `external` | `requires` / `provides_to` | `{NOTES}` |
 
 ## Testing
 
-<!-- Test coverage for this component. -->
-
-| Test Suite | Coverage | Status |
-|-----------|----------|--------|
-| `[name]` | `[Description]` | `[Pass / Fail / N/A]` |
+| Aspect | Details |
+|---|---|
+| Test Location | `{TEST_PATH}` |
+| Integration Tests | `{DESCRIPTION}` |
+| Contract Tests | `{DESCRIPTION}` |
 
 ## Change Log
 
-<!-- History of changes to this component and its documentation. -->
-
-| Date | Change | Change ID | Doc Updated |
-|------|--------|-----------|-------------|
-| `[Date]` | `[Description]` | `[CHANGE-XXXX-v1]` | `[Yes / No]` |
+| Date | Change ID | Description | Author |
+|---|---|---|---|
+| `{DATE}` | `{CHANGE_ID}` | `{DESCRIPTION}` | `{AUTHOR}` |
 
 ## Notes
 
-<!-- Additional context, decisions, or references. -->
+- {NOTE_1}
+- {NOTE_2}

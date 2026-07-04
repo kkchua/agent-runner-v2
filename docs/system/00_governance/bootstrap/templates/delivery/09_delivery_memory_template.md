@@ -1,11 +1,11 @@
 ---
-template_id: DELIVERY-MEMORY-v1
-status: active
-generated: "2026-07-03T23:30:00+08:00"
+title: Delivery Memory Template
+managed_by: workflow-generated
 workflow: 10_execution_scaffold_v1
 step: generate_templates
-managed_by: workflow-generated
-version: 1.0.0
+created: 2026-07-04
+template_id: DELIVERY-MEM-v1
+version: 1
 ---
 
 > Managed by workflow: `10_execution_scaffold_v1` / step: `generate_templates`
@@ -13,90 +13,121 @@ version: 1.0.0
 
 # Delivery Memory Template
 
+> Artifact key: `DELIVERY_MEMORY_TEMPLATE`
+
 ## Metadata
 
 | Field | Value |
-|-------|-------|
-| **Template ID** | `DELIVERY-MEMORY-v1` |
-| **Memory ID** | `[MEMORY-XXXX-v1]` |
-| **Title** | `[Memory Title]` |
-| **Status** | `active` / `archived` / `superseded` |
-| **Type** | `lesson` / `pattern` / `anti-pattern` / `decision` / `observation` |
-| **Task ID** | `[TASK-XXXX-v1]` |
-| **Plan ID** | `[PLAN-XXXX-v1]` |
-| **Created** | `[YYYY-MM-DDTHH:MM:SS+TZ]` |
-| **Updated** | `[YYYY-MM-DDTHH:MM:SS+TZ]` |
-| **Author** | `[Agent role or human]` |
-| **Workflow** | `10_execution_scaffold_v1` |
-| **Step** | `task_execution_v1` |
-| **Managed By** | workflow-generated |
+|---|---|
+| Template ID | `DELIVERY-MEM-v1` |
+| Owner Workflow | `10_execution_scaffold_v1` |
+| Owner Step | `generate_templates` |
+| Scope | Universal baseline — applies to all governed repositories |
+| Status | `active` |
+| Last Verified | 2026-07-04 |
+
+This template defines the canonical structure for capturing delivery memory — outcomes, lessons, reusable patterns, and documentation notes from a completed delivery.
+
+---
+
+## Instance Preamble
+
+```yaml
+---
+title: Delivery Memory — {MEMORY_ID}
+managed_by: workflow-generated
+workflow: 10_execution_scaffold_v1
+step: memory_capture
+created: {DATE}
+template_id: DELIVERY-MEM-v1
+memory_id: {MEMORY_ID}
+initiative_id: {INITIATIVE_ID}
+plan_id: {PLAN_ID}
+status: draft
+---
+```
+
+## Metadata
+
+| Field | Value |
+|---|---|
+| Memory ID | `{MEMORY_ID}` |
+| Initiative ID | `{INITIATIVE_ID}` |
+| Plan ID | `{PLAN_ID}` |
+| Created | `{DATE}` |
+| Author / Agent | Memory Manager |
+| Status | `draft` / `finalized` |
 
 ## Context
 
-<!-- The situation or problem that led to this memory. -->
-
-**Context**: [What was happening when this memory was created]
-
-**Trigger**: [What prompted the creation of this memory]
+| Field | Value |
+|---|---|
+| Initiative Title | `{TITLE}` |
+| Delivery Duration | `{DURATION}` |
+| Team / Agents Involved | `{ROLES}` |
+| Architecture Profile | `{PROFILE}` |
+| Migration Mode | `{MODE}` |
+| Key Context | `{CONTEXT_DESCRIPTION}` |
 
 ## Summary
 
-<!-- Concise summary of the memory. -->
-
-[Provide a clear, concise summary that captures the key information.]
+| Field | Value |
+|---|---|
+| Executive Summary | `{ONE_PARAGRAPH_SUMMARY}` |
+| Outcome | `success` / `partial` / `failure` |
+| Key Achievements | `{ACHIEVEMENTS}` |
+| Key Shortfalls | `{SHORTFALLS}` |
 
 ## Outcomes
 
-<!-- What happened as a result. -->
-
-| Outcome | Description | Impact |
-|---------|-------------|--------|
-| `[Outcome 1]` | `[Description]` | `[Positive / Negative / Neutral]` |
-| `[Outcome 2]` | `[Description]` | `[Positive / Negative / Neutral]` |
+| Outcome ID | Description | Category | Impact | Evidence |
+|---|---|---|---|---|
+| `{OUTCOME_ID}` | `{DESCRIPTION}` | `positive` / `negative` / `neutral` | `high` / `medium` / `low` | `{EVIDENCE}` |
 
 ## Lessons Learned
 
-<!-- Key takeaways from this experience. -->
-
-| Lesson | Category | Applicability | Evidence |
-|--------|----------|--------------|----------|
-| `[Lesson]` | `[process / technical / communication]` | `[Broad / Narrow]` | `[Evidence]` |
+| Lesson ID | Lesson | Context | Applicability | Severity |
+|---|---|---|---|---|
+| `{LESSON_ID}` | `{LESSON}` | `{CONTEXT}` | `universal` / `profile_specific` | `critical` / `important` / `minor` |
 
 ## Reusable Patterns
 
-<!-- Patterns that can be applied to future work. -->
-
-| Pattern | Description | When to Use | Example |
-|---------|-------------|------------|---------|
-| `[Pattern name]` | `[Description]` | `[Context]` | `[Example]` |
+| Pattern ID | Pattern Name | Description | When to Apply | Example |
+|---|---|---|---|---|
+| `{PATTERN_ID}` | `{NAME}` | `{DESCRIPTION}` | `{WHEN}` | `{EXAMPLE}` |
 
 ## Anti-Patterns
 
-<!-- Patterns to avoid in future work. -->
-
-| Anti-Pattern | Description | Why to Avoid | Better Alternative |
-|-------------|-------------|-------------|-------------------|
-| `[Anti-pattern name]` | `[Description]` | `[Why it fails]` | `[Better approach]` |
+| Anti-Pattern ID | Anti-Pattern Name | Description | When to Avoid | Consequence |
+|---|---|---|---|---|
+| `{ANTIPATTERN_ID}` | `{NAME}` | `{DESCRIPTION}` | `{WHEN}` | `{CONSEQUENCE}` |
 
 ## Documentation Notes
 
-<!-- Documentation-related learnings and observations. -->
+This section captures documentation-specific observations from the delivery.
 
-### Documentation Impact Observed
-- [What documentation aspects were learned from this experience]
+| Note ID | Note | Category | Action Required |
+|---|---|---|---|
+| `{NOTE_ID}` | `{NOTE}` | `freshness` / `stale` / `gap` / `improvement` | `{ACTION}` |
 
-### Documentation Improvements
-- [Suggested improvements to documentation processes]
+### Documentation Observations
 
-### Stale Guidance Detected
-- [Any outdated documentation or guidance discovered]
+- {OBSERVATION_1}
+- {OBSERVATION_2}
+
+### Documentation Debt Incurred
+
+| Debt ID | Description | Location | Priority | Recommended Action |
+|---|---|---|---|---|
+| `{DEBT_ID}` | `{DESCRIPTION}` | `{LOCATION}` | `high` / `medium` / `low` | `{ACTION}` |
 
 ## Related Memories
 
-| Memory ID | Title | Relationship |
-|-----------|-------|-------------|
-| `[MEMORY-XXXX]` | `[Title]` | `[Related to / Supersedes / Superseded by]` |
+| Memory ID | Relationship | Notes |
+|---|---|---|
+| `{MEMORY_ID}` | `supersedes` / `extends` / `contradicts` / `related` | {NOTES} |
 
 ## Notes
 
-<!-- Additional context, decisions, or references. -->
+- {NOTE_1}
+- {NOTE_2}

@@ -6,6 +6,8 @@ from dataclasses import dataclass, asdict
 from pathlib import Path
 from typing import Any
 
+from .doc_paths import system_doc_rel
+
 
 CORE_BUNDLE_NAME = "core"
 DEFAULT_DOMAIN_BUNDLE = "general"
@@ -21,21 +23,21 @@ DOMAIN_BUNDLE_NAMES = [
 
 
 CORE_DOCS = [
-    "docs/system/00_governance/bootstrap/README.md",
-    "docs/system/00_governance/bootstrap/DOCUMENTATION_STANDARD.md",
-    "docs/system/00_governance/bootstrap/BUNDLE_TAXONOMY.md",
-    "docs/system/00_governance/bootstrap/BUNDLE_MIGRATION_PLAN.md",
-    "docs/system/00_governance/bootstrap/SYSTEM_OVERVIEW.md",
-    "docs/system/00_governance/bootstrap/BUSINESS_CAPABILITIES.md",
-    "docs/system/00_governance/bootstrap/FUNCTIONAL_SPEC.md",
-    "docs/system/00_governance/bootstrap/NON_FUNCTIONAL_REQUIREMENTS.md",
-    "docs/system/00_governance/bootstrap/SYSTEM_CONTEXT.md",
-    "docs/system/00_governance/bootstrap/COMPONENT_ARCHITECTURE.md",
-    "docs/system/00_governance/bootstrap/DECISION_LOG.md",
-    "docs/system/00_governance/bootstrap/SYSTEM_FILE_STRUCTURE.md",
-    "docs/system/00_governance/bootstrap/DEVELOPER_GUIDE.md",
-    "docs/system/00_governance/bootstrap/RUNBOOK.md",
-    "docs/system/00_governance/bootstrap/EXISTING_REPO_WORKFLOW_SOP.md",
+    system_doc_rel("README.md"),
+    system_doc_rel("DOCUMENTATION_STANDARD.md"),
+    system_doc_rel("BUNDLE_TAXONOMY.md"),
+    system_doc_rel("BUNDLE_MIGRATION_PLAN.md"),
+    system_doc_rel("SYSTEM_OVERVIEW.md"),
+    system_doc_rel("BUSINESS_CAPABILITIES.md"),
+    system_doc_rel("FUNCTIONAL_SPEC.md"),
+    system_doc_rel("NON_FUNCTIONAL_REQUIREMENTS.md"),
+    system_doc_rel("SYSTEM_CONTEXT.md"),
+    system_doc_rel("COMPONENT_ARCHITECTURE.md"),
+    system_doc_rel("DECISION_LOG.md"),
+    system_doc_rel("SYSTEM_FILE_STRUCTURE.md"),
+    system_doc_rel("DEVELOPER_GUIDE.md"),
+    system_doc_rel("RUNBOOK.md"),
+    system_doc_rel("EXISTING_REPO_WORKFLOW_SOP.md"),
 ]
 
 WORKFLOW_DOCS = [

@@ -1,11 +1,11 @@
 ---
-template_id: DELIVERY-INITIATIVE-v1
-status: active
-generated: "2026-07-03T23:30:00+08:00"
+title: Delivery Initiative Template
+managed_by: workflow-generated
 workflow: 10_execution_scaffold_v1
 step: generate_templates
-managed_by: workflow-generated
-version: 1.0.0
+created: 2026-07-04
+template_id: DELIVERY-INIT-v1
+version: 1
 ---
 
 > Managed by workflow: `10_execution_scaffold_v1` / step: `generate_templates`
@@ -13,96 +13,133 @@ version: 1.0.0
 
 # Delivery Initiative Template
 
+> Artifact key: `DELIVERY_INITIATIVE_TEMPLATE`
+
 ## Metadata
 
 | Field | Value |
-|-------|-------|
-| **Template ID** | `DELIVERY-INITIATIVE-v1` |
-| **Initiative ID** | `[INIT-XXXX-v1]` |
-| **Title** | `[Initiative Title]` |
-| **Status** | `draft` / `proposed` / `approved` / `rejected` / `active` / `completed` / `cancelled` |
-| **Created** | `[YYYY-MM-DDTHH:MM:SS+TZ]` |
-| **Updated** | `[YYYY-MM-DDTHH:MM:SS+TZ]` |
-| **Author** | `[Agent or human author]` |
-| **Workflow** | `10_execution_scaffold_v1` |
-| **Step** | `initiative_intake_v1` |
-| **Managed By** | workflow-generated |
-| **Current Profile** | `[Architecture profile, e.g., modular-monolith]` |
-| **Target Profile** | `[Target architecture, if changing]` |
-| **Migration Mode** | `[greenfield / incremental / refactoring / legacy-merge]` |
+|---|---|
+| Template ID | `DELIVERY-INIT-v1` |
+| Owner Workflow | `10_execution_scaffold_v1` |
+| Owner Step | `generate_templates` |
+| Scope | Universal baseline — applies to all governed repositories |
+| Architecture Profile | Conditional — populated from repository context |
+| Migration Mode | Conditional — populated when repo standard is unclear or changing |
+| Status | `active` |
+| Last Verified | 2026-07-04 |
+
+This template defines the canonical structure for a delivery initiative. Every initiative intake artifact must conform to this structure.
+
+---
+
+## Instance Preamble
+
+> The following is the template body. When instantiated, replace placeholder values with actual content.
+
+```yaml
+---
+title: Initiative — {INITIATIVE_ID}
+managed_by: workflow-generated
+workflow: 10_execution_scaffold_v1
+step: initiative_intake_v1
+created: {DATE}
+template_id: DELIVERY-INIT-v1
+initiative_id: {INITIATIVE_ID}
+status: draft
+current_profile: {CURRENT_PROFILE}
+target_profile: {TARGET_PROFILE}
+migration_mode: {MIGRATION_MODE}
+---
+```
+
+## Metadata
+
+| Field | Value |
+|---|---|
+| Initiative ID | `{INITIATIVE_ID}` |
+| Created | `{DATE}` |
+| Author / Agent | `{AGENT_ROLE}` |
+| Status | `draft` / `approved` / `rejected` |
+| Current Architecture Profile | `{CURRENT_PROFILE}` |
+| Target Architecture Profile | `{TARGET_PROFILE}` |
+| Migration Mode | `{MIGRATION_MODE}` |
+
+**Profile and migration fields are conditional:**
+- Populate `current_profile`, `target_profile`, and `migration_mode` when the repository standard is unclear or changing.
+- When the repository standard is well-established and not changing, these fields MAY be populated with known values or set to `n/a`.
+- When a profile change is underway, `migration_mode` MUST be one of: `active`, `greenfield`, `brownfield`, `n/a`.
 
 ## Initiative Description
 
-<!-- Provide a concise description of the initiative. -->
-
-**Background**:
-[What prompted this initiative?]
-
-**Problem Statement**:
-[What problem does this initiative solve?]
-
-**Proposed Solution**:
-[High-level approach to address the problem.]
+| Field | Value |
+|---|---|
+| Initiative Title | `{TITLE}` |
+| Summary | `{ONE_PARAGRAPH_SUMMARY}` |
+| Motivation | `{WHY_THIS_INITIATIVE}` |
+| Expected Outcome | `{DESIRED_STATE_AFTER_DELIVERY}` |
 
 ## Scope
 
-<!-- Define the boundaries of the initiative. -->
-
 ### In Scope
-- [Item 1]
-- [Item 2]
+
+- {ITEM_1}
+- {ITEM_2}
+- {ITEM_N}
 
 ### Out of Scope
-- [Item 1]
-- [Item 2]
 
-### Architecture Profile Assessment
+- {ITEM_1}
+- {ITEM_2}
 
-| Dimension | Value |
-|-----------|-------|
-| **Current Architecture** | `[Describe current architecture standard]` |
-| **Target Architecture** | `[Describe target architecture, if changing]` |
-| **Migration Mode** | `[greenfield / incremental / refactoring / legacy-merge]` |
-| **DDD/EDA Applicability** | `[Applicable / Not applicable — DDD/EDA are conditional standards, not universal defaults]` |
-| **Profile Change Impact** | `[Low / Medium / High — impact on existing codebase and documentation]` |
+### Affected Modules
+
+| Module Path | Reason for Inclusion |
+|---|---|
+| `{MODULE_PATH}` | `{REASON}` |
+
+### Likely Codebase Areas
+
+| Area / Directory | Relevance |
+|---|---|
+| `{AREA}` | `{RELEVANCE}` |
 
 ## Documentation Scope
 
-<!-- Capture the documentation impact of this initiative. -->
+This section captures the documentation impact of the initiative at intake time.
 
-### Documentation Areas Affected
-- [List documentation areas that will need updates]
+| Field | Value |
+|---|---|
+| Documentation Required | `yes` / `no` / `partial` |
+| New Documents Expected | `{COUNT_OR_NONE}` |
+| Existing Documents to Update | `{COUNT_OR_NONE}` |
+| Documents to Retire | `{COUNT_OR_NONE}` |
+| Stale-Guidance Risk | `low` / `medium` / `high` |
 
-### Likely Codebase Areas
-- [Identify source files, modules, or components that will change]
+### Stale-Guidance Risk Assessment
 
-### Stale-Guidance Risk
+| Risk | Likelihood | Impact | Mitigation |
+|---|---|---|---|
+| {RISK_DESCRIPTION} | {LOW/MED/HIGH} | {LOW/MED/HIGH} | {MITIGATION} |
 
-| Risk | Severity | Mitigation |
-|------|----------|-----------|
-| `[Description]` | `[Low / Medium / High]` | `[Mitigation approach]` |
+### Documentation Areas at Risk
 
-### Documentation Artifacts Required
-- [ ] Updated module docs (`docs/codebase/02_modules/`)
-- [ ] Updated component docs (`docs/codebase/03_components/`)
-- [ ] Change-impact record (`docs/codebase/04_changes/`)
-- [ ] Updated inventory (`docs/codebase/01_inventory/codebase_inventory.md`)
-- [ ] New or revised delivery docs (`docs/delivery/`)
+- {AREA_1}
+- {AREA_2}
 
 ## Acceptance Criteria
 
-- [ ] Initiative description is clear and testable
-- [ ] Scope boundaries are explicit (in-scope and out-of-scope)
-- [ ] Architecture profile assessment is complete
-- [ ] Documentation scope is defined
-- [ ] Stakeholder approval is obtained
+| # | Criterion | Verification Method |
+|---|---|---|
+| 1 | {CRITERION} | {METHOD} |
+| 2 | {CRITERION} | {METHOD} |
 
 ## Dependencies
 
-| Type | ID | Description | Status |
-|------|----|-------------|--------|
-| `[initiative / task / external]` | `[ID]` | `[Description]` | `[Status]` |
+| Dependency | Type | Status | Notes |
+|---|---|---|---|
+| {DEPENDENCY} | `blocking` / `advisory` | {STATUS} | {NOTES} |
 
 ## Notes
 
-<!-- Additional context, decisions, or references. -->
+- {NOTE_1}
+- {NOTE_2}

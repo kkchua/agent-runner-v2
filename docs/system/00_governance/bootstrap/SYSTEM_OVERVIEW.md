@@ -1,11 +1,11 @@
 ---
 template_id: "SYS-00-SO"
-title: "System Overview - agent-runner-v2"
+title: "System Overview"
 status: "active"
-generated: "2026-07-04T08:00:00+08:00"
+generated: "2026-07-04T12:00:00+08:00"
 workflow: "00_master_docs_bootstrap_v1"
 step: "03_generate_system_overview_docs"
-change_id: "00DOC-GEN-20260704-001"
+change_id: "00DOC-GEN-20260704-002"
 managed_by: workflow-generated
 ---
 
@@ -16,185 +16,146 @@ managed_by: workflow-generated
 
 ## Purpose
 
-Agent-runner-v2 is a standalone Python-based LLM workflow orchestration engine that enables structured multi-step workflow execution across multiple LLM providers (Claude, Codex, Qwen). It provides review loops, retries, approval gates, and deterministic runner actions for automating complex delivery processes.
-
-**Why:** Manual coordination of LLM-assisted workflows is error-prone and difficult to reproduce. The runner provides deterministic execution, state persistence, and clear contracts between steps, enabling reliable automation of code generation, documentation, content creation, and other AI-assisted tasks.
+This document provides a high-level overview of the `agent-runner-v2` platform, explaining its purpose, core workflows, and value proposition for stakeholders, developers, and operators.
 
 ## Scope
 
-### In Scope
+`agent-runner-v2` is a standalone Python LLM workflow orchestration engine that runs structured multi-step workflows across multiple LLM providers (Claude, Codex, Qwen). The platform supports review loops, retries, approval gates, and deterministic runner actions with a strict execution contract.
 
-- **Local workflow execution** — Manual execution with artifact-based progression
-- **Backend-connected operation** — Worker and daemon modes for distributed execution
-- **Multi-provider LLM support** — Claude, Codex, Qwen adapters
-- **Step-level routing** — Review/refine loops and failure handling
-- **State management** — Job lifecycle with persistence and recovery
-- **Template-based prompts** — Externalized prompt templates
-- **Deterministic actions** — Non-LLM step execution
+### What This Platform Does
 
-### Out of Scope
+- **Orchestrates LLM workflows**: Multi-step workflows with deterministic routing
+- **Supports multiple usage modes**: Local execution, backend-connected worker, and daemon supervision
+- **Enforces strict contracts**: `meta.json` sidecar is the only structured result channel
+- **Manages job lifecycle**: State tracking, retry handling, failure classification
+- **Provides bootstrap workflows**: Pre-defined workflows for common patterns
 
-- **Backend API implementation** — The runner is a client, not the server
-- **Model training** — Uses existing LLM APIs, no training
-- **General-purpose compute** — Focused on LLM workflow orchestration
-- **Persistent queue** — Backend owns queue management
-- **Multi-user coordination** — Single-workstation focus
+### What This Platform Does Not Do
+
+- Does not replace individual LLM APIs (wraps them with adapters)
+- Does not persist execution history indefinitely (job-scoped)
+- Does not provide a web UI (CLI-focused)
+- Does not manage secrets or credentials (relies on environment)
 
 ## Primary Flows
 
 ### Flow 1: Local Workflow Execution
 
 ```
-User → CLI → Load Workflow → Resolve Step → Render Prompt → Invoke Coder
-                                                    ↓
-User ← Results ← Route ← Validate Artifacts ← Read meta.json
+User → ukbe-run-agent run → Load Workflow → Render Prompt → Invoke Coder
+                                              ↓
+                                        Read meta.json
+                                              ↓
+                                        Validate Artifacts
+                                              ↓
+                                        Route to Next Step
 ```
 
-**Description:** A user initiates a workflow locally, the runner loads the workflow bundle, determines the current step, renders the prompt template, invokes the configured LLM coder, reads the resulting `meta.json` sidecar, validates claimed artifacts, and routes to the next step or approval gate.
-
-**Key Characteristics:**
-- Interactive or batch execution
-- Artifact files as step outputs
-- Review/refine loops for quality control
-- Local state in `%USERPROFILE%\.ukbe-runner\jobs\`
+**Value**: Developers can run workflows locally without backend connectivity.
 
 ### Flow 2: Backend-Connected Worker
 
 ```
-Backend → Poll → Claim Work → Execute Step → Submit Result → Backend
-             ↑                                          ↓
-             └──────────── Heartbeat ←──────────────────┘
-```
-
-**Description:** A worker process polls a backend for available work, claims a workflow step, executes it using the local runner, submits results back to the backend, and emits heartbeats during execution.
-
-**Key Characteristics:**
-- Distributed execution model
-- Backend as source of truth
-- Worker ID for identification
-- Result submission via API
-
-### Flow 3: Daemon Supervision
-
-```
-Daemon → Claim Work → Spawn Child → Monitor → Log → Heartbeat
-            ↑                             ↓
-            └────── Track State ←─────────┘
-```
-
-**Description:** A daemon process continuously claims work from the backend, spawns child processes for each step execution, monitors child state, writes logs, and emits child-scoped heartbeats keyed by workflow step run ID.
-
-**Key Characteristics:**
-- Long-running supervision
-- Child process isolation
-- Automatic retry on failure
-- Log aggregation
-
-### Flow 4: Review/Refine Loop
-
-```
-Step Execution → Coder Returns REJECTED → Review Decision
+Daemon/Worker → Poll Backend → Claim Work → Execute Step
                                                   ↓
-         ↓────────────────── Refine Step ←────────────────┘
-         ↓
-    APPROVED → Advance Step
+                                        Submit Result → Backend
+                                                  ↓
+                                        Poll for Next Work
 ```
 
-**Description:** When a coder returns `REJECTED` status, the runner enters a review/refine loop. The rejection code determines the next action: auto-retry, human intervention, or replan. The loop continues until approved or a retry limit is reached.
+**Value**: Workstation acts as a worker node for distributed execution.
 
-**Key Characteristics:**
-- Configurable max rejects per step
-- Auto-retryable vs human-retryable classification
-- Replan context for workflow adaptation
-- State tracking in `loop_context`
+### Flow 3: Step Execution Loop
+
+```
+Load Job State → Check Preflight → Run Step → Parse Result
+                                               ↓
+                                    ┌─────────┴─────────┐
+                                    ↓                   ↓
+                                  APPROVED           REJECTED
+                                    ↓                   ↓
+                              Advance Step         Review Loop
+                                    ↓                   ↓
+                              Next Step            Refine/Retry
+```
+
+**Value**: Strict v2 contract with explicit routing and no silent recovery.
 
 ## Architecture Profile
 
 ### Universal Baseline
 
-The universal baseline applies to all agent-runner-v2 deployments:
+The platform establishes a universal baseline applicable to all repositories:
 
-- **CLI Entry Point** — `ukbe-run-agent` command
-- **Bootstrap Seeding** — Packaged to runtime bundle copy
-- **Job State Management** — JSON-based persistence
-- **Meta.json Contract** — Structured step results
-- **Multi-coder Support** — Abstracted LLM invocation
+| Baseline Element | Description |
+|-------------------|-------------|
+| **Execution Contract** | v2 sidecar-only communication |
+| **Job Schema** | Version 2 with structured state |
+| **Routing Model** | Explicit approve/reject/failure paths |
+| **Artifact Model** | Declared keys with existence validation |
+| **Coder Abstraction** | Adapter pattern for Claude, Codex, Qwen |
 
-### Repo-Selected Profile: `standard`
+### Repo-Selected Profile
 
-This repository selects the `standard` architecture profile with these characteristics:
+This repository (`agent-runner-v2`) currently operates under:
 
-#### Architecture Pattern
+| Attribute | Value | Rationale |
+|-----------|-------|-----------|
+| `current_profile` | `provisional` | Bootstrap in progress |
+| `target_profile` | `explicit` | Full system documentation planned |
+| `migration_mode` | `in-progress` | Documentation being generated |
 
-- **Modular Design** — Clear separation across 40+ modules
-- **State Machine** — Explicit job state transitions
-- **Plugin Actions** — Deterministic action system
-- **Schema-Driven** — JSON schemas for validation
+### Migration Posture
 
-#### Component Organization
+The repository is transitioning from `provisional` to `explicit`:
 
-| Layer | Components | Responsibility |
-|-------|------------|--------------|
-| **CLI** | `run_agent.py` | Command parsing, orchestration |
-| **Execution** | `step_runner.py`, `workflow_router.py` | Step execution, routing |
-| **State** | `job_state.py`, `runtime_context.py` | Persistence, context |
-| **Adapters** | `coder_adapters.py` | LLM invocation |
-| **Actions** | `actions/` package | Deterministic operations |
-| **Bootstrap** | `bundle_loader.py`, `template_groups.py` | Workflow loading |
+- **Current state**: Substantial implementation (56+ modules, 11 workflow families)
+- **Documentation state**: System docs being generated via bootstrap workflow
+- **Target state**: Full `explicit` documentation profile
+- **Timeline**: Bootstrap completion expected 2026-07-04
 
-#### Runtime Characteristics
+### Profile Separation
 
-- **v2 Runtime Model** — Meta.json sidecar as sole result channel
-- **No Silent Recovery** — Explicit failure routing
-- **No Markdown Write-Backs** — Runner does not modify doc files
-- **Deterministic Paths** — Explicit path resolution
+The platform separates universal baseline from repo-specific profiles:
 
-### Migration Posture: `in_progress`
-
-The repository is in documentation bootstrap:
-
-- **Active Generation** — Documentation being created by workflow
-- **Guardrail Protected** — Workflow-generated docs block manual edits
-- **Validation Advisory** — Failures don't block development
-- **Approval Required** — Final transition requires human approval
+| Concern | Universal Baseline | Repo-Specific |
+|---------|-------------------|---------------|
+| Execution contract | v2 sidecar rules | Workflow-specific steps |
+| Artifact model | Key classification | Specific artifact paths |
+| Routing behavior | APPROVED/REJECTED/FAILURE | Step-specific routing config |
+| Documentation structure | Required documents | Optional depth level |
 
 ## Key Risks
 
-| Risk | Severity | Mitigation |
-|------|----------|------------|
-| **Global runner home dependency** | Medium | Runtime depends on `%USERPROFILE%\.ukbe-runner` initialization |
-| **Coder timeout handling** | Medium | Configurable `coder_timeout_seconds` per step |
-| **Backend connectivity failures** | Medium | Worker mode has retry logic; daemon handles child failures |
-| **Artifact path resolution errors** | Low | Explicit path resolution via `resolve_repo_or_runtime_path()` |
-| **State migration complexity** | Medium | Migration functions in `job_state.py` for backward compatibility |
-| **Workflow-generated doc protection** | Low | Guardrails prevent manual edits to workflow-generated documents |
-| **Windows-specific paths** | Medium | Path handling uses `pathlib` with Windows conventions |
+| Risk | Description | Mitigation |
+|------|-------------|------------|
+| **Bootstrap/Runtime Divergence** | Runtime bundles may diverge from packaged bootstrap | `init` command, version tracking |
+| **Strict Contract Violation** | Schema deviations cause hard failures | Clear validation messages |
+| **Multi-Coder Complexity** | Different capabilities across LLM providers | Model mapping configuration |
+| **Job State Migration** | Legacy formats require migration | `migrate_job_state()` function |
+| **Review Loop Exhaustion** | Max iterations may be exceeded | Human intervention triggers |
+| **External Dependency** | Runtime depends on global runner home | Clear initialization SOP |
 
-## Value Proposition
-
-### For Users
-
-- **Reliable Execution** — Deterministic workflows with clear failure handling
-- **Quality Control** — Review loops and approval gates
-- **Flexibility** — Multiple execution modes (local, worker, daemon)
-- **Transparency** — State visible in job JSON, logs for debugging
+## Platform Value
 
 ### For Developers
 
-- **Extensible** — Action system for custom operations
-- **Testable** — Schema validation and artifact-based testing
-- **Portable** — Python package installable via pip
-- **Observable** — Comprehensive logging and usage tracking
+- **Local execution**: Test workflows without backend
+- **Deterministic routing**: Predictable step transitions
+- **Rich debugging**: Step-level logging and state inspection
 
-### For Operations
+### For Operators
 
-- **Scalable** — Daemon mode for continuous processing
-- **Resilient** — Automatic retry and failure classification
-- **Integrable** — Backend API for distributed systems
-- **Maintainable** — Clear module boundaries and documentation
+- **Daemon supervision**: Workstation worker management
+- **Backend integration**: Distributed work claiming
+- **Failure classification**: Automatic retry vs. human intervention
+
+### For Workflow Authors
+
+- **Template groups**: Declarative workflow definitions
+- **Artifact model**: Structured input/output contracts
+- **Review loops**: Built-in refinement support
 
 ---
 
-*Generated: 2026-07-04T08:00:00+08:00*
-*Workflow: 00_master_docs_bootstrap_v1 / Step: 03_generate_system_overview_docs*
-*Change ID: 00DOC-GEN-20260704-001*
+*This overview provides the high-level context for the agent-runner-v2 platform. See `FUNCTIONAL_SPEC.md` for detailed behaviors and `BUSINESS_CAPABILITIES.md` for operational impact.*

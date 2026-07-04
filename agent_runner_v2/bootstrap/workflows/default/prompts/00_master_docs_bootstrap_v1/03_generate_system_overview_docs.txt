@@ -3,20 +3,20 @@ You are generating the system overview and governance-facing master docs for the
 This step builds on the approved bootstrap project analysis. Keep the scope limited to overview and functional documentation.
 
 Inputs you must read first:
-- `docs/system/00_governance/bootstrap/project_analysis.md`
-- `docs/codebase/01_inventory/codebase_inventory.md`
-- `docs/codebase/04_changes/` latest change impact document
+- `{SYSTEM_DOC_ROOT}/project_analysis.md`
+- `{CODEBASE_DOC_ROOT}/01_inventory/codebase_inventory.md`
+- `{CODEBASE_DOC_ROOT}/04_changes/` latest change impact document
 - relevant source files under `agent_runner_v2/`
 
 Write or refresh these docs:
-- `docs/system/00_governance/bootstrap/README.md`
-- `docs/system/00_governance/bootstrap/DOCUMENTATION_STANDARD.md`
-- `docs/system/00_governance/bootstrap/BUNDLE_TAXONOMY.md`
-- `docs/system/00_governance/bootstrap/BUNDLE_MIGRATION_PLAN.md`
-- `docs/system/00_governance/bootstrap/SYSTEM_OVERVIEW.md`
-- `docs/system/00_governance/bootstrap/BUSINESS_CAPABILITIES.md`
-- `docs/system/00_governance/bootstrap/FUNCTIONAL_SPEC.md`
-- `docs/system/00_governance/bootstrap/NON_FUNCTIONAL_REQUIREMENTS.md`
+- `{SYSTEM_DOC_ROOT}/README.md`
+- `{SYSTEM_DOC_ROOT}/DOCUMENTATION_STANDARD.md`
+- `{SYSTEM_DOC_ROOT}/BUNDLE_TAXONOMY.md`
+- `{SYSTEM_DOC_ROOT}/BUNDLE_MIGRATION_PLAN.md`
+- `{SYSTEM_DOC_ROOT}/SYSTEM_OVERVIEW.md`
+- `{SYSTEM_DOC_ROOT}/BUSINESS_CAPABILITIES.md`
+- `{SYSTEM_DOC_ROOT}/FUNCTIONAL_SPEC.md`
+- `{SYSTEM_DOC_ROOT}/NON_FUNCTIONAL_REQUIREMENTS.md`
 
 Primary objectives:
 1. Explain the platform at a level useful to users, developers, and stakeholders.
@@ -26,7 +26,7 @@ Primary objectives:
 5. Make the universal ecosystem baseline and repo-selected architecture posture explicit, especially when the repository has no clear prior standard.
 
 Hard ownership rule:
-- `docs/system/00_governance/bootstrap/project_analysis.md` is read-only in this step.
+- `{SYSTEM_DOC_ROOT}/project_analysis.md` is read-only in this step.
 - Do not create, modify, or refresh any architecture or operations docs in this step.
 - The only writable outputs are the eight files listed in "Write or refresh these docs".
 - In particular, do not touch `SYSTEM_CONTEXT.md`, `COMPONENT_ARCHITECTURE.md`, `DECISION_LOG.md`, `SYSTEM_FILE_STRUCTURE.md`, `DEVELOPER_GUIDE.md`, `RUNBOOK.md`, or `EXISTING_REPO_WORKFLOW_SOP.md`.
@@ -43,7 +43,7 @@ Frontmatter contract:
   - `NON_FUNCTIONAL_REQUIREMENTS.md` -> `SYS-00-NFR`
 
 Required content rules:
-- `docs/system/00_governance/bootstrap/README.md` should index the master doc set and describe the audience views.
+- `{SYSTEM_DOC_ROOT}/README.md` should index the master doc set and describe the audience views.
 - `SYSTEM_OVERVIEW.md` should explain the platform, workflow model, and value flow, not just list files.
 - `SYSTEM_OVERVIEW.md` should separate the universal baseline from any repo-selected profile and note the migration posture when the repo standard is provisional.
 - `DOCUMENTATION_STANDARD.md` should define the baseline rules that apply to every repo, then explain how repo-specific profiles and migration modes are selected.
@@ -60,14 +60,14 @@ Required content rules:
   - `NON_FUNCTIONAL_REQUIREMENTS.md`: quality and operational requirements
 
 Workflow-owned artifact contract:
-- `SYSTEM_DOCS_INDEX` -> `docs/system/00_governance/bootstrap/README.md`
-- `SYSTEM_DOC_STANDARD` -> `docs/system/00_governance/bootstrap/DOCUMENTATION_STANDARD.md`
-- `BUNDLE_TAXONOMY` -> `docs/system/00_governance/bootstrap/BUNDLE_TAXONOMY.md`
-- `BUNDLE_MIGRATION_PLAN` -> `docs/system/00_governance/bootstrap/BUNDLE_MIGRATION_PLAN.md`
-- `SYSTEM_OVERVIEW` -> `docs/system/00_governance/bootstrap/SYSTEM_OVERVIEW.md`
-- `BUSINESS_CAPABILITIES` -> `docs/system/00_governance/bootstrap/BUSINESS_CAPABILITIES.md`
-- `FUNCTIONAL_SPEC` -> `docs/system/00_governance/bootstrap/FUNCTIONAL_SPEC.md`
-- `NON_FUNCTIONAL_REQUIREMENTS` -> `docs/system/00_governance/bootstrap/NON_FUNCTIONAL_REQUIREMENTS.md`
+- `SYSTEM_DOCS_INDEX` -> `{SYSTEM_DOC_ROOT}/README.md`
+- `SYSTEM_DOC_STANDARD` -> `{SYSTEM_DOC_ROOT}/DOCUMENTATION_STANDARD.md`
+- `BUNDLE_TAXONOMY` -> `{SYSTEM_DOC_ROOT}/BUNDLE_TAXONOMY.md`
+- `BUNDLE_MIGRATION_PLAN` -> `{SYSTEM_DOC_ROOT}/BUNDLE_MIGRATION_PLAN.md`
+- `SYSTEM_OVERVIEW` -> `{SYSTEM_DOC_ROOT}/SYSTEM_OVERVIEW.md`
+- `BUSINESS_CAPABILITIES` -> `{SYSTEM_DOC_ROOT}/BUSINESS_CAPABILITIES.md`
+- `FUNCTIONAL_SPEC` -> `{SYSTEM_DOC_ROOT}/FUNCTIONAL_SPEC.md`
+- `NON_FUNCTIONAL_REQUIREMENTS` -> `{SYSTEM_DOC_ROOT}/NON_FUNCTIONAL_REQUIREMENTS.md`
 
 Meta contract:
 - Write the sidecar JSON to `{SYSTEM_DOCS_INDEX_METAJSON}`.
@@ -79,14 +79,14 @@ Meta contract:
       "status": "APPROVED" | "REJECTED",
       "remark": "<summary>",
       "artifacts": {
-        "SYSTEM_DOCS_INDEX": "docs/system/00_governance/bootstrap/README.md",
-        "SYSTEM_DOC_STANDARD": "docs/system/00_governance/bootstrap/DOCUMENTATION_STANDARD.md",
-        "BUNDLE_TAXONOMY": "docs/system/00_governance/bootstrap/BUNDLE_TAXONOMY.md",
-        "BUNDLE_MIGRATION_PLAN": "docs/system/00_governance/bootstrap/BUNDLE_MIGRATION_PLAN.md",
-        "SYSTEM_OVERVIEW": "docs/system/00_governance/bootstrap/SYSTEM_OVERVIEW.md",
-        "BUSINESS_CAPABILITIES": "docs/system/00_governance/bootstrap/BUSINESS_CAPABILITIES.md",
-        "FUNCTIONAL_SPEC": "docs/system/00_governance/bootstrap/FUNCTIONAL_SPEC.md",
-        "NON_FUNCTIONAL_REQUIREMENTS": "docs/system/00_governance/bootstrap/NON_FUNCTIONAL_REQUIREMENTS.md"
+        "SYSTEM_DOCS_INDEX": "{SYSTEM_DOC_ROOT}/README.md",
+        "SYSTEM_DOC_STANDARD": "{SYSTEM_DOC_ROOT}/DOCUMENTATION_STANDARD.md",
+        "BUNDLE_TAXONOMY": "{SYSTEM_DOC_ROOT}/BUNDLE_TAXONOMY.md",
+        "BUNDLE_MIGRATION_PLAN": "{SYSTEM_DOC_ROOT}/BUNDLE_MIGRATION_PLAN.md",
+        "SYSTEM_OVERVIEW": "{SYSTEM_DOC_ROOT}/SYSTEM_OVERVIEW.md",
+        "BUSINESS_CAPABILITIES": "{SYSTEM_DOC_ROOT}/BUSINESS_CAPABILITIES.md",
+        "FUNCTIONAL_SPEC": "{SYSTEM_DOC_ROOT}/FUNCTIONAL_SPEC.md",
+        "NON_FUNCTIONAL_REQUIREMENTS": "{SYSTEM_DOC_ROOT}/NON_FUNCTIONAL_REQUIREMENTS.md"
       },
       "recorded_at": "2026-07-01T00:00:00"
     }
@@ -100,13 +100,13 @@ ABSOLUTE OUTPUT RULE
     "status": "APPROVED | REJECTED",
     "remark": "<summary>",
     "artifacts": {
-      "SYSTEM_DOCS_INDEX": "docs/system/00_governance/bootstrap/README.md",
-      "SYSTEM_DOC_STANDARD": "docs/system/00_governance/bootstrap/DOCUMENTATION_STANDARD.md",
-      "BUNDLE_TAXONOMY": "docs/system/00_governance/bootstrap/BUNDLE_TAXONOMY.md",
-      "BUNDLE_MIGRATION_PLAN": "docs/system/00_governance/bootstrap/BUNDLE_MIGRATION_PLAN.md",
-      "SYSTEM_OVERVIEW": "docs/system/00_governance/bootstrap/SYSTEM_OVERVIEW.md",
-      "BUSINESS_CAPABILITIES": "docs/system/00_governance/bootstrap/BUSINESS_CAPABILITIES.md",
-      "FUNCTIONAL_SPEC": "docs/system/00_governance/bootstrap/FUNCTIONAL_SPEC.md",
-      "NON_FUNCTIONAL_REQUIREMENTS": "docs/system/00_governance/bootstrap/NON_FUNCTIONAL_REQUIREMENTS.md"
+      "SYSTEM_DOCS_INDEX": "{SYSTEM_DOC_ROOT}/README.md",
+      "SYSTEM_DOC_STANDARD": "{SYSTEM_DOC_ROOT}/DOCUMENTATION_STANDARD.md",
+      "BUNDLE_TAXONOMY": "{SYSTEM_DOC_ROOT}/BUNDLE_TAXONOMY.md",
+      "BUNDLE_MIGRATION_PLAN": "{SYSTEM_DOC_ROOT}/BUNDLE_MIGRATION_PLAN.md",
+      "SYSTEM_OVERVIEW": "{SYSTEM_DOC_ROOT}/SYSTEM_OVERVIEW.md",
+      "BUSINESS_CAPABILITIES": "{SYSTEM_DOC_ROOT}/BUSINESS_CAPABILITIES.md",
+      "FUNCTIONAL_SPEC": "{SYSTEM_DOC_ROOT}/FUNCTIONAL_SPEC.md",
+      "NON_FUNCTIONAL_REQUIREMENTS": "{SYSTEM_DOC_ROOT}/NON_FUNCTIONAL_REQUIREMENTS.md"
     }
   }

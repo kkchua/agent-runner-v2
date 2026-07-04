@@ -15,6 +15,7 @@ from typing import Any
 
 from .runtime_context import get_context, get_workflow_module
 from .bundle_loader import load_project_config
+from .doc_paths import codebase_doc_rel
 
 
 EXCLUDED_DIRS = {
@@ -107,12 +108,12 @@ def _module_doc_mode(rel_path: str) -> str:
 
 def _component_owner_doc(component_name: str) -> str:
     slug = _slugify(component_name)
-    return f"docs/codebase/03_components/{slug}.md"
+    return codebase_doc_rel(f"03_components/{slug}.md")
 
 
 def _module_doc_path(rel_path: str) -> str:
     stem = _slugify(rel_path.replace("/", "__").replace("\\", "__").removesuffix(".py"))
-    return f"docs/codebase/02_modules/{stem}.md"
+    return codebase_doc_rel(f"02_modules/{stem}.md")
 
 
 def _module_name_from_path(rel_path: str) -> str:
@@ -171,6 +172,11 @@ def _classify_file(project_root: Path, path: Path) -> ScanItem:
         owner_doc = _component_owner_doc("config and data")
         doc_mode = "summary"
     elif rel.suffix == ".md":
+        category = "documentation files"
+        subcategory = "docs"
+        owner_doc = _component_owner_doc("codebase governance")
+        doc_mode = "summary"
+    elif rel.suffix == ".html":
         category = "documentation files"
         subcategory = "docs"
         owner_doc = _component_owner_doc("codebase governance")
@@ -589,7 +595,7 @@ def render_change_impact(snapshot: dict[str, Any], *, title: str, changed_files:
         "## 1. Change Summary\n\n### 1.1 Description\n\n",
         "Repository scan bootstrap/reconcile generated or refreshed the codebase documentation baseline.\n\n",
         "### 1.2 Rationale\n\n",
-        "Keep `/docs/codebase` synchronized with the current repository state even when code changes occurred outside the normal workflow SOP.\n\n",
+        f"Keep `/{codebase_doc_rel()}` synchronized with the current repository state even when code changes occurred outside the normal workflow SOP.\n\n",
         "## 2. Changed Files\n\n### 2.1 Source Code Changes\n\n",
         "| File | Change Type | Description | Impact |\n|------|-------------|-------------|--------|\n",
     ]

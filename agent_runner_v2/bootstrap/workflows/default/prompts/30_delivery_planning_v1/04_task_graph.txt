@@ -43,7 +43,7 @@ References:
 
 Task Graph Template (MANDATORY):
 - Before generating the task graph, read the canonical template from disk:
-  `docs/system/00_governance/bootstrap/templates/delivery/04_delivery_task_graph_template.md`
+  `{SYSTEM_TEMPLATE_ROOT}/delivery/04_delivery_task_graph_template.md`
 - Use that template as the authoritative structure for the output document â€” section order, metadata fields, field names, and allowed status values must match it exactly.
 - Substitute all `{{PLACEHOLDER}}` tokens with values derived from the approved plan.
 - The `Task Graph ID` metadata field is REQUIRED and must follow the pattern `TASK-GRAPH-{{YYYYMMDD}}-{{PLAN_ID}}`.

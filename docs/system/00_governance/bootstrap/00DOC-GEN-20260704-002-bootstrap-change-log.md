@@ -1,0 +1,135 @@
+---
+template_id: "CHANGE-LOG"
+title: "Bootstrap Change Log"
+status: "active"
+generated: "2026-07-04T14:00:00+08:00"
+workflow: "00_master_docs_bootstrap_v1"
+step: "04_generate_architecture_docs"
+change_id: "00DOC-GEN-20260704-002"
+managed_by: workflow-generated
+---
+
+> Managed by workflow: `00_master_docs_bootstrap_v1` / step: `04_generate_architecture_docs`
+> This file is workflow-generated and protected from manual edits.
+
+# Bootstrap Change Log
+
+## Change Summary
+
+**Workflow**: `00_master_docs_bootstrap_v1`  
+**Step**: `04_generate_architecture_docs`  
+**Change ID**: `00DOC-GEN-20260704-002`  
+**Generated**: 2026-07-04T14:00:00+08:00
+
+This step generated the architecture, engineering, and operations master documentation for the agent-runner-v2 repository.
+
+## Documents Generated
+
+### Architecture Documentation
+
+| Document | Template ID | Purpose | Status |
+|----------|-------------|---------|--------|
+| `SYSTEM_CONTEXT.md` | SYS-03-CTX | System context and external boundaries | Created |
+| `COMPONENT_ARCHITECTURE.md` | SYS-03-CA | Component relationships and dependencies | Created |
+| `DECISION_LOG.md` | SYS-03-DL | Architectural decision records | Created |
+| `SYSTEM_FILE_STRUCTURE.md` | SYS-03-SF` | File organization rationale | Created |
+
+### Engineering Documentation
+
+| Document | Template ID | Purpose | Status |
+|----------|-------------|---------|--------|
+| `DEVELOPER_GUIDE.md` | ENG-01-DG | Development setup and workflows | Created |
+
+### Operations Documentation
+
+| Document | Template ID | Purpose | Status |
+|----------|-------------|---------|--------|
+| `RUNBOOK.md` | OPS-01-RB | Operational procedures | Created |
+| `EXISTING_REPO_WORKFLOW_SOP.md` | SYS-02-SOP | Workflow SOP for existing repos | Created |
+
+## Key Findings
+
+### Architecture Profile
+
+The repository follows a **repo-selected profile** with:
+
+- **Current profile**: `provisional` (bootstrap in progress)
+- **Target profile**: `explicit` (full documentation)
+- **Migration mode**: `in-progress`
+
+### Component Architecture
+
+Identified 7 component groups:
+
+1. **Core Orchestration**: `run_agent.py`, `step_runner.py`, `workflow_router.py`, `job_state.py`
+2. **Coder Abstraction**: `coder_adapters.py`, `model_config.py`
+3. **Runtime Context**: `runtime_context.py`, `bundle_loader.py`
+4. **Runner Actions**: 20 deterministic action modules
+5. **Backend Integration**: `backend_client.py`, `daemon.py`
+6. **Support Utilities**: Guardrails, docs utilities, paths, logging
+7. **Bootstrap Workflows**: `template_groups.py`, prompts, schemas
+
+### Entry Points Documented
+
+| Entry Point | Location | Purpose |
+|-------------|----------|---------|
+| Code Scanning | `actions/scan_repo_codebase.py` | Repository analysis |
+| Documentation Generation | `actions/sync_codebase_docs.py` | Doc synchronization |
+| Workflow Execution | `run_agent.py` | CLI entry point |
+| Architecture Posture | `project_analysis.md` | Posture management |
+
+### DDD/EDA Status
+
+| Pattern | Status | Application |
+|---------|--------|-------------|
+| DDD | Conditional | Workflow domain modeling |
+| EDA | Conditional | Daemon event loop; explicit routing preferred |
+
+## Document Cross-References
+
+### Input Dependencies
+
+| Document | Dependencies |
+|----------|--------------|
+| `SYSTEM_CONTEXT.md` | `project_analysis.md`, `SYSTEM_OVERVIEW.md`, `FUNCTIONAL_SPEC.md` |
+| `COMPONENT_ARCHITECTURE.md` | `project_analysis.md`, `codebase_inventory.md`, module docs |
+| `SYSTEM_FILE_STRUCTURE.md` | Repository scan, `codebase_inventory.md` |
+| `DEVELOPER_GUIDE.md` | All architecture docs, module docs |
+| `RUNBOOK.md` | `job_state.py`, `daemon.py`, operational experience |
+| `EXISTING_REPO_WORKFLOW_SOP.md` | `template_groups.py`, batch files |
+
+### Output References
+
+All generated documents reference:
+- `README.md` - System documentation index
+- `project_analysis.md` - Project analysis (read-only)
+- `codebase_inventory.md` - Module inventory
+- `00DOC-GEN-20260704-002-bootstrap.md` - Change impact
+
+## Remaining Follow-Up Items
+
+1. **Review Step**: Step 05 (`05_review_master_system_docs`) should review these documents
+2. **Refinement Step**: Step 06 (`06_refine_master_system_docs`) may apply refinements
+3. **Validation Steps**: Steps 07-08 validate codebase and system docs
+4. **Finalization**: Step 09 (`09_finalize_bootstrap`) marks completion
+
+## Validation Status
+
+| Check | Status |
+|-------|--------|
+| All required documents generated | ✅ |
+| Frontmatter template IDs correct | ✅ |
+| Protected document banners present | ✅ |
+| Cross-references valid | ✅ |
+| Internal consistency | ✅ |
+
+## Next Steps
+
+1. Execute `05_review_master_system_docs` to review generated documents
+2. Address any review feedback in `06_refine_master_system_docs`
+3. Complete validation in steps 07-08
+4. Finalize bootstrap in step 09
+
+---
+
+*This change log documents the architecture docs generation step of the bootstrap workflow. Generated by `00_master_docs_bootstrap_v1` step `04_generate_architecture_docs`.*

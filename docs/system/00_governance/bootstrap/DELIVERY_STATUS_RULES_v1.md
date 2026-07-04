@@ -1,203 +1,208 @@
 ---
-title: "Delivery Status Rules v1"
-template_id: "DELIVERY-STATUS-RULES-v1"
-status: "active"
-version: "1.0"
-generated: "2026-07-04T07:00:00+08:00"
-workflow: "10_execution_scaffold_v1"
-step: "generate_sop"
+title: Delivery Status Rules
 managed_by: workflow-generated
+workflow: 10_execution_scaffold_v1
+step: generate_sop
+created: 2026-07-04
+version: 1
 ---
 
 > Managed by workflow: `10_execution_scaffold_v1` / step: `generate_sop`
 > This file is workflow-generated and protected from manual edits.
 
-# Delivery Status Rules v1
+# Delivery Status Rules
 
 ## Core Principles
 
-1. **Every artifact has exactly one status at any time.** No artifact may exist without a status, and no artifact may hold multiple statuses simultaneously.
-2. **Status transitions are deterministic.** Only explicitly allowed transitions may occur. All others are forbidden by default.
-3. **Status reflects reality, not intent.** An artifact's status must match its actual state in the world, not the desired or planned state.
-4. **Evidence gates transitions.** No status change occurs without completed workflow phase output validated by a `meta.json` sidecar.
-5. **Terminal states are final.** Once an artifact reaches `completed` or `superseded`, it cannot transition to any other state.
+1. **Status is a state machine, not a label.** Every delivery artifact carries a status that reflects its position in the workflow lifecycle. Status transitions are governed by explicit rules — arbitrary status changes are forbidden.
+
+2. **The sidecar is the source of truth.** The `meta.json` sidecar's `coder_result.status` field is the only authoritative status indicator. A document's internal claims about its own status are secondary to the sidecar.
+
+3. **No forward transition without approval.** An artifact cannot advance to a later lifecycle phase unless the preceding phase has been approved via a valid sidecar with `status: APPROVED`.
+
+4. **Traceability is mandatory.** Every status change must be attributable to a specific workflow step, agent role, and timestamp.
+
+5. **Rejection is a controlled transition.** Rejected artifacts must be reworked, not deleted. The rejection reason must be recorded in the sidecar remark.
 
 ## Global Workflow Discipline
 
-| Rule | Description |
-|------|-------------|
-| **Sequential enforcement** | Phases execute in order: `20_initiative_intake_v1` → `30_delivery_planning_v1` → `31_task_execution_v1` → `40_documentation_sync_v1`. Parallel execution is only allowed for independent tasks within a validated task-graph. |
-| **No skip-rule** | No phase may be skipped. Every initiative must pass through all four workflow families. |
-| **No rollback-rule** | Once a phase completes and its sidecar reports `APPROVED`, the phase output is immutable. Corrections happen via new initiatives, not by editing completed phase output. |
-| **Sidecar required** | Every phase completion must produce a valid `meta.json` sidecar. No sidecar = phase not complete. |
-| **Bounded loops** | Refine loops: max 2. Replan loops: max 1. Exceeding the cap escalates to human intervention. |
-| **Single current-truth** | `40_documentation_sync_v1` is the single workflow for reconciling documentation against actual code state. |
+### Phase Ordering
+Workflow phases MUST execute in the defined sequence:
+
+```
+20_initiative_intake_v1 → 30_delivery_planning_v1 → 31_task_execution_v1
+```
+
+Post-execution reconciliation and publication:
+
+```
+31_task_execution_v1 → 40_documentation_sync_v1 → 50_architecture_site_v1
+```
+
+### Concurrent Work
+- Multiple tasks within a validated task graph MAY execute concurrently
+- Multiple initiatives MUST NOT share a delivery plan — each initiative gets its own plan
+- Documentation sync (`40_documentation_sync_v1`) MAY run independently of active deliveries
+
+### Scope Boundaries
+- A delivery plan addresses exactly one initiative
+- A task graph belongs to exactly one delivery plan
+- A task belongs to exactly one task graph
+- Cross-delivery task dependencies are forbidden — split into separate deliveries
 
 ## Lifecycle Rules
 
 ### Initiative Lifecycle
 
-| From | To | Condition |
-|------|----|-----------|
-| _(none)_ | `draft` | Created by `20_initiative_intake_v1` step |
-| `draft` | `active` | Initiative approved by review gate |
-| `active` | `planned` | `30_delivery_planning_v1` produces an approved plan |
-| `planned` | `executing` | Task decomposition complete, execution begins |
-| `executing` | `completed` | All tasks validated and completed |
-| any non-terminal | `superseded` | A newer initiative replaces this one |
+```
+intake_draft → intake_active → intake_approved
+```
 
-Arrow form: `draft → active → planned → executing → completed`
-Arrow form (supersession): `any non-terminal → superseded`
+- `intake_draft`: Initiative is being authored; not yet submitted for review
+- `intake_active`: Initiative is under review
+- `intake_approved`: Initiative scope, documentation scope, and stale-guidance risk have been assessed and accepted
 
 ### Plan Lifecycle
 
-| From | To | Condition |
-|------|----|-----------|
-| _(none)_ | `draft` | Created by `30_delivery_planning_v1` plan step |
-| `draft` | `active` | Plan approved by review gate |
-| `active` | `task_graph_ready` | Task-graph decomposition complete |
-| `task_graph_ready` | `task_graph_validated` | Task-graph reviewed and approved |
-| `task_graph_validated` | `executing` | First task begins execution |
-| `executing` | `completed` | All tasks in the plan completed |
-| any non-terminal | `superseded` | A newer plan replaces this one |
+```
+plan_draft → plan_active → plan_approved
+```
 
-Arrow form: `draft → active → task_graph_ready → task_graph_validated → executing → completed`
-Arrow form (supersession): `any non-terminal → superseded`
+- `plan_draft`: Plan is being authored
+- `plan_active`: Plan is under review; documentation obligations are being validated
+- `plan_approved`: Plan is accepted; task decomposition may begin
+
+### Task Graph Lifecycle
+
+```
+task_graph_draft → task_graph_ready → task_graph_validated
+```
+
+- `task_graph_draft`: Tasks are being defined with dependencies
+- `task_graph_ready`: All tasks have implementation plans; dependencies validated
+- `task_graph_validated`: Task graph passes structural validation; execution may begin
 
 ### Task Lifecycle
 
-| From | To | Condition |
-|------|----|-----------|
-| _(none)_ | `draft` | Created by task decomposition step |
-| `draft` | `active` | Task approved (acceptance criteria validated) |
-| `active` | `implementing` | Executor begins work |
-| `implementing` | `reviewing` | Implementation complete, submitted for review |
-| `reviewing` | `rework` | Review found issues requiring fix |
-| `rework` | `reviewing` | Rework complete, resubmitted (bounded: max 2 refine loops) |
-| `reviewing` | `validating` | Review passed, no issues or issues resolved |
-| `validating` | `completed` | Validation passed |
-| `validating` | `rework` | Validation failed, return to rework (bounded: max 1 replan loop) |
-| any non-terminal | `superseded` | A newer task replaces this one |
+```
+task_pending → task_implementing → task_reviewing → task_validating → task_completed
+```
 
-Arrow form: `draft → active → implementing → reviewing → validating → completed`
-Arrow form (rework): `reviewing → rework → reviewing`
-Arrow form (validation failure): `validating → rework → reviewing`
+- `task_pending`: Task is queued for implementation
+- `task_implementing`: Executor is actively implementing the task
+- `task_reviewing`: Reviewer is examining implementation and documentation updates
+- `task_validating`: Validator is confirming task completion criteria are met
+- `task_completed`: Task is fully done; artifacts and documentation are finalized
 
-### Implementation Lifecycle
+### Delivery Lifecycle
 
-| From | To | Condition |
-|------|----|-----------|
-| _(none)_ | `draft` | Implementation plan created |
-| `draft` | `active` | Implementation complete, awaiting review |
-| `active` | `reviewing` | Submitted for review |
-| `reviewing` | `rework` | Review found issues |
-| `rework` | `reviewing` | Rework complete, resubmitted |
-| `reviewing` | `validating` | Review passed |
-| `validating` | `completed` | Validation passed |
-| any non-terminal | `superseded` | Replaced by a newer implementation |
+```
+draft → active → planned → task_graph_ready → task_graph_validated → executing → completed
+```
 
-Arrow form: `draft → active → reviewing → validating → completed`
-
-### Documentation Sync Lifecycle
-
-| From | To | Condition |
-|------|----|-----------|
-| _(none)_ | `scanning` | `40_documentation_sync_v1` begins |
-| `scanning` | `analyzing` | Scanning complete, drift data collected |
-| `analyzing` | `flagging` | Analysis complete, stale entries identified |
-| `flagging` | `completed` | All stale entries flagged |
-| any state | `completed` | Sync operation concluded (early termination) |
-
-Arrow form: `scanning → analyzing → flagging → completed`
+- `draft`: Delivery is initialized
+- `active`: Initiative is approved; planning begins
+- `planned`: Plan is approved
+- `task_graph_ready`: Task graph is ready
+- `task_graph_validated`: Task graph is validated
+- `executing`: At least one task is in implementation
+- `completed`: All tasks completed; delivery review passed
 
 ## Authority Model
 
-| Actor | Can Set Status | Cannot Override |
-|-------|---------------|-----------------|
-| **Workflow steps** | Their own phase outputs | Other phases' outputs |
-| **Reviewer** | `reviewing → rework` or `reviewing → validating` | Task completion status |
-| **Validator** | `validating → completed` | Review status |
-| **Memory Manager** | Recording status in memory documents | Any live artifact status |
-| **Runner actions** | Structural validation results | Content quality judgments |
-| **Human operator** | Any status (manual override) | Must document override reason |
+### Document Authority Hierarchy
+
+1. `meta.json` sidecar (v2 schema)
+2. `WORKFLOW_SOP_v1.md` (this SOP)
+3. `DELIVERY_STATUS_RULES_v1.md` (this document)
+4. Workflow templates
+5. Agent role contracts
+6. Repository-specific conventions
+7. Informal notes (non-authoritative)
+
+### Agent Authority
+
+| Agent | Can Approve | Can Reject | Can Escalate |
+|---|---|---|---|
+| Planner | Initiative, Plan | Initiative, Plan | Yes |
+| Task Decomposer | Task Graph | Task Graph | Yes |
+| Impl Planner | Implementation Plan | Implementation Plan | Yes |
+| Executor | — | — | Yes |
+| Reviewer | Task, Delivery | Task, Delivery | Yes |
+| Memory Manager | — | — | Yes |
 
 ## Approval Gates
 
-Every initiative and plan must pass an approval gate before its status advances from `draft` to `active`. The gate checks:
+### Initiative Approval Gate
+- **Required before**: `30_delivery_planning_v1` begins
+- **Criteria**: Initiative document has valid sidecar with `status: APPROVED`; documentation scope and stale-guidance risk are captured
+- **Approver**: Planner agent
 
-1. **Completeness** — all required sections present per template.
-2. **Clarity** — acceptance criteria are specific and testable.
-3. **Scope** — documentation scope fully enumerated, stale-guidance risks identified.
-4. **Risk** — risks identified and mitigated or accepted.
-5. **Traceability** — parent references are valid, child references are resolvable.
+### Plan Approval Gate
+- **Required before**: Task decomposition begins
+- **Criteria**: Plan document has valid sidecar with `status: APPROVED`; documentation obligations are defined per task
+- **Approver**: Planner agent
 
-If the gate rejects, the artifact returns to `draft` for correction. The correction is tracked as a refine iteration.
+### Task Graph Validation Gate
+- **Required before**: Task execution begins
+- **Criteria**: Task graph has valid sidecar with `status: APPROVED`; all dependencies are acyclic; all tasks have implementation plans
+- **Approver**: Task Decomposer + Reviewer
+
+### Task Completion Gate
+- **Required before**: Task advances to `task_completed`
+- **Criteria**: Implementation passes review; codebase documentation is updated; sidecar is valid
+- **Approver**: Reviewer
+
+### Delivery Completion Gate
+- **Required before**: Delivery advances to `completed`
+- **Criteria**: All tasks in `task_completed`; `validate_codebase_docs` passes; no stale documentation in touched modules
+- **Approver**: Reviewer
 
 ## Forbidden Transitions
 
-The following transitions are **always forbidden**, regardless of context:
+The following transitions are **explicitly forbidden**:
 
-| Forbidden | Reason |
-|-----------|--------|
-| `completed → any non-terminal` | Completed artifacts are immutable. Corrections require a new initiative. |
-| `superseded → any` | Superseded artifacts are terminal. |
-| `draft → completed` (any artifact type) | Skips all intermediate phases. |
-| `active → completed` (initiative or plan) | Skips planning or execution phases. |
-| `draft → implementing` (task) | Skips the approval gate. |
-| `draft → executing` (initiative) | Skips the planning phase entirely. |
-| Any state → `draft` (after first transition from draft) | No rollback to draft once an artifact has left draft. |
-| Any state → `active` (from a terminal state) | Terminal states are final. |
-| `reviewing → implementing` (task) | Must go through `rework` or `validating` first. |
-| `validating → reviewing` (task) | Validation failure goes to `rework`, not back to `reviewing`. |
+1. **Skipping phases**: `intake_draft → plan_draft` (initiative must be approved first)
+2. **Backward status change**: `task_completed → task_implementing` (completed is terminal)
+3. **Status without sidecar**: Any status change without a corresponding `meta.json` update
+4. **Parallel plan authoring**: Two plans for the same initiative simultaneously
+5. **Cross-delivery tasks**: A task belonging to multiple task graphs
+6. **Manual override**: Changing status outside of workflow step execution
+7. **Deletion of rejected artifacts**: Rejected artifacts must be reworked, not deleted
+8. **Advancing on rejected sidecar**: No phase advances when the preceding sidecar has `status: REJECTED`
+9. **Unvalidated task graph execution**: Tasks cannot begin implementation until the task graph is validated
+10. **Documentation skip**: Task completion without corresponding codebase documentation update
 
-## Document-First
+## Document-First Rule
 
-All delivery artifacts are documents. Code is secondary. The sequence is:
+All delivery decisions, plans, and outcomes MUST be recorded as markdown documents before execution begins. Implementation without a preceding document is forbidden.
 
-1. Document the requirement (initiative).
-2. Document the solution (plan).
-3. Document the tasks (task-graph).
-4. Document the implementation plan.
-5. Execute the code.
-6. Update the documentation (co-change).
-7. Validate everything.
+### Document-First Enforcement
+- No code changes without an approved implementation plan
+- No task decomposition without an approved delivery plan
+- No initiative execution without an approved initiative document
+- Documentation updates are part of the task, not a follow-up
 
-If code exists without a corresponding approved document, it is unauthorized and must be captured via a new initiative. This rule applies equally to source code changes and documentation-only changes.
-
-### Document-First Implications
-
-- **No orphan code.** Code without documentation is incomplete.
-- **No orphan documentation.** Documentation without a corresponding source or plan is stale.
-- **Co-change is mandatory.** Documentation updates happen in the same delivery task as the code changes they describe.
-- **Flagging is the escape hatch.** If a doc cannot be updated in the current cycle, it must be flagged as `stale_pending` rather than silently left outdated.
+### Exception
+Emergency hotfixes MAY proceed with reduced documentation, but MUST be retroactively documented within the same delivery cycle. The exception must be recorded in the sidecar remark.
 
 ## Traceability
 
-Every delivery artifact must maintain a chain of references back to its origin:
+### Required Traceability Links
+- Every plan MUST reference its source initiative
+- Every task graph MUST reference its source plan
+- Every task MUST reference its source task graph
+- Every implementation MUST reference its source task
+- Every review MUST reference the artifacts it reviewed
+- Every validation MUST reference the criteria it validated
 
-- **Task** references its parent plan.
-- **Plan** references its parent initiative.
-- **Implementation plan** references its parent task.
-- **Review record** references its parent implementation plan.
-- **Validation record** references its parent review record.
-- **Memory record** references all artifacts in the delivery chain.
+### Sidecar Traceability
+- `coder_result.status` — outcome of the step
+- `coder_result.remark` — human-readable summary
+- `coder_result.artifacts` — exact paths of generated documents
+- `coder_result.recorded_at` — ISO 8601 timestamp
 
-This chain enables:
-
-- **Backward traceability** — from any artifact to its origin initiative.
-- **Forward traceability** — from an initiative to all derived artifacts.
-- **Impact analysis** — when a source file changes, which delivery artifacts are affected?
-- **Audit trail** — who approved what, when, and why.
-
-### Traceability Requirements
-
-| Artifact | Required References |
-|----------|-------------------|
-| Initiative | None (root artifact) |
-| Plan | `parent_initiative` |
-| Task | `parent_plan`, `parent_task_graph` |
-| Implementation plan | `parent_task` |
-| Review record | `parent_impl_plan`, `parent_task` |
-| Validation record | `parent_review` |
-| Memory record | `initiative`, `plan`, `tasks[]`, `reviews[]` |
-| Change record (codebase) | `parent_task` (if triggered by a delivery task) |
+### Decision Recording
+- The Memory Manager records all significant decisions in workflow memory
+- Rejection reasons MUST be preserved across rework cycles
+- Escalation decisions MUST include the reason and the escalation target

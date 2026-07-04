@@ -126,9 +126,16 @@ if not exist "%PROJECT_ROOT%" (
     exit /b 1
 )
 
+REM Keep scratch space inside the repo so runs are self-contained.
+set "TEMP_ROOT=%PROJECT_ROOT%\.tmp"
+if not exist "%TEMP_ROOT%" mkdir "%TEMP_ROOT%" >nul 2>nul
+set "TEMP=%TEMP_ROOT%"
+set "TMP=%TEMP_ROOT%"
+set "TMPDIR=%TEMP_ROOT%"
+
 REM If resuming a specific job, show status and stop early when it is already completed.
 if not "%JOB_ID%"=="" (
-    set "STATUS_FILE=%TEMP%\ukbe-run-delivery-status-%RANDOM%.txt"
+    set "STATUS_FILE=%TEMP_ROOT%\ukbe-run-delivery-status-%RANDOM%.txt"
     %UKBE_CLI% run --project-root "%PROJECT_ROOT%" --template-group %TEMPLATE_GROUP% --job-id %JOB_ID% --check-job-status > "!STATUS_FILE!"
     set "STATUS_EXIT=%ERRORLEVEL%"
     if "!STATUS_EXIT!"=="0" (

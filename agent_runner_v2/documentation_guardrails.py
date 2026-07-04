@@ -7,9 +7,12 @@ documentation_guardrails.py - Workflow-owned document inventory and protection h
 from pathlib import Path
 from typing import Iterable
 
+from .doc_paths import architecture_site_rel, codebase_doc_rel, delivery_doc_rel, system_doc_rel
+
 
 MASTER_BOOTSTRAP_WORKFLOW = "00_master_docs_bootstrap_v1"
 EXECUTION_SCAFFOLD_WORKFLOW = "10_execution_scaffold_v1"
+ARCHITECTURE_SITE_WORKFLOW = "50_architecture_site_v1"
 
 WORKFLOW_GENERATED_MARKER = "workflow-generated"
 DEFAULT_LEGACY_QUARANTINE_DIR = "docs/_workflow_legacy"
@@ -24,48 +27,48 @@ def managed_banner(*, workflow: str, step: str) -> str:
 
 def master_bootstrap_doc_paths(*, job_id: str, mode: str) -> list[str]:
     return [
-        "docs/codebase/04_changes/{job_id}-{mode}-snapshot.json".format(job_id=job_id, mode=mode),
-        "docs/codebase/04_changes/{job_id}-{mode}.md".format(job_id=job_id, mode=mode),
-        "docs/codebase/01_inventory/codebase_inventory.md",
-        "docs/system/00_governance/bootstrap/project_analysis.md",
-        "docs/system/00_governance/bootstrap/README.md",
-        "docs/system/00_governance/bootstrap/DOCUMENTATION_STANDARD.md",
-        "docs/system/00_governance/bootstrap/BUNDLE_TAXONOMY.md",
-        "docs/system/00_governance/bootstrap/BUNDLE_MIGRATION_PLAN.md",
-        "docs/system/00_governance/bootstrap/SYSTEM_OVERVIEW.md",
-        "docs/system/00_governance/bootstrap/BUSINESS_CAPABILITIES.md",
-        "docs/system/00_governance/bootstrap/FUNCTIONAL_SPEC.md",
-        "docs/system/00_governance/bootstrap/NON_FUNCTIONAL_REQUIREMENTS.md",
-        "docs/system/00_governance/bootstrap/SYSTEM_CONTEXT.md",
-        "docs/system/00_governance/bootstrap/COMPONENT_ARCHITECTURE.md",
-        "docs/system/00_governance/bootstrap/DECISION_LOG.md",
-        "docs/system/00_governance/bootstrap/SYSTEM_FILE_STRUCTURE.md",
-        "docs/system/00_governance/bootstrap/DEVELOPER_GUIDE.md",
-        "docs/system/00_governance/bootstrap/RUNBOOK.md",
-        "docs/system/00_governance/bootstrap/EXISTING_REPO_WORKFLOW_SOP.md",
-        "docs/system/00_governance/bootstrap/{job_id}-{mode}-change-log.md".format(job_id=job_id, mode=mode),
-        "docs/system/00_governance/bootstrap/{job_id}-{mode}-validation.md".format(job_id=job_id, mode=mode),
-        "docs/system/00_governance/bootstrap/{job_id}-bootstrap-summary.md".format(job_id=job_id),
+        codebase_doc_rel(f"04_changes/{job_id}-{mode}-snapshot.json"),
+        codebase_doc_rel(f"04_changes/{job_id}-{mode}.md"),
+        codebase_doc_rel("01_inventory/codebase_inventory.md"),
+        system_doc_rel("project_analysis.md"),
+        system_doc_rel("README.md"),
+        system_doc_rel("DOCUMENTATION_STANDARD.md"),
+        system_doc_rel("BUNDLE_TAXONOMY.md"),
+        system_doc_rel("BUNDLE_MIGRATION_PLAN.md"),
+        system_doc_rel("SYSTEM_OVERVIEW.md"),
+        system_doc_rel("BUSINESS_CAPABILITIES.md"),
+        system_doc_rel("FUNCTIONAL_SPEC.md"),
+        system_doc_rel("NON_FUNCTIONAL_REQUIREMENTS.md"),
+        system_doc_rel("SYSTEM_CONTEXT.md"),
+        system_doc_rel("COMPONENT_ARCHITECTURE.md"),
+        system_doc_rel("DECISION_LOG.md"),
+        system_doc_rel("SYSTEM_FILE_STRUCTURE.md"),
+        system_doc_rel("DEVELOPER_GUIDE.md"),
+        system_doc_rel("RUNBOOK.md"),
+        system_doc_rel("EXISTING_REPO_WORKFLOW_SOP.md"),
+        system_doc_rel(f"{job_id}-{mode}-change-log.md"),
+        system_doc_rel(f"{job_id}-{mode}-validation.md"),
+        system_doc_rel(f"{job_id}-bootstrap-summary.md"),
     ]
 
 
 def legacy_master_bootstrap_doc_paths(*, job_id: str, mode: str) -> list[str]:
     return [
-        "docs/system/README.md",
-        "docs/system/00_governance/DOCUMENTATION_STANDARD.md",
-        "docs/system/01_overview/SYSTEM_OVERVIEW.md",
-        "docs/system/01_overview/BUSINESS_CAPABILITIES.md",
-        "docs/system/02_functional/FUNCTIONAL_SPEC.md",
-        "docs/system/02_functional/NON_FUNCTIONAL_REQUIREMENTS.md",
-        "docs/system/03_architecture/SYSTEM_CONTEXT.md",
-        "docs/system/03_architecture/COMPONENT_ARCHITECTURE.md",
-        "docs/system/03_architecture/DECISION_LOG.md",
-        "docs/system/03_architecture/SYSTEM_FILE_STRUCTURE.md",
-        "docs/engineering/DEVELOPER_GUIDE.md",
-        "docs/operations/RUNBOOK.md",
-        "docs/operations/EXISTING_REPO_WORKFLOW_SOP.md",
-        "docs/system/00_governance/bootstrap/{job_id}-bootstrap-change-log.md".format(job_id=job_id),
-        "docs/system/00_governance/bootstrap/{job_id}-bootstrap-validation.md".format(job_id=job_id),
+        system_doc_rel("README.md"),
+        system_doc_rel("DOCUMENTATION_STANDARD.md"),
+        system_doc_rel("SYSTEM_OVERVIEW.md"),
+        system_doc_rel("BUSINESS_CAPABILITIES.md"),
+        system_doc_rel("FUNCTIONAL_SPEC.md"),
+        system_doc_rel("NON_FUNCTIONAL_REQUIREMENTS.md"),
+        system_doc_rel("SYSTEM_CONTEXT.md"),
+        system_doc_rel("COMPONENT_ARCHITECTURE.md"),
+        system_doc_rel("DECISION_LOG.md"),
+        system_doc_rel("SYSTEM_FILE_STRUCTURE.md"),
+        system_doc_rel("DEVELOPER_GUIDE.md"),
+        system_doc_rel("RUNBOOK.md"),
+        system_doc_rel("EXISTING_REPO_WORKFLOW_SOP.md"),
+        system_doc_rel(f"{job_id}-bootstrap-change-log.md"),
+        system_doc_rel(f"{job_id}-bootstrap-validation.md"),
     ]
 
 
@@ -119,6 +122,8 @@ def workflow_canonical_doc_paths(*, template_group: str, state: dict) -> list[st
         return master_bootstrap_doc_paths(job_id=job_id, mode=mode)
     if template_group == EXECUTION_SCAFFOLD_WORKFLOW:
         return execution_scaffold_doc_paths()
+    if template_group == ARCHITECTURE_SITE_WORKFLOW:
+        return architecture_site_doc_paths()
     return []
 
 
@@ -132,54 +137,46 @@ def workflow_legacy_doc_paths(*, template_group: str, state: dict) -> list[str]:
 
 def master_bootstrap_artifact_candidates(*, job_id: str, mode: str) -> dict[str, list[str]]:
     canonical = {
-        "PROJECT_ANALYSIS": "docs/system/00_governance/bootstrap/project_analysis.md",
-        "SYSTEM_DOCS_INDEX": "docs/system/00_governance/bootstrap/README.md",
-        "SYSTEM_DOCS_CHANGE_LOG": "docs/system/00_governance/bootstrap/{job_id}-{mode}-change-log.md".format(
-            job_id=job_id, mode=mode
-        ),
-        "SYSTEM_DOCS_VALIDATION": "docs/system/00_governance/bootstrap/{job_id}-{mode}-validation.md".format(
-            job_id=job_id, mode=mode
-        ),
-        "SYSTEM_DOC_STANDARD": "docs/system/00_governance/bootstrap/DOCUMENTATION_STANDARD.md",
-        "BUNDLE_TAXONOMY": "docs/system/00_governance/bootstrap/BUNDLE_TAXONOMY.md",
-        "BUNDLE_MIGRATION_PLAN": "docs/system/00_governance/bootstrap/BUNDLE_MIGRATION_PLAN.md",
-        "SYSTEM_OVERVIEW": "docs/system/00_governance/bootstrap/SYSTEM_OVERVIEW.md",
-        "BUSINESS_CAPABILITIES": "docs/system/00_governance/bootstrap/BUSINESS_CAPABILITIES.md",
-        "FUNCTIONAL_SPEC": "docs/system/00_governance/bootstrap/FUNCTIONAL_SPEC.md",
-        "NON_FUNCTIONAL_REQUIREMENTS": "docs/system/00_governance/bootstrap/NON_FUNCTIONAL_REQUIREMENTS.md",
-        "SYSTEM_CONTEXT": "docs/system/00_governance/bootstrap/SYSTEM_CONTEXT.md",
-        "COMPONENT_ARCHITECTURE": "docs/system/00_governance/bootstrap/COMPONENT_ARCHITECTURE.md",
-        "DECISION_LOG": "docs/system/00_governance/bootstrap/DECISION_LOG.md",
-        "SYSTEM_FILE_STRUCTURE": "docs/system/00_governance/bootstrap/SYSTEM_FILE_STRUCTURE.md",
-        "DEVELOPER_GUIDE": "docs/system/00_governance/bootstrap/DEVELOPER_GUIDE.md",
-        "RUNBOOK": "docs/system/00_governance/bootstrap/RUNBOOK.md",
-        "EXISTING_REPO_WORKFLOW_SOP": "docs/system/00_governance/bootstrap/EXISTING_REPO_WORKFLOW_SOP.md",
-        "BOOTSTRAP_SUMMARY": "docs/system/00_governance/bootstrap/{job_id}-bootstrap-summary.md".format(job_id=job_id),
+        "PROJECT_ANALYSIS": system_doc_rel("project_analysis.md"),
+        "SYSTEM_DOCS_INDEX": system_doc_rel("README.md"),
+        "SYSTEM_DOCS_CHANGE_LOG": system_doc_rel(f"{job_id}-{mode}-change-log.md"),
+        "SYSTEM_DOCS_VALIDATION": system_doc_rel(f"{job_id}-{mode}-validation.md"),
+        "SYSTEM_DOC_STANDARD": system_doc_rel("DOCUMENTATION_STANDARD.md"),
+        "BUNDLE_TAXONOMY": system_doc_rel("BUNDLE_TAXONOMY.md"),
+        "BUNDLE_MIGRATION_PLAN": system_doc_rel("BUNDLE_MIGRATION_PLAN.md"),
+        "SYSTEM_OVERVIEW": system_doc_rel("SYSTEM_OVERVIEW.md"),
+        "BUSINESS_CAPABILITIES": system_doc_rel("BUSINESS_CAPABILITIES.md"),
+        "FUNCTIONAL_SPEC": system_doc_rel("FUNCTIONAL_SPEC.md"),
+        "NON_FUNCTIONAL_REQUIREMENTS": system_doc_rel("NON_FUNCTIONAL_REQUIREMENTS.md"),
+        "SYSTEM_CONTEXT": system_doc_rel("SYSTEM_CONTEXT.md"),
+        "COMPONENT_ARCHITECTURE": system_doc_rel("COMPONENT_ARCHITECTURE.md"),
+        "DECISION_LOG": system_doc_rel("DECISION_LOG.md"),
+        "SYSTEM_FILE_STRUCTURE": system_doc_rel("SYSTEM_FILE_STRUCTURE.md"),
+        "DEVELOPER_GUIDE": system_doc_rel("DEVELOPER_GUIDE.md"),
+        "RUNBOOK": system_doc_rel("RUNBOOK.md"),
+        "EXISTING_REPO_WORKFLOW_SOP": system_doc_rel("EXISTING_REPO_WORKFLOW_SOP.md"),
+        "BOOTSTRAP_SUMMARY": system_doc_rel(f"{job_id}-bootstrap-summary.md"),
     }
     legacy = {
-        "PROJECT_ANALYSIS": ["docs/system/00_governance/bootstrap/project_analysis.md"],
-        "SYSTEM_DOCS_INDEX": ["docs/system/README.md"],
-        "SYSTEM_DOCS_CHANGE_LOG": [
-            "docs/system/00_governance/bootstrap/{job_id}-bootstrap-change-log.md".format(job_id=job_id)
-        ],
-        "SYSTEM_DOCS_VALIDATION": [
-            "docs/system/00_governance/bootstrap/{job_id}-bootstrap-validation.md".format(job_id=job_id)
-        ],
-        "SYSTEM_DOC_STANDARD": ["docs/system/00_governance/DOCUMENTATION_STANDARD.md"],
-        "BUNDLE_TAXONOMY": ["docs/system/00_governance/bootstrap/BUNDLE_TAXONOMY.md"],
-        "BUNDLE_MIGRATION_PLAN": ["docs/system/00_governance/bootstrap/BUNDLE_MIGRATION_PLAN.md"],
-        "SYSTEM_OVERVIEW": ["docs/system/01_overview/SYSTEM_OVERVIEW.md"],
-        "BUSINESS_CAPABILITIES": ["docs/system/01_overview/BUSINESS_CAPABILITIES.md"],
-        "FUNCTIONAL_SPEC": ["docs/system/02_functional/FUNCTIONAL_SPEC.md"],
-        "NON_FUNCTIONAL_REQUIREMENTS": ["docs/system/02_functional/NON_FUNCTIONAL_REQUIREMENTS.md"],
-        "SYSTEM_CONTEXT": ["docs/system/03_architecture/SYSTEM_CONTEXT.md"],
-        "COMPONENT_ARCHITECTURE": ["docs/system/03_architecture/COMPONENT_ARCHITECTURE.md"],
-        "DECISION_LOG": ["docs/system/03_architecture/DECISION_LOG.md"],
-        "SYSTEM_FILE_STRUCTURE": ["docs/system/03_architecture/SYSTEM_FILE_STRUCTURE.md"],
-        "DEVELOPER_GUIDE": ["docs/engineering/DEVELOPER_GUIDE.md"],
-        "RUNBOOK": ["docs/operations/RUNBOOK.md"],
-        "EXISTING_REPO_WORKFLOW_SOP": ["docs/operations/EXISTING_REPO_WORKFLOW_SOP.md"],
-        "BOOTSTRAP_SUMMARY": ["docs/system/00_governance/bootstrap/{job_id}-bootstrap-summary.md".format(job_id=job_id)],
+        "PROJECT_ANALYSIS": [system_doc_rel("project_analysis.md")],
+        "SYSTEM_DOCS_INDEX": [system_doc_rel("README.md")],
+        "SYSTEM_DOCS_CHANGE_LOG": [system_doc_rel(f"{job_id}-bootstrap-change-log.md")],
+        "SYSTEM_DOCS_VALIDATION": [system_doc_rel(f"{job_id}-bootstrap-validation.md")],
+        "SYSTEM_DOC_STANDARD": [system_doc_rel("DOCUMENTATION_STANDARD.md")],
+        "BUNDLE_TAXONOMY": [system_doc_rel("BUNDLE_TAXONOMY.md")],
+        "BUNDLE_MIGRATION_PLAN": [system_doc_rel("BUNDLE_MIGRATION_PLAN.md")],
+        "SYSTEM_OVERVIEW": [system_doc_rel("SYSTEM_OVERVIEW.md")],
+        "BUSINESS_CAPABILITIES": [system_doc_rel("BUSINESS_CAPABILITIES.md")],
+        "FUNCTIONAL_SPEC": [system_doc_rel("FUNCTIONAL_SPEC.md")],
+        "NON_FUNCTIONAL_REQUIREMENTS": [system_doc_rel("NON_FUNCTIONAL_REQUIREMENTS.md")],
+        "SYSTEM_CONTEXT": [system_doc_rel("SYSTEM_CONTEXT.md")],
+        "COMPONENT_ARCHITECTURE": [system_doc_rel("COMPONENT_ARCHITECTURE.md")],
+        "DECISION_LOG": [system_doc_rel("DECISION_LOG.md")],
+        "SYSTEM_FILE_STRUCTURE": [system_doc_rel("SYSTEM_FILE_STRUCTURE.md")],
+        "DEVELOPER_GUIDE": [system_doc_rel("DEVELOPER_GUIDE.md")],
+        "RUNBOOK": [system_doc_rel("RUNBOOK.md")],
+        "EXISTING_REPO_WORKFLOW_SOP": [system_doc_rel("EXISTING_REPO_WORKFLOW_SOP.md")],
+        "BOOTSTRAP_SUMMARY": [system_doc_rel(f"{job_id}-bootstrap-summary.md")],
     }
     return {
         key: [canonical[key], *legacy.get(key, [])]
@@ -189,34 +186,47 @@ def master_bootstrap_artifact_candidates(*, job_id: str, mode: str) -> dict[str,
 
 def execution_scaffold_doc_paths() -> list[str]:
     return [
-        "docs/system/00_governance/bootstrap/WORKFLOW_SOP_v1.md",
-        "docs/system/00_governance/bootstrap/DELIVERY_STATUS_RULES_v1.md",
-        "docs/codebase/00_standards/CODEBASE_DOC_SOP_v1.md",
-        "docs/codebase/00_standards/CODEBASE_DOC_STATUS_RULES_v1.md",
-        "docs/system/00_governance/bootstrap/EXISTING_REPO_WORKFLOW_SOP.md",
-        "docs/system/00_governance/bootstrap/templates/delivery/01_delivery_template_registry.md",
-        "docs/system/00_governance/bootstrap/templates/delivery/02_delivery_initiative_template.md",
-        "docs/system/00_governance/bootstrap/templates/delivery/03_delivery_plan_template.md",
-        "docs/system/00_governance/bootstrap/templates/delivery/04_delivery_task_graph_template.md",
-        "docs/system/00_governance/bootstrap/templates/delivery/05_delivery_task_template.md",
-        "docs/system/00_governance/bootstrap/templates/delivery/06_delivery_impl_template.md",
-        "docs/system/00_governance/bootstrap/templates/delivery/07_delivery_review_template.md",
-        "docs/system/00_governance/bootstrap/templates/delivery/08_delivery_validation_template.md",
-        "docs/system/00_governance/bootstrap/templates/delivery/09_delivery_memory_template.md",
-        "docs/system/00_governance/bootstrap/templates/codebase/01_codebase_template_registry.md",
-        "docs/system/00_governance/bootstrap/templates/codebase/02_codebase_inventory_template.md",
-        "docs/system/00_governance/bootstrap/templates/codebase/03_codebase_module_template.md",
-        "docs/system/00_governance/bootstrap/templates/codebase/04_codebase_component_template.md",
-        "docs/system/00_governance/bootstrap/templates/codebase/05_codebase_change_template.md",
-        "docs/codebase/01_inventory/codebase_inventory.md",
-        "docs/delivery/00_standards/DELIVERY_AGENTS_MD.md",
-        "docs/delivery/00_standards/DELIVERY_AGENT_PLANNER.md",
-        "docs/delivery/00_standards/DELIVERY_AGENT_TASK_DECOMPOSER.md",
-        "docs/delivery/00_standards/DELIVERY_AGENT_IMPL_PLANNER.md",
-        "docs/delivery/00_standards/DELIVERY_AGENT_EXECUTOR.md",
-        "docs/delivery/00_standards/DELIVERY_AGENT_REVIEWER.md",
-        "docs/delivery/00_standards/DELIVERY_AGENT_MEMORY_MANAGER.md",
-        "docs/delivery/DELIVERY_FOLDER_MAP.json",
+        system_doc_rel("WORKFLOW_SOP_v1.md"),
+        system_doc_rel("DELIVERY_STATUS_RULES_v1.md"),
+        codebase_doc_rel("00_standards/CODEBASE_DOC_SOP_v1.md"),
+        codebase_doc_rel("00_standards/CODEBASE_DOC_STATUS_RULES_v1.md"),
+        system_doc_rel("EXISTING_REPO_WORKFLOW_SOP.md"),
+        system_doc_rel("templates/delivery/01_delivery_template_registry.md"),
+        system_doc_rel("templates/delivery/02_delivery_initiative_template.md"),
+        system_doc_rel("templates/delivery/03_delivery_plan_template.md"),
+        system_doc_rel("templates/delivery/04_delivery_task_graph_template.md"),
+        system_doc_rel("templates/delivery/05_delivery_task_template.md"),
+        system_doc_rel("templates/delivery/06_delivery_impl_template.md"),
+        system_doc_rel("templates/delivery/07_delivery_review_template.md"),
+        system_doc_rel("templates/delivery/08_delivery_validation_template.md"),
+        system_doc_rel("templates/delivery/09_delivery_memory_template.md"),
+        system_doc_rel("templates/codebase/01_codebase_template_registry.md"),
+        system_doc_rel("templates/codebase/02_codebase_inventory_template.md"),
+        system_doc_rel("templates/codebase/03_codebase_module_template.md"),
+        system_doc_rel("templates/codebase/04_codebase_component_template.md"),
+        system_doc_rel("templates/codebase/05_codebase_change_template.md"),
+        codebase_doc_rel("01_inventory/codebase_inventory.md"),
+        delivery_doc_rel("00_standards/DELIVERY_AGENTS_MD.md"),
+        delivery_doc_rel("00_standards/DELIVERY_AGENT_PLANNER.md"),
+        delivery_doc_rel("00_standards/DELIVERY_AGENT_TASK_DECOMPOSER.md"),
+        delivery_doc_rel("00_standards/DELIVERY_AGENT_IMPL_PLANNER.md"),
+        delivery_doc_rel("00_standards/DELIVERY_AGENT_EXECUTOR.md"),
+        delivery_doc_rel("00_standards/DELIVERY_AGENT_REVIEWER.md"),
+        delivery_doc_rel("00_standards/DELIVERY_AGENT_MEMORY_MANAGER.md"),
+        delivery_doc_rel("DELIVERY_FOLDER_MAP.json"),
+    ]
+
+
+def architecture_site_doc_paths() -> list[str]:
+    return [
+        architecture_site_rel("index.html"),
+        architecture_site_rel("stakeholders.html"),
+        architecture_site_rel("developers.html"),
+        architecture_site_rel("functional.html"),
+        architecture_site_rel("runtime.html"),
+        architecture_site_rel("components.html"),
+        architecture_site_rel("manifest.json"),
+        architecture_site_rel("validation.md"),
     ]
 
 

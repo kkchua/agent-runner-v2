@@ -1,254 +1,199 @@
 ---
 template_id: "SYS-03-SF"
-title: "System File Structure - agent-runner-v2"
+title: "System File Structure"
 status: "active"
-generated: "2026-07-04T10:00:00+08:00"
+generated: "2026-07-04T14:00:00+08:00"
 workflow: "00_master_docs_bootstrap_v1"
 step: "04_generate_architecture_docs"
-change_id: "00DOC-GEN-20260704-001"
+change_id: "00DOC-GEN-20260704-002"
 managed_by: workflow-generated
 ---
 
 > Managed by workflow: `00_master_docs_bootstrap_v1` / step: `04_generate_architecture_docs`
 > This file is workflow-generated and protected from manual edits.
 
-# System File Structure: agent-runner-v2
+# System File Structure
 
 ## Repository Structure
 
 ```
-D:\MyProjectSpace\01_Workflows\agent-runner-v2\
-├───.env.example                    # Environment variable template
-├───.gitignore                      # Git ignore patterns
-├───HOW_TO_GUIDE.md                 # Delivery scaffold workflow guide
-├───MANIFEST.in                     # Package manifest for distribution
-├───pyproject.toml                  # Python project configuration
-├───QWEN.md                         # Qwen Code context for this repo
-├───README.md                       # Repository quick start guide
-│
-├───agent_runner_v2/                # Core Python package (40+ modules)
-│   ├───__init__.py                 # Package initialization
-│   ├───run_agent.py                # CLI entry point (~2100 lines)
-│   ├───step_runner.py              # Step execution engine (~2000 lines)
-│   ├───workflow_router.py          # Post-step routing (~774 lines)
-│   ├───job_state.py                # Job lifecycle management (~1781 lines)
-│   ├───coder_adapters.py           # LLM provider adapters (~1013 lines)
-│   ├───runtime_context.py         # Process-local runtime context (~281 lines)
-│   ├───bundle_loader.py            # Workflow bundle loading (~188 lines)
-│   ├───backend_client.py          # Backend HTTP API client
-│   ├───daemon.py                   # Workstation supervisor
-│   ├───documentation_guardrails.py # Generated doc protection
-│   ├───*.py                        # Additional core modules
-│   │
-│   ├───actions/                    # Deterministic runner actions (18 modules)
-│   │   ├───__init__.py             # Action registry
-│   │   ├───scan_repo_codebase.py   # Repository structure analysis
-│   │   ├───sync_codebase_docs.py   # Codebase doc synchronization
-│   │   ├───sync_system_docs.py     # System doc synchronization
-│   │   ├───validate_*.py           # Validation actions (5 modules)
-│   │   ├───execute_*.py            # Media generation actions (3 modules)
-│   │   └───...                     # Additional action modules
-│   │
-│   ├───bootstrap/                   # Packaged workflow definitions
-│   │   └───workflows/default/
-│   │       ├───template_groups.py  # Workflow definitions (~3000 lines)
-│   │       ├───*.json              # JSON schemas (job, LLM response, usage)
-│   │       └───prompts/            # Prompt templates (10 workflow families)
-│   │           ├───00_master_docs_bootstrap_v1/
-│   │           ├───10_execution_scaffold_v1/
-│   │           ├───20_initiative_intake_v1/
-│   │           ├───21_bug_fix_intake_v1/
-│   │           ├───30_delivery_planning_v1/
-│   │           ├───31_task_execution_v1/
-│   │           ├───40_documentation_sync_v1/
-│   │           ├───image_csv_gen_v2/
-│   │           ├───videoxpress_gen_v1/
-│   │           └───tiktok_video_pipeline_v1/
-│   │
-│   └───tools/                      # Utility tooling
-│       └───agent_tools.py          # Agent helper functions
-│
-├───archive/                        # Deprecated/legacy files
-│   └───batch/                      # Legacy batch scripts (archived)
-│
-├───docs/                           # Documentation
-│   ├───codebase/                   # Codebase documentation
-│   │   ├───01_inventory/           # Codebase inventory
-│   │   ├───02_modules/             # Per-module documentation (49 files)
-│   │   ├───03_components/          # Component documentation (6 files)
-│   │   └───04_changes/             # Change impact documents
-│   │
-│   ├───operations/                 # Operational manuals
-│   │   ├───DAEMON_MODE_QUICKSTART.md
-│   │   └───EXISTING_REPO_WORKFLOW_SOP.md
-│   │
-│   ├───system/                     # System documentation
-│   │   └───00_governance/bootstrap/ # Master system docs
-│   │       ├───README.md           # Documentation index
-│   │       ├───project_analysis.md # Project analysis
-│   │       ├───DOCUMENTATION_STANDARD.md
-│   │       ├───BUNDLE_TAXONOMY.md
-│   │       ├───BUNDLE_MIGRATION_PLAN.md
-│   │       ├───SYSTEM_OVERVIEW.md
-│   │       ├───BUSINESS_CAPABILITIES.md
-│   │       ├───FUNCTIONAL_SPEC.md
-│   │       ├───NON_FUNCTIONAL_REQUIREMENTS.md
-│   │       ├───SYSTEM_CONTEXT.md   # This file
-│   │       ├───COMPONENT_ARCHITECTURE.md
-│   │       ├───DECISION_LOG.md
-│   │       ├───SYSTEM_FILE_STRUCTURE.md
-│   │       ├───DEVELOPER_GUIDE.md
-│   │       ├───RUNBOOK.md
-│   │       ├───EXISTING_REPO_WORKFLOW_SOP.md
-│   │       └───*-bootstrap-change-log.md
-│   │
-│   └───delivery/                   # Delivery scaffold (if generated)
-│
-├───scripts/                        # Launcher scripts
-│   ├───ukbe-daemon.bat             # Daemon mode launcher
-│   └───ukbe-run-delivery.bat       # Workflow execution launcher
-│
-├───tests/                          # Test suite (pytest-based)
-│
-├───run-*.bat                       # Workflow execution batch files
-├───submit-*.bat                    # Workflow submission batch files
-└───sync-*.bat                      # Workflow sync batch files
+agent-runner-v2/
+├── agent_runner_v2/              # Main package source
+│   ├── __init__.py
+│   ├── run_agent.py              # CLI entry point (core)
+│   ├── step_runner.py            # Step execution (core)
+│   ├── workflow_router.py        # Post-step routing (core)
+│   ├── job_state.py              # Job lifecycle (state)
+│   ├── coder_adapters.py         # LLM adapters (coder)
+│   ├── model_config.py           # Model configuration (coder)
+│   ├── runtime_context.py        # Runtime context (state)
+│   ├── bundle_loader.py          # Bundle loading (bootstrap)
+│   ├── backend_client.py         # Backend API client (backend)
+│   ├── daemon.py                 # Daemon mode (backend)
+│   ├── actions/                  # Deterministic actions (20 modules)
+│   │   ├── __init__.py
+│   │   ├── scan_repo_codebase.py
+│   │   ├── sync_codebase_docs.py
+│   │   ├── sync_system_docs.py
+│   │   ├── validate_*.py
+│   │   ├── prepare_delivery_scaffold.py
+│   │   ├── finalize_bootstrap.py
+│   │   ├── copy_artifact.py
+│   │   ├── promote_*.py
+│   │   ├── publish_architecture_site.py
+│   │   ├── execute_*.py
+│   │   ├── assemble_video.py
+│   │   └── submit_comfyui.py
+│   ├── bootstrap/                # Packaged workflow definitions
+│   │   └── workflows/
+│   │       └── default/
+│   │           ├── template_groups.py      # 11 workflow families
+│   │           ├── job_schema.json
+│   │           ├── llm_response_schema.json
+│   │           ├── model_mapping.json
+│   │           ├── usage_schema.json
+│   │           └── prompts/              # Per-step prompts
+│   │               ├── 00_master_docs_bootstrap_v1/
+│   │               ├── 10_execution_scaffold_v1/
+│   │               ├── 20_initiative_intake_v1/
+│   │               ├── 21_bug_fix_intake_v1/
+│   │               ├── 30_delivery_planning_v1/
+│   │               ├── 31_task_execution_v1/
+│   │               ├── 40_documentation_sync_v1/
+│   │               ├── 50_architecture_site_v1/
+│   │               ├── image_csv_gen_v2/
+│   │               ├── videoxpress_gen_v1/
+│   │               └── tiktok_video_pipeline_v1/
+│   └── tools/
+│       └── agent_tools.py        # Progress tracking utilities
+├── docs/                         # Documentation root
+│   ├── codebase/                 # Codebase documentation
+│   │   ├── 00_standards/         # SOP and status rules
+│   │   ├── 01_inventory/         # codebase_inventory.md
+│   │   ├── 02_modules/           # Per-module docs (56 files)
+│   │   ├── 03_components/        # Component-level docs
+│   │   └── 04_changes/           # Change impact documents
+│   └── system/                   # System documentation
+│       └── 00_governance/
+│           └── bootstrap/        # Generated system docs
+│               ├── README.md
+│               ├── project_analysis.md
+│               ├── DOCUMENTATION_STANDARD.md
+│               ├── BUNDLE_TAXONOMY.md
+│               ├── BUNDLE_MIGRATION_PLAN.md
+│               ├── SYSTEM_OVERVIEW.md
+│               ├── BUSINESS_CAPABILITIES.md
+│               ├── FUNCTIONAL_SPEC.md
+│               ├── NON_FUNCTIONAL_REQUIREMENTS.md
+│               ├── SYSTEM_CONTEXT.md
+│               ├── COMPONENT_ARCHITECTURE.md
+│               ├── DECISION_LOG.md
+│               ├── SYSTEM_FILE_STRUCTURE.md
+│               ├── DEVELOPER_GUIDE.md
+│               ├── RUNBOOK.md
+│               └── EXISTING_REPO_WORKFLOW_SOP.md
+├── tests/                        # Test suite
+├── pyproject.toml                # Package configuration
+├── README.md                     # Repository README
+├── QWEN.md                       # Project context and conventions
+├── HOW_TO_GUIDE.md             # Usage guide
+├── *.bat                       # Batch launchers
+└── .qwen/skills/               # Auto-skills
 ```
 
 ## Top-Level Directories
 
-### `agent_runner_v2/` — Core Package
+### `agent_runner_v2/` — Package Source
 
-**Purpose:** Contains all Python code for the workflow runner.
+Contains all Python source code for the workflow runner.
 
-**Key Files:**
-| File | Responsibility |
-|------|----------------|
-| `run_agent.py` | CLI entry point, command dispatch, orchestration |
-| `step_runner.py` | Prompt rendering, coder invocation, validation |
-| `workflow_router.py` | Post-step routing, state transitions |
-| `job_state.py` | Job lifecycle, persistence, migration |
-| `coder_adapters.py` | LLM provider abstraction |
-| `runtime_context.py` | Process-local context management |
-| `bundle_loader.py` | Workflow bundle loading |
+**Why it exists**: Single package root for clean imports and distribution.
 
-### `agent_runner_v2/actions/` — Deterministic Actions
+**Key subdirectories**:
+- `actions/` — Deterministic runner actions (non-LLM operations)
+- `bootstrap/workflows/default/` — Packaged workflow definitions and prompts
+- `tools/` — Development utilities
 
-**Purpose:** Non-coder steps implemented as deterministic Python functions.
+### `docs/` — Documentation
 
-**Categories:**
-| Category | Files |
-|----------|-------|
-| Documentation | `sync_codebase_docs.py`, `sync_system_docs.py`, `validate_*.py` |
-| Scanning | `scan_repo_codebase.py` |
-| Media Generation | `execute_t2i.py`, `execute_i2v.py`, `execute_voiceover.py`, `assemble_video.py` |
-| Scaffold | `prepare_delivery_scaffold.py`, `finalize_bootstrap.py` |
+Contains all project documentation, separated by audience.
 
-### `agent_runner_v2/bootstrap/` — Packaged Workflows
+**Why it exists**: Clear separation between codebase docs (for developers) and system docs (for stakeholders/operators).
 
-**Purpose:** Seeds runtime workflow bundles during `init`.
+**Subdirectories**:
+- `codebase/` — Code-level documentation
+  - `00_standards/` — Governance SOPs and status rules
+  - `01_inventory/` — Module inventory
+  - `02_modules/` — Per-module documentation
+  - `03_components/` — Component documentation
+  - `04_changes/` — Change impact tracking
+- `system/00_governance/bootstrap/` — Generated system documentation
 
-**Key Files:**
-| File | Purpose |
-|------|---------|
-| `template_groups.py` | Workflow family definitions (10 families, 73+ steps) |
-| `job_schema.json` | Job state JSON schema |
-| `llm_response_schema.json` | LLM response validation schema |
-| `model_mapping.json` | LLM provider configuration |
-| `prompts/*/` | Per-workflow prompt templates |
+### `tests/` — Test Suite
 
-### `docs/codebase/` — Codebase Documentation
+Contains pytest-based test suite.
 
-**Purpose:** Documentation generated from and about the codebase.
-
-**Structure:**
-| Subdirectory | Content |
-|--------------|---------|
-| `01_inventory/` | `codebase_inventory.md` — module registry |
-| `02_modules/` | Per-module documentation (49 files) |
-| `03_components/` | Component documentation (6 files) |
-| `04_changes/` | Change impact documents |
-
-### `docs/system/` — System Documentation
-
-**Purpose:** Master system documentation for the platform.
-
-**Structure:**
-| File | Purpose |
-|------|---------|
-| `00_governance/bootstrap/` | Core system docs (this bootstrap set) |
-| `00_governance/bootstrap/README.md` | Documentation index |
-| Various `.md` files | System overview, architecture, guides |
-
-### `scripts/` — Launcher Scripts
-
-**Purpose:** Helper scripts for workflow execution.
-
-| File | Purpose |
-|------|---------|
-| `ukbe-run-delivery.bat` | Main workflow execution script |
-| `ukbe-daemon.bat` | Daemon mode launcher |
-
-### `archive/` — Legacy Files
-
-**Purpose:** Deprecated batch scripts and legacy code.
-
-**Note:** Contents are preserved for reference but not actively used.
+**Why it exists**: Standard Python testing location, referenced by `pyproject.toml`.
 
 ## Documentation Locations
 
-### System Documentation
-
-| Document | Location | Owner |
-|----------|----------|-------|
-| Documentation Standard | `docs/system/00_governance/bootstrap/DOCUMENTATION_STANDARD.md` | Bootstrap workflow |
-| Bundle Taxonomy | `docs/system/00_governance/bootstrap/BUNDLE_TAXONOMY.md` | Bootstrap workflow |
-| System Overview | `docs/system/00_governance/bootstrap/SYSTEM_OVERVIEW.md` | Bootstrap workflow |
-| Component Architecture | `docs/system/00_governance/bootstrap/COMPONENT_ARCHITECTURE.md` | Bootstrap workflow |
-| Developer Guide | `docs/system/00_governance/bootstrap/DEVELOPER_GUIDE.md` | Bootstrap workflow |
-| Runbook | `docs/system/00_governance/bootstrap/RUNBOOK.md` | Bootstrap workflow |
-
-### Codebase Documentation
-
-| Document | Location | Owner |
-|----------|----------|-------|
-| Codebase Inventory | `docs/codebase/01_inventory/codebase_inventory.md` | Bootstrap/reconcile |
-| Module Docs | `docs/codebase/02_modules/*.md` | Bootstrap/reconcile |
-| Component Docs | `docs/codebase/03_components/*.md` | Bootstrap/reconcile |
-| Change Impact | `docs/codebase/04_changes/*.md` | Bootstrap/reconcile |
-
-### Operational Documentation
-
-| Document | Location | Owner |
-|----------|----------|-------|
-| Daemon Quickstart | `docs/operations/DAEMON_MODE_QUICKSTART.md` | Manual |
-| Workflow SOP | `docs/operations/EXISTING_REPO_WORKFLOW_SOP.md` | Manual/Scaffold |
+| Document Type | Location | Purpose |
+|---------------|----------|---------|
+| **Module docs** | `docs/codebase/02_modules/*.md` | Per-module API and behavior |
+| **Component docs** | `docs/codebase/03_components/*.md` | Component relationships |
+| **Change impact** | `docs/codebase/04_changes/*.md` | Change tracking and impact |
+| **System docs** | `docs/system/00_governance/bootstrap/*.md` | Platform-level documentation |
+| **Inventory** | `docs/codebase/01_inventory/codebase_inventory.md` | Module registry |
 
 ## Runtime Locations
 
-### Global Runner Home
+| Location | Path | Purpose |
+|----------|------|---------|
+| **Runner home** | `%USERPROFILE%\.ukbe-runner\` | Global runtime state |
+| **Config** | `%USERPROFILE%\.ukbe-runner\config.json` | User configuration |
+| **Jobs** | `%USERPROFILE%\.ukbe-runner\jobs\` | Job state directories |
+| **Workflows** | `%USERPROFILE%\.ukbe-runner\workflows\` | Runtime workflow bundles |
+| **Logs** | `%USERPROFILE%\.ukbe-runner\logs\` | Execution logs |
 
-| Path | Purpose |
-|------|---------|
-| `%USERPROFILE%\.ukbe-runner\config.json` | User configuration |
-| `%USERPROFILE%\.ukbe-runner\jobs\` | Job state persistence |
-| `%USERPROFILE%\.ukbe-runner\workflows\` | Runtime workflow bundles |
-| `%USERPROFILE%\.ukbe-runner\logs\` | Execution logs |
+## File Relationships
 
-### Job State Structure
+### Core Execution Flow
 
 ```
-%USERPROFILE%\.ukbe-runner\jobs\
-└───<template_group>\                # e.g., 00_master_docs_bootstrap_v1
-    └───<job_id>\                    # e.g., 00DOC-GEN-20260703-007
-        ├───job.json                 # Job state
-        ├───<step_id>\               # Per-step directories
-        │   └───meta.json            # Step result sidecar
-        └───logs\                    # Execution logs
+run_agent.py
+    ↓ imports
+step_runner.py ←→ coder_adapters.py
+    ↓ imports                   ↓ HTTP
+workflow_router.py          LLM APIs
+    ↓ imports
+job_state.py
+    ↓ imports
+runtime_context.py ←→ bundle_loader.py
 ```
+
+### Documentation Flow
+
+```
+scan_repo_codebase.py
+    ↓ generates
+codebase_inventory.md
+    ↓ feeds into
+PROJECT_ANALYSIS
+    ↓ feeds into
+System docs generation
+```
+
+## Key Files
+
+| File | Purpose | Owner |
+|------|---------|-------|
+| `pyproject.toml` | Package config, entry points, dependencies | Source |
+| `QWEN.md` | Project conventions and context | Manual |
+| `README.md` | Repository overview | Manual |
+| `template_groups.py` | Workflow definitions | Source |
+| `job_schema.json` | Job state schema | Source |
+| `llm_response_schema.json` | Expected LLM response format | Source |
 
 ---
 
-*Generated: 2026-07-04T10:00:00+08:00*
-*Workflow: 00_master_docs_bootstrap_v1 / Step: 04_generate_architecture_docs*
-*Change ID: 00DOC-GEN-20260704-001*
+*This file structure document explains the organization of agent-runner-v2. See DEVELOPER_GUIDE.md for development workflows and RUNBOOK.md for operational procedures.*

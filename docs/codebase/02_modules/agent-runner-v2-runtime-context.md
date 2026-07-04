@@ -6,8 +6,8 @@ module_path: "agent_runner_v2/runtime_context.py"
 module_area: "state"
 documentation_mode: "full"
 owner_doc_path: "docs/codebase/02_modules/agent-runner-v2-runtime-context.md"
-last_verified_by_change: "00_master_docs_bootstrap_v1 / 00DOC-GEN-20260704-001 / 2026-07-04T06:01:39+08:00"
-created: "2026-07-04T06:01:39+08:00"
+last_verified_by_change: "00_master_docs_bootstrap_v1 / 00DOC-GEN-20260704-002 / 2026-07-04T10:47:08+08:00"
+created: "2026-07-04T10:47:08+08:00"
 owner: "00_master_docs_bootstrap_v1"
 ---
 
@@ -61,6 +61,11 @@ This module belongs to the `state` area and is documented as `full`.
 | `set_delivery_root` | `(root)` | public function |
 | `resolve_artifact_root` | `()` | Return the root for resolving artifact paths. |
 | `resolve_repo_or_runtime_path` | `(path_str)` | Resolve a path using the repo/runtime namespace convention. |
+| `repo_doc_root` | `()` | public function |
+| `system_doc_root` | `()` | public function |
+| `codebase_doc_root` | `()` | public function |
+| `delivery_doc_root` | `()` | public function |
+| `architecture_site_root` | `()` | public function |
 | `artifact_rel_to_meta_rel` | `(artifact_rel)` | Return the meta.json sibling path for a repo/runtime-relative artifact. |
 | `write_meta_sidecar` | `(meta_path_like)` | Write a v2 meta.json sidecar using the shared path resolver. |
 | `resolve_step_meta_rel` | `()` | Resolve the meta.json relative path for a step-owned artifact. |

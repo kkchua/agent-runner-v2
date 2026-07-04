@@ -10,7 +10,7 @@
     },   
     "qwen-architect": {
       "coder": "qwen",
-      "model": "glm-5"
+      "model": "kimi-k2.5"
     }, 
 	"qwen-architect1": {
       "coder": "qwen",

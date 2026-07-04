@@ -1,11 +1,11 @@
 ---
-template_id: DELIVERY-PLAN-v1
-status: active
-generated: "2026-07-03T23:30:00+08:00"
+title: Delivery Plan Template
+managed_by: workflow-generated
 workflow: 10_execution_scaffold_v1
 step: generate_templates
-managed_by: workflow-generated
-version: 1.0.0
+created: 2026-07-04
+template_id: DELIVERY-PLAN-v1
+version: 1
 ---
 
 > Managed by workflow: `10_execution_scaffold_v1` / step: `generate_templates`
@@ -13,119 +13,155 @@ version: 1.0.0
 
 # Delivery Plan Template
 
+> Artifact key: `DELIVERY_PLAN_TEMPLATE`
+
 ## Metadata
 
 | Field | Value |
-|-------|-------|
-| **Template ID** | `DELIVERY-PLAN-v1` |
-| **Plan ID** | `[PLAN-XXXX-v1]` |
-| **Title** | `[Plan Title]` |
-| **Status** | `draft` / `proposed` / `approved` / `active` / `completed` / `abandoned` |
-| **Initiative ID** | `[INIT-XXXX-v1]` |
-| **Created** | `[YYYY-MM-DDTHH:MM:SS+TZ]` |
-| **Updated** | `[YYYY-MM-DDTHH:MM:SS+TZ]` |
-| **Author** | `[Agent or human author]` |
-| **Workflow** | `10_execution_scaffold_v1` |
-| **Step** | `delivery_planning_v1` |
-| **Managed By** | workflow-generated |
-| **Current Profile** | `[Architecture profile, e.g., modular-monolith]` |
-| **Target Profile** | `[Target architecture, if changing]` |
-| **Migration Mode** | `[greenfield / incremental / refactoring / legacy-merge]` |
+|---|---|
+| Template ID | `DELIVERY-PLAN-v1` |
+| Owner Workflow | `10_execution_scaffold_v1` |
+| Owner Step | `generate_templates` |
+| Scope | Universal baseline — applies to all governed repositories |
+| Architecture Profile | Conditional — populated from repository context |
+| Migration Mode | Conditional — populated when repo standard is unclear or changing |
+| Status | `active` |
+| Last Verified | 2026-07-04 |
+
+This template defines the canonical structure for a delivery plan. Every plan artifact must conform to this structure.
+
+---
+
+## Instance Preamble
+
+```yaml
+---
+title: Delivery Plan — {PLAN_ID}
+managed_by: workflow-generated
+workflow: 10_execution_scaffold_v1
+step: delivery_planning_v1
+created: {DATE}
+template_id: DELIVERY-PLAN-v1
+plan_id: {PLAN_ID}
+initiative_id: {INITIATIVE_ID}
+status: draft
+current_profile: {CURRENT_PROFILE}
+target_profile: {TARGET_PROFILE}
+migration_mode: {MIGRATION_MODE}
+---
+```
+
+## Metadata
+
+| Field | Value |
+|---|---|
+| Plan ID | `{PLAN_ID}` |
+| Initiative ID | `{INITIATIVE_ID}` |
+| Created | `{DATE}` |
+| Author / Agent | Planner |
+| Status | `draft` / `approved` / `rejected` |
+| Current Architecture Profile | `{CURRENT_PROFILE}` |
+| Target Architecture Profile | `{TARGET_PROFILE}` |
+| Migration Mode | `{MIGRATION_MODE}` |
+
+**Profile and migration fields are conditional:**
+- MUST be populated when the repository standard is unclear or changing.
+- When the repo standard is well-established and not changing, the fields MAY carry the known values or `n/a`.
 
 ## Plan Objective
 
-<!-- State the primary objective of this delivery plan. -->
-
-**Objective**: [What this plan achieves]
-
-**Success Metric**: [How success is measured]
+| Field | Value |
+|---|---|
+| Objective | `{OBJECTIVE}` |
+| Success Definition | `{WHAT_DONE_LOOKS_LIKE}` |
+| Key Results | `{MEASURABLE_OUTCOMES}` |
 
 ## Strategy Overview
 
-<!-- High-level approach to achieving the plan objective. -->
-
-### Architecture Profile Assessment
-
-| Dimension | Value |
-|-----------|-------|
-| **Current Architecture** | `[Describe current architecture standard]` |
-| **Target Architecture** | `[Describe target architecture, if changing]` |
-| **Migration Mode** | `[greenfield / incremental / refactoring / legacy-merge]` |
-| **DDD/EDA Applicability** | `[Applicable / Not applicable — conditional standards]` |
-
-### Baseline vs Profile-Specific Obligations
-
-| Obligation Type | Required | Description |
-|----------------|----------|-------------|
-| **Baseline: Module docs** | Always | Update `docs/codebase/02_modules/` for changed modules |
-| **Baseline: Component docs** | Always | Update `docs/codebase/03_components/` for changed components |
-| **Baseline: Inventory sync** | Always | Update `docs/codebase/01_inventory/codebase_inventory.md` |
-| **Baseline: Change record** | Always | Create `docs/codebase/04_changes/` entry |
-| **Profile: DDD aggregates** | Profile-specific | Document aggregate boundaries and bounded contexts |
-| **Profile: EDA events** | Profile-specific | Document event schemas and stream contracts |
-| **Profile: [other]** | Profile-specific | [Profile-specific documentation requirement] |
+| Field | Value |
+|---|---|
+| Approach | `{APPROACH_DESCRIPTION}` |
+| Phasing | `{PHASING_STRATEGY}` |
+| Constraints | `{KNOWN_CONSTRAINTS}` |
+| Non-Goals | `{EXPLICIT_NON_GOALS}` |
 
 ## Scope Mapping
 
-<!-- Map plan scope to source code areas and documentation areas. -->
+### Baseline Documentation Obligations (Universal)
 
-| Source Area | Documentation Area | Impact Level |
-|-------------|-------------------|--------------|
-| `[Module / file path]` | `[Corresponding doc]` | `[Low / Medium / High]` |
+These obligations apply to every delivery regardless of architecture profile:
+
+| Obligation | Scope | Verification |
+|---|---|---|
+| Touch-module doc freshness | Every modified module must have a current `docs/codebase/02_modules/` entry | `validate_codebase_docs` action |
+| Sidecar contract compliance | Every step emits v2 `meta.json` | `validate_delivery_docs` action |
+| Change-impact record | `docs/codebase/04_changes/` entry for the delivery | Manual review |
+| Protected-doc banner | All generated docs carry workflow banner | Automated check |
+
+### Profile-Specific Architectural Obligations (Conditional)
+
+These obligations apply only when the delivery introduces or changes an architecture profile:
+
+| Obligation | Profile | Verification |
+|---|---|---|
+| {PROFILE_OBLIGATION} | `{PROFILE_NAME}` | `{METHOD}` |
+
+**Rule:** Baseline obligations are always active. Profile-specific obligations are activated only when the initiative's `current_profile` or `target_profile` fields are populated with a non-universal value.
+
+### Affected Modules
+
+| Module | Change Type | Documentation Required |
+|---|---|---|
+| `{MODULE_PATH}` | `create` / `modify` / `delete` | `yes` / `no` |
 
 ## Task Breakdown
 
-<!-- Break the plan into executable tasks. -->
-
-| Task ID | Description | Priority | Dependencies | Estimate |
-|---------|-------------|----------|--------------|----------|
-| `[TASK-XXXX]` | `[Description]` | `[P1/P2/P3]` | `[Dependencies]` | `[Estimate]` |
+| Task ID | Title | Estimated Effort | Documentation Required | Dependencies |
+|---|---|---|---|---|
+| `{TASK_ID}` | `{TITLE}` | `{EFFORT}` | `yes` / `no` | `{DEPS}` |
 
 ## Documentation Strategy
 
-<!-- Define how documentation will be maintained throughout the delivery. -->
-
-### Baseline Documentation Obligations
-- [ ] All code changes have corresponding documentation updates
-- [ ] Module docs updated in `docs/codebase/02_modules/`
-- [ ] Component docs updated in `docs/codebase/03_components/`
-- [ ] Inventory refreshed in `docs/codebase/01_inventory/codebase_inventory.md`
-- [ ] Change-impact record created in `docs/codebase/04_changes/`
-
-### Profile-Specific Documentation Obligations
-- [ ] `[Profile-specific doc requirement]`
+| Field | Value |
+|---|---|
+| Documentation Approach | `{APPROACH}` |
+| New Documents | `{COUNT_AND_TYPES}` |
+| Updated Documents | `{COUNT_AND_PATHS}` |
+| Retired Documents | `{COUNT_AND_PATHS}` |
+| Documentation Owner | `{ROLE_OR_AGENT}` |
 
 ### Documentation Freshness Risks
 
-| Risk | Severity | Mitigation |
-|------|----------|-----------|
-| `[Description]` | `[Low / Medium / High]` | `[Mitigation approach]` |
+| Risk | Likelihood | Impact | Mitigation | Trigger |
+|---|---|---|---|---|
+| {RISK} | {LOW/MED/HIGH} | {LOW/MED/HIGH} | {MITIGATION} | {TRIGGER_CONDITION} |
 
-### Documentation Review Gates
-- [ ] Documentation review at task completion
-- [ ] Documentation validation at implementation completion
-- [ ] Documentation synchronization check at plan completion
+### Baseline vs Profile-Specific Documentation Obligations
+
+| Obligation Type | Obligations |
+|---|---|
+| Baseline (universal) | {BASELINE_ITEMS} |
+| Profile-specific (conditional) | {PROFILE_ITEMS} |
 
 ## Risks
 
-| Risk | Impact | Likelihood | Mitigation |
-|------|--------|------------|-----------|
-| `[Description]` | `[Low / Medium / High]` | `[Low / Medium / High]` | `[Mitigation approach]` |
+| Risk | Likelihood | Impact | Mitigation | Owner |
+|---|---|---|---|---|
+| {RISK} | {LOW/MED/HIGH} | {LOW/MED/HIGH} | {MITIGATION} | `{OWNER}` |
 
 ## Deliverables
 
-| Deliverable | Type | Description | Status |
-|-------------|------|-------------|--------|
-| `[Name]` | `[code / doc / config]` | `[Description]` | `[Pending / In Progress / Complete]` |
+| Deliverable | Type | Path | Acceptance Criterion |
+|---|---|---|---|
+| `{DELIVERABLE}` | `code` / `doc` / `config` | `{PATH}` | `{CRITERION}` |
 
 ## Acceptance Criteria
 
-- [ ] All tasks in the breakdown are completed
-- [ ] All code changes pass validation
-- [ ] All documentation is synchronized with code changes
-- [ ] Architecture profile obligations are met
-- [ ] Documentation freshness is verified
+| # | Criterion | Verification Method |
+|---|---|---|
+| 1 | {CRITERION} | {METHOD} |
 
 ## Notes
 
-<!-- Additional context, decisions, or references. -->
+- {NOTE_1}
+- {NOTE_2}

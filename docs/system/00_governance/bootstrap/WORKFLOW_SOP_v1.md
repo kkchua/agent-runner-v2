@@ -1,424 +1,219 @@
 ---
-title: "Delivery Workflow SOP v1"
-template_id: "WORKFLOW-SOP-v1"
-status: "active"
-version: "1.0"
-generated: "2026-07-04T07:00:00+08:00"
-workflow: "10_execution_scaffold_v1"
-step: "generate_sop"
+title: Delivery Workflow SOP
 managed_by: workflow-generated
+workflow: 10_execution_scaffold_v1
+step: generate_sop
+created: 2026-07-04
+version: 1
 ---
 
 > Managed by workflow: `10_execution_scaffold_v1` / step: `generate_sop`
 > This file is workflow-generated and protected from manual edits.
 
-# Delivery Workflow SOP v1
+# Delivery Workflow SOP
 
 ## Purpose
 
-This Standard Operating Procedure defines the end-to-end delivery lifecycle for every repository governed by the UKBE runner. It governs how initiatives are captured, planned, decomposed, executed, reviewed, validated, and remembered through the structured workflow families:
+This Standard Operating Procedure defines the end-to-end delivery workflow for governed repositories managed by `10_execution_scaffold_v1`. It covers the complete lifecycle from initiative intake through planning, task decomposition, implementation, review, validation, and completion.
 
-- `20_initiative_intake_v1` — requirement capture and pre-init refinement
-- `30_delivery_planning_v1` — plan creation, task-graph decomposition, task decomposition
-- `31_task_execution_v1` — implementation, review, validation, documentation sync
-- `40_documentation_sync_v1` — current-truth reconciliation of code against documentation
+The delivery SOP establishes:
+- The authoritative sequence of workflow phases
+- Agent roles and responsibilities at each phase
+- State transitions and approval gates
+- Folder structure and artifact routing
+- Validation contracts that must be satisfied before advancement
 
-All delivery activity flows through these workflows under deterministic governance rules. No delivery artifact may exist outside this SOP's state machine.
-
-This SOP applies to every governed repository regardless of the repository's selected architecture profile or migration mode. Architecture profiles and migration modes refine the baseline defined here; they do not replace it.
+This SOP applies universally to every repository governed by the scaffold. Repository-specific profiles (DDD, EDA, microservices, etc.) refine but do not replace this baseline.
 
 ## Core Principle
 
-**Every delivery unit follows the same lifecycle.** Whether it is a bug fix, a feature, a refactor, or a documentation sync, every unit passes through initiative intake, planning, task decomposition, execution, review, validation, and memory recording. The workflows enforce this sequence; the state machine prevents shortcuts.
+**Document-first, sidecar-gated, workflow-protected.**
 
-Three corollaries:
+Every delivery decision, plan, task, and outcome is recorded as a protected markdown document with a `meta.json` sidecar. No phase advances without a valid sidecar. No sidecar is valid without the required artifacts. No manual edits override workflow-generated content.
 
-1. **Document-first.** Documents precede code. Requirements, plans, and task specs are written before implementation begins.
-2. **Sidecar-verified.** Every workflow step produces a `meta.json` sidecar. The sidecar is the only structured output channel between coder steps and the runner.
-3. **Never-delete.** Superseded artifacts are marked `superseded` with a pointer to the replacement. No delivery artifact is ever deleted.
+The delivery workflow is a **state machine**, not a checklist. Each phase has defined entry criteria, exit criteria, and transition rules. Skipping or reordering phases invalidates the delivery.
 
 ## Authority Precedence
 
-When conflicts arise between governance artifacts, this order determines which takes priority:
+When conflicts arise between documents, the following precedence applies (highest first):
 
-1. **Runner actions** (deterministic validation steps, e.g., `validate_delivery_docs`, `validate_system_docs`) — these are ground truth.
-2. **This SOP** (`WORKFLOW_SOP_v1.md`) — structural rules, state machine, roles.
-3. **Status Rules** (`DELIVERY_STATUS_RULES_v1.md`) — lifecycle state definitions, forbidden transitions.
-4. **Codebase SOP** (`CODEBASE_DOC_SOP_v1.md`) and **Codebase Status Rules** (`CODEBASE_DOC_STATUS_RULES_v1.md`) — codebase documentation obligations.
-5. **Template Registry** (`templates/delivery/01_delivery_template_registry.md`) — artifact format contracts.
-6. **Agent Contracts** (`docs/delivery/00_standards/DELIVERY_AGENT_*.md`) — role-specific behavior rules.
-7. **Project Analysis** (`docs/delivery/project_analysis.md`) — repo-specific scope and recommendations.
-
-A lower-precedence artifact may never contradict a higher-precedence one. When a contradiction is detected, the higher-precedence rule wins and the lower artifact must be corrected.
-
-The `07_master_prompts` directory is **deprecated** and must not appear in any governance reference, template, or SOP.
+1. **`meta.json` sidecar** (v2 schema) — the runtime source of truth for step outcomes
+2. **This SOP** (`WORKFLOW_SOP_v1.md`) — the workflow contract
+3. **`DELIVERY_STATUS_RULES_v1.md`** — lifecycle and transition rules
+4. **Workflow templates** (initiative, plan, task graph, task, impl, review, validation, memory)
+5. **Agent role contracts** (planner, task-decomposer, impl-planner, executor, reviewer, memory-manager)
+6. **Repository-specific conventions** (when documented and approved)
+7. **Ad-hoc notes or comments** — never authoritative
 
 ## Workflow State Machine
 
-### Primary Lifecycle (Arrow Form)
+The primary delivery lifecycle follows this state transition sequence:
 
 ```
-draft → active → planned → executing → completed
+draft → active → planned → task_graph_ready → task_graph_validated → executing → completed
 ```
 
-### Detailed Lifecycle (Arrow Form)
+Detailed phase transitions:
 
 ```
-draft → active → task_graph_ready → task_graph_validated → executing → completed
+intake_draft → intake_active → intake_approved
+    → plan_draft → plan_active → plan_approved
+    → task_graph_draft → task_graph_ready → task_graph_validated
+    → task_pending → task_implementing → task_reviewing → task_validating → task_completed
+    → delivery_reviewing → delivery_validating → delivery_completed
 ```
 
-### Per-Entity State Machines (Arrow Form)
-
-**Initiative lifecycle:**
+Failure and recovery transitions:
 
 ```
-draft → active → planned → executing → completed
-draft → superseded
-active → superseded
-planned → superseded
-executing → superseded
+any_phase → rejected → (rework) → active
+any_phase → failed → (diagnosis) → active | escalated
+task_implementing → blocked → (unblocked) → task_implementing
 ```
 
-**Plan lifecycle:**
+### State Transition Rules
 
-```
-draft → active → task_graph_ready → task_graph_validated → executing → completed
-draft → superseded
-active → superseded
-task_graph_ready → superseded
-task_graph_validated → superseded
-executing → superseded
-```
-
-**Task lifecycle:**
-
-```
-draft → active → implementing → reviewing → validating → completed
-reviewing → rework → reviewing → validating → completed
-draft → superseded
-active → superseded
-implementing → superseded
-reviewing → superseded
-rework → superseded
-validating → superseded
-```
-
-**Implementation lifecycle:**
-
-```
-draft → active → reviewing → validating → completed
-reviewing → rework → reviewing → validating → completed
-draft → superseded
-active → superseded
-reviewing → superseded
-rework → superseded
-validating → superseded
-```
-
-**Documentation sync lifecycle:**
-
-```
-scanning → analyzing → flagging → completed
-scanning → completed
-analyzing → completed
-any_state → completed (early termination)
-```
-
-### State Transition Summary Tables
-
-#### Initiative States
-
-| State | Description | Valid Transitions |
-|-------|-------------|-------------------|
-| `draft` | Intake in progress | `active`, `superseded` |
-| `active` | Approved, awaiting planning | `planned`, `superseded` |
-| `planned` | Plan approved, task-graph in progress | `executing`, `superseded` |
-| `executing` | Tasks being executed | `completed`, `superseded` |
-| `completed` | All tasks done, validated | Terminal |
-| `superseded` | Replaced by a newer initiative | Terminal |
-
-#### Plan States
-
-| State | Description | Valid Transitions |
-|-------|-------------|-------------------|
-| `draft` | Plan in progress | `active`, `superseded` |
-| `active` | Approved, awaiting decomposition | `task_graph_ready`, `superseded` |
-| `task_graph_ready` | Task-graph decomposition complete | `task_graph_validated`, `superseded` |
-| `task_graph_validated` | Task-graph validated, ready for execution | `executing`, `superseded` |
-| `executing` | Tasks being executed | `completed`, `superseded` |
-| `completed` | All tasks done, validated | Terminal |
-| `superseded` | Replaced by a newer plan | Terminal |
-
-#### Task States
-
-| State | Description | Valid Transitions |
-|-------|-------------|-------------------|
-| `draft` | Task spec in progress | `active`, `superseded` |
-| `active` | Task approved, awaiting implementation | `implementing`, `superseded` |
-| `implementing` | Implementation in progress | `reviewing`, `superseded` |
-| `reviewing` | Review in progress | `rework`, `validating`, `superseded` |
-| `rework` | Fixing issues from review | `reviewing`, `superseded` |
-| `validating` | Validation in progress | `completed`, `superseded` |
-| `completed` | Implementation reviewed and validated | Terminal |
-| `superseded` | Replaced by a newer task | Terminal |
-
-#### Documentation Sync States
-
-| State | Description | Valid Transitions |
-|-------|-------------|-------------------|
-| `scanning` | Scanning codebase for drift | `analyzing`, `completed` |
-| `analyzing` | Analyzing identified drift | `flagging`, `completed` |
-| `flagging` | Flagging stale documentation | `completed` |
-| `completed` | Sync complete, stale guidance recorded | Terminal |
+| From | To | Condition |
+|---|---|---|
+| `draft` | `active` | Initiative or plan is opened for work |
+| `active` | `planned` | Plan document emitted with valid sidecar |
+| `planned` | `task_graph_ready` | Task graph emitted with valid sidecar |
+| `task_graph_ready` | `task_graph_validated` | Task graph passes validation action |
+| `task_graph_validated` | `executing` | First task begins implementation |
+| `executing` | `completed` | All tasks validated; delivery review passed |
+| any | `rejected` | Reviewer or validator rejects; rework required |
+| any | `failed` | Unrecoverable error; escalation required |
 
 ## Agent Roles
 
-| Role | Responsibility | Assigned Workflow Phases |
-|------|---------------|-------------------------|
-| **Planner** | Scopes initiative, produces plan with solution strategy | `20_initiative_intake_v1`, `30_delivery_planning_v1` |
-| **Task Decomposer** | Converts plan into task-graph, then decomposes into task specs | `30_delivery_planning_v1` |
-| **Impl Planner** | Produces implementation plan for each task | `31_task_execution_v1` |
-| **Executor** | Implements solution, produces deliverables, writes docs | `31_task_execution_v1` |
-| **Reviewer** | Reviews implementation against task spec and acceptance criteria | `31_task_execution_v1` |
-| **Memory Manager** | Records delivery memory, maintains governance artifacts | `31_task_execution_v1`, `40_documentation_sync_v1` |
-
-Each agent operates within its authority boundary. No agent may override another agent's artifacts without going through the review loop.
+| Role | Phase | Responsibility |
+|---|---|---|
+| **Planner** | `20_initiative_intake_v1`, `30_delivery_planning_v1` | Captures initiative scope, documentation obligations, and delivery plan. Converts initiative intake into a structured plan with task obligations. |
+| **Task Decomposer** | `30_delivery_planning_v1` | Breaks the plan into a task graph with dependencies, documentation update obligations per task, and validation criteria. |
+| **Impl Planner** | `31_task_execution_v1` | Produces per-task implementation plans with codebase-doc impact analysis. |
+| **Executor** | `31_task_execution_v1` | Runs coder adapters, writes code and documentation artifacts, updates codebase docs alongside code changes. |
+| **Reviewer** | `31_task_execution_v1` | Enforces sidecar contract, doc freshness, status rules, and template compliance. |
+| **Memory Manager** | All phases | Maintains workflow memory, decision history, and cross-delivery context. |
 
 ## Workflow Phases
 
 ### Phase 1: Initiative Intake (`20_initiative_intake_v1`)
 
-**Purpose**: Capture the requirement, scope documentation obligations, identify stale-guidance risks.
+**Entry**: Initiative request received (user prompt, ticket, or directive).
 
-1. Capture the requirement (problem statement, context, constraints).
-2. Identify **documentation scope** — which codebase modules, components, or configurations will be affected?
-3. **Flag stale-guidance risk** for any existing docs that reference the affected area.
-4. Produce the initiative document at `docs/delivery/01_initiatives/`.
-5. Route to approval gate. On approval, status moves `draft → active`.
+**Actions**:
+1. Parse initiative scope — what changes, what documentation is affected
+2. Capture documentation scope — which codebase docs need creation or update
+3. Assess stale-guidance risk — identify existing docs that may become stale
+4. Produce initiative document with approved sidecar
 
-The initiative document must include a **Documentation Scope** section listing all affected doc files and their stale-guidance risk level.
+**Exit**: Initiative document in `intake_approved` state with valid sidecar.
 
 ### Phase 2: Delivery Planning (`30_delivery_planning_v1`)
 
-**Purpose**: Convert documentation scope and initiative into plan, task-graph, and per-task implementation plans.
+**Entry**: Approved initiative document.
 
-1. Convert initiative into a plan with solution strategy, scope, and risk assessment.
-2. Produce the plan document at `docs/delivery/02_plans/`.
-3. Decompose plan into a task-graph (ordered dependencies, parallel tracks).
-4. Decompose each graph node into a task spec with acceptance criteria.
-5. **Convert documentation scope into concrete plan/task obligations** — each task that touches code must have a corresponding doc-update subtask.
-6. Produce task documents at `docs/delivery/03_tasks/`.
-7. Route to approval gate. On approval, status moves `task_graph_ready → task_graph_validated`.
+**Actions**:
+1. Convert documentation scope into plan-level obligations
+2. Define task boundaries with documentation deliverables per task
+3. Generate delivery plan document with approved sidecar
+4. Generate task graph document with validated sidecar
+
+**Exit**: Plan and task graph both approved with valid sidecars.
 
 ### Phase 3: Task Execution (`31_task_execution_v1`)
 
-**Purpose**: Execute each task, review the implementation, validate, and update codebase documentation.
+**Entry**: Validated task graph.
 
-1. For each task: produce an implementation plan at `docs/delivery/04_implementation_plans/`.
-2. Executor implements the solution.
-3. **Executor updates all codebase documentation** identified in the documentation scope.
-4. Reviewer reviews implementation against task spec and acceptance criteria.
-5. If issues found, executor reworks and reviewer re-reviews (max 2 refine loops).
-6. Validator validates deliverables against acceptance criteria, including documentation accuracy.
-7. If validation fails, executor reworks (max 1 replan loop).
-8. On validation pass, task status moves `validating → completed`.
-9. Memory Manager records delivery memory at `docs/delivery/06_memory/`.
+**Actions** (per task):
+1. Generate implementation plan (impl planner)
+2. Execute code changes (executor)
+3. Update codebase documentation alongside code (executor)
+4. Review implementation and doc updates (reviewer)
+5. Validate task completion including doc freshness (reviewer)
+
+**Exit**: All tasks in `task_completed` state; delivery review passed.
 
 ### Phase 4: Documentation Sync (`40_documentation_sync_v1`)
 
-**Purpose**: Reconcile current code against active documentation and flag stale guidance.
+**Entry**: Triggered on-demand or after task execution completes.
 
-**`40_documentation_sync_v1` is the single current-truth synchronization workflow.** It reconciles the actual codebase state against all active documentation (system docs, codebase module docs, component docs, agent contracts, templates).
+**Actions**:
+1. Reconcile current code against active documentation
+2. Flag stale guidance — documents that no longer match code behavior
+3. Generate reconciliation report
+4. Queue documentation repair tasks if stale content found
 
-1. **Scan** — walks all source files and compares against the inventory.
-2. **Detect** — identifies missing docs (new files without docs), orphaned docs (docs for deleted files), and stale docs (docs that don't match current source).
-3. **Report** — produces a drift report listing all discrepancies with severity levels.
-4. **Flag** — updates inventory entries to `stale_pending` for docs that need correction.
+**Exit**: Documentation freshness confirmed or repair tasks queued.
 
-After the sync completes:
+### Phase 5: Architecture Communication (`50_architecture_site_v1`)
 
-- If the drift report shows **critical stale guidance** (active misdirection), create an emergency correction task.
-- If the drift report shows **high/medium/low staleness**, create a delivery initiative to batch-correct the flagged docs.
-- If system docs (`docs/system/`) or operations guidance (`docs/delivery/`) are stale because the runner behavior or agent contracts changed, run `10_execution_scaffold_v1` again to refresh them.
+**Entry**: Repository posture and docs are synchronized.
+
+**Actions**:
+1. Publish browsable HTML architecture views
+2. Generate stakeholder, developer, operator, and functional consumer views
+3. Validate site renders correctly
+
+**Exit**: Architecture site published and validated.
 
 ## Standard Rules
 
-1. **No artifact without a parent.** Every initiative, plan, task, and implementation must reference its parent in the hierarchy.
-2. **No execution without a validated task spec.** Executors must only implement against an approved, validated task document.
-3. **No task completion without documentation updates.** Code changes that are not accompanied by corresponding documentation updates are not considered complete.
-4. **No state transition without evidence.** Every state change must be backed by a completed workflow phase with `meta.json` sidecar validation.
-5. **Review loops are bounded.** Refine loops cap at 2 iterations. Replan loops cap at 1 iteration. Exceeding the cap escalates to human review.
-6. **Supersession over deletion.** When an artifact is replaced, the old version is marked `superseded` with a pointer to the replacement. No artifact is ever deleted.
-7. **Memory is mandatory.** Every completed delivery unit produces a memory record.
-8. **Stale guidance must be flagged.** When documentation cannot be updated in the current delivery cycle, it must be flagged in the memory record.
-9. **Single current-truth workflow.** `40_documentation_sync_v1` is the single workflow for reconciling documentation against actual code state. No other workflow may perform current-truth synchronization.
-10. **Deprecated directory.** The `07_master_prompts` directory is deprecated. It must not appear in any governance reference, template, or SOP.
+### Sidecar Contract
+- Every workflow step MUST produce a `meta.json` sidecar conforming to v2 schema
+- The sidecar MUST include `schema_version`, `coder_result.status`, `coder_result.artifacts`, and `coder_result.recorded_at`
+- Status MUST be `APPROVED` or `REJECTED` — no other values accepted
+- Artifacts MUST list all generated documents with their exact paths
 
-## Ecosystem Baseline
+### Document Protection
+- Workflow-generated documents carry the `managed_by: workflow-generated` frontmatter field
+- Protected documents display the workflow banner immediately after frontmatter
+- Manual edits to protected documents are forbidden
+- Renaming protected documents is forbidden
 
-The delivery lifecycle defined in this SOP rests on a universal ecosystem baseline that applies to every repository governed by the runner. Repo-level profiles and migration modes layer on top of this baseline — they refine it; they do not replace it.
+### Approval Gates
+- No phase advances without a valid sidecar with `status: APPROVED`
+- Rejected steps must be reworked and resubmitted
+- Failed steps require diagnosis before retry
 
-### Universal Baseline
-
-The following rules apply to every governed repository, regardless of domain, size, or technology:
-
-1. **Sequential delivery lifecycle.** Every unit of work passes through initiative intake → delivery planning → task execution → documentation sync. No shortcuts.
-2. **Sidecar-based result tracking.** Every workflow step produces a `meta.json` sidecar. The sidecar is the only structured communication channel between coder steps and the runner.
-3. **Document-first delivery.** Documents precede code. Requirements, plans, and task specs are written before implementation begins.
-4. **Documentation co-change.** Any source code change requires corresponding documentation updates in the same delivery task.
-5. **Supersession over deletion.** No delivery artifact is ever deleted. Replaced artifacts are marked `superseded` with a pointer to the replacement.
-6. **Bounded review loops.** Refine loops cap at 2 iterations; replan loops cap at 1. Exceeding the cap escalates to human review.
-7. **Inventory completeness.** Every source file appears in the codebase inventory with an explicit status.
-8. **Freshness discipline.** Documentation stale beyond 30 days is flagged. Critical misdirection triggers emergency correction.
-
-### Repo-Selected Architecture Profile
-
-Repositories may select an architecture profile that extends the universal baseline with domain-specific standards. Profile selection is a **repo-level decision** made during onboarding and recorded in the project analysis document.
-
-Available profiles (non-exhaustive):
-
-| Profile | Description | Additional Requirements |
-|---------|-------------|------------------------|
-| **none** (default) | No architecture profile. Universal baseline only. | — |
-| **ddd** | Domain-Driven Design conventions | Aggregate boundaries documented; bounded contexts mapped; ubiquitous vocabulary maintained |
-| **eda** | Event-Driven Architecture conventions | Event schema registry maintained; producer/consumer contracts versioned; event lifecycle documented |
-| **layered** | Traditional layered architecture | Layer dependency rules enforced; cross-layer calls via interfaces only |
-| **clean** | Clean/Hexagonal architecture | Domain layer isolated; adapters documented; dependency rule enforced |
-
-**Important:** DDD, EDA, and similar architecture standards are **conditional profile choices**, not universal defaults. A repository without an explicit profile selection operates on the universal baseline alone. Profile-specific requirements are enforced by the reviewer during task validation only when the profile is explicitly selected.
-
-### Migration Mode
-
-Repositories may also declare a migration mode that affects how the delivery lifecycle operates during transitional periods:
-
-| Mode | Description | Effect on Lifecycle |
-|------|-------------|--------------------|
-| **none** (default) | No active migration. Standard lifecycle applies. | — |
-| **bootstrap** | Initial onboarding from legacy state | First pass generates all docs; subsequent passes follow standard lifecycle |
-| **format-migration** | Workflow bundle format upgrade in progress | `sync_system_docs` action runs after every delivery task until migration complete |
-| **docs-reconciliation** | Large-scale documentation remediation | `40_documentation_sync_v1` runs continuously until drift report shows zero critical/high items |
-
-Migration mode is set in the project analysis and cleared when migration objectives are met.
-
-### Conditional Standards
-
-The following standards are **not** part of the universal baseline. They apply only when explicitly selected via architecture profile, migration mode, or repo-specific governance extension:
-
-- Aggregate boundary enforcement (DDD profile only)
-- Event schema registry maintenance (EDA profile only)
-- Layer dependency enforcement (layered profile only)
-- Hexagonal adapter contracts (clean profile only)
-- Continuous sync reconciliation (docs-reconciliation migration mode only)
-- Post-delivery bootstrap sync (bootstrap migration mode only)
-
-Repo-specific governance extensions must be documented in the project analysis and approved through the same authority precedence chain as this SOP.
+### Freshness Enforcement
+- Codebase documentation MUST be updated in the same delivery as the code change
+- Stale documentation blocks delivery advancement
+- The `validate_codebase_docs` action enforces freshness at review time
 
 ## Folder Structure
 
-All delivery artifacts reside under `docs/delivery/`:
-
 ```
-docs/delivery/
-  00_standards/          # Governance SOPs, status rules, agent contracts
-    AGENTS.md                  (agent registry)
-    DELIVERY_AGENT_PLANNER.md
-    DELIVERY_AGENT_TASK_DECOMPOSER.md
-    DELIVERY_AGENT_IMPL_PLANNER.md
-    DELIVERY_AGENT_EXECUTOR.md
-    DELIVERY_AGENT_REVIEWER.md
-    DELIVERY_AGENT_MEMORY_MANAGER.md
-  01_initiatives/        # Initiative documents
-  02_plans/              # Delivery plan documents
-  03_tasks/              # Task specification documents
-  04_implementation_plans/ # Implementation plan documents
-  05_reviews/            # Review records with meta.json sidecars
-  06_memory/             # Delivery memory records
-  DELIVERY_FOLDER_MAP.json
-  project_analysis.md    # Project-specific analysis (input to scaffold)
-```
-
-All governance SOPs and status rules reside under `docs/system/00_governance/bootstrap/`:
-
-```
-docs/system/00_governance/bootstrap/
-  WORKFLOW_SOP_v1.md           (this file)
-  DELIVERY_STATUS_RULES_v1.md
-  EXISTING_REPO_WORKFLOW_SOP.md
-```
-
-All codebase documentation standards reside under `docs/codebase/00_standards/`:
-
-```
-docs/codebase/00_standards/
-  CODEBASE_DOC_SOP_v1.md
-  CODEBASE_DOC_STATUS_RULES_v1.md
-```
-
-All governance templates reside under `docs/system/00_governance/bootstrap/templates/`:
-
-```
-docs/system/00_governance/bootstrap/templates/
-  delivery/              # Delivery artifact templates
-    01_delivery_template_registry.md
-    02_delivery_initiative_template.md
-    03_delivery_plan_template.md
-    04_delivery_task_graph_template.md
-    05_delivery_task_template.md
-    06_delivery_impl_template.md
-    07_delivery_review_template.md
-    08_delivery_validation_template.md
-    09_delivery_memory_template.md
-  codebase/              # Codebase artifact templates
-    01_codebase_template_registry.md
-    02_codebase_inventory_template.md
-    03_codebase_module_template.md
-    04_codebase_component_template.md
-    05_codebase_change_template.md
+docs/
+├── codebase/
+│   ├── 00_standards/          # SOPs and status rules
+│   ├── 01_inventory/          # Project analysis and codebase inventory
+│   ├── 02_modules/            # Module-level documentation
+│   ├── 03_components/         # Component groupings
+│   └── 04_changes/            # Change-impact records
+├── system/
+│   ├── 00_governance/
+│   │   └── bootstrap/         # Delivery SOPs, status rules, templates, agent contracts
+│   └── 02_architecture_site/  # Published architecture views
+└── delivery/                  # Active delivery artifacts (initiatives, plans, tasks)
 ```
 
 ## Validation
 
-All delivery artifacts are validated at two levels:
+### Pre-Delivery Validation
+- Initiative document exists and is approved
+- Plan document exists and is approved
+- Task graph exists and is validated
+- All sidecars conform to v2 schema
 
-### Structural Validation (Deterministic)
+### In-Delivery Validation
+- Each task has a valid implementation plan
+- Code changes have corresponding documentation updates
+- Reviewer has signed off on each task
+- Sidecar artifacts match actual files on disk
 
-- File exists in the correct directory.
-- Filename matches the template ID convention.
-- Frontmatter contains all required fields (`title`, `status`, `workflow`, `step`).
-- The `managed_by` field is present for workflow-generated files.
-
-### Content Validation (LLM-Driven)
-
-- All required sections are present per the template.
-- Cross-references between artifacts are valid (initiative references plan, plan references tasks, etc.).
-- Acceptance criteria are testable (not vague).
-- Documentation scope covers all affected modules and components.
-
-### Validation Gates
-
-| Gate | Workflow Phase | Method | Pass Criteria |
-|------|---------------|--------|---------------|
-| Initiative validation | `20_initiative_intake_v1` | Runner action | Required sections present, documentation scope defined |
-| Plan validation | `30_delivery_planning_v1` | Runner action | Plan references valid initiative, task graph has dependencies |
-| Task graph validation | `30_delivery_planning_v1` | `validate_delivery_docs` | All tasks have acceptance criteria, no circular dependencies |
-| Implementation validation | `31_task_execution_v1` | `validate_delivery_docs` | Impl plan references valid task, code changes present |
-| Review validation | `31_task_execution_v1` | `validate_delivery_docs` | Review references valid implementation, verdict is explicit |
-| Documentation sync validation | `40_documentation_sync_v1` | `validate_delivery_docs` | Drift report produced, reconciliation actions defined |
-
-### Sidecar Validation
-
-Each workflow step produces a `meta.json` sidecar in the job directory. The sidecar must contain:
-
-```json
-{
-  "schema_version": "v2",
-  "coder_result": {
-    "status": "APPROVED" | "REJECTED",
-    "remark": "<summary>",
-    "artifacts": { ... },
-    "recorded_at": "<ISO-8601>"
-  }
-}
-```
-
-A step's output is only considered complete when its sidecar reports `APPROVED`.
+### Post-Delivery Validation
+- All tasks in `completed` state
+- No stale documentation in touched modules
+- `validate_codebase_docs` passes
+- Memory manager has recorded delivery summary

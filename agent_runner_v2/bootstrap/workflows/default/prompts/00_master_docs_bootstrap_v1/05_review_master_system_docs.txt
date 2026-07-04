@@ -15,19 +15,19 @@ Inputs:
 - System docs change log: {SYSTEM_DOCS_CHANGE_LOG}
 
 Review scope:
-- `docs/system/00_governance/bootstrap/project_analysis.md`
-- `docs/system/00_governance/bootstrap/README.md`
-- `docs/system/00_governance/bootstrap/DOCUMENTATION_STANDARD.md`
-- `docs/system/00_governance/bootstrap/SYSTEM_OVERVIEW.md`
-- `docs/system/00_governance/bootstrap/BUSINESS_CAPABILITIES.md`
-- `docs/system/00_governance/bootstrap/FUNCTIONAL_SPEC.md`
-- `docs/system/00_governance/bootstrap/NON_FUNCTIONAL_REQUIREMENTS.md`
-- `docs/system/00_governance/bootstrap/SYSTEM_CONTEXT.md`
-- `docs/system/00_governance/bootstrap/COMPONENT_ARCHITECTURE.md`
-- `docs/system/00_governance/bootstrap/DECISION_LOG.md`
-- `docs/system/00_governance/bootstrap/SYSTEM_FILE_STRUCTURE.md`
-- `docs/system/00_governance/bootstrap/DEVELOPER_GUIDE.md`
-- `docs/system/00_governance/bootstrap/RUNBOOK.md`
+- `{SYSTEM_DOC_ROOT}/project_analysis.md`
+- `{SYSTEM_DOC_ROOT}/README.md`
+- `{SYSTEM_DOC_ROOT}/DOCUMENTATION_STANDARD.md`
+- `{SYSTEM_DOC_ROOT}/SYSTEM_OVERVIEW.md`
+- `{SYSTEM_DOC_ROOT}/BUSINESS_CAPABILITIES.md`
+- `{SYSTEM_DOC_ROOT}/FUNCTIONAL_SPEC.md`
+- `{SYSTEM_DOC_ROOT}/NON_FUNCTIONAL_REQUIREMENTS.md`
+- `{SYSTEM_DOC_ROOT}/SYSTEM_CONTEXT.md`
+- `{SYSTEM_DOC_ROOT}/COMPONENT_ARCHITECTURE.md`
+- `{SYSTEM_DOC_ROOT}/DECISION_LOG.md`
+- `{SYSTEM_DOC_ROOT}/SYSTEM_FILE_STRUCTURE.md`
+- `{SYSTEM_DOC_ROOT}/DEVELOPER_GUIDE.md`
+- `{SYSTEM_DOC_ROOT}/RUNBOOK.md`
 
 Review criteria:
 - repository purpose, workflow model, and code structure are described consistently

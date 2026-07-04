@@ -56,7 +56,7 @@ Task:
 - Non-Python documentation requirement (MANDATORY):
   - For every changed file type that does not use Python-style module docstrings, you MUST still execute the documentation obligations defined in {IMPL_FILE} and {TASK_FILE}.
   - Config files, schemas, workflow definitions, templates, markdown docs, assets, and generated support files must be reflected through the required inventory/module/component/change-impact docs.
-  - If the task changes system behavior, architecture, developer workflow, or operations guidance, update the relevant files under `docs/system/`, `docs/engineering/`, or `docs/operations/` in the same execution cycle.
+  - If the task changes system behavior, architecture, developer workflow, or operations guidance, update the relevant files under `{SYSTEM_DOC_ROOT}/`, `{DOCS_ROOT}/engineering/`, or `{DOCS_ROOT}/operations/` in the same execution cycle.
   - Do not treat "no Python file changed" as a reason to skip documentation work.
 - After implementing the code changes, you MUST run the tests declared in the IMPL's Test Plan section:
   - Command: `pytest <test_files_from_impl> -v --tb=short`

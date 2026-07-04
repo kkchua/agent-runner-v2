@@ -11,8 +11,8 @@ Auto-Discovery Rule (MANDATORY)
   - AI coder context: `QWEN.md`, `AGENTS.md`, `CLAUDE.md`, `.cursorrules`, `.github/copilot-instructions.md`, `.windsurfrules`
   - Project metadata: `README*`, `pyproject.toml`, `package.json`, `Cargo.toml`, `go.mod`, `Gemfile`
   - Architecture / design docs: `docs/architecture/*.md`, `docs/specs/*.md`, `docs/design/*.md`, `ARCHITECTURE.md`, `DESIGN.md`
-  - Existing delivery docs: `docs/delivery/**/*`
-  - Existing codebase docs: `docs/codebase/**/*`
+  - Existing delivery docs: `{DELIVERY_DOC_ROOT}/**/*`
+  - Existing codebase docs: `{CODEBASE_DOC_ROOT}/**/*`
 - If none exist, return REJECTED with `No project context files found`.
 
 Task:

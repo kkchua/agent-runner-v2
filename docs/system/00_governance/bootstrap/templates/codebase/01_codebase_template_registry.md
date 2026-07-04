@@ -1,11 +1,11 @@
 ---
-template_id: CODEBASE-REGISTRY-v1
-status: active
-generated: "2026-07-03T23:30:00+08:00"
+title: Codebase Template Registry
+managed_by: workflow-generated
 workflow: 10_execution_scaffold_v1
 step: generate_templates
-managed_by: workflow-generated
-version: 1.0.0
+created: 2026-07-04
+template_id: CODEBASE-REG-v1
+version: 1
 ---
 
 > Managed by workflow: `10_execution_scaffold_v1` / step: `generate_templates`
@@ -16,92 +16,82 @@ version: 1.0.0
 ## Metadata
 
 | Field | Value |
-|-------|-------|
-| **Template ID** | `CODEBASE-REGISTRY-v1` |
-| **Status** | Active |
-| **Generated** | 2026-07-03 |
-| **Workflow** | `10_execution_scaffold_v1` |
-| **Step** | `generate_templates` |
-| **Version** | 1.0.0 |
-| **Managed By** | workflow-generated |
+|---|---|
+| Template ID | `CODEBASE-REG-v1` |
+| Owner Workflow | `10_execution_scaffold_v1` |
+| Owner Step | `generate_templates` |
+| Scope | Universal baseline — applies to all governed repositories |
+| Status | `active` |
+| Last Verified | 2026-07-04 |
+
+This registry is the authoritative index of all codebase-documentation templates produced by `10_execution_scaffold_v1`. Each template has a stable artifact key, a fixed file path, and a defined role in the codebase-documentation lifecycle.
 
 ## Registry Overview
 
-This registry is the authoritative index of all codebase-documentation templates used by the `10_execution_scaffold_v1` workflow and any downstream workflows that produce or maintain codebase documentation. Every codebase document produced by the workflow must use one of the templates listed here.
+The codebase template family covers documentation for the repository source: inventory of all code files, module reference docs, component groupings, and change-impact records. Every template is workflow-generated, protected from manual edits, and emitted with YAML frontmatter containing a stable `template_id`.
 
-The registry supports:
-- **Universal ecosystem baseline**: All codebase templates work for any repository regardless of language or architecture.
-- **File type coverage**: Templates cover all source file types — Python, JavaScript, configuration files, scripts, tests, documentation, and workflow files.
-- **Status vocabulary**: All entries use a consistent status set — `current`, `needs_update`, `pending_review`, `superseded`.
-- **Profile metadata support**: Inventory entries include room for repo profile metadata when a change introduces or replaces a declared architecture standard.
-- **Ownership tracking**: Each entry tracks owner-doc path, documentation mode, and last-verified-by-change fields.
+| Artifact Key | Template ID | File Path | Role |
+|---|---|---|---|
+| `CODEBASE_TEMPLATE_REGISTRY` | `CODEBASE-REG-v1` | `docs/system/00_governance/bootstrap/templates/codebase/01_codebase_template_registry.md` | This document. Master index of all codebase templates. |
+| `CODEBASE_INVENTORY_TEMPLATE` | `CODEBASE-INV-TEMPLATE-v1` | `docs/system/00_governance/bootstrap/templates/codebase/02_codebase_inventory_template.md` | Defines the structure for codebase inventory entries. Covers all source file types and supports statuses: `current`, `needs_update`, `pending_review`, `superseded`. |
+| `CODEBASE_MODULE_TEMPLATE` | `CODEBASE-MOD-v1` | `docs/system/00_governance/bootstrap/templates/codebase/03_codebase_module_template.md` | Defines the structure for per-module reference documentation. |
+| `CODEBASE_COMPONENT_TEMPLATE` | `CODEBASE-COMP-v1` | `docs/system/00_governance/bootstrap/templates/codebase/04_codebase_component_template.md` | Defines the structure for component grouping documentation. |
+| `CODEBASE_CHANGE_TEMPLATE` | `CODEBASE-CHG-v1` | `docs/system/00_governance/bootstrap/templates/codebase/05_codebase_change_template.md` | Defines the structure for change-impact records tracking changed files, updated docs, and stale-doc removal. |
+| `CODEBASE_INVENTORY` | `CODEBASE-INV-v1` | `docs/codebase/01_inventory/codebase_inventory.md` | The live codebase inventory for this repository. Conforms to `CODEBASE_INVENTORY_TEMPLATE`. |
 
 ## Template Families
 
-### Codebase Documentation Templates
+### Inventory Templates
+Templates that track and enumerate codebase assets:
 
-| Template ID | File | Purpose | Status |
-|-------------|------|---------|--------|
-| `CODEBASE-INV-v1` | `02_codebase_inventory_template.md` | Codebase inventory entry template | Active |
-| `CODEBASE-MOD-v1` | `03_codebase_module_template.md` | Module documentation template | Active |
-| `CODEBASE-COMP-v1` | `04_codebase_component_template.md` | Component documentation template | Active |
-| `CODEBASE-CHANGE-v1` | `05_codebase_change_template.md` | Change-impact tracking template | Active |
+- `CODEBASE_INVENTORY_TEMPLATE` — defines entry structure
+- `CODEBASE_INVENTORY` — the live inventory instance
 
-### Related Delivery Templates
+### Reference Templates
+Templates that document code structure:
 
-| Template ID | File | Purpose | Status |
-|-------------|------|---------|--------|
-| `DELIVERY-REGISTRY-v1` | `../delivery/01_delivery_template_registry.md` | Delivery template registry | Active |
-| `DELIVERY-TASK-v1` | `../delivery/05_delivery_task_template.md` | Task template with doc impact | Active |
-| `DELIVERY-IMPL-v1` | `../delivery/06_delivery_impl_template.md` | Impl template with doc update plan | Active |
-| `DELIVERY-VALIDATION-v1` | `../delivery/08_delivery_validation_template.md` | Validation with doc sync check | Active |
+- `CODEBASE_MODULE_TEMPLATE` — per-module documentation
+- `CODEBASE_COMPONENT_TEMPLATE` — per-component documentation
+
+### Change Tracking Templates
+Templates that record and trace changes:
+
+- `CODEBASE_CHANGE_TEMPLATE` — change-impact records
+
+### Governance Templates
+Templates that define the codebase-docs framework itself:
+
+- `CODEBASE_TEMPLATE_REGISTRY` — this document
 
 ## Usage Rules
 
-1. **Template Selection**: Every codebase document must use exactly one template from this registry. The `template_id` in YAML frontmatter must match the registry entry.
+1. **Every instance must carry the template_id.** When a workflow step produces a codebase-doc artifact from a template, the output YAML frontmatter MUST include the `template_id` of the source template.
 
-2. **Status Vocabulary**: All codebase documents use a standard status set:
-   - `current` — up-to-date with the source code
-   - `needs_update` — source code has changed; doc is behind
-   - `pending_review` — updated; awaiting validation
-   - `superseded` — replaced by a newer document
+2. **Section headings are fixed.** The section headings defined in each template are mandatory. Additional sections may be appended but existing headings must not be renamed or removed.
 
-3. **File Type Coverage**: The inventory template covers ALL file types in the repository:
-   - Source files (`.py`, `.js`, `.ts`, `.go`, `.rs`, etc.)
-   - Configuration files (`pyproject.toml`, `.json`, `.yaml`, `.env`)
-   - Scripts (`.sh`, `.bat`, `.ps1`)
-   - Test files (`test_*.py`, `*_test.py`)
-   - Workflow files (prompt templates, JSON workflows)
-   - Documentation files (`.md` in `docs/`)
+3. **Inventory must cover all source file types.** The codebase inventory MUST include entries for all file types discovered in the repository: Python modules, JSON configs, prompt templates, shell scripts, markdown context files, architecture-site outputs.
 
-4. **Ownership Tracking**: Each inventory entry must specify:
-   - `owner_doc_path` — path to the owning module or component doc
-   - `documentation_mode` — `stub` / `summary` / `full`
-   - `status` — one of the standard statuses
-   - `last_verified_by_change` — change record that last verified this doc
+4. **Status vocabulary is fixed.** Every inventory entry MUST use one of the four defined statuses:
+   - `current` — the entry accurately reflects the current state of the code
+   - `needs_update` — the code has changed and the entry is stale
+   - `pending_review` — the entry may be stale and requires human or agent review
+   - `superseded` — the entry has been replaced by a newer entry
 
-5. **Profile Metadata**: When a change introduces or replaces an architecture standard, the inventory must record:
-   - Previous profile
-   - New profile
-   - Migration mode
+5. **Inventory uses registry-aligned template IDs.** The live codebase inventory MUST use `CODEBASE-INV-v1` as its `template_id`, not the legacy `CB-01` marker.
 
-6. **Cross-Reference Integrity**: Templates that reference other templates must use the canonical `template_id` values listed in this registry.
+6. **Change-impact records must track three categories:** changed files, updated docs, and stale-doc removal.
+
+7. **Profile metadata is supported but conditional.** When a change introduces or replaces a declared architecture standard, inventory entries MAY carry profile metadata fields.
+
+8. **Inventory entries include owner-doc path, documentation mode, status, and last-verified-by-change fields.**
 
 ## Cross-References
 
-- **Delivery Template Registry**: See `../delivery/01_delivery_template_registry.md`
-- **Workflow SOP**: See `../../WORKFLOW_SOP_v1.md`
-- **Codebase Doc SOP**: See `../../../../codebase/00_standards/CODEBASE_DOC_SOP_v1.md`
-
-## Artifact Keys
-
-The following literal artifact keys are the canonical identifiers for codebase templates. These keys must be used in workflow configurations, runner scripts, and any cross-references that resolve codebase templates programmatically.
-
-| Artifact Key | Template ID | File |
-|-------------|-------------|------|
-| `CODEBASE_TEMPLATE_REGISTRY` | `CODEBASE-REGISTRY-v1` | `01_codebase_template_registry.md` |
-| `CODEBASE_INVENTORY_TEMPLATE` | `CODEBASE-INV-v1` | `02_codebase_inventory_template.md` |
-| `CODEBASE_MODULE_TEMPLATE` | `CODEBASE-MOD-v1` | `03_codebase_module_template.md` |
-| `CODEBASE_COMPONENT_TEMPLATE` | `CODEBASE-COMP-v1` | `04_codebase_component_template.md` |
-| `CODEBASE_CHANGE_TEMPLATE` | `CODEBASE-CHANGE-v1` | `05_codebase_change_template.md` |
-| `CODEBASE_INVENTORY` | `CODEBASE-INV-v1` | `docs/codebase/01_inventory/codebase_inventory.md` |
+| Reference | Location |
+|---|---|
+| Delivery Template Registry | `docs/system/00_governance/bootstrap/templates/delivery/01_delivery_template_registry.md` |
+| Codebase Doc SOP | `docs/codebase/00_standards/CODEBASE_DOC_SOP_v1.md` |
+| Codebase Doc Status Rules | `docs/codebase/00_standards/CODEBASE_DOC_STATUS_RULES_v1.md` |
+| Delivery Workflow SOP | `docs/system/00_governance/bootstrap/WORKFLOW_SOP_v1.md` |
+| Project Analysis | `docs/system/00_governance/bootstrap/project_analysis.md` |
+| Existing Repo Workflow SOP | `docs/system/00_governance/bootstrap/EXISTING_REPO_WORKFLOW_SOP.md` |

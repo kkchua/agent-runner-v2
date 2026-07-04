@@ -92,8 +92,11 @@ This seeds the global runner home under `%USERPROFILE%\.ukbe-runner`:
 - scaffolds `docs/delivery/` and `docs/codebase/` governance
 - generates templates, SOPs, status rules, and agent contracts
 
-### `documentation_sync_v1`
-- documentation-only synchronization and validation flow
+### `documentation_sync_v1` / `40_documentation_sync_v1`
+- documentation-only repository reconciliation and validation flow
+
+### `50_architecture_site_v1`
+- publishes browsable HTML architecture views for stakeholders, developers, operators, and functional consumers
 
 ## Documentation Governance
 
@@ -105,8 +108,10 @@ Current delivery lifecycle:
    - turns documentation scope into plan/task obligations
 3. `task_execution_v1`
    - executes code and documentation updates together
-4. validation
-   - rejects stale or missing codebase docs
+4. `documentation_sync_v1`
+   - reconciles the codebase inventory and stale guidance after drift or contract changes
+5. `architecture_site_v1`
+   - publishes the HTML architecture communication layer for human readers
 
 Current documentation governance lives under:
 
