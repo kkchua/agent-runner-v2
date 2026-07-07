@@ -39,3 +39,9 @@ testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
+markers = [
+    "unit: Unit tests - test logic, functions, classes in isolation",
+    "integration: Integration tests - test with real files, external systems, subprocesses",
+]
+tmp_path_retention_policy = "none"
+addopts = "-p no:cacheprovider"
