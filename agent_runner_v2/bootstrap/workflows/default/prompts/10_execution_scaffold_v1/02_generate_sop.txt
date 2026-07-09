@@ -10,11 +10,11 @@ Inputs:
 
 Task:
 - Generate five documents:
-  - `{DELIVERY_SOP_PATH}`
-  - `{DELIVERY_STATUS_RULES_PATH}`
+  - `{DELIVERY_SOP}`
+  - `{DELIVERY_STATUS_RULES}`
   - `{CODEBASE_DOC_SOP}`
   - `{CODEBASE_DOC_STATUS_RULES}`
-  - `{EXISTING_REPO_WORKFLOW_SOP_PATH}`
+  - `{EXISTING_REPO_WORKFLOW_SOP}`
 - Delivery documents govern initiative/plan/task/implementation/review/validation flow.
 - Codebase documents govern documentation coverage across all file types, freshness rules, supersession rules, and task/workflow integration.
 - The existing-repo workflow SOP must give operators the exact onboarding and reconciliation sequence to run on a pre-existing repository.
@@ -108,37 +108,3 @@ Completion rule (MANDATORY)
   - `CODEBASE_DOC_SOP`
   - `CODEBASE_DOC_STATUS_RULES`
   - `EXISTING_REPO_WORKFLOW_SOP`
-
-Critical: meta.json sidecar is REQUIRED
-- Sidecar path: `{DELIVERY_SOP_METAJSON}`
-- Use `write_file` tool to create the sidecar after writing the governance files.
-- Sidecar structure (exact):
-  {
-    "schema_version": "v2",
-    "coder_result": {
-      "status": "APPROVED" | "REJECTED",
-      "remark": "<summary>",
-      "artifacts": {
-        "DELIVERY_SOP": "{DELIVERY_SOP_PATH}",
-        "DELIVERY_STATUS_RULES": "{DELIVERY_STATUS_RULES_PATH}",
-        "CODEBASE_DOC_SOP": "{CODEBASE_DOC_SOP}",
-        "CODEBASE_DOC_STATUS_RULES": "{CODEBASE_DOC_STATUS_RULES}",
-        "EXISTING_REPO_WORKFLOW_SOP": "{EXISTING_REPO_WORKFLOW_SOP_PATH}"
-      },
-      "recorded_at": "2026-06-29T00:00:00"
-    }
-  }
-
-ABSOLUTE OUTPUT RULE
-- Return ONLY valid JSON:
-  {
-    "status": "APPROVED | REJECTED",
-    "remark": "<summary>",
-    "artifacts": {
-      "DELIVERY_SOP": "{DELIVERY_SOP_PATH}",
-      "DELIVERY_STATUS_RULES": "{DELIVERY_STATUS_RULES_PATH}",
-      "CODEBASE_DOC_SOP": "{CODEBASE_DOC_SOP}",
-      "CODEBASE_DOC_STATUS_RULES": "{CODEBASE_DOC_STATUS_RULES}",
-      "EXISTING_REPO_WORKFLOW_SOP": "{EXISTING_REPO_WORKFLOW_SOP_PATH}"
-    }
-  }

@@ -30,6 +30,7 @@ from typing import Any
 
 from .backend_client import BackendClient
 from .bundle_loader import (
+    core_bundles_root,
     init_workspace,
     load_project_config,
     load_workflow_module,
@@ -81,8 +82,9 @@ from .runtime_context import (
     get_delivery_root, get_workflow_module,
     set_context, set_workflow_module, set_delivery_root,
 )
-from .doc_paths import codebase_doc_rel, delivery_doc_rel, system_doc_rel
+from .constants import codebase_doc_rel, delivery_doc_rel, system_doc_rel
 from .doc_paths import repo_doc_rel
+from .constants import known_artifact_paths
 from .step_runner import (
     StepResult,
     build_context,
@@ -105,6 +107,19 @@ from .execution_result import ExecutionFailure, ExecutionResult
 from .workflow_router import route_after_failure, route_after_step
 from .workflow_specs import reconcile_step_execution_spec
 from .workflow_specs import build_step_execution_spec, get_template_group_cfg
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+def _safe_relative_to(path: Path, base: Path) -> str:
+    """Safely compute relative path, falling back to os.path.relpath on Windows."""
+    try:
+        return str(path.relative_to(base))
+    except ValueError:
+        # Windows pathlib.relative_to() can fail even for valid subpaths
+        return os.path.relpath(path, base)
 
 
 # ---------------------------------------------------------------------------
@@ -732,6 +747,7 @@ def main(argv: list[str] | None = None) -> int:
                 group_name=args.template_group,
                 state=state,
                 step=step,
+                step_cfg=step_cfg,
                 coder_used=coder_used,
                 exc=exc,
                 max_rejects=max_rejects,
@@ -765,7 +781,7 @@ def main(argv: list[str] | None = None) -> int:
                 "step": step,
                 "step_progress": _step_progress_label(group_cfg, step),
                 "coder_used": coder_used,
-                "step_dir": str(step_dir.relative_to(JOBS_ROOT)),
+                "step_dir": _safe_relative_to(step_dir, JOBS_ROOT),
             }, indent=2))
             return 0
 
@@ -804,6 +820,7 @@ def main(argv: list[str] | None = None) -> int:
             group_name=args.template_group,
             state=state,
             step=step,
+            step_cfg=step_cfg,
             coder_used=coder_used,
             exc=exc,
             max_rejects=max_rejects,
@@ -823,7 +840,7 @@ def main(argv: list[str] | None = None) -> int:
             "last_failure_source": state.get("last_failure_source"),
             "reject_count": state.get("reject_counts", {}).get(step, 0),
             "max_rejects": max_rejects,
-            "step_dir": str(step_dir.relative_to(JOBS_ROOT)),
+            "step_dir": _safe_relative_to(step_dir, JOBS_ROOT),
         }, indent=2))
         return exit_code
 
@@ -864,7 +881,7 @@ def main(argv: list[str] | None = None) -> int:
         "last_failure_source": state.get("last_failure_source"),
         "artifacts": step_result.artifacts,
         "meta_json_path": step_result.meta_json_path,
-        "step_dir": str(step_dir.relative_to(JOBS_ROOT)),
+        "step_dir": _safe_relative_to(step_dir, JOBS_ROOT),
     }, indent=2))
     return exit_code
 
@@ -1132,14 +1149,38 @@ def _worker_command(*, backend_url: str, worker_id: str, host_name: str | None, 
         completion_step_run = dict((completion or {}).get("step_run") or step_run)
         next_step_run = (completion or {}).get("next_step_run")
         last_event = "STEP_COMPLETED"
+        
+        # Determine if this is truly the last step (no more steps to execute)
+        is_last_step = next_step_run is None
+        
         if completion_run.get("status") == "awaiting_human":
             last_event = "HUMAN_APPROVAL_REQUIRED"
-        elif completion_run.get("status") == "completed":
-            last_event = "RUN_COMPLETED"
+            # Send notification for human intervention required
+            print(f"[worker] Attempting to send WAITING_FOR_HUMAN_INTERVENTION notification for run {completion_run.get('id', 'unknown')}", flush=True)
+            from .notification_manager import send_workflow_notification
+            result = send_workflow_notification("WAITING_FOR_HUMAN_INTERVENTION", completion_run)
+            print(f"[worker] Notification result: {result}", flush=True)
         elif completion_run.get("status") == "failed":
             last_event = "RUN_FAILED"
+            # Send notification for workflow failure
+            print(f"[worker] Attempting to send FAILED notification for run {completion_run.get('id', 'unknown')}", flush=True)
+            from .notification_manager import send_workflow_notification
+            result = send_workflow_notification("FAILED", completion_run)
+            print(f"[worker] Notification result: {result}", flush=True)
+        elif completion_run.get("status") == "completed" and is_last_step:
+            # Only send COMPLETED notification when status is completed AND there are no more steps
+            last_event = "RUN_COMPLETED"
+            print(f"[worker] Workflow completed (last step). Sending COMPLETED notification for run {completion_run.get('id', 'unknown')}", flush=True)
+            from .notification_manager import send_workflow_notification
+            result = send_workflow_notification("COMPLETED", completion_run)
+            print(f"[worker] Notification result: {result}", flush=True)
         elif next_step_run:
             last_event = "STEP_ENQUEUED"
+            print(f"[worker] Step completed, next step enqueued: {next_step_run.get('step_name', 'unknown')}", flush=True)
+        else:
+            # Status is completed but we couldn't determine if it's the last step
+            # This shouldn't happen, but log it for debugging
+            print(f"[worker] WARNING: Status is 'completed' but next_step_run is unclear. is_last_step={is_last_step}, next_step_run={next_step_run}", flush=True)
         _write_backend_job_json(
             run=completion_run,
             step_run=completion_step_run,
@@ -1212,12 +1253,41 @@ def _build_worker_request_payload(
         value = context_payload.get(artifact_key)
         if isinstance(value, str) and value:
             input_artifacts[artifact_key] = value
+
+    # Compute step sequence number for backend_step_dir_rel
+    job_id = str(run.get("run_code") or run.get("id") or "backend-job")
+
+    # ALWAYS compute from current workflow definition to prevent drift from stale backend data
+    try:
+        from .job_state import get_template_group_cfg
+        group_cfg = get_template_group_cfg(
+            template_group=template_group,
+            workspace_root=workspace_path,
+            workflow_name=workflow_name or "default",
+        )
+        steps = list(group_cfg.get("steps") or [])
+        if step_name in steps:
+            step_sequence_no = steps.index(step_name) + 1
+        else:
+            step_sequence_no = 1
+    except Exception:
+        # Fallback to backend-provided value only if we can't load the workflow
+        step_sequence_no = spec.get("step_sequence_no") or step_run.get("sequence_no") or 1
+    
+    # Compute backend_step_dir_rel to ensure actions can write meta.json
+    backend_step_dir_rel = str(
+        JOBS_ROOT
+        / template_group
+        / job_id
+        / f"{int(step_sequence_no):02d}_{step_name}"
+    )
+    
     return {
         "workflow_name": workflow_name,
         "template_group": spec.get("template_group") or workflow_name,
         "workflow_run_id": run.get("id"),
         "workflow_step_run_id": step_run.get("id"),
-        "job_id": run.get("run_code"),
+        "job_id": job_id,
         "step_name": step_name,
         "step_spec_source": mode,
         "project_root": project_root,
@@ -1232,7 +1302,9 @@ def _build_worker_request_payload(
         },
         "input_artifacts": input_artifacts,
         "context_payload": context_payload,
-        "state_overrides": {},
+        "state_overrides": {
+            "backend_step_dir_rel": backend_step_dir_rel,
+        },
         "step_execution_spec": spec,
     }
 
@@ -1245,12 +1317,17 @@ def _invoke_execute_step_subprocess(request_payload: dict[str, Any], engine_root
         module = "agent_runner_v2.run_agent"
         cmd = [sys.executable, "-m", module, "execute-step", "--request-file", str(req_path), "--result-file", str(res_path)]
         env = os.environ.copy()
+        
+        # Set working directory to project_root so subprocess can find .env file
+        project_root = request_payload.get("project_root") or request_payload.get("workspace_root")
+        cwd = Path(project_root).resolve() if project_root else None
+        
         if engine_root:
             # Prepend <engine_root>/agent_runner_v2 so Python finds the frozen inner package
             # at <engine_root>/agent_runner_v2/agent_runner_v2/, not the outer worker's copy.
             env["PYTHONPATH"] = str(Path(engine_root) / "agent_runner_v2") + os.pathsep + env.get("PYTHONPATH", "")
         # SNAPSHOT: engine_root is None — outer worker PYTHONPATH already provides agent_runner_v2
-        proc = subprocess.run(cmd, capture_output=True, text=True, env=env)
+        proc = subprocess.run(cmd, capture_output=True, text=True, env=env, cwd=cwd)
         if not res_path.exists():
             # Print full stderr before raising for debugging
             print(f"[_invoke_execute_step_subprocess] FULL STDERR:\n{proc.stderr}", flush=True)
@@ -1483,7 +1560,7 @@ def _build_execution_state(*, request: ExecutionRequest, group_cfg: dict[str, An
 
 
 DELIVERY_SCAFFOLD_PUBLISH_PATHS: dict[str, str] = {
-    "PROJECT_ANALYSIS": system_doc_rel("project_analysis.md"),
+    "PROJECT_ANALYSIS": system_doc_rel("PROJECT_ANALYSIS.md"),
     "DELIVERY_SOP": system_doc_rel("WORKFLOW_SOP_v1.md"),
     "DELIVERY_STATUS_RULES": system_doc_rel("DELIVERY_STATUS_RULES_v1.md"),
     "CODEBASE_DOC_SOP": codebase_doc_rel("00_standards/CODEBASE_DOC_SOP_v1.md"),
@@ -1504,13 +1581,6 @@ DELIVERY_SCAFFOLD_PUBLISH_PATHS: dict[str, str] = {
     "CODEBASE_COMPONENT_TEMPLATE": system_doc_rel("templates/codebase/04_codebase_component_template.md"),
     "CODEBASE_CHANGE_TEMPLATE": system_doc_rel("templates/codebase/05_codebase_change_template.md"),
     "CODEBASE_INVENTORY": codebase_doc_rel("01_inventory/codebase_inventory.md"),
-    "DELIVERY_AGENTS_MD": delivery_doc_rel("00_standards/DELIVERY_AGENTS_MD.md"),
-    "DELIVERY_AGENT_PLANNER": delivery_doc_rel("00_standards/DELIVERY_AGENT_PLANNER.md"),
-    "DELIVERY_AGENT_TASK_DECOMPOSER": delivery_doc_rel("00_standards/DELIVERY_AGENT_TASK_DECOMPOSER.md"),
-    "DELIVERY_AGENT_IMPL_PLANNER": delivery_doc_rel("00_standards/DELIVERY_AGENT_IMPL_PLANNER.md"),
-    "DELIVERY_AGENT_EXECUTOR": delivery_doc_rel("00_standards/DELIVERY_AGENT_EXECUTOR.md"),
-    "DELIVERY_AGENT_REVIEWER": delivery_doc_rel("00_standards/DELIVERY_AGENT_REVIEWER.md"),
-    "DELIVERY_AGENT_MEMORY_MANAGER": delivery_doc_rel("00_standards/DELIVERY_AGENT_MEMORY_MANAGER.md"),
 }
 
 
@@ -1518,6 +1588,7 @@ DELIVERY_SCAFFOLD_PUBLISH_PATHS: dict[str, str] = {
 class PreparedStepExecution:
     step_dir: Path
     action_name: str = ""
+    post_action: str = ""  # Action to run after LLM completes (for LLM_Action type)
     coder_used: str = "action"
     coder_alias: str | None = None
     coder_config: dict[str, Any] | None = None
@@ -1586,7 +1657,7 @@ def _prepare_step_execution(
         step_cfg=step_cfg,
         state=state,
     )
-    prompt_text = render_prompt(template_text, context)
+    prompt_text = render_prompt(template_text, context, step_cfg=step_cfg)
     checksum = prompt_checksum(prompt_text)
     _save_text(step_dir / "prompt.txt", prompt_text)
 
@@ -1599,6 +1670,7 @@ def _prepare_step_execution(
         prompt_path=prompt_path,
         prompt_text=prompt_text,
         checksum=checksum,
+        post_action=str(step_cfg.get("post_action") or ""),
     )
 
 
@@ -1648,7 +1720,8 @@ def _execute_prepared_step(
             context=prepared.context,
         )
 
-    return run_step(
+    # LLM step (with optional post_action for LLM_Action type)
+    result = run_step(
         group_name=template_group,
         group_cfg=group_cfg,
         state=state,
@@ -1662,6 +1735,30 @@ def _execute_prepared_step(
         project_root=effective_root,
         context=prepared.context,
     )
+
+    # Run post_action if configured and LLM step succeeded (for LLM_Action type)
+    if prepared.post_action and result.status == "APPROVED":
+        print(f"[step_runner] Running post_action={prepared.post_action} after LLM step", flush=True)
+        post_result = run_action(
+            action_name=prepared.post_action,
+            state=state,
+            step=step,
+            step_cfg=step_cfg,
+            step_dir=prepared.step_dir,
+            project_root=effective_root,
+            context=prepared.context,
+        )
+        # Merge artifacts from post_action into result
+        if post_result.artifacts:
+            result.artifacts.update(post_result.artifacts)
+        # If post_action failed, update result status
+        if post_result.status != "APPROVED":
+            result.status = post_result.status
+            result.remark = f"{result.remark}; post_action: {post_result.remark}"
+            if post_result.reject_code:
+                result.reject_code = post_result.reject_code
+
+    return result
 
 
 def _publish_backend_artifacts(*, state: dict[str, Any], step: str, artifacts: dict[str, str], project_root: Path) -> dict[str, str]:
@@ -1740,6 +1837,27 @@ def _execute_backend_step_request(
             step_cfg=step_cfg,
             effective_root=effective_root,
         )
+        
+        # Send step-level notification if configured (for backend/daemon mode)
+        if step_result.status == "APPROVED":
+            print(f"[backend_mode] Step {step} completed successfully, checking for notifications", flush=True)
+            
+            # Update timestamp for duration calculation
+            from .job_state import now_iso
+            state["updated_at"] = now_iso()
+            
+            # Ensure state has workflow info for notifications
+            if "workflow_name" not in state:
+                state["workflow_name"] = request.template_group
+            if "template_group" not in state:
+                state["template_group"] = request.template_group
+            
+            print(f"[backend_mode] State keys: {list(state.keys())}", flush=True)
+            print(f"[backend_mode] workflow_name={state.get('workflow_name')}, template_group={state.get('template_group')}", flush=True)
+            print(f"[backend_mode] created_at={state.get('created_at')}, updated_at={state.get('updated_at')}", flush=True)
+
+            from .notification_manager import send_step_notification
+            send_step_notification("STEP_COMPLETED", state, step, step_cfg)
     except PreflightBlockedError as exc:
         failure = ExecutionFailure(
             failure_class="HUMAN_RETRY_REQUIRED",
@@ -1801,7 +1919,7 @@ def _execute_backend_step_request(
             "workflow_run_id": request.workflow_run_id,
             "workflow_step_run_id": request.workflow_step_run_id,
             "job_id": state.get("job_id"),
-            "step_dir": str(prepared.step_dir.relative_to(JOBS_ROOT)),
+            "step_dir": _safe_relative_to(prepared.step_dir, JOBS_ROOT),
         },
     )
 
@@ -1859,28 +1977,78 @@ def _load_group(group_name: str) -> dict:
 
 
 def _validate_static_reference_files(workspace_root: Path, group_cfg: dict | None = None, template_group: str = "") -> None:
-    # Scaffold workflows generate the delivery docs — they don't need pre-existing reference files
-    if template_group.startswith("delivery_scaffold"):
+    # Bootstrap and scaffold workflows generate docs — they don't need pre-existing reference files
+    if template_group in ("00_master_docs_bootstrap_v1", "10_execution_scaffold_v1", "delivery_scaffold_v1") or template_group.startswith("delivery_scaffold"):
         return
+
     bundle = get_workflow_module()
     if bundle is None:
         raise RuntimeError("Workflow module is not loaded. Runtime must use the global workflow bundle.")
+
     reference_files = bundle.REFERENCE_FILES
     if group_cfg is not None and "reference_files" in group_cfg:
         reference_files = group_cfg.get("reference_files") or {}
-    missing = [f"{k}: {workspace_root / v}" for k, v in reference_files.items()
-               if not (workspace_root / v).exists()]
+
+    # Separate reference files into two categories:
+    # 1. Global bundle files: System governance docs (WORKFLOW_SOP, DELIVERY_AGENTS_MD, etc.)
+    # 2. Repo-based files: Codebase documentation generated by execution scaffold workflows
+    
+    # These are repo-based artifacts, NOT part of the global bootstrap bundle
+    REPO_BASED_KEYS = {
+        "CODEBASE_DOC_SOP",
+        "CODEBASE_DOC_STATUS_RULES",
+        "CODEBASE_INVENTORY",
+    }
+
+    global_bundle_root = core_bundles_root() / "current"
+    missing = []
+
+    for key, rel_path in reference_files.items():
+        if key in REPO_BASED_KEYS:
+            # Check repo-based files at workspace root
+            file_path = workspace_root / rel_path
+            if not file_path.exists():
+                missing.append(f"{key}: {rel_path} (not found in workspace at {workspace_root})")
+        else:
+            # Check global bundle files
+            # The rel_path might be like "docs/delivery/00_standards/DELIVERY_AGENTS_MD.md"
+            # but in the global bundle it's just "DELIVERY_AGENTS_MD" (no extension, flat structure)
+            
+            # Extract just the filename from the path
+            filename = Path(rel_path).name
+            
+            # Try multiple possible locations in the global bundle
+            possible_paths = [
+                global_bundle_root / filename,  # Direct match (e.g., DELIVERY_AGENTS_MD)
+                global_bundle_root / f"{filename}.md",  # With .md extension
+                global_bundle_root / rel_path,  # Full relative path (if bundle has subdirs)
+            ]
+            
+            # Check if any of the possible paths exist
+            if not any(p.exists() for p in possible_paths):
+                missing.append(f"{key}: {rel_path} (not found in global bundle at {global_bundle_root})")
+
     if missing:
         raise FileNotFoundError("Missing static reference file(s):\n" + "\n".join(missing))
 
 
 def _missing_artifacts(keys: list[str], state: dict) -> list[str]:
     missing = []
-    artifacts = state.get("artifacts") or {}
+    if "artifacts" not in state or state["artifacts"] is None:
+        state["artifacts"] = {}
+    artifacts = state["artifacts"]
+    known_paths = known_artifact_paths()
     for key in keys:
         value = artifacts.get(key)
-        if not value or not (ARTIFACT_ROOT / value).exists():
-            missing.append(key)
+        if value and (ARTIFACT_ROOT / value).exists():
+            continue
+        # Auto-discover: check if artifact exists at known path on disk
+        known_path = known_paths.get(key)
+        if known_path and (ARTIFACT_ROOT / known_path).exists():
+            # Auto-populate the artifact in job state
+            artifacts[key] = known_path
+            continue
+        missing.append(key)
     return missing
 
 
@@ -2127,7 +2295,7 @@ def _build_worker_crash_result(*, run: dict[str, Any], step_run: dict[str, Any],
         "workflow_run_id": str(run.get("id") or ""),
         "workflow_step_run_id": str(step_run.get("id") or ""),
         "job_id": str(run.get("run_code") or ""),
-        "step_dir": str(step_dir.relative_to(JOBS_ROOT)),
+        "step_dir": _safe_relative_to(step_dir, JOBS_ROOT),
         "worker_error": repr(error),
     }
     step_dir.mkdir(parents=True, exist_ok=True)

@@ -16,7 +16,7 @@ Auto-Discovery Rule (MANDATORY)
 - If none exist, return REJECTED with `No project context files found`.
 
 Task:
-- Produce `{PROJECT_ANALYSIS_PATH}` as a structured markdown document.
+- Produce `{PROJECT_ANALYSIS}` as a structured markdown document.
 - The analysis must cover:
   - domain
   - tech stack
@@ -31,6 +31,8 @@ Task:
   - current profile, target profile, and migration mode when the repo standard is unclear or evolving
 
 Required sections:
+- Repo Overview
+- Codebase Structure
 - Domain
 - Tech Stack
 - Complexity
@@ -46,33 +48,6 @@ Required sections:
 
 Completion rule (MANDATORY)
 - Return APPROVED only after:
-  - `{PROJECT_ANALYSIS_PATH}` exists
-  - `{PROJECT_ANALYSIS_METAJSON}` exists
+  - `{PROJECT_ANALYSIS}` exists
+  - meta.json sidecar exists at the path shown in CRITICAL section below
   - artifacts.PROJECT_ANALYSIS matches the written path
-
-Critical: meta.json sidecar is REQUIRED
-- Sidecar path: `{PROJECT_ANALYSIS_METAJSON}`
-- Use `write_file` tool to create the sidecar immediately after writing `{PROJECT_ANALYSIS_PATH}`.
-- Sidecar structure (exact):
-  {
-    "schema_version": "v2",
-    "coder_result": {
-      "status": "APPROVED" | "REJECTED",
-      "remark": "Brief summary",
-      "artifacts": {
-        "PROJECT_ANALYSIS": "{PROJECT_ANALYSIS_PATH}"
-      },
-      "recorded_at": "2026-06-29T00:00:00"
-    }
-  }
-- You MUST verify the sidecar exists on disk before returning.
-
-ABSOLUTE OUTPUT RULE
-- Return ONLY valid JSON:
-  {
-    "status": "APPROVED | REJECTED",
-    "remark": "<summary>",
-    "artifacts": {
-      "PROJECT_ANALYSIS": "{PROJECT_ANALYSIS_PATH}"
-    }
-  }
