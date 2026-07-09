@@ -32,9 +32,22 @@ from .doc_paths import (
     architecture_site_rel,
     codebase_doc_rel,
     delivery_doc_rel,
-    master_bootstrap_docs,
-    prompt_literal_aliases,
     system_doc_rel,
+)
+from .constants import (
+    placeholder,
+    FOLDER_KEY_DELIVERY_IMPLEMENTATIONS,
+    FOLDER_KEY_DELIVERY_TASKS,
+    FOLDER_KEY_DELIVERY_PLANS,
+    FOLDER_KEY_DELIVERY_INITIATIVES,
+    FOLDER_KEY_DELIVERY_REVIEWS,
+    FOLDER_KEY_CODEBASE_CHANGES,
+    FOLDER_KEY_SYSTEM_TEMPLATE_ROOT,
+    FOLDER_KEY_SYSTEM_DELIVERY_TEMPLATE_ROOT,
+    FOLDER_KEY_SYSTEM_CODEBASE_TEMPLATE_ROOT,
+    EXT_MD,
+    EXT_JSON,
+    known_artifact_paths,
 )
 from .runtime_context import (
     ARTIFACT_ROOT,
@@ -49,12 +62,66 @@ from .runtime_context import (
 from .documentation_guardrails import (
     MASTER_BOOTSTRAP_WORKFLOW,
     master_bootstrap_artifact_candidates,
-    snapshot_paths,
-    workflow_generated_doc_paths,
 )
 
 
 RESULT_SCHEMA_PATH = PathProxy(lambda: Path(RUNNER_ROOT) / "llm_response_schema.json")
+
+
+# ---------------------------------------------------------------------------
+# Automatic sidecar instruction injection template
+# ---------------------------------------------------------------------------
+
+SIDECAR_INSTRUCTION_TEMPLATE = """
+
+═══════════════════════════════════════════════════════════
+CRITICAL: RESULT REPORTING REQUIREMENT (AUTOMATED INJECTION)
+═══════════════════════════════════════════════════════════
+
+After completing your work, you MUST report results via meta.json sidecar.
+
+**Sidecar path**: `{META_JSON_PATH}`
+
+**Required steps**:
+1. Write your artifact file(s) to disk using write_file tool
+2. Verify each artifact file exists on disk
+3. Create the meta.json sidecar using write_file tool with this EXACT structure:
+   {{
+     "schema_version": "v2",
+     "coder_result": {{
+       "status": "APPROVED" or "REJECTED",
+       "remark": "Brief summary of what you accomplished",
+       "artifacts": {{
+         {ARTIFACT_ENTRIES}
+       }},
+       "recorded_at": "{CURRENT_TIMESTAMP}"
+     }}
+   }}
+4. Verify meta.json exists on disk before finishing
+
+**Status decision rule**:
+- Return APPROVED only if ALL required artifacts exist on disk AND meta.json is written
+- Return REJECTED if any artifact is missing or cannot be created
+
+**Output format rule**:
+- Return ONLY valid JSON matching this structure:
+  {{
+    "status": "APPROVED" or "REJECTED",
+    "remark": "<summary>",
+    "artifacts": {{
+      {ARTIFACT_ENTRIES}
+    }}
+  }}
+- Do NOT return markdown, explanations, or conversational text
+- The runner reads results ONLY from meta.json and your JSON output
+
+**Verification requirement**:
+- You MUST verify files exist on disk before returning APPROVED
+- Use exact artifact paths provided in context variables above
+
+This requirement is MANDATORY — failure to follow these steps will cause workflow failure.
+═══════════════════════════════════════════════════════════
+"""
 
 
 def _workflow_module():
@@ -113,11 +180,6 @@ def run_step(
         ArtifactMissingError  — meta.json references paths that don't exist on disk
     """
     invoked_at = _now_iso()
-    protected_docs_before = _snapshot_protected_docs(
-        project_root=project_root,
-        template_group=group_name,
-        state=state,
-    )
 
     # Resolve meta.json path before invocation so it can be used as an early-exit signal.
     # Safe to compute here — context is pre-built and immutable; we do NOT call build_context() again.
@@ -193,12 +255,12 @@ def run_step(
             step=step,
         )
 
-    _assert_protected_docs_unchanged(
-        project_root=project_root,
-        template_group=group_name,
-        state=state,
+    # Validate artifacts are in the produces list (declarative protection model)
+    produces = step_cfg.get("produces", [])
+    _validate_artifacts_in_produces_list(
         artifacts=artifacts,
-        before_snapshot=protected_docs_before,
+        produces=produces,
+        step=step,
     )
 
     artifacts = _canonicalize_master_bootstrap_artifacts(
@@ -265,11 +327,6 @@ def run_action(
     from .runner_actions import execute as execute_action
 
     invoked_at = _now_iso()
-    protected_docs_before = _snapshot_protected_docs(
-        project_root=project_root,
-        template_group=str(state.get("template_group") or ""),
-        state=state,
-    )
 
     # Resolve meta.json path so the action can use it from context.
     meta_path = _resolve_meta_json_path(
@@ -299,12 +356,12 @@ def run_action(
     artifacts = dict(coder_result.get("artifacts") or {})
     _validate_artifact_files_exist(artifacts=artifacts, project_root=project_root)
 
-    _assert_protected_docs_unchanged(
-        project_root=project_root,
-        template_group=str(state.get("template_group") or ""),
-        state=state,
+    # Validate artifacts are in the produces list (declarative protection model)
+    produces = step_cfg.get("produces", [])
+    _validate_artifacts_in_produces_list(
         artifacts=artifacts,
-        before_snapshot=protected_docs_before,
+        produces=produces,
+        step=step,
     )
 
     # Enrich sidecar with runner_data
@@ -525,11 +582,14 @@ def _validate_artifact_files_exist(
     artifacts: dict[str, str],
     project_root: Path,
 ) -> None:
-    """Raise ArtifactMissingError if any artifact path in the dict doesn't exist."""
+    """Raise ArtifactMissingError if any artifact path in the dict doesn't exist.
+    
+    Note: Skips .meta.json files as they are sidecars, not actual artifacts.
+    """
     missing = [
         path_str
         for path_str in artifacts.values()
-        if path_str and not (project_root / path_str).exists()
+        if path_str and not path_str.endswith('.meta.json') and not (project_root / path_str).exists()
     ]
     if missing:
         raise ArtifactMissingError(
@@ -538,41 +598,58 @@ def _validate_artifact_files_exist(
         )
 
 
-def _snapshot_protected_docs(*, project_root: Path, template_group: str, state: dict) -> dict[str, str]:
-    protected_paths = workflow_generated_doc_paths(template_group=template_group, state=state)
-    return snapshot_paths(project_root=project_root, rel_paths=protected_paths)
-
-
-def _assert_protected_docs_unchanged(
+def _validate_artifacts_in_produces_list(
     *,
-    project_root: Path,
-    template_group: str,
-    state: dict,
     artifacts: dict[str, str],
-    before_snapshot: dict[str, str],
+    produces: list[str],
+    step: str,
 ) -> None:
-    protected_paths = workflow_generated_doc_paths(template_group=template_group, state=state)
-    if not protected_paths:
+    """Raise ArtifactMissingError if any artifact is not in the step's produces list.
+    
+    This enforces the declarative document protection model:
+    - Each step declares what it produces in template_groups.py
+    - LLM can only report artifacts in that list
+    - Prevents workflows from modifying documents they don't own
+    
+    Note: Auto-normalizes common LLM mistakes:
+    - REVIEW_FILE_SUGGESTED_METAJSON → REVIEW_FILE_SUGGESTED (strips _METAJSON suffix)
+    - Keys containing a produces item as substring are accepted
+    """
+    if not produces:
+        # Action steps or steps without produces declaration - skip validation
         return
-
-    def _abs_norm(path_value: str) -> str:
-        path = Path(path_value)
-        if not path.is_absolute():
-            path = project_root / path
-        return str(path.resolve()).replace("\\", "/")
-
-    allowed = {_abs_norm(path) for path in artifacts.values() if path}
-    after_snapshot = snapshot_paths(project_root=project_root, rel_paths=protected_paths)
-    changed = [
-        path
-        for path in protected_paths
-        if _abs_norm(path) not in allowed and before_snapshot.get(path) != after_snapshot.get(path)
-    ]
-    if changed:
+    
+    # Convert produces list to set for comparison
+    allowed = set(produces)
+    
+    # Normalize artifacts: strip common suffixes that LLM mistakenly adds
+    normalized_artifacts = {}
+    for artifact_key, artifact_path in artifacts.items():
+        # Strip _METAJSON suffix if present
+        if artifact_key.endswith("_METAJSON"):
+            normalized_key = artifact_key[:-len("_METAJSON")]
+            normalized_artifacts[normalized_key] = artifact_path
+        else:
+            normalized_artifacts[artifact_key] = artifact_path
+    
+    # Check each normalized artifact against produces list
+    unauthorized = []
+    for artifact_key in normalized_artifacts.keys():
+        # Exact match
+        if artifact_key in allowed:
+            continue
+        
+        # Substring match: allow keys like REVIEW_FILE_SUGGESTED_PATH if REVIEW_FILE_SUGGESTED is in produces
+        is_allowed = any(allowed_key in artifact_key for allowed_key in allowed)
+        
+        if not is_allowed:
+            unauthorized.append(artifact_key)
+    
+    if unauthorized:
         raise ArtifactMissingError(
-            "Protected workflow-generated documents were modified outside the step outputs: "
-            + ", ".join(changed),
-            missing=changed,
+            f"Step '{step}' reported artifacts not declared in 'produces' list: {unauthorized}. "
+            f"Allowed artifacts: {sorted(allowed)}",
+            missing=unauthorized,
         )
 
 
@@ -714,52 +791,16 @@ def _set_backend_artifact_rule_aliases(*, ctx: dict[str, str], state: dict, step
 
 
 
-DELIVERY_SCAFFOLD_OUTPUT_PATHS: dict[str, str] = {
-    **{
-        "PROJECT_ANALYSIS": system_doc_rel("project_analysis.md"),
-        "DELIVERY_SOP": system_doc_rel("WORKFLOW_SOP_v1.md"),
-        "DELIVERY_STATUS_RULES": system_doc_rel("DELIVERY_STATUS_RULES_v1.md"),
-        "DELIVERY_VALIDATION_TEMPLATE": system_doc_rel("templates/delivery/08_delivery_validation_template.md"),
-        "DELIVERY_TEMPLATE_REGISTRY": system_doc_rel("templates/delivery/01_delivery_template_registry.md"),
-        "DELIVERY_INITIATIVE_TEMPLATE": system_doc_rel("templates/delivery/02_delivery_initiative_template.md"),
-        "DELIVERY_PLAN_TEMPLATE": system_doc_rel("templates/delivery/03_delivery_plan_template.md"),
-        "DELIVERY_TASK_GRAPH_TEMPLATE": system_doc_rel("templates/delivery/04_delivery_task_graph_template.md"),
-        "DELIVERY_TASK_TEMPLATE": system_doc_rel("templates/delivery/05_delivery_task_template.md"),
-        "DELIVERY_IMPL_TEMPLATE": system_doc_rel("templates/delivery/06_delivery_impl_template.md"),
-        "DELIVERY_REVIEW_TEMPLATE": system_doc_rel("templates/delivery/07_delivery_review_template.md"),
-        "DELIVERY_MEMORY_TEMPLATE": system_doc_rel("templates/delivery/09_delivery_memory_template.md"),
-        "DELIVERY_AGENTS_MD": delivery_doc_rel("00_standards/DELIVERY_AGENTS_MD.md"),
-        "DELIVERY_AGENT_PLANNER": delivery_doc_rel("00_standards/DELIVERY_AGENT_PLANNER.md"),
-        "DELIVERY_AGENT_TASK_DECOMPOSER": delivery_doc_rel("00_standards/DELIVERY_AGENT_TASK_DECOMPOSER.md"),
-        "DELIVERY_AGENT_IMPL_PLANNER": delivery_doc_rel("00_standards/DELIVERY_AGENT_IMPL_PLANNER.md"),
-        "DELIVERY_AGENT_EXECUTOR": delivery_doc_rel("00_standards/DELIVERY_AGENT_EXECUTOR.md"),
-        "DELIVERY_AGENT_REVIEWER": delivery_doc_rel("00_standards/DELIVERY_AGENT_REVIEWER.md"),
-        "DELIVERY_AGENT_MEMORY_MANAGER": delivery_doc_rel("00_standards/DELIVERY_AGENT_MEMORY_MANAGER.md"),
-        "CODEBASE_DOC_SOP": codebase_doc_rel("00_standards/CODEBASE_DOC_SOP_v1.md"),
-        "CODEBASE_DOC_STATUS_RULES": codebase_doc_rel("00_standards/CODEBASE_DOC_STATUS_RULES_v1.md"),
-        "CODEBASE_TEMPLATE_REGISTRY": system_doc_rel("templates/codebase/01_codebase_template_registry.md"),
-        "CODEBASE_INVENTORY_TEMPLATE": system_doc_rel("templates/codebase/02_codebase_inventory_template.md"),
-        "CODEBASE_MODULE_TEMPLATE": system_doc_rel("templates/codebase/03_codebase_module_template.md"),
-        "CODEBASE_COMPONENT_TEMPLATE": system_doc_rel("templates/codebase/04_codebase_component_template.md"),
-        "CODEBASE_CHANGE_TEMPLATE": system_doc_rel("templates/codebase/05_codebase_change_template.md"),
-        "CODEBASE_INVENTORY": codebase_doc_rel("01_inventory/codebase_inventory.md"),
-        "DELIVERY_FOLDER_MAP": delivery_doc_rel("DELIVERY_FOLDER_MAP.json"),
-        "EXISTING_REPO_WORKFLOW_SOP": system_doc_rel("EXISTING_REPO_WORKFLOW_SOP.md"),
-    }
-}
+from .constants import get_master_docs_output_paths, delivery_scaffold_docs
 
-MASTER_DOCS_OUTPUT_PATHS: dict[str, str] = {
-    **master_bootstrap_docs(job_id="{job_id}", mode="{mode}"),
-    "SYSTEM_DOCS_CHANGE_LOG": system_doc_rel("{job_id}-{mode}-change-log.md"),
-    "SYSTEM_DOCS_VALIDATION": system_doc_rel("{job_id}-{mode}-validation.md"),
-    "CODEBASE_SCAN_SNAPSHOT": codebase_doc_rel("04_changes/{job_id}-{mode}-snapshot.json"),
-}
+MASTER_DOCS_OUTPUT_PATHS: dict[str, str] = get_master_docs_output_paths()
+DELIVERY_SCAFFOLD_OUTPUT_PATHS: dict[str, str] = delivery_scaffold_docs()
 
 BUG_FIX_OUTPUT_PATHS: dict[str, str] = {
-    "BUG_REPORT_FILE": delivery_doc_rel("04_implementation_plans/{step_dir_rel}/BUG_REPORT.md"),
-    "REPRO_FILE": delivery_doc_rel("04_implementation_plans/{step_dir_rel}/BUG_REPRODUCTION.md"),
-    "ROOT_CAUSE_FILE": delivery_doc_rel("04_implementation_plans/{step_dir_rel}/ROOT_CAUSE.md"),
-    "PATCH_FILE": delivery_doc_rel("04_implementation_plans/{step_dir_rel}/PATCH.md"),
+    "BUG_REPORT_FILE": f"{FOLDER_KEY_DELIVERY_IMPLEMENTATIONS}/{{step_dir_rel}}/BUG_REPORT.md",
+    "REPRO_FILE": f"{FOLDER_KEY_DELIVERY_IMPLEMENTATIONS}/{{step_dir_rel}}/BUG_REPRODUCTION.md",
+    "ROOT_CAUSE_FILE": f"{FOLDER_KEY_DELIVERY_IMPLEMENTATIONS}/{{step_dir_rel}}/ROOT_CAUSE.md",
+    "PATCH_FILE": f"{FOLDER_KEY_DELIVERY_IMPLEMENTATIONS}/{{step_dir_rel}}/PATCH.md",
 }
 
 
@@ -835,7 +876,9 @@ def _set_delivery_scaffold_aliases(*, ctx: dict[str, str], state: dict, step: st
 
 
 def _set_bug_fix_aliases(*, ctx: dict[str, str], state: dict, step: str, artifacts: dict[str, Any], produces: list[str]) -> None:
-    if not str(state.get("template_group") or "").startswith("bug_fix"):
+    # Determine if this step produces bug fix artifacts
+    bug_fix_artifact_keys = {"BUG_REPORT_FILE", "REPRO_FILE", "ROOT_CAUSE_FILE", "PATCH_FILE"}
+    if not any(key in produces for key in bug_fix_artifact_keys):
         return
 
     step_names = list(_workflow_module().TEMPLATE_GROUPS.get(state.get("template_group", ""), {}).get("steps", []))
@@ -913,6 +956,31 @@ def _set_master_docs_aliases(*, ctx: dict[str, str], state: dict, step: str, art
         if artifact_value:
             p = PurePath(str(artifact_value))
             ctx[f"{artifact_key}_METAJSON"] = step_dir_meta or str(p.parent / f"{p.stem}.meta.json")
+
+
+def _set_audience_site_aliases(*, ctx: dict[str, str], state: dict, step: str, artifacts: dict[str, Any], produces: list[str]) -> None:
+    """Set path aliases for audience site artifacts (markdown, HTML, PDF, manifest).
+
+    This ensures the prompts use the correct repo-relative paths for audience
+    documentation sites (41_*_doc_v1 and 51-55_*_docs_v1).
+    """
+    template_group = state.get("template_group", "")
+    # Apply to both 41_*_doc_v1 (markdown generation) and 51-55_*_docs_v1 (site generation)
+    if not any(template_group.startswith(f"{i}_") for i in [41, 51, 52, 53, 54, 55]):
+        return
+
+    from .constants import audience_site_artifacts
+    site_artifacts = audience_site_artifacts()
+
+    # Set path aliases for all audience site artifacts
+    for artifact_key, rel_path in site_artifacts.items():
+        artifact_value = artifacts.get(artifact_key) or rel_path
+        ctx[artifact_key] = str(artifact_value)
+        ctx[f"{artifact_key}_PATH"] = str(artifact_value)
+        # Only set METAJSON if not already set (action steps have their own METAJSON logic)
+        if artifact_value and not ctx.get(f"{artifact_key}_METAJSON"):
+            p = PurePath(str(artifact_value))
+            ctx[f"{artifact_key}_METAJSON"] = str(p.parent / f"{p.stem}.meta.json")
 
 
 def _validate_template_conformance(
@@ -1074,6 +1142,171 @@ def enrich_sidecar(
 # Context building (prompt template variable resolution)
 # ---------------------------------------------------------------------------
 
+def _load_site_config(*, state: dict) -> dict:
+    """Load sites.config from docs/sites.config in the target repo.
+
+    Returns a dict with:
+    - output_format: "html", "pdf", or "html+pdf" (default: "html")
+    - additional_sections: list of custom section definitions
+    - theme: theme configuration dict (name, layout_file, css_file)
+
+    Returns empty dict if config doesn't exist or workflow not configured.
+    """
+    template_group = state.get("template_group", "")
+    if not template_group:
+        return {}
+
+    # Look for sites.config in the artifact root (target repo's docs/)
+    config_path = ARTIFACT_ROOT / "docs" / "sites.config"
+    if not config_path.exists():
+        return {}
+
+    try:
+        with open(config_path, "r", encoding="utf-8") as f:
+            config = json.load(f)
+    except Exception as exc:
+        print(f"[step_runner] Failed to load sites.config: {exc}", flush=True)
+        return {}
+
+    workflow_config = config.get(template_group, {})
+    if not isinstance(workflow_config, dict):
+        return {}
+
+    return {
+        "output_format": workflow_config.get("output_format", "html"),
+        "additional_sections": workflow_config.get("additional_sections", []),
+        "theme": workflow_config.get("theme", {}),
+    }
+
+
+def _format_additional_sections(sections: list) -> str:
+    """Format additional sections for prompt injection."""
+    if not sections:
+        return ""
+
+    lines = [
+        "## Additional Custom Sections",
+        "",
+        "In addition to the default sections, include the following custom sections:",
+        "",
+    ]
+    for i, section in enumerate(sections, 1):
+        title = section.get("title", f"Custom Section {i}")
+        desc = section.get("description", "")
+        guidelines = section.get("content_guidelines", "")
+        source = section.get("source_artifacts", [])
+
+        lines.append(f"### {i}. {title}")
+        if desc:
+            lines.append(f"**Purpose**: {desc}")
+        if guidelines:
+            lines.append(f"**Content Guidelines**: {guidelines}")
+        if source:
+            lines.append(f"**Source Documents**: {', '.join(source)}")
+        lines.append("")
+
+    return "\n".join(lines)
+
+
+def _load_site_theme(*, site_config: dict) -> dict:
+    """Load custom theme files (layout template and CSS) from the target repo.
+
+    Args:
+        site_config: The site config dict from _load_site_config()
+
+    Returns a dict with:
+    - theme_name: Name of the theme (default: "default")
+    - layout_template: Full HTML template content (or empty string)
+    - theme_css: Full CSS content (or empty string)
+    - layout_instructions: Instructions for LLM on how to use the template
+    """
+    # Theme config can be a string (theme name) or dict (legacy format)
+    theme_config = site_config.get("theme", "default")
+    if isinstance(theme_config, str):
+        theme_name = theme_config
+    elif isinstance(theme_config, dict):
+        theme_name = theme_config.get("name", "default")
+    else:
+        theme_name = "default"
+
+    result = {
+        "theme_name": theme_name,
+        "layout_template": "",
+        "theme_css": "",
+        "layout_instructions": "",
+    }
+
+    # Load theme files from global runner home's themes directory
+    # Theme location: ~/.ukbe-runner/themes/<theme_name>/
+    # Falls back to package bundle location if not found in global path
+    from pathlib import Path as _Path
+    from .runtime_context import RUNNER_HOME
+
+    # First try global runner home
+    global_themes_root = RUNNER_HOME / "themes"
+    theme_dir = global_themes_root / theme_name
+
+    # Fall back to package bundle location if not found
+    if not theme_dir.exists():
+        bundle_themes_root = PACKAGE_ROOT / "bootstrap" / "themes"
+        theme_dir = bundle_themes_root / theme_name
+
+    layout_path = theme_dir / "layout.html"
+    css_path = theme_dir / "theme.css"
+
+    # Load layout template
+    if layout_path.exists():
+        try:
+            result["layout_template"] = layout_path.read_text(encoding="utf-8")
+            result["layout_instructions"] = _build_layout_instructions(str(layout_path))
+        except Exception as exc:
+            print(f"[step_runner] Failed to load layout template {layout_path}: {exc}", flush=True)
+    else:
+        print(f"[step_runner] Theme layout not found: {layout_path}, using default", flush=True)
+
+    # Load CSS
+    if css_path.exists():
+        try:
+            result["theme_css"] = css_path.read_text(encoding="utf-8")
+        except Exception as exc:
+            print(f"[step_runner] Failed to load CSS {css_path}: {exc}", flush=True)
+    else:
+        print(f"[step_runner] Theme CSS not found: {css_path}, using default", flush=True)
+
+    return result
+
+
+def _build_layout_instructions(layout_file: str) -> str:
+    """Build instructions for LLM on how to use a custom layout template."""
+    return f"""Custom Layout Template:
+- A custom layout template is provided at: {layout_file}
+- Use this template as the base HTML structure
+- Replace these placeholders in the template:
+  - {{{{TITLE}}}} → Page title (e.g., "Stakeholder Documentation")
+  - {{{{SUBTITLE}}}} → Page subtitle/description
+  - {{{{WORKFLOW}}}} → Workflow name (e.g., "51_stakeholder_docs_v1")
+  - {{{{STEP}}}} → Step name (e.g., "generate_site")
+  - {{{{NAV_LINKS}}}} → Navigation links as HTML anchor tags
+  - {{{{BODY}}}} → Main content HTML (generated from markdown)
+  - {{{{CSS}}}} → CSS styles (provided separately or use default)
+  - {{{{THEME_NAME}}}} → Theme name identifier
+  - {{{{DOWNLOAD_LINK}}}} → PDF download link (if applicable)
+
+- The template content will be injected as {{{{SITE_LAYOUT_TEMPLATE}}}}
+- The CSS content will be injected as {{{{SITE_THEME_CSS}}}}
+- If {{{{SITE_LAYOUT_TEMPLATE}}}} is empty, use the standard page_shell structure
+"""
+
+
+def _load_additional_sections(*, state: dict, step: str) -> str:
+    """Load additional sections from sites.config in the target repo.
+
+    Kept for backward compatibility. Use _load_site_config() for full config.
+    """
+    config = _load_site_config(state=state)
+    return _format_additional_sections(config.get("additional_sections", []))
+
+
 def build_context(
     state: dict,
     *,
@@ -1085,27 +1318,15 @@ def build_context(
     ctx: dict[str, str] = dict(bundle.REFERENCE_FILES)
     ctx["SYSTEM_DOC_ROOT"] = system_doc_rel()
     ctx["DOCS_ROOT"] = docs_root_rel()
-    ctx["SYSTEM_TEMPLATE_ROOT"] = system_doc_rel("templates")
-    ctx["SYSTEM_DELIVERY_TEMPLATE_ROOT"] = system_doc_rel("templates/delivery")
-    ctx["SYSTEM_CODEBASE_TEMPLATE_ROOT"] = system_doc_rel("templates/codebase")
+    ctx["SYSTEM_TEMPLATE_ROOT"] = FOLDER_KEY_SYSTEM_TEMPLATE_ROOT
+    ctx["SYSTEM_DELIVERY_TEMPLATE_ROOT"] = FOLDER_KEY_SYSTEM_DELIVERY_TEMPLATE_ROOT
+    ctx["SYSTEM_CODEBASE_TEMPLATE_ROOT"] = FOLDER_KEY_SYSTEM_CODEBASE_TEMPLATE_ROOT
     ctx["CODEBASE_DOC_ROOT"] = codebase_doc_rel()
     ctx["DELIVERY_DOC_ROOT"] = delivery_doc_rel()
     ctx["ARCHITECTURE_SITE_ROOT"] = architecture_site_rel()
-    artifacts = state.get("artifacts") or {}
 
-    for key in bundle.ARTIFACT_KEYS:
-        value = artifacts.get(key)
-        if value:
-            ctx[key] = value
-            ctx[f"{key}_ABS_PATH"] = str(ARTIFACT_ROOT / value)
-            ctx[f"{key}_METAJSON"] = artifact_rel_to_meta_rel(value)
-        else:
-            ctx[f"{key}_ABS_PATH"] = ""
-            ctx[f"{key}_METAJSON"] = ""
-        fp = _build_file_fingerprint(value)
-        ctx[f"{key}_CHECKSUM"] = fp["checksum"]
-        ctx[f"{key}_BYTES"] = str(fp["bytes"] if fp["bytes"] is not None else "")
-        ctx[f"{key}_MTIME"] = str(fp["mtime"] if fp["mtime"] is not None else "")
+    # Get artifacts from state for fingerprinting
+    artifacts = state.get("artifacts") or {}
 
     # For producing steps where the artifact doesn't exist yet, compute the step
     # directory meta.json path so the prompt can tell the coder where to write it.
@@ -1137,7 +1358,7 @@ def build_context(
         ctx["CONTEXT_PACK_FILE_PATH"] = ""
 
     # Task ID starting sequence: scan existing task docs to avoid collision
-    task_dir = ARTIFACT_ROOT / delivery_doc_rel("03_tasks")
+    task_dir = ARTIFACT_ROOT / FOLDER_KEY_DELIVERY_TASKS
     date_code = dt.datetime.now().strftime("%Y%m%d")
     highest_task_seq = 0
     if task_dir.exists():
@@ -1250,7 +1471,7 @@ def build_context(
         task_path, meta_path = compute_paths(
             node_id=current_task_node_id,
             title=current_task_title,
-            output_dir=delivery_doc_rel("03_tasks"),
+            output_dir=FOLDER_KEY_DELIVERY_TASKS,
         )
         ctx["TASK_FILE_PATH"] = task_path
         ctx["TASK_FILE_METAJSON"] = meta_path
@@ -1275,6 +1496,13 @@ def build_context(
         produces=produces,
     )
     _set_bug_fix_aliases(
+        ctx=ctx,
+        state=state,
+        step=step,
+        artifacts=artifacts,
+        produces=produces,
+    )
+    _set_audience_site_aliases(
         ctx=ctx,
         state=state,
         step=step,
@@ -1440,6 +1668,18 @@ def build_context(
     except Exception:
         ctx["TOOLS_DIR"] = ""
 
+    # Load site configuration from docs/sites.config (per-repo configuration)
+    site_config = _load_site_config(state=state)
+    ctx["OUTPUT_FORMAT"] = site_config.get("output_format", "html")
+    ctx["ADDITIONAL_SECTIONS"] = _format_additional_sections(site_config.get("additional_sections", []))
+
+    # Load theme configuration (layout template and CSS)
+    theme = _load_site_theme(site_config=site_config)
+    ctx["SITE_THEME_NAME"] = theme.get("theme_name", "default")
+    ctx["SITE_LAYOUT_TEMPLATE"] = theme.get("layout_template", "")
+    ctx["SITE_THEME_CSS"] = theme.get("theme_css", "")
+    ctx["SITE_LAYOUT_INSTRUCTIONS"] = theme.get("layout_instructions", "")
+
     return ctx
 
 
@@ -1475,8 +1715,9 @@ Example for a 3-step task:
 Actually call the functions with real arguments — do NOT just describe your answer."""
 
 
-def render_prompt(template_text: str, context: dict[str, str]) -> str:
+def render_prompt(template_text: str, context: dict[str, str], step_cfg: dict | None = None) -> str:
     import os as _os
+    from datetime import datetime as _datetime
     _src = _os.path.abspath(__file__)
     _tools_dir = context.get("TOOLS_DIR", "")
     print(f"[render_prompt] step_runner={_src}", flush=True)
@@ -1484,6 +1725,42 @@ def render_prompt(template_text: str, context: dict[str, str]) -> str:
     rendered = _rewrite_prompt_literals(template_text)
     for key, value in context.items():
         rendered = rendered.replace(f"{{{key}}}", _stringify_prompt_value(value))
+    
+    # NEW: Inject standardized sidecar instructions (if this step produces artifacts)
+    if step_cfg:
+        result_key = step_cfg.get("result_meta_key") or step_cfg.get("result_meta_key_from_context", "")
+        if result_key:
+            # If result_meta_key_from_context already ends with _METAJSON, use it directly
+            if result_key.endswith("_METAJSON"):
+                meta_json_path = context.get(result_key, "")
+                artifact_key = result_key.replace("_METAJSON", "")
+            else:
+                meta_json_path = context.get(f"{result_key}_METAJSON", "")
+                artifact_key = result_key
+            
+            artifact_path = context.get(artifact_key, "")
+            
+            if meta_json_path:  # Only inject if we have the path
+                # Build artifact entries for JSON template
+                if artifact_path:
+                    artifact_entries = f'        "{result_key}": "{artifact_path}"'
+                else:
+                    artifact_entries = f'        "{result_key}": null'
+                
+                # Generate timestamp
+                current_timestamp = _datetime.now().astimezone().isoformat(timespec="seconds")
+                
+                # Format and append sidecar instructions
+                sidecar_text = SIDECAR_INSTRUCTION_TEMPLATE.format(
+                    META_JSON_PATH=meta_json_path,
+                    ARTIFACT_ENTRIES=artifact_entries,
+                    CURRENT_TIMESTAMP=current_timestamp
+                )
+                rendered += sidecar_text
+                print(f"[render_prompt] SIDECAR_INSTRUCTION appended for {result_key}", flush=True)
+            else:
+                print(f"[render_prompt] SIDECAR_INSTRUCTION skipped: {result_key}_METAJSON not in context", flush=True)
+    
     if _tools_dir:
         block = _TOOL_INSTRUCTION_TEMPLATE
         for key, value in context.items():
@@ -1496,9 +1773,115 @@ def render_prompt(template_text: str, context: dict[str, str]) -> str:
 
 
 def _rewrite_prompt_literals(template_text: str) -> str:
+    """Replace artifact paths in template text with prompt placeholders.
+    
+    Uses ARTIFACT_PATH_* constants from constants module and placeholder() helper.
+    """
+    from .constants import (
+        # Import all path constants to build the mapping
+        ARTIFACT_PATH_PROJECT_ANALYSIS,
+        ARTIFACT_PATH_README,
+        ARTIFACT_PATH_DOCUMENTATION_STANDARD,
+        ARTIFACT_PATH_BUNDLE_TAXONOMY,
+        ARTIFACT_PATH_BUNDLE_MIGRATION_PLAN,
+        ARTIFACT_PATH_SYSTEM_OVERVIEW,
+        ARTIFACT_PATH_BUSINESS_CAPABILITIES,
+        ARTIFACT_PATH_FUNCTIONAL_SPEC,
+        ARTIFACT_PATH_NON_FUNCTIONAL_REQUIREMENTS,
+        ARTIFACT_PATH_SYSTEM_CONTEXT,
+        ARTIFACT_PATH_COMPONENT_ARCHITECTURE,
+        ARTIFACT_PATH_DECISION_LOG,
+        ARTIFACT_PATH_SYSTEM_FILE_STRUCTURE,
+        ARTIFACT_PATH_DEVELOPER_GUIDE,
+        ARTIFACT_PATH_RUNBOOK,
+        ARTIFACT_PATH_EXISTING_REPO_WORKFLOW_SOP,
+        ARTIFACT_PATH_CODEBASE_INVENTORY,
+        ARTIFACT_PATH_INTEGRATION_MAP,
+        ARTIFACT_PATH_FAILURE_MODES,
+        ARTIFACT_PATH_ARCHITECTURE_FLOW,
+        ARTIFACT_PATH_CODEBASE_DOC_SOP,
+        ARTIFACT_PATH_CODEBASE_DOC_STATUS_RULES,
+        ARTIFACT_PATH_DELIVERY_AGENTS,
+        ARTIFACT_PATH_DELIVERY_AGENT_PLANNER,
+        ARTIFACT_PATH_DELIVERY_AGENT_TASK_DECOMPOSER,
+        ARTIFACT_PATH_DELIVERY_AGENT_IMPL_PLANNER,
+        ARTIFACT_PATH_DELIVERY_AGENT_EXECUTOR,
+        ARTIFACT_PATH_DELIVERY_AGENT_REVIEWER,
+        ARTIFACT_PATH_DELIVERY_AGENT_MEMORY_MANAGER,
+        ARTIFACT_PATH_DELIVERY_FOLDER_MAP,
+        # Import artifact key constants for placeholder generation
+        ARTIFACT_KEY_PROJECT_ANALYSIS,
+        ARTIFACT_KEY_SYSTEM_DOCS_INDEX,
+        ARTIFACT_KEY_SYSTEM_DOC_STANDARD,
+        ARTIFACT_KEY_BUNDLE_TAXONOMY,
+        ARTIFACT_KEY_BUNDLE_MIGRATION_PLAN,
+        ARTIFACT_KEY_SYSTEM_OVERVIEW,
+        ARTIFACT_KEY_BUSINESS_CAPABILITIES,
+        ARTIFACT_KEY_FUNCTIONAL_SPEC,
+        ARTIFACT_KEY_NON_FUNCTIONAL_REQUIREMENTS,
+        ARTIFACT_KEY_SYSTEM_CONTEXT,
+        ARTIFACT_KEY_COMPONENT_ARCHITECTURE,
+        ARTIFACT_KEY_DECISION_LOG,
+        ARTIFACT_KEY_SYSTEM_FILE_STRUCTURE,
+        ARTIFACT_KEY_DEVELOPER_GUIDE,
+        ARTIFACT_KEY_RUNBOOK,
+        ARTIFACT_KEY_EXISTING_REPO_WORKFLOW_SOP,
+        ARTIFACT_KEY_CODEBASE_INVENTORY,
+        ARTIFACT_KEY_INTEGRATION_MAP,
+        ARTIFACT_KEY_FAILURE_MODES,
+        ARTIFACT_KEY_ARCHITECTURE_FLOW,
+        ARTIFACT_KEY_CODEBASE_DOC_SOP,
+        ARTIFACT_KEY_CODEBASE_DOC_STATUS_RULES,
+        ARTIFACT_KEY_DELIVERY_AGENTS,
+        ARTIFACT_KEY_DELIVERY_AGENT_PLANNER,
+        ARTIFACT_KEY_DELIVERY_AGENT_TASK_DECOMPOSER,
+        ARTIFACT_KEY_DELIVERY_AGENT_IMPL_PLANNER,
+        ARTIFACT_KEY_DELIVERY_AGENT_EXECUTOR,
+        ARTIFACT_KEY_DELIVERY_AGENT_REVIEWER,
+        ARTIFACT_KEY_DELIVERY_AGENT_MEMORY_MANAGER,
+        ARTIFACT_KEY_DELIVERY_FOLDER_MAP,
+    )
+    
     rendered = template_text
-    for literal, token in sorted(prompt_literal_aliases().items(), key=lambda item: len(item[0]), reverse=True):
+    
+    # Build path → placeholder mapping from constants
+    path_to_placeholder = {
+        ARTIFACT_PATH_PROJECT_ANALYSIS: placeholder(ARTIFACT_KEY_PROJECT_ANALYSIS),
+        ARTIFACT_PATH_README: placeholder(ARTIFACT_KEY_SYSTEM_DOCS_INDEX),
+        ARTIFACT_PATH_DOCUMENTATION_STANDARD: placeholder(ARTIFACT_KEY_SYSTEM_DOC_STANDARD),
+        ARTIFACT_PATH_BUNDLE_TAXONOMY: placeholder(ARTIFACT_KEY_BUNDLE_TAXONOMY),
+        ARTIFACT_PATH_BUNDLE_MIGRATION_PLAN: placeholder(ARTIFACT_KEY_BUNDLE_MIGRATION_PLAN),
+        ARTIFACT_PATH_SYSTEM_OVERVIEW: placeholder(ARTIFACT_KEY_SYSTEM_OVERVIEW),
+        ARTIFACT_PATH_BUSINESS_CAPABILITIES: placeholder(ARTIFACT_KEY_BUSINESS_CAPABILITIES),
+        ARTIFACT_PATH_FUNCTIONAL_SPEC: placeholder(ARTIFACT_KEY_FUNCTIONAL_SPEC),
+        ARTIFACT_PATH_NON_FUNCTIONAL_REQUIREMENTS: placeholder(ARTIFACT_KEY_NON_FUNCTIONAL_REQUIREMENTS),
+        ARTIFACT_PATH_SYSTEM_CONTEXT: placeholder(ARTIFACT_KEY_SYSTEM_CONTEXT),
+        ARTIFACT_PATH_COMPONENT_ARCHITECTURE: placeholder(ARTIFACT_KEY_COMPONENT_ARCHITECTURE),
+        ARTIFACT_PATH_DECISION_LOG: placeholder(ARTIFACT_KEY_DECISION_LOG),
+        ARTIFACT_PATH_SYSTEM_FILE_STRUCTURE: placeholder(ARTIFACT_KEY_SYSTEM_FILE_STRUCTURE),
+        ARTIFACT_PATH_DEVELOPER_GUIDE: placeholder(ARTIFACT_KEY_DEVELOPER_GUIDE),
+        ARTIFACT_PATH_RUNBOOK: placeholder(ARTIFACT_KEY_RUNBOOK),
+        ARTIFACT_PATH_EXISTING_REPO_WORKFLOW_SOP: placeholder(ARTIFACT_KEY_EXISTING_REPO_WORKFLOW_SOP),
+        ARTIFACT_PATH_CODEBASE_INVENTORY: placeholder(ARTIFACT_KEY_CODEBASE_INVENTORY),
+        ARTIFACT_PATH_INTEGRATION_MAP: placeholder(ARTIFACT_KEY_INTEGRATION_MAP),
+        ARTIFACT_PATH_FAILURE_MODES: placeholder(ARTIFACT_KEY_FAILURE_MODES),
+        ARTIFACT_PATH_ARCHITECTURE_FLOW: placeholder(ARTIFACT_KEY_ARCHITECTURE_FLOW),
+        ARTIFACT_PATH_CODEBASE_DOC_SOP: placeholder(ARTIFACT_KEY_CODEBASE_DOC_SOP),
+        ARTIFACT_PATH_CODEBASE_DOC_STATUS_RULES: placeholder(ARTIFACT_KEY_CODEBASE_DOC_STATUS_RULES),
+        ARTIFACT_PATH_DELIVERY_AGENTS: placeholder(ARTIFACT_KEY_DELIVERY_AGENTS),
+        ARTIFACT_PATH_DELIVERY_AGENT_PLANNER: placeholder(ARTIFACT_KEY_DELIVERY_AGENT_PLANNER),
+        ARTIFACT_PATH_DELIVERY_AGENT_TASK_DECOMPOSER: placeholder(ARTIFACT_KEY_DELIVERY_AGENT_TASK_DECOMPOSER),
+        ARTIFACT_PATH_DELIVERY_AGENT_IMPL_PLANNER: placeholder(ARTIFACT_KEY_DELIVERY_AGENT_IMPL_PLANNER),
+        ARTIFACT_PATH_DELIVERY_AGENT_EXECUTOR: placeholder(ARTIFACT_KEY_DELIVERY_AGENT_EXECUTOR),
+        ARTIFACT_PATH_DELIVERY_AGENT_REVIEWER: placeholder(ARTIFACT_KEY_DELIVERY_AGENT_REVIEWER),
+        ARTIFACT_PATH_DELIVERY_AGENT_MEMORY_MANAGER: placeholder(ARTIFACT_KEY_DELIVERY_AGENT_MEMORY_MANAGER),
+        ARTIFACT_PATH_DELIVERY_FOLDER_MAP: placeholder(ARTIFACT_KEY_DELIVERY_FOLDER_MAP),
+    }
+    
+    # Replace paths with placeholders (longest paths first to avoid partial matches)
+    for literal, token in sorted(path_to_placeholder.items(), key=lambda item: len(item[0]), reverse=True):
         rendered = rendered.replace(literal, token)
+    
     return rendered
 
 
@@ -1523,6 +1906,16 @@ def resolve_prompt_path(*, step_cfg: dict, coder: str, model_id: str | None = No
       2. {stem}_{coder}{suffix}     e.g. 06_task_qwen.txt
       3. {stem}{suffix}             e.g. 06_task.txt  (default)
     """
+    import os
+    
+    def safe_relative(path: Path, base: Path) -> str:
+        """Safely compute relative path, falling back to os.path.relpath on Windows."""
+        try:
+            return str(path.relative_to(base))
+        except ValueError:
+            # Windows pathlib.relative_to() can fail even for valid subpaths
+            return os.path.relpath(path, base)
+    
     default_path = RUNNER_ROOT / step_cfg["prompt_file"]
     path_obj = Path(step_cfg["prompt_file"])
 
@@ -1531,17 +1924,20 @@ def resolve_prompt_path(*, step_cfg: dict, coder: str, model_id: str | None = No
             path_obj.parent / f"{path_obj.stem}_{model_id}{path_obj.suffix}"
         )
         if model_specific.exists():
-            print(f"[step_runner] Using model-id-specific prompt: {model_specific.relative_to(RUNNER_ROOT)}", flush=True)
+            rel_path = safe_relative(model_specific, RUNNER_ROOT)
+            print(f"[step_runner] Using model-id-specific prompt: {rel_path}", flush=True)
             return model_specific
 
     coder_specific = RUNNER_ROOT / str(
         path_obj.parent / f"{path_obj.stem}_{coder}{path_obj.suffix}"
     )
     if coder_specific.exists():
-        print(f"[step_runner] Using coder-specific prompt: {coder_specific.relative_to(RUNNER_ROOT)}", flush=True)
+        rel_path = safe_relative(coder_specific, RUNNER_ROOT)
+        print(f"[step_runner] Using coder-specific prompt: {rel_path}", flush=True)
         return coder_specific
 
-    print(f"[step_runner] Using default prompt: {default_path.relative_to(RUNNER_ROOT)}", flush=True)
+    rel_path = safe_relative(default_path, RUNNER_ROOT)
+    print(f"[step_runner] Using default prompt: {rel_path}", flush=True)
     return default_path
 
 
@@ -1575,6 +1971,7 @@ def _review_step_code(step: str) -> str:
         "review_sop": "rsop",
         "review_templates": "rtmpl",
         "review_agents": "ragent",
+        "review_markdown": "rmd",
     }.get(step, "")
 
 
@@ -1630,7 +2027,7 @@ def _build_new_review_file_path(*, state: dict, step: str, step_cfg: dict) -> st
         return ""
     tid = _build_review_target_identifier(artifact_key=artifact_key, artifact_path=artifact_path)
     slug = _derive_review_slug_from_artifact_path(artifact_path)
-    review_dir = ARTIFACT_ROOT / delivery_doc_rel("05_reviews")
+    review_dir = ARTIFACT_ROOT / FOLDER_KEY_DELIVERY_REVIEWS
     date_code = _review_filename_date_code()
 
     # Find highest sequence number already used for this date (any slug/step/tid)
@@ -1670,9 +2067,11 @@ def _suggested_review_file_path(
 
 def _build_validation_file_path(*, state: dict, step: str, step_cfg: dict) -> str:
     template_group = str(state.get("template_group") or "")
+    
+    # Handle codebase workflows
     if template_group.startswith("codebase_"):
         mode = str(step_cfg.get("mode") or ("bootstrap" if "bootstrap" in template_group else "reconcile"))
-        validation_dir = ARTIFACT_ROOT / codebase_doc_rel("04_changes")
+        validation_dir = ARTIFACT_ROOT / FOLDER_KEY_CODEBASE_CHANGES
         candidate = validation_dir / f"{str(state.get('job_id') or 'codebase-scan')}-{mode}-validation.md"
         seq = 2
         while candidate.exists():
@@ -1680,20 +2079,46 @@ def _build_validation_file_path(*, state: dict, step: str, step_cfg: dict) -> st
             seq += 1
         return str(PurePath(str(candidate.relative_to(ARTIFACT_ROOT))))
 
+    # Handle delivery/task execution workflows (with IMPL_FILE)
     impl_path = (state.get("artifacts") or {}).get("IMPL_FILE")
-    if not impl_path:
-        return ""
-    tid = _build_review_target_identifier(artifact_key="IMPL_FILE", artifact_path=impl_path)
-    slug = _derive_review_slug_from_artifact_path(impl_path)
-    review_dir = ARTIFACT_ROOT / delivery_doc_rel("05_reviews")
-    seq = 1
-    while True:
-        candidate = review_dir / f"VALIDATION-{_review_filename_date_code()}-{tid}_{slug}.md"
-        if seq > 1:
-            candidate = review_dir / f"VALIDATION-{_review_filename_date_code()}-{seq}-{tid}_{slug}.md"
-        if not candidate.exists():
-            return str(PurePath(str(candidate.relative_to(ARTIFACT_ROOT))))
-        seq += 1
+    if impl_path:
+        tid = _build_review_target_identifier(artifact_key="IMPL_FILE", artifact_path=impl_path)
+        slug = _derive_review_slug_from_artifact_path(impl_path)
+        review_dir = ARTIFACT_ROOT / FOLDER_KEY_DELIVERY_REVIEWS
+        seq = 1
+        while True:
+            candidate = review_dir / f"VALIDATION-{_review_filename_date_code()}-{tid}_{slug}.md"
+            if seq > 1:
+                candidate = review_dir / f"VALIDATION-{_review_filename_date_code()}-{seq}-{tid}_{slug}.md"
+            if not candidate.exists():
+                return str(PurePath(str(candidate.relative_to(ARTIFACT_ROOT))))
+            seq += 1
+    
+    # Handle bug fix workflows (don't require IMPL_FILE)
+    workflow_cfg = _workflow_module().TEMPLATE_GROUPS.get(template_group, {})
+    step_configs = workflow_cfg.get("step_configs", {})
+    bug_fix_artifact_keys = {"BUG_REPORT_FILE", "REPRO_FILE", "ROOT_CAUSE_FILE", "PATCH_FILE"}
+    
+    is_bug_fix_workflow = False
+    for s_name, s_cfg in step_configs.items():
+        s_produces = s_cfg.get("produces", [])
+        if any(key in s_produces for key in bug_fix_artifact_keys):
+            is_bug_fix_workflow = True
+            break
+    
+    if is_bug_fix_workflow:
+        # Use step_dir pattern like other bug fix artifacts
+        step_names = workflow_cfg.get("steps", [])
+        try:
+            idx = step_names.index(step) + 1
+        except ValueError:
+            idx = 1
+        job_id = state.get("job_id", "")
+        step_dir_rel = f"{template_group}/{job_id}/{idx:02d}_{step}"
+        return delivery_doc_rel(f"04_implementation_plans/{step_dir_rel}/VALIDATION.md")
+    
+    # No match - return empty
+    return ""
 
 
 def _build_pre_init_file_path(*, state: dict) -> str:
@@ -1703,7 +2128,7 @@ def _build_pre_init_file_path(*, state: dict) -> str:
     """
     draft_path = (state.get("artifacts") or {}).get("DRAFT_INIT_FILE", "")
     slug = _derive_review_slug_from_artifact_path(draft_path) if draft_path else "pre-init"
-    pre_init_dir = ARTIFACT_ROOT / delivery_doc_rel("01_initiatives/pre_init")
+    pre_init_dir = ARTIFACT_ROOT / FOLDER_KEY_DELIVERY_INITIATIVES / "pre_init"
     date_code = dt.datetime.now().strftime("%Y%m%d")
 
     # Find highest sequence number already used for this date (any slug)
@@ -1730,7 +2155,7 @@ def _build_plan_file_path(*, state: dict) -> str:
     """
     init_path = (state.get("artifacts") or {}).get("INIT_FILE", "")
     slug = _derive_review_slug_from_artifact_path(init_path) if init_path else "plan"
-    plan_dir = ARTIFACT_ROOT / delivery_doc_rel("02_plans")
+    plan_dir = ARTIFACT_ROOT / FOLDER_KEY_DELIVERY_PLANS
     date_code = dt.datetime.now().strftime("%Y%m%d")
 
     # Find highest sequence number already used for this date (any slug)
@@ -1761,7 +2186,7 @@ def _build_task_graph_file_path(*, state: dict) -> str:
     plan_stem = Path(plan_path).stem  # e.g. "PLAN-20260413-01_slug"
     m = re.match(r"(PLAN-\d{8}-\d+)", plan_stem)
     plan_id = m.group(1) if m else "PLAN-00000000-00"
-    tg_dir = ARTIFACT_ROOT / delivery_doc_rel("02_plans/artifacts")
+    tg_dir = ARTIFACT_ROOT / FOLDER_KEY_DELIVERY_PLANS / "artifacts"
     date_code = dt.datetime.now().strftime("%Y%m%d")
     candidate = tg_dir / f"TASK-GRAPH-{date_code}-{plan_id}.md"
     return str(PurePath(str(candidate.relative_to(ARTIFACT_ROOT))))
@@ -1778,7 +2203,7 @@ def _build_impl_file_path(*, state: dict) -> str:
     current_item = task_queue_current_item(state) or task_execution_binding_current_item(state)
     title = str((current_item or {}).get("title") or "")
     slug = _normalize_review_slug(title, max_length=60) if title else "impl"
-    impl_dir = ARTIFACT_ROOT / delivery_doc_rel("04_implementation_plans")
+    impl_dir = ARTIFACT_ROOT / FOLDER_KEY_DELIVERY_IMPLEMENTATIONS
     date_code = dt.datetime.now().strftime("%Y%m%d")  # YYYYMMDD — matches existing naming convention
 
     # Find highest sequence number already used for this date (any slug)
@@ -1801,7 +2226,7 @@ def _build_codebase_change_impact_path(*, state: dict) -> str:
     template_group = str(state.get("template_group") or "")
     if template_group.startswith("codebase_"):
         mode = "bootstrap" if "bootstrap" in template_group else "reconcile"
-        change_dir = ARTIFACT_ROOT / codebase_doc_rel("04_changes")
+        change_dir = ARTIFACT_ROOT / FOLDER_KEY_CODEBASE_CHANGES
         candidate = change_dir / f"{str(state.get('job_id') or 'codebase-scan')}-{mode}.md"
         seq = 2
         while candidate.exists():
@@ -1816,7 +2241,7 @@ def _build_codebase_change_impact_path(*, state: dict) -> str:
     title = str((current_item or {}).get("title") or "").strip()
     slug = _normalize_review_slug(title, max_length=60) if title else "codebase-doc-update"
     base = task_id or f"DOCSYNC-{dt.datetime.now().strftime('%Y%m%d')}"
-    change_dir = ARTIFACT_ROOT / codebase_doc_rel("04_changes")
+    change_dir = ARTIFACT_ROOT / FOLDER_KEY_CODEBASE_CHANGES
     candidate = change_dir / f"{base}_{slug}.md"
     seq = 2
     while candidate.exists():
