@@ -93,26 +93,7 @@ You may return status: "APPROVED" only after all of the following are true:
 - all video and audio jobs have completed successfully
 - the composition job has been submitted and completed
 - the final video has been saved to {FINAL_VIDEO_PATH}
-- the meta.json sidecar has been written to {FINAL_VIDEO_METAJSON}
 - If the composition was not completed successfully, you MUST return REJECTED.
-
-Critical: meta.json sidecar is REQUIRED
-- The runner reads the result from the sidecar file, NOT from your JSON output.
-- Sidecar path: {FINAL_VIDEO_METAJSON}
-- Sidecar structure (exact):
-{
-  "schema_version": "v2",
-  "coder_result": {
-    "status": "APPROVED" | "REJECTED",
-    "remark": "Composed final TikTok video: <duration>s, <N> scenes",
-    "artifacts": {
-      "FINAL_VIDEO": "{FINAL_VIDEO_PATH}"
-    },
-    "recorded_at": "<current ISO timestamp>"
-  }
-}
-- Use write_file tool to create the sidecar immediately after writing the result.
-- You MUST verify the sidecar exists on disk before returning.
 
 ================================================================================
 ABSOLUTE OUTPUT RULE (NON-NEGOTIABLE)
@@ -155,9 +136,7 @@ Required execution sequence:
 6. Submit the composition job.
 7. Wait for composition to complete.
 8. Write the final video result to {FINAL_VIDEO_PATH}.
-9. Write the meta.json sidecar to {FINAL_VIDEO_METAJSON}.
-10. Verify the sidecar exists on disk.
-11. Return the final JSON.
+9. Return the final JSON.
 
 ================================================================================
 QUALITY CHECKLIST

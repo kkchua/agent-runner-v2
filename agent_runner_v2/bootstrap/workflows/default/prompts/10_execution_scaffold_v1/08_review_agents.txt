@@ -22,11 +22,11 @@ Inputs:
 {PROJECT_ANALYSIS}
 {DELIVERY_SOP}
 {DELIVERY_STATUS_RULES}
-{CODEBASE_DOC_SOP}
-{CODEBASE_DOC_STATUS_RULES}
+{CODEBASE_DOC_SOP_v1}
+{CODEBASE_DOC_STATUS_RULES_v1}
 
 - Review target set:
-{DELIVERY_AGENTS_MD}
+{DELIVERY_AGENTS}
 {DELIVERY_AGENT_PLANNER}
 {DELIVERY_AGENT_TASK_DECOMPOSER}
 {DELIVERY_AGENT_IMPL_PLANNER}
@@ -39,9 +39,9 @@ Freshness requirement (MANDATORY)
 - Base your decision only on their current contents.
 - Do not rely on prior memory, previous summaries, or cached understanding.
 - Current file states:
-  - DELIVERY_AGENTS_MD checksum: {DELIVERY_AGENTS_MD_CHECKSUM}
-  - DELIVERY_AGENTS_MD bytes: {DELIVERY_AGENTS_MD_BYTES}
-  - DELIVERY_AGENTS_MD mtime: {DELIVERY_AGENTS_MD_MTIME}
+  - DELIVERY_AGENTS checksum: {DELIVERY_AGENTS_CHECKSUM}
+  - DELIVERY_AGENTS bytes: {DELIVERY_AGENTS_BYTES}
+  - DELIVERY_AGENTS mtime: {DELIVERY_AGENTS_MTIME}
   - DELIVERY_AGENT_PLANNER checksum: {DELIVERY_AGENT_PLANNER_CHECKSUM}
   - DELIVERY_AGENT_PLANNER bytes: {DELIVERY_AGENT_PLANNER_BYTES}
   - DELIVERY_AGENT_PLANNER mtime: {DELIVERY_AGENT_PLANNER_MTIME}
@@ -81,18 +81,18 @@ Current artifact fingerprints:
 
 Source-of-truth priority:
 1. Individual agent contract files
-2. {DELIVERY_AGENTS_MD}
+2. {DELIVERY_AGENTS}
 3. {PROJECT_ANALYSIS}
 4. {DELIVERY_SOP}
 5. {DELIVERY_STATUS_RULES}
-6. {CODEBASE_DOC_SOP}
-7. {CODEBASE_DOC_STATUS_RULES}
+6. {CODEBASE_DOC_SOP_v1}
+7. {CODEBASE_DOC_STATUS_RULES_v1}
 8. Current checksum context
 
 Task:
 - Evaluate whether the agent system is complete and internally consistent for this project.
 - Verify each individual agent contract includes a metadata block with `doc_type: 08_agent` and `agent_id` before evaluating the body content.
-- Verify each agent listed in AGENTS.md has a matching contract file and coherent role boundaries.
+- Verify each agent listed in DELIVERY_AGENTS has a matching contract file and coherent role boundaries.
 - Verify the contracts align with the SOP, status rules, and required handoffs.
 - Confirm `DELIVERY_AGENT_MEMORY_MANAGER` is present and valid for this workflow.
 - Reject if planner/task-decomposer/executor/reviewer contracts fail to assign documentation-governance duties at the correct lifecycle stage.
@@ -103,35 +103,7 @@ Task:
 - The REVIEW_FILE must exist on disk before returning final JSON.
 - Return the REVIEW_FILE path in artifacts.REVIEW_FILE.
 - Do not output markdown prose in place of JSON.
-- Use the exact review file path and sidecar path shown above.
-
-Critical: Sidecar file is REQUIRED for review step
-- The runner reads review decision from the sidecar file.
-- Sidecar path: `{REVIEW_FILE_SUGGESTED_METAJSON}`
-- Sidecar structure (exact):
-  {
-    "schema_version": "v2",
-    "coder_result": {
-      "status": "APPROVED" | "REJECTED",
-      "remark": "Brief summary of review decision",
-      "artifacts": {
-        "REVIEW_FILE": "<exact path of the review file you wrote>"
-      },
-      "recorded_at": "2026-04-15T10:30:00"
-    }
-  }
-- Use `write_file` tool to create the sidecar JSON.
-- Status: "APPROVED" if review passes, "REJECTED" if blocking issues found.
-
-ABSOLUTE OUTPUT RULE (NON-NEGOTIABLE)
-
-You are NOT a chat assistant.
-You are a strict JSON generator.
-
-Return ONLY valid JSON.
-Do NOT explain.
-Do NOT wrap in markdown.
-Do NOT add any text before or after the JSON.
+- Use the exact review file path shown above.
 
 Required JSON schema:
 {

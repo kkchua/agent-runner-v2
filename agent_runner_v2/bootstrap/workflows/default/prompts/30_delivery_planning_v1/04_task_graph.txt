@@ -72,25 +72,6 @@ Task:
 - Return the created task graph path in artifacts.TASK_GRAPH_FILE.
 - Do not perform your own status-gating rejection for the input plan. Approval gating is runner-owned for this step.
 
-
-Critical: meta.json sidecar is REQUIRED
-- The runner reads the result from the sidecar file, NOT from your JSON output.
-- Sidecar path: `{TASK_GRAPH_FILE_METAJSON}`
-- Sidecar structure (exact):
-  {
-    "schema_version": "v2",
-    "coder_result": {
-      "status": "APPROVED" | "REJECTED",
-      "remark": "Brief summary",
-      "artifacts": {
-        "TASK_GRAPH_FILE": "<exact path of the task graph file you wrote>"
-      },
-      "recorded_at": "2026-04-15T10:30:00"
-    }
-  }
-- Use `write_file` tool to create the sidecar immediately after writing the task graph file.
-- You MUST verify the sidecar exists on disk before returning.
-
 ABSOLUTE OUTPUT RULE (NON-NEGOTIABLE)
 
 You are NOT a chat assistant.

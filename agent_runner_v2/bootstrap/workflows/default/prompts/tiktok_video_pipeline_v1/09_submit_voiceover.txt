@@ -87,26 +87,7 @@ You may return status: "APPROVED" only after all of the following are true:
 - all voiceover texts have been submitted to ElevenLabs API
 - all audio files have been saved to {AUDIO_OUTPUT_DIR}
 - the submission result summary has been written to {AUDIO_SUBMIT_RESULT_PATH}
-- the meta.json sidecar has been written to {AUDIO_SUBMIT_RESULT_METAJSON}
 - If the submission was not completed successfully, you MUST return REJECTED.
-
-Critical: meta.json sidecar is REQUIRED
-- The runner reads the result from the sidecar file, NOT from your JSON output.
-- Sidecar path: {AUDIO_SUBMIT_RESULT_METAJSON}
-- Sidecar structure (exact):
-{
-  "schema_version": "v2",
-  "coder_result": {
-    "status": "APPROVED" | "REJECTED",
-    "remark": "Generated N audio files: M succeeded, K failed",
-    "artifacts": {
-      "AUDIO_SUBMIT_RESULT": "{AUDIO_SUBMIT_RESULT_PATH}"
-    },
-    "recorded_at": "<current ISO timestamp>"
-  }
-}
-- Use write_file tool to create the sidecar immediately after writing the summary.
-- You MUST verify the sidecar exists on disk before returning.
 
 ================================================================================
 ABSOLUTE OUTPUT RULE (NON-NEGOTIABLE)
@@ -146,6 +127,4 @@ Required execution sequence:
 3. Load ElevenLabs configuration.
 4. For each voiceover, call ElevenLabs TTS API and save audio.
 5. Write the submission summary to {AUDIO_SUBMIT_RESULT_PATH}.
-6. Write the meta.json sidecar to {AUDIO_SUBMIT_RESULT_METAJSON}.
-7. Verify the sidecar exists on disk.
-8. Return the final JSON.
+6. Return the final JSON.

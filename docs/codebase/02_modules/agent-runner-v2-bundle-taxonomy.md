@@ -6,9 +6,9 @@ module_path: "agent_runner_v2/bundle_taxonomy.py"
 module_area: "support"
 documentation_mode: "summary"
 owner_doc_path: "docs/codebase/02_modules/agent-runner-v2-bundle-taxonomy.md"
-last_verified_by_change: "40_documentation_sync_v1 / 40DOCSYNC-GEN-20260704-001 / 2026-07-04T13:29:07+08:00"
-created: "2026-07-04T13:29:07+08:00"
-owner: "40_documentation_sync_v1"
+last_verified_by_change: "00_master_docs_bootstrap_v1 / 00DOC-GEN-20260709-002 / 2026-07-09T21:13:38+08:00"
+created: "2026-07-09T21:13:38+08:00"
+owner: "00_master_docs_bootstrap_v1"
 ---
 
 # Module Documentation: agent_runner_v2.bundle_taxonomy
@@ -37,73 +37,79 @@ This module belongs to the `support` area and is documented as `summary`.
 
 ### 2.1 Classes
 
-| Class | Purpose | Key Methods |
-|-------|---------|-------------|
-| `BundleSelection` | public class | |
+#### BundleSelection
+
+**Decorators**: `@dataclass`
+
+**Purpose**: Public class
+
+**Methods**:
+
+- `to_dict()` → `dict[str, Any]` — method
+
 
 ### 2.2 Functions
 
-| Function | Signature | Purpose |
-|----------|-----------|---------|
-| `bundle_manifest` | `()` | public function |
-| `bundle_manifest_path` | `(runner_home)` | public function |
+#### bundle_manifest()
+
+**Signature**: `bundle_manifest(*, workflow_name: str, domain: str = DEFAULT_DOMAIN_BUNDLE, profile: str = DEFAULT_BUNDLE_PROFILE)`
+
+**Parameters**:
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `workflow_name` | `str` | — | — |
+| `domain` | `str` | `DEFAULT_DOMAIN_BUNDLE` | — |
+| `profile` | `str` | `DEFAULT_BUNDLE_PROFILE` | — |
+
+**Returns**: `dict[str, Any]`
+
+---
+
+#### bundle_manifest_path()
+
+**Signature**: `bundle_manifest_path(runner_home: Path)`
+
+**Parameters**:
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `runner_home` | `Path` | — | — |
+
+**Returns**: `Path`
+
+---
+
 
 ### 2.3 Constants / Configuration
 
-| Name | Value / Type | Purpose |
-|------|-------------|---------|
-| `CORE_BUNDLE_NAME` | constant | module configuration |
-| `DEFAULT_DOMAIN_BUNDLE` | constant | module configuration |
-| `DEFAULT_BUNDLE_PROFILE` | constant | module configuration |
-| `DOMAIN_BUNDLE_NAMES` | constant | module configuration |
-| `CORE_DOCS` | constant | module configuration |
-| `WORKFLOW_DOCS` | constant | module configuration |
-| `DOMAIN_DOCS` | constant | module configuration |
+| Name | Purpose |
+|------|--------|
+| `CORE_BUNDLE_NAME` | module configuration |
+| `DEFAULT_DOMAIN_BUNDLE` | module configuration |
+| `DEFAULT_BUNDLE_PROFILE` | module configuration |
+| `DOMAIN_BUNDLE_NAMES` | module configuration |
+| `CORE_DOCS` | module configuration |
+| `WORKFLOW_DOCS` | module configuration |
+| `DOMAIN_DOCS` | module configuration |
 
-## 3. Internal Implementation
 
-### 3.1 Key Data Structures
+## 3. Error Handling
 
-Auto-generated baseline documentation derived from the current source tree.
+No documented exceptions.
 
-### 3.2 Algorithm / Flow
 
-See the source module for implementation details; this document captures the public contract and scan-derived summary.
+## 4. Testing
 
-## 4. I/O Contract
-
-### 4.1 Inputs
-
-Derived from function parameters, imports, and file-level responsibilities.
-
-### 4.2 Outputs
-
-Derived from function return values and side effects observed in the source file.
-
-### 4.3 Side Effects
-
-Tracked at a baseline level by the repository scan.
-
-## 5. Error Handling
-
-| Error Condition | Handling | Recovery |
-|----------------|----------|----------|
-| | | |
-
-## 6. Testing
-
-### 6.1 Test Coverage
+### 4.1 Test Coverage
 
 | Test File | Coverage Area |
-|-----------|--------------|
-| | |
+|-----------|---------------|
+| (none) | No test references found |
 
-### 6.2 Known Gaps
 
-Auto-generated baseline. Review and refine as the codebase evolves.
-
-## 7. Change Log
+## 5. Change Log
 
 | Date | Change | Verified By |
 |------|--------|-------------|
-| 2026-07-04 | Initial baseline generated from repository scan | 40_documentation_sync_v1 |
+| 2026-07-09 | Initial baseline generated from repository scan | 00_master_docs_bootstrap_v1 |

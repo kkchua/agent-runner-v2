@@ -78,26 +78,7 @@ refine_brief COMPLETION RULE (MANDATORY)
 
 You may return status: "APPROVED" only after all of the following are true:
 - the updated brief JSON has been written to {BRIEF_JSON_PATH}
-- the meta.json sidecar has been written to {BRIEF_JSON_METAJSON}
 - If the refinements were not written successfully, you MUST return REJECTED.
-
-Critical: meta.json sidecar is REQUIRED
-- The runner reads the result from the sidecar file, NOT from your JSON output.
-- Sidecar path: {BRIEF_JSON_METAJSON}
-- Sidecar structure (exact):
-{
-  "schema_version": "v2",
-  "coder_result": {
-    "status": "APPROVED" | "REJECTED",
-    "remark": "Brief summary",
-    "artifacts": {
-      "BRIEF_JSON": "{BRIEF_JSON_PATH}"
-    },
-    "recorded_at": "<current ISO timestamp>"
-  }
-}
-- Use write_file tool to create the sidecar immediately after writing the updated brief.
-- You MUST verify the sidecar exists on disk before returning.
 
 ================================================================================
 ABSOLUTE OUTPUT RULE (NON-NEGOTIABLE)
@@ -134,6 +115,4 @@ Required execution sequence:
 1. Read the review feedback from {REVIEW_FILE}.
 2. For each flagged issue, re-read the brief and fix the specific field.
 3. Update the brief JSON at {BRIEF_JSON_PATH}.
-4. Write the meta.json sidecar to {BRIEF_JSON_METAJSON}.
-5. Verify the sidecar exists on disk.
-6. Return the final JSON.
+4. Return the final JSON.

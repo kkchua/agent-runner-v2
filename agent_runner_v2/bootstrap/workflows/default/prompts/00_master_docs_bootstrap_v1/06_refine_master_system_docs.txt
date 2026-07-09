@@ -20,36 +20,6 @@ Execution rules:
 - Update the changed master/system docs so they align with the repository scan and the review findings.
 
 Required outputs after refinement:
-- `{SYSTEM_DOC_ROOT}/project_analysis.md`
+- `{PROJECT_ANALYSIS}`
 - `{SYSTEM_DOC_ROOT}/README.md`
 - the existing `SYSTEM_DOCS_CHANGE_LOG` artifact path must still exist and reflect the current doc set
-
-Critical: meta.json sidecar is REQUIRED
-- Sidecar path: `{PROJECT_ANALYSIS_METAJSON}`
-- Use `write_file` tool to create the sidecar immediately after the edits.
-- Sidecar structure (exact):
-  {
-    "schema_version": "v2",
-    "coder_result": {
-      "status": "APPROVED" | "REJECTED",
-      "remark": "Brief summary of refinements",
-      "artifacts": {
-        "PROJECT_ANALYSIS": "{PROJECT_ANALYSIS_PATH}",
-        "SYSTEM_DOCS_INDEX": "{SYSTEM_DOCS_INDEX_PATH}",
-        "SYSTEM_DOCS_CHANGE_LOG": "{SYSTEM_DOCS_CHANGE_LOG_PATH}"
-      },
-      "recorded_at": "2026-07-01T00:00:00"
-    }
-  }
-
-ABSOLUTE OUTPUT RULE
-- Return ONLY valid JSON:
-  {
-    "status": "APPROVED | REJECTED",
-    "remark": "<summary>",
-    "artifacts": {
-      "PROJECT_ANALYSIS": "{PROJECT_ANALYSIS_PATH}",
-      "SYSTEM_DOCS_INDEX": "{SYSTEM_DOCS_INDEX_PATH}",
-      "SYSTEM_DOCS_CHANGE_LOG": "{SYSTEM_DOCS_CHANGE_LOG_PATH}"
-    }
-  }

@@ -6,9 +6,9 @@ module_path: "agent_runner_v2/runner_actions.py"
 module_area: "schema"
 documentation_mode: "summary"
 owner_doc_path: "docs/codebase/02_modules/agent-runner-v2-runner-actions.md"
-last_verified_by_change: "40_documentation_sync_v1 / 40DOCSYNC-GEN-20260704-001 / 2026-07-04T13:29:07+08:00"
-created: "2026-07-04T13:29:07+08:00"
-owner: "40_documentation_sync_v1"
+last_verified_by_change: "00_master_docs_bootstrap_v1 / 00DOC-GEN-20260709-002 / 2026-07-09T21:13:38+08:00"
+created: "2026-07-09T21:13:38+08:00"
+owner: "00_master_docs_bootstrap_v1"
 ---
 
 # Module Documentation: agent_runner_v2.runner_actions
@@ -32,12 +32,15 @@ This module belongs to the `schema` area and is documented as `summary`.
 | `pathlib` | stdlib module | imported dependency |
 | `typing` | stdlib module | imported dependency |
 | `action_result` | external module | repository dependency |
+| `actions.archive_previous_version` | external module | repository dependency |
 | `actions.assemble_video` | external module | repository dependency |
 | `actions.copy_artifact` | external module | repository dependency |
 | `actions.execute_i2v` | external module | repository dependency |
 | `actions.execute_t2i` | external module | repository dependency |
 | `actions.execute_voiceover` | external module | repository dependency |
 | `actions.finalize_bootstrap` | external module | repository dependency |
+| `actions.generate_site` | external module | repository dependency |
+| `actions.generate_site_pdf` | external module | repository dependency |
 | `actions.prepare_delivery_scaffold` | external module | repository dependency |
 | `actions.promote_artifact` | external module | repository dependency |
 | `actions.promote_init` | external module | repository dependency |
@@ -49,73 +52,83 @@ This module belongs to the `schema` area and is documented as `summary`.
 | `actions.validate_architecture_site` | external module | repository dependency |
 | `actions.validate_codebase_docs` | external module | repository dependency |
 | `actions.validate_delivery_docs` | external module | repository dependency |
+| `actions.validate_developer_site` | external module | repository dependency |
+| `actions.validate_operator_site` | external module | repository dependency |
+| `actions.validate_stakeholder_site` | external module | repository dependency |
 | `actions.validate_system_docs` | external module | repository dependency |
+| `actions.validate_tester_site` | external module | repository dependency |
+| `actions.validate_user_site` | external module | repository dependency |
 
 ## 2. Public API
 
 ### 2.1 Classes
 
-| Class | Purpose | Key Methods |
-|-------|---------|-------------|
-| | | |
+No public classes.
+
 
 ### 2.2 Functions
 
-| Function | Signature | Purpose |
-|----------|-----------|---------|
-| `execute` | `()` | Dispatch to a registered action function. |
-| `get_registered_actions` | `()` | Return sorted list of registered action names. |
+#### execute()
+
+**Signature**: `execute(*, action_name: str, context: dict[str, str], state: dict, step_cfg: dict, step: str, project_root: Path)`
+
+**Purpose**: Dispatch to a registered action function.
+
+**Parameters**:
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `action_name` | `str` | — | — |
+| `context` | `dict[str, str]` | — | — |
+| `state` | `dict` | — | — |
+| `step_cfg` | `dict` | — | — |
+| `step` | `str` | — | — |
+| `project_root` | `Path` | — | — |
+
+**Returns**: `ActionResult`
+
+**Raises**:
+
+- `KeyError` — if action_name is not in the registry.
+- `Exception` — action-specific failures (caller routes to failure).
+
+---
+
+#### get_registered_actions()
+
+**Signature**: `get_registered_actions()`
+
+**Purpose**: Return sorted list of registered action names.
+
+**Returns**: `list[str]`
+
+---
+
 
 ### 2.3 Constants / Configuration
 
-| Name | Value / Type | Purpose |
-|------|-------------|---------|
-| | | |
+No public constants.
 
-## 3. Internal Implementation
 
-### 3.1 Key Data Structures
+## 3. Error Handling
 
-Auto-generated baseline documentation derived from the current source tree.
+| Exception | When | Raised By |
+|-----------|------|----------|
+| `Exception` | action-specific failures (caller routes to failure). | `execute` |
+| `KeyError` | if action_name is not in the registry. | `execute` |
 
-### 3.2 Algorithm / Flow
 
-See the source module for implementation details; this document captures the public contract and scan-derived summary.
+## 4. Testing
 
-## 4. I/O Contract
-
-### 4.1 Inputs
-
-Derived from function parameters, imports, and file-level responsibilities.
-
-### 4.2 Outputs
-
-Derived from function return values and side effects observed in the source file.
-
-### 4.3 Side Effects
-
-Tracked at a baseline level by the repository scan.
-
-## 5. Error Handling
-
-| Error Condition | Handling | Recovery |
-|----------------|----------|----------|
-| | | |
-
-## 6. Testing
-
-### 6.1 Test Coverage
+### 4.1 Test Coverage
 
 | Test File | Coverage Area |
-|-----------|--------------|
-| | |
+|-----------|---------------|
+| (none) | No test references found |
 
-### 6.2 Known Gaps
 
-Auto-generated baseline. Review and refine as the codebase evolves.
-
-## 7. Change Log
+## 5. Change Log
 
 | Date | Change | Verified By |
 |------|--------|-------------|
-| 2026-07-04 | Initial baseline generated from repository scan | 40_documentation_sync_v1 |
+| 2026-07-09 | Initial baseline generated from repository scan | 00_master_docs_bootstrap_v1 |

@@ -270,26 +270,7 @@ gen_workflow COMPLETION RULE (MANDATORY)
 
 You may return status: "APPROVED" only after all of the following are true:
 - the workflow JSON has been written to {WORKFLOW_JSON_PATH}
-- the meta.json sidecar has been written to {WORKFLOW_JSON_METAJSON}
 - If the workflow was not written successfully, you MUST return REJECTED.
-
-Critical: meta.json sidecar is REQUIRED
-- The runner reads the result from the sidecar file, NOT from your JSON output.
-- Sidecar path: {WORKFLOW_JSON_METAJSON}
-- Sidecar structure (exact):
-{
-  "schema_version": "v2",
-  "coder_result": {
-    "status": "APPROVED" | "REJECTED",
-    "remark": "Brief summary",
-    "artifacts": {
-      "WORKFLOW_JSON": "{WORKFLOW_JSON_PATH}"
-    },
-    "recorded_at": "<current ISO timestamp>"
-  }
-}
-- Use write_file tool to create the sidecar immediately after writing the workflow.
-- You MUST verify the sidecar exists on disk before returning.
 
 ================================================================================
 ABSOLUTE OUTPUT RULE (NON-NEGOTIABLE)
@@ -319,9 +300,7 @@ Required execution sequence:
 1. Read the approved brief from {BRIEF_JSON}.
 2. Generate the complete TikTok workflow following ALL rules above.
 3. Write the workflow JSON to {WORKFLOW_JSON_PATH}.
-4. Write the meta.json sidecar to {WORKFLOW_JSON_METAJSON}.
-5. Verify the sidecar exists on disk.
-6. Return the final JSON.
+4. Return the final JSON.
 
 ================================================================================
 EXECUTION CHECKLIST

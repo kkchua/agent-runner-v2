@@ -1,12 +1,10 @@
 ---
 template_id: "SYS-00-NFR"
-title: "Non-Functional Requirements"
-status: "active"
-generated: "2026-07-04T12:00:00+08:00"
+managed_by: workflow-generated
+generated: "2026-07-09T21:18:02+08:00"
 workflow: "00_master_docs_bootstrap_v1"
 step: "03_generate_system_overview_docs"
-change_id: "00DOC-GEN-20260704-002"
-managed_by: workflow-generated
+change_id: "00DOC-GEN-20260709-002"
 ---
 
 > Managed by workflow: `00_master_docs_bootstrap_v1` / step: `03_generate_system_overview_docs`
@@ -16,213 +14,254 @@ managed_by: workflow-generated
 
 ## Purpose
 
-This document captures the quality attributes and operational requirements for the `agent-runner-v2` platform. These requirements constrain how the system behaves while meeting its functional goals.
+This document captures the runtime, quality, and operational expectations for agent-runner-v2. It defines how the system should perform, behave, and operate under various conditions, independent of specific functional requirements.
 
-## Quality Attributes
+## Quality Requirements
 
-### QA-1: Reliability
+### Reliability
 
-**Requirement**: The system must handle transient failures gracefully and maintain job state integrity.
+| Requirement | Target | Measurement |
+|-------------|--------|-------------|
+| **Availability** | 99.5% for daemon mode | Uptime percentage over 30 days |
+| **Step Success Rate** | >95% | Successful completions vs total attempts |
+| **Recovery Success** | >90% | Successful recoveries after failure |
+| **State Consistency** | 100% | Job state corruption incidents |
 
-**Metrics**:
-| Metric | Target | Measurement |
-|--------|--------|-------------|
-| Step success rate | > 95% | Successful steps / total steps |
-| State persistence | 100% | Jobs recoverable after interruption |
-| Data integrity | 100% | No corruption on graceful shutdown |
+### Fault Tolerance
 
-**Strategies**:
-- Atomic job state writes
-- Idempotent retry handling
-- Clear failure classification
+| Scenario | Requirement |
+|----------|-------------|
+| **Coder Timeout** | Retry with exponential backoff, max 3 attempts |
+| **Backend Unavailable** | Retry with 30s intervals, queue locally |
+| **Sidecar Corruption** | Reject step, route to failure handling |
+| **State Corruption** | Detect via schema validation, attempt migration |
+| **Child Process Failure** | Terminate, report failure, claim next work |
 
-### QA-2: Performance
+### Data Integrity
 
-**Requirement**: Step execution must complete within acceptable time bounds.
+| Requirement | Implementation |
+|-------------|----------------|
+| **Job State Persistence** | Atomic writes with checksum validation |
+| **Artifact Verification** | Path existence check before routing |
+| **Sidecar Validation** | JSON schema validation, required field check |
+| **Path Resolution** | Absolute path normalization, traversal protection |
 
-**Metrics**:
-| Metric | Target | Measurement |
-|--------|--------|-------------|
-| Prompt rendering | < 100ms | Time to render template |
-| Job state save | < 50ms | Time to persist state |
-| Artifact validation | < 200ms | Time to check artifact existence |
-| Step overhead | < 500ms | Non-LLM step processing time |
+## Performance Requirements
 
-**Constraints**:
-- LLM invocation time is provider-dependent and excluded
-- Network latency to backend is excluded from worker metrics
+### Response Time
 
-### QA-3: Scalability
+| Operation | Target | Maximum |
+|-----------|--------|---------|
+| **Prompt Rendering** | <100ms | 500ms |
+| **Preflight Check** | <50ms | 200ms |
+| **Job State Load** | <100ms | 500ms |
+| **Job State Save** | <200ms | 1s |
+| **Sidecar Read** | <50ms | 200ms |
 
-**Requirement**: The system must support concurrent execution patterns.
+### Throughput
 
-**Metrics**:
-| Metric | Target | Measurement |
-|--------|--------|-------------|
-| Concurrent jobs | 10+ | Jobs in flight per daemon |
-| Workflow families | 20+ | Supported without degradation |
-| Steps per workflow | 50+ | Steps without performance loss |
+| Metric | Target | Notes |
+|--------|--------|-------|
+| **Steps per Hour (Local)** | 10-20 | Depends on coder response time |
+| **Steps per Hour (Worker)** | 30-60 | Parallel execution across workers |
+| **Concurrent Jobs** | 10 | Per daemon instance |
+| **Poll Interval** | 10s | Worker poll frequency |
 
-**Limitations**:
-- Single daemon per workstation
-- Job state is file-based (not distributed)
-- Backend coordination required for multi-worker
+### Resource Usage
 
-### QA-4: Maintainability
-
-**Requirement**: The codebase must support evolution and debugging.
-
-**Standards**:
-- Python 3.11+ type hints throughout
-- Docstrings for public APIs
-- Clear module separation of concerns
-- Comprehensive logging
-
-**Metrics**:
-| Metric | Target | Measurement |
-|--------|--------|-------------|
-| Test coverage | > 70% | Lines covered by tests |
-| Cyclomatic complexity | < 10 | Per function |
-| Module size | < 500 lines | Per module (preferable) |
-
-### QA-5: Portability
-
-**Requirement**: The system must run on supported platforms.
-
-**Platforms**:
-| Platform | Support Level | Notes |
-|----------|---------------|-------|
-| Windows | Primary | Development and production |
-| macOS | Secondary | Development only |
-| Linux | Community | May require adaptation |
-
-**Dependencies**:
-- Python 3.11+
-- Standard library only (no external runtime deps)
-- Dev dependencies: pytest, pytest-cov
-
-### QA-6: Security
-
-**Requirement**: The system must handle sensitive data appropriately.
-
-**Requirements**:
-- No credential storage in job state
-- No logging of sensitive inputs
-- Environment-based API key handling
-- Protected document guards prevent unauthorized modification
-
-**Excluded**:
-- Encryption at rest (file system responsibility)
-- Network security (backend responsibility)
-- Authentication (backend responsibility)
+| Resource | Target | Maximum |
+|----------|--------|---------|
+| **Memory (Daemon)** | <100MB | 500MB |
+| **Memory (Step)** | <500MB | 2GB |
+| **Disk (Job State)** | <10KB per job | 50KB |
+| **Disk (Logs)** | <100MB per day | Rotated |
+| **CPU (Idle)** | <1% | 5% |
 
 ## Operational Requirements
 
-### OR-1: Deployment
+### Deployment
 
-**Requirement**: The system must be deployable with minimal configuration.
+| Requirement | Specification |
+|-------------|-------------|
+| **Installation** | pip install -e . |
+| **Initialization** | ukbe-run-agent init |
+| **Configuration** | config.json in runner home |
+| **Upgrade** | pip install --upgrade + init |
 
-**Installation**:
-```bash
-pip install -e .
-ukbe-run-agent init
-```
+### Monitoring
 
-**Configuration**:
-- `%USERPROFILE%\.ukbe-runner\config.json` for runtime settings
-- Environment variables for API keys
-- `template_groups.py` for workflow definitions
+| Requirement | Implementation |
+|-------------|----------------|
+| **Heartbeat** | Every 30s in daemon mode |
+| **Log Rotation** | Daily rotation, 7 day retention |
+| **Metrics Exposure** | Job state queryable via CLI |
+| **Health Check** | Backend ping endpoint |
 
-### OR-2: Monitoring
+### Maintenance
 
-**Requirement**: System health must be observable.
+| Task | Frequency | Automation |
+|------|-----------|------------|
+| **Log Cleanup** | Daily | Automatic |
+| **Job Archive** | Weekly | Manual script |
+| **Bundle Sync** | As needed | Manual trigger |
+| **Schema Migration** | On version change | Automatic with confirmation |
 
-**Observability**:
-| Component | Mechanism | Output |
-|-----------|-----------|--------|
-| Daemon | Log files | `%USERPROFILE%\.ukbe-runner\logs\` |
-| Steps | Structured logs | Console and file |
-| Heartbeats | Backend API | Worker status |
-| Metrics | Backend API | Usage data per step |
+## Security Requirements
 
-### OR-3: Logging
+### Authentication
 
-**Requirement**: Operations must be auditable through logs.
+| Requirement | Implementation |
+|-------------|----------------|
+| **Backend Auth** | API key in config.json |
+| **Coder Access** | System-level coder authentication |
+| **Local Access** | File system permissions |
 
-**Log Levels**:
-| Level | Use Case |
-|-------|----------|
-| DEBUG | Development troubleshooting |
-| INFO | Normal operation events |
-| WARNING | Recoverable issues |
-| ERROR | Step failures |
-| CRITICAL | System failures |
+### Authorization
 
-**Log Retention**:
-- Daemon logs: Rolling retention (configurable)
-- Job logs: Persist with job state
-- Audit events: Backend persistence
+| Requirement | Implementation |
+|-------------|----------------|
+| **Job Ownership** | User-scoped job directories |
+| **Artifact Access** | Path-based access control |
+| **Workflow Access** | No restriction (local execution) |
 
-### OR-4: Backup and Recovery
+### Data Protection
 
-**Requirement**: Job state must be recoverable.
+| Requirement | Implementation |
+|-------------|----------------|
+| **Sensitive Data** | .env files excluded from git |
+| **Credentials** | Stored in config.json, not code |
+| **Job Data** | Local storage only (unless backend-connected) |
 
-**Scope**:
-- Job state directory (`%USERPROFILE%\.ukbe-runner\jobs\`)
-- Runtime bundles (`%USERPROFILE%\.ukbe-runner\workflows\`)
+## Compatibility Requirements
 
-**Excluded**:
-- Package source (recoverable via pip/git)
-- Backend data (backend responsibility)
+### Platform Support
 
-### OR-5: Compatibility
+| Platform | Support Level | Notes |
+|----------|---------------|-------|
+| **Windows** | Primary | Development and deployment platform |
+| **macOS** | Supported | Via compatibility layer |
+| **Linux** | Supported | CI/CD, server deployment |
 
-**Requirement**: The system must maintain backward compatibility where possible.
+### Python Version
 
-**Version Compatibility**:
-| Component | Compatibility Rule |
-|-----------|-------------------|
-| Job schema | Migration path for v1 → v2 |
-| Workflow bundles | Family versioning for breaking changes |
-| CLI interface | Semantic versioning for commands |
+| Version | Support | Notes |
+|---------|---------|-------|
+| **3.12** | Primary | Recommended version |
+| **3.11** | Supported | Minimum supported |
+| **3.13+** | Testing | Compatibility testing |
+
+### External Dependencies
+
+| Dependency | Version | Purpose |
+|------------|---------|---------|
+| **Claude Code** | Latest | Coder invocation |
+| **Codex CLI** | Latest | Coder invocation |
+| **Qwen Code** | Latest | Coder invocation |
+| **Python** | 3.11+ | Runtime |
+
+## Scalability Requirements
+
+### Horizontal Scaling
+
+| Aspect | Requirement |
+|--------|-------------|
+| **Worker Distribution** | Multiple workstations claim work from backend |
+| **Concurrent Execution** | Daemon spawns child processes per step |
+| **Backend Coordination** | Backend manages work queue, tracks state |
+
+### Vertical Scaling
+
+| Aspect | Requirement |
+|--------|-------------|
+| **Resource Isolation** | Child processes isolated from daemon |
+| **Resource Limits** | Configurable timeouts and memory limits |
+| **Cleanup** | Automatic temp file cleanup post-step |
+
+## Usability Requirements
+
+### CLI Interface
+
+| Requirement | Implementation |
+|-------------|----------------|
+| **Command Discovery** | --help on all commands |
+| **Consistent Interface** | Common flags across modes |
+| **Progress Visibility** | Step status in job state |
+| **Error Clarity** | Descriptive error messages |
+
+### Documentation
+
+| Requirement | Implementation |
+|-------------|----------------|
+| **Usage Examples** | README.md with common commands |
+| **Troubleshooting** | HOW_TO_GUIDE.md |
+| **API Reference** | Function docstrings |
+| **Architecture** | System documentation set |
+
+## Portability Requirements
+
+### Configuration Portability
+
+| Aspect | Requirement |
+|--------|-------------|
+| **Config Location** | %USERPROFILE%\.ukbe-runner\config.json |
+| **Relative Paths** | Job state uses relative paths |
+| **Cross-Platform** | Pathlib for cross-platform paths |
+
+### Workflow Portability
+
+| Aspect | Requirement |
+|--------|-------------|
+| **Bundle Seeding** | Bootstrap seeds runtime bundles |
+| **Version Pinning** | Workflows can pin to bundle versions |
+| **Export/Import** | Jobs can be archived and restored |
+
+## Maintainability Requirements
+
+### Code Organization
+
+| Requirement | Implementation |
+|-------------|----------------|
+| **Module Size** | No module >2,500 lines |
+| **Separation of Concerns** | Narrow module responsibilities |
+| **Constants Centralization** | All paths in constants.py |
+| **Test Separation** | Unit vs integration split |
+
+### Documentation
+
+| Requirement | Implementation |
+|-------------|----------------|
+| **Doc Coverage** | All public functions documented |
+| **Generated Docs** | Workflow-generated, protected |
+| **Change Tracking** | Change impact documentation |
+
+### Testing
+
+| Requirement | Implementation |
+|-------------|----------------|
+| **Unit Test Coverage** | Pure logic isolated from filesystem |
+| **Integration Test Coverage** | Real files, external systems |
+| **Test Markers** | pytest markers for selection |
 
 ## Constraints
 
 ### Technical Constraints
 
-| Constraint | Description |
-|------------|-------------|
-| Python 3.11+ | Minimum Python version |
-| No async/await | Synchronous execution model |
-| File-based state | No database dependency |
-| CLI-only | No web interface |
+| Constraint | Rationale |
+|------------|-----------|
+| **No Markdown Write-Backs** | v2 contract — sidecar only |
+| **No Pre-Invocation Sidecar Writes** | Coder owns sidecar |
+| **No Recovery Functions** | Explicit failure routing |
+| **Meta.json Only** | Single structured communication channel |
 
-### Business Constraints
+### Operational Constraints
 
-| Constraint | Description |
-|------------|-------------|
-| Backend dependency | Distributed mode requires backend |
-| LLM provider accounts | User must provide API credentials |
-| Local filesystem | Runtime requires writable home directory |
-
-## Quality Assurance
-
-### Testing Requirements
-
-| Test Type | Coverage | Tool |
-|-----------|----------|------|
-| Unit tests | Core modules | pytest |
-| Integration tests | Step execution | pytest |
-| Contract tests | Meta.json schema | JSON Schema validation |
-
-### Validation Requirements
-
-| Validation | Frequency | Owner |
-|------------|-----------|-------|
-| Schema conformance | Every build | CI/CD |
-| Type checking | Every commit | Developer |
-| Documentation sync | On code change | documentation_sync_v1 |
+| Constraint | Rationale |
+|------------|-----------|
+| **Bootstrap/Runtime Distinction** | Runtime loads from user home, not repo |
+| **External Coder Dependency** | Runtime requires installed coders |
+| **Windows Path Handling** | Special handling for pathlib edge cases |
+| **Daemon Child Processes** | Fresh subprocess per step for code reload |
 
 ---
 
-*These non-functional requirements constrain the implementation of agent-runner-v2. See `FUNCTIONAL_SPEC.md` for functional requirements and `RUNBOOK.md` for operational procedures.*
+*Generated by workflow: 00_master_docs_bootstrap_v1 / step: 03_generate_system_overview_docs*

@@ -261,23 +261,7 @@ For EACH {image_stem}_desc.json processed:
      image_filename | t2i_prompt1 | t2i_prompt2 | negative_prompt
    Save to: {IMAGE_CSV_RUN_DIR}/{image_name}.csv
 
-After processing ALL images, write meta.json to: {IMAGE_CSV_JSON_METAJSON}
-
-meta.json structure:
-{
-  "schema_version": "v2",
-  "coder_result": {
-    "status": "APPROVED",
-    "remark": "Generated T2V variations for N images",
-    "recorded_at": "<current ISO timestamp>",
-    "artifacts": {
-      "IMAGE_CSV_JSON": "{IMAGE_CSV_RUN_DIR}/",
-      "IMAGE_CSV_CSV": "{IMAGE_CSV_RUN_DIR}/"
-    }
-  }
-}
-
-Return APPROVED if all .json, .csv, and meta.json files were written successfully.
+Return APPROVED if all .json and .csv files were written successfully.
 Return REJECTED only if files could NOT be written (API error, disk failure).
 Do NOT reject for quality concerns.
 
@@ -305,9 +289,7 @@ Execution sequence:
 2. Read each description file
 3. Generate 4 independent variations per image
 4. Write each {image_name}.json and {image_name}.csv
-5. Write meta.json sidecar
-6. Verify sidecar exists on disk
-7. Return final JSON
+5. Return final JSON
 
 ================================================================================
 QUALITY CHECKLIST (WRITING GUIDE — NOT A REJECTION CRITERION)

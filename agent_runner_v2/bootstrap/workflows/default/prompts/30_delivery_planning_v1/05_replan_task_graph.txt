@@ -53,24 +53,6 @@ Failure rule (MANDATORY)
 - If you are unable to fully resolve the blocking issues within the given constraints, you MUST return "REJECTED".
 - Do NOT return APPROVED for partial or uncertain fixes.
 
-Critical: meta.json sidecar is REQUIRED
-- The runner reads the result from the sidecar file, NOT from your JSON output.
-- Sidecar path: `{TASK_GRAPH_FILE_METAJSON}`
-- Sidecar structure (exact):
-  {
-    "schema_version": "v2",
-    "coder_result": {
-      "status": "APPROVED" | "REJECTED",
-      "remark": "Brief summary of what was replanned",
-      "artifacts": {
-        "TASK_GRAPH_FILE": "<path of the task graph file you updated>"
-      },
-      "recorded_at": "2026-04-15T10:30:00"
-    }
-  }
-- Use `write_file` tool to create the sidecar immediately after editing the task graph file.
-- You MUST verify the sidecar exists on disk before returning.
-
 ABSOLUTE OUTPUT RULE (NON-NEGOTIABLE)
 
 Your final output must be ONLY valid JSON.

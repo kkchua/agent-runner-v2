@@ -3,8 +3,8 @@ You are generating the architecture, engineering, and operations master docs for
 This step completes the richer architectural synthesis. Keep the result grounded in the repo code, the codebase baseline, and the previously generated analysis and overview docs.
 
 Inputs you must read first:
-- `{SYSTEM_DOC_ROOT}/project_analysis.md`
-- `{SYSTEM_DOC_ROOT}/README.md`
+- `{PROJECT_ANALYSIS}`
+- `{SYSTEM_DOCS_INDEX}`
 - `{CODEBASE_DOC_ROOT}/01_inventory/codebase_inventory.md`
 - `{CODEBASE_DOC_ROOT}/04_changes/` latest change impact document
 - `{CODEBASE_DOC_ROOT}/02_modules/`
@@ -13,14 +13,14 @@ Inputs you must read first:
 - relevant workflow and launcher entrypoints under `scripts/` and repository root
 
 Write or refresh these docs:
-- `{SYSTEM_DOC_ROOT}/SYSTEM_CONTEXT.md`
-- `{SYSTEM_DOC_ROOT}/COMPONENT_ARCHITECTURE.md`
-- `{SYSTEM_DOC_ROOT}/DECISION_LOG.md`
-- `{SYSTEM_DOC_ROOT}/SYSTEM_FILE_STRUCTURE.md`
-- `{SYSTEM_DOC_ROOT}/DEVELOPER_GUIDE.md`
-- `{SYSTEM_DOC_ROOT}/RUNBOOK.md`
-- `{SYSTEM_DOC_ROOT}/EXISTING_REPO_WORKFLOW_SOP.md` if the workflow guidance needs refresh
-- `{SYSTEM_DOC_ROOT}/{job-id}-bootstrap-change-log.md`
+- `{SYSTEM_CONTEXT}`
+- `{COMPONENT_ARCHITECTURE}`
+- `{DECISION_LOG}`
+- `{SYSTEM_FILE_STRUCTURE}`
+- `{DEVELOPER_GUIDE}`
+- `{RUNBOOK}`
+- `{EXISTING_REPO_WORKFLOW_SOP}` if the workflow guidance needs refresh
+- `{SYSTEM_DOCS_CHANGE_LOG}`
 
 Workflow-owned artifact contract:
 - `SYSTEM_DOCS_CHANGE_LOG` -> `{SYSTEM_DOC_ROOT}/{job-id}-bootstrap-change-log.md`
@@ -41,11 +41,11 @@ Primary objectives:
 6. Include enough information for the next-phase HTML architecture site to explain the major pieces of the app to developers, stakeholders, functional consumers, and operators.
 
 Hard ownership rule:
-- `{SYSTEM_DOC_ROOT}/project_analysis.md` is read-only in this step.
-- `{SYSTEM_DOC_ROOT}/README.md` and the overview docs from step 03 are read-only inputs in this step.
-- Do not create, modify, or refresh `project_analysis.md` or any step 03 overview docs here.
+- `{PROJECT_ANALYSIS}` is read-only in this step.
+- `{SYSTEM_DOCS_INDEX}` and the overview docs from step 03 are read-only inputs in this step.
+- Do not create, modify, or refresh `PROJECT_ANALYSIS` or any step 03 overview docs here.
 - The only writable outputs are the files listed in "Write or refresh these docs" and the bootstrap change log.
-- In particular, do not touch `project_analysis.md`, `README.md`, `DOCUMENTATION_STANDARD.md`, `BUNDLE_TAXONOMY.md`, `BUNDLE_MIGRATION_PLAN.md`, `SYSTEM_OVERVIEW.md`, `BUSINESS_CAPABILITIES.md`, `FUNCTIONAL_SPEC.md`, or `NON_FUNCTIONAL_REQUIREMENTS.md`.
+- In particular, do not touch `PROJECT_ANALYSIS`, `SYSTEM_DOCS_INDEX`, `SYSTEM_DOC_STANDARD`, `BUNDLE_TAXONOMY`, `BUNDLE_MIGRATION_PLAN`, `SYSTEM_OVERVIEW`, `BUSINESS_CAPABILITIES`, `FUNCTIONAL_SPEC`, or `NON_FUNCTIONAL_REQUIREMENTS`.
 
 Frontmatter contract:
 - Use these exact `template_id` values in YAML frontmatter:
@@ -57,16 +57,16 @@ Frontmatter contract:
   - `RUNBOOK.md` -> `OPS-01-RB`
 
 Required content rules:
-- `COMPONENT_ARCHITECTURE.md` should describe major components, dependencies, and boundaries.
-- `COMPONENT_ARCHITECTURE.md` should state whether the repository is following the universal baseline or a repo-selected profile, and whether DDD or EDA are conditional rather than universal standards.
-- `SYSTEM_FILE_STRUCTURE.md` should explain why the major folders exist and how they relate.
-- `DEVELOPER_GUIDE.md` should tell developers where code scanning, documentation generation, workflow execution, and architecture posture management live.
-- `DEVELOPER_GUIDE.md` must include the exact top-level sections `Development Workflow`, `Key Commands`, `Documentation Responsibilities`, and `Architecture Posture` in that order before any optional detail sections.
-- `DEVELOPER_GUIDE.md` should explicitly mention the code scanning entrypoint, documentation generation entrypoint, workflow execution entrypoint, and the repo profile/migration posture used for architecture decisions.
-- `RUNBOOK.md` should tell operators where job state, runtime bundles, logs, and sidecars live.
-- `EXISTING_REPO_WORKFLOW_SOP.md` should preserve the existing-repo onboarding and reconciliation sequence and explain how 00_ and 10_ workflows are rerun after drift or contract changes.
-- `EXISTING_REPO_WORKFLOW_SOP.md` must include the exact top-level sections `Purpose`, `First-Time Setup`, `Normal Governed Delivery`, `Drift Reconciliation`, `Governance Refresh`, `Batch Files`, and `Notes` in that order.
-- `EXISTING_REPO_WORKFLOW_SOP.md` must explicitly describe the first-time setup chain (`00_master_docs_bootstrap_v1` then `10_execution_scaffold_v1`) and the normal governed delivery chain (`20_initiative_intake_v1` then `30_delivery_planning_v1` then `31_task_execution_v1`), plus the drift-recovery path via `40_documentation_sync_v1` and the architecture communication phase via `50_architecture_site_v1`.
+- `{COMPONENT_ARCHITECTURE}` should describe major components, dependencies, and boundaries.
+- `{COMPONENT_ARCHITECTURE}` should state whether the repository is following the universal baseline or a repo-selected profile, and whether DDD or EDA are conditional rather than universal standards.
+- `{SYSTEM_FILE_STRUCTURE}` should explain why the major folders exist and how they relate.
+- `{DEVELOPER_GUIDE}` should tell developers where code scanning, documentation generation, workflow execution, and architecture posture management live.
+- `{DEVELOPER_GUIDE}` must include the exact top-level sections `Development Workflow`, `Key Commands`, `Documentation Responsibilities`, and `Architecture Posture` in that order before any optional detail sections.
+- `{DEVELOPER_GUIDE}` should explicitly mention the code scanning entrypoint, documentation generation entrypoint, workflow execution entrypoint, and the repo profile/migration posture used for architecture decisions.
+- `{RUNBOOK}` should tell operators where job state, runtime bundles, logs, and sidecars live.
+- `{EXISTING_REPO_WORKFLOW_SOP}` should preserve the existing-repo onboarding and reconciliation sequence and explain how 00_ and 10_ workflows are rerun after drift or contract changes.
+- `{EXISTING_REPO_WORKFLOW_SOP}` must include the exact top-level sections `Purpose`, `First-Time Setup`, `Normal Governed Delivery`, `Drift Reconciliation`, `Governance Refresh`, `Batch Files`, and `Notes` in that order.
+- `{EXISTING_REPO_WORKFLOW_SOP}` must explicitly describe the first-time setup chain (`00_master_docs_bootstrap_v1` then `10_execution_scaffold_v1`) and the normal governed delivery chain (`20_initiative_intake_v1` then `30_delivery_planning_v1` then `31_task_execution_v1`), plus the drift-recovery path via `40_documentation_sync_v1` and the architecture communication phase via `50_architecture_site_v1`.
 - the bootstrap change log should summarize refreshed documents, key findings, and remaining follow-up items if any.
 - Each file must include workflow-generated YAML frontmatter with a stable `template_id` and the workflow metadata already used elsewhere in this bootstrap set.
 - Use these section headings exactly in the generated docs:
@@ -77,47 +77,3 @@ Required content rules:
   - `DEVELOPER_GUIDE.md`: development workflow, key commands, documentation responsibilities, architecture posture
   - `RUNBOOK.md`: operations scope, routine procedures, failure handling
   - `EXISTING_REPO_WORKFLOW_SOP.md`: `Purpose`, `First-Time Setup`, `Normal Governed Delivery`, `Drift Reconciliation`, `Governance Refresh`, `Batch Files`, `Notes`
-
-Meta contract:
-- Write the sidecar JSON to `{SYSTEM_DOCS_CHANGE_LOG_METAJSON}`.
-- Mark the run `APPROVED` only when the architecture, engineering, and operations docs are written and internally consistent.
-- Do NOT write a plain top-level `{ "status": ..., "remark": ..., "artifacts": ... }` object into `meta.json`.
-- `meta.json` must be the wrapped v2 sidecar object with `schema_version` and `coder_result`.
-- The sidecar MUST use this exact structure:
-  {
-    "schema_version": "v2",
-    "coder_result": {
-      "status": "APPROVED" | "REJECTED",
-      "remark": "<summary>",
-      "artifacts": {
-        "SYSTEM_DOCS_CHANGE_LOG": "{SYSTEM_DOCS_CHANGE_LOG_PATH}",
-        "SYSTEM_CONTEXT": "{SYSTEM_DOC_ROOT}/SYSTEM_CONTEXT.md",
-        "COMPONENT_ARCHITECTURE": "{SYSTEM_DOC_ROOT}/COMPONENT_ARCHITECTURE.md",
-        "DECISION_LOG": "{SYSTEM_DOC_ROOT}/DECISION_LOG.md",
-        "SYSTEM_FILE_STRUCTURE": "{SYSTEM_DOC_ROOT}/SYSTEM_FILE_STRUCTURE.md",
-        "DEVELOPER_GUIDE": "{SYSTEM_DOC_ROOT}/DEVELOPER_GUIDE.md",
-        "RUNBOOK": "{SYSTEM_DOC_ROOT}/RUNBOOK.md",
-        "EXISTING_REPO_WORKFLOW_SOP": "{SYSTEM_DOC_ROOT}/EXISTING_REPO_WORKFLOW_SOP.md"
-      },
-      "recorded_at": "2026-07-01T00:00:00"
-    }
-  }
-
-Before finishing, verify that all target files exist on disk and align with the current repository state.
-
-ABSOLUTE OUTPUT RULE
-- Return ONLY valid JSON:
-  {
-    "status": "APPROVED | REJECTED",
-    "remark": "<summary>",
-    "artifacts": {
-      "SYSTEM_DOCS_CHANGE_LOG": "{SYSTEM_DOCS_CHANGE_LOG_PATH}",
-      "SYSTEM_CONTEXT": "{SYSTEM_DOC_ROOT}/SYSTEM_CONTEXT.md",
-      "COMPONENT_ARCHITECTURE": "{SYSTEM_DOC_ROOT}/COMPONENT_ARCHITECTURE.md",
-      "DECISION_LOG": "{SYSTEM_DOC_ROOT}/DECISION_LOG.md",
-      "SYSTEM_FILE_STRUCTURE": "{SYSTEM_DOC_ROOT}/SYSTEM_FILE_STRUCTURE.md",
-      "DEVELOPER_GUIDE": "{SYSTEM_DOC_ROOT}/DEVELOPER_GUIDE.md",
-      "RUNBOOK": "{SYSTEM_DOC_ROOT}/RUNBOOK.md",
-      "EXISTING_REPO_WORKFLOW_SOP": "{SYSTEM_DOC_ROOT}/EXISTING_REPO_WORKFLOW_SOP.md"
-    }
-  }

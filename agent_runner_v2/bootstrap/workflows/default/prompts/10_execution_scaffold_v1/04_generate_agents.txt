@@ -9,12 +9,12 @@ Inputs:
 - {PROJECT_ANALYSIS}
 - {DELIVERY_SOP}
 - {DELIVERY_STATUS_RULES}
-- {CODEBASE_DOC_SOP}
-- {CODEBASE_DOC_STATUS_RULES}
+- {CODEBASE_DOC_SOP_v1}
+- {CODEBASE_DOC_STATUS_RULES_v1}
 
 Task:
 - Generate:
-  - `{DELIVERY_AGENTS_MD}`
+  - `{DELIVERY_AGENTS}`
   - `{DELIVERY_AGENT_PLANNER}`
   - `{DELIVERY_AGENT_TASK_DECOMPOSER}`
   - `{DELIVERY_AGENT_IMPL_PLANNER}`
@@ -29,29 +29,4 @@ Task:
 - Do not generate `07_master_prompts`.
 
 Completion rule (MANDATORY)
-- Return APPROVED only after all files exist and the sidecar exists at `{DELIVERY_AGENTS_MD_METAJSON}`.
-
-Critical: meta.json sidecar is REQUIRED
-- Sidecar path: `{DELIVERY_AGENTS_MD_METAJSON}`
-- Use `write_file` tool to create the sidecar after writing the agent contracts.
-- Sidecar structure (exact):
-  {
-    "schema_version": "v2",
-    "coder_result": {
-      "status": "APPROVED" | "REJECTED",
-      "remark": "<summary>",
-      "artifacts": {
-        "DELIVERY_AGENTS_MD": "{DELIVERY_AGENTS_MD}",
-        "DELIVERY_AGENT_PLANNER": "{DELIVERY_AGENT_PLANNER}",
-        "DELIVERY_AGENT_TASK_DECOMPOSER": "{DELIVERY_AGENT_TASK_DECOMPOSER}",
-        "DELIVERY_AGENT_IMPL_PLANNER": "{DELIVERY_AGENT_IMPL_PLANNER}",
-        "DELIVERY_AGENT_EXECUTOR": "{DELIVERY_AGENT_EXECUTOR}",
-        "DELIVERY_AGENT_REVIEWER": "{DELIVERY_AGENT_REVIEWER}",
-        "DELIVERY_AGENT_MEMORY_MANAGER": "{DELIVERY_AGENT_MEMORY_MANAGER}"
-      },
-      "recorded_at": "2026-06-29T00:00:00"
-    }
-  }
-
-ABSOLUTE OUTPUT RULE
-- Return ONLY valid JSON with every written agent-contract path in `artifacts`.
+- Return APPROVED only after all files exist and the sidecar exists at `{DELIVERY_AGENTS_METAJSON}`.

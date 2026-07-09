@@ -73,6 +73,4 @@ OUTPUT JSON:
   }
 }
 
-Write meta.json sidecar with assembly status.
-
 Return ONLY the JSON. No explanations.

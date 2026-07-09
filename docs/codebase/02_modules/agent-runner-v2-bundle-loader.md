@@ -6,9 +6,9 @@ module_path: "agent_runner_v2/bundle_loader.py"
 module_area: "bootstrap"
 documentation_mode: "full"
 owner_doc_path: "docs/codebase/02_modules/agent-runner-v2-bundle-loader.md"
-last_verified_by_change: "40_documentation_sync_v1 / 40DOCSYNC-GEN-20260704-001 / 2026-07-04T13:29:07+08:00"
-created: "2026-07-04T13:29:07+08:00"
-owner: "40_documentation_sync_v1"
+last_verified_by_change: "00_master_docs_bootstrap_v1 / 00DOC-GEN-20260709-002 / 2026-07-09T21:13:38+08:00"
+created: "2026-07-09T21:13:38+08:00"
+owner: "00_master_docs_bootstrap_v1"
 ---
 
 # Module Documentation: agent_runner_v2.bundle_loader
@@ -41,89 +41,292 @@ This module belongs to the `bootstrap` area and is documented as `full`.
 
 ### 2.1 Classes
 
-| Class | Purpose | Key Methods |
-|-------|---------|-------------|
-| | | |
+No public classes.
+
 
 ### 2.2 Functions
 
-| Function | Signature | Purpose |
-|----------|-----------|---------|
-| `bundles_root` | `()` | public function |
-| `core_bundles_root` | `()` | public function |
-| `domain_bundles_root` | `()` | public function |
-| `workflow_bundles_root` | `()` | public function |
-| `config_path` | `(workspace_root)` | public function |
-| `workflows_root` | `(workspace_root)` | public function |
-| `workflow_root` | `(workspace_root, workflow_name)` | public function |
-| `global_workflows_root` | `()` | public function |
-| `global_workflow_root` | `(workflow_name)` | public function |
-| `package_bootstrap_root` | `()` | public function |
-| `global_bootstrap_root` | `()` | public function |
-| `bootstrap_source_root` | `(workspace_root)` | public function |
-| `publish_bootstrap_bundle` | `(workspace_root)` | public function |
-| `install_bootstrap_bundle` | `(workspace_root)` | public function |
-| `resolve_workflow_root` | `(workspace_root, workflow_name)` | public function |
-| `load_project_config` | `(workspace_root)` | public function |
-| `save_project_config` | `(workspace_root, config)` | public function |
-| `load_workflow_module` | `(workspace_root, workflow_name)` | public function |
-| `seed_workflow_bundle` | `(target_root, workflow_name)` | Copy the bootstrap workflow template set into the target global workflow location. |
-| `init_workspace` | `(workspace_root, workflow_name)` | public function |
+#### bundles_root()
+
+**Signature**: `bundles_root()`
+
+**Returns**: `Path`
+
+---
+
+#### core_bundles_root()
+
+**Signature**: `core_bundles_root()`
+
+**Returns**: `Path`
+
+---
+
+#### domain_bundles_root()
+
+**Signature**: `domain_bundles_root()`
+
+**Returns**: `Path`
+
+---
+
+#### workflow_bundles_root()
+
+**Signature**: `workflow_bundles_root()`
+
+**Returns**: `Path`
+
+---
+
+#### config_path()
+
+**Signature**: `config_path(workspace_root: Path)`
+
+**Parameters**:
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `workspace_root` | `Path` | — | — |
+
+**Returns**: `Path`
+
+---
+
+#### workflows_root()
+
+**Signature**: `workflows_root(workspace_root: Path)`
+
+**Parameters**:
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `workspace_root` | `Path` | — | — |
+
+**Returns**: `Path`
+
+---
+
+#### workflow_root()
+
+**Signature**: `workflow_root(workspace_root: Path, workflow_name: str)`
+
+**Parameters**:
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `workspace_root` | `Path` | — | — |
+| `workflow_name` | `str` | — | — |
+
+**Returns**: `Path`
+
+---
+
+#### global_workflows_root()
+
+**Signature**: `global_workflows_root()`
+
+**Returns**: `Path`
+
+---
+
+#### global_workflow_root()
+
+**Signature**: `global_workflow_root(workflow_name: str)`
+
+**Parameters**:
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `workflow_name` | `str` | — | — |
+
+**Returns**: `Path`
+
+---
+
+#### package_bootstrap_root()
+
+**Signature**: `package_bootstrap_root()`
+
+**Returns**: `Path`
+
+---
+
+#### global_bootstrap_root()
+
+**Signature**: `global_bootstrap_root()`
+
+**Returns**: `Path`
+
+---
+
+#### bootstrap_source_root()
+
+**Signature**: `bootstrap_source_root(workspace_root: Path)`
+
+**Parameters**:
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `workspace_root` | `Path` | — | — |
+
+**Returns**: `Path`
+
+---
+
+#### publish_bootstrap_bundle()
+
+**Signature**: `publish_bootstrap_bundle(workspace_root: Path, *, source_root: Path | None = None, package_root: Path | None = None)`
+
+**Parameters**:
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `workspace_root` | `Path` | — | — |
+| `source_root` | `Path | None` | `None` | — |
+| `package_root` | `Path | None` | `None` | — |
+
+**Returns**: `dict`
+
+---
+
+#### install_bootstrap_bundle()
+
+**Signature**: `install_bootstrap_bundle(workspace_root: Path, *, package_root: Path | None = None, runner_home: Path | None = None)`
+
+**Parameters**:
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `workspace_root` | `Path` | — | — |
+| `package_root` | `Path | None` | `None` | — |
+| `runner_home` | `Path | None` | `None` | — |
+
+**Returns**: `dict`
+
+---
+
+#### resolve_workflow_root()
+
+**Signature**: `resolve_workflow_root(workspace_root: Path, workflow_name: str, *, config: dict | None = None)`
+
+**Parameters**:
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `workspace_root` | `Path` | — | — |
+| `workflow_name` | `str` | — | — |
+| `config` | `dict | None` | `None` | — |
+
+**Returns**: `Path`
+
+---
+
+#### load_project_config()
+
+**Signature**: `load_project_config(workspace_root: Path)`
+
+**Parameters**:
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `workspace_root` | `Path` | — | — |
+
+**Returns**: `dict`
+
+---
+
+#### save_project_config()
+
+**Signature**: `save_project_config(workspace_root: Path, config: dict)`
+
+**Parameters**:
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `workspace_root` | `Path` | — | — |
+| `config` | `dict` | — | — |
+
+**Returns**: `None`
+
+---
+
+#### load_workflow_module()
+
+**Signature**: `load_workflow_module(workspace_root: Path, workflow_name: str, *, config: dict | None = None)`
+
+**Parameters**:
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `workspace_root` | `Path` | — | — |
+| `workflow_name` | `str` | — | — |
+| `config` | `dict | None` | `None` | — |
+
+**Returns**: `ModuleType`
+
+---
+
+#### seed_workflow_bundle()
+
+**Signature**: `seed_workflow_bundle(target_root: Path, workflow_name: str = 'example')`
+
+**Purpose**: Copy the bootstrap workflow template set into the target global workflow location.
+
+**Parameters**:
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `target_root` | `Path` | — | — |
+| `workflow_name` | `str` | `'example'` | — |
+
+**Returns**: `Path`
+
+---
+
+#### init_workspace()
+
+**Signature**: `init_workspace(workspace_root: Path, workflow_name: str = 'default', *, domain: str = DEFAULT_DOMAIN_BUNDLE, bundle_profile: str = DEFAULT_BUNDLE_PROFILE)`
+
+**Parameters**:
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `workspace_root` | `Path` | — | — |
+| `workflow_name` | `str` | `'default'` | — |
+| `domain` | `str` | `DEFAULT_DOMAIN_BUNDLE` | — |
+| `bundle_profile` | `str` | `DEFAULT_BUNDLE_PROFILE` | — |
+
+**Returns**: `dict`
+
+---
+
 
 ### 2.3 Constants / Configuration
 
-| Name | Value / Type | Purpose |
-|------|-------------|---------|
-| `GLOBAL_RUNNER_HOME` | constant | module configuration |
-| `BOOTSTRAP_ROOT` | constant | module configuration |
-| `BOOTSTRAP_SOURCE_ROOT` | constant | module configuration |
-| `PACKAGE_BOOTSTRAP_ROOT` | constant | module configuration |
+| Name | Purpose |
+|------|--------|
+| `GLOBAL_RUNNER_HOME` | module configuration |
+| `BOOTSTRAP_ROOT` | module configuration |
+| `BOOTSTRAP_SOURCE_ROOT` | module configuration |
+| `PACKAGE_BOOTSTRAP_ROOT` | module configuration |
 
-## 3. Internal Implementation
 
-### 3.1 Key Data Structures
+## 3. Error Handling
 
-Auto-generated baseline documentation derived from the current source tree.
+No documented exceptions.
 
-### 3.2 Algorithm / Flow
 
-See the source module for implementation details; this document captures the public contract and scan-derived summary.
+## 4. Testing
 
-## 4. I/O Contract
-
-### 4.1 Inputs
-
-Derived from function parameters, imports, and file-level responsibilities.
-
-### 4.2 Outputs
-
-Derived from function return values and side effects observed in the source file.
-
-### 4.3 Side Effects
-
-Tracked at a baseline level by the repository scan.
-
-## 5. Error Handling
-
-| Error Condition | Handling | Recovery |
-|----------------|----------|----------|
-| | | |
-
-## 6. Testing
-
-### 6.1 Test Coverage
+### 4.1 Test Coverage
 
 | Test File | Coverage Area |
-|-----------|--------------|
-| `tests/test_bundle_loader.py` | `agent_runner_v2.bundle_loader` |
-| `tests/test_tool_instruction_block.py` | `agent_runner_v2.bundle_loader` |
+|-----------|---------------|
+| (none) | No test references found |
 
-### 6.2 Known Gaps
 
-Auto-generated baseline. Review and refine as the codebase evolves.
-
-## 7. Change Log
+## 5. Change Log
 
 | Date | Change | Verified By |
 |------|--------|-------------|
-| 2026-07-04 | Initial baseline generated from repository scan | 40_documentation_sync_v1 |
+| 2026-07-09 | Initial baseline generated from repository scan | 00_master_docs_bootstrap_v1 |

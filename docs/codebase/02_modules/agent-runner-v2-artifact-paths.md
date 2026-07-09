@@ -6,9 +6,9 @@ module_path: "agent_runner_v2/artifact_paths.py"
 module_area: "schema"
 documentation_mode: "summary"
 owner_doc_path: "docs/codebase/02_modules/agent-runner-v2-artifact-paths.md"
-last_verified_by_change: "40_documentation_sync_v1 / 40DOCSYNC-GEN-20260704-001 / 2026-07-04T13:29:07+08:00"
-created: "2026-07-04T13:29:07+08:00"
-owner: "40_documentation_sync_v1"
+last_verified_by_change: "00_master_docs_bootstrap_v1 / 00DOC-GEN-20260709-002 / 2026-07-09T21:13:38+08:00"
+created: "2026-07-09T21:13:38+08:00"
+owner: "00_master_docs_bootstrap_v1"
 ---
 
 # Module Documentation: agent_runner_v2.artifact_paths
@@ -39,69 +39,100 @@ This module belongs to the `schema` area and is documented as `summary`.
 
 ### 2.1 Classes
 
-| Class | Purpose | Key Methods |
-|-------|---------|-------------|
-| | | |
+No public classes.
+
 
 ### 2.2 Functions
 
-| Function | Signature | Purpose |
-|----------|-----------|---------|
-| `compute_paths` | `()` | Return (artifact_path, meta_json_path) — single source of truth. |
-| `meta_json_path_for_artifact` | `(artifact_path)` | Return the meta.json path for any artifact path. |
-| `load_meta_json` | `(artifact_path)` | Load coder-written meta.json. Returns None if missing. |
-| `read_coder_result` | `(artifact_path)` | Read coder_result from meta.json. Returns None if missing or invalid. |
+#### compute_paths()
+
+**Signature**: `compute_paths(*, node_id: str, title: str = '', output_dir: str, ext: str = '.md')`
+
+**Purpose**: Return (artifact_path, meta_json_path) — single source of truth.
+
+**Parameters**:
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `node_id` | `str` | — | Task node ID from task graph (e.g., "TASK-20260413-07_supersede-workflow"). |
+| `title` | `str` | `''` | Human-readable title (e.g., "Supersede Workflow Implementation"). |
+| `output_dir` | `str` | — | Relative output directory (e.g., "docs/delivery/03_tasks"). |
+| `ext` | `str` | `'.md'` | Artifact file extension (default ".md"). |
+
+**Returns**: `tuple[str, str]`
+
+---
+
+#### meta_json_path_for_artifact()
+
+**Signature**: `meta_json_path_for_artifact(artifact_path: str)`
+
+**Purpose**: Return the meta.json path for any artifact path.
+
+**Parameters**:
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `artifact_path` | `str` | — | — |
+
+**Returns**: `str`
+
+---
+
+#### load_meta_json()
+
+**Signature**: `load_meta_json(artifact_path: str)`
+
+**Purpose**: Load coder-written meta.json. Returns None if missing.
+
+**Parameters**:
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `artifact_path` | `str` | — | — |
+
+**Returns**: `dict | None`
+
+---
+
+#### read_coder_result()
+
+**Signature**: `read_coder_result(artifact_path: str)`
+
+**Purpose**: Read coder_result from meta.json. Returns None if missing or invalid.
+
+**Parameters**:
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `artifact_path` | `str` | — | — |
+
+**Returns**: `dict | None`
+
+---
+
 
 ### 2.3 Constants / Configuration
 
-| Name | Value / Type | Purpose |
-|------|-------------|---------|
-| | | |
+No public constants.
 
-## 3. Internal Implementation
 
-### 3.1 Key Data Structures
+## 3. Error Handling
 
-Auto-generated baseline documentation derived from the current source tree.
+No documented exceptions.
 
-### 3.2 Algorithm / Flow
 
-See the source module for implementation details; this document captures the public contract and scan-derived summary.
+## 4. Testing
 
-## 4. I/O Contract
-
-### 4.1 Inputs
-
-Derived from function parameters, imports, and file-level responsibilities.
-
-### 4.2 Outputs
-
-Derived from function return values and side effects observed in the source file.
-
-### 4.3 Side Effects
-
-Tracked at a baseline level by the repository scan.
-
-## 5. Error Handling
-
-| Error Condition | Handling | Recovery |
-|----------------|----------|----------|
-| | | |
-
-## 6. Testing
-
-### 6.1 Test Coverage
+### 4.1 Test Coverage
 
 | Test File | Coverage Area |
-|-----------|--------------|
-| | |
+|-----------|---------------|
+| (none) | No test references found |
 
-### 6.2 Known Gaps
 
-Auto-generated baseline. Review and refine as the codebase evolves.
-
-## 7. Change Log
+## 5. Change Log
 
 | Date | Change | Verified By |
 |------|--------|-------------|
-| 2026-07-04 | Initial baseline generated from repository scan | 40_documentation_sync_v1 |
+| 2026-07-09 | Initial baseline generated from repository scan | 00_master_docs_bootstrap_v1 |

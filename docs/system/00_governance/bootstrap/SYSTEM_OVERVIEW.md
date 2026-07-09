@@ -1,12 +1,10 @@
 ---
 template_id: "SYS-00-SO"
-title: "System Overview"
-status: "active"
-generated: "2026-07-04T12:00:00+08:00"
+managed_by: workflow-generated
+generated: "2026-07-09T21:18:02+08:00"
 workflow: "00_master_docs_bootstrap_v1"
 step: "03_generate_system_overview_docs"
-change_id: "00DOC-GEN-20260704-002"
-managed_by: workflow-generated
+change_id: "00DOC-GEN-20260709-002"
 ---
 
 > Managed by workflow: `00_master_docs_bootstrap_v1` / step: `03_generate_system_overview_docs`
@@ -16,146 +14,227 @@ managed_by: workflow-generated
 
 ## Purpose
 
-This document provides a high-level overview of the `agent-runner-v2` platform, explaining its purpose, core workflows, and value proposition for stakeholders, developers, and operators.
+This document provides a high-level overview of agent-runner-v2, explaining the platform's purpose, its workflow execution model, and the value flow from input to output. It serves as the primary entry point for stakeholders, new team members, and anyone seeking to understand what the system does without diving into implementation details.
+
+agent-runner-v2 is a standalone Python LLM workflow orchestration engine that runs structured multi-step workflows across Claude, Codex, Qwen, and aliased models, with review loops, retries, approval gates, and deterministic runner actions.
 
 ## Scope
 
-`agent-runner-v2` is a standalone Python LLM workflow orchestration engine that runs structured multi-step workflows across multiple LLM providers (Claude, Codex, Qwen). The platform supports review loops, retries, approval gates, and deterministic runner actions with a strict execution contract.
+### In Scope
 
-### What This Platform Does
+- Workflow orchestration and execution
+- Multi-step workflow management with state persistence
+- Coder invocation (Claude Code, Codex CLI, Qwen Code)
+- Deterministic action execution
+- Sidecar-based result communication
+- Review/refine routing loops
+- Backend-connected worker mode
+- Daemon supervision
 
-- **Orchestrates LLM workflows**: Multi-step workflows with deterministic routing
-- **Supports multiple usage modes**: Local execution, backend-connected worker, and daemon supervision
-- **Enforces strict contracts**: `meta.json` sidecar is the only structured result channel
-- **Manages job lifecycle**: State tracking, retry handling, failure classification
-- **Provides bootstrap workflows**: Pre-defined workflows for common patterns
+### Out of Scope
 
-### What This Platform Does Not Do
-
-- Does not replace individual LLM APIs (wraps them with adapters)
-- Does not persist execution history indefinitely (job-scoped)
-- Does not provide a web UI (CLI-focused)
-- Does not manage secrets or credentials (relies on environment)
+- LLM model training or fine-tuning
+- General-purpose task scheduling
+- CI/CD pipeline management
+- Container orchestration
+- Database management systems
 
 ## Primary Flows
 
-### Flow 1: Local Workflow Execution
+### Value Flow
+
+The core value flow of agent-runner-v2 follows this pattern:
 
 ```
-User → ukbe-run-agent run → Load Workflow → Render Prompt → Invoke Coder
-                                              ↓
-                                        Read meta.json
-                                              ↓
-                                        Validate Artifacts
-                                              ↓
-                                        Route to Next Step
+Requirement → Workflow → Step → Coder/Action → Artifact → Review → Route
 ```
 
-**Value**: Developers can run workflows locally without backend connectivity.
+**Flow Description:**
 
-### Flow 2: Backend-Connected Worker
+1. **Requirement Capture**: User defines work through draft initiatives, bug reports, or direct workflow invocation
+2. **Workflow Selection**: Appropriate workflow family selected based on work type
+3. **Step Execution**: Each step renders a prompt, invokes a coder or action, and produces artifacts
+4. **Result Validation**: Step results validated via `meta.json` sidecar and artifact verification
+5. **Review/Route**: Based on sidecar status, workflow routes to next step, retry, or completion
+6. **Artifact Accumulation**: Approved artifacts accumulate as project state
+
+### Execution Modes
+
+agent-runner-v2 supports three primary execution modes:
+
+#### Local Workflow Execution
+
+**Purpose**: Manual workflow execution with full control
+
+**Flow:**
 
 ```
-Daemon/Worker → Poll Backend → Claim Work → Execute Step
-                                                  ↓
-                                        Submit Result → Backend
-                                                  ↓
-                                        Poll for Next Work
+User → ukbe-run-agent run → Load workflow → Render prompt → Execute step → Route → Repeat
 ```
 
-**Value**: Workstation acts as a worker node for distributed execution.
+**Use Cases:**
+- Development and testing
+- One-off task execution
+- Debugging workflow steps
+- Manual approval workflows
 
-### Flow 3: Step Execution Loop
+#### Backend-Connected Worker
+
+**Purpose**: Backend-driven step execution
+
+**Flow:**
 
 ```
-Load Job State → Check Preflight → Run Step → Parse Result
-                                               ↓
-                                    ┌─────────┴─────────┐
-                                    ↓                   ↓
-                                  APPROVED           REJECTED
-                                    ↓                   ↓
-                              Advance Step         Review Loop
-                                    ↓                   ↓
-                              Next Step            Refine/Retry
+Backend → Worker poll → Claim step → Execute → Submit result → Repeat
 ```
 
-**Value**: Strict v2 contract with explicit routing and no silent recovery.
+**Commands:**
+- `ukbe-run-agent worker` — Continuous polling loop
+- `ukbe-run-agent poll` — Single poll operation
+- `ukbe-run-agent execute-step` — Single step execution
+
+**Use Cases:**
+- Distributed execution across workstations
+- Backend-managed work queues
+- Scalable task processing
+- Workload distribution
+
+#### Daemon Supervision
+
+**Purpose**: Workstation supervisor for backend-connected execution
+
+**Flow:**
+
+```
+Daemon start → Poll backend → Claim work → Spawn child process → Monitor → Heartbeat → Repeat
+```
+
+**Responsibilities:**
+- Claim work from backend
+- Spawn child `execute-step` processes
+- Track child process state
+- Emit child-scoped heartbeats
+- Handle child failures
+
+**Use Cases:**
+- Long-running workstation agents
+- Automatic work claiming
+- Process supervision
+- Operational visibility
+
+### Workflow Lifecycle
+
+#### Step Execution Lifecycle
+
+Each workflow step follows a strict lifecycle:
+
+```
+Load Bundle → Render Prompt → Preflight Check → Execute → Read Sidecar → Validate → Route
+```
+
+**Phase Details:**
+
+| Phase | Responsibility | Output |
+|-------|---------------|--------|
+| Load Bundle | Load workflow definition from runtime bundle | Workflow config, prompt template |
+| Render Prompt | Substitute context variables, inject sidecar instructions | Final prompt text |
+| Preflight Check | Verify required artifacts exist | Go/No-go decision |
+| Execute | Invoke coder or run action | Raw output, artifacts |
+| Read Sidecar | Parse `meta.json` for structured results | Status, remark, artifact paths |
+| Validate | Verify artifacts exist at declared paths | Validation result |
+| Route | Determine next step based on status | Next step or completion |
+
+#### Sidecar Contract
+
+The `meta.json` sidecar is the **only** structured communication channel:
+
+```json
+{
+  "schema_version": "v2",
+  "coder_result": {
+    "status": "APPROVED",
+    "remark": "Brief summary",
+    "artifacts": {"ARTIFACT_KEY": "path/to/file.md"},
+    "recorded_at": "2026-07-09T21:18:02+08:00"
+  }
+}
+```
+
+**Status Decision Rules:**
+- `APPROVED`: All required artifacts exist, meta.json written
+- `REJECTED`: Missing artifact, validation failure, or explicit rejection
 
 ## Architecture Profile
 
 ### Universal Baseline
 
-The platform establishes a universal baseline applicable to all repositories:
+agent-runner-v2 implements the **universal-bootstrap** architecture profile:
 
-| Baseline Element | Description |
-|-------------------|-------------|
-| **Execution Contract** | v2 sidecar-only communication |
-| **Job Schema** | Version 2 with structured state |
-| **Routing Model** | Explicit approve/reject/failure paths |
-| **Artifact Model** | Declared keys with existence validation |
-| **Coder Abstraction** | Adapter pattern for Claude, Codex, Qwen |
-
-### Repo-Selected Profile
-
-This repository (`agent-runner-v2`) currently operates under:
-
-| Attribute | Value | Rationale |
-|-----------|-------|-----------|
-| `current_profile` | `provisional` | Bootstrap in progress |
-| `target_profile` | `explicit` | Full system documentation planned |
-| `migration_mode` | `in-progress` | Documentation being generated |
-
-### Migration Posture
-
-The repository is transitioning from `provisional` to `explicit`:
-
-- **Current state**: Substantial implementation (56+ modules, 11 workflow families)
-- **Documentation state**: System docs being generated via bootstrap workflow
-- **Target state**: Full `explicit` documentation profile
-- **Timeline**: Bootstrap completion expected 2026-07-04
+| Attribute | Value | Evidence |
+|-----------|-------|----------|
+| **current_profile** | explicit | Documented contracts, strict enforcement |
+| **target_profile** | universal-bootstrap | Reusable workflow system |
+| **migration_mode** | maintenance | Refreshes vs recreates |
+| **repo_state** | explicit | Clear architecture documentation |
 
 ### Profile Separation
 
-The platform separates universal baseline from repo-specific profiles:
+The system separates universal baseline from repo-selected profile:
 
-| Concern | Universal Baseline | Repo-Specific |
-|---------|-------------------|---------------|
-| Execution contract | v2 sidecar rules | Workflow-specific steps |
-| Artifact model | Key classification | Specific artifact paths |
-| Routing behavior | APPROVED/REJECTED/FAILURE | Step-specific routing config |
-| Documentation structure | Required documents | Optional depth level |
+| Aspect | Universal Baseline | Repo-Selected Profile |
+|--------|-------------------|----------------------|
+| **Purpose** | Rules that apply to every repo | Specifics for this repo |
+| **Location** | `constants.py`, `template_groups.py` | Workflow family selection |
+| **Stability** | Stable across repos | Repo-specific |
+| **Migration** | Version controlled | Runtime configuration |
+
+### agent-runner-v2 Profile
+
+agent-runner-v2 selects an **explicit** profile with **maintenance** migration mode:
+
+**Evidence:**
+
+1. **Comprehensive workflow definitions**: 12+ workflow families in `template_groups.py`
+2. **Strict v2 contract enforcement**: Explicit rejection of v1 patterns
+3. **Centralized constants**: All paths via `constants.py`
+4. **Generated doc protection**: Workflow-attributed, protected from manual edits
+5. **Test infrastructure**: 109+ unit tests with strict separation
+
+**Migration Posture:**
+
+- Existing documents are refreshed, not recreated
+- Template IDs are preserved
+- Section requirements are additive
+- Manual annotations outside guarded sections are preserved
 
 ## Key Risks
 
-| Risk | Description | Mitigation |
-|------|-------------|------------|
-| **Bootstrap/Runtime Divergence** | Runtime bundles may diverge from packaged bootstrap | `init` command, version tracking |
-| **Strict Contract Violation** | Schema deviations cause hard failures | Clear validation messages |
-| **Multi-Coder Complexity** | Different capabilities across LLM providers | Model mapping configuration |
-| **Job State Migration** | Legacy formats require migration | `migrate_job_state()` function |
-| **Review Loop Exhaustion** | Max iterations may be exceeded | Human intervention triggers |
-| **External Dependency** | Runtime depends on global runner home | Clear initialization SOP |
+### Operational Risks
 
-## Platform Value
+| Risk | Impact | Mitigation |
+|------|--------|------------|
+| **Bootstrap/Runtime Sync Gap** | Changes not reflected in execution | Sync scripts, re-initialization |
+| **External Coder Dependency** | Worker failures if coder missing | Pre-flight checks, error handling |
+| **Job State Schema Drift** | Compatibility issues | Migration functions, version checks |
+| **Daemon Child Process Failure** | Orphaned jobs | Heartbeat monitoring, timeout handling |
 
-### For Developers
+### Technical Risks
 
-- **Local execution**: Test workflows without backend
-- **Deterministic routing**: Predictable step transitions
-- **Rich debugging**: Step-level logging and state inspection
+| Risk | Impact | Mitigation |
+|------|--------|------------|
+| **Windows Path Handling** | Path resolution failures | `_safe_relative_to()` helper |
+| **Placeholder Resolution Ordering** | Unresolved tokens | Centralized context builder |
+| **Sidecar Corruption** | Invalid step results | Schema validation, checksums |
+| **Bundle Version Mismatch** | Unexpected behavior | Version pinning, validation |
 
-### For Operators
+### Business Risks
 
-- **Daemon supervision**: Workstation worker management
-- **Backend integration**: Distributed work claiming
-- **Failure classification**: Automatic retry vs. human intervention
-
-### For Workflow Authors
-
-- **Template groups**: Declarative workflow definitions
-- **Artifact model**: Structured input/output contracts
-- **Review loops**: Built-in refinement support
+| Risk | Impact | Mitigation |
+|------|--------|------------|
+| **Documentation Drift** | Stale documentation | Documentation sync workflow |
+| **Workflow Complexity** | Steep learning curve | Comprehensive documentation |
+| **Toolchain Dependency** | External tool changes | Abstraction layers, adapters |
 
 ---
 
-*This overview provides the high-level context for the agent-runner-v2 platform. See `FUNCTIONAL_SPEC.md` for detailed behaviors and `BUSINESS_CAPABILITIES.md` for operational impact.*
+*Generated by workflow: 00_master_docs_bootstrap_v1 / step: 03_generate_system_overview_docs*

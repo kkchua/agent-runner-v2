@@ -178,27 +178,7 @@ Task completion rule (MANDATORY)
   2. You used the `write_file` or `edit` tool to create or update that implementation plan
   3. The file is saved at exactly `{IMPL_FILE_PATH}`
   4. The file path is returned in `artifacts.IMPL_FILE`
-  5. **SIDECAR JSON file has been written** to `{IMPL_FILE_METAJSON}`
 - If ANY of the above fails, you MUST return `REJECTED`.
-
-Critical: Sidecar file is REQUIRED for APPROVED
-- The runner reads result from the sidecar file, NOT from your JSON output.
-- If you create the IMPL file but NOT the sidecar, the runner will REJECT the step.
-- Sidecar path: `{IMPL_FILE_METAJSON}`
-- Sidecar structure (exact, no deviations):
-  {
-    "schema_version": "v2",
-    "coder_result": {
-      "status": "APPROVED",
-      "remark": "Brief summary of what was done",
-      "artifacts": {
-        "IMPL_FILE": "{DELIVERY_DOC_ROOT}/04_implementation_plans/IMPL-20260415-01.md"
-      },
-      "recorded_at": "2026-04-15T10:30:00"
-    }
-  }
-- Use `write_file` tool to create the sidecar JSON immediately after writing the IMPL file.
-- The runner reads coder_result.status from this meta.json to route the workflow.
 
 Implementation plan lifecycle rule (MANDATORY)
 - Newly created implementation plans for this step MUST be written with status `draft`.

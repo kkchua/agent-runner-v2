@@ -6,9 +6,9 @@ module_path: "agent_runner_v2/step_runner.py"
 module_area: "core"
 documentation_mode: "full"
 owner_doc_path: "docs/codebase/02_modules/agent-runner-v2-step-runner.md"
-last_verified_by_change: "40_documentation_sync_v1 / 40DOCSYNC-GEN-20260704-001 / 2026-07-04T13:29:07+08:00"
-created: "2026-07-04T13:29:07+08:00"
-owner: "40_documentation_sync_v1"
+last_verified_by_change: "00_master_docs_bootstrap_v1 / 00DOC-GEN-20260709-002 / 2026-07-09T21:13:38+08:00"
+created: "2026-07-09T21:13:38+08:00"
+owner: "00_master_docs_bootstrap_v1"
 ---
 
 # Module Documentation: agent_runner_v2.step_runner
@@ -39,6 +39,7 @@ This module belongs to the `core` area and is documented as `full`.
 | `typing` | stdlib module | imported dependency |
 | `artifact_paths` | external module | repository dependency |
 | `coder_adapters` | external module | repository dependency |
+| `constants` | external module | repository dependency |
 | `doc_paths` | external module | repository dependency |
 | `documentation_guardrails` | external module | repository dependency |
 | `exceptions` | external module | repository dependency |
@@ -48,75 +49,195 @@ This module belongs to the `core` area and is documented as `full`.
 
 ### 2.1 Classes
 
-| Class | Purpose | Key Methods |
-|-------|---------|-------------|
-| `StepResult` | public class | |
+#### StepResult
+
+**Decorators**: `@dataclass`
+
+**Purpose**: Public class
+
 
 ### 2.2 Functions
 
-| Function | Signature | Purpose |
-|----------|-----------|---------|
-| `run_step` | `()` | Invoke coder, read meta.json contract, validate artifacts, enrich sidecar. |
-| `run_action` | `()` | Execute a runner action (non-coder step). |
-| `enrich_sidecar` | `()` | Atomically append runner_data section to existing meta.json. |
-| `build_context` | `(state)` | Build the full context dict for prompt rendering. |
-| `render_prompt` | `(template_text, context)` | public function |
-| `prompt_checksum` | `(prompt_text)` | public function |
-| `resolve_prompt_path` | `()` | Resolve prompt file path with three-level fallback. |
+#### run_step()
+
+**Signature**: `run_step(*, group_name: str, group_cfg: dict, state: dict, step: str, step_cfg: dict, coder: str, coder_config: dict | None, prompt_text: str, checksum: str, step_dir: Path, project_root: Path, context: dict[str, str])`
+
+**Purpose**: Invoke coder, read meta.json contract, validate artifacts, enrich sidecar.
+
+**Parameters**:
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `group_name` | `str` | — | — |
+| `group_cfg` | `dict` | — | — |
+| `state` | `dict` | — | — |
+| `step` | `str` | — | — |
+| `step_cfg` | `dict` | — | — |
+| `coder` | `str` | — | — |
+| `coder_config` | `dict | None` | — | — |
+| `prompt_text` | `str` | — | — |
+| `checksum` | `str` | — | — |
+| `step_dir` | `Path` | — | — |
+| `project_root` | `Path` | — | — |
+| `context` | `dict[str, str]` | — | — |
+
+**Returns**: `StepResult`
+
+**Raises**:
+
+- `CoderInvocationError` — coder process failed (caller routes to failure)
+- `MetaJsonMissingError` — coder did not write meta.json (hard failure)
+- `MetaJsonInvalidError` — meta.json present but schema invalid (hard failure)
+- `ArtifactMissingError` — meta.json references paths that don't exist on disk
+
+---
+
+#### run_action()
+
+**Signature**: `run_action(*, action_name: str, state: dict, step: str, step_cfg: dict, step_dir: Path, project_root: Path, context: dict[str, str])`
+
+**Purpose**: Execute a runner action (non-coder step).
+
+**Parameters**:
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `action_name` | `str` | — | — |
+| `state` | `dict` | — | — |
+| `step` | `str` | — | — |
+| `step_cfg` | `dict` | — | — |
+| `step_dir` | `Path` | — | — |
+| `project_root` | `Path` | — | — |
+| `context` | `dict[str, str]` | — | — |
+
+**Returns**: `StepResult`
+
+**Raises**:
+
+- `Exception` — action-specific failures (caller routes to failure).
+
+---
+
+#### enrich_sidecar()
+
+**Signature**: `enrich_sidecar(*, meta_path: Path, step: str, coder_used: str, invoked_at: str, finished_at: str, prompt_checksum: str, project_root: Path)`
+
+**Purpose**: Atomically append runner_data section to existing meta.json.
+
+**Parameters**:
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `meta_path` | `Path` | — | — |
+| `step` | `str` | — | — |
+| `coder_used` | `str` | — | — |
+| `invoked_at` | `str` | — | — |
+| `finished_at` | `str` | — | — |
+| `prompt_checksum` | `str` | — | — |
+| `project_root` | `Path` | — | — |
+
+**Returns**: `None`
+
+---
+
+#### build_context()
+
+**Signature**: `build_context(state: dict, *, step: str = '', step_cfg: dict | None = None)`
+
+**Purpose**: Build the full context dict for prompt rendering.
+
+**Parameters**:
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `state` | `dict` | — | — |
+| `step` | `str` | `''` | — |
+| `step_cfg` | `dict | None` | `None` | — |
+
+**Returns**: `dict[str, str]`
+
+---
+
+#### render_prompt()
+
+**Signature**: `render_prompt(template_text: str, context: dict[str, str], step_cfg: dict | None = None)`
+
+**Parameters**:
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `template_text` | `str` | — | — |
+| `context` | `dict[str, str]` | — | — |
+| `step_cfg` | `dict | None` | `None` | — |
+
+**Returns**: `str`
+
+---
+
+#### prompt_checksum()
+
+**Signature**: `prompt_checksum(prompt_text: str)`
+
+**Parameters**:
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `prompt_text` | `str` | — | — |
+
+**Returns**: `str`
+
+---
+
+#### resolve_prompt_path()
+
+**Signature**: `resolve_prompt_path(*, step_cfg: dict, coder: str, model_id: str | None = None)`
+
+**Purpose**: Resolve prompt file path with three-level fallback.
+
+**Parameters**:
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `step_cfg` | `dict` | — | — |
+| `coder` | `str` | — | — |
+| `model_id` | `str | None` | `None` | — |
+
+**Returns**: `Path`
+
+---
+
 
 ### 2.3 Constants / Configuration
 
-| Name | Value / Type | Purpose |
-|------|-------------|---------|
-| `RESULT_SCHEMA_PATH` | constant | module configuration |
-| `_TOOL_INSTRUCTION_TEMPLATE` | constant | module configuration |
+| Name | Purpose |
+|------|--------|
+| `RESULT_SCHEMA_PATH` | module configuration |
+| `SIDECAR_INSTRUCTION_TEMPLATE` | module configuration |
+| `_TOOL_INSTRUCTION_TEMPLATE` | module configuration |
 
-## 3. Internal Implementation
 
-### 3.1 Key Data Structures
+## 3. Error Handling
 
-Auto-generated baseline documentation derived from the current source tree.
+| Exception | When | Raised By |
+|-----------|------|----------|
+| `ArtifactMissingError` | meta.json references paths that don't exist on disk | `run_step` |
+| `CoderInvocationError` | coder process failed (caller routes to failure) | `run_step` |
+| `Exception` | action-specific failures (caller routes to failure). | `run_action` |
+| `MetaJsonInvalidError` | meta.json present but schema invalid (hard failure) | `run_step` |
+| `MetaJsonMissingError` | coder did not write meta.json (hard failure) | `run_step` |
 
-### 3.2 Algorithm / Flow
 
-See the source module for implementation details; this document captures the public contract and scan-derived summary.
+## 4. Testing
 
-## 4. I/O Contract
-
-### 4.1 Inputs
-
-Derived from function parameters, imports, and file-level responsibilities.
-
-### 4.2 Outputs
-
-Derived from function return values and side effects observed in the source file.
-
-### 4.3 Side Effects
-
-Tracked at a baseline level by the repository scan.
-
-## 5. Error Handling
-
-| Error Condition | Handling | Recovery |
-|----------------|----------|----------|
-| | | |
-
-## 6. Testing
-
-### 6.1 Test Coverage
+### 4.1 Test Coverage
 
 | Test File | Coverage Area |
-|-----------|--------------|
-| `tests/test_backend_worker_mode.py` | `agent_runner_v2.step_runner` |
-| `tests/test_documentation_governance.py` | `agent_runner_v2.step_runner` |
-| `tests/test_tool_instruction_block.py` | `agent_runner_v2.step_runner` |
+|-----------|---------------|
+| (none) | No test references found |
 
-### 6.2 Known Gaps
 
-Auto-generated baseline. Review and refine as the codebase evolves.
-
-## 7. Change Log
+## 5. Change Log
 
 | Date | Change | Verified By |
 |------|--------|-------------|
-| 2026-07-04 | Initial baseline generated from repository scan | 40_documentation_sync_v1 |
+| 2026-07-09 | Initial baseline generated from repository scan | 00_master_docs_bootstrap_v1 |

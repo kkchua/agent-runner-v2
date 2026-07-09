@@ -6,9 +6,9 @@ module_path: "agent_runner_v2/runtime_context.py"
 module_area: "state"
 documentation_mode: "full"
 owner_doc_path: "docs/codebase/02_modules/agent-runner-v2-runtime-context.md"
-last_verified_by_change: "40_documentation_sync_v1 / 40DOCSYNC-GEN-20260704-001 / 2026-07-04T13:29:07+08:00"
-created: "2026-07-04T13:29:07+08:00"
-owner: "40_documentation_sync_v1"
+last_verified_by_change: "00_master_docs_bootstrap_v1 / 00DOC-GEN-20260709-002 / 2026-07-09T21:13:38+08:00"
+created: "2026-07-09T21:13:38+08:00"
+owner: "00_master_docs_bootstrap_v1"
 ---
 
 # Module Documentation: agent_runner_v2.runtime_context
@@ -40,97 +40,312 @@ This module belongs to the `state` area and is documented as `full`.
 
 ### 2.1 Classes
 
-| Class | Purpose | Key Methods |
-|-------|---------|-------------|
-| `RuntimeContext` | public class | |
-| `PathProxy` | Lightweight Path-like proxy that resolves lazily from current context. | |
+#### RuntimeContext
+
+**Decorators**: `@dataclass`
+
+**Purpose**: Public class
+
+#### PathProxy
+
+**Purpose**: Lightweight Path-like proxy that resolves lazily from current context.
+
 
 ### 2.2 Functions
 
-| Function | Signature | Purpose |
-|----------|-----------|---------|
-| `set_context` | `()` | Set process-local runtime context and return it. |
-| `get_context` | `()` | public function |
-| `get_workspace_root` | `()` | public function |
-| `get_runner_home` | `()` | public function |
-| `get_jobs_root` | `()` | public function |
-| `get_workflow_root` | `()` | public function |
-| `get_workflow_module` | `()` | public function |
-| `set_workflow_module` | `(module)` | public function |
-| `get_delivery_root` | `()` | public function |
-| `set_delivery_root` | `(root)` | public function |
-| `resolve_artifact_root` | `()` | Return the root for resolving artifact paths. |
-| `resolve_repo_or_runtime_path` | `(path_str)` | Resolve a path using the repo/runtime namespace convention. |
-| `repo_doc_root` | `()` | public function |
-| `system_doc_root` | `()` | public function |
-| `codebase_doc_root` | `()` | public function |
-| `delivery_doc_root` | `()` | public function |
-| `architecture_site_root` | `()` | public function |
-| `artifact_rel_to_meta_rel` | `(artifact_rel)` | Return the meta.json sibling path for a repo/runtime-relative artifact. |
-| `write_meta_sidecar` | `(meta_path_like)` | Write a v2 meta.json sidecar using the shared path resolver. |
-| `resolve_step_meta_rel` | `()` | Resolve the meta.json relative path for a step-owned artifact. |
+#### set_context()
+
+**Signature**: `set_context(*, workspace_root: Path, workflow_name: str | None = None, workflow_root: Path | None = None, workflow_module: ModuleType | None = None, delivery_root: Path | None = None)`
+
+**Purpose**: Set process-local runtime context and return it.
+
+**Parameters**:
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `workspace_root` | `Path` | — | — |
+| `workflow_name` | `str | None` | `None` | — |
+| `workflow_root` | `Path | None` | `None` | — |
+| `workflow_module` | `ModuleType | None` | `None` | — |
+| `delivery_root` | `Path | None` | `None` | — |
+
+**Returns**: `RuntimeContext`
+
+---
+
+#### get_context()
+
+**Signature**: `get_context()`
+
+**Returns**: `RuntimeContext`
+
+---
+
+#### get_workspace_root()
+
+**Signature**: `get_workspace_root()`
+
+**Returns**: `Path`
+
+---
+
+#### get_runner_home()
+
+**Signature**: `get_runner_home()`
+
+**Returns**: `Path`
+
+---
+
+#### get_jobs_root()
+
+**Signature**: `get_jobs_root()`
+
+**Returns**: `Path`
+
+---
+
+#### get_workflow_root()
+
+**Signature**: `get_workflow_root()`
+
+**Returns**: `Path`
+
+---
+
+#### get_workflow_module()
+
+**Signature**: `get_workflow_module()`
+
+**Returns**: `ModuleType | None`
+
+---
+
+#### set_workflow_module()
+
+**Signature**: `set_workflow_module(module: ModuleType)`
+
+**Parameters**:
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `module` | `ModuleType` | — | — |
+
+**Returns**: `None`
+
+---
+
+#### get_delivery_root()
+
+**Signature**: `get_delivery_root()`
+
+**Returns**: `Path | None`
+
+---
+
+#### set_delivery_root()
+
+**Signature**: `set_delivery_root(root: Path | None)`
+
+**Parameters**:
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `root` | `Path | None` | — | — |
+
+**Returns**: `None`
+
+---
+
+#### resolve_artifact_root()
+
+**Signature**: `resolve_artifact_root()`
+
+**Purpose**: Return the root for resolving artifact paths.
+
+**Returns**: `Path`
+
+---
+
+#### resolve_repo_or_runtime_path()
+
+**Signature**: `resolve_repo_or_runtime_path(path_str: str, *, project_root: Path | None = None, runtime_root: Path | None = None)`
+
+**Purpose**: Resolve a path using the repo/runtime namespace convention.
+
+**Parameters**:
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `path_str` | `str` | — | — |
+| `project_root` | `Path | None` | `None` | — |
+| `runtime_root` | `Path | None` | `None` | — |
+
+**Returns**: `Path`
+
+---
+
+#### repo_doc_root()
+
+**Signature**: `repo_doc_root(*parts: str)`
+
+**Parameters**:
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `*parts` | `str` | — | — |
+
+**Returns**: `Path`
+
+---
+
+#### system_doc_root()
+
+**Signature**: `system_doc_root(*parts: str)`
+
+**Parameters**:
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `*parts` | `str` | — | — |
+
+**Returns**: `Path`
+
+---
+
+#### codebase_doc_root()
+
+**Signature**: `codebase_doc_root(*parts: str)`
+
+**Parameters**:
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `*parts` | `str` | — | — |
+
+**Returns**: `Path`
+
+---
+
+#### delivery_doc_root()
+
+**Signature**: `delivery_doc_root(*parts: str)`
+
+**Parameters**:
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `*parts` | `str` | — | — |
+
+**Returns**: `Path`
+
+---
+
+#### architecture_site_root()
+
+**Signature**: `architecture_site_root(*parts: str)`
+
+**Parameters**:
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `*parts` | `str` | — | — |
+
+**Returns**: `Path`
+
+---
+
+#### artifact_rel_to_meta_rel()
+
+**Signature**: `artifact_rel_to_meta_rel(artifact_rel: str)`
+
+**Purpose**: Return the meta.json sibling path for a repo/runtime-relative artifact.
+
+**Parameters**:
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `artifact_rel` | `str` | — | — |
+
+**Returns**: `str`
+
+---
+
+#### write_meta_sidecar()
+
+**Signature**: `write_meta_sidecar(meta_path_like: str | Path, *, status: str, remark: str, artifacts: dict, project_root: Path | None = None, runtime_root: Path | None = None, extra: dict[str, Any] | None = None)`
+
+**Purpose**: Write a v2 meta.json sidecar using the shared path resolver.
+
+**Parameters**:
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `meta_path_like` | `str | Path` | — | — |
+| `status` | `str` | — | — |
+| `remark` | `str` | — | — |
+| `artifacts` | `dict` | — | — |
+| `project_root` | `Path | None` | `None` | — |
+| `runtime_root` | `Path | None` | `None` | — |
+| `extra` | `dict[str, Any] | None` | `None` | — |
+
+**Returns**: `Path`
+
+---
+
+#### resolve_step_meta_rel()
+
+**Signature**: `resolve_step_meta_rel(*, context: dict[str, str], state: dict, context_key: str, default_step: str)`
+
+**Purpose**: Resolve the meta.json relative path for a step-owned artifact.
+
+**Parameters**:
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `context` | `dict[str, str]` | — | — |
+| `state` | `dict` | — | — |
+| `context_key` | `str` | — | — |
+| `default_step` | `str` | — | — |
+
+**Returns**: `str`
+
+---
+
 
 ### 2.3 Constants / Configuration
 
-| Name | Value / Type | Purpose |
-|------|-------------|---------|
-| `PACKAGE_ROOT` | constant | module configuration |
-| `DEFAULT_RUNNER_HOME` | constant | module configuration |
-| `GLOBAL_RUNNER_HOME` | constant | module configuration |
-| `DEFAULT_WORKFLOW_NAME` | constant | module configuration |
-| `_CTX` | constant | module configuration |
-| `PROJECT_ROOT` | constant | module configuration |
-| `RUNNER_HOME` | constant | module configuration |
-| `RUNNER_ROOT` | constant | module configuration |
-| `JOBS_ROOT` | constant | module configuration |
-| `DELIVERY_ROOT` | constant | module configuration |
-| `ARTIFACT_ROOT` | constant | module configuration |
+| Name | Purpose |
+|------|--------|
+| `PACKAGE_ROOT` | module configuration |
+| `DEFAULT_RUNNER_HOME` | module configuration |
+| `GLOBAL_RUNNER_HOME` | module configuration |
+| `DEFAULT_WORKFLOW_NAME` | module configuration |
+| `_CTX` | module configuration |
+| `PROJECT_ROOT` | module configuration |
+| `RUNNER_HOME` | module configuration |
+| `RUNNER_ROOT` | module configuration |
+| `JOBS_ROOT` | module configuration |
+| `DELIVERY_ROOT` | module configuration |
+| `ARTIFACT_ROOT` | module configuration |
 
-## 3. Internal Implementation
 
-### 3.1 Key Data Structures
+## 3. Error Handling
 
-Auto-generated baseline documentation derived from the current source tree.
+No documented exceptions.
 
-### 3.2 Algorithm / Flow
 
-See the source module for implementation details; this document captures the public contract and scan-derived summary.
+## 4. Testing
 
-## 4. I/O Contract
-
-### 4.1 Inputs
-
-Derived from function parameters, imports, and file-level responsibilities.
-
-### 4.2 Outputs
-
-Derived from function return values and side effects observed in the source file.
-
-### 4.3 Side Effects
-
-Tracked at a baseline level by the repository scan.
-
-## 5. Error Handling
-
-| Error Condition | Handling | Recovery |
-|----------------|----------|----------|
-| | | |
-
-## 6. Testing
-
-### 6.1 Test Coverage
+### 4.1 Test Coverage
 
 | Test File | Coverage Area |
-|-----------|--------------|
-| `tests/test_backend_worker_mode.py` | `agent_runner_v2.runtime_context` |
-| `tests/test_runtime_context_paths.py` | `agent_runner_v2.runtime_context` |
+|-----------|---------------|
+| (none) | No test references found |
 
-### 6.2 Known Gaps
 
-Auto-generated baseline. Review and refine as the codebase evolves.
-
-## 7. Change Log
+## 5. Change Log
 
 | Date | Change | Verified By |
 |------|--------|-------------|
-| 2026-07-04 | Initial baseline generated from repository scan | 40_documentation_sync_v1 |
+| 2026-07-09 | Initial baseline generated from repository scan | 00_master_docs_bootstrap_v1 |

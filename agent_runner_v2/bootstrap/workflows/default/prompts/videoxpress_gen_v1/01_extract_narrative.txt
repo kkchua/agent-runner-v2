@@ -145,20 +145,6 @@ COMPLETION RULES
 
 - Return `status: "APPROVED"` only after narrative.json is written successfully
 - Return `status: "REJECTED"` if images cannot form coherent narrative
-- Write meta.json sidecar to {NARRATIVE_FILE_METAJSON}
-
-meta.json structure:
-{
-  "schema_version": "v2",
-  "coder_result": {
-    "status": "APPROVED" | "REJECTED",
-    "remark": "Brief summary",
-    "artifacts": {
-      "NARRATIVE_FILE": "{IMAGE_DESC_FOLDER}/narrative.json"
-    },
-    "recorded_at": "<current ISO timestamp>"
-  }
-}
 
 Required return JSON schema:
 {

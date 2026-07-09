@@ -51,28 +51,7 @@ The review file must be a markdown document containing:
 review_prompts completion rule (MANDATORY)
 - You may return `status: "APPROVED"` only after all of the following are true:
   - the review file has been written to {REVIEW_FILE_PATH}
-  - the meta.json sidecar has been written to {REVIEW_FILE_METAJSON}
 - If the review was not written successfully, you MUST return `REJECTED`.
-
-Critical: meta.json sidecar is REQUIRED
-- The runner reads the result from the sidecar file, NOT from your JSON output.
-- Sidecar path: {REVIEW_FILE_METAJSON}
-- Sidecar structure (exact):
-  {
-    "schema_version": "v2",
-    "coder_result": {
-      "status": "APPROVED" | "REJECTED",
-      "remark": "Brief summary",
-      "artifacts": {
-        "REVIEW_FILE": "{REVIEW_FILE_PATH}"
-      },
-      "recorded_at": "<current ISO timestamp>",
-      "reject_code": null | "PROMPT_VALIDATION_FAILED"
-    }
-  }
-- Set reject_code to null if APPROVED, or "PROMPT_VALIDATION_FAILED" if REJECTED.
-- Use write_file tool to create the sidecar immediately after writing the review file.
-- You MUST verify the sidecar exists on disk before returning.
 
 ABSOLUTE OUTPUT RULE (NON-NEGOTIABLE)
 
@@ -108,9 +87,7 @@ Required execution sequence:
 1. Read the JSON and CSV files from {IMAGE_CSV_JSON}.
 2. Validate each variation against all review criteria above.
 3. Write the review markdown file to {REVIEW_FILE_PATH}.
-4. Write the meta.json sidecar to {REVIEW_FILE_METAJSON}.
-5. Verify the sidecar exists on disk.
-6. Return the final JSON with status APPROVED or REJECTED and artifacts.REVIEW_FILE set.
+4. Return the final JSON with status APPROVED or REJECTED and artifacts.REVIEW_FILE set.
 
 VALIDATION NOTES FOR REJECTION
 If any of the following are found, set status to REJECTED:

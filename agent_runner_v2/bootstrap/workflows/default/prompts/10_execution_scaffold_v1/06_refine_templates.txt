@@ -64,45 +64,6 @@ Refinement completion rule (MANDATORY)
 - You may return `status: "APPROVED"` only after:
   - all affected template files have been updated in-place
   - the files exist on disk at their original paths
-  - the meta.json sidecar has been written
-
-Critical: meta.json sidecar is REQUIRED
-- Sidecar path: `{DELIVERY_TEMPLATE_REGISTRY_METAJSON}`
-- Use `write_file` tool to create the sidecar after writing the refined files.
-- Sidecar structure (exact):
-  {
-    "schema_version": "v2",
-    "coder_result": {
-      "status": "APPROVED | REJECTED",
-      "remark": "<short summary of changes made>",
-      "artifacts": {
-        "DELIVERY_TEMPLATE_REGISTRY": "<path>",
-        "DELIVERY_INITIATIVE_TEMPLATE": "<path>",
-        "DELIVERY_PLAN_TEMPLATE": "<path>",
-        "DELIVERY_TASK_GRAPH_TEMPLATE": "<path>",
-        "DELIVERY_TASK_TEMPLATE": "<path>",
-        "DELIVERY_IMPL_TEMPLATE": "<path>",
-        "DELIVERY_REVIEW_TEMPLATE": "<path>",
-        "DELIVERY_VALIDATION_TEMPLATE": "<path>",
-        "DELIVERY_MEMORY_TEMPLATE": "<path>",
-        "CODEBASE_TEMPLATE_REGISTRY": "<path>",
-        "CODEBASE_INVENTORY_TEMPLATE": "<path>",
-        "CODEBASE_MODULE_TEMPLATE": "<path>",
-        "CODEBASE_COMPONENT_TEMPLATE": "<path>",
-        "CODEBASE_CHANGE_TEMPLATE": "<path>",
-        "CODEBASE_INVENTORY": "<path>"
-      },
-      "recorded_at": "<ISO timestamp e.g. 2026-06-07T10:00:00>"
-    }
-  }
-
-ABSOLUTE OUTPUT RULE (NON-NEGOTIABLE)
-
-Return ONLY valid JSON.
-Do NOT explain.
-Do NOT wrap in markdown.
-Do NOT add any text before or after the JSON.
-Do NOT wrap the final JSON in ```json fences.
 
 Required JSON schema:
 {
@@ -133,5 +94,4 @@ Required execution sequence:
 3. Apply targeted changes to address each review issue.
 4. Write the updated files to their original paths.
 5. Verify files exist on disk.
-6. Write the meta.json sidecar to `{DELIVERY_TEMPLATE_REGISTRY_METAJSON}`.
-7. Return the final JSON.
+6. Return the final JSON.

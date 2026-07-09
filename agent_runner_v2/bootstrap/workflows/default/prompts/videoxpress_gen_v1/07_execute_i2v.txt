@@ -51,5 +51,3 @@ OUTPUT:
     {"scene": 1, "status": "success|failed", "filename": "scene_01_i2v.mp4"}
   ]
 }
-
-Write meta.json sidecar with generation status.
