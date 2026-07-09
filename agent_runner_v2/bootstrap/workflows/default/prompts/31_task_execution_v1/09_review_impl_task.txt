@@ -67,25 +67,6 @@ Task:
 - Explicitly assess whether speculative technical design has been introduced beyond verified upstream artifacts.
 - Reject if the implementation plan hardcodes concrete upstream APIs or schema assumptions without evidence/reconciliation guidance.
 
-Critical: Sidecar file is REQUIRED for review step
-- The runner reads review decision from the sidecar file.
-- Sidecar path: `{REVIEW_FILE_SUGGESTED_METAJSON}`
-- Sidecar structure (exact):
-  {
-    "schema_version": "v2",
-    "coder_result": {
-      "status": "APPROVED" | "REJECTED",
-      "remark": "Brief summary of review decision",
-      "artifacts": {
-        "REVIEW_FILE": "{DELIVERY_DOC_ROOT}/05_reviews/REV-20260415-01.md"
-      },
-      "recorded_at": "2026-04-15T10:30:00"
-    }
-  }
-- Use `write_file` tool to create the sidecar JSON.
-- Status: "APPROVED" if review passes, "REJECTED" if blocking issues found.
-- The runner reads coder_result.status from this meta.json to route the workflow.
-
 ABSOLUTE OUTPUT RULE (NON-NEGOTIABLE)
 
 You are NOT a chat assistant.

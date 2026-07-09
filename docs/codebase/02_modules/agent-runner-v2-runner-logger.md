@@ -6,9 +6,9 @@ module_path: "agent_runner_v2/runner_logger.py"
 module_area: "backend"
 documentation_mode: "full"
 owner_doc_path: "docs/codebase/02_modules/agent-runner-v2-runner-logger.md"
-last_verified_by_change: "40_documentation_sync_v1 / 40DOCSYNC-GEN-20260704-001 / 2026-07-04T13:29:07+08:00"
-created: "2026-07-04T13:29:07+08:00"
-owner: "40_documentation_sync_v1"
+last_verified_by_change: "00_master_docs_bootstrap_v1 / 00DOC-GEN-20260709-002 / 2026-07-09T21:13:38+08:00"
+created: "2026-07-09T21:13:38+08:00"
+owner: "00_master_docs_bootstrap_v1"
 ---
 
 # Module Documentation: agent_runner_v2.runner_logger
@@ -39,71 +39,141 @@ This module belongs to the `backend` area and is documented as `full`.
 
 ### 2.1 Classes
 
-| Class | Purpose | Key Methods |
-|-------|---------|-------------|
-| | | |
+No public classes.
+
 
 ### 2.2 Functions
 
-| Function | Signature | Purpose |
-|----------|-----------|---------|
-| `log_event` | `(step, coder)` | Log one event to both console and file. |
-| `log_invocation_start` | `(step, coder)` | Log that a coder invocation is about to start. |
-| `log_invocation_result` | `(step, coder)` | Log the result of a coder invocation. |
-| `log_error` | `(step, coder)` | Log a coder invocation error. |
-| `log_resolver` | `(coder_input, resolved)` | Log coder alias resolution. |
+#### log_event()
+
+**Signature**: `log_event(step: str, coder: str, *, model: str = '', auth_type: str = '', event: str = 'info', duration_ms: int | None = None, return_code: int | None = None, status: str = '', message: str = '')`
+
+**Purpose**: Log one event to both console and file.
+
+**Parameters**:
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `step` | `str` | — | — |
+| `coder` | `str` | — | — |
+| `model` | `str` | `''` | — |
+| `auth_type` | `str` | `''` | — |
+| `event` | `str` | `'info'` | — |
+| `duration_ms` | `int | None` | `None` | — |
+| `return_code` | `int | None` | `None` | — |
+| `status` | `str` | `''` | — |
+| `message` | `str` | `''` | — |
+
+**Returns**: `None`
+
+---
+
+#### log_invocation_start()
+
+**Signature**: `log_invocation_start(step: str, coder: str, *, model: str = '', auth_type: str = '', command: list[str] | None = None)`
+
+**Purpose**: Log that a coder invocation is about to start.
+
+**Parameters**:
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `step` | `str` | — | — |
+| `coder` | `str` | — | — |
+| `model` | `str` | `''` | — |
+| `auth_type` | `str` | `''` | — |
+| `command` | `list[str] | None` | `None` | — |
+
+**Returns**: `None`
+
+---
+
+#### log_invocation_result()
+
+**Signature**: `log_invocation_result(step: str, coder: str, *, model: str = '', auth_type: str = '', return_code: int, duration_ms: int, status: str, message: str = '')`
+
+**Purpose**: Log the result of a coder invocation.
+
+**Parameters**:
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `step` | `str` | — | — |
+| `coder` | `str` | — | — |
+| `model` | `str` | `''` | — |
+| `auth_type` | `str` | `''` | — |
+| `return_code` | `int` | — | — |
+| `duration_ms` | `int` | — | — |
+| `status` | `str` | — | — |
+| `message` | `str` | `''` | — |
+
+**Returns**: `None`
+
+---
+
+#### log_error()
+
+**Signature**: `log_error(step: str, coder: str, *, model: str = '', auth_type: str = '', error: str = '')`
+
+**Purpose**: Log a coder invocation error.
+
+**Parameters**:
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `step` | `str` | — | — |
+| `coder` | `str` | — | — |
+| `model` | `str` | `''` | — |
+| `auth_type` | `str` | `''` | — |
+| `error` | `str` | `''` | — |
+
+**Returns**: `None`
+
+---
+
+#### log_resolver()
+
+**Signature**: `log_resolver(coder_input: str, resolved: str, *, is_alias: bool)`
+
+**Purpose**: Log coder alias resolution.
+
+**Parameters**:
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `coder_input` | `str` | — | — |
+| `resolved` | `str` | — | — |
+| `is_alias` | `bool` | — | — |
+
+**Returns**: `None`
+
+---
+
 
 ### 2.3 Constants / Configuration
 
-| Name | Value / Type | Purpose |
-|------|-------------|---------|
-| `_COLOURS` | constant | module configuration |
-| `_COLOUR_SUPPORTED` | constant | module configuration |
+| Name | Purpose |
+|------|--------|
+| `_COLOURS` | module configuration |
+| `_COLOUR_SUPPORTED` | module configuration |
 
-## 3. Internal Implementation
 
-### 3.1 Key Data Structures
+## 3. Error Handling
 
-Auto-generated baseline documentation derived from the current source tree.
+No documented exceptions.
 
-### 3.2 Algorithm / Flow
 
-See the source module for implementation details; this document captures the public contract and scan-derived summary.
+## 4. Testing
 
-## 4. I/O Contract
-
-### 4.1 Inputs
-
-Derived from function parameters, imports, and file-level responsibilities.
-
-### 4.2 Outputs
-
-Derived from function return values and side effects observed in the source file.
-
-### 4.3 Side Effects
-
-Tracked at a baseline level by the repository scan.
-
-## 5. Error Handling
-
-| Error Condition | Handling | Recovery |
-|----------------|----------|----------|
-| | | |
-
-## 6. Testing
-
-### 6.1 Test Coverage
+### 4.1 Test Coverage
 
 | Test File | Coverage Area |
-|-----------|--------------|
-| | |
+|-----------|---------------|
+| (none) | No test references found |
 
-### 6.2 Known Gaps
 
-Auto-generated baseline. Review and refine as the codebase evolves.
-
-## 7. Change Log
+## 5. Change Log
 
 | Date | Change | Verified By |
 |------|--------|-------------|
-| 2026-07-04 | Initial baseline generated from repository scan | 40_documentation_sync_v1 |
+| 2026-07-09 | Initial baseline generated from repository scan | 00_master_docs_bootstrap_v1 |

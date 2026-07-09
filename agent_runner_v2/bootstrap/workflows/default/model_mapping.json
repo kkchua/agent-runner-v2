@@ -1,5 +1,17 @@
 {
   "coder_aliases": {
+    "architect": {
+      "coder": "qwen",
+      "model": "qwen3.7-plus"
+    }, 
+	"developer": {
+      "coder": "qwen",
+      "model": "kimi-k2.5"
+    }, 
+	"reviewer": {
+      "coder": "claude",
+      "model": "qwen3.7-plus"
+    }, 
     "deepseek-reviewer": {
       "coder": "qwen",
       "model": "deepseek-v4-pro"
@@ -29,11 +41,11 @@
       "model": "qwen3.5-plus"
     }, 
 	"claude-architect": {
-      "coder": "claude",
+      "coder": "qwen",
       "model": "qwen3.7-plus"
     }, 
 	"claude-reviewer": {
-      "coder": "claude",
+      "coder": "qwen",
       "model": "qwen3.6-plus"
     }, 
     "codex-architect": {

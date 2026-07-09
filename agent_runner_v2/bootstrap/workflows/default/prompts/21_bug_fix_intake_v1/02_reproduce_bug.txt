@@ -22,7 +22,7 @@ Task:
 - Do not write code.
 
 Completion rule:
-- Return APPROVED only if the reproduction file and meta.json sidecar exist on disk.
+- Return APPROVED only if the reproduction file exists on disk.
 
-ABSOLUTE OUTPUT RULE
+Output requirements:
 - Return ONLY valid JSON.

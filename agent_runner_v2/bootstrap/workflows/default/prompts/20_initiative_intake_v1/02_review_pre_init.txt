@@ -28,25 +28,6 @@ Review rules
 - Do not edit the pre-init artifact in this step.
 - Do not create the official initiative artifact in this step.
 
-Critical: meta.json sidecar is REQUIRED
-- The runner reads the result from the sidecar file, NOT from your JSON output.
-- Write your REVIEW_FILE to: `{REVIEW_FILE_SUGGESTED}` (exact path — do not substitute)
-- Sidecar path: `{REVIEW_FILE_SUGGESTED_METAJSON}`
-- Sidecar structure (exact):
-  {
-    "schema_version": "v2",
-    "coder_result": {
-      "status": "APPROVED" | "REJECTED",
-      "remark": "Brief summary of review decision",
-      "artifacts": {
-        "REVIEW_FILE": "<path of the review file you wrote>"
-      },
-      "recorded_at": "2026-04-15T10:30:00"
-    }
-  }
-- Use `write_file` tool to create the sidecar immediately after writing the review file.
-- You MUST always write a REVIEW_FILE and a sidecar — for both APPROVED and REJECTED.
-
 Output requirements:
 - Return ONLY valid JSON
 - Use `artifacts.REVIEW_FILE` when you write a review document

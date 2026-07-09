@@ -52,5 +52,3 @@ OUTPUT:
     {"scene": 1, "status": "success|failed", "filename": "scene_01_t2i.png"}
   ]
 }
-
-Write meta.json sidecar with generation status.

@@ -6,9 +6,9 @@ module_path: "agent_runner_v2/backend_client.py"
 module_area: "backend"
 documentation_mode: "full"
 owner_doc_path: "docs/codebase/02_modules/agent-runner-v2-backend-client.md"
-last_verified_by_change: "40_documentation_sync_v1 / 40DOCSYNC-GEN-20260704-001 / 2026-07-04T13:29:07+08:00"
-created: "2026-07-04T13:29:07+08:00"
-owner: "40_documentation_sync_v1"
+last_verified_by_change: "00_master_docs_bootstrap_v1 / 00DOC-GEN-20260709-002 / 2026-07-09T21:13:38+08:00"
+created: "2026-07-09T21:13:38+08:00"
+owner: "00_master_docs_bootstrap_v1"
 ---
 
 # Module Documentation: agent_runner_v2.backend_client
@@ -37,66 +37,51 @@ This module belongs to the `backend` area and is documented as `full`.
 
 ### 2.1 Classes
 
-| Class | Purpose | Key Methods |
-|-------|---------|-------------|
-| `BackendClient` | public class | |
+#### BackendClient
+
+**Decorators**: `@dataclass`
+
+**Purpose**: Public class
+
+**Methods**:
+
+- `submit_run(*, workflow_name: str, initiative_id: str | None = None, target_worker_id: str | None = None, assigned_provider: str | None = None, coder_override: str | None = None, project_root: str | None = None, target_project_root: str | None = None, workspace_path: str | None = None, repo_url: str | None = None, repo_ref: str | None = None, worker_label: str = 'live', env_overrides: dict[str, Any] | None = None, input_payload: dict[str, Any] | None = None, context_payload: dict[str, Any] | None = None)` → `dict[str, Any]` — method
+- `approve_run(*, run_id: str, action: str = 'approve', feedback: str | None = None, outcome: str | None = None)` → `dict[str, Any]` — method
+- `get_run(*, run_id: str)` → `dict[str, Any]` — method
+- `register_worker(*, worker_id: str, host_name: str | None = None, capabilities: dict[str, Any] | None = None, worker_label: str = 'live')` → `dict[str, Any]` — method
+- `heartbeat(*, worker_id: str, status: str | None = None, current_step_run_id: str | None = None, workflow_run_id: str | None = None, workflow_step_run_id: str | None = None, run_code: str | None = None, pid: int | None = None, state: str | None = None, log_file: str | None = None, watchdog_reason: str | None = None, exit_code: int | None = None)` → `dict[str, Any]` — method
+- `claim_step(*, worker_id: str)` → `dict[str, Any]` — method
+- `complete_step_run(*, step_run_id: str, payload: dict[str, Any])` → `dict[str, Any]` — method
+- `create_artifact(*, run_id: str, payload: dict[str, Any])` → `dict[str, Any]` — method
+- `create_event(*, run_id: str, payload: dict[str, Any])` → `dict[str, Any]` — method
+
 
 ### 2.2 Functions
 
-| Function | Signature | Purpose |
-|----------|-----------|---------|
-| | | |
+No public functions.
+
 
 ### 2.3 Constants / Configuration
 
-| Name | Value / Type | Purpose |
-|------|-------------|---------|
-| | | |
+No public constants.
 
-## 3. Internal Implementation
 
-### 3.1 Key Data Structures
+## 3. Error Handling
 
-Auto-generated baseline documentation derived from the current source tree.
+No documented exceptions.
 
-### 3.2 Algorithm / Flow
 
-See the source module for implementation details; this document captures the public contract and scan-derived summary.
+## 4. Testing
 
-## 4. I/O Contract
-
-### 4.1 Inputs
-
-Derived from function parameters, imports, and file-level responsibilities.
-
-### 4.2 Outputs
-
-Derived from function return values and side effects observed in the source file.
-
-### 4.3 Side Effects
-
-Tracked at a baseline level by the repository scan.
-
-## 5. Error Handling
-
-| Error Condition | Handling | Recovery |
-|----------------|----------|----------|
-| | | |
-
-## 6. Testing
-
-### 6.1 Test Coverage
+### 4.1 Test Coverage
 
 | Test File | Coverage Area |
-|-----------|--------------|
-| `tests/test_daemon.py` | `agent_runner_v2.backend_client` |
+|-----------|---------------|
+| (none) | No test references found |
 
-### 6.2 Known Gaps
 
-Auto-generated baseline. Review and refine as the codebase evolves.
-
-## 7. Change Log
+## 5. Change Log
 
 | Date | Change | Verified By |
 |------|--------|-------------|
-| 2026-07-04 | Initial baseline generated from repository scan | 40_documentation_sync_v1 |
+| 2026-07-09 | Initial baseline generated from repository scan | 00_master_docs_bootstrap_v1 |

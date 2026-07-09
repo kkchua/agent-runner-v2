@@ -1,12 +1,10 @@
 ---
 template_id: "SYS-03-CTX"
-title: "System Context"
-status: "active"
-generated: "2026-07-04T14:00:00+08:00"
+managed_by: workflow-generated
+generated: "2026-07-09T21:26:23+08:00"
 workflow: "00_master_docs_bootstrap_v1"
 step: "04_generate_architecture_docs"
-change_id: "00DOC-GEN-20260704-002"
-managed_by: workflow-generated
+change_id: "00DOC-GEN-20260709-002"
 ---
 
 > Managed by workflow: `00_master_docs_bootstrap_v1` / step: `04_generate_architecture_docs`
@@ -16,106 +14,111 @@ managed_by: workflow-generated
 
 ## Context Statement
 
-The `agent-runner-v2` platform operates as a workflow orchestration engine that bridges human intent (via workflow definitions) with LLM execution (via coder adapters) and artifact management (via the runtime bundle system).
+agent-runner-v2 is a standalone Python LLM workflow orchestration engine that operates within a larger ecosystem of AI-assisted software development tools. It serves as the execution runtime for structured multi-step workflows, bridging human intent (expressed through initiatives, bug reports, or direct invocation) with AI-powered implementation via external coder tools (Claude Code, Codex CLI, Qwen Code).
+
+The system exists at the intersection of:
+- **Human operators** who define work through initiatives and approve/reject step outcomes
+- **AI coders** that execute implementation steps and produce artifacts
+- **Backend systems** that manage work distribution and track execution state
+- **Documentation systems** that maintain codebase and delivery governance
 
 ## Primary Context Elements
 
-### External Actors
+### Business Context
 
-| Actor | Role | Interaction Pattern |
-|-------|------|---------------------|
-| **Developer** | Local workflow execution and debugging | CLI invocation, job inspection, retry operations |
-| **Operator** | Production worker supervision | Daemon management, log monitoring, incident response |
-| **Workflow Author** | Creates and maintains workflow definitions | Edits template_groups.py and prompt templates |
-| **Backend System** | External work distribution system | REST API for work claiming and result submission |
-| **LLM Providers** | Claude, Codex, Qwen API endpoints | HTTP requests with retry and timeout handling |
-| **File System** | Artifact storage and job state persistence | Atomic writes, path resolution, bundle management |
+**Purpose**: Enable deterministic, repeatable, and reviewable AI-assisted software delivery through structured workflows.
 
-### External Systems
+**Value Proposition**:
+- Reduces cognitive load by encoding best practices into workflow templates
+- Ensures consistent artifact generation and validation across projects
+- Provides audit trail through job state and step history
+- Enables parallel execution across distributed workstations
 
-| System | Purpose | Interface |
-|--------|---------|-----------|
-| **Claude API** | Anthropic LLM inference | HTTP REST via `coder_adapters.py` |
-| **Codex API** | OpenAI Codex inference | HTTP REST via `coder_adapters.py` |
-| **Qwen API** | Qwen Code inference | HTTP REST via `coder_adapters.py` |
-| **Backend Server** | Distributed work coordination | REST API via `backend_client.py` |
-| **Runner Home** | Global runtime bundle storage | File system at `%USERPROFILE%\.ukbe-runner\` |
+**Stakeholders**:
+| Stakeholder | Concern | Interaction |
+|-------------|---------|-------------|
+| Developers | Implement features, fix bugs | Invoke workflows, review step outputs |
+| Tech Leads | Ensure quality and consistency | Approve/reject steps, configure workflows |
+| Operators | Maintain runtime health | Monitor daemon, review logs |
+| Backend Systems | Distribute work, track state | Queue jobs, receive results |
 
-### Information Flows
+### Technical Context
 
-#### Flow 1: Local Execution Context
+**Runtime Environment**:
+- Python 3.12+ (primary development target)
+- Windows (primary platform) with cross-platform compatibility
+- User home directory for runner state (`%USERPROFILE%\.ukbe-runner`)
 
+**External Dependencies**:
+| Dependency | Purpose | Integration |
+|------------|---------|-------------|
+| Claude Code | AI coding assistant | CLI invocation via `claude` |
+| Codex CLI | OpenAI coding assistant | CLI invocation via `codex` |
+| Qwen Code | Qwen coding assistant | CLI invocation via `qwen` |
+| Backend API | Work distribution | HTTP REST API |
+
+**Data Stores**:
+| Store | Location | Purpose |
+|-------|----------|---------|
+| Job State | `~/.ukbe-runner/jobs/` | Workflow execution state |
+| Workflow Bundles | `~/.ukbe-runner/workflows/` | Runtime workflow definitions |
+| Logs | `~/.ukbe-runner/logs/` | Execution logs and events |
+| Config | `~/.ukbe-runner/config.json` | Runtime configuration |
+
+### Execution Context
+
+**Workflow Execution Model**:
 ```
-Developer (CLI)
-    ↓
-ukbe-run-agent run <workflow>
-    ↓
-Load workflow bundle from ~/.ukbe-runner/workflows/
-    ↓
-Render prompt → Invoke Coder → Read meta.json
-    ↓
-Validate artifacts → Route to next step
-    ↓
-Update job.json → Continue or complete
-```
-
-#### Flow 2: Worker Mode Context
-
-```
-Backend Server
-    ↓
-Daemon polls via backend_client
-    ↓
-Claim work → Spawn execute-step subprocess
-    ↓
-Child process runs step → Submits result
-    ↓
-Backend receives structured result
-    ↓
-Daemon continues polling
+Job → Step → Prompt → Coder/Action → Artifacts → Sidecar → Route
 ```
 
-#### Flow 3: Bootstrap/R Runtime Context
+Each workflow execution:
+1. Creates a job with unique ID under `jobs/<workflow>/<job_id>/`
+2. Executes steps sequentially, with each step having its own working directory
+3. Produces artifacts written to disk
+4. Reports results via `meta.json` sidecar
+5. Routes to next step based on approval/rejection status
 
-```
-Packaged Bootstrap (repo)
-    ↓
-ukbe-run-agent init
-    ↓
-Copy to ~/.ukbe-runner/workflows/
-    ↓
-Runtime Bundle (global)
-    ↓
-Workflow execution loads from runtime
-```
+**State Management**:
+- Job state persisted to `job.json` with schema version 6 (v2)
+- Step results tracked in `retry_history` array
+- Artifact paths accumulated in `artifacts` dictionary
+- Review decisions recorded per artifact type
 
-### Context Boundaries
+**Failure Handling**:
+- Control classes: `AUTO_RETRYABLE`, `HUMAN_RETRY_REQUIRED`, `FATAL`
+- Retry limits enforced per step configuration
+- Failure history maintained for operational visibility
 
-| Boundary | Inside | Outside |
-|----------|--------|---------|
-| **Platform Boundary** | Workflow orchestration, job state, routing | LLM provider implementations, backend server |
-| **Runtime Boundary** | Job execution, artifact validation, step routing | Workflow definition authoring, prompt template design |
-| **Repository Boundary** | Packaged bootstrap, source code, tests | Global runner home, job directories, logs |
-| **Contract Boundary** | meta.json sidecar validation, artifact existence | Content validation, semantic correctness |
+### Documentation Context
 
-### Domain Context
+**Documentation Domains**:
+| Domain | Location | Purpose |
+|--------|----------|---------|
+| System Docs | `docs/system/` | Platform-level documentation |
+| Codebase Docs | `docs/codebase/` | Implementation documentation |
+| Delivery Docs | `docs/delivery/` | Project work tracking |
+| Bootstrap Bundle | `agent_runner_v2/bootstrap/` | Package seed documentation |
 
-The platform sits at the intersection of three domains:
+**Generated Document Protection**:
+- Workflow-generated docs carry `managed_by: workflow-generated` frontmatter
+- Protected from manual edits with explicit banner
+- Manifest tracked in `documentation_guardrails.py`
+- Regenerated via `documentation_sync_v1` workflow
 
-1. **Workflow Domain**: Template groups, steps, routing configuration
-2. **Execution Domain**: Coder invocation, action execution, result processing
-3. **Artifact Domain**: File generation, path resolution, document lifecycle
+### Operational Context
 
-### Constraints and Assumptions
+**Deployment Patterns**:
+- **Local Development**: Direct CLI invocation with manual workflow selection
+- **Backend-Connected**: Worker mode polling backend for work
+- **Daemon Mode**: Supervisor process managing child step execution
 
-| Constraint | Rationale |
-|------------|-----------|
-| Sidecar-only communication | Deterministic, auditable, machine-parseable |
-| No markdown write-backs | Separation of concerns - runner orchestrates, coders generate |
-| Hard failures on schema violations | Fail fast, explicit recovery paths |
-| Runtime bundle precedence | Allows local workflow customization without source changes |
-| Atomic file operations | Prevent partial writes during concurrent execution |
+**Monitoring**:
+- Job status queryable via `ukbe-run-agent status <job_id>`
+- Daemon emits heartbeats keyed by `workflow_step_run_id`
+- Child process state tracked via JSONL event logs
+- Pushover notifications for step completion/failure (if configured)
 
 ---
 
-*This context document describes the external boundaries of agent-runner-v2. See COMPONENT_ARCHITECTURE.md for internal component relationships.*
+*Generated by workflow: 00_master_docs_bootstrap_v1 / step: 04_generate_architecture_docs*

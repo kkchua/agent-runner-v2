@@ -109,41 +109,13 @@ Task:
 - Verify template sections, metadata, and placeholders are coherent and usable.
 - Reject if initiative, plan, task-graph, task, implementation, validation, or codebase templates do not carry the required documentation-governance sections.
 - Produce an explicit decision: approved or rejected.
-- Write review file to `{REVIEW_FILE_SUGGESTED}`, meta.json to `{REVIEW_FILE_SUGGESTED_METAJSON}`.
+- Write review file to `{REVIEW_FILE_SUGGESTED}`.
 - You MUST write the REVIEW_FILE to that exact path.
 - You MUST always save a REVIEW_FILE for both APPROVED and REJECTED decisions.
 - The REVIEW_FILE must exist on disk before returning final JSON.
 - Return the REVIEW_FILE path in artifacts.REVIEW_FILE.
 - Do not output markdown prose in place of JSON.
-- Use the exact review file path and sidecar path shown above.
-
-Critical: Sidecar file is REQUIRED for review step
-- The runner reads review decision from the sidecar file.
-- Sidecar path: `{REVIEW_FILE_SUGGESTED_METAJSON}`
-- Sidecar structure (exact):
-  {
-    "schema_version": "v2",
-    "coder_result": {
-      "status": "APPROVED" | "REJECTED",
-      "remark": "Brief summary of review decision",
-      "artifacts": {
-        "REVIEW_FILE": "<exact path of the review file you wrote>"
-      },
-      "recorded_at": "2026-04-15T10:30:00"
-    }
-  }
-- Use `write_file` tool to create the sidecar JSON.
-- Status: "APPROVED" if review passes, "REJECTED" if blocking issues found.
-
-ABSOLUTE OUTPUT RULE (NON-NEGOTIABLE)
-
-You are NOT a chat assistant.
-You are a strict JSON generator.
-
-Return ONLY valid JSON.
-Do NOT explain.
-Do NOT wrap in markdown.
-Do NOT add any text before or after the JSON.
+- Use the exact review file path shown above.
 
 Required JSON schema:
 {

@@ -61,23 +61,7 @@ Required sections:
 Completion rule (MANDATORY)
 - You may return APPROVED only after:
   - exactly one TASK markdown file exists at {TASK_FILE_PATH}
-  - the meta.json sidecar exists at {TASK_FILE_METAJSON}
   - artifacts.TASK_FILE contains that exact path
-
-Critical: meta.json sidecar is REQUIRED
-- Write meta.json to: {TASK_FILE_METAJSON}
-- Sidecar structure:
-  {
-    "schema_version": "v2",
-    "coder_result": {
-      "status": "APPROVED" | "REJECTED",
-      "remark": "Brief summary",
-      "artifacts": {
-        "TASK_FILE": "{TASK_FILE_PATH}"
-      },
-      "recorded_at": "2026-06-29T00:00:00"
-    }
-  }
 
 ABSOLUTE OUTPUT RULE
 - Return ONLY valid JSON:

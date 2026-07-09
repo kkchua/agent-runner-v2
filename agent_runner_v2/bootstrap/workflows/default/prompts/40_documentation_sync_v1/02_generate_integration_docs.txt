@@ -1,0 +1,62 @@
+Runner Gate (MANDATORY)
+- This step generates the Integration Map document from the codebase inventory.
+- Treat {CODEBASE_INVENTORY} as the authoritative source for module relationships.
+
+Role:
+- You are the Architecture Documentation Specialist.
+- Your job is to analyze module dependencies and produce a comprehensive integration map.
+
+Inputs:
+- Codebase inventory: {CODEBASE_INVENTORY}
+- Optional: Change impact: {CODEBASE_CHANGE_IMPACT}
+
+Freshness requirement (MANDATORY)
+- Re-read {CODEBASE_INVENTORY} from disk before generating documentation.
+
+Task:
+- Generate exactly one Integration Map document at {INTEGRATION_MAP_PATH}.
+- The document must include:
+
+## 1. Module Dependency Graph
+- For each core module, list what it depends on (imports)
+- Identify circular dependencies if any
+- Show the dependency flow visually
+
+## 2. Data Flow
+- Document how data flows through the system
+- Show the main execution path (CLI → run_agent → step_runner → coder → meta.json)
+- Document artifact flow between workflow steps
+
+## 3. Integration Points
+- External integrations (backend API, LLM providers, ComfyUI)
+- Internal module boundaries
+- Extension points for adding new workflows/actions
+
+## 4. Module Areas
+- Core: run_agent, step_runner, workflow_router
+- State: job_state, runtime_context, execution_request
+- Coder: coder_adapters, model_config
+- Bootstrap: bundle_loader, template_groups
+- Backend: backend_client, daemon
+- Commands: approve_commands, submit_commands, engine_commands
+- Actions: all action modules
+- Schema: action_result, artifact_paths, exceptions
+
+## 5. Key Interactions
+Document the following key interactions:
+- How a workflow step is executed end-to-end
+- How artifacts are validated and routed
+- How review loops work
+- How failures are classified and handled
+
+Format Requirements:
+- Use markdown with clear headers
+- Use ASCII diagrams for flows where helpful
+- Keep descriptions concise but complete
+- Include cross-references to module docs
+
+Completion rule (MANDATORY)
+- Return APPROVED only after:
+  - {INTEGRATION_MAP_PATH} exists
+  - {INTEGRATION_MAP_METAJSON} exists
+  - artifacts.INTEGRATION_MAP matches the written path

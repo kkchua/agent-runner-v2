@@ -6,9 +6,9 @@ module_path: "agent_runner_v2/coder_adapters.py"
 module_area: "coder"
 documentation_mode: "full"
 owner_doc_path: "docs/codebase/02_modules/agent-runner-v2-coder-adapters.md"
-last_verified_by_change: "40_documentation_sync_v1 / 40DOCSYNC-GEN-20260704-001 / 2026-07-04T13:29:07+08:00"
-created: "2026-07-04T13:29:07+08:00"
-owner: "40_documentation_sync_v1"
+last_verified_by_change: "00_master_docs_bootstrap_v1 / 00DOC-GEN-20260709-002 / 2026-07-09T21:13:38+08:00"
+created: "2026-07-09T21:13:38+08:00"
+owner: "00_master_docs_bootstrap_v1"
 ---
 
 # Module Documentation: agent_runner_v2.coder_adapters
@@ -46,73 +46,113 @@ This module belongs to the `coder` area and is documented as `full`.
 
 ### 2.1 Classes
 
-| Class | Purpose | Key Methods |
-|-------|---------|-------------|
-| `CoderInvocationError` | public class | |
-| `UsageData` | public class | |
-| `InvocationManifest` | public class | |
-| `InvocationResult` | public class | |
+#### CoderInvocationError
+
+**Inherits from**: `Exception`
+
+**Decorators**: `@dataclass`
+
+**Purpose**: Public class
+
+#### UsageData
+
+**Decorators**: `@dataclass`
+
+**Purpose**: Public class
+
+#### InvocationManifest
+
+**Decorators**: `@dataclass`
+
+**Purpose**: Public class
+
+#### InvocationResult
+
+**Decorators**: `@dataclass`
+
+**Purpose**: Public class
+
 
 ### 2.2 Functions
 
-| Function | Signature | Purpose |
-|----------|-----------|---------|
-| `dataclass_dict` | `(value)` | public function |
-| `invoke_coder` | `()` | public function |
-| `merge_usage` | `(target, source)` | public function |
+#### dataclass_dict()
+
+**Signature**: `dataclass_dict(value: UsageData | InvocationManifest)`
+
+**Parameters**:
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `value` | `UsageData | InvocationManifest` | — | — |
+
+**Returns**: `dict[str, Any]`
+
+---
+
+#### invoke_coder()
+
+**Signature**: `invoke_coder(*, coder: str, step: str, prompt_text: str, cwd: Path, schema_path: Path, prompt_checksum: str, now_iso_fn, coder_config: dict[str, Any] | None = None, sidecar_path: Path | None = None, timeout_seconds_override: int | None = None)`
+
+**Parameters**:
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `coder` | `str` | — | — |
+| `step` | `str` | — | — |
+| `prompt_text` | `str` | — | — |
+| `cwd` | `Path` | — | — |
+| `schema_path` | `Path` | — | — |
+| `prompt_checksum` | `str` | — | — |
+| `now_iso_fn` | — | — | — |
+| `coder_config` | `dict[str, Any] | None` | `None` | — |
+| `sidecar_path` | `Path | None` | `None` | — |
+| `timeout_seconds_override` | `int | None` | `None` | — |
+
+**Returns**: `InvocationResult`
+
+---
+
+#### merge_usage()
+
+**Signature**: `merge_usage(target: dict[str, Any], source: dict[str, Any])`
+
+**Parameters**:
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `target` | `dict[str, Any]` | — | — |
+| `source` | `dict[str, Any]` | — | — |
+
+**Returns**: `None`
+
+---
+
 
 ### 2.3 Constants / Configuration
 
-| Name | Value / Type | Purpose |
-|------|-------------|---------|
-| `DEFAULT_CODER_TIMEOUT_SECONDS` | constant | module configuration |
-| `SIDECAR_POLL_INTERVAL_SECONDS` | constant | module configuration |
-| `SIDECAR_SETTLE_DELAY_SECONDS` | constant | module configuration |
+| Name | Purpose |
+|------|--------|
+| `DEFAULT_CODER_TIMEOUT_SECONDS` | module configuration |
+| `SIDECAR_POLL_INTERVAL_SECONDS` | module configuration |
+| `SIDECAR_SETTLE_DELAY_SECONDS` | module configuration |
 
-## 3. Internal Implementation
 
-### 3.1 Key Data Structures
+## 3. Error Handling
 
-Auto-generated baseline documentation derived from the current source tree.
+No documented exceptions.
 
-### 3.2 Algorithm / Flow
 
-See the source module for implementation details; this document captures the public contract and scan-derived summary.
+## 4. Testing
 
-## 4. I/O Contract
-
-### 4.1 Inputs
-
-Derived from function parameters, imports, and file-level responsibilities.
-
-### 4.2 Outputs
-
-Derived from function return values and side effects observed in the source file.
-
-### 4.3 Side Effects
-
-Tracked at a baseline level by the repository scan.
-
-## 5. Error Handling
-
-| Error Condition | Handling | Recovery |
-|----------------|----------|----------|
-| | | |
-
-## 6. Testing
-
-### 6.1 Test Coverage
+### 4.1 Test Coverage
 
 | Test File | Coverage Area |
-|-----------|--------------|
-| `tests/test_documentation_governance.py` | `agent_runner_v2.coder_adapters` |
+|-----------|---------------|
+| (none) | No test references found |
 
-### 6.2 Known Gaps
 
-Auto-generated baseline. Review and refine as the codebase evolves.
-
-## 7. Change Log
+## 5. Change Log
 
 | Date | Change | Verified By |
 |------|--------|-------------|
-| 2026-07-04 | Initial baseline generated from repository scan | 40_documentation_sync_v1 |
+| 2026-07-09 | Initial baseline generated from repository scan | 00_master_docs_bootstrap_v1 |

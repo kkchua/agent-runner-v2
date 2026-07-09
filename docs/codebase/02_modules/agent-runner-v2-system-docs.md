@@ -6,9 +6,9 @@ module_path: "agent_runner_v2/system_docs.py"
 module_area: "support"
 documentation_mode: "summary"
 owner_doc_path: "docs/codebase/02_modules/agent-runner-v2-system-docs.md"
-last_verified_by_change: "40_documentation_sync_v1 / 40DOCSYNC-GEN-20260704-001 / 2026-07-04T13:29:07+08:00"
-created: "2026-07-04T13:29:07+08:00"
-owner: "40_documentation_sync_v1"
+last_verified_by_change: "00_master_docs_bootstrap_v1 / 00DOC-GEN-20260709-002 / 2026-07-09T21:13:38+08:00"
+created: "2026-07-09T21:13:38+08:00"
+owner: "00_master_docs_bootstrap_v1"
 ---
 
 # Module Documentation: agent_runner_v2.system_docs
@@ -36,84 +36,269 @@ This module belongs to the `support` area and is documented as `summary`.
 
 ### 2.1 Classes
 
-| Class | Purpose | Key Methods |
-|-------|---------|-------------|
-| | | |
+No public classes.
+
 
 ### 2.2 Functions
 
-| Function | Signature | Purpose |
-|----------|-----------|---------|
-| `render_system_index` | `(snapshot)` | public function |
-| `render_documentation_standard` | `(snapshot)` | public function |
-| `render_bundle_taxonomy` | `(snapshot)` | public function |
-| `render_bundle_migration_plan` | `(snapshot)` | public function |
-| `render_system_overview` | `(snapshot)` | public function |
-| `render_business_capabilities` | `(snapshot)` | public function |
-| `render_functional_spec` | `(snapshot)` | public function |
-| `render_nfr` | `(snapshot)` | public function |
-| `render_system_context` | `(snapshot)` | public function |
-| `render_component_architecture` | `(snapshot)` | public function |
-| `render_decision_log` | `(snapshot)` | public function |
-| `render_system_file_structure` | `(snapshot)` | public function |
-| `render_developer_guide` | `(snapshot)` | public function |
-| `render_runbook` | `(snapshot)` | public function |
-| `render_system_docs_change_log` | `(snapshot)` | public function |
-| `render_system_docs_validation` | `(snapshot)` | public function |
+#### render_system_index()
+
+**Signature**: `render_system_index(snapshot: dict, *, repo_name: str)`
+
+**Parameters**:
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `snapshot` | `dict` | — | — |
+| `repo_name` | `str` | — | — |
+
+**Returns**: `str`
+
+---
+
+#### render_documentation_standard()
+
+**Signature**: `render_documentation_standard(snapshot: dict)`
+
+**Parameters**:
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `snapshot` | `dict` | — | — |
+
+**Returns**: `str`
+
+---
+
+#### render_bundle_taxonomy()
+
+**Signature**: `render_bundle_taxonomy(snapshot: dict)`
+
+**Parameters**:
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `snapshot` | `dict` | — | — |
+
+**Returns**: `str`
+
+---
+
+#### render_bundle_migration_plan()
+
+**Signature**: `render_bundle_migration_plan(snapshot: dict)`
+
+**Parameters**:
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `snapshot` | `dict` | — | — |
+
+**Returns**: `str`
+
+---
+
+#### render_system_overview()
+
+**Signature**: `render_system_overview(snapshot: dict, *, repo_name: str)`
+
+**Parameters**:
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `snapshot` | `dict` | — | — |
+| `repo_name` | `str` | — | — |
+
+**Returns**: `str`
+
+---
+
+#### render_business_capabilities()
+
+**Signature**: `render_business_capabilities(snapshot: dict)`
+
+**Parameters**:
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `snapshot` | `dict` | — | — |
+
+**Returns**: `str`
+
+---
+
+#### render_functional_spec()
+
+**Signature**: `render_functional_spec(snapshot: dict, *, repo_name: str)`
+
+**Parameters**:
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `snapshot` | `dict` | — | — |
+| `repo_name` | `str` | — | — |
+
+**Returns**: `str`
+
+---
+
+#### render_nfr()
+
+**Signature**: `render_nfr(snapshot: dict)`
+
+**Parameters**:
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `snapshot` | `dict` | — | — |
+
+**Returns**: `str`
+
+---
+
+#### render_system_context()
+
+**Signature**: `render_system_context(snapshot: dict, *, repo_name: str)`
+
+**Parameters**:
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `snapshot` | `dict` | — | — |
+| `repo_name` | `str` | — | — |
+
+**Returns**: `str`
+
+---
+
+#### render_component_architecture()
+
+**Signature**: `render_component_architecture(snapshot: dict)`
+
+**Parameters**:
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `snapshot` | `dict` | — | — |
+
+**Returns**: `str`
+
+---
+
+#### render_decision_log()
+
+**Signature**: `render_decision_log(snapshot: dict)`
+
+**Parameters**:
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `snapshot` | `dict` | — | — |
+
+**Returns**: `str`
+
+---
+
+#### render_system_file_structure()
+
+**Signature**: `render_system_file_structure(snapshot: dict)`
+
+**Parameters**:
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `snapshot` | `dict` | — | — |
+
+**Returns**: `str`
+
+---
+
+#### render_developer_guide()
+
+**Signature**: `render_developer_guide(snapshot: dict)`
+
+**Parameters**:
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `snapshot` | `dict` | — | — |
+
+**Returns**: `str`
+
+---
+
+#### render_runbook()
+
+**Signature**: `render_runbook(snapshot: dict)`
+
+**Parameters**:
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `snapshot` | `dict` | — | — |
+
+**Returns**: `str`
+
+---
+
+#### render_system_docs_change_log()
+
+**Signature**: `render_system_docs_change_log(snapshot: dict, *, repo_name: str, doc_paths: list[str])`
+
+**Parameters**:
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `snapshot` | `dict` | — | — |
+| `repo_name` | `str` | — | — |
+| `doc_paths` | `list[str]` | — | — |
+
+**Returns**: `str`
+
+---
+
+#### render_system_docs_validation()
+
+**Signature**: `render_system_docs_validation(snapshot: dict, *, title: str, checks: list[tuple[str, bool, str]])`
+
+**Parameters**:
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `snapshot` | `dict` | — | — |
+| `title` | `str` | — | — |
+| `checks` | `list[tuple[str, bool, str]]` | — | — |
+
+**Returns**: `str`
+
+---
+
 
 ### 2.3 Constants / Configuration
 
-| Name | Value / Type | Purpose |
-|------|-------------|---------|
-| `SYSTEM_BOOTSTRAP_ROOT` | constant | module configuration |
-| `CODEBASE_ROOT` | constant | module configuration |
-| `DELIVERY_ROOT` | constant | module configuration |
+| Name | Purpose |
+|------|--------|
+| `SYSTEM_BOOTSTRAP_ROOT` | module configuration |
+| `CODEBASE_ROOT` | module configuration |
+| `DELIVERY_ROOT` | module configuration |
 
-## 3. Internal Implementation
 
-### 3.1 Key Data Structures
+## 3. Error Handling
 
-Auto-generated baseline documentation derived from the current source tree.
+No documented exceptions.
 
-### 3.2 Algorithm / Flow
 
-See the source module for implementation details; this document captures the public contract and scan-derived summary.
+## 4. Testing
 
-## 4. I/O Contract
-
-### 4.1 Inputs
-
-Derived from function parameters, imports, and file-level responsibilities.
-
-### 4.2 Outputs
-
-Derived from function return values and side effects observed in the source file.
-
-### 4.3 Side Effects
-
-Tracked at a baseline level by the repository scan.
-
-## 5. Error Handling
-
-| Error Condition | Handling | Recovery |
-|----------------|----------|----------|
-| | | |
-
-## 6. Testing
-
-### 6.1 Test Coverage
+### 4.1 Test Coverage
 
 | Test File | Coverage Area |
-|-----------|--------------|
-| `tests/test_bundle_loader.py` | `agent_runner_v2.system_docs` |
-| `tests/test_documentation_governance.py` | `agent_runner_v2.system_docs` |
+|-----------|---------------|
+| (none) | No test references found |
 
-### 6.2 Known Gaps
 
-Auto-generated baseline. Review and refine as the codebase evolves.
-
-## 7. Change Log
+## 5. Change Log
 
 | Date | Change | Verified By |
 |------|--------|-------------|
-| 2026-07-04 | Initial baseline generated from repository scan | 40_documentation_sync_v1 |
+| 2026-07-09 | Initial baseline generated from repository scan | 00_master_docs_bootstrap_v1 |

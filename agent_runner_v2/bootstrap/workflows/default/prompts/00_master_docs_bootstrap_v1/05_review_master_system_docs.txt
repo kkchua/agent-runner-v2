@@ -13,21 +13,15 @@ Inputs:
 - Project analysis: {PROJECT_ANALYSIS}
 - System docs index: {SYSTEM_DOCS_INDEX}
 - System docs change log: {SYSTEM_DOCS_CHANGE_LOG}
-
-Review scope:
-- `{SYSTEM_DOC_ROOT}/project_analysis.md`
-- `{SYSTEM_DOC_ROOT}/README.md`
-- `{SYSTEM_DOC_ROOT}/DOCUMENTATION_STANDARD.md`
-- `{SYSTEM_DOC_ROOT}/SYSTEM_OVERVIEW.md`
-- `{SYSTEM_DOC_ROOT}/BUSINESS_CAPABILITIES.md`
-- `{SYSTEM_DOC_ROOT}/FUNCTIONAL_SPEC.md`
-- `{SYSTEM_DOC_ROOT}/NON_FUNCTIONAL_REQUIREMENTS.md`
-- `{SYSTEM_DOC_ROOT}/SYSTEM_CONTEXT.md`
-- `{SYSTEM_DOC_ROOT}/COMPONENT_ARCHITECTURE.md`
-- `{SYSTEM_DOC_ROOT}/DECISION_LOG.md`
-- `{SYSTEM_DOC_ROOT}/SYSTEM_FILE_STRUCTURE.md`
-- `{SYSTEM_DOC_ROOT}/DEVELOPER_GUIDE.md`
-- `{SYSTEM_DOC_ROOT}/RUNBOOK.md`
+- Integration map: {INTEGRATION_MAP}
+- Failure modes: {FAILURE_MODES}
+- Architecture flow: {ARCHITECTURE_FLOW}
+- System context: {SYSTEM_CONTEXT}
+- Component architecture: {COMPONENT_ARCHITECTURE}
+- Decision log: {DECISION_LOG}
+- System file structure: {SYSTEM_FILE_STRUCTURE}
+- Developer guide: {DEVELOPER_GUIDE}
+- Runbook: {RUNBOOK}
 
 Review criteria:
 - repository purpose, workflow model, and code structure are described consistently
@@ -43,29 +37,3 @@ Task:
 - If approved, explain why the document set is ready for bootstrap finalization.
 - Do not output markdown prose in place of JSON. The only thing the runner parses is the final JSON object.
 - The review file path and sidecar path are already provided above. Use them exactly as given.
-
-Critical: meta.json sidecar is REQUIRED
-- Sidecar path: `{REVIEW_FILE_SUGGESTED_METAJSON}`
-- Use `write_file` tool to create the sidecar immediately after writing `{REVIEW_FILE_SUGGESTED}`.
-- Sidecar structure (exact):
-  {
-    "schema_version": "v2",
-    "coder_result": {
-      "status": "APPROVED" | "REJECTED",
-      "remark": "Brief review result",
-      "artifacts": {
-        "REVIEW_FILE": "{REVIEW_FILE_SUGGESTED}"
-      },
-      "recorded_at": "2026-07-01T00:00:00"
-    }
-  }
-
-ABSOLUTE OUTPUT RULE
-- Return ONLY valid JSON:
-  {
-    "status": "APPROVED | REJECTED",
-    "remark": "<summary>",
-    "artifacts": {
-      "REVIEW_FILE": "{REVIEW_FILE_SUGGESTED}"
-    }
-  }

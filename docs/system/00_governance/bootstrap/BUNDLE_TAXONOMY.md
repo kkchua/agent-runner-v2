@@ -1,12 +1,10 @@
 ---
 template_id: "SYS-00-BT"
-title: "Bundle Taxonomy"
-status: "active"
-generated: "2026-07-04T12:00:00+08:00"
+managed_by: workflow-generated
+generated: "2026-07-09T21:18:02+08:00"
 workflow: "00_master_docs_bootstrap_v1"
 step: "03_generate_system_overview_docs"
-change_id: "00DOC-GEN-20260704-002"
-managed_by: workflow-generated
+change_id: "00DOC-GEN-20260709-002"
 ---
 
 > Managed by workflow: `00_master_docs_bootstrap_v1` / step: `03_generate_system_overview_docs`
@@ -16,202 +14,257 @@ managed_by: workflow-generated
 
 ## Purpose
 
-This document defines the taxonomy for workflow bundles in agent-runner-v2. It establishes the classification system for workflows, artifacts, and their relationships, enabling consistent organization and navigation across the platform.
+This document defines the taxonomy and organization of workflow bundles in agent-runner-v2. It describes the structure of bootstrap bundles, runtime bundles, and the relationship between them.
+
+The bundle taxonomy serves as the reference for understanding where workflow definitions live, how they are organized, and how changes propagate from bootstrap source to runtime execution.
 
 ## Audience Model
 
-| Audience | Concern | Primary Sections |
-|----------|---------|------------------|
-| **Workflow Authors** | How do I structure a new workflow? | Workflow Families, Artifact Classification |
-| **Integrators** | How do I reference and extend bundles? | Bundle Structure, Reference Patterns |
-| **Operators** | How do I deploy and manage bundles? | Runtime Source of Truth, Versioning |
-| **Platform Maintainers** | How do I evolve the taxonomy? | Taxonomy Versioning, Migration |
+| Audience | Concerns | How This Document Helps |
+|----------|----------|----------------------|
+| **System Maintainers** | Bundle structure, versioning, migration | Understanding taxonomy and organization |
+| **Workflow Authors** | Where to place new workflows, naming conventions | Bundle structure and conventions |
+| **Operators** | Runtime bundle location, troubleshooting | Runtime bundle paths and sync procedures |
+| **Developers** | Bootstrap vs runtime distinction | Clear separation of concerns |
 
 ## Bundle Structure
 
-A workflow bundle is a directory containing:
+### Bootstrap Bundle
+
+The bootstrap bundle is the package-local source of workflow definitions and templates.
+
+**Location:** `agent_runner_v2/bootstrap/`
+
+**Structure:**
 
 ```
-<workflow_root>/<workflow_name>/
-├── template_groups.py      # Workflow definitions and step configurations
-├── prompts/                # Prompt template directory
-│   └── <step_name>/
-│       ├── <step_file>.txt # Primary prompt template
-│       └── *.txt           # Additional templates
-├── *.json                  # Schema and configuration files
-└── assets/                 # Workflow-specific assets (optional)
+agent_runner_v2/bootstrap/
+├── workflows/
+│   └── default/
+│       ├── template_groups.py          # Workflow family definitions
+│       ├── job_schema.json             # Job state schema
+│       ├── llm_response_schema.json    # LLM response schema
+│       ├── model_mapping.json          # Model name mappings
+│       └── prompts/                    # Workflow step prompts
+│           ├── 00_master_docs_bootstrap_v1/
+│           ├── 10_execution_scaffold_v1/
+│           ├── 20_initiative_intake_v1/
+│           ├── 21_bug_fix_intake_v1/
+│           ├── 30_delivery_planning_v1/
+│           ├── 31_task_execution_v1/
+│           ├── 40_documentation_sync_v1/
+│           ├── 41_audience_doc_v1/
+│           └── ...
+├── bundles/
+│   └── core/
+│       └── current/                    # Core system documentation bundle
+│           ├── README.md
+│           ├── SYSTEM_OVERVIEW.md
+│           ├── FUNCTIONAL_SPEC.md
+│           ├── templates/              # Document templates
+│           │   ├── delivery/
+│           │   └── codebase/
+│           └── ...
+└── themes/
+    └── default/                        # Architecture site themes
+        ├── layout.html
+        ├── styles.css
+        └── ...
 ```
+
+### Runtime Bundle
+
+The runtime bundle is the active execution source loaded during workflow execution.
+
+**Location:** `%USERPROFILE%\.ukbe-runner\workflows\<workflow>\`
+
+**Structure:**
+
+```
+%USERPROFILE%\.ukbe-runner\workflows\default/
+├── template_groups.py          # Copied from bootstrap
+├── job_schema.json             # Copied from bootstrap
+├── llm_response_schema.json    # Copied from bootstrap
+├── model_mapping.json          # Copied from bootstrap
+└── prompts/                    # Copied from bootstrap
+    └── ...
+```
+
+### Critical Distinction
+
+| Aspect | Bootstrap Source | Runtime Bundle |
+|--------|-----------------|----------------|
+| **Purpose** | Package-local seed/template | Active execution source |
+| **Location** | `agent_runner_v2/bootstrap/...` | `%USERPROFILE%\.ukbe-runner\workflows\...` |
+| **Updates** | Via code changes | Used by running workflows |
+| **Loading** | `bundle_loader.py` | `runtime_context.py` |
+| **Persistence** | Version controlled | Global user directory |
+
+**Critical Rule:** Changes to bootstrap workflow files must be synced to the global runner home before they take effect in prompts.
 
 ## Workflow Families
 
-Workflows are organized into families based on their purpose and lifecycle phase:
+### Core Workflow Families
 
-| Family ID | Prefix | Steps | Purpose |
-|-----------|--------|-------|---------|
-| `00_master_docs_bootstrap_v1` | 00DOC | 10 | Master documentation bootstrap |
-| `10_execution_scaffold_v1` | EXSC | 13 | Delivery scaffold generation |
-| `20_initiative_intake_v1` | INIT | 5 | Initiative intake and refinement |
-| `21_bug_fix_intake_v1` | BUG | 7 | Bug fix workflow |
-| `30_delivery_planning_v1` | PLAN | 10 | Plan and task graph generation |
-| `31_task_execution_v1` | TASK | 12 | Task implementation and validation |
-| `40_documentation_sync_v1` | SYNC | 2 | Documentation reconciliation |
-| `50_architecture_site_v1` | SITE | 2 | Architecture site publishing |
-| `image_csv_gen_v2` | IMG | 3 | Image CSV generation |
-| `videoxpress_gen_v1` | VID | 9 | Video generation pipeline |
-| `tiktok_video_pipeline_v1` | TTOK | 10 | TikTok video workflow |
+| Workflow Family | ID Pattern | Purpose |
+|-----------------|------------|---------|
+| **Master Docs Bootstrap** | `00_master_docs_bootstrap_v1` | Generate core system documentation |
+| **Execution Scaffold** | `10_execution_scaffold_v1` | Scaffold delivery and codebase governance |
+| **Initiative Intake** | `20_initiative_intake_v1` | Draft and refine initiative intake |
+| **Bug Fix Intake** | `21_bug_fix_intake_v1` | Triage and fix bugs |
+| **Delivery Planning** | `30_delivery_planning_v1` | Plan generation and task decomposition |
+| **Task Execution** | `31_task_execution_v1` | Implement and validate tasks |
+| **Documentation Sync** | `40_documentation_sync_v1` | Reconcile documentation with codebase |
+| **Audience Documentation** | `41_audience_doc_v1` | Generate audience-specific docs |
+| **Architecture Site** | `50_architecture_site_v1` | Publish browsable HTML architecture |
+| **Developer Documentation** | `51_developer_doc_v1` | Generate developer-facing docs |
+| **Operator Documentation** | `52_operator_doc_v1` | Generate operator-facing docs |
+| **User Documentation** | `55_user_docs_v1` | Generate end-user docs |
 
-### Family Naming Convention
+### Workflow Naming Convention
 
-```
-[<priority_prefix>][<name>]_v<version>
-```
+| Element | Convention | Example |
+|---------|------------|---------|
+| **Family ID** | `{prefix}_{descriptive_name}_v{version}` | `30_delivery_planning_v1` |
+| **Step ID** | `{zero_padded_step}_{step_name}` | `02_generate_project_analysis` |
+| **Prompt File** | `{step_number}_{step_name}.txt` | `02_generate_project_analysis.txt` |
 
-- **Priority prefix**: Two-digit number indicating bootstrap/execution order (00-99)
-- **Name**: Lowercase, descriptive, underscore-separated
-- **Version**: Integer version for compatibility tracking
+## Core Bundle Contents
 
-## Artifact Classification
+### System Documentation
 
-Artifacts are classified by their role in the delivery lifecycle:
+The core bundle contains the complete system documentation set:
 
-### Initiative Artifacts
+| Document | Template ID | Purpose |
+|----------|-------------|---------|
+| README.md | SYS-00-IDX | Documentation index |
+| DOCUMENTATION_STANDARD.md | SYS-00-DS | Documentation conventions |
+| BUNDLE_TAXONOMY.md | SYS-00-BT | This document — bundle organization |
+| BUNDLE_MIGRATION_PLAN.md | SYS-00-BMP | Migration procedures |
+| SYSTEM_OVERVIEW.md | SYS-00-SO | Platform overview |
+| BUSINESS_CAPABILITIES.md | SYS-00-BC | Operational capabilities |
+| FUNCTIONAL_SPEC.md | SYS-00-FS | System behaviors |
+| NON_FUNCTIONAL_REQUIREMENTS.md | SYS-00-NFR | Quality expectations |
+| SYSTEM_CONTEXT.md | SYS-00-SC | System context |
+| COMPONENT_ARCHITECTURE.md | SYS-00-CA | Component structure |
+| DECISION_LOG.md | SYS-00-DL | Architectural decisions |
+| SYSTEM_FILE_STRUCTURE.md | SYS-00-SFS | File organization |
+| DEVELOPER_GUIDE.md | SYS-00-DG | Development procedures |
+| RUNBOOK.md | SYS-00-RB | Operational procedures |
+| EXISTING_REPO_WORKFLOW_SOP.md | SYS-00-SOP | Workflow SOP |
+| PROJECT_ANALYSIS.md | SYS-00-PA | Project analysis |
 
-| Artifact Key | File Pattern | Phase | Description |
-|--------------|--------------|-------|-------------|
-| `DRAFT_INIT_FILE` | `DRAFT-*.md` | Intake | Initial draft requirements |
-| `PRE_INIT_FILE` | `PRE-INIT-*.md` | Intake | Pre-approval refinement |
-| `INIT_FILE` | `INIT-*.md` | Intake | Approved initiative specification |
+### Template Registry
 
-### Planning Artifacts
+The core bundle includes document templates for delivery and codebase documentation:
 
-| Artifact Key | File Pattern | Phase | Description |
-|--------------|--------------|-------|-------------|
-| `PLAN_FILE` | `PLAN-*.md` | Planning | Implementation plan |
-| `TASK_GRAPH_FILE` | `TASK-GRAPH-*.json` | Planning | Task dependency graph |
-| `TASK_FILE` | `TASK-*.md` | Planning | Individual task specification |
+**Delivery Templates:**
+- Delivery template registry
+- Initiative template
+- Plan template
+- Task graph template
+- Task template
+- Implementation template
+- Review template
+- Validation template
+- Memory template
 
-### Execution Artifacts
+**Codebase Templates:**
+- Codebase template registry
+- Inventory template
+- Module template
+- Component template
+- Change template
 
-| Artifact Key | File Pattern | Phase | Description |
-|--------------|--------------|-------|-------------|
-| `IMPL_FILE` | `IMPL-*.md` | Execution | Implementation specification |
-| `REVIEW_FILE` | `REVIEW-*.md` | Execution | Code review output |
-| `VALIDATION_FILE` | `VALIDATION-*.md` | Execution | Validation results |
+### Agent Contracts
 
-### Codebase Documentation Artifacts
+The core bundle includes agent contract documentation:
 
-| Artifact Key | File Pattern | Phase | Description |
-|--------------|--------------|-------|-------------|
-| `CODEBASE_INVENTORY` | `codebase_inventory.md` | Bootstrap | Module inventory |
-| `CODEBASE_CHANGE_IMPACT` | `*-change.md` | Sync | Change impact analysis |
-| `CODEBASE_SCAN_SNAPSHOT` | `*-snapshot.json` | Sync | Repository scan results |
+- AGENTS.md — Master agent index
+- AGENT-PLANNER.md — Planning agent
+- AGENT-EXECUTOR.md — Execution agent
+- AGENT-REVIEWER.md — Review agent
+- AGENT-IMPL-PLANNER.md — Implementation planner
+- AGENT-TASK-DECOMPOSER.md — Task decomposer
+- AGENT-MEMORY-MANAGER.md — Memory manager
 
-### System Documentation Artifacts
+## Synchronization
 
-| Artifact Key | File Pattern | Phase | Description |
-|--------------|--------------|-------|-------------|
-| `SYSTEM_OVERVIEW` | `SYSTEM_OVERVIEW.md` | Bootstrap | System overview |
-| `FUNCTIONAL_SPEC` | `FUNCTIONAL_SPEC.md` | Bootstrap | Functional specification |
-| `COMPONENT_ARCHITECTURE` | `COMPONENT_ARCHITECTURE.md` | Bootstrap | Architecture documentation |
-| `DECISION_LOG` | `DECISION_LOG.md` | Bootstrap | Decision records |
+### Sync Procedures
 
-### Scaffold Artifacts
+Changes to bootstrap files must be synchronized to the runtime bundle:
 
-| Artifact Key | File Pattern | Phase | Description |
-|--------------|--------------|-------|-------------|
-| `PROJECT_ANALYSIS` | `project_analysis.md` | Scaffold | Project analysis |
-| `DELIVERY_SOP` | `DELIVERY_SOP_*.md` | Scaffold | Delivery SOP |
-| `DELIVERY_AGENTS_MD` | `AGENTS.md` | Scaffold | Agent contracts |
-| `DELIVERY_STATUS_RULES` | `DELIVERY_STATUS_RULES_*.md` | Scaffold | Status rules |
+| Change Type | Sync Method | Command |
+|-------------|-------------|---------|
+| Workflow prompts | Manual sync | `sync-workflows-to-backend.bat` |
+| Template groups | Manual sync | `sync-10_execution_scaffold_v1-workflow-spec.bat` |
+| Core bundle | Init command | `ukbe-run-agent init` (re-seeds) |
 
-## Step Classification
+### Sync Validation
 
-Steps are classified by their execution type:
+After synchronization:
 
-| Step Type | Description | Example |
-|-----------|-------------|---------|
-| `scan` | Repository analysis | `00_scan_repo_codebase` |
-| `generate` | Document generation | `02_generate_project_analysis` |
-| `review` | Human review checkpoint | `05_review_master_system_docs` |
-| `refine` | Iterative refinement | `06_refine_master_system_docs` |
-| `validate` | Validation and verification | `08_validate_master_system_docs` |
-| `finalize` | Completion and cleanup | `09_finalize_bootstrap` |
+1. Verify runtime bundle matches bootstrap source
+2. Check prompt templates are updated
+3. Validate template_groups.py changes
+4. Confirm schema files are current
 
-### Step Naming Convention
+### Sync Failure Handling
 
-```
-[<priority>]_<action>_<target>
-```
+| Failure | Action |
+|---------|--------|
+| Partial sync | Re-run sync command |
+| Version mismatch | Check bundle versions, re-initialize if needed |
+| File permission | Check user directory permissions |
+| Path resolution | Verify RUNNER_ROOT environment |
 
-- **Priority**: Two-digit number for ordering within workflow
-- **Action**: Verb describing the step's primary action
-- **Target**: Noun describing what the step operates on
+## Versioning
 
-## Runtime Source of Truth
+### Bundle Versions
 
-The platform maintains two sources of workflow definitions:
+Bundles are versioned through:
 
-| Source | Location | Purpose | Update Mechanism |
-|--------|----------|---------|------------------|
-| **Packaged Bootstrap** | `agent_runner_v2/bootstrap/workflows/default/` | Repository distribution | Git commit |
-| **Runtime Bundle** | `%USERPROFILE%\.ukbe-runner\workflows\<workflow>\` | Active execution | `ukbe-run-agent init` |
+| Mechanism | Description |
+|-----------|-------------|
+| **Git commit** | Bootstrap source version controlled |
+| **Change ID** | Generated documents tagged with change ID |
+| **Template version** | Workflow family version in ID |
 
-### Initialization Flow
+### Version Compatibility
 
-1. User runs `ukbe-run-agent init`
-2. Bootstrap copies workflow files from package to runtime home
-3. Runtime loads workflows from runtime home, not package
-4. Updates to bootstrap require re-initialization to propagate
+| Bootstrap Version | Runtime Version | Compatibility |
+|-------------------|-----------------|---------------|
+| Same | Same | Full compatibility |
+| Newer | Older | May have new features not available |
+| Older | Newer | Backward compatible if schema unchanged |
 
-### Versioning Strategy
+## Extension Points
 
-| Component | Version Location | Compatibility |
-|-----------|------------------|---------------|
-| Job schema | `job_schema.json` | Required for state loading |
-| LLM response | `llm_response_schema.json` | Required for coder output |
-| Template groups | `template_groups.py` | Workflow definitions |
-| Prompt templates | `prompts/` directory | Step-specific inputs |
+### Custom Workflows
 
-## Reference Patterns
+New workflow families can be added:
 
-### Cross-Workflow References
+1. Create workflow directory in `bootstrap/workflows/default/prompts/`
+2. Define in `template_groups.py`
+3. Sync to runtime bundle
+4. Test with local execution
 
-```python
-# Reference another workflow's artifact
-"reference_files": {
-    "OTHER_WORKFLOW_ARTIFACT": "path/to/artifact.md"
-}
-```
+### Custom Templates
 
-### Artifact Path Resolution
+Repository-specific templates:
 
-```python
-# Runtime context resolves paths
-from agent_runner_v2.runtime_context import get_delivery_root
-from agent_runner_v2.doc_paths import delivery_doc_rel
+1. Add to `bootstrap/bundles/core/current/templates/`
+2. Update template registry
+3. Reference via artifact keys
 
-# Absolute path to delivery artifact
-delivery_path = get_delivery_root() / "01_initiatives" / "INIT-001.md"
+### Custom Themes
 
-# Relative path from repo root
-rel_path = delivery_doc_rel("01_initiatives/INIT-001.md")
-```
+Architecture site themes:
 
-## Taxonomy Versioning
-
-The bundle taxonomy is versioned independently from the platform:
-
-| Taxonomy Version | Platform Compatibility | Changes |
-|------------------|------------------------|---------|
-| 1.0 | agent-runner-v2 >= 0.1.0 | Initial taxonomy |
-
-### Taxonomy Extension Rules
-
-1. **New artifact keys**: Add to `ARTIFACT_KEYS` list
-2. **New workflow families**: Add to `TEMPLATE_GROUPS` dictionary
-3. **New step types**: Follow naming convention, document in taxonomy
-4. **Breaking changes**: Require taxonomy version bump
+1. Add to `bootstrap/themes/`
+2. Reference in workflow config
+3. Validate HTML output
 
 ---
 
-*This taxonomy defines the structure for all workflow bundles in agent-runner-v2. Extensions should follow established patterns and update this document.*
+*Generated by workflow: 00_master_docs_bootstrap_v1 / step: 03_generate_system_overview_docs*

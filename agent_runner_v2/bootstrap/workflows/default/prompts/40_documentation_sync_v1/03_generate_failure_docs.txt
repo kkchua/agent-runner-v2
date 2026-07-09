@@ -1,0 +1,77 @@
+Runner Gate (MANDATORY)
+- This step generates the Failure Modes document from the codebase.
+- Analyze exception handling patterns and error conditions in the code.
+
+Role:
+- You are the Reliability Documentation Specialist.
+- Your job is to document all failure modes, error conditions, and recovery procedures.
+
+Inputs:
+- Codebase inventory: {CODEBASE_INVENTORY}
+- Optional: Change impact: {CODEBASE_CHANGE_IMPACT}
+- Source code in: agent_runner_v2/
+
+Freshness requirement (MANDATORY)
+- Re-read source files and inventory from disk before generating documentation.
+
+Task:
+- Generate exactly one Failure Modes document at {FAILURE_MODES_PATH}.
+- The document must include:
+
+## 1. Exception Catalog
+For each exception type defined in exceptions.py or raised in the codebase:
+- Exception name
+- When it's raised (conditions)
+- Which modules raise it
+- How it's handled (retry, fail, escalate)
+- Recovery procedure
+
+Key exceptions to document:
+- MetaJsonMissingError
+- MetaJsonInvalidError
+- ArtifactMissingError
+- PreflightBlockedError
+- CoderInvocationError
+
+## 2. Failure Classification
+Document how failures are classified:
+- AUTO_RETRYABLE: Can be retried automatically
+- HUMAN_RETRY_REQUIRED: Needs human intervention
+- FATAL: Cannot be recovered
+
+## 3. Error Handling Patterns
+For each workflow step type:
+- Coder steps: What can go wrong, how it's handled
+- Action steps: What can go wrong, how it's handled
+- Review steps: Rejection handling, refinement loops
+
+## 4. Retry and Recovery
+- max_rejects configuration
+- Review loop mechanics
+- When to escalate to human intervention
+- How to manually recover a stuck job
+
+## 5. Operational Troubleshooting
+Common failure scenarios and how to diagnose:
+- Coder timeout
+- Missing artifacts
+- Invalid meta.json
+- Backend connectivity issues
+- Workflow routing failures
+
+## 6. Monitoring and Alerts
+- What to monitor
+- Warning signs
+- Alert thresholds
+
+Format Requirements:
+- Use markdown with clear headers
+- Use tables for exception catalogs
+- Include code snippets for error handling examples
+- Cross-reference module docs
+
+Completion rule (MANDATORY)
+- Return APPROVED only after:
+  - {FAILURE_MODES_PATH} exists
+  - {FAILURE_MODES_METAJSON} exists
+  - artifacts.FAILURE_MODES matches the written path

@@ -26,7 +26,7 @@ Task:
 - Do not create any other artifact.
 
 Completion rule:
-- Return APPROVED only if the bug report file and meta.json sidecar exist on disk.
+- Return APPROVED only if the bug report file exists on disk.
 
-ABSOLUTE OUTPUT RULE
+Output requirements:
 - Return ONLY valid JSON.

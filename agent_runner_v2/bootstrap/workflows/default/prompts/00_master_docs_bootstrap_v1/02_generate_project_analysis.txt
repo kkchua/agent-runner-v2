@@ -19,9 +19,9 @@ Primary objectives:
 6. Capture the repository architecture posture so downstream docs can distinguish the universal baseline from any repo-selected profile.
 
 Write or refresh:
-- `{SYSTEM_DOC_ROOT}/project_analysis.md`
+- `{PROJECT_ANALYSIS}`
 
-Required content for `project_analysis.md`:
+Required content for `{PROJECT_ANALYSIS}`:
 - YAML frontmatter with this exact template identifier: `template_id: "SYS-00-PA"` plus the standard generated-doc metadata
 - concise repo overview
 - codebase structure summary
@@ -63,31 +63,3 @@ Use these section headings exactly:
 - `Architectural Observations`
 - `Architecture Posture`
 - `Unresolved Documentation Gaps`
-
-Meta contract:
-- Write the sidecar JSON to `{PROJECT_ANALYSIS_METAJSON}`.
-- Mark the run `APPROVED` only when `project_analysis.md` is written and aligned with the actual repo code you inspected.
-- The sidecar MUST use this exact structure:
-  {
-    "schema_version": "v2",
-    "coder_result": {
-      "status": "APPROVED" | "REJECTED",
-      "remark": "<summary>",
-      "artifacts": {
-        "PROJECT_ANALYSIS": "{SYSTEM_DOC_ROOT}/project_analysis.md"
-      },
-      "recorded_at": "2026-07-01T00:00:00"
-    }
-  }
-
-Before finishing, verify that the target file exists on disk and reflects the current repository code, not only the scan summary.
-
-ABSOLUTE OUTPUT RULE
-- Return ONLY valid JSON:
-  {
-    "status": "APPROVED | REJECTED",
-    "remark": "<summary>",
-    "artifacts": {
-      "PROJECT_ANALYSIS": "{SYSTEM_DOC_ROOT}/project_analysis.md"
-    }
-  }

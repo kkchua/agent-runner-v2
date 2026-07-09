@@ -31,26 +31,7 @@ For EACH image processed:
 extract_desc completion rule (MANDATORY)
 - You may return `status: "APPROVED"` only after all of the following are true:
   - one _desc.json file has been created for each image in {IMAGE_FOLDER}
-  - the meta.json sidecar has been written to {IMAGE_DESC_FOLDER_METAJSON}
 - If the descriptions were not written successfully, you MUST return `REJECTED`.
-
-Critical: meta.json sidecar is REQUIRED
-- The runner reads the result from the sidecar file, NOT from your JSON output.
-- Sidecar path: {IMAGE_DESC_FOLDER_METAJSON}
-- Sidecar structure (exact):
-  {
-    "schema_version": "v2",
-    "coder_result": {
-      "status": "APPROVED" | "REJECTED",
-      "remark": "Brief summary",
-      "artifacts": {
-        "IMAGE_DESC_FOLDER": "{IMAGE_FOLDER}/"
-      },
-      "recorded_at": "<current ISO timestamp>"
-    }
-  }
-- Use write_file tool to create the sidecar immediately after writing all description files.
-- You MUST verify the sidecar exists on disk before returning.
 
 ABSOLUTE OUTPUT RULE (NON-NEGOTIABLE)
 
@@ -87,6 +68,4 @@ Required execution sequence:
 1. Scan {IMAGE_FOLDER} for PNG, JPG, WEBP files.
 2. Read each image and produce its structured description.
 3. Write each {image_stem}_desc.json to {IMAGE_FOLDER}/.
-4. Write the meta.json sidecar to {IMAGE_DESC_FOLDER_METAJSON}.
-5. Verify the sidecar exists on disk.
-6. Return the final JSON.
+4. Return the final JSON.

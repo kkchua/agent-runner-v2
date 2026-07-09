@@ -28,12 +28,12 @@ Inputs:
 - Governing references:
 {PROJECT_ANALYSIS}
 {DELIVERY_STATUS_RULES}
-{CODEBASE_DOC_SOP}
-{CODEBASE_DOC_STATUS_RULES}
+{CODEBASE_DOC_SOP_v1}
+{CODEBASE_DOC_STATUS_RULES_v1}
 {EXISTING_REPO_WORKFLOW_SOP}
 
 Freshness requirement (MANDATORY)
-- Re-read {DELIVERY_SOP}, {PROJECT_ANALYSIS}, {DELIVERY_STATUS_RULES}, {CODEBASE_DOC_SOP}, {CODEBASE_DOC_STATUS_RULES}, and {EXISTING_REPO_WORKFLOW_SOP} from disk before proceeding.
+- Re-read {DELIVERY_SOP}, {PROJECT_ANALYSIS}, {DELIVERY_STATUS_RULES}, {CODEBASE_DOC_SOP_v1}, {CODEBASE_DOC_STATUS_RULES_v1}, and {EXISTING_REPO_WORKFLOW_SOP} from disk before proceeding.
 - Base your decision only on their current contents.
 - Do not rely on prior memory, previous summaries, or cached understanding.
 - Current file states:
@@ -72,35 +72,7 @@ Task:
 - The REVIEW_FILE must exist on disk before returning final JSON.
 - Return the REVIEW_FILE path in artifacts.REVIEW_FILE.
 - Do not output markdown prose in place of JSON.
-- Use the exact review file path and sidecar path shown above.
-
-Critical: Sidecar file is REQUIRED for review step
-- The runner reads review decision from the sidecar file.
-- Sidecar path: `{REVIEW_FILE_SUGGESTED_METAJSON}`
-- Sidecar structure (exact):
-  {
-    "schema_version": "v2",
-    "coder_result": {
-      "status": "APPROVED" | "REJECTED",
-      "remark": "Brief summary of review decision",
-      "artifacts": {
-        "REVIEW_FILE": "<exact path of the review file you wrote>"
-      },
-      "recorded_at": "2026-04-15T10:30:00"
-    }
-  }
-- Use `write_file` tool to create the sidecar JSON.
-- Status: "APPROVED" if review passes, "REJECTED" if blocking issues found.
-
-ABSOLUTE OUTPUT RULE (NON-NEGOTIABLE)
-
-You are NOT a chat assistant.
-You are a strict JSON generator.
-
-Return ONLY valid JSON.
-Do NOT explain.
-Do NOT wrap in markdown.
-Do NOT add any text before or after the JSON.
+- Use the exact review file path shown above.
 
 Required JSON schema:
 {

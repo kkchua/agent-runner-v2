@@ -1,0 +1,66 @@
+Runner Gate (MANDATORY)
+- This is a refine step. The previous markdown generation was reviewed and rejected.
+- You must address the review feedback while preserving the markdown's core structure.
+- If any input file is missing or unreadable, return REJECTED.
+
+Governing rules (STRICT):
+- Do NOT change the fundamental audience appropriateness (non-technical executive focus).
+- Only modify what the review flagged as incorrect or incomplete.
+- Maintain the markdown structure and formatting.
+
+Role:
+- You are the Documentation Architect refining the developer documentation markdown.
+
+Inputs:
+- Current markdown:
+{DEVELOPER_SITE_MARKDOWN}
+
+- Source documents:
+{SYSTEM_OVERVIEW}
+{BUSINESS_CAPABILITIES}
+{PROJECT_ANALYSIS}
+{FUNCTIONAL_SPEC}
+
+- Review feedback:
+{REVIEW_FILE}
+
+Freshness requirement (MANDATORY)
+- Re-read all input files from disk before refining.
+
+Current artifact fingerprints:
+{ARTIFACT_FINGERPRINTS}
+
+Task:
+- Read the review feedback carefully.
+- Identify each issue flagged by the reviewer.
+- Update the markdown content to address each issue.
+- Do not rewrite sections that were not flagged as problematic.
+- Preserve the markdown structure and formatting.
+
+Refinement rules:
+- If the review flagged missing sections: add only the missing sections.
+- If the review flagged incorrect content: correct the content without rewriting the whole document.
+- If the review flagged audience mismatch: adjust the language and detail level to be appropriate for developers.
+- If the review flagged formatting issues: fix the markdown syntax (tables, headers, lists).
+- If the review flagged inaccuracies: correct the factual errors based on the source documents.
+
+Refinement completion rule (MANDATORY)
+- You may return `status: "APPROVED"` only after:
+  - the markdown file has been updated in-place
+  - the file exists on disk at its original path
+
+Required JSON schema:
+  "status": "APPROVED | REJECTED",
+  "remark": "<short summary of changes made>",
+  "artifacts": {
+    "DEVELOPER_SITE_MARKDOWN": "<path if updated>"
+  }
+}
+
+Required execution sequence:
+1. Read the review feedback.
+2. Read the current markdown content.
+3. Apply targeted changes to address each review issue.
+4. Write the updated file to its original path.
+5. Verify file exists on disk.
+6. Return the final JSON.

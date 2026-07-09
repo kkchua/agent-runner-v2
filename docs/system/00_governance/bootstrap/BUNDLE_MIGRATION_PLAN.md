@@ -1,12 +1,10 @@
 ---
 template_id: "SYS-00-BMP"
-title: "Bundle Migration Plan"
-status: "active"
-generated: "2026-07-04T12:00:00+08:00"
+managed_by: workflow-generated
+generated: "2026-07-09T21:18:02+08:00"
 workflow: "00_master_docs_bootstrap_v1"
 step: "03_generate_system_overview_docs"
-change_id: "00DOC-GEN-20260704-002"
-managed_by: workflow-generated
+change_id: "00DOC-GEN-20260709-002"
 ---
 
 > Managed by workflow: `00_master_docs_bootstrap_v1` / step: `03_generate_system_overview_docs`
@@ -16,262 +14,249 @@ managed_by: workflow-generated
 
 ## Purpose
 
-This document defines the migration strategy for workflow bundles and documentation evolution in agent-runner-v2. It establishes the rules for transitioning between bundle versions, updating runtime bundles, and maintaining consistency between packaged bootstrap and runtime sources.
+This document defines the migration procedures for workflow bundles in agent-runner-v2. It describes how bundles are versioned, how migrations are executed, and how to handle version transitions.
+
+The migration plan serves as the reference for system maintainers when updating workflow definitions, changing bundle structures, or migrating existing workspaces to new bundle versions.
 
 ## Audience Model
 
-| Audience | Concern | Primary Sections |
-|----------|---------|------------------|
-| **Platform Maintainers** | How do I release bundle updates? | Version Strategy, Release Process |
-| **Repository Administrators** | How do I update my runtime bundles? | Runtime Update Procedures |
-| **Workflow Authors** | How do I migrate my workflows? | Workflow Migration Patterns |
-| **Operators** | How do I manage breaking changes? | Breaking Changes, Rollback Procedures |
+| Audience | Concerns | How This Document Helps |
+|----------|----------|----------------------|
+| **System Maintainers** | Migration procedures, version transitions | Understanding migration mechanics |
+| **Operators** | Workspace migration, downtime handling | Migration procedures and timing |
+| **Developers** | Backward compatibility, breaking changes | Version compatibility rules |
 
-## Current State
+## Migration Principles
 
-| Component | Current Version | Status |
-|-----------|-----------------|--------|
-| Platform | 0.1.0 | Active development |
-| Bootstrap Bundle | 1.0.0 | Packaged with platform |
-| Runtime Bundle | 1.0.0 (if initialized) | User home directory |
-| Job Schema | 2 | v2 execution contract |
+### Core Principles
 
-## Migration Scenarios
+1. **Backward Compatibility**: New bundle versions support existing job states
+2. **Explicit Migration**: Migrations are explicit, not automatic
+3. **No Data Loss**: Job history and artifacts are preserved
+4. **Rollback Support**: Migrations can be reversed if issues occur
+5. **Version Pinning**: Workspaces can pin to specific bundle versions
 
-### Scenario 1: Platform Update with Bundle Changes
+### Migration Scope
 
-**Trigger**: New platform release includes bootstrap workflow changes
+| Scope | Description |
+|-------|-------------|
+| **Bootstrap to Runtime** | Sync package source to user directory |
+| **Version Upgrade** | Migrate to new bundle version |
+| **Workspace Migration** | Migrate existing jobs to new structure |
+| **Schema Migration** | Update job state schema version |
 
-**Process**:
-1. Update platform package (`pip install -e .`)
-2. Run `ukbe-run-agent init` to re-seed runtime bundles
-3. Existing jobs continue with previous bundle version
-4. New jobs use updated bundle
+## Bundle Versions
 
-**Considerations**:
-- Existing job state is preserved
-- Re-initialization is required to see changes
-- No automatic migration of in-flight jobs
+### Version Identification
 
-### Scenario 2: Runtime Bundle Refresh
+Bundle versions are identified by:
 
-**Trigger**: Local bootstrap modifications need testing
+| Identifier | Source | Example |
+|------------|--------|---------|
+| **Git commit** | Bootstrap source | `d57a719` |
+| **Change ID** | Generated documents | `00DOC-GEN-20260709-002` |
+| **Schema version** | Job state | `6` (v2) |
 
-**Process**:
-1. Modify files in `agent_runner_v2/bootstrap/workflows/default/`
-2. Run `ukbe-run-agent init` to copy to runtime home
-3. Test with new job
+### Version States
 
-**Considerations**:
-- Changes are local until committed
-- Runtime home is user-specific
-- Other users see changes only after pull + init
+| State | Meaning |
+|-------|---------|
+| **current** | Active, supported version |
+| **deprecated** | Supported but superseded |
+| **archived** | Read-only, unsupported |
 
-### Scenario 3: Workflow Family Version Bump
+## Migration Procedures
 
-**Trigger**: Breaking changes to workflow definition
+### Bootstrap to Runtime Sync
 
-**Process**:
-1. Create new workflow family with incremented version (e.g., `v1` → `v2`)
-2. Maintain both versions during transition period
-3. Deprecate old version with timeline
-4. Remove old version after deprecation period
+**Purpose**: Update runtime bundle with latest bootstrap changes
 
-**Example**:
-```python
-# Old version
-"delivery_planning_v1": { ... }
+**Procedure:**
 
-# New version
-"delivery_planning_v2": { ... }
-```
+1. Modify bootstrap source files
+2. Run sync script: `sync-workflows-to-backend.bat`
+3. Verify runtime bundle updated
+4. Test workflow execution
 
-## Version Strategy
+**Validation:**
 
-### Platform Versioning
+- Compare file checksums between source and runtime
+- Verify prompt templates render correctly
+- Confirm template_groups.py loads without errors
 
-Follows semantic versioning:
+### Schema Migration
 
-| Version Component | Meaning | Example Change |
-|-------------------|---------|----------------|
-| Major | Breaking API changes | New job schema version |
-| Minor | New features, backward compatible | New workflow families |
-| Patch | Bug fixes | Prompt template fixes |
+**Purpose**: Migrate job state to new schema version
 
-### Bundle Versioning
+**Procedure:**
 
-Workflow families use integer versions:
+1. Update `CURRENT_SCHEMA_VERSION` in `job_state.py`
+2. Implement migration function in `migrate_job_state()`
+3. Test migration with sample jobs
+4. Deploy with migration enabled
 
-| Version | Meaning | Migration Required |
-|---------|---------|-------------------|
-| Same version | Compatible updates | No |
-| New version | Breaking changes | Yes, manual job migration |
-
-### Schema Versioning
-
-Job and response schemas use integer versions:
-
-| Schema | Current | Compatibility |
-|--------|---------|---------------|
-| `job_schema.json` | 2 | Required for state loading |
-| `llm_response_schema.json` | 2 | Required for coder output |
-
-## Runtime Update Procedures
-
-### Standard Update
-
-```bash
-# 1. Update platform package
-pip install -e .
-
-# 2. Re-initialize runtime bundles
-ukbe-run-agent init
-
-# 3. Verify update
-ukbe-run-agent show-config
-```
-
-### Selective Workflow Update
-
-To update only specific workflows (advanced):
-
-```bash
-# 1. Locate runtime workflow directory
-# %USERPROFILE%\.ukbe-runner\workflows\
-
-# 2. Replace specific workflow files
-
-# 3. Restart any running daemon
-ukbe-run-agent daemon-stop <worker-id>
-ukbe-run-agent daemon <worker-id>
-```
-
-### Version Verification
-
-```bash
-# Check platform version
-python -c "import agent_runner_v2; print(agent_runner_v2.__version__)"
-
-# Check runtime bundle version
-# (Review template_groups.py in runtime home)
-```
-
-## Breaking Changes
-
-### Definition
-
-A breaking change requires action by workflow authors or operators:
-
-| Change Type | Breaking? | Mitigation |
-|-------------|-----------|------------|
-| New step in workflow | No | Jobs continue; new steps run |
-| Removed step | Yes | Existing jobs may fail |
-| Renamed artifact key | Yes | Artifact references must update |
-| Changed step inputs | Yes | Caller configuration must update |
-| New required input | Yes | All job initiations must provide |
-
-### Breaking Change Process
-
-1. **Identify**: Mark as breaking in commit and changelog
-2. **Document**: Update this migration plan
-3. **Version**: Bump appropriate version component
-4. **Communicate**: Notify affected users
-5. **Timeline**: Provide migration window
-6. **Deprecate**: Remove after migration period
-
-## Rollback Procedures
-
-### Platform Rollback
-
-```bash
-# 1. Restore previous package version
-git checkout <previous-tag>
-pip install -e .
-
-# 2. Re-initialize (restores bundled bundles)
-ukbe-run-agent init
-
-# 3. Verify
-ukbe-run-agent --version
-```
-
-### Runtime Bundle Rollback
-
-```bash
-# 1. Stop any running daemon
-ukbe-run-agent daemon-stop <worker-id>
-
-# 2. Restore runtime bundles from backup
-# Copy from backup location to %USERPROFILE%\.ukbe-runner\workflows\
-
-# 3. Restart daemon if needed
-ukbe-run-agent daemon <worker-id>
-```
-
-### Job State Recovery
-
-If job state becomes incompatible:
-
-```bash
-# 1. Identify affected job
-ukbe-run-agent show-job --job-id <job-id>
-
-# 2. Create new job with compatible workflow
-ukbe-run-agent run --template-group <workflow>_v<version> --set <artifacts>
-
-# 3. Archive old job
-# Move job directory to archive location
-```
-
-## Workflow Migration Patterns
-
-### Pattern 1: Artifact Key Rename
+**Migration Function Pattern:**
 
 ```python
-# Before
-"produces": ["OLD_ARTIFACT_NAME"]
-
-# After
-"produces": ["NEW_ARTIFACT_NAME"]
-
-# Migration: Update all references
-# - template_groups.py reference_files
-# - Job state artifacts
-# - Prompt template variable references
+def migrate_v5_to_v6(state: dict) -> dict:
+    """Migrate schema version 5 to 6."""
+    state["schema_version"] = 6
+    # Add new fields
+    state["new_field"] = default_value
+    # Transform existing fields
+    state["transformed"] = transform(state["old_field"])
+    del state["old_field"]
+    return state
 ```
 
-### Pattern 2: Step Reordering
+### Workspace Migration
 
-```python
-# Before: step "03_old_step"
-# After: step "04_new_step" with same purpose
+**Purpose**: Migrate existing workspace to new bundle version
 
-# Migration: Update job state step tracking
-# - completed_steps
-# - failed_steps
-# - retry_history
+**Procedure:**
+
+1. Backup existing workspace
+2. Archive old bundle to `bundles/core/archived/`
+3. Publish new bundle to `bundles/core/current/`
+4. Update workspace bundle reference
+5. Reconcile existing documents
+6. Validate workspace integrity
+
+**Rollback:**
+
+1. Restore from backup
+2. Revert bundle reference
+3. Reconcile documents to previous state
+
+## Compatibility Rules
+
+### Forward Compatibility
+
+| Scenario | Rule |
+|----------|------|
+| New workflow family | Ignored by older runner versions |
+| New step in workflow | Older runners fail gracefully |
+| New artifact type | Ignored by older validation |
+| New schema field | Ignored by older parsers |
+
+### Backward Compatibility
+
+| Scenario | Rule |
+|----------|------|
+| Removed workflow family | Must be deprecated first |
+| Removed step | Must provide migration path |
+| Removed artifact | Validation warning, not error |
+| Removed schema field | Must be optional first |
+
+### Breaking Changes
+
+Breaking changes require major version bump:
+
+| Change Type | Migration Required |
+|-------------|-------------------|
+| Schema version decrease | No (forward only) |
+| Required field removal | Yes |
+| Artifact path change | Yes |
+| Workflow family rename | Yes |
+| Prompt template structure change | No (runtime effect only) |
+
+## Migration Checklist
+
+### Pre-Migration
+
+- [ ] Identify affected workspaces
+- [ ] Backup current bundle
+- [ ] Document breaking changes
+- [ ] Prepare rollback procedure
+- [ ] Schedule maintenance window
+
+### Migration
+
+- [ ] Execute backup
+- [ ] Deploy new bundle
+- [ ] Run migration scripts
+- [ ] Verify job state integrity
+- [ ] Test workflow execution
+- [ ] Validate document generation
+
+### Post-Migration
+
+- [ ] Monitor error logs
+- [ ] Verify active jobs complete
+- [ ] Confirm new jobs start successfully
+- [ ] Update documentation
+- [ ] Archive old bundle
+
+### Rollback
+
+- [ ] Restore from backup
+- [ ] Revert bundle reference
+- [ ] Reconcile documents
+- [ ] Verify workspace integrity
+- [ ] Document rollback reason
+
+## Migration Commands
+
+### Command Reference
+
+| Command | Purpose |
+|---------|---------|
+| `ukbe-run-agent init` | Re-initialize workspace with current bundle |
+| `sync-workflows-to-backend.bat` | Sync bootstrap to runtime |
+| `python -m agent_runner_v2.actions.finalize_bootstrap` | Finalize bootstrap migration |
+| `python -m agent_runner_v2.actions.archive_previous_version` | Archive previous bundle version |
+
+### Script Locations
+
+| Script | Location |
+|--------|----------|
+| `sync-workflows-to-backend.bat` | Repository root |
+| `sync-10_execution_scaffold_v1-workflow-spec.bat` | Repository root |
+| `run-00_master_docs_bootstrap_v1.bat` | Repository root |
+
+## Troubleshooting
+
+### Common Migration Issues
+
+| Issue | Cause | Resolution |
+|-------|-------|------------|
+| Schema version mismatch | Old job with new runner | Run migration |
+| Missing workflow family | Sync not executed | Re-sync bootstrap |
+| Template load failure | Corrupted runtime bundle | Re-initialize workspace |
+| Document validation failure | Outdated section requirements | Refresh documents |
+| Path resolution error | Constants mismatch | Verify constants.py sync |
+
+### Migration Logs
+
+Migration activities are logged to:
+
+```
+%USERPROFILE%\.ukbe-runner\logs\migration.log
 ```
 
-### Pattern 3: Input Changes
+Log format:
 
-```python
-# Before
-"required_inputs": ["INPUT_A"]
-
-# After
-"required_inputs": ["INPUT_A", "INPUT_B"]
-
-# Migration: Ensure all job initiations provide INPUT_B
+```
+[TIMESTAMP] [LEVEL] [WORKSPACE] [ACTION] [RESULT] [DETAILS]
 ```
 
-## Timeline
+### Emergency Procedures
 
-| Milestone | Target Date | Description |
-|-----------|-------------|-------------|
-| Bootstrap Complete | 2026-07-04 | System documentation generated |
-| v1.0.0 Release | TBD | First stable release |
-| v2 Planning | TBD | Evaluate schema v3, new patterns |
+**Complete Migration Failure:**
+
+1. Stop all workflow execution
+2. Restore from pre-migration backup
+3. Revert to previous bundle version
+4. Notify affected users
+5. Investigate failure cause
+
+**Partial Migration Failure:**
+
+1. Identify failed workspaces
+2. Re-run migration for affected workspaces
+3. Verify successful completion
+4. Document intermittent issue
 
 ---
 
-*This migration plan is a living document. Update when making breaking changes or adding new migration patterns.*
+*Generated by workflow: 00_master_docs_bootstrap_v1 / step: 03_generate_system_overview_docs*

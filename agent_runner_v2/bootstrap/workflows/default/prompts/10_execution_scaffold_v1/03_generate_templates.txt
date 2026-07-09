@@ -30,6 +30,12 @@ Task:
 Required additions:
 - Delivery task and implementation templates must include documentation-impact sections.
 - Validation template must validate both code changes and documentation synchronization.
+- Codebase module and component templates must include a `Documentation Governance` section covering:
+  - Documentation status tracking (owner, last verified, next review due, status)
+  - Freshness checks (checklist for keeping docs in sync with code)
+  - Stale guidance handling (rules for when to update, mark needs_update, or supersede)
+  - Review and validation expectations (frequency, criteria, reviewer role, approval requirements)
+  - Synchronization requirements (when and how to update docs alongside code changes)
 - The template set must support a universal ecosystem baseline plus repo-selected architecture profiles and migration modes; DDD/EDA must be treated as conditional standards, not universal defaults.
 - Initiative, plan, task, and implementation templates must capture current profile, target profile, and migration mode whenever the repository standard is unclear or changing.
 - Codebase inventory template must cover all source file types and support statuses:
@@ -78,42 +84,9 @@ Required additions:
   - Memory template: `Metadata`, `Context`, `Summary`, `Outcomes`, `Lessons Learned`, `Reusable Patterns`, `Anti-Patterns`, `Documentation Notes`, `Related Memories`, `Notes`
   - Codebase registry: `Metadata`, `Registry Overview`, `Template Families`, `Usage Rules`, `Cross-References`
   - Inventory template: `Metadata`, `Template Fields`, `Entry Template`, `Status Definitions`, `File Type Coverage`
-  - Module template: `Metadata`, `Module Overview`, `File Inventory`, `Architecture`, `Key Components`, `Public API`, `Dependencies`, `Testing`, `Change Log`, `Notes`
-  - Component template: `Metadata`, `Component Overview`, `File Coverage`, `Interface`, `Implementation Details`, `Dependencies`, `Testing`, `Change Log`, `Notes`
+  - Module template: `Metadata`, `Module Overview`, `File Inventory`, `Architecture`, `Key Components`, `Public API`, `Dependencies`, `Testing`, `Change Log`, `Documentation Governance`, `Notes`
+  - Component template: `Metadata`, `Component Overview`, `File Coverage`, `Interface`, `Implementation Details`, `Dependencies`, `Testing`, `Change Log`, `Documentation Governance`, `Notes`
   - Change template: `Metadata`, `Change Summary`, `Changed Files`, `Documentation Updates`, `Stale Documentation Removal`, `Documentation Freshness Verification`, `Cross-References`, `Notes`
 
 Completion rule (MANDATORY)
 - Return APPROVED only after all files exist and the sidecar exists at `{DELIVERY_TEMPLATE_REGISTRY_METAJSON}`.
-
-Critical: meta.json sidecar is REQUIRED
-- Sidecar path: `{DELIVERY_TEMPLATE_REGISTRY_METAJSON}`
-- Use `write_file` tool to create the sidecar after writing the templates.
-- Sidecar structure (exact):
-  {
-    "schema_version": "v2",
-    "coder_result": {
-      "status": "APPROVED" | "REJECTED",
-      "remark": "<summary>",
-      "artifacts": {
-        "DELIVERY_TEMPLATE_REGISTRY": "{DELIVERY_TEMPLATE_REGISTRY}",
-        "DELIVERY_INITIATIVE_TEMPLATE": "{DELIVERY_INITIATIVE_TEMPLATE}",
-        "DELIVERY_PLAN_TEMPLATE": "{DELIVERY_PLAN_TEMPLATE}",
-        "DELIVERY_TASK_GRAPH_TEMPLATE": "{DELIVERY_TASK_GRAPH_TEMPLATE}",
-        "DELIVERY_TASK_TEMPLATE": "{DELIVERY_TASK_TEMPLATE}",
-        "DELIVERY_IMPL_TEMPLATE": "{DELIVERY_IMPL_TEMPLATE}",
-        "DELIVERY_REVIEW_TEMPLATE": "{DELIVERY_REVIEW_TEMPLATE}",
-        "DELIVERY_VALIDATION_TEMPLATE": "{DELIVERY_VALIDATION_TEMPLATE}",
-        "DELIVERY_MEMORY_TEMPLATE": "{DELIVERY_MEMORY_TEMPLATE}",
-        "CODEBASE_TEMPLATE_REGISTRY": "{CODEBASE_TEMPLATE_REGISTRY}",
-        "CODEBASE_INVENTORY_TEMPLATE": "{CODEBASE_INVENTORY_TEMPLATE}",
-        "CODEBASE_MODULE_TEMPLATE": "{CODEBASE_MODULE_TEMPLATE}",
-        "CODEBASE_COMPONENT_TEMPLATE": "{CODEBASE_COMPONENT_TEMPLATE}",
-        "CODEBASE_CHANGE_TEMPLATE": "{CODEBASE_CHANGE_TEMPLATE}",
-        "CODEBASE_INVENTORY": "{CODEBASE_INVENTORY}"
-      },
-      "recorded_at": "2026-06-29T00:00:00"
-    }
-  }
-
-ABSOLUTE OUTPUT RULE
-- Return ONLY valid JSON with every written template path in `artifacts`.

@@ -153,8 +153,6 @@ Critical: meta.json file is REQUIRED
   }
 - The `created_by` field MUST be your coder name (e.g., "qwen", "claude", "codex").
 - The `coder_result.status` MUST match the status in your final JSON output.
-- Use `write_file` tool to create the meta.json immediately after writing the IMPL file.
-
 Implementation plan lifecycle rule (MANDATORY)
 - Newly created implementation plans for this step MUST be written with status `draft`.
 - Do NOT mark the implementation plan as `approved`, `in_review`, or finalized during creation.
@@ -218,8 +216,6 @@ Rules for the artifacts object:
 Required execution sequence:
 1. Read the task, task graph, and plan from the provided paths.
 2. Write the implementation plan markdown file to `{IMPL_FILE_PATH}` (exact path provided by runner â€” do not choose a different path).
-4. Verify the IMPL file exists on disk.
-5. Write the meta.json file to: `{IMPL_FILE_METAJSON}`
-6. Verify the meta.json file exists on disk.
-7. Only after BOTH files exist on disk, return the final JSON with that exact path in `artifacts.IMPL_FILE`.
+3. Verify the IMPL file exists on disk.
+4. Return the final JSON with that exact path in `artifacts.IMPL_FILE`.
 

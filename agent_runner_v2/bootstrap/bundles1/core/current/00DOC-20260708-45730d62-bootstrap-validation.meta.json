@@ -1,0 +1,20 @@
+{
+  "schema_version": "v2",
+  "coder_result": {
+    "status": "REJECTED",
+    "remark": "Master documentation review completed with one blocking finding: workflow family count discrepancy (docs claim 19, actual count is 21). All other aspects validated successfully - architecture posture consistent, v2 contract clear, no invented subsystems, strong repository alignment.",
+    "artifacts": {
+      "REVIEW_FILE_SUGGESTED": "docs/system/00_governance/bootstrap/00DOC-20260708-45730d62-bootstrap-validation.md"
+    },
+    "recorded_at": "2026-07-08T22:47:17+08:00"
+  },
+  "runner_data": {
+    "step": "05_review_master_system_docs",
+    "coder_used": "qwen",
+    "invoked_at": "2026-07-08T22:47:17",
+    "finished_at": "2026-07-08T22:53:34",
+    "prompt_checksum": "sha256:16ef22349ae2e324d55c8f36dc561f4d19f52f4ebc8239d1e86dab0c24009df5",
+    "enriched_at": "2026-07-08T22:53:34",
+    "runner_version": "v2"
+  }
+}

@@ -98,25 +98,6 @@ Task:
 - The REVIEW_FILE must exist on disk before returning final JSON.
 - Return the REVIEW_FILE path in artifacts.REVIEW_FILE.
 
-Critical: Sidecar file is REQUIRED for review step
-- The runner reads review decision from the sidecar file.
-- Sidecar path: `{REVIEW_FILE_SUGGESTED_METAJSON}`
-- Sidecar structure (exact):
-  {
-    "schema_version": "v2",
-    "coder_result": {
-      "status": "APPROVED" | "REJECTED",
-      "remark": "Brief summary of review decision",
-      "artifacts": {
-        "REVIEW_FILE": "<exact path of the review file you wrote>"
-      },
-      "recorded_at": "2026-04-15T10:30:00"
-    }
-  }
-- Use `write_file` tool to create the sidecar JSON.
-- Status: "APPROVED" if review passes, "REJECTED" if blocking issues found.
-- The runner reads coder_result.status from this meta.json to route the workflow.
-
 
 ABSOLUTE OUTPUT RULE (NON-NEGOTIABLE)
 

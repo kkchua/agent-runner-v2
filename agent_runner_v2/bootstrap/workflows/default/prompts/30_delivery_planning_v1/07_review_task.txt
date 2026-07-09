@@ -26,13 +26,6 @@ Task:
   - validation proves documentation freshness, not only code correctness
 - Do not implement anything.
 - Write the review file to {REVIEW_FILE_SUGGESTED}.
-- Write the sidecar to {REVIEW_FILE_SUGGESTED_METAJSON}.
-
-Critical: sidecar is REQUIRED
-- Sidecar artifacts must contain:
-  {
-    "REVIEW_FILE": "{REVIEW_FILE_SUGGESTED}"
-  }
 
 ABSOLUTE OUTPUT RULE
 - Return ONLY valid JSON:

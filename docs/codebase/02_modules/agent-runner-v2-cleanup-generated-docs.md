@@ -6,9 +6,9 @@ module_path: "agent_runner_v2/cleanup_generated_docs.py"
 module_area: "support"
 documentation_mode: "summary"
 owner_doc_path: "docs/codebase/02_modules/agent-runner-v2-cleanup-generated-docs.md"
-last_verified_by_change: "40_documentation_sync_v1 / 40DOCSYNC-GEN-20260704-001 / 2026-07-04T13:29:07+08:00"
-created: "2026-07-04T13:29:07+08:00"
-owner: "40_documentation_sync_v1"
+last_verified_by_change: "00_master_docs_bootstrap_v1 / 00DOC-GEN-20260709-002 / 2026-07-09T21:13:38+08:00"
+created: "2026-07-09T21:13:38+08:00"
+owner: "00_master_docs_bootstrap_v1"
 ---
 
 # Module Documentation: agent_runner_v2.cleanup_generated_docs
@@ -39,67 +39,70 @@ This module belongs to the `support` area and is documented as `summary`.
 
 ### 2.1 Classes
 
-| Class | Purpose | Key Methods |
-|-------|---------|-------------|
-| `CleanupResult` | public class | |
+#### CleanupResult
+
+**Decorators**: `@dataclass`
+
+**Purpose**: Public class
+
 
 ### 2.2 Functions
 
-| Function | Signature | Purpose |
-|----------|-----------|---------|
-| `cleanup_workflow_generated_docs` | `()` | public function |
-| `main` | `(argv)` | public function |
+#### cleanup_workflow_generated_docs()
+
+**Signature**: `cleanup_workflow_generated_docs(*, project_root: Path, template_group: str, job_id: str, mode: str, action: str = 'report', quarantine_root: str = DEFAULT_LEGACY_QUARANTINE_DIR)`
+
+**Parameters**:
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `project_root` | `Path` | — | — |
+| `template_group` | `str` | — | — |
+| `job_id` | `str` | — | — |
+| `mode` | `str` | — | — |
+| `action` | `str` | `'report'` | — |
+| `quarantine_root` | `str` | `DEFAULT_LEGACY_QUARANTINE_DIR` | — |
+
+**Returns**: `CleanupResult`
+
+---
+
+#### main()
+
+**Signature**: `main(argv: list[str] | None = None)`
+
+**Parameters**:
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `argv` | `list[str] | None` | `None` | — |
+
+**Returns**: `int`
+
+---
+
 
 ### 2.3 Constants / Configuration
 
-| Name | Value / Type | Purpose |
-|------|-------------|---------|
-| | | |
+No public constants.
 
-## 3. Internal Implementation
 
-### 3.1 Key Data Structures
+## 3. Error Handling
 
-Auto-generated baseline documentation derived from the current source tree.
+No documented exceptions.
 
-### 3.2 Algorithm / Flow
 
-See the source module for implementation details; this document captures the public contract and scan-derived summary.
+## 4. Testing
 
-## 4. I/O Contract
-
-### 4.1 Inputs
-
-Derived from function parameters, imports, and file-level responsibilities.
-
-### 4.2 Outputs
-
-Derived from function return values and side effects observed in the source file.
-
-### 4.3 Side Effects
-
-Tracked at a baseline level by the repository scan.
-
-## 5. Error Handling
-
-| Error Condition | Handling | Recovery |
-|----------------|----------|----------|
-| | | |
-
-## 6. Testing
-
-### 6.1 Test Coverage
+### 4.1 Test Coverage
 
 | Test File | Coverage Area |
-|-----------|--------------|
-| `tests/test_documentation_guardrails_cleanup.py` | `agent_runner_v2.cleanup_generated_docs` |
+|-----------|---------------|
+| (none) | No test references found |
 
-### 6.2 Known Gaps
 
-Auto-generated baseline. Review and refine as the codebase evolves.
-
-## 7. Change Log
+## 5. Change Log
 
 | Date | Change | Verified By |
 |------|--------|-------------|
-| 2026-07-04 | Initial baseline generated from repository scan | 40_documentation_sync_v1 |
+| 2026-07-09 | Initial baseline generated from repository scan | 00_master_docs_bootstrap_v1 |

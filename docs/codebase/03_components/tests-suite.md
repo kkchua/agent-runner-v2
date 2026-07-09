@@ -3,10 +3,10 @@ title: "Component Documentation: tests suite"
 template_id: "CB-03"
 status: "active"
 component_id: "tests-suite"
-created: "2026-07-04T13:29:07+08:00"
-owner: "40_documentation_sync_v1"
-last_verified_by_change: "40_documentation_sync_v1 / 40DOCSYNC-GEN-20260704-001 / 2026-07-04T13:29:07+08:00"
-modules: ["tests/conftest.py", "tests/test_architecture_site.py", "tests/test_backend_worker_mode.py", "tests/test_bundle_loader.py", "tests/test_codebase_docs.py", "tests/test_daemon.py", "tests/test_documentation_governance.py", "tests/test_documentation_guardrails_cleanup.py", "tests/test_run_agent_status.py", "tests/test_runtime_context_paths.py", "tests/test_tool_instruction_block.py", "tests/test_ukbe_runner_wrapper.py"]
+created: "2026-07-09T21:13:38+08:00"
+owner: "00_master_docs_bootstrap_v1"
+last_verified_by_change: "00_master_docs_bootstrap_v1 / 00DOC-GEN-20260709-002 / 2026-07-09T21:13:38+08:00"
+modules: ["tests/conftest.py", "tests/integration/__init__.py", "tests/integration/test_architecture_site.py", "tests/integration/test_backend_worker_mode.py", "tests/integration/test_daemon.py", "tests/integration/test_notification_e2e.py", "tests/integration/test_notification_integration.py", "tests/integration/test_notifications.py", "tests/integration/test_pushover.py", "tests/integration/test_ukbe_runner_wrapper.py", "tests/unit/__init__.py", "tests/unit/test_bundle_loader.py", "tests/unit/test_codebase_docs.py", "tests/unit/test_documentation_governance.py", "tests/unit/test_documentation_guardrails_cleanup.py", "tests/unit/test_run_agent_status.py", "tests/unit/test_runtime_context_paths.py", "tests/unit/test_tool_instruction_block.py"]
 ---
 
 # Component Documentation: tests suite
@@ -22,17 +22,23 @@ Repository test suite coverage grouped as a single logical component.
 | Module | Role in Component |
 |--------|-------------------|
 | `tests/conftest.py` | test coverage |
-| `tests/test_architecture_site.py` | test coverage |
-| `tests/test_backend_worker_mode.py` | test coverage |
-| `tests/test_bundle_loader.py` | test coverage |
-| `tests/test_codebase_docs.py` | test coverage |
-| `tests/test_daemon.py` | test coverage |
-| `tests/test_documentation_governance.py` | test coverage |
-| `tests/test_documentation_guardrails_cleanup.py` | test coverage |
-| `tests/test_run_agent_status.py` | test coverage |
-| `tests/test_runtime_context_paths.py` | test coverage |
-| `tests/test_tool_instruction_block.py` | test coverage |
-| `tests/test_ukbe_runner_wrapper.py` | test coverage |
+| `tests/integration/__init__.py` | test coverage |
+| `tests/integration/test_architecture_site.py` | test coverage |
+| `tests/integration/test_backend_worker_mode.py` | test coverage |
+| `tests/integration/test_daemon.py` | test coverage |
+| `tests/integration/test_notification_e2e.py` | test coverage |
+| `tests/integration/test_notification_integration.py` | test coverage |
+| `tests/integration/test_notifications.py` | test coverage |
+| `tests/integration/test_pushover.py` | test coverage |
+| `tests/integration/test_ukbe_runner_wrapper.py` | test coverage |
+| `tests/unit/__init__.py` | test coverage |
+| `tests/unit/test_bundle_loader.py` | test coverage |
+| `tests/unit/test_codebase_docs.py` | test coverage |
+| `tests/unit/test_documentation_governance.py` | test coverage |
+| `tests/unit/test_documentation_guardrails_cleanup.py` | test coverage |
+| `tests/unit/test_run_agent_status.py` | test coverage |
+| `tests/unit/test_runtime_context_paths.py` | test coverage |
+| `tests/unit/test_tool_instruction_block.py` | test coverage |
 
 ## 2. Architecture
 
@@ -49,17 +55,23 @@ Repository files are scanned, normalized into inventory rows, and rendered into 
 | Interface | Direction | Protocol | Description |
 |-----------|-----------|----------|-------------|
 | `tests/conftest.py` | outbound | markdown | test coverage |
-| `tests/test_architecture_site.py` | outbound | markdown | test coverage |
-| `tests/test_backend_worker_mode.py` | outbound | markdown | test coverage |
-| `tests/test_bundle_loader.py` | outbound | markdown | test coverage |
-| `tests/test_codebase_docs.py` | outbound | markdown | test coverage |
-| `tests/test_daemon.py` | outbound | markdown | test coverage |
-| `tests/test_documentation_governance.py` | outbound | markdown | test coverage |
-| `tests/test_documentation_guardrails_cleanup.py` | outbound | markdown | test coverage |
-| `tests/test_run_agent_status.py` | outbound | markdown | test coverage |
-| `tests/test_runtime_context_paths.py` | outbound | markdown | test coverage |
-| `tests/test_tool_instruction_block.py` | outbound | markdown | test coverage |
-| `tests/test_ukbe_runner_wrapper.py` | outbound | markdown | test coverage |
+| `tests/integration/__init__.py` | outbound | markdown | test coverage |
+| `tests/integration/test_architecture_site.py` | outbound | markdown | test coverage |
+| `tests/integration/test_backend_worker_mode.py` | outbound | markdown | test coverage |
+| `tests/integration/test_daemon.py` | outbound | markdown | test coverage |
+| `tests/integration/test_notification_e2e.py` | outbound | markdown | test coverage |
+| `tests/integration/test_notification_integration.py` | outbound | markdown | test coverage |
+| `tests/integration/test_notifications.py` | outbound | markdown | test coverage |
+| `tests/integration/test_pushover.py` | outbound | markdown | test coverage |
+| `tests/integration/test_ukbe_runner_wrapper.py` | outbound | markdown | test coverage |
+| `tests/unit/__init__.py` | outbound | markdown | test coverage |
+| `tests/unit/test_bundle_loader.py` | outbound | markdown | test coverage |
+| `tests/unit/test_codebase_docs.py` | outbound | markdown | test coverage |
+| `tests/unit/test_documentation_governance.py` | outbound | markdown | test coverage |
+| `tests/unit/test_documentation_guardrails_cleanup.py` | outbound | markdown | test coverage |
+| `tests/unit/test_run_agent_status.py` | outbound | markdown | test coverage |
+| `tests/unit/test_runtime_context_paths.py` | outbound | markdown | test coverage |
+| `tests/unit/test_tool_instruction_block.py` | outbound | markdown | test coverage |
 
 ## 3. Behavior
 
@@ -103,4 +115,4 @@ Auto-generated baseline; extend with component-specific checks as needed.
 
 | Date | Change | Modules Affected | Verified By |
 |------|--------|-----------------|-------------|
-| 2026-07-04 | Initial baseline generated from repository scan | 12 modules/files | 40_documentation_sync_v1 |
+| 2026-07-09 | Initial baseline generated from repository scan | 18 modules/files | 00_master_docs_bootstrap_v1 |

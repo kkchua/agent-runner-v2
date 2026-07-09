@@ -1,311 +1,334 @@
 ---
-title: Existing Repository Workflow SOP
+template_id: "SYS-00-SOP"
 managed_by: workflow-generated
-workflow: 10_execution_scaffold_v1
-step: generate_sop
-created: 2026-07-04
-version: 1
+generated: "2026-07-09T21:26:23+08:00"
+workflow: "00_master_docs_bootstrap_v1"
+step: "04_generate_architecture_docs"
+change_id: "00DOC-GEN-20260709-002"
 ---
 
-> Managed by workflow: `10_execution_scaffold_v1` / step: `generate_sop`
+> Managed by workflow: `00_master_docs_bootstrap_v1` / step: `04_generate_architecture_docs`
 > This file is workflow-generated and protected from manual edits.
 
 # Existing Repository Workflow SOP
 
 ## Purpose
 
-This SOP provides operators with the exact onboarding and reconciliation sequence for bringing a pre-existing repository under governed delivery. It applies when a repository already has an established codebase, existing documentation, and possibly prior governance conventions.
-
-This SOP is NOT for greenfield repositories — those follow the standard `10_execution_scaffold_v1` flow directly. This SOP addresses the specific challenges of migration mode: coexisting with existing artifacts, reconciling existing documentation, and establishing governance without destroying prior work.
-
-### Universal Ecosystem Baseline
-
-Every governed repository — including this existing repository — MUST satisfy the **universal ecosystem baseline**. The universal baseline applies regardless of architecture profile or migration mode:
-
-1. **Inventory Coverage**: Every source module, configuration file, and script MUST be represented in the codebase inventory or module documentation.
-2. **Freshness Contract**: Documentation MUST be updated in the same delivery cycle as the code it describes.
-3. **Status Tracking**: Every codebase document carries a status (`active`, `stale`, `superseded`, `archived`) governed by `CODEBASE_DOC_STATUS_RULES_v1.md`.
-4. **Workflow Integration**: Codebase documentation is a deliverable in every task graph — `20_initiative_intake_v1` captures scope, `30_delivery_planning_v1` converts it into obligations, `31_task_execution_v1` executes and validates updates.
-5. **Reconciliation**: `40_documentation_sync_v1` reconciles current code against active documentation and flags stale guidance.
-6. **Architecture Communication**: `50_architecture_site_v1` publishes browsable HTML views after repository posture and docs are synchronized.
-7. **Protection**: Workflow-generated documents are protected from manual edits via frontmatter and banner.
-8. **No Deprecated Artifacts**: `07_master_prompts` is deprecated and MUST NOT appear in any governed repository.
-
-### Repo-Selected Profile
-
-Architecture profiles (DDD, EDA, microservices, event-sourced, CQRS, etc.) are **conditional profile choices** — they are NOT universal defaults. A repository adopts an architecture profile only when its architecture posture warrants it.
-
-- The universal baseline applies first.
-- Profile refinements layer on top of the baseline.
-- A repository may adopt zero, one, or multiple architecture profiles.
-- Profile adoption is documented in the project analysis and reflected in module documentation structure.
-
-### Migration Mode
-
-This repository operates in **migration mode** — it has a mature, populated governance corpus that the scaffold must coexist with, not overwrite. The sequence below is designed to respect existing artifacts while bringing the repository into alignment with the universal ecosystem baseline.
-
-When repo standard is unclear, fall back to the universal baseline and use `40_documentation_sync_v1` to identify gaps and inconsistencies. Adopt the universal baseline incrementally and document adopted conventions for future reference.
-
-### Conditional Standards
-
-The following standards are conditional — they apply only when the repository's architecture profile warrants them:
-
-| Standard | Condition | Notes |
-|---|---|---|
-| DDD (Domain-Driven Design) | Repository adopts bounded contexts, aggregates, domain events | Module docs may reflect domain boundaries |
-| EDA (Event-Driven Architecture) | Repository uses event contracts and message flows | Event contracts warrant dedicated documentation |
-| CQRS | Repository separates command and query models | Command/query separation documented per module |
-| Event Sourcing | Repository uses event logs as primary store | Event schema documentation required |
-| Microservices | Repository is decomposed into independent services | Service boundary documentation required |
-
-These are NOT universal requirements. The universal baseline does not require any of these. They are refinements that specific architecture profiles may introduce.
+This document describes the standard operating procedure for onboarding existing repositories to the agent-runner-v2 governed delivery framework and for rerunning workflows after drift or contract changes.
 
 ## First-Time Setup
 
-The first-time setup sequence establishes the governance foundation for an existing repository. It MUST be run before any governed delivery begins.
+The first-time setup chain initializes a repository for governed delivery:
 
-### First-Time Setup Sequence
+### Step 1: Bootstrap System Documentation
 
+**Workflow**: `00_master_docs_bootstrap_v1`
+
+**Command**:
+```bash
+run-00_master_docs_bootstrap_v1.bat
 ```
-00_master_docs_bootstrap_v1 → 10_execution_scaffold_v1
+
+**What it does**:
+1. Scans repository structure
+2. Generates project analysis
+3. Creates system documentation (this doc set)
+4. Establishes documentation standard
+5. Creates bundle taxonomy and migration plan
+
+**Artifacts**:
+- `PROJECT_ANALYSIS.md`
+- `SYSTEM_OVERVIEW.md`
+- `FUNCTIONAL_SPEC.md`
+- `COMPONENT_ARCHITECTURE.md` (this document)
+- `DEVELOPER_GUIDE.md`
+- `RUNBOOK.md`
+- And 15+ other system documents
+
+**When to rerun**:
+- After significant repository restructuring
+- When project analysis becomes stale
+- When documentation standard changes
+
+### Step 2: Scaffold Delivery Framework
+
+**Workflow**: `10_execution_scaffold_v1`
+
+**Command**:
+```bash
+run-10_execution_scaffold_v1.bat
 ```
 
-### Step 1: Run `00_master_docs_bootstrap_v1`
+**What it does**:
+1. Analyzes project structure
+2. Generates delivery SOP and status rules
+3. Creates delivery templates
+4. Generates agent contracts
+5. Establishes `docs/delivery/` structure
 
-**Purpose**: Generate master system documentation and codebase baseline.
+**Artifacts**:
+- `DELIVERY_SOP_v1.md`
+- `DELIVERY_STATUS_RULES_v1.md`
+- `AGENTS.md` + 6 agent contracts
+- Delivery templates (initiative, plan, task, etc.)
+- `CODEBASE_DOC_SOP_v1.md`
 
-**Produces**:
-- `docs/codebase/01_inventory/01_PROJECT_ANALYSIS.md` — comprehensive analysis
-- System overview documents (SYSTEM_OVERVIEW, FUNCTIONAL_SPEC, SYSTEM_CONTEXT, COMPONENT_ARCHITECTURE, etc.)
-- Initial codebase inventory
+**When to rerun**:
+- When delivery process changes
+- When agent contracts need refresh
+- When templates need update
 
-### Step 2: Run `10_execution_scaffold_v1`
-
-**Purpose**: Generate the complete governance scaffold — SOPs, status rules, templates, agent contracts, folder map, and this existing-repo workflow SOP.
-
-**Produces**:
-- `docs/system/00_governance/bootstrap/WORKFLOW_SOP_v1.md` — delivery SOP
-- `docs/system/00_governance/bootstrap/DELIVERY_STATUS_RULES_v1.md` — delivery status rules
-- `docs/codebase/00_standards/CODEBASE_DOC_SOP_v1.md` — codebase documentation SOP
-- `docs/codebase/00_standards/CODEBASE_DOC_STATUS_RULES_v1.md` — codebase documentation status rules
-- `docs/system/00_governance/bootstrap/EXISTING_REPO_WORKFLOW_SOP.md` — this document
-- Delivery template registry and templates
-- Codebase template registry and templates
-- Agent role contracts
-- Folder map
-
-### First-Time Setup Validation
-
-After first-time setup:
-1. Review generated artifacts for conflicts with existing conventions
-2. Resolve any conflicts (the scaffold should coexist, not overwrite)
-3. Validate that `docs/codebase/` and `docs/system/` trees are populated correctly
-4. Confirm no `07_master_prompts` artifacts are present
+**Order matters**: Must run after `00_master_docs_bootstrap_v1` completes successfully.
 
 ## Normal Governed Delivery
 
-Once first-time setup is complete, all subsequent deliveries follow the standard governed delivery sequence.
+After first-time setup, normal work follows this chain:
 
-### Governed Delivery Sequence
+### Step 1: Initiative Intake
 
+**Workflow**: `20_initiative_intake_v1`
+
+**Command**:
+```bash
+run-20_initiative_intake_v1.bat
 ```
-20_initiative_intake_v1 → 30_delivery_planning_v1 → 31_task_execution_v1
+
+**What it does**:
+- Captures new initiative or enhancement
+- Drafts pre-init document
+- Reviews and refines requirements
+- Creates `INIT_FILE` for approved initiatives
+
+**Entry points**:
+- New feature request
+- Enhancement idea
+- Technical debt item
+
+**Artifacts**:
+- `DRAFT_INIT_FILE` (draft)
+- `PRE_INIT_FILE` (refined)
+- `INIT_FILE` (approved)
+
+### Step 2: Delivery Planning
+
+**Workflow**: `30_delivery_planning_v1`
+
+**Command**:
+```bash
+run-30_delivery_planning_v1.bat
 ```
 
-### Step 1: Initiative Intake (`20_initiative_intake_v1`)
+**What it does**:
+- Reads `INIT_FILE`
+- Generates implementation plan
+- Decomposes into task graph
+- Creates task contracts
 
-**Purpose**: Capture the initiative scope, including documentation scope and stale-guidance risk assessment.
+**Artifacts**:
+- `PLAN_FILE`
+- `TASK_GRAPH_FILE`
+- `TASK_FILE` (per task)
 
-**Key Migration Consideration**: For existing repositories, the initiative intake MUST account for existing documentation that may need updating. The stale-guidance risk assessment is critical — existing docs may already be partially stale.
+**Loop behavior**:
+- Plan may be rejected and replanned
+- Task graph may be refined
+- Replanning preserves approved artifacts
 
-**Produces**: Approved initiative document with documentation scope and stale-guidance risk captured.
+### Step 3: Task Execution
 
-### Step 2: Delivery Planning (`30_delivery_planning_v1`)
+**Workflow**: `31_task_execution_v1`
 
-**Purpose**: Convert documentation scope into plan and task obligations. Generate delivery plan and task graph.
+**Command**:
+```bash
+run-31_task_execution_v1.bat
+```
 
-**Key Migration Consideration**: The plan must include tasks for reconciling existing documentation that will be affected by the initiative.
+**What it does**:
+- Plans implementation for each task
+- Reviews and refines implementation plan
+- Executes implementation
+- Validates results
 
-**Produces**: Approved delivery plan and validated task graph.
+**Artifacts**:
+- `IMPL_FILE`
+- `REVIEW_FILE`
+- `VALIDATION_FILE`
 
-### Step 3: Task Execution (`31_task_execution_v1`)
-
-**Purpose**: Execute tasks — implement code changes and update codebase documentation as part of task completion.
-
-**Key Migration Consideration**: When updating existing module docs, respect the existing documentation style and conventions where they don't conflict with the universal baseline.
-
-**Produces**: Completed tasks with updated code and documentation.
+**Loop behavior**:
+- Implementation may be rejected and refined
+- Validation may trigger fixes
+- Retries tracked in job state
 
 ## Drift Reconciliation
 
-When documentation drift is detected — or suspected — the drift reconciliation workflow is triggered.
+When documentation drifts from code or contracts change:
 
-### Drift Detection Triggers
-
-- `validate_codebase_docs` reports stale documentation
-- `scan_repo_codebase` finds undocumented modules
-- An operator observes that system behavior or operations guidance is stale
-- After a delivery that touched many modules
-- Periodically (recommended: quarterly)
-
-### Drift Reconciliation Workflow
+### Documentation Sync
 
 **Workflow**: `40_documentation_sync_v1`
 
-`40_documentation_sync_v1` is the **repo-wide reconciliation workflow**. It:
-
-1. Scans the entire codebase documentation corpus
-2. Compares documentation against current code state
-3. Flags stale guidance — documents that no longer match code behavior
-4. Generates a reconciliation report
-5. Identifies which documents need repair, supersession, or archival
-
-### Stale Guidance Response
-
-When `40_documentation_sync_v1` identifies stale guidance:
-
-1. **Assess severity**: Is the stale guidance actively misleading, or merely outdated?
-2. **Repair or supersede**: Update the document to match current code, or supersede it if fundamentally outdated
-3. **Refresh system docs**: When system behavior or operations guidance is stale, refresh the affected system documentation
-4. **Record the reconciliation**: Create a change record in `docs/codebase/04_changes/`
-
-### Drift Recovery Flow
-
-```
-40_documentation_sync_v1 → (if stale guidance found) → targeted repair tasks → validate_codebase_docs
+**Command**:
+```bash
+run-40_documentation_sync_v1.bat
 ```
 
-## Architecture Communication
+**What it does**:
+- Scans current repository state
+- Identifies stale documentation
+- Regenerates affected docs
+- Preserves manual annotations (in unguarded sections)
 
-After the repository posture and documentation are synchronized, the architecture communication workflow publishes browsable views.
+**When to run**:
+- After significant code changes
+- When documentation appears stale
+- Before major releases
+- After contract changes
 
-### Architecture Communication Workflow
-
-**Workflow**: `50_architecture_site_v1`
-
-`50_architecture_site_v1` is the **next-phase architecture communication workflow**. It:
-
-1. Publishes browsable HTML architecture views
-2. Generates views for different audiences:
-   - **Stakeholders**: High-level architecture, business context, system boundaries
-   - **Developers**: Module structure, API contracts, dependency graphs
-   - **Operators**: Deployment topology, configuration, monitoring, runbooks
-   - **Functional consumers**: Integration points, API documentation, usage guides
-3. Uses Pandoc + Mermaid pipeline for rendering
-4. Outputs to `docs/system/02_architecture_site/`
-
-### When to Run
-
-`50_architecture_site_v1` runs:
-- After first-time setup is complete
-- After drift reconciliation has synchronized docs
-- Periodically (recommended: monthly or after significant deliveries)
-- When requested by stakeholders
-
-### Prerequisites
-
-- Documentation must be synchronized (run `40_documentation_sync_v1` first)
-- No stale guidance in published documents
-- Architecture site pipeline (Pandoc + Mermaid) must be functional
-
-### Governance Refresh Chain
-
-```
-40_documentation_sync_v1 → 50_architecture_site_v1
-```
+**Preservation rules**:
+- Sections outside guarded blocks preserved
+- Manual annotations in unguarded sections kept
+- Workflow-generated sections refreshed
 
 ## Governance Refresh
 
-When the governance scaffold itself needs updating — for example, when new workflow families are added or the SOP structure evolves — a governance refresh is performed.
+After drift recovery, refresh governance:
 
-### Governance Refresh Sequence
+### Step 1: Developer Documentation
 
-1. **Re-run `10_execution_scaffold_v1`** — regenerates protected documents
-2. **Review changes** — compare regenerated documents with prior versions
-3. **Resolve conflicts** — if existing conventions conflict with updated scaffold, resolve explicitly
-4. **Validate** — confirm all protected documents are correctly regenerated
-5. **Update this SOP** — if the existing-repo workflow sequence changes
+**Workflow**: `41_developer_doc_v1`
 
-### Full Refresh Chain
-
-For a complete governance refresh:
-
-```
-00_master_docs_bootstrap_v1 → 10_execution_scaffold_v1 → 40_documentation_sync_v1 → 50_architecture_site_v1
+**Command**:
+```bash
+run-41_developer_doc_v1.bat
 ```
 
-### Governance Refresh vs. Drift Reconciliation
+### Step 2: Operator Documentation
 
-- **Governance refresh** updates the governance framework itself (SOPs, templates, agent contracts)
-- **Drift reconciliation** updates the codebase documentation to match current code
-- They are independent but complementary — a governance refresh may reveal drift that needs reconciliation
+**Workflow**: `41_operator_doc_v1`
+
+**Command**:
+```bash
+run-41_operator_doc_v1.bat
+```
+
+### Step 3: Stakeholder Documentation
+
+**Workflow**: `41_stakeholder_doc_v1`
+
+**Command**:
+```bash
+run-41_stakeholder_doc_v1.bat
+```
+
+### Step 4: Architecture Site
+
+**Workflow**: `50_architecture_site_v1`
+
+**Command**:
+```bash
+run-50_architecture_site_v1.bat
+```
+
+**What it does**:
+- Generates HTML architecture views
+- Publishes browsable documentation
+- Creates stakeholder/developer/operator/functional views
+
+**Artifacts**:
+- `docs/site/architecture/` (HTML)
+- `ARCHITECTURE_SITE_INDEX`
+- `ARCHITECTURE_SITE_MANIFEST`
 
 ## Batch Files
 
-### Bootstrap Batch Files
+### Workflow Launchers
+
+| Batch File | Purpose | Chain |
+|------------|---------|-------|
+| `run-00_master_docs_bootstrap_v1.bat` | Bootstrap system docs | First-time setup |
+| `run-10_execution_scaffold_v1.bat` | Scaffold delivery framework | First-time setup |
+| `run-20_initiative_intake_v1.bat` | New initiative | Normal delivery |
+| `run-21_bug_fix_intake_v1.bat` | Bug fix intake | Normal delivery |
+| `run-30_delivery_planning_v1.bat` | Delivery planning | Normal delivery |
+| `run-31_task_execution_v1.bat` | Task execution | Normal delivery |
+| `run-40_documentation_sync_v1.bat` | Documentation sync | Drift recovery |
+| `run-50_architecture_site_v1.bat` | Architecture site | Governance refresh |
+| `run-41_developer_doc_v1.bat` | Developer docs | Governance refresh |
+| `run-41_operator_doc_v1.bat` | Operator docs | Governance refresh |
+| `run-41_stakeholder_doc_v1.bat` | Stakeholder docs | Governance refresh |
+
+### Submission Batch Files
 
 | Batch File | Purpose |
-|---|---|
-| `run-00_master_docs_bootstrap_v1.bat` | Run bootstrap locally |
-| `submit-00_master_docs_bootstrap_v1.bat` | Submit to backend |
-| `run-10_execution_scaffold_v1.bat` | Run scaffold locally |
+|------------|---------|
+| `submit-00_master_docs_bootstrap_v1.bat` | Submit bootstrap to backend |
 | `submit-10_execution_scaffold_v1.bat` | Submit scaffold to backend |
+| `submit-40_documentation_sync_v1.bat` | Submit sync to backend |
 
-### Operational Batch Files
+### Sync Batch Files
 
 | Batch File | Purpose |
-|---|---|
-| `run-20_initiative_intake_v1.bat` | Run initiative intake locally |
-| `submit-20_initiative_intake_v1.bat` | Submit initiative to backend |
-| `run-30_delivery_planning_v1.bat` | Run delivery planning locally |
-| `submit-30_delivery_planning_v1.bat` | Submit planning to backend |
-| `run-31_task_execution_v1.bat` | Run task execution locally |
-| `submit-31_task_execution_v1.bat` | Submit execution to backend |
-| `run-40_documentation_sync_v1.bat` | Run documentation sync locally |
-| `submit-40_documentation_sync_v1.bat` | Submit sync to backend |
-| `run-50_architecture_site_v1.bat` | Publish architecture site |
-| `run-daemon.bat` | Start daemon mode |
-| `run-approve-step.bat` | Force approve a step |
-| `run-reset-step.bat` | Reset step for retry |
-| `run-cleanup-generated-docs.bat` | Clean generated docs |
+|------------|---------|
+| `sync-workflows-to-backend.bat` | Sync workflow bundles |
+| `sync-10_execution_scaffold_v1-workflow-spec.bat` | Sync scaffold spec |
 
 ## Notes
 
-### Migration Mode Considerations
+### Workflow Execution Modes
 
-1. **Coexistence, not replacement**: The scaffold coexists with existing documentation. It does not overwrite or delete existing artifacts unless they are directly superseded by workflow-generated replacements.
+**Local Mode** (`run-*.bat`):
+- Executes on local workstation
+- Uses local coder tools
+- Results stored in local job directories
 
-2. **Respect existing conventions**: Where existing documentation conventions don't conflict with the universal baseline, respect them. The scaffold adapts to the repository, not the other way around.
+**Backend Mode** (`submit-*.bat`):
+- Submits to backend work queue
+- Picked up by worker daemons
+- Results tracked in backend database
 
-3. **Incremental adoption**: Not all governance features need to be adopted at once. Prioritize:
-   - SOPs and status rules (foundational)
-   - Delivery workflow (immediate governance)
-   - Codebase documentation coverage (ongoing)
-   - Architecture site (communication)
+### Re-Running Workflows
 
-4. **Dual source of truth**: Be aware of the dual source-of-truth model — packaged bootstrap (`agent_runner_v2/bootstrap/workflows/default/`) vs. runtime bundle (`%USERPROFILE%\.ukbe-runner\workflows\...`). Never hand-edit the runtime bundle.
+**After bootstrap changes**:
+1. Update bootstrap source
+2. Run sync batch files
+3. Rerun affected workflows
 
-5. **Windows-first**: Paths and scripts assume Windows. The SOP does not assume POSIX tools unless explicitly wrapped.
+**After prompt changes**:
+1. Edit prompt templates
+2. Run sync batch files
+3. Test with `run-*.bat`
 
-6. **Zero runtime deps**: The runner is intentionally dependency-free. Adding dependencies requires explicit review.
-
-7. **Protected documents**: Workflow-generated documents carry `managed_by: workflow-generated` and are protected from manual edits. Respect this protection.
-
-8. **`07_master_prompts` is deprecated**: This artifact MUST NOT appear in any governed repository. If found during reconciliation, flag it for removal.
-
-### Architecture Profile Notes
-
-- **DDD (Domain-Driven Design)**: If the repository adopts DDD, the module documentation structure may be refined to reflect bounded contexts, aggregates, and domain events. This is a profile choice, not a universal requirement.
-- **EDA (Event-Driven Architecture)**: If the repository adopts EDA, event contracts and message flows may warrant dedicated documentation sections. This is a profile choice.
-- **Other profiles**: Microservices, CQRS, event-sourced, and similar architectures each have conditional documentation refinements. The universal baseline applies first; profile refinements layer on top.
+**After code changes**:
+1. Run `run-40_documentation_sync_v1.bat` to update codebase docs
+2. Review change impact document
+3. Update affected system docs if needed
 
 ### Workflow Dependencies
 
-| Workflow | Requires | Produces |
-|---|---|---|
-| `10_execution_scaffold_v1` | `PROJECT_ANALYSIS` from `00_master_docs_bootstrap_v1` | Delivery scaffold |
-| `20_initiative_intake_v1` | User directive or ticket | Approved initiative |
-| `30_delivery_planning_v1` | `INIT_FILE` from `20_initiative_intake_v1` | Plan, task graph |
-| `31_task_execution_v1` | `TASK_FILE` from `30_delivery_planning_v1` | Implementation |
-| `40_documentation_sync_v1` | Current codebase state | Updated docs |
-| `50_architecture_site_v1` | Synchronized system docs | HTML site |
+```
+00_master_docs_bootstrap_v1
+    ↓ (required before)
+10_execution_scaffold_v1
+    ↓ (required before)
+20_initiative_intake_v1 → 30_delivery_planning_v1 → 31_task_execution_v1
+    ↓ (may trigger)
+40_documentation_sync_v1 → 41_*_doc_v1 → 50_architecture_site_v1
+```
+
+### Approval Gates
+
+Some steps require human approval:
+- Pre-init review (`20_initiative_intake_v1`)
+- Plan review (`30_delivery_planning_v1`)
+- Implementation review (`31_task_execution_v1`)
+
+Approval commands:
+```bash
+ukbe-run-agent approve <job-id>
+ukbe-run-agent reject <job-id> [--reason "..."]
+ukbe-run-agent force-approve <job-id>  # Emergency only
+```
+
+---
+
+*Generated by workflow: 00_master_docs_bootstrap_v1 / step: 04_generate_architecture_docs*
