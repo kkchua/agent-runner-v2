@@ -96,10 +96,12 @@ from .step_runner import (
 )
 from .documentation_guardrails import (
     EXECUTION_SCAFFOLD_WORKFLOW,
-    MASTER_BOOTSTRAP_WORKFLOW,
+    MASTER_BOOTSTRAP_WORKFLOWS,
     generated_doc_manifest,
     managed_banner,
 )
+from .workflow_packages.registry import discover_workflow_package
+from .workflow_packages.loader import bundle_to_template_group_dict
 
 __version__ = "0.1.0"
 from .execution_request import ExecutionRequest
@@ -388,7 +390,7 @@ def main(argv: list[str] | None = None) -> int:
     execution_binding: dict | None = None
 
     try:
-        group_cfg = _load_group(args.template_group)
+        group_cfg = _load_group(args.template_group, workspace_root=workspace_root)
         _validate_static_reference_files(workspace_root, group_cfg, template_group=args.template_group)
 
         if (args.task_graph_id or args.task_node_id) and args.template_group != "task_execution_v1":
@@ -934,7 +936,7 @@ def _execute_step_command(request_path: Path, result_path: Path | None = None) -
 
         spec_source = (request.step_spec_source or "backend").strip().lower()
         if spec_source == "global":
-            group_cfg = _load_group(request.template_group)
+            group_cfg = _load_group(request.template_group, workspace_root=workspace_root)
             step_cfg = group_cfg["step_configs"].get(request.step_name)
             if not step_cfg:
                 raise ValueError(f"Step {request.step_name!r} is not defined for template group {request.template_group!r}")
@@ -961,7 +963,7 @@ def _execute_step_command(request_path: Path, result_path: Path | None = None) -
                 request.step_name,
             )
         else:
-            group_cfg = _load_group(request.template_group)
+            group_cfg = _load_group(request.template_group, workspace_root=workspace_root)
             step_cfg = group_cfg["step_configs"].get(request.step_name)
             if not step_cfg:
                 raise ValueError(f"Step {request.step_name!r} is not defined for template group {request.template_group!r}")
@@ -1148,48 +1150,7 @@ def _worker_command(*, backend_url: str, worker_id: str, host_name: str | None, 
         except Exception as exc:
             result = _build_worker_crash_result(run=run, step_run=step_run, error=exc)
         completion = _submit_worker_result(client=client, run=run, step_run=step_run, result=result)
-        completion_run = dict((completion or {}).get("run") or run)
-        completion_step_run = dict((completion or {}).get("step_run") or step_run)
-        next_step_run = (completion or {}).get("next_step_run")
-        last_event = "STEP_COMPLETED"
-        
-        # Determine if this is truly the last step (no more steps to execute)
-        is_last_step = next_step_run is None
-        
-        if completion_run.get("status") == "awaiting_human":
-            last_event = "HUMAN_APPROVAL_REQUIRED"
-            # Send notification for human intervention required
-            print(f"[worker] Attempting to send WAITING_FOR_HUMAN_INTERVENTION notification for run {completion_run.get('id', 'unknown')}", flush=True)
-            from .notification_manager import send_workflow_notification
-            result = send_workflow_notification("WAITING_FOR_HUMAN_INTERVENTION", completion_run)
-            print(f"[worker] Notification result: {result}", flush=True)
-        elif completion_run.get("status") == "failed":
-            last_event = "RUN_FAILED"
-            # Send notification for workflow failure
-            print(f"[worker] Attempting to send FAILED notification for run {completion_run.get('id', 'unknown')}", flush=True)
-            from .notification_manager import send_workflow_notification
-            result = send_workflow_notification("FAILED", completion_run)
-            print(f"[worker] Notification result: {result}", flush=True)
-        elif completion_run.get("status") == "completed" and is_last_step:
-            # Only send COMPLETED notification when status is completed AND there are no more steps
-            last_event = "RUN_COMPLETED"
-            print(f"[worker] Workflow completed (last step). Sending COMPLETED notification for run {completion_run.get('id', 'unknown')}", flush=True)
-            from .notification_manager import send_workflow_notification
-            result = send_workflow_notification("COMPLETED", completion_run)
-            print(f"[worker] Notification result: {result}", flush=True)
-        elif next_step_run:
-            last_event = "STEP_ENQUEUED"
-            print(f"[worker] Step completed, next step enqueued: {next_step_run.get('step_name', 'unknown')}", flush=True)
-        else:
-            # Status is completed but we couldn't determine if it's the last step
-            # This shouldn't happen, but log it for debugging
-            print(f"[worker] WARNING: Status is 'completed' but next_step_run is unclear. is_last_step={is_last_step}, next_step_run={next_step_run}", flush=True)
-        _write_backend_job_json(
-            run=completion_run,
-            step_run=completion_step_run,
-            next_step_run=next_step_run if isinstance(next_step_run, dict) else None,
-            last_event=last_event,
-        )
+        _finalize_worker_completion(client=client, run=run, step_run=step_run, completion=completion)
         client.heartbeat(worker_id=worker_id, status="idle", current_step_run_id=None)
         if once:
             return 0
@@ -1446,6 +1407,77 @@ def _submit_worker_result(*, client: BackendClient, run: dict[str, Any], step_ru
     return completion
 
 
+def _finalize_worker_completion(
+    *,
+    client: BackendClient,
+    run: dict[str, Any],
+    step_run: dict[str, Any],
+    completion: dict[str, Any] | None,
+) -> dict[str, Any]:
+    """Mirror backend completion locally and send workflow notifications.
+
+    This is shared by both `worker` mode and the daemon supervisor so they
+    do not drift on terminal run handling.
+    """
+    completion_run = dict((completion or {}).get("run") or run)
+    completion_step_run = dict((completion or {}).get("step_run") or step_run)
+    next_step_run = (completion or {}).get("next_step_run")
+    last_event = "STEP_COMPLETED"
+
+    terminal_statuses = {"awaiting_human", "failed", "completed"}
+    run_id = str(run.get("id") or "")
+    if completion_run.get("status") not in terminal_statuses and next_step_run is None and run_id:
+        try:
+            refreshed_run = client.get_run(run_id=run_id)
+            if isinstance(refreshed_run, dict) and refreshed_run:
+                completion_run = refreshed_run
+        except Exception as exc:
+            print(f"[worker] WARNING: Failed to refresh run state for notification handling: {exc}", flush=True)
+
+    is_last_step = next_step_run is None
+
+    if completion_run.get("status") == "awaiting_human":
+        last_event = "HUMAN_APPROVAL_REQUIRED"
+        print(f"[worker] Attempting to send WAITING_FOR_HUMAN_INTERVENTION notification for run {completion_run.get('id', 'unknown')}", flush=True)
+        from .notification_manager import send_workflow_notification
+        notify_result = send_workflow_notification("WAITING_FOR_HUMAN_INTERVENTION", completion_run)
+        print(f"[worker] Notification result: {notify_result}", flush=True)
+    elif completion_run.get("status") == "failed":
+        last_event = "RUN_FAILED"
+        print(f"[worker] Attempting to send FAILED notification for run {completion_run.get('id', 'unknown')}", flush=True)
+        from .notification_manager import send_workflow_notification
+        notify_result = send_workflow_notification("FAILED", completion_run)
+        print(f"[worker] Notification result: {notify_result}", flush=True)
+    elif completion_run.get("status") == "completed" and is_last_step:
+        last_event = "RUN_COMPLETED"
+        print(f"[worker] Workflow completed (last step). Sending COMPLETED notification for run {completion_run.get('id', 'unknown')}", flush=True)
+        from .notification_manager import send_workflow_notification
+        notify_result = send_workflow_notification("COMPLETED", completion_run)
+        print(f"[worker] Notification result: {notify_result}", flush=True)
+    elif next_step_run:
+        last_event = "STEP_ENQUEUED"
+        print(f"[worker] Step completed, next step enqueued: {next_step_run.get('step_name', 'unknown')}", flush=True)
+    else:
+        print(
+            f"[worker] WARNING: Run completion state is non-terminal after final step. "
+            f"status={completion_run.get('status')!r}, next_step_run={next_step_run!r}",
+            flush=True,
+        )
+
+    _write_backend_job_json(
+        run=completion_run,
+        step_run=completion_step_run,
+        next_step_run=next_step_run if isinstance(next_step_run, dict) else None,
+        last_event=last_event,
+    )
+    return {
+        "run": completion_run,
+        "step_run": completion_step_run,
+        "next_step_run": next_step_run,
+        "last_event": last_event,
+    }
+
+
 def _build_execution_state(*, request: ExecutionRequest, group_cfg: dict[str, Any]) -> dict[str, Any]:
     bundle = get_workflow_module()
     if bundle is None:
@@ -1685,7 +1717,7 @@ def _augment_generated_doc_prompt(
     step_cfg: dict[str, Any],
     state: dict[str, Any],
 ) -> str:
-    if template_group not in {MASTER_BOOTSTRAP_WORKFLOW, EXECUTION_SCAFFOLD_WORKFLOW}:
+    if template_group not in MASTER_BOOTSTRAP_WORKFLOWS and template_group != EXECUTION_SCAFFOLD_WORKFLOW:
         return template_text
 
     banner = managed_banner(workflow=template_group, step=step)
@@ -1937,7 +1969,26 @@ def _ensure_delivery_folders(target_root: Path) -> None:
         (target_root / folder).mkdir(parents=True, exist_ok=True)
 
 
-def _load_group(group_name: str) -> dict:
+def _load_group(group_name: str, workspace_root: Path | None = None) -> dict:
+    """Load a template group config, checking workflow packages first.
+
+    Precedence:
+    1. ``workflows/<group_name>/workflow.toml`` (plugin package) — if found,
+       the package is parsed and adapted to the TEMPLATE_GROUPS dict format.
+    2. ``TEMPLATE_GROUPS[group_name]`` in the runtime workflow bundle.
+
+    This allows plugin-based workflow packages to coexist with and gradually
+    replace the monolithic ``template_groups.py``.
+    """
+    # Check for a plugin workflow package first
+    if workspace_root is not None:
+        bundle = discover_workflow_package(group_name, project_root=workspace_root)
+        if bundle is not None:
+            group_dict = bundle_to_template_group_dict(bundle)
+            # Stamp the bundle reference onto the dict for downstream use
+            group_dict["_workflow_bundle"] = bundle
+            return group_dict
+
     bundle = get_workflow_module()
     if bundle is None:
         raise RuntimeError("Workflow module is not loaded. Runtime must use the global workflow bundle.")
@@ -1950,7 +2001,7 @@ def _load_group(group_name: str) -> dict:
 
 def _validate_static_reference_files(workspace_root: Path, group_cfg: dict | None = None, template_group: str = "") -> None:
     # Bootstrap and scaffold workflows generate docs — they don't need pre-existing reference files
-    if template_group in ("00_master_docs_bootstrap_v1", "10_execution_scaffold_v1", "delivery_scaffold_v1") or template_group.startswith("delivery_scaffold"):
+    if template_group in ("00_master_docs_bootstrap_v1", "00_master_docs_bootstrap_v2", "10_execution_scaffold_v1", "delivery_scaffold_v1") or template_group.startswith("delivery_scaffold"):
         return
 
     bundle = get_workflow_module()

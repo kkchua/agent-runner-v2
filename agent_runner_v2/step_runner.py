@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import datetime as dt
 import hashlib
+import importlib.util
 import json
 import re
 import shutil
@@ -64,7 +65,7 @@ from .runtime_context import (
     resolve_repo_or_runtime_path,
 )
 from .documentation_guardrails import (
-    MASTER_BOOTSTRAP_WORKFLOW,
+    MASTER_BOOTSTRAP_WORKFLOWS,
     master_bootstrap_artifact_candidates,
 )
 
@@ -125,6 +126,26 @@ After completing your work, you MUST report results via meta.json sidecar.
 
 This requirement is MANDATORY — failure to follow these steps will cause workflow failure.
 ═══════════════════════════════════════════════════════════
+"""
+
+
+CODER_SOP_INSTRUCTION_TEMPLATE = """
+
+===========================================================================
+MANDATORY CODER SOP
+===========================================================================
+Before implementing any logic, read and follow:
+{CODER_IMPLEMENTATION_SOP_PATH}
+
+Minimum required behavior:
+- Re-read the current source-of-truth files from disk before making decisions
+- Inspect existing code paths before assuming runtime behavior
+- Refactor duplicated execution logic toward one shared helper or transition path
+- Do not add new parallel logic for workflow completion, failure, notifications, or artifacts
+- Add or update tests proving all affected execution modes follow the same behavior
+
+This SOP is repository-wide and applies to all coder backends for this step.
+===========================================================================
 """
 
 
@@ -796,7 +817,7 @@ def _canonicalize_master_bootstrap_artifacts(
     project_root: Path,
     state: dict,
 ) -> dict[str, str]:
-    if state.get("template_group") != MASTER_BOOTSTRAP_WORKFLOW:
+    if state.get("template_group") not in MASTER_BOOTSTRAP_WORKFLOWS:
         return dict(artifacts)
 
     job_id = str(state.get("job_id") or "").strip()
@@ -1448,6 +1469,69 @@ def _load_additional_sections(*, state: dict, step: str) -> str:
     return _format_additional_sections(config.get("additional_sections", []))
 
 
+# ---------------------------------------------------------------------------
+# Workflow package context hooks
+# ---------------------------------------------------------------------------
+
+_CONTEXT_HOOK_CACHE: dict[str, bool] = {}
+
+
+def _apply_workflow_package_context_hooks(
+    *,
+    ctx: dict[str, str],
+    state: dict,
+    step: str,
+    step_cfg: dict | None,
+) -> None:
+    """Load and run context_extensions.py from the active workflow package.
+
+    When ``step_cfg`` carries a ``_workflow_bundle`` reference (stamped by
+    ``_load_group`` in ``run_agent.py``), this function discovers and invokes
+    any context hooks exported by the workflow package's ``context_extensions.py``.
+    """
+    if not step_cfg:
+        return
+    bundle = step_cfg.get("_workflow_bundle")
+    if bundle is None:
+        return
+
+    ext_path = getattr(bundle, "context_extensions_path", None)
+    if ext_path is None:
+        return
+
+    cache_key = str(ext_path)
+    if cache_key in _CONTEXT_HOOK_CACHE:
+        return
+
+    if not ext_path.is_file():
+        _CONTEXT_HOOK_CACHE[cache_key] = False
+        return
+
+    try:
+        spec = importlib.util.spec_from_file_location(
+            "workflow_context_extensions", ext_path
+        )
+        if spec is None or spec.loader is None:
+            _CONTEXT_HOOK_CACHE[cache_key] = False
+            return
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+
+        hooks_fn = getattr(mod, "build_context_extensions", None)
+        if hooks_fn is not None:
+            extensions = hooks_fn(state=state, step=step, step_cfg=step_cfg, ctx=ctx)
+            if isinstance(extensions, dict):
+                ctx.update(extensions)
+        _CONTEXT_HOOK_CACHE[cache_key] = True
+    except Exception:
+        import logging  # noqa: PLC0415
+
+        logging.getLogger(__name__).exception(
+            "Failed to load context extensions from %s", ext_path
+        )
+        _CONTEXT_HOOK_CACHE[cache_key] = False
+
+
 def build_context(
     state: dict,
     *,
@@ -1465,6 +1549,7 @@ def build_context(
     ctx["CODEBASE_DOC_ROOT"] = codebase_doc_rel()
     ctx["DELIVERY_DOC_ROOT"] = delivery_doc_rel()
     ctx["ARCHITECTURE_SITE_ROOT"] = architecture_site_rel()
+    ctx["CODER_IMPLEMENTATION_SOP_PATH"] = "CODER_IMPLEMENTATION_SOP.md"
 
     # Get artifacts from state for fingerprinting
     artifacts = state.get("artifacts") or {}
@@ -1649,6 +1734,14 @@ def build_context(
         step=step,
         artifacts=artifacts,
         produces=produces,
+    )
+
+    # Run workflow package context hooks (from context_extensions.py)
+    _apply_workflow_package_context_hooks(
+        ctx=ctx,
+        state=state,
+        step=step,
+        step_cfg=step_cfg,
     )
 
     # Print expected output paths BEFORE the agent starts (for visibility)
@@ -1920,8 +2013,14 @@ def render_prompt(template_text: str, context: dict[str, str], step_cfg: dict | 
             block = block.replace(f"{{{key}}}", _stringify_prompt_value(value))
         rendered = rendered + block
         print("[render_prompt] TOOL_INSTRUCTION appended", flush=True)
+    if render_context.get("CODER_IMPLEMENTATION_SOP_PATH"):
+        sop_block = CODER_SOP_INSTRUCTION_TEMPLATE
+        for key, value in render_context.items():
+            sop_block = sop_block.replace(f"{{{key}}}", _stringify_prompt_value(value))
+        rendered = rendered + sop_block
+        print("[render_prompt] MANDATORY CODER SOP appended", flush=True)
     else:
-        print("[render_prompt] TOOLS_DIR empty — TOOL_INSTRUCTION skipped", flush=True)
+        print("[render_prompt] CODER_IMPLEMENTATION_SOP_PATH not in context — MANDATORY CODER SOP skipped", flush=True)
     return rendered
 
 
@@ -1933,113 +2032,6 @@ def _rewrite_prompt_literals(template_text: str) -> str:
     rendered = template_text
     for literal, token in sorted(prompt_literal_substitutions().items(), key=lambda item: len(item[0]), reverse=True):
         rendered = rendered.replace(literal, token)
-    return rendered
-
-    from .constants import (
-        # Import all path constants to build the mapping
-        ARTIFACT_PATH_PROJECT_ANALYSIS,
-        ARTIFACT_PATH_README,
-        ARTIFACT_PATH_DOCUMENTATION_STANDARD,
-        ARTIFACT_PATH_BUNDLE_TAXONOMY,
-        ARTIFACT_PATH_BUNDLE_MIGRATION_PLAN,
-        ARTIFACT_PATH_SYSTEM_OVERVIEW,
-        ARTIFACT_PATH_BUSINESS_CAPABILITIES,
-        ARTIFACT_PATH_FUNCTIONAL_SPEC,
-        ARTIFACT_PATH_NON_FUNCTIONAL_REQUIREMENTS,
-        ARTIFACT_PATH_SYSTEM_CONTEXT,
-        ARTIFACT_PATH_COMPONENT_ARCHITECTURE,
-        ARTIFACT_PATH_DECISION_LOG,
-        ARTIFACT_PATH_SYSTEM_FILE_STRUCTURE,
-        ARTIFACT_PATH_DEVELOPER_GUIDE,
-        ARTIFACT_PATH_RUNBOOK,
-        ARTIFACT_PATH_EXISTING_REPO_WORKFLOW_SOP,
-        ARTIFACT_PATH_CODEBASE_INVENTORY,
-        ARTIFACT_PATH_INTEGRATION_MAP,
-        ARTIFACT_PATH_FAILURE_MODES,
-        ARTIFACT_PATH_ARCHITECTURE_FLOW,
-        ARTIFACT_PATH_CODEBASE_DOC_SOP,
-        ARTIFACT_PATH_CODEBASE_DOC_STATUS_RULES,
-        ARTIFACT_PATH_DELIVERY_AGENTS,
-        ARTIFACT_PATH_DELIVERY_AGENT_PLANNER,
-        ARTIFACT_PATH_DELIVERY_AGENT_TASK_DECOMPOSER,
-        ARTIFACT_PATH_DELIVERY_AGENT_IMPL_PLANNER,
-        ARTIFACT_PATH_DELIVERY_AGENT_EXECUTOR,
-        ARTIFACT_PATH_DELIVERY_AGENT_REVIEWER,
-        ARTIFACT_PATH_DELIVERY_AGENT_MEMORY_MANAGER,
-        ARTIFACT_PATH_DELIVERY_FOLDER_MAP,
-        # Import artifact key constants for placeholder generation
-        ARTIFACT_KEY_PROJECT_ANALYSIS,
-        ARTIFACT_KEY_SYSTEM_DOCS_INDEX,
-        ARTIFACT_KEY_SYSTEM_DOC_STANDARD,
-        ARTIFACT_KEY_BUNDLE_TAXONOMY,
-        ARTIFACT_KEY_BUNDLE_MIGRATION_PLAN,
-        ARTIFACT_KEY_SYSTEM_OVERVIEW,
-        ARTIFACT_KEY_BUSINESS_CAPABILITIES,
-        ARTIFACT_KEY_FUNCTIONAL_SPEC,
-        ARTIFACT_KEY_NON_FUNCTIONAL_REQUIREMENTS,
-        ARTIFACT_KEY_SYSTEM_CONTEXT,
-        ARTIFACT_KEY_COMPONENT_ARCHITECTURE,
-        ARTIFACT_KEY_DECISION_LOG,
-        ARTIFACT_KEY_SYSTEM_FILE_STRUCTURE,
-        ARTIFACT_KEY_DEVELOPER_GUIDE,
-        ARTIFACT_KEY_RUNBOOK,
-        ARTIFACT_KEY_EXISTING_REPO_WORKFLOW_SOP,
-        ARTIFACT_KEY_CODEBASE_INVENTORY,
-        ARTIFACT_KEY_INTEGRATION_MAP,
-        ARTIFACT_KEY_FAILURE_MODES,
-        ARTIFACT_KEY_ARCHITECTURE_FLOW,
-        ARTIFACT_KEY_CODEBASE_DOC_SOP,
-        ARTIFACT_KEY_CODEBASE_DOC_STATUS_RULES,
-        ARTIFACT_KEY_DELIVERY_AGENTS,
-        ARTIFACT_KEY_DELIVERY_AGENT_PLANNER,
-        ARTIFACT_KEY_DELIVERY_AGENT_TASK_DECOMPOSER,
-        ARTIFACT_KEY_DELIVERY_AGENT_IMPL_PLANNER,
-        ARTIFACT_KEY_DELIVERY_AGENT_EXECUTOR,
-        ARTIFACT_KEY_DELIVERY_AGENT_REVIEWER,
-        ARTIFACT_KEY_DELIVERY_AGENT_MEMORY_MANAGER,
-        ARTIFACT_KEY_DELIVERY_FOLDER_MAP,
-    )
-    
-    rendered = template_text
-    
-    # Build path → placeholder mapping from constants
-    path_to_placeholder = {
-        ARTIFACT_PATH_PROJECT_ANALYSIS: placeholder(ARTIFACT_KEY_PROJECT_ANALYSIS),
-        ARTIFACT_PATH_README: placeholder(ARTIFACT_KEY_SYSTEM_DOCS_INDEX),
-        ARTIFACT_PATH_DOCUMENTATION_STANDARD: placeholder(ARTIFACT_KEY_SYSTEM_DOC_STANDARD),
-        ARTIFACT_PATH_BUNDLE_TAXONOMY: placeholder(ARTIFACT_KEY_BUNDLE_TAXONOMY),
-        ARTIFACT_PATH_BUNDLE_MIGRATION_PLAN: placeholder(ARTIFACT_KEY_BUNDLE_MIGRATION_PLAN),
-        ARTIFACT_PATH_SYSTEM_OVERVIEW: placeholder(ARTIFACT_KEY_SYSTEM_OVERVIEW),
-        ARTIFACT_PATH_BUSINESS_CAPABILITIES: placeholder(ARTIFACT_KEY_BUSINESS_CAPABILITIES),
-        ARTIFACT_PATH_FUNCTIONAL_SPEC: placeholder(ARTIFACT_KEY_FUNCTIONAL_SPEC),
-        ARTIFACT_PATH_NON_FUNCTIONAL_REQUIREMENTS: placeholder(ARTIFACT_KEY_NON_FUNCTIONAL_REQUIREMENTS),
-        ARTIFACT_PATH_SYSTEM_CONTEXT: placeholder(ARTIFACT_KEY_SYSTEM_CONTEXT),
-        ARTIFACT_PATH_COMPONENT_ARCHITECTURE: placeholder(ARTIFACT_KEY_COMPONENT_ARCHITECTURE),
-        ARTIFACT_PATH_DECISION_LOG: placeholder(ARTIFACT_KEY_DECISION_LOG),
-        ARTIFACT_PATH_SYSTEM_FILE_STRUCTURE: placeholder(ARTIFACT_KEY_SYSTEM_FILE_STRUCTURE),
-        ARTIFACT_PATH_DEVELOPER_GUIDE: placeholder(ARTIFACT_KEY_DEVELOPER_GUIDE),
-        ARTIFACT_PATH_RUNBOOK: placeholder(ARTIFACT_KEY_RUNBOOK),
-        ARTIFACT_PATH_EXISTING_REPO_WORKFLOW_SOP: placeholder(ARTIFACT_KEY_EXISTING_REPO_WORKFLOW_SOP),
-        ARTIFACT_PATH_CODEBASE_INVENTORY: placeholder(ARTIFACT_KEY_CODEBASE_INVENTORY),
-        ARTIFACT_PATH_INTEGRATION_MAP: placeholder(ARTIFACT_KEY_INTEGRATION_MAP),
-        ARTIFACT_PATH_FAILURE_MODES: placeholder(ARTIFACT_KEY_FAILURE_MODES),
-        ARTIFACT_PATH_ARCHITECTURE_FLOW: placeholder(ARTIFACT_KEY_ARCHITECTURE_FLOW),
-        ARTIFACT_PATH_CODEBASE_DOC_SOP: placeholder(ARTIFACT_KEY_CODEBASE_DOC_SOP),
-        ARTIFACT_PATH_CODEBASE_DOC_STATUS_RULES: placeholder(ARTIFACT_KEY_CODEBASE_DOC_STATUS_RULES),
-        ARTIFACT_PATH_DELIVERY_AGENTS: placeholder(ARTIFACT_KEY_DELIVERY_AGENTS),
-        ARTIFACT_PATH_DELIVERY_AGENT_PLANNER: placeholder(ARTIFACT_KEY_DELIVERY_AGENT_PLANNER),
-        ARTIFACT_PATH_DELIVERY_AGENT_TASK_DECOMPOSER: placeholder(ARTIFACT_KEY_DELIVERY_AGENT_TASK_DECOMPOSER),
-        ARTIFACT_PATH_DELIVERY_AGENT_IMPL_PLANNER: placeholder(ARTIFACT_KEY_DELIVERY_AGENT_IMPL_PLANNER),
-        ARTIFACT_PATH_DELIVERY_AGENT_EXECUTOR: placeholder(ARTIFACT_KEY_DELIVERY_AGENT_EXECUTOR),
-        ARTIFACT_PATH_DELIVERY_AGENT_REVIEWER: placeholder(ARTIFACT_KEY_DELIVERY_AGENT_REVIEWER),
-        ARTIFACT_PATH_DELIVERY_AGENT_MEMORY_MANAGER: placeholder(ARTIFACT_KEY_DELIVERY_AGENT_MEMORY_MANAGER),
-        ARTIFACT_PATH_DELIVERY_FOLDER_MAP: placeholder(ARTIFACT_KEY_DELIVERY_FOLDER_MAP),
-    }
-    
-    # Replace paths with placeholders (longest paths first to avoid partial matches)
-    for literal, token in sorted(path_to_placeholder.items(), key=lambda item: len(item[0]), reverse=True):
-        rendered = rendered.replace(literal, token)
-    
     return rendered
 
 
@@ -2175,7 +2167,7 @@ def _build_review_target_identifier(*, artifact_key: str, artifact_path: str) ->
 
 def _build_new_review_file_path(*, state: dict, step: str, step_cfg: dict) -> str:
     template_group = str(state.get("template_group") or "")
-    if template_group == MASTER_BOOTSTRAP_WORKFLOW and step == "05_review_master_system_docs":
+    if template_group in MASTER_BOOTSTRAP_WORKFLOWS and step == "05_review_master_system_docs":
         job_id = str(state.get("job_id") or "00DOC")
         return system_doc_rel(f"{job_id}-bootstrap-validation.md")
 
