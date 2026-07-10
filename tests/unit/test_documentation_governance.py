@@ -9,7 +9,7 @@ from os import fspath
 
 from agent_runner_v2.workflow_router import _resolve_reject_route
 from agent_runner_v2.documentation_guardrails import (
-    MASTER_BOOTSTRAP_WORKFLOW,
+    MASTER_BOOTSTRAP_WORKFLOWS,
     execution_scaffold_doc_paths,
     master_bootstrap_doc_paths,
 )
@@ -146,7 +146,7 @@ def test_generated_doc_banner_instruction_is_injected_for_workflow_prompts():
 
     rendered = _augment_generated_doc_prompt(
         "body",
-        template_group=MASTER_BOOTSTRAP_WORKFLOW,
+        template_group="00_master_docs_bootstrap_v1",
         step="03_generate_system_overview_docs",
         step_cfg={"mode": "bootstrap"},
         state={"job_id": "00DOC-GEN-20260702-003", "current_mode": "bootstrap"},

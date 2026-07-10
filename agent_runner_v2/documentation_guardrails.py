@@ -28,7 +28,10 @@ from .constants import (
 )
 
 
-MASTER_BOOTSTRAP_WORKFLOW = "00_master_docs_bootstrap_v1"
+MASTER_BOOTSTRAP_WORKFLOWS: set[str] = {
+    "00_master_docs_bootstrap_v1",
+    "00_master_docs_bootstrap_v2",
+}
 EXECUTION_SCAFFOLD_WORKFLOW = "10_execution_scaffold_v1"
 ARCHITECTURE_SITE_WORKFLOW = "50_architecture_site_v1"
 
@@ -113,7 +116,7 @@ def scan_workflow_generated_paths(*, project_root: Path, template_group: str) ->
 def workflow_canonical_doc_paths(*, template_group: str, state: dict) -> list[str]:
     job_id = str(state.get("job_id") or state.get("workflow_run_id") or "").strip()
     mode = str((state.get("current_step_cfg") or {}).get("mode") or state.get("current_mode") or "bootstrap")
-    if template_group == MASTER_BOOTSTRAP_WORKFLOW:
+    if template_group in MASTER_BOOTSTRAP_WORKFLOWS:
         return master_bootstrap_doc_paths(job_id=job_id, mode=mode)
     if template_group == EXECUTION_SCAFFOLD_WORKFLOW:
         return execution_scaffold_doc_paths()
@@ -125,7 +128,7 @@ def workflow_canonical_doc_paths(*, template_group: str, state: dict) -> list[st
 def workflow_legacy_doc_paths(*, template_group: str, state: dict) -> list[str]:
     job_id = str(state.get("job_id") or state.get("workflow_run_id") or "").strip()
     mode = str((state.get("current_step_cfg") or {}).get("mode") or state.get("current_mode") or "bootstrap")
-    if template_group == MASTER_BOOTSTRAP_WORKFLOW:
+    if template_group in MASTER_BOOTSTRAP_WORKFLOWS:
         return legacy_master_bootstrap_doc_paths(job_id=job_id, mode=mode)
     return []
 

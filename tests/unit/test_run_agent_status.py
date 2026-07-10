@@ -57,7 +57,7 @@ def test_main_returns_success_for_completed_matching_seed(monkeypatch, tmp_path,
     monkeypatch.setattr(run_agent_module, "load_project_config", lambda root: {})
     monkeypatch.setattr(run_agent_module, "_resolve_workflow_bundle_root", lambda *args, **kwargs: workspace)
     monkeypatch.setattr(run_agent_module, "load_workflow_module", lambda *args, **kwargs: None)
-    monkeypatch.setattr(run_agent_module, "_load_group", lambda template_group: group_cfg)
+    monkeypatch.setattr(run_agent_module, "_load_group", lambda template_group, **kwargs: group_cfg)
     monkeypatch.setattr(run_agent_module, "_validate_static_reference_files", lambda *args, **kwargs: None)
     monkeypatch.setattr(run_agent_module, "set_context", lambda **kwargs: None)
     monkeypatch.setattr(run_agent_module, "set_workflow_module", lambda module: None)

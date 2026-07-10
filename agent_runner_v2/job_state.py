@@ -22,7 +22,7 @@ from typing import Any
 from .doc_paths import delivery_doc_rel
 
 from .exceptions import ArtifactMissingError, MetaJsonInvalidError, MetaJsonMissingError, PreflightBlockedError
-from .documentation_guardrails import MASTER_BOOTSTRAP_WORKFLOW, master_bootstrap_artifact_candidates
+from .documentation_guardrails import MASTER_BOOTSTRAP_WORKFLOWS, master_bootstrap_artifact_candidates
 from .runtime_context import JOBS_ROOT, PROJECT_ROOT, get_workflow_module
 from .notifications import send_notification
 from .notification_manager import send_workflow_notification, send_step_notification
@@ -611,7 +611,7 @@ def ensure_backward_compatible_state(state: dict[str, Any]) -> dict[str, Any]:
 
 
 def _repair_master_bootstrap_artifacts(state: dict[str, Any]) -> None:
-    if state.get("template_group") != MASTER_BOOTSTRAP_WORKFLOW:
+    if state.get("template_group") not in MASTER_BOOTSTRAP_WORKFLOWS:
         return
 
     job_id = str(state.get("job_id") or "").strip()
