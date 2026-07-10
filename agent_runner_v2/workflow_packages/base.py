@@ -76,6 +76,9 @@ class WorkflowBundle:
     # Optional custom context extension module path (loaded via importlib at runtime)
     context_extensions_path: Path | None = None
 
+    # Package-local actions registered via @action() decorator
+    custom_actions: dict[str, Any] = field(default_factory=dict)
+
     # Metadata
     description: str = ""
     visibility: str = ""

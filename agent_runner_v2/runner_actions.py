@@ -37,7 +37,6 @@ from .actions.validate_developer_site import validate_developer_site
 from .actions.validate_operator_site import validate_operator_site
 from .actions.validate_tester_site import validate_tester_site
 from .actions.validate_user_site import validate_user_site
-from .actions.validate_system_docs import validate_system_docs
 from .actions.execute_t2i import execute_t2i
 from .actions.execute_i2v import execute_i2v
 from .actions.execute_voiceover import execute_voiceover
@@ -56,7 +55,6 @@ logger = logging.getLogger(__name__)
 
 ACTION_REGISTRY: dict[str, Callable] = {
     "copy_artifact": copy_artifact,
-    "finalize_bootstrap": finalize_bootstrap,
     "generate_site": generate_site,
     "generate_site_pdf": generate_site_pdf,
     "archive_previous_version": archive_previous_version,
@@ -75,7 +73,6 @@ ACTION_REGISTRY: dict[str, Callable] = {
     "validate_operator_site": validate_operator_site,
     "validate_tester_site": validate_tester_site,
     "validate_user_site": validate_user_site,
-    "validate_system_docs": validate_system_docs,
     "execute_t2i": execute_t2i,
     "execute_i2v": execute_i2v,
     "execute_voiceover": execute_voiceover,
@@ -95,11 +92,15 @@ def execute(
 ) -> ActionResult:
     """Dispatch to a registered action function.
 
+    Resolution order:
+    1. ``step_cfg["_workflow_bundle"].custom_actions`` — package-local actions.
+    2. ``ACTION_REGISTRY`` — globally registered actions.
+
     Raises:
-        KeyError — if action_name is not in the registry.
+        KeyError — if action_name is not found in either registry.
         Exception — action-specific failures (caller routes to failure).
     """
-    fn = ACTION_REGISTRY.get(action_name)
+    fn = _resolve_action_fn(action_name, step_cfg)
     if fn is None:
         available = ", ".join(sorted(ACTION_REGISTRY.keys()))
         raise KeyError(
@@ -127,6 +128,21 @@ def execute(
     )
 
     return result
+
+
+def _resolve_action_fn(
+    action_name: str, step_cfg: dict
+) -> Callable | None:
+    """Resolve an action function, checking package-local actions first."""
+    # 1. Package-local actions (decorator-registered in workflow package's actions.py)
+    bundle = step_cfg.get("_workflow_bundle") if step_cfg else None
+    if bundle is not None:
+        package_actions = getattr(bundle, "custom_actions", {}) or {}
+        fn = package_actions.get(action_name)
+        if fn is not None:
+            return fn
+    # 2. Fall back to global registry
+    return ACTION_REGISTRY.get(action_name)
 
 
 def get_registered_actions() -> list[str]:
