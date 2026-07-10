@@ -101,7 +101,7 @@ from .documentation_guardrails import (
     managed_banner,
 )
 from .workflow_packages.registry import discover_workflow_package
-from .workflow_packages.loader import bundle_to_template_group_dict
+from .workflow_packages.loader import bundle_to_template_group_dict, load_workflow_package
 
 __version__ = "0.1.0"
 from .execution_request import ExecutionRequest
@@ -1974,29 +1974,36 @@ def _load_group(
     workspace_root: Path | None = None,
     workflow_root: Path | None = None,
 ) -> dict:
-    """Load a template group config, checking workflow packages first.
+    """Load a template group config.
 
-    Precedence:
-    1. ``<workflow_root>/<group_name>/workflow.toml`` (plugin package) — if found,
-       the package is parsed and adapted to the TEMPLATE_GROUPS dict format.
-    2. ``TEMPLATE_GROUPS[group_name]`` in the runtime workflow bundle.
+    Resolution order:
+    1. ``<workflow_root>/<group_name>/workflow.toml`` — plugin workflow
+       package (self-contained; runtime source of truth).  If the
+       directory exists but the file is missing, fails fast.
+    2. ``TEMPLATE_GROUPS[group_name]`` — fallback for template_groups.py
+       entries (no ``workflow.toml`` package).
 
-    This allows plugin-based workflow packages to coexist with and gradually
-    replace the monolithic ``template_groups.py``.
+    There is **no** fallback from the global path to a project-local
+    ``workflows/`` directory.  For runtime, the package must be present
+    in the global runner home (seeded via ``ukbe-run-agent init``).
     """
-    # Check for a plugin workflow package first
-    if workspace_root is not None or workflow_root is not None:
-        bundle = discover_workflow_package(
-            group_name,
-            project_root=workspace_root,
-            workflow_root=workflow_root,
-        )
-        if bundle is not None:
+    # --- Direct path check (plugin package) ---------------------------
+    if workflow_root is not None:
+        pkg_dir = workflow_root / group_name
+        manifest = pkg_dir / "workflow.toml"
+        if manifest.is_file():
+            bundle = load_workflow_package(pkg_dir)
             group_dict = bundle_to_template_group_dict(bundle)
-            # Stamp the bundle reference onto the dict for downstream use
             group_dict["_workflow_bundle"] = bundle
             return group_dict
+        if pkg_dir.is_dir():
+            # Directory exists but no workflow.toml — broken package
+            raise FileNotFoundError(
+                f"Plugin workflow directory exists at {pkg_dir} "
+                f"but no workflow.toml found."
+            )
 
+    # --- Fallback: TEMPLATE_GROUPS ------------------------------------
     bundle = get_workflow_module()
     if bundle is None:
         raise RuntimeError("Workflow module is not loaded. Runtime must use the global workflow bundle.")
