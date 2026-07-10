@@ -2034,7 +2034,7 @@ def _validate_static_reference_files(workspace_root: Path, group_cfg: dict | Non
                 missing.append(f"{key}: {rel_path} (not found in workspace at {workspace_root})")
         else:
             # Check global bundle files
-            # The rel_path might be like "docs/delivery/00_standards/DELIVERY_AGENTS_MD.md"
+            # The rel_path might be like "docs/system/00_governance/bootstrap/DELIVERY_AGENTS.md"
             # but in the global bundle it's just "DELIVERY_AGENTS_MD" (no extension, flat structure)
             
             # Extract just the filename from the path
