@@ -213,6 +213,38 @@ def seed_workflow_bundle(target_root: Path, workflow_name: str = "example") -> P
     return wf_root
 
 
+def seed_workflow_packages(workspace_root: Path) -> list[Path]:
+    """Copy plugin workflow packages from the repo into the global runner home.
+
+    Scans ``<workspace_root>/workflows/`` for directories that contain a
+    ``workflow.toml`` manifest and copies each one to
+    ``%USERPROFILE%/.ukbe-runner/workflows/<name>/``.
+
+    This is the plugin-package analogue of ``seed_workflow_bundle()``.
+    """
+    repo_packages_dir = (workspace_root / "workflows").resolve()
+    if not repo_packages_dir.is_dir():
+        return []
+
+    global_root = global_workflows_root()
+    global_root.mkdir(parents=True, exist_ok=True)
+    seeded: list[Path] = []
+
+    for candidate in sorted(repo_packages_dir.iterdir()):
+        if not candidate.is_dir():
+            continue
+        manifest = candidate / "workflow.toml"
+        if not manifest.is_file():
+            continue
+
+        pkg_name = candidate.name
+        dest = global_root / pkg_name
+        _replace_tree(candidate, dest)
+        seeded.append(dest)
+
+    return seeded
+
+
 def init_workspace(
     workspace_root: Path,
     workflow_name: str = "default",
@@ -243,6 +275,9 @@ def init_workspace(
     workflows_dir = global_workflows_root()
     workflows_dir.mkdir(parents=True, exist_ok=True)
     wf_root = seed_workflow_bundle(workflows_dir, workflow_name="example")
+
+    # Seed plugin workflow packages (workflow.toml-based) from the repo
+    seeded_packages = seed_workflow_packages(workspace_root)
 
     (core_dir / "current").mkdir(parents=True, exist_ok=True)
     (domain_dir / domain / "current").mkdir(parents=True, exist_ok=True)
@@ -276,6 +311,7 @@ def init_workspace(
         "bundle_manifest": str(manifest_path),
         "bootstrap_install": bootstrap_install,
         "workflow_root": str(wf_root),
+        "seeded_packages": [str(p) for p in seeded_packages],
         "config_path": str(config_path(workspace_root)),
         "config_example_path": str(config_example_dst) if config_example_dst.exists() else None,
     }

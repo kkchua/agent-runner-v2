@@ -131,9 +131,12 @@ def _parse_bundle(
             reject_code_routes=raw.get("reject_code_routes"),
             requires_human_approval_after=bool(
                 raw.get("requires_human_approval_after", False)
+                or artifact.get("requires_human_approval_after", False)
             ),
-            loop_returns_to=_opt_str(raw, "loop_returns_to"),
-            replan_returns_to=_opt_str(raw, "replan_returns_to"),
+            loop_returns_to=_opt_str(raw, "loop_returns_to")
+                or _opt_str(artifact, "loop_returns_to"),
+            replan_returns_to=_opt_str(raw, "replan_returns_to")
+                or _opt_str(artifact, "replan_returns_to"),
             enable_notifications=bool(raw.get("enable_notifications", False)),
             template_ref=raw.get("template_ref"),
             post_action=_opt_str(raw, "post_action"),
@@ -144,6 +147,9 @@ def _parse_bundle(
     # --- Context extensions -----------------------------------------------
     context_ext_file = bundle_root / "context_extensions.py"
     context_ext_path: Path | None = context_ext_file if context_ext_file.is_file() else None
+
+    # --- Package-local actions ------------------------------------------
+    custom_actions = _load_package_actions(bundle_root)
 
     return WorkflowBundle(
         name=name,
@@ -158,6 +164,7 @@ def _parse_bundle(
         init_inputs=init_inputs,
         default_max_rejects=default_max_rejects,
         context_extensions_path=context_ext_path,
+        custom_actions=custom_actions,
         description=description,
         visibility=visibility,
     )
@@ -286,6 +293,67 @@ def bundle_to_template_group_dict(bundle: WorkflowBundle) -> dict[str, Any]:
         group["visibility"] = bundle.visibility
 
     return group
+
+
+# ---------------------------------------------------------------------------
+# Package-local action discovery
+# ---------------------------------------------------------------------------
+
+# Cache: bundle_root → action dict, so we don't import actions.py more than
+# once per package across repeated load/adapt cycles.
+_ACTION_CACHE: dict[str, dict[str, Any]] = {}
+
+
+def _load_package_actions(bundle_root: Path) -> dict[str, Any]:
+    """Import ``actions.py`` from the package and return its registered actions.
+
+    Scans the workflow package directory for an ``actions.py`` module.
+    When found, imports it via ``importlib`` — this triggers the ``@action()``
+    decorators which register each function into
+    ``workflow_packages.actions.REGISTERED_ACTIONS``. Those registrations
+    are collected and returned as the ``custom_actions`` dict.
+
+    Returns an empty dict when no ``actions.py`` exists.
+    """
+    actions_file = bundle_root / "actions.py"
+    if not actions_file.is_file():
+        return {}
+
+    cache_key = str(bundle_root.resolve())
+    if cache_key in _ACTION_CACHE:
+        return dict(_ACTION_CACHE[cache_key])
+
+    try:
+        import importlib.util  # noqa: PLC0415
+
+        from .actions import REGISTERED_ACTIONS  # noqa: PLC0415
+
+        # Snapshot before import
+        before = set(REGISTERED_ACTIONS.keys())
+
+        spec = importlib.util.spec_from_file_location(
+            f"{bundle_root.name}_actions", actions_file
+        )
+        if spec is None or spec.loader is None:
+            return {}
+        mod = importlib.util.module_from_spec(spec)
+        # Execute the module — this runs the @action() decorators
+        spec.loader.exec_module(mod)
+
+        # Snapshot after import — collect newly registered actions
+        after = set(REGISTERED_ACTIONS.keys())
+        new_actions = {name: REGISTERED_ACTIONS[name] for name in (after - before)}
+
+        _ACTION_CACHE[cache_key] = dict(new_actions)
+        return new_actions
+
+    except Exception:
+        import logging  # noqa: PLC0415
+
+        logging.getLogger(__name__).exception(
+            "Failed to load package actions from %s", actions_file
+        )
+        return {}
 
 
 # ---------------------------------------------------------------------------
