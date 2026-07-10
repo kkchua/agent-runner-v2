@@ -175,13 +175,25 @@ def set_global_registry(registry: WorkflowRegistry) -> None:
 
 
 def discover_workflow_package(
-    name: str, *, project_root: str | Path | None = None
+    name: str,
+    *,
+    project_root: str | Path | None = None,
+    workflow_root: str | Path | None = None,
 ) -> WorkflowBundle | None:
     """Convenience: discover a single package by name.
+
+    Search order (first match wins):
+    1. ``<workflow_root>/<name>/`` — global runner home workflow bundle directory
+       (runtime source of truth; e.g. ``~/.ukbe-runner/workflows/default/``)
+    2. ``<project_root>/workflows/<name>/`` — project-local (development only)
 
     Returns ``None`` when the package is not found (no exception).
     """
     registry = get_global_registry()
+    if workflow_root is not None:
+        wf_root = Path(workflow_root).resolve()
+        if wf_root.is_dir():
+            registry.add_search_path(wf_root)
     if project_root is not None:
         registry.add_search_path(Path(project_root) / "workflows")
     if not registry._loaded:
