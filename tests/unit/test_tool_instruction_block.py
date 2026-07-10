@@ -13,12 +13,14 @@ _TEST_CONTEXT = {
     "STEP_NAME": "test_step_name",
     "PROGRESS_FILE": "/workspace/project/.ukbe-runner/jobs/31_task_execution_v1/JOB-001/01_test_step_name/progress.jsonl",
     "TOOLS_DIR": "/workspace/project/agent_runner_v2/agent_runner_v2/tools",
+    "CODER_IMPLEMENTATION_SOP_PATH": "CODER_IMPLEMENTATION_SOP.md",
 }
 
 _EMPTY_PATH_CONTEXT = {
     "STEP_NAME": "test_step_name",
     "PROGRESS_FILE": "progress.jsonl",
     "TOOLS_DIR": "",
+    "CODER_IMPLEMENTATION_SOP_PATH": "CODER_IMPLEMENTATION_SOP.md",
 }
 
 
@@ -62,6 +64,14 @@ def test_render_documents_mark_process():
     rendered = render_prompt(template, _TEST_CONTEXT)
     assert "mark_process" in rendered
     assert "processing" in rendered
+
+
+def test_render_appends_coder_sop_block():
+    """Assert the rendered prompt includes the repository-wide coder SOP block."""
+    template = _read_template("31_task_execution_v1", "10_executor.txt")
+    rendered = render_prompt(template, _TEST_CONTEXT)
+    assert "MANDATORY CODER SOP" in rendered
+    assert "CODER_IMPLEMENTATION_SOP.md" in rendered
 
 
 # ---------------------------------------------------------------------------

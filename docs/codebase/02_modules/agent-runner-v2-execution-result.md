@@ -6,9 +6,9 @@ module_path: "agent_runner_v2/execution_result.py"
 module_area: "state"
 documentation_mode: "summary"
 owner_doc_path: "docs/codebase/02_modules/agent-runner-v2-execution-result.md"
-last_verified_by_change: "00_master_docs_bootstrap_v1 / 00DOC-GEN-20260710-004 / 2026-07-10T09:40:54+08:00"
-created: "2026-07-10T09:40:54+08:00"
-owner: "00_master_docs_bootstrap_v1"
+last_verified_by_change: "00_master_docs_bootstrap_v2 / 00DOC-GEN-20260710-004 / 2026-07-10T14:00:58+08:00"
+created: "2026-07-10T14:00:58+08:00"
+owner: "00_master_docs_bootstrap_v2"
 ---
 
 # Module Documentation: agent_runner_v2.execution_result
@@ -80,4 +80,4 @@ No documented exceptions.
 
 | Date | Change | Verified By |
 |------|--------|-------------|
-| 2026-07-10 | Initial baseline generated from repository scan | 00_master_docs_bootstrap_v1 |
+| 2026-07-10 | Initial baseline generated from repository scan | 00_master_docs_bootstrap_v2 |

@@ -2,305 +2,197 @@
 template_id: "ENG-01-DG"
 title: "Developer Guide - agent-runner-v2"
 status: "active"
-change_id: "00DOC-GEN-20260710-004"
-workflow: "00_master_docs_bootstrap_v1"
+generated: "2026-07-10T14:20:05+08:00"
+workflow: "00_master_docs_bootstrap_v2"
 step: "04_generate_architecture_docs"
+change_id: "00DOC-GEN-20260710-004"
 managed_by: workflow-generated
-generated: "2026-07-10T09:52:38+08:00"
 ---
 
-> Managed by workflow: `00_master_docs_bootstrap_v1` / step: `04_generate_architecture_docs`
+> Managed by workflow: `00_master_docs_bootstrap_v2` / step: `04_generate_architecture_docs`
 > This file is workflow-generated and protected from manual edits.
 
-# Developer Guide: agent-runner-v2
+# Developer Guide
 
 ## Development Workflow
 
 ### Setup
 
-1. **Clone the repository**:
-   ```bash
-   git clone <repository-url>
-   cd agent-runner-v2
-   ```
+```bash
+# Clone the repository
+git clone <repo-url>
+cd agent-runner-v2
 
-2. **Create virtual environment**:
-   ```bash
-   python -m venv .venv
-   .venv\Scripts\activate  # Windows
-   source .venv/bin/activate  # Unix
-   ```
+# Create virtual environment (Python 3.12+)
+python -m venv .venv
 
-3. **Install dependencies**:
-   ```bash
-   pip install -e ".[dev]"
-   ```
+# Activate (Windows)
+.venv\Scripts\activate
 
-4. **Initialize the runner**:
-   ```bash
-   ukbe-run-agent init
-   ```
-
-### Daily Development
-
-1. **Activate environment**: `.venv\Scripts\activate`
-2. **Make changes** to source code
-3. **Run tests**: `pytest tests/unit/`
-4. **Run workflow**: `run-00_master_docs_bootstrap_v1.bat` (or use CLI directly)
-5. **Commit changes**: `git add . && git commit -m "message"`
+# Install in development mode
+pip install -e ".[dev]"
+```
 
 ### Code Scanning Entrypoint
 
-**Primary**: `agent_runner_v2/actions/scan_repo_codebase.py`
+Code scanning is initiated through:
 
-**Usage**:
-```bash
-ukbe-run-agent run scan_repo_codebase --initiative-id <id>
-```
+| Entrypoint | Command | Purpose |
+|------------|---------|---------|
+| **Bootstrap Scan** | `run-00_master_docs_bootstrap_v1.bat` or `run-00_master_docs_bootstrap_v2.bat` | Full codebase documentation bootstrap |
+| **Sync Scan** | `run-40_documentation_sync_v1.bat` | Incremental documentation sync |
+| **Action Direct** | `ukbe-run-agent run scan_repo_codebase` | Direct action invocation |
 
-**Purpose**: Analyzes repository structure, generates codebase inventory.
-
-**Called by**: `40_documentation_sync_v1` workflow step.
+The scanning logic resides in `agent_runner_v2/actions/scan_repo_codebase.py`.
 
 ### Documentation Generation Entrypoint
 
-**Primary**: `agent_runner_v2/actions/generate_site.py`
+Documentation generation workflows:
 
-**Usage**:
-```bash
-ukbe-run-agent run generate_site --initiative-id <id>
-```
-
-**Purpose**: Generates HTML documentation sites from markdown.
-
-**Called by**: `50_architecture_site_v1` workflow steps.
+| Entrypoint | Command | Output |
+|------------|---------|--------|
+| **Master Bootstrap** | `run-00_master_docs_bootstrap_v2.bat` | System docs, codebase docs |
+| **Execution Scaffold** | `run-10_execution_scaffold_v1.bat` | Delivery SOPs, templates, agents |
+| **Doc Sync** | `run-40_documentation_sync_v1.bat` | Refreshed codebase docs |
+| **Architecture Site** | `run-50_architecture_site_v1.bat` | HTML site generation |
 
 ### Workflow Execution Entrypoint
 
-**Primary**: `agent_runner_v2/run_agent.py`
+Execute workflows via:
 
-**Usage**:
+| Mode | Command | Description |
+|------|---------|-------------|
+| **Manual** | `ukbe-run-agent run <workflow>` | Local execution |
+| **Daemon** | `ukbe-run-agent daemon` | Background supervisor |
+| **Worker** | `ukbe-run-agent worker` | Backend-connected worker |
+| **Batch** | `run-<workflow>.bat` | Convenience wrapper |
+
+### Testing
+
 ```bash
-# Run workflow
-ukbe-run-agent run <workflow> --initiative-id <id>
+# Run all tests
+pytest
 
-# Run single step
-ukbe-run-agent execute-step <workflow> <step> --job-id <id>
+# Run unit tests only
+pytest tests/unit/ -v
 
-# Run daemon mode
-ukbe-run-agent daemon
+# Run integration tests only
+pytest tests/integration/ -v
 
-# Run worker mode
-ukbe-run-agent worker
+# With coverage
+pytest --cov=agent_runner_v2 --cov-report=html
 ```
-
-**Purpose**: Main CLI entry point for all workflow operations.
 
 ## Key Commands
 
-### Development Commands
-
 | Command | Purpose |
 |---------|---------|
-| `pytest tests/unit/` | Run unit tests |
-| `pytest tests/integration/` | Run integration tests |
-| `run-tests.bat` | Run all tests via batch |
-| `run-integration-tests.bat` | Run integration tests via batch |
-| `run-all-tests.bat` | Run all tests via batch |
+| `ukbe-run-agent init` | Initialize runner home, seed bootstrap assets |
+| `ukbe-run-agent run <workflow>` | Execute workflow locally |
+| `ukbe-run-agent daemon` | Start daemon supervisor |
+| `ukbe-run-agent poll` | Poll backend for work |
+| `ukbe-run-agent execute-step` | Execute single step (internal) |
+| `python -m agent_runner_v2.run_agent` | Direct module execution |
 
-### Workflow Commands
+### Development Shortcuts
 
-| Command | Purpose |
-|---------|---------|
-| `ukbe-run-agent init` | Initialize runner home |
-| `ukbe-run-agent run <workflow>` | Run workflow |
-| `ukbe-run-agent daemon` | Start background daemon |
-| `ukbe-run-agent worker` | Run backend worker |
-| `ukbe-run-agent poll` | Poll for pending jobs |
-| `ukbe-run-agent execute-step <wf> <step>` | Execute single step |
-| `ukbe-run-agent approve-step <job> <step>` | Approve a step |
+| Batch File | Workflow |
+|------------|----------|
+| `run-00_master_docs_bootstrap_v1.bat` | 00_master_docs_bootstrap_v1 |
+| `run-00_master_docs_bootstrap_v2.bat` | 00_master_docs_bootstrap_v2 |
+| `run-10_execution_scaffold_v1.bat` | 10_execution_scaffold_v1 |
+| `run-20_initiative_intake_v1.bat` | 20_initiative_intake_v1 |
+| `run-21_bug_fix_intake_v1.bat` | 21_bug_fix_intake_v1 |
+| `run-30_delivery_planning_v1.bat` | 30_delivery_planning_v1 |
+| `run-31_task_execution_v1.bat` | 31_task_execution_v1 |
+| `run-40_documentation_sync_v1.bat` | 40_documentation_sync_v1 |
+| `run-50_architecture_site_v1.bat` | 50_architecture_site_v1 |
 
-### Utility Commands
+### Virtual Environment
 
-| Command | Purpose |
-|---------|---------|
-| `run-cleanup-generated-docs.bat` | Clean generated docs |
-| `run-reset-step.bat` | Reset workflow step |
-| `run-approve-step.bat` | Approve step via batch |
+**Rule 11**: Use `.venv` (Python 3.12) for all commands:
 
-### Batch File Quick Reference
-
-```
-run-00_master_docs_bootstrap_v1.bat  - Bootstrap system docs
-run-10_execution_scaffold_v1.bat     - Scaffold delivery governance
-run-20_initiative_intake_v1.bat    - Initiative capture
-run-21_bug_fix_intake_v1.bat       - Bug triage and fix
-run-30_delivery_planning_v1.bat    - Plan generation
-run-31_task_execution_v1.bat       - Task execution
-run-40_documentation_sync_v1.bat   - Doc reconciliation
-run-50_architecture_site_v1.bat    - Generate HTML site
+```batch
+.venv\Scripts\activate && ukbe-run-agent <command>
 ```
 
 ## Documentation Responsibilities
 
-### Where Things Live
+| Document Type | Location | Generated By | Maintained By |
+|---------------|----------|--------------|---------------|
+| System docs | `docs/system/00_governance/bootstrap/` | `00_master_docs_bootstrap_v2` | Workflow only |
+| Codebase inventory | `docs/codebase/01_inventory/` | `00_master_docs_bootstrap_v2` | Workflow only |
+| Module docs | `docs/codebase/02_modules/` | `00_master_docs_bootstrap_v2` | Workflow only |
+| Component docs | `docs/codebase/03_components/` | `00_master_docs_bootstrap_v2` | Workflow only |
+| Change impact | `docs/codebase/04_changes/` | `00_master_docs_bootstrap_v2` | Workflow only |
+| Delivery SOPs | `docs/delivery/00_governance/` | `10_execution_scaffold_v1` | Workflow only |
+| Delivery templates | `docs/delivery/01_templates/` | `10_execution_scaffold_v1` | Workflow only |
+| Initiatives | `docs/delivery/02_initiatives/` | `20_initiative_intake_v1` | Workflow only |
+| Plans | `docs/delivery/03_plans/` | `30_delivery_planning_v1` | Workflow only |
+| Tasks | `docs/delivery/04_tasks/` | `30_delivery_planning_v1` | Workflow only |
+| Implementations | `docs/delivery/06_implementations/` | `31_task_execution_v1` | Workflow only |
 
-| Responsibility | Location | Key Files |
-|----------------|----------|-----------|
-| **Code scanning** | `agent_runner_v2/actions/scan_repo_codebase.py` | Repository analysis, inventory generation |
-| **Doc generation** | `agent_runner_v2/actions/generate_site.py` | HTML site generation |
-| **Workflow execution** | `agent_runner_v2/run_agent.py` | CLI entry, orchestration |
-| **Step execution** | `agent_runner_v2/step_runner.py` | Prompt rendering, coder invocation |
-| **Architecture posture** | `docs/system/00_governance/bootstrap/PROJECT_ANALYSIS.md` | Posture assessment |
+### Protected Documents
 
-### Document Types
+All documents in the table above are **workflow-generated** and protected from manual edits. Changes must flow through the appropriate workflow.
 
-**System Documents** (`docs/system/`):
-- Generated by `00_master_docs_bootstrap_v1`
-- Protected from manual edits
-- Establish governance baseline
+### Modifiable Files
 
-**Codebase Documents** (`docs/codebase/`):
-- Generated by `40_documentation_sync_v1`
-- Module and component docs
-- Auto-regenerated on changes
-
-**Delivery Documents** (`docs/delivery/`):
-- Generated by various workflows
-- Track initiatives, plans, tasks
-- Ephemeral (specific to initiatives)
-
-### Editing Guidelines
-
-**Workflow-generated documents**:
-- ❌ Do NOT edit directly
-- ✅ Update source prompts in `agent_runner_v2/bootstrap/workflows/default/prompts/`
-- ✅ Re-run workflow to regenerate
-
-**Source code**:
-- ✅ Edit directly
-- ✅ Run tests
-- ✅ Commit changes
-
-**Configuration**:
-- ✅ Edit `pyproject.toml`, `.env.example`
-- ✅ Update `requirements.txt` if needed
+| File Type | Location | Notes |
+|-----------|----------|-------|
+| Source code | `agent_runner_v2/` | Python modules |
+| Tests | `tests/` | Test modules |
+| Scripts | `scripts/` | Batch wrappers |
+| Config | `.env`, `config.json` | User configuration |
 
 ## Architecture Posture
 
-### Current Posture
+| Attribute | Value |
+|-----------|-------|
+| **Current Profile** | `provisional` → `structured` (migration in progress) |
+| **Target Profile** | `structured` |
+| **Migration Mode** | `in_progress` |
+| **Repo State** | `explicit` |
 
-| Field | Value |
-|-------|-------|
-| `current_profile` | `provisional` |
-| `target_profile` | `explicit` (delivery scaffold governance model) |
-| `migration_mode` | `bootstrap-in-progress` |
+### Baseline vs Migration Path
 
-### What This Means
+This repository follows a **targeted migration path** rather than the universal baseline:
 
-**Provisional**: The repository does not declare a formal architecture standard document. Architecture emerges from code structure.
+| Standard | Application |
+|----------|-------------|
+| **DDD** | Conditional — applied where domain boundaries are clear |
+| **EDA** | Conditional — used for async workflows and notifications |
+| **Layered Architecture** | Universal — core/action/coder/backend separation |
+| **Centralized Constants** | Universal — single source of truth in `constants.py` |
 
-**Explicit Target**: The delivery scaffold governance model provides SOPs, templates, and agent contracts that govern documentation lifecycle.
+### Migration Progress
 
-**Bootstrap In Progress**: The system is currently generating its own documentation via the `00_master_docs_bootstrap_v1` workflow.
+| Phase | Status | Evidence |
+|-------|--------|----------|
+| Centralized constants | ✅ Complete | `constants.py` with 1,342 lines |
+| Auto-injection | ✅ Complete | Sidecar injection in `step_runner.py` |
+| Test split | ✅ Complete | `tests/unit/` and `tests/integration/` |
+| Plugin architecture | 🔄 In Progress | `workflow_packages/` module exists |
+| Monolithic cleanup | ⏳ Pending | `template_groups.py` still 2,453 lines |
 
-### When Repository Follows Baseline vs Migration
+### Code Patterns
 
-| Area | Baseline | Migration |
-|------|----------|-----------|
-| Module separation | ✅ Strong | - |
-| Centralized constants | ✅ Single source | - |
-| Contract-based steps | ✅ v2 contract | - |
-| Documentation governance | - | 🔄 In progress |
-| Agent contracts | - | 🔄 In progress |
-| Bundle taxonomy | - | 🔄 In progress |
+**Preferred:**
+- Constants from `constants.py` (ARTIFACT_KEY_*, ARTIFACT_PATH_*)
+- Dataclass-based results (`StepResult`, `CoderInvocationError`)
+- PathProxy for lazy path resolution
+- Pure functions for unit testability
 
-### Design Principles
+**Deprecated:**
+- Hardcoded paths
+- String literals for artifact keys
+- Pre-invocation sidecar writes
+- Markdown write-backs
 
-1. **Single source of truth**: `constants.py` for all paths
-2. **Explicit contracts**: Meta.json is only communication channel
-3. **No silent failures**: Explicit routing for all error cases
-4. **Separation of concerns**: Bootstrap vs runtime, core vs actions
-5. **Testable isolation**: Pure logic in unit tests, file I/O in integration
+### Related Documents
 
-### Extension Points
-
-**Adding a new action**:
-1. Create module in `agent_runner_v2/actions/`
-2. Implement action function
-3. Register in `runner_actions.py`
-4. Add to workflow step config
-5. Write tests
-
-**Adding a new workflow**:
-1. Define in `template_groups.py`
-2. Create prompt templates in `prompts/<workflow>/`
-3. Add batch file `run-<workflow>.bat`
-4. Test end-to-end
-
-**Modifying existing workflows**:
-1. Edit prompt in `prompts/<workflow>/`
-2. Sync to runtime: copy to `%USERPROFILE%\.ukbe-runner\workflows\default\`
-3. Re-run workflow
-
-### Common Tasks
-
-**Run specific test**:
-```bash
-pytest tests/unit/test_job_state.py::test_specific -v
-```
-
-**Debug workflow step**:
-```bash
-ukbe-run-agent run <workflow> --initiative-id <id> --step <step> --dry-run
-```
-
-**View job state**:
-```bash
-cat %USERPROFILE%\.ukbe-runner\jobs\<workflow>\<job_id>\job.json
-```
-
-**Reset workflow**:
-```bash
-run-reset-step.bat <workflow> <step> <job_id>
-```
-
-### Testing Strategy
-
-| Type | Location | Focus | Dependencies |
-|------|----------|-------|--------------|
-| Unit | `tests/unit/` | Pure logic | None (mocked) |
-| Integration | `tests/integration/` | File I/O, external | Real files, network |
-
-**Unit test requirements**:
-- No `tmp_path` fixture (causes Windows permission issues)
-- No real file operations
-- Pure function testing
-- Fast execution
-
-**Integration test requirements**:
-- Real file operations
-- External API calls (if applicable)
-- End-to-end workflows
-
-### Troubleshooting
-
-**Issue**: Workflow fails with "MetaJsonMissingError"
-- **Cause**: LLM didn't write meta.json
-- **Fix**: Check prompt sidecar injection, verify file paths
-
-**Issue**: "Path validation failed"
-- **Cause**: Hardcoded path strings
-- **Fix**: Use `constants.py` artifact keys
-
-**Issue**: "Workflow not found"
-- **Cause**: Bootstrap not synced to runtime
-- **Fix**: Copy updated files to `%USERPROFILE%\.ukbe-runner\workflows\default\`
-
-**Issue**: Tests fail on Windows with permission error
-- **Cause**: Using `tmp_path` in unit tests
-- **Fix**: Move test to integration/ or use mocking
-
----
-
-*Generated by workflow `00_master_docs_bootstrap_v1` step `04_generate_architecture_docs` on 2026-07-10T09:52:38+08:00*
+| Document | Purpose |
+|----------|---------|
+| [SYSTEM_FILE_STRUCTURE.md](SYSTEM_FILE_STRUCTURE.md) | Repository organization |
+| [COMPONENT_ARCHITECTURE.md](COMPONENT_ARCHITECTURE.md) | Component breakdown |
+| [DECISION_LOG.md](DECISION_LOG.md) | Architectural decisions |

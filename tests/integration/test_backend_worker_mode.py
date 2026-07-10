@@ -11,6 +11,7 @@ from agent_runner_v2.actions.promote_artifact import promote_artifact
 from agent_runner_v2.step_runner import build_context
 from agent_runner_v2 import runtime_context as runtime_context_module
 from agent_runner_v2.run_agent import (
+    _finalize_worker_completion,
     _build_execution_state,
     _build_worker_request_payload,
     _execute_step_command,
@@ -399,6 +400,44 @@ def test_submit_worker_result_posts_artifacts_event_and_completion():
     client.create_event.assert_called_once()
     event_call = client.create_event.call_args.kwargs
     assert event_call['payload']['event_type'] == 'WORKER_RESULT'
+
+
+def test_finalize_worker_completion_refreshes_terminal_run_and_sends_completed(monkeypatch):
+    client = MagicMock()
+    client.get_run.return_value = {
+        'id': 'run-1',
+        'status': 'completed',
+        'workflow_name': 'initiative_intake_v1',
+        'run_code': 'RUN-1',
+    }
+    notifications: list[tuple[str, dict]] = []
+    writes: list[dict] = []
+
+    monkeypatch.setattr(
+        'agent_runner_v2.notification_manager.send_workflow_notification',
+        lambda status, context: notifications.append((status, context)) or True,
+    )
+    monkeypatch.setattr(
+        run_agent_module,
+        '_write_backend_job_json',
+        lambda **kwargs: writes.append(kwargs),
+    )
+
+    info = _finalize_worker_completion(
+        client=client,
+        run={'id': 'run-1', 'run_code': 'RUN-1', 'workflow_name': 'initiative_intake_v1'},
+        step_run={'id': 'step-1', 'step_name': 'finalize_bootstrap'},
+        completion={
+            'run': {'id': 'run-1', 'status': 'pending', 'workflow_name': 'initiative_intake_v1', 'run_code': 'RUN-1'},
+            'step_run': {'id': 'step-1', 'status': 'completed'},
+            'next_step_run': None,
+        },
+    )
+
+    client.get_run.assert_called_once_with(run_id='run-1')
+    assert info['run']['status'] == 'completed'
+    assert notifications == [('COMPLETED', info['run'])]
+    assert writes[0]['last_event'] == 'RUN_COMPLETED'
 
 
 def test_write_backend_job_json_mirrors_run_state(tmp_path, monkeypatch):

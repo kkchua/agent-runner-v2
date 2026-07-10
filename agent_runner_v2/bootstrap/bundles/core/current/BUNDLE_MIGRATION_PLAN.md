@@ -1,12 +1,12 @@
 ---
-template_id: "SYS-00-BMP"
 title: "Bundle Migration Plan"
+template_id: "SYS-00-BMP"
 status: "active"
-change_id: "00DOC-GEN-20260710-004"
+generated: "2026-07-10T11:45:32+08:00"
 workflow: "00_master_docs_bootstrap_v1"
 step: "03_generate_system_overview_docs"
+change_id: "00DOC-20260710-15f76235"
 managed_by: workflow-generated
-generated: "2026-07-10T09:43:38+08:00"
 ---
 
 > Managed by workflow: `00_master_docs_bootstrap_v1` / step: `03_generate_system_overview_docs`
@@ -14,234 +14,197 @@ generated: "2026-07-10T09:43:38+08:00"
 
 # Bundle Migration Plan
 
-## Purpose
+## Current State
 
-This document defines the migration paths between bundle versions for the `agent-runner-v2` ecosystem. It establishes how bundles evolve, how breaking changes are managed, and how consumers transition between versions.
+### Bootstrap Bundle Version
 
-## Migration Philosophy
+| Attribute | Value |
+|-----------|-------|
+| **Bundle Name** | `default` |
+| **Location** | `agent_runner_v2/bootstrap/workflows/default/` |
+| **Workflow Families** | 8+ active workflows |
+| **Prompt Templates** | 100+ templates |
+| **Schema Version** | 1.0.0 |
 
-### Principles
+### Workflow Families
 
-1. **Backward compatibility first**: New versions should not break existing workflows
-2. **Explicit opt-in**: Major changes require explicit migration
-3. **Graceful degradation**: Unsupported features fail gracefully
-4. **Clear deprecation**: Deprecated features are clearly marked
+| ID | Name | Status | Version |
+|----|------|--------|---------|
+| `00` | master_docs_bootstrap_v1 | active | v1 |
+| `10` | execution_scaffold_v1 | active | v1 |
+| `20` | initiative_intake_v1 | active | v1 |
+| `21` | bug_fix_intake_v1 | active | v1 |
+| `30` | delivery_planning_v1 | active | v1 |
+| `31` | task_execution_v1 | active | v1 |
+| `40` | documentation_sync_v1 | active | v1 |
+| `41` | audience_doc_v1 | active | v1 |
 
-### Migration Types
+## Migration Strategy
 
-| Type | Description | Example |
-|------|-------------|---------|
-| **Additive** | New features, no breaking changes | Adding new templates |
-| **Deprecating** | Old features still work, but discouraged | Renaming constants |
-| **Breaking** | Old features removed or changed | Schema changes |
-| **Structural** | Bundle organization changes | File moves |
+### Strategy: Incremental Evolution
 
-## Current Migration State
+The repository follows an incremental migration strategy where:
 
-### From: `provisional`
+1. **Bootstrap templates** in the repo are the source of truth
+2. **Runtime bundles** are seeded from bootstrap during `init`
+3. **Changes** to bootstrap require re-initialization to take effect
+4. **Backward compatibility** is maintained across minor versions
 
-The repository is currently in `provisional` state with no prior bundle version.
+### Migration Scenarios
 
-### To: `00DOC-GEN-20260710-004`
+| Scenario | Action | Impact |
+|----------|--------|--------|
+| New workflow added | Add to bootstrap, run `init` | New workflows available |
+| Prompt modified | Update bootstrap, run `init` | New jobs use updated prompts |
+| Schema changed | Update bootstrap, run `init`, migrate jobs | Existing jobs may need migration |
+| Workflow deprecated | Mark deprecated, maintain for 2 versions | Existing jobs continue working |
 
-This is the initial bootstrap migration. All documents in this bundle are newly generated.
+## Runtime Bundle Drift
 
-| Document | Previous State | Current State |
-|----------|----------------|---------------|
-| PROJECT_ANALYSIS.md | None | Generated |
-| README.md | None | Generated |
-| DOCUMENTATION_STANDARD.md | None | Generated |
-| BUNDLE_TAXONOMY.md | None | Generated |
-| BUNDLE_MIGRATION_PLAN.md | None | Generated |
-| SYSTEM_OVERVIEW.md | None | Generated |
-| BUSINESS_CAPABILITIES.md | None | Generated |
-| FUNCTIONAL_SPEC.md | None | Generated |
-| NON_FUNCTIONAL_REQUIREMENTS.md | None | Generated |
+### Drift Mechanism
 
-### Migration Mode: `bootstrap-in-progress`
+The runtime bundle in `%USERPROFILE%\.ukbe-runner\workflows\` may diverge from the bootstrap bundle:
 
-The current migration mode is `bootstrap-in-progress`, indicating that the initial documentation set is being established.
+| Cause | Effect | Mitigation |
+|-------|--------|------------|
+| Bootstrap changed without `init` | Runtime uses old templates | Run `ukbe-run-agent init` |
+| Manual runtime edits | Bootstrap/runtime mismatch | Avoid manual runtime edits |
+| Version rollback | Runtime newer than bootstrap | Re-run `init` after rollback |
 
-## Migration Paths
+### Sync Procedure
 
-### Path 1: Bootstrap to Active
+To synchronize bootstrap to runtime:
 
-**Scenario**: Initial documentation generation
+```bash
+# Full re-initialization
+ukbe-run-agent init
 
-```
-provisional → bootstrap-in-progress → explicit
-```
-
-**Steps**:
-1. Generate PROJECT_ANALYSIS.md
-2. Generate system overview docs (current step)
-3. Generate architecture docs (step 04)
-4. Review and refine (steps 05-06)
-5. Mark as explicit
-
-**Validation**:
-- All required documents exist
-- All cross-references resolve
-- Review gates passed
-
-### Path 2: Additive Update
-
-**Scenario**: Adding new templates or documents
-
-```
-v1.0 → v1.1 (additive)
+# Or use sync batch file
+sync-workflows-to-runtime.bat
 ```
 
-**Steps**:
-1. Add new documents
-2. Update manifest
-3. Validate backward compatibility
-4. Archive previous version
+## Version Migration Paths
 
-**Breaking Changes**: None
+### v1 to v2 (Future)
 
-### Path 3: Deprecating Update
+When workflow v2 is introduced:
 
-**Scenario**: Renaming or discouraging features
+1. Create new workflow directory: `prompts/workflow_name_v2/`
+2. Copy v1 templates as baseline
+3. Modify templates for v2 contract
+4. Add v2 definition to `template_groups.py`
+5. Update documentation
+6. Run `init` to seed v2 runtime bundle
 
+### Schema Evolution
+
+| Change Type | Backward Compatible | Action Required |
+|-------------|---------------------|-----------------|
+| Add optional field | Yes | None |
+| Add required field | No | Job migration |
+| Remove field | No | Job migration |
+| Rename field | No | Job migration |
+
+### Job Migration
+
+When schema changes require job migration:
+
+```python
+# In job_state.py
+migrate_job_state(state, from_version, to_version)
 ```
-v1.x → v1.y (deprecating) → v2.0 (breaking)
-```
 
-**Steps**:
-1. Mark old features deprecated
-2. Provide migration guide
-3. Maintain backward compatibility
-4. Remove in next major version
+Migration functions ensure backward compatibility.
 
-**Timeline**: Deprecation → 1 version → Removal
+## Workflow Deprecation
 
-### Path 4: Breaking Update
+### Deprecation Lifecycle
 
-**Scenario**: Schema or structural changes
+| Phase | Duration | Action |
+|-------|----------|--------|
+| Active | Indefinite | Fully supported |
+| Deprecated | 2 major versions | Still works, warnings issued |
+| Removed | After deprecation | No longer available |
 
-```
-v1.x → v2.0 (breaking)
-```
+### Deprecation Process
 
-**Steps**:
-1. Document breaking changes
-2. Provide migration script
-3. Update all consumers
-4. Archive old version
+1. Mark workflow as deprecated in `template_groups.py`:
+   ```python
+   "workflow_v1": {
+       "deprecated": True,
+       "replaced_by": "workflow_v2"
+   }
+   ```
 
-**Validation**:
-- All workflows tested
-- All artifacts migrated
-- Rollback plan ready
+2. Update documentation to reflect deprecation
 
-## Breaking Change Categories
+3. Maintain for 2 major versions
 
-### Schema Changes
+4. Remove in third major version
 
-| Change | Impact | Migration |
-|--------|--------|-----------|
-| New required field | High | Update all meta.json |
-| Removed field | Medium | Remove references |
-| Renamed field | High | Transform existing data |
-| Type change | High | Validate and convert |
+## Bundle Taxonomy Evolution
 
-### Path Changes
+### Current Taxonomy Version
 
-| Change | Impact | Migration |
-|--------|--------|-----------|
-| New folder | Low | Create folder |
-| Moved folder | High | Update all references |
-| Renamed artifact | High | Update constants and refs |
+| Version | Date | Changes |
+|---------|------|---------|
+| 1.0.0 | 2026-07-10 | Initial taxonomy |
 
-### Template Changes
+### Future Taxonomy Changes
 
-| Change | Impact | Migration |
-|--------|--------|-----------|
-| New template | Low | None |
-| Modified template | Medium | Regenerate affected docs |
-| Removed template | High | Replace or archive |
-
-## Migration Tools
-
-### Automated Migration
-
-| Tool | Purpose |
-|------|---------|
-| `bundle_loader.py` | Load and validate bundles |
-| `finalize_bootstrap.py` | Finalize bootstrap bundles |
-| `promote_artifact.py` | Promote artifacts between versions |
-
-### Manual Migration
-
-For complex migrations, manual steps may be required:
-
-1. **Audit existing usage**: Find all references
-2. **Prepare migration script**: Automate changes
-3. **Test in staging**: Validate before production
-4. **Execute with rollback**: Migrate with safety
-
-## Rollback Strategy
-
-### When to Rollback
-
-- Critical bug in new version
-- Incompatibility discovered
-- Performance regression
-
-### Rollback Steps
-
-1. Identify previous stable version
-2. Restore from archive
-3. Update runtime references
-4. Notify consumers
-
-### Rollback Limitations
-
-- Jobs in progress may fail
-- Partial migrations may leave mixed state
-- Data loss possible for destructive changes
-
-## Version Support Policy
-
-| Version | Support Level | End of Support |
-|---------|---------------|----------------|
-| Latest | Full support | Current |
-| Previous | Security fixes | +3 months |
-| Older | Archive only | +6 months |
+| Proposed Change | Rationale | Target Version |
+|-----------------|-----------|----------------|
+| Workflow prefix standardization | Clearer categorization | 1.1.0 |
+| Step naming convention | Consistent ordering | 1.1.0 |
+| Artifact key simplification | Reduced verbosity | 2.0.0 |
 
 ## Migration Checklist
 
-### For Additive Changes
+### Before Migration
 
-- [ ] New feature documented
-- [ ] Backward compatibility verified
-- [ ] Manifest updated
-- [ ] Tests pass
+- [ ] Review all workflow dependencies
+- [ ] Backup existing runtime bundles
+- [ ] Identify jobs requiring migration
+- [ ] Test new templates in isolation
+- [ ] Update documentation
 
-### For Deprecating Changes
+### During Migration
 
-- [ ] Deprecation notice added
-- [ ] Migration guide written
-- [ ] Timeline documented
-- [ ] Consumers notified
+- [ ] Run `ukbe-run-agent init`
+- [ ] Verify runtime bundle updated
+- [ ] Test workflow execution
+- [ ] Validate job migration (if applicable)
+- [ ] Monitor for errors
 
-### For Breaking Changes
+### After Migration
 
-- [ ] Breaking changes documented
-- [ ] Migration script provided
-- [ ] All consumers updated
-- [ ] Rollback plan ready
-- [ ] Tests updated
-- [ ] Archive created
+- [ ] Archive old runtime bundles
+- [ ] Update operational runbooks
+- [ ] Communicate changes to users
+- [ ] Monitor job success rates
+- [ ] Document lessons learned
 
----
+## Rollback Procedure
+
+If migration fails:
+
+1. Stop runner execution
+2. Restore runtime bundle from backup:
+   ```bash
+   xcopy /E /I backup\workflows %USERPROFILE%\.ukbe-runner\workflows\
+   ```
+3. Verify restored bundle works
+4. Investigate failure cause
+5. Retry migration with fixes
 
 ## Related Documents
 
-- [BUNDLE_TAXONOMY.md](BUNDLE_TAXONOMY.md) — Bundle organization
-- [DOCUMENTATION_STANDARD.md](DOCUMENTATION_STANDARD.md) — Standards
+- [BUNDLE_TAXONOMY.md](BUNDLE_TAXONOMY.md) — Bundle structure definitions
+- [DOCUMENTATION_STANDARD.md](DOCUMENTATION_STANDARD.md) — Documentation governance
+- `agent_runner_v2/bootstrap/workflows/default/template_groups.py` — Workflow definitions
 
----
+## Change Log
 
-*Generated by workflow `00_master_docs_bootstrap_v1` step `03_generate_system_overview_docs` on 2026-07-10T09:43:38+08:00*
+| Date | Change | Author |
+|------|--------|--------|
+| 2026-07-10 | Initial migration plan | `00_master_docs_bootstrap_v1` |

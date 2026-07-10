@@ -1,12 +1,12 @@
 ---
-template_id: "SYS-03-SFS"
-title: "System File Structure - agent-runner-v2"
+title: "System File Structure"
+template_id: "SYS-03-SF"
 status: "active"
-change_id: "00DOC-GEN-20260710-004"
+change_id: "00DOC-20260710-15f76235"
 workflow: "00_master_docs_bootstrap_v1"
 step: "04_generate_architecture_docs"
 managed_by: workflow-generated
-generated: "2026-07-10T09:52:38+08:00"
+generated: "2026-07-10T11:57:31+08:00"
 ---
 
 > Managed by workflow: `00_master_docs_bootstrap_v1` / step: `04_generate_architecture_docs`
@@ -17,320 +17,204 @@ generated: "2026-07-10T09:52:38+08:00"
 ## Repository Structure
 
 ```
-agent-runner-v2/
-├── agent_runner_v2/              # Main Python package (47 modules)
-│   ├── __init__.py
-│   ├── run_agent.py              # CLI entry point (2,308 lines)
-│   ├── step_runner.py            # Core step execution (2,647 lines)
-│   ├── workflow_router.py        # Post-step routing logic (787 lines)
-│   ├── job_state.py              # Job.json lifecycle (1,806 lines)
-│   ├── coder_adapters.py         # LLM invocation adapters
-│   ├── template_groups.py        # Workflow definitions (2,453 lines)
-│   ├── constants.py              # Centralized path constants (1,333 lines)
-│   ├── bundle_loader.py          # Bootstrap seeding and bundle loading
-│   ├── runtime_context.py        # Active workflow/runtime path context
-│   ├── backend_client.py         # Backend API client
-│   ├── daemon.py                 # Background job processor
-│   ├── notifications.py          # Notification delivery
-│   ├── notification_manager.py   # Notification orchestration
-│   ├── artifact_paths.py         # Artifact path computation
-│   ├── doc_paths.py              # Documentation path helpers
-│   ├── exceptions.py             # Custom exceptions
-│   ├── execution_request.py      # Execution request schema
-│   ├── execution_result.py       # Execution result schema
-│   ├── model_config.py           # Model resolution
-│   ├── runner_logger.py          # Logging utilities
-│   ├── runner_actions.py         # Action registry
-│   ├── workflow_specs.py         # Workflow specifications
-│   ├── workflow_spec_commands.py # Workflow CLI commands
-│   ├── approve_commands.py       # Approval CLI commands
-│   ├── submit_commands.py        # Submission CLI commands
-│   ├── engine_commands.py        # Engine CLI commands
-│   ├── submitter.py              # Submission handling
-│   ├── documentation_guardrails.py # Document protection
-│   ├── codebase_docs.py            # Codebase documentation
-│   ├── system_docs.py              # System documentation
-│   ├── cleanup_generated_docs.py   # Doc cleanup utility
-│   ├── architecture_site.py        # Site generation
-│   ├── site_styles.py              # Site styling
-│   ├── bundle_taxonomy.py          # Bundle taxonomy
-│   ├── config/                     # Configuration modules
-│   │   ├── __init__.py
-│   │   └── section_requirements.py
-│   ├── tools/                      # Utility tools
-│   │   └── agent_tools.py
-│   ├── actions/                    # 29 deterministic runner actions
-│   │   ├── __init__.py
-│   │   ├── archive_previous_version.py
-│   │   ├── assemble_video.py
-│   │   ├── copy_artifact.py
-│   │   ├── documentation_validation_core.py
-│   │   ├── execute_i2v.py
-│   │   ├── execute_t2i.py
-│   │   ├── execute_voiceover.py
-│   │   ├── finalize_bootstrap.py
-│   │   ├── generate_site.py
-│   │   ├── generate_site_pdf.py
+agent-runner-v2/                          # Project root
+├── agent_runner_v2/                        # Main Python package (67 modules)
+│   ├── __init__.py                         # Package entry
+│   ├── run_agent.py                        # CLI entry point (2,338 lines)
+│   ├── step_runner.py                      # Core step execution (2,582 lines)
+│   ├── workflow_router.py                  # Post-step routing (787 lines)
+│   ├── job_state.py                        # Job lifecycle management
+│   ├── coder_adapters.py                   # Claude/Codex/Qwen invocation
+│   ├── runtime_context.py                  # Active workflow/runtime context
+│   ├── bundle_loader.py                    # Bootstrap seeding, workflow loading
+│   ├── constants.py                        # Centralized path constants
+│   ├── daemon.py                           # Workstation supervisor
+│   ├── actions/                            # 26 deterministic runner actions
+│   │   ├── init.py
 │   │   ├── prepare_delivery_scaffold.py
-│   │   ├── promote_artifact.py
-│   │   ├── promote_init.py
-│   │   ├── publish_architecture_site.py
 │   │   ├── scan_repo_codebase.py
-│   │   ├── submit_comfyui.py
-│   │   ├── sync_codebase_docs.py
-│   │   ├── sync_system_docs.py
-│   │   ├── validate_architecture_site.py
-│   │   ├── validate_codebase_docs.py
-│   │   ├── validate_delivery_docs.py
-│   │   ├── validate_developer_site.py
-│   │   ├── validate_operator_site.py
-│   │   ├── validate_stakeholder_site.py
-│   │   ├── validate_system_docs.py
-│   │   ├── validate_tester_site.py
-│   │   └── validate_user_site.py
-│   ├── bootstrap/                  # Packaged bootstrap source
-│   │   ├── bundles/                  # Bundle templates
-│   │   ├── themes/                   # Site themes
-│   │   └── workflows/
-│   │       └── default/
-│   │           ├── template_groups.py    # Workflow definitions
-│   │           ├── constants.py          # Path constants
-│   │           ├── job_schema.json       # Job JSON schema
-│   │           ├── llm_response_schema.json # LLM response schema
-│   │           ├── model_mapping.json    # Model aliases
-│   │           └── prompts/              # 290+ prompt templates
-│   │               ├── 00_master_docs_bootstrap_v1/
-│   │               ├── 10_execution_scaffold_v1/
-│   │               ├── 20_initiative_intake_v1/
-│   │               ├── 21_bug_fix_intake_v1/
-│   │               ├── 30_delivery_planning_v1/
-│   │               ├── 31_task_execution_v1/
-│   │               ├── 40_documentation_sync_v1/
-│   │               ├── 41_audience_doc_v1/
-│   │               ├── 50_architecture_site_v1/
-│   │               ├── 51_stakeholder_docs_v1/
-│   │               ├── 52_developer_docs_v1/
-│   │               ├── 53_operator_docs_v1/
-│   │               ├── 54_tester_docs_v1/
-│   │               ├── 55_user_docs_v1/
-│   │               ├── image_csv_gen_v2/
-│   │               ├── tiktok_video_pipeline_v1/
-│   │               └── videoxpress_gen_v1/
-│   └── templates/                  # Jinja2 templates
-│
-├── docs/                         # Documentation
-│   ├── delivery/                 # Per-repo delivery artifacts
-│   │   ├── 01_initiatives/
-│   │   ├── 02_plans/
-│   │   ├── 03_task_graphs/
-│   │   ├── 04_tasks/
-│   │   ├── 05_implementations/
-│   │   ├── 06_reviews/
-│   │   └── 08_agents/
-│   ├── codebase/                 # Codebase documentation
-│   │   ├── 01_inventory/         # Codebase inventory (auto-generated)
-│   │   ├── 02_modules/           # Module documentation
-│   │   ├── 03_components/        # Component documentation
-│   │   └── 04_changes/           # Change impact documents
-│   └── system/                   # System documentation
-│       └── 00_governance/
-│           └── bootstrap/        # Master system docs
-│
-├── tests/                        # Test suite
-│   ├── unit/                     # Isolated logic tests (45 tests)
-│   ├── integration/              # Real file/external system tests
-│   └── conftest.py               # Shared fixtures
-│
-├── scripts/                      # Utility scripts
-│   └── workflow_scaffold/        # Scaffold scripts
-│
-├── run-*.bat                     # 26 workflow launcher batch files
-├── pyproject.toml                # Build configuration
-├── requirements.txt              # Dependencies
-├── README.md                     # Repository overview
-├── QWEN.md                       # Project context
-├── CLAUDE.md                     # Claude-specific context
-├── .env.example                  # Environment template
-├── .gitignore                    # Git ignore rules
-└── MANIFEST.in                   # Package manifest
+│   │   ├── validate_*.py                   # Document validation actions
+│   │   ├── sync_*.py                       # Documentation sync actions
+│   │   ├── generate_site.py
+│   │   └── ...
+│   ├── bootstrap/                          # Packaged workflow definitions
+│   │   └── workflows/default/
+│   │       ├── template_groups.py          # Workflow step definitions
+│   │       ├── job_schema.json             # Job state schema
+│   │       ├── llm_response_schema.json    # Meta.json schema
+│   │       ├── model_mapping.json          # Model aliases
+│   │       └── prompts/                    # LLM prompt templates
+│   │           ├── 00_master_docs_bootstrap_v1/
+│   │           ├── 10_execution_scaffold_v1/
+│   │           ├── 20_initiative_intake_v1/
+│   │           ├── 21_bug_fix_intake_v1/
+│   │           ├── 30_delivery_planning_v1/
+│   │           ├── 31_task_execution_v1/
+│   │           ├── 40_documentation_sync_v1/
+│   │           └── 41_audience_doc_v1/
+│   └── tools/
+│       └── agent_tools.py                  # Workflow utility tools
+├── docs/                                   # Documentation governance
+│   ├── delivery/                           # Delivery governance
+│   │   ├── 01_initiatives/                # Initiative documents
+│   │   ├── 02_plans/                        # Plan documents
+│   │   ├── 03_tasks/                        # Task documents
+│   │   └── 04_validation/                   # Validation documents
+│   ├── codebase/                           # Codebase documentation
+│   │   ├── 01_inventory/                    # Codebase inventory
+│   │   ├── 02_modules/                      # 67 module docs
+│   │   ├── 03_components/                   # Component docs
+│   │   └── 04_changes/                      # Change impact docs
+│   └── system/                             # System governance
+│       └── 00_governance/bootstrap/         # Master system docs
+├── tests/                                  # Test suite
+│   ├── unit/                               # 45 pure unit tests
+│   ├── integration/                        # Integration tests
+│   └── conftest.py                         # Shared fixtures
+├── scripts/                                # Utility scripts
+│   └── ukbe-run-delivery.bat               # Batch wrapper
+├── run-*.bat                               # Workflow launchers (26 files)
+├── pyproject.toml                          # Package configuration
+├── requirements.txt                        # Dependencies
+├── README.md                               # Project readme
+├── QWEN.md                                 # Qwen Code context
+├── CODER_IMPLEMENTATION_SOP.md            # Coder SOP
+└── .env.example                            # Environment template
 ```
 
 ## Top-Level Directories
 
-### agent_runner_v2/
+### `agent_runner_v2/`
 
-**Purpose**: Main Python package containing all runtime code.
+**Purpose**: Main Python package containing all runner logic
 
-**Why this structure**:
-- Clear package boundary for imports
-- Mirrors runtime module structure
-- Enables `pip install` distribution
-- Separates code from configuration and docs
+**Key Modules**:
+- `run_agent.py` - CLI entry and orchestration
+- `step_runner.py` - Core step execution contract
+- `workflow_router.py` - Post-step routing logic
+- `job_state.py` - Job lifecycle and persistence
+- `constants.py` - Centralized artifact path constants
 
-**Key files**:
-- `run_agent.py` - CLI entry point
-- `step_runner.py` - Core execution engine
-- `constants.py` - Single source of truth for paths
+**Subpackages**:
+- `actions/` - 26 deterministic runner actions
+- `bootstrap/` - Packaged workflow definitions
 
-### docs/
+### `docs/`
 
-**Purpose**: All documentation artifacts.
-
-**Three subdirectories**:
-
-| Directory | Purpose | Generated |
-|-----------|---------|-----------|
-| `delivery/` | Initiative artifacts (plans, tasks, reviews) | Workflow-generated |
-| `codebase/` | Repository documentation | Auto-generated + manual |
-| `system/` | Master system documentation | Workflow-generated |
-
-**Why three doc types**:
-- **Delivery**: Tracks work in progress (ephemeral)
-- **Codebase**: Describes code (regenerated on changes)
-- **System**: Describes architecture (versioned, reviewed)
-
-### tests/
-
-**Purpose**: Test suite with clear separation.
+**Purpose**: Documentation governance under three taxonomies
 
 **Structure**:
-- `unit/` - Pure logic tests, no file I/O (45 tests, 100% pass)
-- `integration/` - Tests with real files, external systems
+- `delivery/` - Initiative, plan, task, validation documents
+- `codebase/` - Module docs, component docs, inventory, changes
+- `system/` - Master system documentation
 
-**Why split**: Unit tests must run fast and reliably; integration tests verify real behavior.
+**Governance**:
+- All docs workflow-generated with protection banners
+- Declarative `produces` lists control mutations
+- Validation against section requirements
 
-### agent_runner_v2/bootstrap/
+### `tests/`
 
-**Purpose**: Packaged bootstrap source that seeds runtime.
+**Purpose**: Split test suite
 
-**Why separate**: Runtime loads from `%USERPROFILE%\.ukbe-runner`, not directly from repo. Bootstrap seeds the initial runtime state.
+**Structure**:
+- `unit/` - Pure logic tests (45 tests, no filesystem)
+- `integration/` - Real files and external systems
+- `conftest.py` - Shared pytest fixtures
 
-**Sync requirement**: Changes to bootstrap files require explicit sync to runtime.
+**Markers**:
+- `unit` - Fast, isolated, no I/O
+- `integration` - Slow, filesystem, network
 
-## File Organization Rationale
+### `scripts/`
 
-### Why constants.py is Centralized
+**Purpose**: Utility scripts
 
-All documentation paths use constants from `constants.py`:
+**Contents**:
+- `ukbe-run-delivery.bat` - Common batch wrapper
 
-```python
-# Before (scattered):
-path = "docs/system/00_governance/bootstrap/PROJECT_ANALYSIS.md"
+## Runtime Locations
 
-# After (centralized):
-from agent_runner_v2.constants import artifact_path, ARTIFACT_KEY_PROJECT_ANALYSIS
-path = artifact_path(ARTIFACT_KEY_PROJECT_ANALYSIS, FOLDER_KEY_SYSTEM_BOOTSTRAP)
+### Runner Home (`~/.ukbe-runner/`)
+
+```
+~/.ukbe-runner/
+├── config.json                             # Global configuration
+├── engine/
+│   └── config.json                         # Engine/daemon config
+├── jobs/                                   # Job state storage
+│   └── <workflow>/
+│       └── <job_id>/
+│           ├── job.json                    # Job state
+│           ├── 01_<step>/                  # Step working dirs
+│           │   ├── meta.json               # Step result sidecar
+│           │   └── <artifacts>
+│           └── ...
+├── workflows/                              # Runtime workflow bundles
+│   └── default/
+│       ├── template_groups.py              # (copied from bootstrap)
+│       └── prompts/                        # (copied from bootstrap)
+└── logs/                                   # Execution logs
 ```
 
-**Benefits**:
-- Single source of truth
-- No case mismatches
-- Easy path refactoring
-- Type safety
-
-### Why Runtime Context Exists
-
-`runtime_context.py` provides process-local context:
-
-```python
-CTX = RuntimeContext(
-    workspace_root=Path.cwd().resolve(),
-    runner_home=GLOBAL_RUNNER_HOME,
-    workflow_name="default",
-    workflow_module=None,
-    delivery_root=None,
-)
-```
-
-**Benefits**:
-- Thread-safe context storage
-- Lazy path resolution
-- Testable isolation
-
-### Why Batch Files for Workflows
-
-26 batch files provide simple entry points:
-
-```batch
-run-00_master_docs_bootstrap_v1.bat
-run-10_execution_scaffold_v1.bat
-run-20_initiative_intake_v1.bat
-...
-```
-
-**Benefits**:
-- Simple double-click execution
-- Consistent activation: `.venv\Scripts\activate`
-- Clear workflow discovery
-
-### Why Meta.json Sidecars
-
-Every step produces a sidecar file:
-
-```json
-{
-  "schema_version": "v2",
-  "coder_result": {
-    "status": "APPROVED",
-    "remark": "Task completed",
-    "artifacts": {...},
-    "recorded_at": "2026-07-10T09:52:38+08:00"
-  }
-}
-```
-
-**Benefits**:
-- Structured communication
-- Versioned schema
-- Validatable
-- No stdout parsing
+**Key Files**:
+- `~/.ukbe-runner/config.json` - User configuration
+- `~/.ukbe-runner/engine/config.json` - Daemon configuration
+- `~/.ukbe-runner/jobs/<wf>/<job>/job.json` - Job state
+- `~/.ukbe-runner/jobs/<wf>/<job>/<step>/meta.json` - Step results
 
 ## Documentation Locations
 
-### Workflow-Generated Documents
+### System Docs (`docs/system/00_governance/bootstrap/`)
 
-| Document | Location | Owner |
-|----------|----------|-------|
-| PROJECT_ANALYSIS.md | `docs/system/00_governance/bootstrap/` | 00_master_docs_bootstrap_v1 |
-| SYSTEM_OVERVIEW.md | `docs/system/00_governance/bootstrap/` | 00_master_docs_bootstrap_v1 |
-| COMPONENT_ARCHITECTURE.md | `docs/system/00_governance/bootstrap/` | 00_master_docs_bootstrap_v1 |
-| codebase_inventory.md | `docs/codebase/01_inventory/` | 40_documentation_sync_v1 |
-| Delivery artifacts | `docs/delivery/*/` | Various workflows |
-
-### Protected Documents
-
-Documents with `managed_by: workflow-generated` in frontmatter are protected from manual edits. Changes must be made via workflow prompts.
-
-## Configuration Files
-
-| File | Purpose |
-|------|---------|
-| `pyproject.toml` | Package metadata, dependencies, pytest config |
-| `requirements.txt` | Runtime dependencies |
-| `.env.example` | Environment variable template |
-| `.env` | Local credentials (git-ignored) |
-
-## Runtime Files
-
-| Location | Purpose |
+| Document | Purpose |
 |----------|---------|
-| `%USERPROFILE%\.ukbe-runner\config.json` | Runner configuration |
-| `%USERPROFILE%\.ukbe-runner\jobs\` | Job state persistence |
-| `%USERPROFILE%\.ukbe-runner\workflows\` | Runtime workflow bundles |
-| `%USERPROFILE%\.ukbe-runner\logs\` | Execution logs |
+| `PROJECT_ANALYSIS.md` | Repository analysis |
+| `README.md` | Documentation index |
+| `DOCUMENTATION_STANDARD.md` | Governance rules |
+| `BUNDLE_TAXONOMY.md` | Bundle structure |
+| `BUNDLE_MIGRATION_PLAN.md` | Migration strategy |
+| `SYSTEM_OVERVIEW.md` | Platform overview |
+| `BUSINESS_CAPABILITIES.md` | Capabilities |
+| `FUNCTIONAL_SPEC.md` | Functional spec |
+| `NON_FUNCTIONAL_REQUIREMENTS.md` | Quality attributes |
+| `SYSTEM_CONTEXT.md` | System context |
+| `COMPONENT_ARCHITECTURE.md` | Component architecture |
+| `DECISION_LOG.md` | Decision log |
+| `SYSTEM_FILE_STRUCTURE.md` | File structure |
+| `DEVELOPER_GUIDE.md` | Developer guide |
+| `RUNBOOK.md` | Operations runbook |
+| `EXISTING_REPO_WORKFLOW_SOP.md` | Workflow SOP |
 
-## Version Control Strategy
+### Codebase Docs (`docs/codebase/`)
 
-| What | Where | Git |
-|------|-------|-----|
-| Source code | `agent_runner_v2/` | Tracked |
-| System docs | `docs/system/` | Tracked |
-| Codebase docs | `docs/codebase/` | Tracked |
-| Delivery docs | `docs/delivery/` | Tracked |
-| Job state | `%USERPROFILE%\.ukbe-runner\jobs\` | Ignored |
-| Runtime bundles | `%USERPROFILE%\.ukbe-runner\workflows\` | Ignored |
-| Logs | `%USERPROFILE%\.ukbe-runner\logs\` | Ignored |
+| Directory | Contents |
+|-----------|----------|
+| `01_inventory/` | `codebase_inventory.md` |
+| `02_modules/` | 67 module documentation files |
+| `03_components/` | Component documentation |
+| `04_changes/` | Change impact documents |
 
----
+## Relationships
 
-*Generated by workflow `00_master_docs_bootstrap_v1` step `04_generate_architecture_docs` on 2026-07-10T09:52:38+08:00*
+### Bootstrap to Runtime
+
+1. **Packaged bootstrap** (`agent_runner_v2/bootstrap/`) ships with repo
+2. **`init` command** seeds runtime bundles to `~/.ukbe-runner/workflows/`
+3. **Runtime execution** loads from runner home, not repo
+4. **Sync required** after bootstrap changes
+
+### Code to Docs
+
+1. **Code changes** trigger `40_documentation_sync_v1` workflow
+2. **Codebase scan** updates `codebase_inventory.md`
+3. **Module docs** refreshed from source analysis
+4. **Validation** ensures docs match code
+
+### Job State Flow
+
+1. **Create job** → `job.json` in `~/.ukbe-runner/jobs/<wf>/<job>/`
+2. **Run step** → Working dir `<step>/` created
+3. **Write artifacts** → Files in working dir
+4. **Write meta.json** → Sidecar for routing
+5. **Route** → Next step or completion

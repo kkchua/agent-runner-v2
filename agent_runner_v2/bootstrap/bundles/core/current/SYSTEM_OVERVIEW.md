@@ -1,12 +1,12 @@
 ---
-template_id: "SYS-00-SO"
 title: "System Overview"
+template_id: "SYS-00-SO"
 status: "active"
-change_id: "00DOC-GEN-20260710-004"
+generated: "2026-07-10T11:45:32+08:00"
 workflow: "00_master_docs_bootstrap_v1"
 step: "03_generate_system_overview_docs"
+change_id: "00DOC-20260710-15f76235"
 managed_by: workflow-generated
-generated: "2026-07-10T09:43:38+08:00"
 ---
 
 > Managed by workflow: `00_master_docs_bootstrap_v1` / step: `03_generate_system_overview_docs`
@@ -16,194 +16,239 @@ generated: "2026-07-10T09:43:38+08:00"
 
 ## Purpose
 
-This document provides a comprehensive overview of the `agent-runner-v2` platform. It explains what the system does, how it works, and why it exists—at a level useful to stakeholders, developers, and operators.
+`agent-runner-v2` is a standalone Python LLM workflow orchestration engine that executes structured multi-step workflows across multiple LLM providers (Claude, Codex, Qwen), with support for review loops, retries, approval gates, and deterministic runner actions.
+
+The platform serves as a bridge between:
+- **Human intent** (captured in workflow definitions and prompt templates)
+- **LLM execution** (through coder adapters for different providers)
+- **Deterministic actions** (through Python action library)
+- **Structured outputs** (via meta.json sidecar pattern)
+
+### Value Proposition
+
+| Stakeholder | Value |
+|-------------|-------|
+| **Developers** | Structured workflow execution with predictable routing, review loops, and artifact validation |
+| **Teams** | Multi-model orchestration, documentation governance, and delivery scaffold workflows |
+| **Operators** | Daemon supervision, backend integration, and operational visibility |
 
 ## Scope
 
-`agent-runner-v2` is a standalone Python LLM workflow orchestration engine that executes structured multi-step workflows across multiple AI models (Claude, Codex, Qwen). It provides review loops, retries, approval gates, and deterministic runner actions.
+### In Scope
 
-The system operates in three primary modes:
-- **Manual execution**: Direct workflow invocation via CLI
-- **Backend-connected**: Worker mode for backend-orchestrated execution
-- **Daemon supervision**: Continuous supervision with polling
+- Local workflow execution via CLI
+- Multi-model LLM invocation (Claude, Codex, Qwen)
+- Deterministic action execution
+- Job state management and persistence
+- Backend-connected worker modes
+- Workstation daemon supervision
+- Documentation generation and validation
+- Bundle seeding and runtime workflow management
+
+### Out of Scope
+
+- LLM training or fine-tuning
+- General-purpose task scheduling
+- Distributed execution across multiple machines
+- Web UI or graphical interface
+- Real-time collaboration features
+
+### System Boundary
+
+The system boundary encompasses:
+- The `agent-runner-v2` Python package
+- Runtime state in `%USERPROFILE%\.ukbe-runner\`
+- Integration with LLM providers (Claude, Codex, Qwen APIs)
+- Optional backend API integration
+- Local file system for artifact storage
+
+External systems (out of scope):
+- Backend API implementation
+- LLM provider services
+- ComfyUI/media generation services
+- Version control systems
 
 ## Primary Flows
 
-### Workflow Execution Flow
+### Flow 1: Local Workflow Execution
 
 ```
-┌─────────────────┐     ┌──────────────────┐     ┌─────────────────┐
-│  Load Workflow  │────▶│  Render Prompt   │────▶│ Invoke Coder    │
-│  Bundle         │     │  Template        │     │ or Action       │
-└─────────────────┘     └──────────────────┘     └─────────────────┘
-                                                         │
-┌─────────────────┐     ┌──────────────────┐            │
-│  Route to Next  │◀────│  Validate        │◀───────────┘
-│  Step           │     │  Artifacts       │
-└─────────────────┘     └──────────────────┘
-       │
-       ▼
-┌─────────────────┐
-│  Read meta.json │
-│  Sidecar        │
-└─────────────────┘
+User → ukbe-run-agent run → Load Workflow Bundle → Render Prompt
+    → Invoke Coder/Action → LLM/Action Executes → Write Artifacts
+    → Write meta.json → Validate → Route to Next Step → Repeat
 ```
 
-### Key v2 Contract
+1. User invokes `ukbe-run-agent run --template-group <workflow>`
+2. Runner loads workflow bundle from runtime location
+3. Step runner renders prompt template with artifact substitution
+4. Coder adapter invokes LLM or runner executes action
+5. LLM/action writes artifacts to disk
+6. LLM writes structured results to `meta.json` sidecar
+7. Step runner validates artifacts
+8. Workflow router determines next step
+9. Repeat until completion or failure
 
-1. **meta.json sidecar is the ONLY result channel**
-2. **No markdown write-backs by the runner**
-3. **No silent recovery paths**
-4. **Hard failures route explicitly through failure handling**
-5. **Declarative document protection via `produces` lists**
+### Flow 2: Backend-Connected Execution
 
-### Value Flow
+```
+Daemon → Poll Backend → Claim Step → Spawn execute-step
+    → Child Process Executes → Report Result → Backend Updates
+    → Daemon Claims Next Step → Repeat
+```
 
-The system creates value through:
+1. Daemon polls backend for available work
+2. Backend assigns step to worker
+3. Daemon spawns `execute-step` subprocess
+4. Child process executes step (same as Flow 1)
+5. Child reports result via result file
+6. Daemon submits result to backend
+7. Backend updates run state
+8. Daemon polls for next assignment
 
-1. **Structured Execution**: Workflows proceed through defined steps with clear inputs and outputs
-2. **Quality Gates**: Review steps with APPROVE/REJECT decisions
-3. **Retry Logic**: Automatic retries with configurable limits
-4. **Artifact Management**: Consistent artifact paths and validation
-5. **Deterministic Actions**: Python functions for predictable operations
-6. **Multi-Model Support**: Claude, Codex, Qwen with unified interface
+### Flow 3: Documentation Bootstrap
+
+```
+Project Analysis → Generate Codebase Baseline → Generate System Docs
+    → Generate Architecture Docs → Review/Refine → Finalize
+```
+
+1. `00_master_docs_bootstrap_v1` analyzes repository
+2. Generates codebase inventory and module docs
+3. Generates master system documentation (this set)
+4. Generates architecture and operations docs
+5. Review cycle for refinement
+6. Finalize bootstrap
 
 ## Architecture Profile
 
 ### Universal Baseline
 
-The following applies to all repositories using the runner:
+The universal baseline defines capabilities present in every deployment:
 
-| Aspect | Baseline |
-|--------|----------|
-| **Execution Model** | Step-by-step with explicit routing |
-| **Result Channel** | meta.json sidecar only |
-| **Document Protection** | Declarative `produces` lists |
-| **Path Management** | Centralized constants |
-| **Review Pattern** | Generate → Review → Refine loops |
+| Attribute | Value |
+|-----------|-------|
+| **Language** | Python 3.11+ |
+| **Dependencies** | Zero runtime dependencies (stdlib only) |
+| **Interface** | CLI-only |
+| **State** | File-based (JSON) |
+| **Concurrency** | Single-threaded (per process) |
 
 ### Repo-Selected Profile
 
-| Aspect | Current Setting |
-|--------|-----------------|
-| **Architecture Posture** | `provisional` → `explicit` |
-| **Documentation Mode** | `bootstrap-in-progress` |
-| **Target Standard** | Delivery scaffold governance model |
+The repository has selected additional architectural characteristics:
 
-### Profile Migration
+| Attribute | Selection | Rationale |
+|-----------|-----------|-----------|
+| **Documentation Governance** | `enabled` | 67 module docs, active validation workflows |
+| **Multi-Model Support** | `Claude, Codex, Qwen` | Flexibility for different tasks |
+| **Backend Integration** | `optional` | Supports both local and backend-connected modes |
+| **Daemon Supervision** | `enabled` | Production workstation deployment |
+| **Action Library** | `26 actions` | Comprehensive deterministic operations |
 
-The repository is transitioning from `provisional` to `explicit`:
+### Architecture Posture
 
-```
-Current: provisional (no clear standard)
-  ↓
-Bootstrap: bootstrap-in-progress (generating docs)
-  ↓
-Target: explicit (delivery scaffold governance)
-```
+| Attribute | Value |
+|-----------|-------|
+| **Current Profile** | `provisional` |
+| **Target Profile** | `structured_delivery` |
+| **Migration Mode** | `incremental` |
+| **Repo State** | `explicit` |
 
-**Migration Posture**: The repository demonstrates explicit architecture through:
-- Strong module separation (core, state, adapters, actions)
-- Centralized constants (1,333 lines in constants.py)
-- Contract-based step execution
-- Bootstrap/runtime separation
+### Posture Rationale
 
-However, the formal documentation is still being bootstrapped, hence the `provisional` classification.
+**Current Profile: Provisional**
+
+The repository is in provisional posture because:
+- Master system docs are currently being generated
+- Documentation is actively being reconciled
+- Bundle taxonomy is evolving
+
+**Target Profile: Structured Delivery**
+
+The target is structured delivery based on:
+- 8+ active workflow families
+- Comprehensive documentation governance
+- Delivery scaffold workflows
+- Multi-audience documentation generation
+
+**Migration Mode: Incremental**
+
+Migration is incremental because:
+- Existing codebase documentation exists (67 modules)
+- Changes are being made without disrupting existing workflows
+- Bootstrap workflow handles gradual adoption
 
 ## Key Risks
 
-### Runtime Sync Risk
+### Risk 1: Runtime Bundle Drift
 
-**Description**: Changes to bootstrap workflow files must be synced to runtime bundles before taking effect.
+**Description**: Bootstrap templates in repo may diverge from runtime bundles.
+
+**Impact**: Changes to bootstrap may not take effect until `init` re-run.
 
 **Mitigation**: 
-- Explicit sync commands (`ukbe-run-agent sync`)
-- Version checking in loader
-- Validation on load
+- Document sync requirement
+- Provide sync batch files
+- Validate runtime bundle freshness
 
-**Impact**: High (silent failures if not synced)
+### Risk 2: Meta.json Contract Violation
 
-### Sidecar Contract Enforcement
+**Description**: LLMs may not write proper meta.json sidecar.
 
-**Description**: Strict v2 sidecar schema required; deviation causes hard failures.
+**Impact**: Step routing fails, workflows stall.
 
 **Mitigation**:
-- Automated sidecar instruction injection
-- Schema validation
+- Prompt instructions for meta.json format
+- Sidecar validation before routing
+- Explicit failure handling
+
+### Risk 3: Backend Availability
+
+**Description**: Backend-connected modes require backend availability.
+
+**Impact**: Worker/daemon modes fail if backend unreachable.
+
+**Mitigation**:
+- Local mode works without backend
+- Retry logic with backoff
 - Clear error messages
 
-**Impact**: Medium (failures are explicit)
+### Risk 4: Windows Path Handling
 
-### Bootstrap-to-Runtime Drift
+**Description**: Path resolution issues on Windows.
 
-**Description**: Runtime bundles may diverge from bootstrap source.
-
-**Mitigation**:
-- Explicit sync workflow
-- Version manifests
-- Drift detection
-
-**Impact**: Medium (manageable with process)
-
-### Documentation Protection Model
-
-**Description**: Misconfigured `produces` lists can block writes or allow unauthorized modifications.
+**Impact**: Artifact paths may fail to resolve.
 
 **Mitigation**:
-- Declarative allow-lists
-- Validation on write
-- Clear error messages
+- Centralized path constants using `PurePosixPath`
+- Cross-platform testing
+- Path normalization in constants
 
-**Impact**: Low (validation catches issues)
+### Risk 5: LLM Provider Rate Limits
 
-### Multi-Model Consistency
+**Description**: External API rate limits may throttle execution.
 
-**Description**: Different models may interpret prompts differently.
+**Impact**: Slow workflow execution, timeouts.
 
 **Mitigation**:
-- Model-specific prompt variants
-- Consistent schema enforcement
-- Fallback validation
+- Configurable timeouts
+- Retry with exponential backoff
+- Local caching where appropriate
 
-**Impact**: Medium (model-specific handling)
+### Risk 6: Job State Migration
 
-## System Boundaries
+**Description**: Schema changes may break existing jobs.
 
-### Inside the System
+**Impact**: Old jobs fail to load after updates.
 
-- Workflow step execution
-- Prompt rendering and substitution
-- Artifact path resolution
-- Meta.json validation
-- Step routing (approve/reject/failure)
-
-### Outside the System
-
-- Backend state management (backend is source of truth)
-- LLM model execution (via adapters)
-- File system operations (via actions)
-- Network operations (via actions)
-
-### Integration Points
-
-| System | Integration | Responsibility |
-|--------|-------------|----------------|
-| Backend | REST API | State sync, artifact storage |
-| Claude | Adapter | Code generation |
-| Codex | Adapter | Code generation |
-| Qwen | Adapter | Code generation |
-| File System | Actions | Read/write operations |
-| Notifications | Manager | Pushover, etc. |
-
----
+**Mitigation**:
+- Backward compatibility functions
+- Migration helpers
+- Version tracking in job state
 
 ## Related Documents
 
-- [PROJECT_ANALYSIS.md](PROJECT_ANALYSIS.md) — Repository posture
-- [BUSINESS_CAPABILITIES.md](BUSINESS_CAPABILITIES.md) — What it enables
-- [FUNCTIONAL_SPEC.md](FUNCTIONAL_SPEC.md) — How it behaves
-- [NON_FUNCTIONAL_REQUIREMENTS.md](NON_FUNCTIONAL_REQUIREMENTS.md) — Quality expectations
-
----
-
-*Generated by workflow `00_master_docs_bootstrap_v1` step `03_generate_system_overview_docs` on 2026-07-10T09:43:38+08:00*
+- [PROJECT_ANALYSIS.md](PROJECT_ANALYSIS.md) — Detailed repository analysis
+- [BUSINESS_CAPABILITIES.md](BUSINESS_CAPABILITIES.md) — Operational capabilities
+- [FUNCTIONAL_SPEC.md](FUNCTIONAL_SPEC.md) — Functional requirements
+- [NON_FUNCTIONAL_REQUIREMENTS.md](NON_FUNCTIONAL_REQUIREMENTS.md) — Quality attributes

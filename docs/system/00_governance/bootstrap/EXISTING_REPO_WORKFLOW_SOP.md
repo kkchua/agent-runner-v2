@@ -1,326 +1,298 @@
 ---
-template_id: "SOP-01-ERW"
-title: "Existing Repo Workflow SOP"
+template_id: "SOP-EXISTING"
+title: "Existing Repository Workflow SOP"
 status: "active"
-change_id: "00DOC-GEN-20260710-004"
-workflow: "00_master_docs_bootstrap_v1"
+generated: "2026-07-10T14:20:05+08:00"
+workflow: "00_master_docs_bootstrap_v2"
 step: "04_generate_architecture_docs"
+change_id: "00DOC-GEN-20260710-004"
 managed_by: workflow-generated
-generated: "2026-07-10T09:52:38+08:00"
 ---
 
-> Managed by workflow: `00_master_docs_bootstrap_v1` / step: `04_generate_architecture_docs`
+> Managed by workflow: `00_master_docs_bootstrap_v2` / step: `04_generate_architecture_docs`
 > This file is workflow-generated and protected from manual edits.
 
-# Existing Repo Workflow SOP
+# Existing Repository Workflow SOP
 
 ## Purpose
 
-This SOP defines the standard operating procedure for existing repositories using the agent-runner-v2 workflow system. It covers first-time setup, normal governed delivery, drift reconciliation, and governance refresh workflows.
+This SOP describes the workflow sequences for an existing repository that has already completed initial setup. It covers:
+
+- First-time setup chain for new workstations
+- Normal governed delivery for day-to-day development
+- Drift reconciliation after code changes
+- Governance refresh after contract changes
+- Batch file usage for convenience
 
 ## First-Time Setup
 
-For repositories that have not yet bootstrapped the delivery governance system:
+The first-time setup chain initializes a new workstation for governed delivery:
 
-### Step 1: Run Master Docs Bootstrap
+### Sequence
 
-**Command**:
-```batch
-run-00_master_docs_bootstrap_v1.bat
+```
+00_master_docs_bootstrap_v1 (or v2)
+    └── 10_execution_scaffold_v1
 ```
 
-**What it does**:
-- Generates PROJECT_ANALYSIS.md
-- Generates system overview documents (SYSTEM_OVERVIEW.md, BUSINESS_CAPABILITIES.md, FUNCTIONAL_SPEC.md, NON_FUNCTIONAL_REQUIREMENTS.md)
-- Generates architecture documents (SYSTEM_CONTEXT.md, COMPONENT_ARCHITECTURE.md, DECISION_LOG.md, SYSTEM_FILE_STRUCTURE.md, DEVELOPER_GUIDE.md, RUNBOOK.md)
-- Generates integration and failure documents
-- Generates EXISTING_REPO_WORKFLOW_SOP.md
+### Step 1: Master Docs Bootstrap
 
-**Duration**: ~30-60 minutes
-**Artifacts**: 13 documents in `docs/system/00_governance/bootstrap/`
+**Command:**
+```batch
+run-00_master_docs_bootstrap_v2.bat
+```
 
-### Step 2: Run Execution Scaffold
+**Purpose:** Generate master system documentation
 
-**Command**:
+**Outputs:**
+- `docs/system/00_governance/bootstrap/README.md`
+- `docs/system/00_governance/bootstrap/PROJECT_ANALYSIS.md`
+- `docs/system/00_governance/bootstrap/SYSTEM_OVERVIEW.md`
+- `docs/system/00_governance/bootstrap/BUSINESS_CAPABILITIES.md`
+- `docs/system/00_governance/bootstrap/FUNCTIONAL_SPEC.md`
+- `docs/system/00_governance/bootstrap/NON_FUNCTIONAL_REQUIREMENTS.md`
+- `docs/system/00_governance/bootstrap/SYSTEM_CONTEXT.md`
+- `docs/system/00_governance/bootstrap/COMPONENT_ARCHITECTURE.md`
+- `docs/system/00_governance/bootstrap/DECISION_LOG.md`
+- `docs/system/00_governance/bootstrap/SYSTEM_FILE_STRUCTURE.md`
+- `docs/system/00_governance/bootstrap/DEVELOPER_GUIDE.md`
+- `docs/system/00_governance/bootstrap/RUNBOOK.md`
+- `docs/system/00_governance/bootstrap/EXISTING_REPO_WORKFLOW_SOP.md`
+- `docs/codebase/01_inventory/codebase_inventory.md`
+- `docs/codebase/02_modules/*.md` (72 files)
+- `docs/codebase/03_components/*.md` (6 files)
+
+### Step 2: Execution Scaffold
+
+**Command:**
 ```batch
 run-10_execution_scaffold_v1.bat
 ```
 
-**What it does**:
-- Generates delivery SOP and status rules
-- Generates codebase doc SOP and status rules
-- Generates template registry and templates
-- Generates agent contracts (AGENTS.md + 6 individual)
+**Purpose:** Generate delivery governance
 
-**Duration**: ~45-90 minutes
-**Artifacts**: 9 delivery templates + 6 codebase templates + 7 agent contracts
-
-**Setup Chain**: `00_master_docs_bootstrap_v1` → `10_execution_scaffold_v1`
+**Outputs:**
+- `docs/delivery/00_governance/DELIVERY_SOP.md`
+- `docs/delivery/00_governance/DELIVERY_STATUS_RULES.md`
+- `docs/delivery/00_governance/DELIVERY_TEMPLATE_REGISTRY.md`
+- `docs/delivery/00_governance/DELIVERY_VALIDATION_TEMPLATE.md`
+- `docs/delivery/00_governance/DELIVERY_AGENTS.md`
+- `docs/codebase/00_governance/CODEBASE_DOC_SOP.md`
+- `docs/codebase/00_governance/CODEBASE_DOC_STATUS_RULES.md`
+- `docs/codebase/00_governance/CODEBASE_TEMPLATE_REGISTRY.md`
+- `docs/codebase/01_templates/CODEBASE_INVENTORY_TEMPLATE.md`
+- `docs/codebase/01_templates/CODEBASE_MODULE_TEMPLATE.md`
+- `docs/codebase/01_templates/CODEBASE_COMPONENT_TEMPLATE.md`
+- `docs/codebase/01_templates/CODEBASE_CHANGE_TEMPLATE.md`
+- `docs/codebase/01_inventory/CODEBASE_INVENTORY.md`
 
 ## Normal Governed Delivery
 
-For day-to-day development work after initial setup:
+The normal governed delivery chain for implementing changes:
 
-### Chain: Initiative Intake → Delivery Planning → Task Execution
+### Sequence
 
 ```
-20_initiative_intake_v1 → 30_delivery_planning_v1 → 31_task_execution_v1
+20_initiative_intake_v1
+    └── 30_delivery_planning_v1
+            └── 31_task_execution_v1
 ```
 
 ### Step 1: Initiative Intake
 
-**Command**:
+**Command:**
 ```batch
-run-20_initiative_intake_v1.bat
+run-20_initiative_intake_v1.bat <initiative-id>
 ```
 
-**What it does**:
-- Captures requirement and documentation scope
-- Drafts initiative pre-init document
-- Reviews and refines initiative
-- Produces INIT_FILE
+**Purpose:** Capture and refine initiative requirements
 
-**Duration**: ~20-40 minutes
-**Output**: `docs/delivery/01_initiatives/`
+**Inputs:** Draft initiative or enhancement idea
+**Outputs:**
+- `docs/delivery/02_initiatives/INIT-<id>.md`
+- Refined requirements and scope
 
 ### Step 2: Delivery Planning
 
-**Command**:
+**Command:**
 ```batch
-run-30_delivery_planning_v1.bat
+run-30_delivery_planning_v1.bat <initiative-id>
 ```
 
-**What it does**:
-- Generates plan from initiative
-- Creates task graph
-- Generates individual tasks
-- Produces PLAN_FILE, TASK_GRAPH_FILE, TASK_FILEs
+**Purpose:** Generate plan and task graph
 
-**Duration**: ~30-60 minutes
-**Output**: `docs/delivery/02_plans/`, `docs/delivery/03_task_graphs/`, `docs/delivery/04_tasks/`
+**Outputs:**
+- `docs/delivery/03_plans/PLAN-<id>.md`
+- `docs/delivery/04_tasks/TASK-<id>-<seq>.md` (task graph)
 
 ### Step 3: Task Execution
 
-**Command**:
+**Command:**
 ```batch
-run-31_task_execution_v1.bat
+run-31_task_execution_v1.bat <initiative-id> --task-id <task-id>
 ```
 
-**What it does**:
-- Creates implementation plan
-- Executes implementation
-- Reviews and refines
-- Validates output
-- Produces IMPL_FILE, REVIEW_FILE, VALIDATION_FILE
+**Purpose:** Implement and validate tasks
 
-**Duration**: ~60-180 minutes (varies by task size)
-**Output**: `docs/delivery/05_implementations/`, `docs/delivery/06_reviews/`
-
-**Delivery Chain**: `20_initiative_intake_v1` → `30_delivery_planning_v1` → `31_task_execution_v1`
+**Outputs:**
+- `docs/delivery/06_implementations/IMPL-<id>-<seq>.md`
+- `docs/delivery/07_reviews/REVIEW-<id>-<seq>.md`
+- `docs/delivery/08_validations/VALIDATION-<id>-<seq>.md`
+- Code changes in repository
 
 ## Drift Reconciliation
 
-When code changes occur outside normal workflow or documentation becomes stale:
+The drift-recovery path via documentation sync:
 
-### Run Documentation Sync
+### When to Run
 
-**Command**:
+- After code changes outside normal workflow
+- When documentation becomes stale
+- After merging external contributions
+- Periodic maintenance
+
+### Command
+
 ```batch
 run-40_documentation_sync_v1.bat
 ```
 
-**What it does**:
-- Scans repository for changes
-- Updates codebase inventory
-- Syncs module documentation
-- Syncs component documentation
-- Validates documentation
+**Purpose:** Reconcile codebase documentation with current repository state
 
-**Duration**: ~20-40 minutes
-**Output**: Updated `docs/codebase/`
+**Outputs:**
+- Refreshed `docs/codebase/01_inventory/codebase_inventory.md`
+- Updated `docs/codebase/02_modules/*.md`
+- Updated `docs/codebase/03_components/*.md`
+- New `docs/codebase/04_changes/<change-id>-bootstrap.md`
 
-**Drift Recovery Path**: `40_documentation_sync_v1`
+### Rerunning After Drift
 
-**When to run**:
-- After significant code changes outside workflow
-- When documentation appears stale
-- After manual code edits
-- Weekly maintenance
+After significant drift or contract changes, rerun first-time setup:
 
-## Governance Refresh
-
-After bootstrap drift or contract changes:
-
-### Re-run Master Docs Bootstrap
-
-**Command**:
 ```batch
-run-00_master_docs_bootstrap_v1.bat
-```
-
-**What it does**:
-- Refreshes system documentation
-- Updates architecture documents
-- Reconciles with current codebase
-
-**When to run**:
-- After major architectural changes
-- When system docs become stale
-- After workflow system updates
-
-### Re-run Execution Scaffold
-
-**Command**:
-```batch
+run-00_master_docs_bootstrap_v2.bat
 run-10_execution_scaffold_v1.bat
 ```
 
-**What it does**:
-- Refreshes delivery SOPs and templates
-- Updates agent contracts
+## Governance Refresh
 
-**When to run**:
-- After changing delivery process
-- When templates need updates
-- After agent role changes
+The governance refresh path for updating SOPs and templates:
+
+### When to Run
+
+- After changing delivery SOPs
+- After changing template structure
+- After adding new workflow families
+- After contract changes
+
+### Command
+
+```batch
+run-10_execution_scaffold_v1.bat --refresh
+```
+
+**Purpose:** Regenerate delivery governance documents
 
 ## Architecture Communication
 
-Publishing browsable HTML documentation for stakeholders:
+The architecture communication phase via HTML site generation:
 
-### Run Architecture Site
+### Command
 
-**Command**:
 ```batch
 run-50_architecture_site_v1.bat
 ```
 
-**What it does**:
-- Generates stakeholder HTML view
-- Generates developer HTML view
-- Validates generated sites
+**Purpose:** Publish browsable HTML architecture views
 
-**Duration**: ~15-30 minutes
-**Output**: HTML site in `docs/architecture-site/`
+**Outputs:**
+- `docs/sites/architecture/` (browsable HTML site)
+- `docs/sites/architecture/index.html`
+- Audience-specific views (stakeholder, developer, operator, tester, user)
 
-**Architecture Communication Phase**: `50_architecture_site_v1`
+### Audience Sites
 
-**When to run**:
-- After system docs are updated
-- Before stakeholder presentations
-- For onboarding new team members
+```batch
+run-51_stakeholder_docs_v1.bat
+run-52_developer_docs_v1.bat
+run-53_operator_docs_v1.bat
+run-54_tester_docs_v1.bat
+run-55_user_docs_v1.bat
+```
 
 ## Batch Files
 
-All workflows have launcher batch files:
+Convenience batch files for workflow execution:
 
-| Batch File | Purpose |
-|------------|---------|
-| `run-00_master_docs_bootstrap_v1.bat` | First-time bootstrap |
-| `run-10_execution_scaffold_v1.bat` | Governance scaffold |
-| `run-20_initiative_intake_v1.bat` | Initiative capture |
-| `run-21_bug_fix_intake_v1.bat` | Bug fix workflow |
-| `run-30_delivery_planning_v1.bat` | Plan generation |
-| `run-31_task_execution_v1.bat` | Task execution |
-| `run-40_documentation_sync_v1.bat` | Drift reconciliation |
-| `run-50_architecture_site_v1.bat` | HTML site generation |
+| Batch File | Workflow | Purpose |
+|------------|----------|---------|
+| `run-00_master_docs_bootstrap_v1.bat` | 00_master_docs_bootstrap_v1 | Bootstrap system docs (v1) |
+| `run-00_master_docs_bootstrap_v2.bat` | 00_master_docs_bootstrap_v2 | Bootstrap system docs (v2) |
+| `run-10_execution_scaffold_v1.bat` | 10_execution_scaffold_v1 | Generate delivery governance |
+| `run-20_initiative_intake_v1.bat` | 20_initiative_intake_v1 | Capture initiative |
+| `run-21_bug_fix_intake_v1.bat` | 21_bug_fix_intake_v1 | Bug triage and fix |
+| `run-30_delivery_planning_v1.bat` | 30_delivery_planning_v1 | Generate plan/task graph |
+| `run-31_task_execution_v1.bat` | 31_task_execution_v1 | Implement tasks |
+| `run-40_documentation_sync_v1.bat` | 40_documentation_sync_v1 | Reconcile docs |
+| `run-50_architecture_site_v1.bat` | 50_architecture_site_v1 | Generate HTML site |
 
-### Batch File Pattern
+### Usage Pattern
 
-All batch files follow this pattern:
 ```batch
-@echo off
-setlocal enabledelayedexpansion
-cd /d "D:\MyProjectSpace\01_Workflows\agent-runner-v2"
-call .venv\Scripts\activate.bat
-ukbe-run-agent run <workflow> --initiative-id "%%1" %*
+.venv\Scripts\activate && ukbe-run-agent run <workflow> --initiative-id <id>
 ```
 
 ## Notes
 
-### Workflow Families
+### Workflow Categories
 
-The repository defines 21 workflow families with 290+ steps:
+| Category | Workflows | Use Case |
+|----------|-----------|----------|
+| **Bootstrap** | 00_* | System and codebase documentation |
+| **Scaffold** | 10_* | Delivery governance setup |
+| **Intake** | 20_*, 21_* | Initiative and bug capture |
+| **Planning** | 30_* | Plan and task generation |
+| **Execution** | 31_* | Implementation and validation |
+| **Sync** | 40_* | Documentation reconciliation |
+| **Audience** | 41_*, 51-55_* | Audience-specific documentation |
+| **Site** | 50_* | HTML site generation |
 
-| Workflow | Steps | Purpose |
-|----------|-------|---------|
-| `00_master_docs_bootstrap_v1` | 13 | System documentation bootstrap |
-| `10_execution_scaffold_v1` | 13 | Delivery governance scaffold |
-| `20_initiative_intake_v1` | 5 | Initiative capture |
-| `21_bug_fix_intake_v1` | 7 | Bug triage and fix |
-| `30_delivery_planning_v1` | 10 | Plan generation |
-| `31_task_execution_v1` | 12 | Task execution |
-| `40_documentation_sync_v1` | 5 | Doc reconciliation |
-| `50_architecture_site_v1` | 2 | HTML site generation |
-| `41_*_doc_v1` | 4 each | Audience-specific docs |
-| `51-55_*_docs_v1` | 1-4 each | Site generation workflows |
-| Media workflows | 3-10 | Image/video pipelines |
+### Protected Documents
 
-### Bootstrap vs Runtime
+All documents in `docs/system/`, `docs/codebase/`, and `docs/delivery/` are **workflow-generated** and protected from manual edits. Changes must flow through the appropriate workflow.
 
-**Important**: Changes to bootstrap files only take effect after syncing to runtime:
+### Rerunning Workflows
 
-```
-Repo bootstrap → %USERPROFILE%\.ukbe-runner\workflows\default\ → Runtime
-```
+Workflows are idempotent where possible. Rerunning will:
+- Refresh existing documents
+- Add new documents for new initiatives
+- Update change impact documents
 
-**Sync commands**:
+### Daemon Mode
+
+For continuous operation, use daemon mode:
+
 ```batch
-ukbe-run-agent init --force
-# Or
-run-bootstrap-publish.bat
+ukbe-run-agent daemon
 ```
 
-### Review/Refine Loops
+The daemon:
+- Polls backend for available work
+- Does NOT need restart for code changes
+- Spawns fresh subprocesses for each step
 
-Most workflows include review steps:
-1. Generate artifact
-2. Review produces REVIEW_FILE_SUGGESTED
-3. If rejected → refine with `edit_mode: in_place`
-4. Loop back to review
-5. Max iterations enforced
+### Troubleshooting
 
-### Approval Gates
+| Issue | Solution |
+|-------|----------|
+| Workflow not found | Run `ukbe-run-agent init` |
+| Bundle drift | Run `ukbe-run-agent init` to sync |
+| Step hangs | Kill process and retry |
+| Test failures | Check `tests/unit/` and `tests/integration/` |
 
-Steps can require human approval:
-- Status becomes `WAITING_FOR_HUMAN_APPROVAL`
-- Notification sent
-- Approve via: `ukbe-run-agent approve-step <job> <step>`
+### Related Documents
 
-### Generated Document Protection
-
-Workflow-generated documents have:
-```yaml
-managed_by: workflow-generated
-```
-
-**Do not edit these files directly**. Update the source prompts instead.
-
-### Running Workflows After Drift
-
-When code has changed outside workflow:
-
-1. **Update codebase docs**: `run-40_documentation_sync_v1.bat`
-2. **Run initiative workflow**: `run-20_initiative_intake_v1.bat`
-3. **Continue normal chain**: Planning → Execution
-
-### Emergency Procedures
-
-**Reset stuck job**:
-```batch
-run-reset-step.bat <workflow> <step> <job_id>
-```
-
-**Clean generated docs**:
-```batch
-run-cleanup-generated-docs.bat
-```
-
-**Approve stuck step**:
-```batch
-run-approve-step.bat <job_id> <step_id>
-```
-
----
-
-*Generated by workflow `00_master_docs_bootstrap_v1` step `04_generate_architecture_docs` on 2026-07-10T09:52:38+08:00*
+| Document | Purpose |
+|----------|---------|
+| [RUNBOOK.md](RUNBOOK.md) | Operational procedures |
+| [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md) | Development setup |

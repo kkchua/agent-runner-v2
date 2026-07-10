@@ -26,6 +26,7 @@ class DummyProc:
 def test_run_supervisor_spawns_child_and_emits_child_heartbeat(monkeypatch, tmp_path):
     heartbeats: list[dict] = []
     submissions: list[dict] = []
+    finalizations: list[dict] = []
     claims = [
         {
             'run': {'id': 'run-1', 'run_code': 'RUN-1'},
@@ -60,6 +61,7 @@ def test_run_supervisor_spawns_child_and_emits_child_heartbeat(monkeypatch, tmp_
 
     monkeypatch.setattr('agent_runner_v2.backend_client.BackendClient', FakeClient)
     monkeypatch.setattr('agent_runner_v2.run_agent._submit_worker_result', lambda **kwargs: submissions.append(kwargs))
+    monkeypatch.setattr('agent_runner_v2.run_agent._finalize_worker_completion', lambda **kwargs: finalizations.append(kwargs) or {'run': {'status': 'completed'}, 'step_run': {'id': 'step-1'}, 'next_step_run': None, 'last_event': 'RUN_COMPLETED'})
 
     def fake_spawn_child(*, claim, runtime_root, cli_pythonpath, logger, backend_url, step_spec_source):
         child_dir = runtime_root / 'step-1'
@@ -80,6 +82,8 @@ def test_run_supervisor_spawns_child_and_emits_child_heartbeat(monkeypatch, tmp_
             run_code='RUN-1',
             step_run_id='step-1',
             step_name='pre_init',
+            run_payload={'id': 'run-1', 'run_code': 'RUN-1'},
+            step_run_payload={'id': 'step-1', 'step_name': 'pre_init'},
             request_payload={},
             request_path=child_dir / 'request.json',
             result_path=result_path,
@@ -111,6 +115,7 @@ def test_run_supervisor_spawns_child_and_emits_child_heartbeat(monkeypatch, tmp_
 
     assert rc == 0
     assert submissions
+    assert finalizations
     child_heartbeats = [item for item in heartbeats if item.get('workflow_step_run_id') == 'step-1']
     assert child_heartbeats
     assert child_heartbeats[0]['worker_id'] == 'worker-1'

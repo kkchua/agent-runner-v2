@@ -22,6 +22,7 @@ GOVERNING RULES (STRICT):
 Role:
 - You are the Executor agent.
 - Your only job is to execute the current implementation plan artifact for the linked task.
+- Before changing code or logic, read and follow `{CODER_IMPLEMENTATION_SOP_PATH}`.
 
 Input:
 - Implementation plan: {IMPL_FILE}

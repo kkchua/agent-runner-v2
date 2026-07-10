@@ -192,6 +192,7 @@ required_inputs = [
 ]
 produces = ["REVIEW_FILE_SUGGESTED"]
 result_meta_key_from_context = "REVIEW_FILE_SUGGESTED_METAJSON"
+
 requires_human_approval_after = false
 
 [step.coder]
@@ -228,6 +229,7 @@ produces = [
 target_artifact = "PROJECT_ANALYSIS"
 edit_mode = "in_place"
 result_meta_key = "PROJECT_ANALYSIS"
+
 loop_returns_to = "05_review_master_system_docs"
 
 [step.coder]

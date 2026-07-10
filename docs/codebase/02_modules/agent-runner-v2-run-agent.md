@@ -6,9 +6,9 @@ module_path: "agent_runner_v2/run_agent.py"
 module_area: "core"
 documentation_mode: "full"
 owner_doc_path: "docs/codebase/02_modules/agent-runner-v2-run-agent.md"
-last_verified_by_change: "00_master_docs_bootstrap_v1 / 00DOC-GEN-20260710-004 / 2026-07-10T09:40:54+08:00"
-created: "2026-07-10T09:40:54+08:00"
-owner: "00_master_docs_bootstrap_v1"
+last_verified_by_change: "00_master_docs_bootstrap_v2 / 00DOC-GEN-20260710-004 / 2026-07-10T14:00:58+08:00"
+created: "2026-07-10T14:00:58+08:00"
+owner: "00_master_docs_bootstrap_v2"
 ---
 
 # Module Documentation: agent_runner_v2.run_agent
@@ -53,6 +53,8 @@ This module belongs to the `core` area and is documented as `full`.
 | `runner_logger` | external module | repository dependency |
 | `runtime_context` | external module | repository dependency |
 | `step_runner` | external module | repository dependency |
+| `workflow_packages.loader` | external module | repository dependency |
+| `workflow_packages.registry` | external module | repository dependency |
 | `workflow_router` | external module | repository dependency |
 | `workflow_specs` | external module | repository dependency |
 
@@ -121,4 +123,4 @@ No documented exceptions.
 
 | Date | Change | Verified By |
 |------|--------|-------------|
-| 2026-07-10 | Initial baseline generated from repository scan | 00_master_docs_bootstrap_v1 |
+| 2026-07-10 | Initial baseline generated from repository scan | 00_master_docs_bootstrap_v2 |

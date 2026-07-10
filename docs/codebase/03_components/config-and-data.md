@@ -3,10 +3,10 @@ title: "Component Documentation: config and data"
 template_id: "CB-03"
 status: "active"
 component_id: "config-and-data"
-created: "2026-07-10T09:40:54+08:00"
-owner: "00_master_docs_bootstrap_v1"
-last_verified_by_change: "00_master_docs_bootstrap_v1 / 00DOC-GEN-20260710-004 / 2026-07-10T09:40:54+08:00"
-modules: [".env.example", "agent_runner_v2/bootstrap/bundles/core/current/00DOC-GEN-20260709-002-bootstrap-validation.meta.json", "agent_runner_v2/bootstrap/bundles/core/current/00DOC-GEN-20260709-002-bootstrap-validation.meta.meta.json", "agent_runner_v2/comfyui_config.json", "agent_runner_v2/job_schema.json", "agent_runner_v2/llm_response_schema.json", "agent_runner_v2/model_mapping.json", "agent_runner_v2/usage_schema.json", "docs/codebase/04_changes/00DOC-GEN-20260710-004-bootstrap-snapshot.json", "pyproject.toml"]
+created: "2026-07-10T14:00:58+08:00"
+owner: "00_master_docs_bootstrap_v2"
+last_verified_by_change: "00_master_docs_bootstrap_v2 / 00DOC-GEN-20260710-004 / 2026-07-10T14:00:58+08:00"
+modules: [".env.example", "agent_runner_v2/bootstrap/bundles/core/current/00DOC-20260710-15f76235-bootstrap-validation.meta.json", "agent_runner_v2/bootstrap/bundles/core/current/00DOC-20260710-15f76235-bootstrap-validation.meta.meta.json", "agent_runner_v2/comfyui_config.json", "agent_runner_v2/job_schema.json", "agent_runner_v2/llm_response_schema.json", "agent_runner_v2/model_mapping.json", "agent_runner_v2/usage_schema.json", "docs/codebase/04_changes/00DOC-GEN-20260710-001-bootstrap-snapshot.json", "docs/codebase/04_changes/00DOC-GEN-20260710-002-bootstrap-snapshot.json", "docs/codebase/04_changes/00DOC-GEN-20260710-003-bootstrap-snapshot.json", "docs/codebase/04_changes/00DOC-GEN-20260710-004-bootstrap-snapshot.json", "pyproject.toml", "workflows/00_master_docs_bootstrap_v2/workflow.toml"]
 ---
 
 # Component Documentation: config and data
@@ -22,15 +22,19 @@ Configuration and structured data files that define runtime and documentation be
 | Module | Role in Component |
 |--------|-------------------|
 | `.env.example` | configuration / structured data |
-| `agent_runner_v2/bootstrap/bundles/core/current/00DOC-GEN-20260709-002-bootstrap-validation.meta.json` | configuration / structured data |
-| `agent_runner_v2/bootstrap/bundles/core/current/00DOC-GEN-20260709-002-bootstrap-validation.meta.meta.json` | configuration / structured data |
+| `agent_runner_v2/bootstrap/bundles/core/current/00DOC-20260710-15f76235-bootstrap-validation.meta.json` | configuration / structured data |
+| `agent_runner_v2/bootstrap/bundles/core/current/00DOC-20260710-15f76235-bootstrap-validation.meta.meta.json` | configuration / structured data |
 | `agent_runner_v2/comfyui_config.json` | configuration / structured data |
 | `agent_runner_v2/job_schema.json` | configuration / structured data |
 | `agent_runner_v2/llm_response_schema.json` | configuration / structured data |
 | `agent_runner_v2/model_mapping.json` | configuration / structured data |
 | `agent_runner_v2/usage_schema.json` | configuration / structured data |
+| `docs/codebase/04_changes/00DOC-GEN-20260710-001-bootstrap-snapshot.json` | configuration / structured data |
+| `docs/codebase/04_changes/00DOC-GEN-20260710-002-bootstrap-snapshot.json` | configuration / structured data |
+| `docs/codebase/04_changes/00DOC-GEN-20260710-003-bootstrap-snapshot.json` | configuration / structured data |
 | `docs/codebase/04_changes/00DOC-GEN-20260710-004-bootstrap-snapshot.json` | configuration / structured data |
 | `pyproject.toml` | configuration / structured data |
+| `workflows/00_master_docs_bootstrap_v2/workflow.toml` | configuration / structured data |
 
 ## 2. Architecture
 
@@ -47,15 +51,19 @@ Repository files are scanned, normalized into inventory rows, and rendered into 
 | Interface | Direction | Protocol | Description |
 |-----------|-----------|----------|-------------|
 | `.env.example` | outbound | markdown | configuration / structured data |
-| `agent_runner_v2/bootstrap/bundles/core/current/00DOC-GEN-20260709-002-bootstrap-validation.meta.json` | outbound | markdown | configuration / structured data |
-| `agent_runner_v2/bootstrap/bundles/core/current/00DOC-GEN-20260709-002-bootstrap-validation.meta.meta.json` | outbound | markdown | configuration / structured data |
+| `agent_runner_v2/bootstrap/bundles/core/current/00DOC-20260710-15f76235-bootstrap-validation.meta.json` | outbound | markdown | configuration / structured data |
+| `agent_runner_v2/bootstrap/bundles/core/current/00DOC-20260710-15f76235-bootstrap-validation.meta.meta.json` | outbound | markdown | configuration / structured data |
 | `agent_runner_v2/comfyui_config.json` | outbound | markdown | configuration / structured data |
 | `agent_runner_v2/job_schema.json` | outbound | markdown | configuration / structured data |
 | `agent_runner_v2/llm_response_schema.json` | outbound | markdown | configuration / structured data |
 | `agent_runner_v2/model_mapping.json` | outbound | markdown | configuration / structured data |
 | `agent_runner_v2/usage_schema.json` | outbound | markdown | configuration / structured data |
+| `docs/codebase/04_changes/00DOC-GEN-20260710-001-bootstrap-snapshot.json` | outbound | markdown | configuration / structured data |
+| `docs/codebase/04_changes/00DOC-GEN-20260710-002-bootstrap-snapshot.json` | outbound | markdown | configuration / structured data |
+| `docs/codebase/04_changes/00DOC-GEN-20260710-003-bootstrap-snapshot.json` | outbound | markdown | configuration / structured data |
 | `docs/codebase/04_changes/00DOC-GEN-20260710-004-bootstrap-snapshot.json` | outbound | markdown | configuration / structured data |
 | `pyproject.toml` | outbound | markdown | configuration / structured data |
+| `workflows/00_master_docs_bootstrap_v2/workflow.toml` | outbound | markdown | configuration / structured data |
 
 ## 3. Behavior
 
@@ -99,4 +107,4 @@ Auto-generated baseline; extend with component-specific checks as needed.
 
 | Date | Change | Modules Affected | Verified By |
 |------|--------|-----------------|-------------|
-| 2026-07-10 | Initial baseline generated from repository scan | 10 modules/files | 00_master_docs_bootstrap_v1 |
+| 2026-07-10 | Initial baseline generated from repository scan | 14 modules/files | 00_master_docs_bootstrap_v2 |

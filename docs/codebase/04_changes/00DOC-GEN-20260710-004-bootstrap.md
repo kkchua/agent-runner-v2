@@ -3,10 +3,10 @@ title: "Change Impact: agent-runner-v2 codebase bootstrap"
 template_id: "CB-04"
 status: "active"
 change_id: "00DOC-GEN-20260710-004"
-task_id: "00_master_docs_bootstrap_v1"
+task_id: "00_master_docs_bootstrap_v2"
 initiative_id: "codebase-doc-bootstrap"
-created: "2026-07-10T09:40:54+08:00"
-author: "00_master_docs_bootstrap_v1"
+created: "2026-07-10T14:00:58+08:00"
+author: "00_master_docs_bootstrap_v2"
 ---
 
 # Change Impact: agent-runner-v2 codebase bootstrap
@@ -62,11 +62,11 @@ Keep `/docs/codebase` synchronized with the current repository state even when c
 | `agent_runner_v2/architecture_site.py` | modify | part of repository scan baseline | medium |
 | `agent_runner_v2/artifact_paths.py` | modify | part of repository scan baseline | medium |
 | `agent_runner_v2/backend_client.py` | modify | part of repository scan baseline | medium |
-| `agent_runner_v2/bootstrap/bundles/core/current/00DOC-GEN-20260709-002-bootstrap-change-log.md` | modify | part of repository scan baseline | medium |
-| `agent_runner_v2/bootstrap/bundles/core/current/00DOC-GEN-20260709-002-bootstrap-summary.md` | modify | part of repository scan baseline | medium |
-| `agent_runner_v2/bootstrap/bundles/core/current/00DOC-GEN-20260709-002-bootstrap-validation.md` | modify | part of repository scan baseline | medium |
-| `agent_runner_v2/bootstrap/bundles/core/current/00DOC-GEN-20260709-002-bootstrap-validation.meta.json` | modify | part of repository scan baseline | medium |
-| `agent_runner_v2/bootstrap/bundles/core/current/00DOC-GEN-20260709-002-bootstrap-validation.meta.meta.json` | modify | part of repository scan baseline | medium |
+| `agent_runner_v2/bootstrap/bundles/core/current/00DOC-20260710-15f76235-bootstrap-change-log.md` | modify | part of repository scan baseline | medium |
+| `agent_runner_v2/bootstrap/bundles/core/current/00DOC-20260710-15f76235-bootstrap-summary.md` | modify | part of repository scan baseline | medium |
+| `agent_runner_v2/bootstrap/bundles/core/current/00DOC-20260710-15f76235-bootstrap-validation.md` | modify | part of repository scan baseline | medium |
+| `agent_runner_v2/bootstrap/bundles/core/current/00DOC-20260710-15f76235-bootstrap-validation.meta.json` | modify | part of repository scan baseline | medium |
+| `agent_runner_v2/bootstrap/bundles/core/current/00DOC-20260710-15f76235-bootstrap-validation.meta.meta.json` | modify | part of repository scan baseline | medium |
 | `agent_runner_v2/bootstrap/bundles/core/current/BUNDLE_MIGRATION_PLAN.md` | modify | part of repository scan baseline | medium |
 | `agent_runner_v2/bootstrap/bundles/core/current/BUNDLE_TAXONOMY.md` | modify | part of repository scan baseline | medium |
 | `agent_runner_v2/bootstrap/bundles/core/current/BUSINESS_CAPABILITIES.md` | modify | part of repository scan baseline | medium |
@@ -236,6 +236,11 @@ Keep `/docs/codebase` synchronized with the current repository state even when c
 | `agent_runner_v2/system_docs.py` | modify | part of repository scan baseline | medium |
 | `agent_runner_v2/tools/agent_tools.py` | modify | part of repository scan baseline | medium |
 | `agent_runner_v2/usage_schema.json` | modify | part of repository scan baseline | medium |
+| `agent_runner_v2/workflow_packages/__init__.py` | modify | part of repository scan baseline | medium |
+| `agent_runner_v2/workflow_packages/actions/__init__.py` | modify | part of repository scan baseline | medium |
+| `agent_runner_v2/workflow_packages/base.py` | modify | part of repository scan baseline | medium |
+| `agent_runner_v2/workflow_packages/loader.py` | modify | part of repository scan baseline | medium |
+| `agent_runner_v2/workflow_packages/registry.py` | modify | part of repository scan baseline | medium |
 | `agent_runner_v2/workflow_router.py` | modify | part of repository scan baseline | medium |
 | `agent_runner_v2/workflow_spec_commands.py` | modify | part of repository scan baseline | medium |
 | `agent_runner_v2/workflow_specs.py` | modify | part of repository scan baseline | medium |
@@ -256,6 +261,10 @@ Keep `/docs/codebase` synchronized with the current repository state even when c
 | `archive/batch/submit-documentation_bootstrap_v1.bat` | modify | part of repository scan baseline | medium |
 | `archive/batch/submit-documentation_validation_v1.bat` | modify | part of repository scan baseline | medium |
 | `CLAUDE.md` | modify | part of repository scan baseline | medium |
+| `CODER_IMPLEMENTATION_SOP.md` | modify | part of repository scan baseline | medium |
+| `docs/codebase/04_changes/00DOC-GEN-20260710-001-bootstrap-snapshot.json` | modify | part of repository scan baseline | medium |
+| `docs/codebase/04_changes/00DOC-GEN-20260710-002-bootstrap-snapshot.json` | modify | part of repository scan baseline | medium |
+| `docs/codebase/04_changes/00DOC-GEN-20260710-003-bootstrap-snapshot.json` | modify | part of repository scan baseline | medium |
 | `docs/codebase/04_changes/00DOC-GEN-20260710-004-bootstrap-snapshot.json` | modify | part of repository scan baseline | medium |
 | `HOW_TO_GUIDE.md` | modify | part of repository scan baseline | medium |
 | `PUSHOVER_NOTIFICATIONS.md` | modify | part of repository scan baseline | medium |
@@ -263,6 +272,7 @@ Keep `/docs/codebase` synchronized with the current repository state even when c
 | `QWEN.md` | modify | part of repository scan baseline | medium |
 | `README.md` | modify | part of repository scan baseline | medium |
 | `run-00_master_docs_bootstrap_v1.bat` | modify | part of repository scan baseline | medium |
+| `run-00_master_docs_bootstrap_v2.bat` | modify | part of repository scan baseline | medium |
 | `run-10_execution_scaffold_v1.bat` | modify | part of repository scan baseline | medium |
 | `run-20_initiative_intake_v1.bat` | modify | part of repository scan baseline | medium |
 | `run-21_bug_fix_intake_v1.bat` | modify | part of repository scan baseline | medium |
@@ -325,19 +335,25 @@ Keep `/docs/codebase` synchronized with the current repository state even when c
 | `tests/integration/test_ukbe_runner_wrapper.py` | modify | part of repository scan baseline | medium |
 | `tests/unit/__init__.py` | modify | part of repository scan baseline | medium |
 | `tests/unit/README.md` | modify | part of repository scan baseline | medium |
+| `tests/unit/test_agent_tools.py` | modify | part of repository scan baseline | medium |
 | `tests/unit/test_bundle_loader.py` | modify | part of repository scan baseline | medium |
 | `tests/unit/test_codebase_docs.py` | modify | part of repository scan baseline | medium |
+| `tests/unit/test_coder_adapters_sidecar_grace.py` | modify | part of repository scan baseline | medium |
 | `tests/unit/test_constants_registry.py` | modify | part of repository scan baseline | medium |
+| `tests/unit/test_context_extensions.py` | modify | part of repository scan baseline | medium |
 | `tests/unit/test_documentation_governance.py` | modify | part of repository scan baseline | medium |
 | `tests/unit/test_documentation_guardrails_cleanup.py` | modify | part of repository scan baseline | medium |
 | `tests/unit/test_run_agent_status.py` | modify | part of repository scan baseline | medium |
 | `tests/unit/test_runtime_context_paths.py` | modify | part of repository scan baseline | medium |
 | `tests/unit/test_step_runner_write_contract.py` | modify | part of repository scan baseline | medium |
 | `tests/unit/test_tool_instruction_block.py` | modify | part of repository scan baseline | medium |
+| `tests/unit/test_workflow_packages.py` | modify | part of repository scan baseline | medium |
+| `tests/unit/test_workflow_registry.py` | modify | part of repository scan baseline | medium |
 | `TODO_LIST.md` | modify | part of repository scan baseline | medium |
 | `UNIT_TEST_FIXES.md` | modify | part of repository scan baseline | medium |
 | `UNIT_TEST_RESULTS.md` | modify | part of repository scan baseline | medium |
 | `WINDOWS_COMPATIBILITY.md` | modify | part of repository scan baseline | medium |
+| `workflows/00_master_docs_bootstrap_v2/workflow.toml` | modify | part of repository scan baseline | medium |
 
 ### 2.2 Configuration Changes
 
@@ -422,6 +438,11 @@ Keep `/docs/codebase` synchronized with the current repository state even when c
 | `agent-runner-v2-submitter.md` | `docs/codebase/02_modules/agent-runner-v2-submitter.md` | module/component/inventory | draft |
 | `agent-runner-v2-system-docs.md` | `docs/codebase/02_modules/agent-runner-v2-system-docs.md` | module/component/inventory | draft |
 | `agent-runner-v2-tools-agent-tools.md` | `docs/codebase/02_modules/agent-runner-v2-tools-agent-tools.md` | module/component/inventory | draft |
+| `agent-runner-v2-workflow-packages-init.md` | `docs/codebase/02_modules/agent-runner-v2-workflow-packages-init.md` | module/component/inventory | draft |
+| `agent-runner-v2-workflow-packages-actions-init.md` | `docs/codebase/02_modules/agent-runner-v2-workflow-packages-actions-init.md` | module/component/inventory | draft |
+| `agent-runner-v2-workflow-packages-base.md` | `docs/codebase/02_modules/agent-runner-v2-workflow-packages-base.md` | module/component/inventory | draft |
+| `agent-runner-v2-workflow-packages-loader.md` | `docs/codebase/02_modules/agent-runner-v2-workflow-packages-loader.md` | module/component/inventory | draft |
+| `agent-runner-v2-workflow-packages-registry.md` | `docs/codebase/02_modules/agent-runner-v2-workflow-packages-registry.md` | module/component/inventory | draft |
 | `agent-runner-v2-workflow-router.md` | `docs/codebase/02_modules/agent-runner-v2-workflow-router.md` | module/component/inventory | draft |
 | `agent-runner-v2-workflow-spec-commands.md` | `docs/codebase/02_modules/agent-runner-v2-workflow-spec-commands.md` | module/component/inventory | draft |
 | `agent-runner-v2-workflow-specs.md` | `docs/codebase/02_modules/agent-runner-v2-workflow-specs.md` | module/component/inventory | draft |
@@ -501,6 +522,11 @@ Keep `/docs/codebase` synchronized with the current repository state even when c
 | `agent-runner-v2-submitter.md` | `docs/codebase/02_modules/agent-runner-v2-submitter.md` | full document | repository reconciliation |
 | `agent-runner-v2-system-docs.md` | `docs/codebase/02_modules/agent-runner-v2-system-docs.md` | full document | repository reconciliation |
 | `agent-runner-v2-tools-agent-tools.md` | `docs/codebase/02_modules/agent-runner-v2-tools-agent-tools.md` | full document | repository reconciliation |
+| `agent-runner-v2-workflow-packages-init.md` | `docs/codebase/02_modules/agent-runner-v2-workflow-packages-init.md` | full document | repository reconciliation |
+| `agent-runner-v2-workflow-packages-actions-init.md` | `docs/codebase/02_modules/agent-runner-v2-workflow-packages-actions-init.md` | full document | repository reconciliation |
+| `agent-runner-v2-workflow-packages-base.md` | `docs/codebase/02_modules/agent-runner-v2-workflow-packages-base.md` | full document | repository reconciliation |
+| `agent-runner-v2-workflow-packages-loader.md` | `docs/codebase/02_modules/agent-runner-v2-workflow-packages-loader.md` | full document | repository reconciliation |
+| `agent-runner-v2-workflow-packages-registry.md` | `docs/codebase/02_modules/agent-runner-v2-workflow-packages-registry.md` | full document | repository reconciliation |
 | `agent-runner-v2-workflow-router.md` | `docs/codebase/02_modules/agent-runner-v2-workflow-router.md` | full document | repository reconciliation |
 | `agent-runner-v2-workflow-spec-commands.md` | `docs/codebase/02_modules/agent-runner-v2-workflow-spec-commands.md` | full document | repository reconciliation |
 | `agent-runner-v2-workflow-specs.md` | `docs/codebase/02_modules/agent-runner-v2-workflow-specs.md` | full document | repository reconciliation |
@@ -550,7 +576,7 @@ Keep `/docs/codebase` synchronized with the current repository state even when c
 
 | Workflow | Impact | Notes |
 |----------|--------|-------|
-| `00_master_docs_bootstrap_v1` | high | repository scan baseline |
+| `00_master_docs_bootstrap_v2` | high | repository scan baseline |
 
 ### 5.3 Backward Compatibility
 

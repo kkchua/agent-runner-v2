@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-07-10T09:40:34+08:00",
+  "generated_at": "2026-07-10T13:58:28+08:00",
   "mode": "bootstrap",
-  "workflow_name": "00_master_docs_bootstrap_v1",
+  "workflow_name": "00_master_docs_bootstrap_v2",
   "bundle_profile": "core+workflow",
   "bundle_domain": "general",
   "bundle_manifest": "bundles/bundle-set.json",
@@ -337,7 +337,7 @@
       "last_verified_by_change": "bootstrap/reconcile scan"
     },
     {
-      "rel_path": "agent_runner_v2/bootstrap/bundles/core/current/00DOC-GEN-20260709-002-bootstrap-change-log.md",
+      "rel_path": "agent_runner_v2/bootstrap/bundles/core/current/00DOC-20260710-15f76235-bootstrap-change-log.md",
       "category": "documentation files",
       "subcategory": "docs",
       "doc_mode": "summary",
@@ -346,7 +346,7 @@
       "last_verified_by_change": "bootstrap/reconcile scan"
     },
     {
-      "rel_path": "agent_runner_v2/bootstrap/bundles/core/current/00DOC-GEN-20260709-002-bootstrap-summary.md",
+      "rel_path": "agent_runner_v2/bootstrap/bundles/core/current/00DOC-20260710-15f76235-bootstrap-summary.md",
       "category": "documentation files",
       "subcategory": "docs",
       "doc_mode": "summary",
@@ -355,7 +355,7 @@
       "last_verified_by_change": "bootstrap/reconcile scan"
     },
     {
-      "rel_path": "agent_runner_v2/bootstrap/bundles/core/current/00DOC-GEN-20260709-002-bootstrap-validation.md",
+      "rel_path": "agent_runner_v2/bootstrap/bundles/core/current/00DOC-20260710-15f76235-bootstrap-validation.md",
       "category": "documentation files",
       "subcategory": "docs",
       "doc_mode": "summary",
@@ -364,7 +364,7 @@
       "last_verified_by_change": "bootstrap/reconcile scan"
     },
     {
-      "rel_path": "agent_runner_v2/bootstrap/bundles/core/current/00DOC-GEN-20260709-002-bootstrap-validation.meta.json",
+      "rel_path": "agent_runner_v2/bootstrap/bundles/core/current/00DOC-20260710-15f76235-bootstrap-validation.meta.json",
       "category": "configuration/data files",
       "subcategory": "config",
       "doc_mode": "summary",
@@ -373,7 +373,7 @@
       "last_verified_by_change": "bootstrap/reconcile scan"
     },
     {
-      "rel_path": "agent_runner_v2/bootstrap/bundles/core/current/00DOC-GEN-20260709-002-bootstrap-validation.meta.meta.json",
+      "rel_path": "agent_runner_v2/bootstrap/bundles/core/current/00DOC-20260710-15f76235-bootstrap-validation.meta.meta.json",
       "category": "configuration/data files",
       "subcategory": "config",
       "doc_mode": "summary",
@@ -1912,6 +1912,51 @@
       "last_verified_by_change": "bootstrap/reconcile scan"
     },
     {
+      "rel_path": "agent_runner_v2/workflow_packages/__init__.py",
+      "category": "python modules",
+      "subcategory": "package",
+      "doc_mode": "stub",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-workflow-packages-init.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/workflow_packages/actions/__init__.py",
+      "category": "python modules",
+      "subcategory": "package",
+      "doc_mode": "stub",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-workflow-packages-actions-init.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/workflow_packages/base.py",
+      "category": "python modules",
+      "subcategory": "support",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-workflow-packages-base.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/workflow_packages/loader.py",
+      "category": "python modules",
+      "subcategory": "support",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-workflow-packages-loader.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "agent_runner_v2/workflow_packages/registry.py",
+      "category": "python modules",
+      "subcategory": "support",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-workflow-packages-registry.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
       "rel_path": "agent_runner_v2/workflow_router.py",
       "category": "python modules",
       "subcategory": "core",
@@ -2101,12 +2146,48 @@
       "last_verified_by_change": "bootstrap/reconcile scan"
     },
     {
+      "rel_path": "CODER_IMPLEMENTATION_SOP.md",
+      "category": "documentation files",
+      "subcategory": "docs",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
       "rel_path": "count_workflows.py",
       "category": "other files",
       "subcategory": "other",
       "doc_mode": "summary",
       "status": "current",
       "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "docs/codebase/04_changes/00DOC-GEN-20260710-001-bootstrap-snapshot.json",
+      "category": "configuration/data files",
+      "subcategory": "config",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/config-and-data.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "docs/codebase/04_changes/00DOC-GEN-20260710-002-bootstrap-snapshot.json",
+      "category": "configuration/data files",
+      "subcategory": "config",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/config-and-data.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "docs/codebase/04_changes/00DOC-GEN-20260710-003-bootstrap-snapshot.json",
+      "category": "configuration/data files",
+      "subcategory": "config",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/config-and-data.md",
       "last_verified_by_change": "bootstrap/reconcile scan"
     },
     {
@@ -2174,6 +2255,15 @@
     },
     {
       "rel_path": "run-00_master_docs_bootstrap_v1.bat",
+      "category": "scripts",
+      "subcategory": "scripts",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/scripts-suite.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "run-00_master_docs_bootstrap_v2.bat",
       "category": "scripts",
       "subcategory": "scripts",
       "doc_mode": "summary",
@@ -2632,6 +2722,15 @@
       "last_verified_by_change": "bootstrap/reconcile scan"
     },
     {
+      "rel_path": "test_script.py",
+      "category": "other files",
+      "subcategory": "other",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
       "rel_path": "tests/conftest.py",
       "category": "test files",
       "subcategory": "tests",
@@ -2749,6 +2848,15 @@
       "last_verified_by_change": "bootstrap/reconcile scan"
     },
     {
+      "rel_path": "tests/unit/test_agent_tools.py",
+      "category": "test files",
+      "subcategory": "tests",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/tests-suite.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
       "rel_path": "tests/unit/test_bundle_loader.py",
       "category": "test files",
       "subcategory": "tests",
@@ -2767,7 +2875,25 @@
       "last_verified_by_change": "bootstrap/reconcile scan"
     },
     {
+      "rel_path": "tests/unit/test_coder_adapters_sidecar_grace.py",
+      "category": "test files",
+      "subcategory": "tests",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/tests-suite.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
       "rel_path": "tests/unit/test_constants_registry.py",
+      "category": "test files",
+      "subcategory": "tests",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/tests-suite.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "tests/unit/test_context_extensions.py",
       "category": "test files",
       "subcategory": "tests",
       "doc_mode": "summary",
@@ -2830,6 +2956,24 @@
       "last_verified_by_change": "bootstrap/reconcile scan"
     },
     {
+      "rel_path": "tests/unit/test_workflow_packages.py",
+      "category": "test files",
+      "subcategory": "tests",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/tests-suite.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "tests/unit/test_workflow_registry.py",
+      "category": "test files",
+      "subcategory": "tests",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/tests-suite.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
       "rel_path": "TODO_LIST.md",
       "category": "documentation files",
       "subcategory": "docs",
@@ -2863,6 +3007,105 @@
       "doc_mode": "summary",
       "status": "current",
       "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "workflows/00_master_docs_bootstrap_v2/actions.py",
+      "category": "other files",
+      "subcategory": "other",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "workflows/00_master_docs_bootstrap_v2/context_extensions.py",
+      "category": "other files",
+      "subcategory": "other",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "workflows/00_master_docs_bootstrap_v2/prompts/02_generate_project_analysis.txt",
+      "category": "other files",
+      "subcategory": "other",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "workflows/00_master_docs_bootstrap_v2/prompts/03_generate_system_overview_docs.txt",
+      "category": "other files",
+      "subcategory": "other",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "workflows/00_master_docs_bootstrap_v2/prompts/04_generate_architecture_docs.txt",
+      "category": "other files",
+      "subcategory": "other",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "workflows/00_master_docs_bootstrap_v2/prompts/04b_generate_integration_docs.txt",
+      "category": "other files",
+      "subcategory": "other",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "workflows/00_master_docs_bootstrap_v2/prompts/04c_generate_failure_docs.txt",
+      "category": "other files",
+      "subcategory": "other",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "workflows/00_master_docs_bootstrap_v2/prompts/04d_generate_architecture_flow_docs.txt",
+      "category": "other files",
+      "subcategory": "other",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "workflows/00_master_docs_bootstrap_v2/prompts/05_review_master_system_docs.txt",
+      "category": "other files",
+      "subcategory": "other",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "workflows/00_master_docs_bootstrap_v2/prompts/06_refine_master_system_docs.txt",
+      "category": "other files",
+      "subcategory": "other",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "workflows/00_master_docs_bootstrap_v2/workflow.toml",
+      "category": "configuration/data files",
+      "subcategory": "config",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/config-and-data.md",
       "last_verified_by_change": "bootstrap/reconcile scan"
     }
   ],
@@ -5510,6 +5753,30 @@
           "is_async": false
         },
         {
+          "name": "seed_workflow_packages",
+          "signature": "(workspace_root: Path, workflow_name: str = 'default')",
+          "summary": "Copy plugin workflow packages from the repo into the global runner home.",
+          "docstring": "Copy plugin workflow packages from the repo into the global runner home.\n\nScans ``<workspace_root>/workflows/`` for directories that contain a\n``workflow.toml`` manifest and copies each one into the active workflow\nbundle at ``%USERPROFILE%/.ukbe-runner/workflows/<workflow_name>/<name>/``.\n\nThis is the plugin-package analogue of ``seed_workflow_bundle()``.",
+          "parameters": [
+            {
+              "name": "workspace_root",
+              "type": "Path",
+              "default": "",
+              "kind": "positional"
+            },
+            {
+              "name": "workflow_name",
+              "type": "str",
+              "default": "'default'",
+              "kind": "positional"
+            }
+          ],
+          "return_type": "list[Path]",
+          "raises": [],
+          "decorators": [],
+          "is_async": false
+        },
+        {
           "name": "init_workspace",
           "signature": "(workspace_root: Path, workflow_name: str = 'default', *, domain: str = DEFAULT_DOMAIN_BUNDLE, bundle_profile: str = DEFAULT_BUNDLE_PROFILE)",
           "summary": "",
@@ -6196,7 +6463,8 @@
       "constants": [
         "DEFAULT_CODER_TIMEOUT_SECONDS",
         "SIDECAR_POLL_INTERVAL_SECONDS",
-        "SIDECAR_SETTLE_DELAY_SECONDS"
+        "SIDECAR_SETTLE_DELAY_SECONDS",
+        "DEFAULT_SIDECAR_POST_COMPLETE_GRACE_SECONDS"
       ],
       "test_references": []
     },
@@ -7495,7 +7763,6 @@
       ],
       "public_classes": [],
       "constants": [
-        "MASTER_BOOTSTRAP_WORKFLOW",
         "EXECUTION_SCAFFOLD_WORKFLOW",
         "ARCHITECTURE_SITE_WORKFLOW",
         "WORKFLOW_GENERATED_MARKER",
@@ -9555,6 +9822,8 @@
         "runner_logger",
         "runtime_context",
         "step_runner",
+        "workflow_packages.loader",
+        "workflow_packages.registry",
         "workflow_router",
         "workflow_specs"
       ],
@@ -9651,7 +9920,6 @@
         "actions.validate_developer_site",
         "actions.validate_operator_site",
         "actions.validate_stakeholder_site",
-        "actions.validate_system_docs",
         "actions.validate_tester_site",
         "actions.validate_user_site"
       ],
@@ -9660,7 +9928,7 @@
           "name": "execute",
           "signature": "(*, action_name: str, context: dict[str, str], state: dict, step_cfg: dict, step: str, project_root: Path)",
           "summary": "Dispatch to a registered action function.",
-          "docstring": "Dispatch to a registered action function.\n\nRaises:\n    KeyError — if action_name is not in the registry.\n    Exception — action-specific failures (caller routes to failure).",
+          "docstring": "Dispatch to a registered action function.\n\nResolution order:\n1. ``step_cfg[\"_workflow_bundle\"].custom_actions`` — package-local actions.\n2. ``ACTION_REGISTRY`` — globally registered actions.\n\nRaises:\n    KeyError — if action_name is not found in either registry.\n    Exception — action-specific failures (caller routes to failure).",
           "parameters": [
             {
               "name": "action_name",
@@ -9703,7 +9971,7 @@
           "raises": [
             {
               "exception": "KeyError",
-              "description": "if action_name is not in the registry."
+              "description": "if action_name is not found in either registry."
             },
             {
               "exception": "Exception",
@@ -10654,10 +10922,12 @@
         "dataclasses",
         "datetime",
         "hashlib",
+        "importlib.util",
         "json",
         "pathlib",
         "re",
         "shutil",
+        "sys",
         "tempfile",
         "typing"
       ],
@@ -11022,6 +11292,7 @@
       "constants": [
         "RESULT_SCHEMA_PATH",
         "SIDECAR_INSTRUCTION_TEMPLATE",
+        "CODER_SOP_INSTRUCTION_TEMPLATE",
         "_TOOL_INSTRUCTION_TEMPLATE"
       ],
       "test_references": []
@@ -11628,7 +11899,7 @@
       "doc_mode": "summary",
       "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-tools-agent-tools.md",
       "summary": "agent_tools.py — Task coder tool functions for agent-runner steps.",
-      "module_doc": "agent_tools.py — Task coder tool functions for agent-runner steps.\n\nTwo operations:\n  create_todos(step_id, todos)        → records all todo items as pending\n  mark_complete(step_id, index, notes) → marks a todo item as completed\n\nWrites append-only JSON lines to the file at PROGRESS_FILE env var.\nAlso POSTs to the backend API when BACKEND_URL and WORKFLOW_STEP_RUN_ID are set.",
+      "module_doc": "agent_tools.py — Task coder tool functions for agent-runner steps.\n\nThree operations:\n  create_todos(step_id, todos)         → records all todo items as pending\n  mark_process(step_id, index, notes)  → marks a todo item as processing\n  mark_complete(step_id, index, notes) → marks a todo item as completed\n\nWrites append-only JSON lines to the file at PROGRESS_FILE env var.\nAlso POSTs to the backend API when BACKEND_URL and WORKFLOW_STEP_RUN_ID are set.",
       "stdlib_imports": [
         "datetime",
         "json",
@@ -11656,6 +11927,36 @@
               "name": "todos",
               "type": "list",
               "default": "",
+              "kind": "positional"
+            }
+          ],
+          "return_type": "dict",
+          "raises": [],
+          "decorators": [],
+          "is_async": false
+        },
+        {
+          "name": "mark_process",
+          "signature": "(step_id: str, todo_index: int, notes: str = '')",
+          "summary": "Mark the todo at 1-based index as processing.",
+          "docstring": "Mark the todo at 1-based index as processing.",
+          "parameters": [
+            {
+              "name": "step_id",
+              "type": "str",
+              "default": "",
+              "kind": "positional"
+            },
+            {
+              "name": "todo_index",
+              "type": "int",
+              "default": "",
+              "kind": "positional"
+            },
+            {
+              "name": "notes",
+              "type": "str",
+              "default": "''",
               "kind": "positional"
             }
           ],
@@ -11701,6 +12002,349 @@
         "BACKEND_URL",
         "STEP_RUN_ID"
       ],
+      "test_references": []
+    },
+    {
+      "rel_path": "agent_runner_v2/workflow_packages/__init__.py",
+      "module_name": "agent_runner_v2",
+      "module_area": "package",
+      "doc_mode": "stub",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-workflow-packages-init.md",
+      "summary": "Auto-generated baseline module documentation.",
+      "module_doc": "",
+      "stdlib_imports": [],
+      "local_imports": [],
+      "external_imports": [],
+      "public_functions": [],
+      "public_classes": [],
+      "constants": [],
+      "test_references": [
+        "tests/conftest.py"
+      ]
+    },
+    {
+      "rel_path": "agent_runner_v2/workflow_packages/actions/__init__.py",
+      "module_name": "agent_runner_v2",
+      "module_area": "package",
+      "doc_mode": "stub",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-workflow-packages-actions-init.md",
+      "summary": "Pluggable action decorator and registry for workflow packages.",
+      "module_doc": "Pluggable action decorator and registry for workflow packages.\n\nUsage\n-----\n    from agent_runner_v2.workflow_packages.actions import action\n\n    @action(\"my_custom_action\")\n    def my_custom_action(*, context, state, step_cfg, project_root):\n        # ... implementation ...\n        return ActionResult(status=\"APPROVED\", ...)\n\nActions registered via the decorator are automatically collected when a\nworkflow package's ``actions.py`` module is loaded, and the runner\ndispatches to them before falling back to the global ``ACTION_REGISTRY``.",
+      "stdlib_imports": [
+        "__future__",
+        "typing"
+      ],
+      "local_imports": [],
+      "external_imports": [
+        "action_result"
+      ],
+      "public_functions": [
+        {
+          "name": "action",
+          "signature": "(name: str | None = None)",
+          "summary": "Decorator that registers a function as a runner action.",
+          "docstring": "Decorator that registers a function as a runner action.\n\nParameters\n----------\nname :\n    The action name used in ``workflow.toml`` ``action = \"...\"`` entries.\n    Defaults to the function's ``__name__`` when omitted.\n\nExamples\n--------\n.. code-block:: python\n\n    @action(\"validate_system_docs\")\n    def validate_system_docs(*, context, state, step_cfg, project_root):\n        ...",
+          "parameters": [
+            {
+              "name": "name",
+              "type": "str | None",
+              "default": "None",
+              "kind": "positional"
+            }
+          ],
+          "return_type": "Callable[, ActionFn]",
+          "raises": [],
+          "decorators": [],
+          "is_async": false
+        },
+        {
+          "name": "get_registered_actions",
+          "signature": "()",
+          "summary": "Return a copy of all decorator-registered actions.",
+          "docstring": "Return a copy of all decorator-registered actions.",
+          "parameters": [],
+          "return_type": "dict[str, ActionFn]",
+          "raises": [],
+          "decorators": [],
+          "is_async": false
+        },
+        {
+          "name": "clear_registered_actions",
+          "signature": "()",
+          "summary": "Clear all decorator-registered actions (useful in tests).",
+          "docstring": "Clear all decorator-registered actions (useful in tests).",
+          "parameters": [],
+          "return_type": "None",
+          "raises": [],
+          "decorators": [],
+          "is_async": false
+        }
+      ],
+      "public_classes": [],
+      "constants": [],
+      "test_references": [
+        "tests/conftest.py"
+      ]
+    },
+    {
+      "rel_path": "agent_runner_v2/workflow_packages/base.py",
+      "module_name": "agent_runner_v2.workflow_packages.base",
+      "module_area": "support",
+      "doc_mode": "summary",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-workflow-packages-base.md",
+      "summary": "Auto-generated baseline module documentation.",
+      "module_doc": "",
+      "stdlib_imports": [
+        "__future__",
+        "dataclasses",
+        "pathlib",
+        "typing"
+      ],
+      "local_imports": [],
+      "external_imports": [],
+      "public_functions": [],
+      "public_classes": [
+        {
+          "name": "StepConfig",
+          "summary": "Canonical, validated step configuration from a workflow.toml manifest.",
+          "docstring": "Canonical, validated step configuration from a workflow.toml manifest.",
+          "decorators": [
+            "dataclass"
+          ],
+          "bases": [],
+          "methods": []
+        },
+        {
+          "name": "WorkflowBundle",
+          "summary": "A fully loaded, validated workflow package ready for execution.",
+          "docstring": "A fully loaded, validated workflow package ready for execution.",
+          "decorators": [
+            "dataclass"
+          ],
+          "bases": [],
+          "methods": [
+            {
+              "name": "get_step",
+              "signature": "(name: str)",
+              "summary": "Look up a step by name. Raises KeyError if missing.",
+              "return_type": "StepConfig"
+            },
+            {
+              "name": "next_step",
+              "signature": "(current: str)",
+              "summary": "Return the next step in the ordered list, or None.",
+              "return_type": "str | None"
+            }
+          ]
+        }
+      ],
+      "constants": [],
+      "test_references": []
+    },
+    {
+      "rel_path": "agent_runner_v2/workflow_packages/loader.py",
+      "module_name": "agent_runner_v2.workflow_packages.loader",
+      "module_area": "support",
+      "doc_mode": "summary",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-workflow-packages-loader.md",
+      "summary": "Parse workflow.toml manifests and adapt them to the TEMPLATE_GROUPS dict format.",
+      "module_doc": "Parse workflow.toml manifests and adapt them to the TEMPLATE_GROUPS dict format.\n\nUsage\n-----\n    bundle = load_workflow_package(Path(\"workflows/my_workflow_v2\"))\n    group_dict = bundle_to_template_group_dict(bundle)\n    # group_dict is now shaped exactly like\n    # TEMPLATE_GROUPS[\"my_workflow_v1\"] — the runner consumes it identically.",
+      "stdlib_imports": [
+        "__future__",
+        "pathlib",
+        "sys",
+        "typing"
+      ],
+      "local_imports": [],
+      "external_imports": [
+        "base"
+      ],
+      "public_functions": [
+        {
+          "name": "load_workflow_package",
+          "signature": "(package_dir: Path)",
+          "summary": "Parse *package_dir/workflow.toml* and return a validated WorkflowBundle.",
+          "docstring": "Parse *package_dir/workflow.toml* and return a validated WorkflowBundle.\n\nParameters\n----------\npackage_dir :\n    Root directory of the workflow package (must contain ``workflow.toml``).\n\nReturns\n-------\nWorkflowBundle\n    A frozen, validated bundle ready for adaptation or execution.\n\nRaises\n------\nFileNotFoundError\n    If ``workflow.toml`` is missing.\nValueError\n    If the manifest is structurally invalid or missing required fields.",
+          "parameters": [
+            {
+              "name": "package_dir",
+              "type": "Path",
+              "default": "",
+              "kind": "positional"
+            }
+          ],
+          "return_type": "WorkflowBundle",
+          "raises": [],
+          "decorators": [],
+          "is_async": false
+        },
+        {
+          "name": "bundle_to_template_group_dict",
+          "signature": "(bundle: WorkflowBundle)",
+          "summary": "Adapt a ``WorkflowBundle`` into a ``TEMPLATE_GROUPS``-style dict.",
+          "docstring": "Adapt a ``WorkflowBundle`` into a ``TEMPLATE_GROUPS``-style dict.\n\nThe returned dict has the same structure as the per-workflow entries in\n``template_groups.py`` so the existing runner pipeline can consume it\nwithout any changes to ``step_runner.py``, ``workflow_router.py``, etc.",
+          "parameters": [
+            {
+              "name": "bundle",
+              "type": "WorkflowBundle",
+              "default": "",
+              "kind": "positional"
+            }
+          ],
+          "return_type": "dict[str, Any]",
+          "raises": [],
+          "decorators": [],
+          "is_async": false
+        }
+      ],
+      "public_classes": [],
+      "constants": [
+        "_STEP_DIRECT_KEYS",
+        "_KNOWN_STEP_KEYS"
+      ],
+      "test_references": [
+        "tests/conftest.py"
+      ]
+    },
+    {
+      "rel_path": "agent_runner_v2/workflow_packages/registry.py",
+      "module_name": "agent_runner_v2.workflow_packages.registry",
+      "module_area": "support",
+      "doc_mode": "summary",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-workflow-packages-registry.md",
+      "summary": "Workflow package registry — discovery, caching, and lookup.",
+      "module_doc": "Workflow package registry — discovery, caching, and lookup.\n\nThe registry scans configured search paths for ``workflows/<name>/workflow.toml``\ndirectories and returns ``WorkflowBundle`` instances on demand.",
+      "stdlib_imports": [
+        "__future__",
+        "pathlib",
+        "typing"
+      ],
+      "local_imports": [],
+      "external_imports": [
+        "base",
+        "loader"
+      ],
+      "public_functions": [
+        {
+          "name": "get_global_registry",
+          "signature": "()",
+          "summary": "Return the process-wide singleton registry (lazily created).",
+          "docstring": "Return the process-wide singleton registry (lazily created).",
+          "parameters": [],
+          "return_type": "WorkflowRegistry",
+          "raises": [],
+          "decorators": [],
+          "is_async": false
+        },
+        {
+          "name": "set_global_registry",
+          "signature": "(registry: WorkflowRegistry)",
+          "summary": "Replace the process-wide singleton registry.",
+          "docstring": "Replace the process-wide singleton registry.",
+          "parameters": [
+            {
+              "name": "registry",
+              "type": "WorkflowRegistry",
+              "default": "",
+              "kind": "positional"
+            }
+          ],
+          "return_type": "None",
+          "raises": [],
+          "decorators": [],
+          "is_async": false
+        },
+        {
+          "name": "discover_workflow_package",
+          "signature": "(name: str, *, project_root: str | Path | None = None, workflow_root: str | Path | None = None)",
+          "summary": "Convenience: discover a single package by name.",
+          "docstring": "Convenience: discover a single package by name.\n\nSearch order (first match wins):\n1. ``<workflow_root>/<name>/`` — global runner home workflow bundle directory\n   (runtime source of truth; e.g. ``~/.ukbe-runner/workflows/default/``).\n   This is the ONLY path used at runtime.\n2. ``<project_root>/workflows/<name>/`` — fallback for tests and direct\n   invocation without ``workflow_root``.\n\nReturns ``None`` when the package is not found (no exception).",
+          "parameters": [
+            {
+              "name": "name",
+              "type": "str",
+              "default": "",
+              "kind": "positional"
+            },
+            {
+              "name": "project_root",
+              "type": "str | Path | None",
+              "default": "None",
+              "kind": "keyword-only"
+            },
+            {
+              "name": "workflow_root",
+              "type": "str | Path | None",
+              "default": "None",
+              "kind": "keyword-only"
+            }
+          ],
+          "return_type": "WorkflowBundle | None",
+          "raises": [],
+          "decorators": [],
+          "is_async": false
+        }
+      ],
+      "public_classes": [
+        {
+          "name": "WorkflowRegistry",
+          "summary": "Directory of available workflow packages on local disk.",
+          "docstring": "Directory of available workflow packages on local disk.",
+          "decorators": [],
+          "bases": [],
+          "methods": [
+            {
+              "name": "add_search_path",
+              "signature": "(path: str | Path)",
+              "summary": "Register a directory to scan for workflow packages.",
+              "return_type": "None"
+            },
+            {
+              "name": "set_search_paths",
+              "signature": "(paths: list[str | Path])",
+              "summary": "Replace all search paths (clears previous paths).",
+              "return_type": "None"
+            },
+            {
+              "name": "discover",
+              "signature": "()",
+              "summary": "Scan all search paths and index discovered workflow packages.",
+              "return_type": "None"
+            },
+            {
+              "name": "get",
+              "signature": "(name: str)",
+              "summary": "Return a previously discovered workflow bundle.",
+              "return_type": "WorkflowBundle"
+            },
+            {
+              "name": "list_workflows",
+              "signature": "()",
+              "summary": "Return sorted names of all discovered workflow packages.",
+              "return_type": "list[str]"
+            },
+            {
+              "name": "has",
+              "signature": "(name: str)",
+              "summary": "Check whether a workflow package with *name* exists.",
+              "return_type": "bool"
+            },
+            {
+              "name": "create",
+              "signature": "(*, search_paths: list[str | Path] | None = None)",
+              "summary": "Factory: build a registry, add paths, and discover.",
+              "return_type": "WorkflowRegistry"
+            },
+            {
+              "name": "from_project_root",
+              "signature": "(project_root: str | Path, *, additional_paths: list[str | Path] | None = None)",
+              "summary": "Factory: scan ``<project_root>/workflows/`` plus any extra paths.",
+              "return_type": "WorkflowRegistry"
+            }
+          ]
+        }
+      ],
+      "constants": [],
       "test_references": []
     },
     {
@@ -13530,32 +14174,32 @@
   ],
   "counts": {
     "configuration/data files": {
-      "current": 9,
+      "current": 13,
       "needs_update": 0,
       "pending_review": 0,
       "superseded": 0,
-      "total": 9
+      "total": 13
     },
     "other files": {
-      "current": 7,
+      "current": 18,
       "needs_update": 0,
       "pending_review": 0,
       "superseded": 0,
-      "total": 7
+      "total": 18
     },
     "python modules": {
-      "current": 67,
+      "current": 72,
       "needs_update": 0,
       "pending_review": 0,
       "superseded": 0,
-      "total": 67
+      "total": 72
     },
     "documentation files": {
-      "current": 34,
+      "current": 35,
       "needs_update": 0,
       "pending_review": 0,
       "superseded": 0,
-      "total": 34
+      "total": 35
     },
     "bootstrap workflow files": {
       "current": 115,
@@ -13565,18 +14209,18 @@
       "total": 115
     },
     "scripts": {
-      "current": 65,
+      "current": 66,
       "needs_update": 0,
       "pending_review": 0,
       "superseded": 0,
-      "total": 65
+      "total": 66
     },
     "test files": {
-      "current": 20,
+      "current": 25,
       "needs_update": 0,
       "pending_review": 0,
       "superseded": 0,
-      "total": 20
+      "total": 25
     }
   }
 }

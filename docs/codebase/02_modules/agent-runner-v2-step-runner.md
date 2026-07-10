@@ -6,9 +6,9 @@ module_path: "agent_runner_v2/step_runner.py"
 module_area: "core"
 documentation_mode: "full"
 owner_doc_path: "docs/codebase/02_modules/agent-runner-v2-step-runner.md"
-last_verified_by_change: "00_master_docs_bootstrap_v1 / 00DOC-GEN-20260710-004 / 2026-07-10T09:40:54+08:00"
-created: "2026-07-10T09:40:54+08:00"
-owner: "00_master_docs_bootstrap_v1"
+last_verified_by_change: "00_master_docs_bootstrap_v2 / 00DOC-GEN-20260710-004 / 2026-07-10T14:00:58+08:00"
+created: "2026-07-10T14:00:58+08:00"
+owner: "00_master_docs_bootstrap_v2"
 ---
 
 # Module Documentation: agent_runner_v2.step_runner
@@ -31,10 +31,12 @@ This module belongs to the `core` area and is documented as `full`.
 | `dataclasses` | stdlib module | imported dependency |
 | `datetime` | stdlib module | imported dependency |
 | `hashlib` | stdlib module | imported dependency |
+| `importlib.util` | stdlib module | imported dependency |
 | `json` | stdlib module | imported dependency |
 | `pathlib` | stdlib module | imported dependency |
 | `re` | stdlib module | imported dependency |
 | `shutil` | stdlib module | imported dependency |
+| `sys` | stdlib module | imported dependency |
 | `tempfile` | stdlib module | imported dependency |
 | `typing` | stdlib module | imported dependency |
 | `artifact_paths` | external module | repository dependency |
@@ -215,6 +217,7 @@ This module belongs to the `core` area and is documented as `full`.
 |------|--------|
 | `RESULT_SCHEMA_PATH` | module configuration |
 | `SIDECAR_INSTRUCTION_TEMPLATE` | module configuration |
+| `CODER_SOP_INSTRUCTION_TEMPLATE` | module configuration |
 | `_TOOL_INSTRUCTION_TEMPLATE` | module configuration |
 
 
@@ -242,4 +245,4 @@ This module belongs to the `core` area and is documented as `full`.
 
 | Date | Change | Verified By |
 |------|--------|-------------|
-| 2026-07-10 | Initial baseline generated from repository scan | 00_master_docs_bootstrap_v1 |
+| 2026-07-10 | Initial baseline generated from repository scan | 00_master_docs_bootstrap_v2 |

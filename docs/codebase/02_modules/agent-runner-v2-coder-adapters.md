@@ -6,9 +6,9 @@ module_path: "agent_runner_v2/coder_adapters.py"
 module_area: "coder"
 documentation_mode: "full"
 owner_doc_path: "docs/codebase/02_modules/agent-runner-v2-coder-adapters.md"
-last_verified_by_change: "00_master_docs_bootstrap_v1 / 00DOC-GEN-20260710-004 / 2026-07-10T09:40:54+08:00"
-created: "2026-07-10T09:40:54+08:00"
-owner: "00_master_docs_bootstrap_v1"
+last_verified_by_change: "00_master_docs_bootstrap_v2 / 00DOC-GEN-20260710-004 / 2026-07-10T14:00:58+08:00"
+created: "2026-07-10T14:00:58+08:00"
+owner: "00_master_docs_bootstrap_v2"
 ---
 
 # Module Documentation: agent_runner_v2.coder_adapters
@@ -135,6 +135,7 @@ This module belongs to the `coder` area and is documented as `full`.
 | `DEFAULT_CODER_TIMEOUT_SECONDS` | module configuration |
 | `SIDECAR_POLL_INTERVAL_SECONDS` | module configuration |
 | `SIDECAR_SETTLE_DELAY_SECONDS` | module configuration |
+| `DEFAULT_SIDECAR_POST_COMPLETE_GRACE_SECONDS` | module configuration |
 
 
 ## 3. Error Handling
@@ -155,4 +156,4 @@ No documented exceptions.
 
 | Date | Change | Verified By |
 |------|--------|-------------|
-| 2026-07-10 | Initial baseline generated from repository scan | 00_master_docs_bootstrap_v1 |
+| 2026-07-10 | Initial baseline generated from repository scan | 00_master_docs_bootstrap_v2 |

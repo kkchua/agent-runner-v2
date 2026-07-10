@@ -12,6 +12,7 @@ Role
 
 * Reviewer agent in VALIDATION mode.
 * Validate implementation output against TASK_FILE and IMPL_FILE.
+* Before validating implementation behavior, read and follow `{CODER_IMPLEMENTATION_SOP_PATH}`.
 * Do not implement or expand scope.
 
 Inputs
