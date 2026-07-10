@@ -18,6 +18,7 @@ default_max_rejects = 3
 name = "00_scan_repo_codebase"
 action = "scan_repo_codebase"
 mode = "bootstrap"
+onsuccess = "01_generate_codebase_baseline"
 
 [step.artifacts]
 produces = ["CODEBASE_SCAN_SNAPSHOT"]
@@ -30,6 +31,7 @@ result_meta_key = "CODEBASE_SCAN_SNAPSHOT"
 name = "01_generate_codebase_baseline"
 action = "sync_codebase_docs"
 mode = "bootstrap"
+onsuccess = "02_generate_project_analysis"
 
 [step.artifacts]
 required_inputs = ["CODEBASE_SCAN_SNAPSHOT"]
@@ -43,6 +45,7 @@ result_meta_key = "CODEBASE_CHANGE_IMPACT"
 name = "02_generate_project_analysis"
 prompt = "prompts/02_generate_project_analysis.txt"
 enable_notifications = true
+onsuccess = "03_generate_system_overview_docs"
 
 [step.artifacts]
 required_inputs = ["CODEBASE_SCAN_SNAPSHOT", "CODEBASE_CHANGE_IMPACT", "CODEBASE_INVENTORY"]
@@ -60,6 +63,7 @@ allowed = ["claude", "codex", "qwen-architect"]
 name = "03_generate_system_overview_docs"
 prompt = "prompts/03_generate_system_overview_docs.txt"
 enable_notifications = true
+onsuccess = "04_generate_architecture_docs"
 
 [step.artifacts]
 required_inputs = [
@@ -84,6 +88,7 @@ allowed = ["claude", "codex", "qwen-architect"]
 name = "04_generate_architecture_docs"
 prompt = "prompts/04_generate_architecture_docs.txt"
 enable_notifications = true
+onsuccess = "04b_generate_integration_docs"
 
 [step.artifacts]
 required_inputs = [
@@ -108,6 +113,7 @@ allowed = ["claude", "codex", "qwen-architect"]
 name = "04b_generate_integration_docs"
 prompt = "prompts/04b_generate_integration_docs.txt"
 enable_notifications = true
+onsuccess = "04c_generate_failure_docs"
 
 [step.artifacts]
 required_inputs = [
@@ -132,6 +138,7 @@ allowed = ["claude", "codex", "qwen-architect"]
 name = "04c_generate_failure_docs"
 prompt = "prompts/04c_generate_failure_docs.txt"
 enable_notifications = true
+onsuccess = "04d_generate_architecture_flow_docs"
 
 [step.artifacts]
 required_inputs = [
@@ -156,6 +163,7 @@ allowed = ["claude", "codex", "qwen-architect"]
 name = "04d_generate_architecture_flow_docs"
 prompt = "prompts/04d_generate_architecture_flow_docs.txt"
 enable_notifications = true
+onsuccess = "05_review_master_system_docs"
 
 [step.artifacts]
 required_inputs = [
@@ -180,6 +188,7 @@ allowed = ["claude", "codex", "qwen-architect"]
 name = "05_review_master_system_docs"
 prompt = "prompts/05_review_master_system_docs.txt"
 enable_notifications = true
+onsuccess = "07_validate_codebase_baseline"
 
 [step.artifacts]
 required_inputs = [
@@ -191,7 +200,7 @@ required_inputs = [
     "SYSTEM_FILE_STRUCTURE", "DEVELOPER_GUIDE", "RUNBOOK",
 ]
 produces = ["REVIEW_FILE_SUGGESTED"]
-result_meta_key_from_context = "REVIEW_FILE_SUGGESTED_METAJSON"
+result_meta_key = "REVIEW_FILE_SUGGESTED"
 
 requires_human_approval_after = false
 
@@ -219,7 +228,7 @@ required_inputs = [
     "CODEBASE_SCAN_SNAPSHOT", "CODEBASE_CHANGE_IMPACT",
     "CODEBASE_INVENTORY", "PROJECT_ANALYSIS",
     "SYSTEM_DOCS_INDEX", "SYSTEM_DOCS_CHANGE_LOG",
-    "REVIEW_FILE_SUGGESTED_SUGGESTED",
+    "REVIEW_FILE_SUGGESTED",
     "INTEGRATION_MAP", "FAILURE_MODES", "ARCHITECTURE_FLOW",
 ]
 produces = [
@@ -243,6 +252,7 @@ allowed = ["claude", "codex", "qwen-architect"]
 name = "07_validate_codebase_baseline"
 action = "validate_codebase_docs"
 mode = "bootstrap"
+onsuccess = "08_validate_master_system_docs"
 
 [step.artifacts]
 required_inputs = ["CODEBASE_SCAN_SNAPSHOT", "CODEBASE_CHANGE_IMPACT", "CODEBASE_INVENTORY"]
@@ -257,6 +267,7 @@ name = "08_validate_master_system_docs"
 action = "validate_system_docs"
 mode = "bootstrap"
 enable_notifications = true
+onsuccess = "09_finalize_bootstrap"
 
 [step.artifacts]
 required_inputs = [
@@ -274,6 +285,7 @@ name = "09_finalize_bootstrap"
 action = "finalize_bootstrap"
 mode = "bootstrap"
 enable_notifications = true
+onsuccess = "stepCompletion"
 
 [step.artifacts]
 required_inputs = [
@@ -285,3 +297,10 @@ required_inputs = [
 ]
 produces = ["BOOTSTRAP_SUMMARY"]
 result_meta_key = "BOOTSTRAP_SUMMARY"
+
+# ---------------------------------------------------------------------------
+# Step Completion — final terminal step
+# ---------------------------------------------------------------------------
+[[step]]
+name = "stepCompletion"
+action = "step_completion"

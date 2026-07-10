@@ -393,6 +393,18 @@ def run_action(
 
     finished_at = _now_iso()
 
+    # Write meta.json from ActionResult automatically so actions don't
+    # need to manage sidecar files themselves.
+    _save_json_atomic(meta_path, {
+        "schema_version": "v2",
+        "coder_result": {
+            "status": result.status,
+            "remark": result.remark,
+            "artifacts": dict(result.artifacts or {}),
+            "recorded_at": finished_at,
+        },
+    })
+
     # Validate the action wrote a meta.json
     meta = _read_and_validate_meta_json(meta_path)
     coder_result = meta["coder_result"]
@@ -453,9 +465,14 @@ def _resolve_meta_json_path(
     """
     from_ctx_key = step_cfg.get("result_meta_key_from_context")
     if from_ctx_key:
-        artifact_path_str = context.get(from_ctx_key, "")
-        if artifact_path_str:
-            meta_rel = artifact_rel_to_meta_rel(artifact_path_str)
+        value = context.get(from_ctx_key, "")
+        if value:
+            if from_ctx_key.endswith("_METAJSON"):
+                # Key already points to a pre-resolved .meta.json path — use directly
+                meta_rel = value
+            else:
+                # Key points to an artifact path — derive the .meta.json sidecar path
+                meta_rel = artifact_rel_to_meta_rel(value)
             return resolve_repo_or_runtime_path(meta_rel, project_root=project_root, runtime_root=JOBS_ROOT)
 
     result_key = step_cfg.get("result_meta_key")
@@ -1574,12 +1591,24 @@ def build_context(
     # Get artifacts from state for fingerprinting
     artifacts = state.get("artifacts") or {}
 
+    # Inject artifact values as context variables so prompt templates
+    # can reference {ARTIFACT_KEY} directly (e.g., {IMAGE_FOLDER}).
+    for _ak, _av in artifacts.items():
+        if _av is not None:
+            ctx[_ak] = str(_av)
+
     # For producing steps where the artifact doesn't exist yet, compute the step
     # directory meta.json path so the prompt can tell the coder where to write it.
     if step and step_cfg:
         result_key = step_cfg.get("result_meta_key") or step_cfg.get("result_meta_key_from_context", "")
+        # If result_key already ends with _METAJSON, use it directly;
+        # otherwise append _METAJSON to form the context key.
+        if result_key.endswith("_METAJSON"):
+            meta_ctx_key = result_key
+        else:
+            meta_ctx_key = f"{result_key}_METAJSON"
         prefer_step_meta = bool(step_cfg.get("action"))
-        if result_key and (prefer_step_meta or not ctx.get(f"{result_key}_METAJSON")):
+        if result_key and (prefer_step_meta or not ctx.get(meta_ctx_key)):
             step_dir_rel = str(state.get("backend_step_dir_rel") or "").strip()
             if not step_dir_rel:
                 steps = _workflow_module().TEMPLATE_GROUPS.get(state.get("template_group", ""), {}).get("steps", [])
@@ -1590,8 +1619,8 @@ def build_context(
                 template_group = state.get("template_group", "")
                 job_id = state.get("job_id", "")
                 step_dir_rel = f"{template_group}/{job_id}/{idx:02d}_{step}"
-            ctx[f"{result_key}_METAJSON"] = _normalize_backend_job_path(f"{step_dir_rel}/meta.json")
-            print(f"[step_runner] Producing step {step}: {result_key}_METAJSON -> {ctx[f'{result_key}_METAJSON']}", flush=True)
+            ctx[meta_ctx_key] = _normalize_backend_job_path(f"{step_dir_rel}/meta.json")
+            print(f"[step_runner] Producing step {step}: {meta_ctx_key} -> {ctx[meta_ctx_key]}", flush=True)
 
     ctx["ARTIFACT_FINGERPRINTS"] = _format_artifact_fingerprint_block(artifacts)
 
@@ -1756,14 +1785,6 @@ def build_context(
         produces=produces,
     )
 
-    # Run workflow package context hooks (from context_extensions.py)
-    _apply_workflow_package_context_hooks(
-        ctx=ctx,
-        state=state,
-        step=step,
-        step_cfg=step_cfg,
-    )
-
     # Print expected output paths BEFORE the agent starts (for visibility)
     if produces:
         print(f"[step_runner] step={step} produces={produces}", flush=True)
@@ -1842,11 +1863,16 @@ def build_context(
         if existing_csv_json:
             # Reuse the run directory from a prior step (gen_prompts already ran).
             p = PurePath(existing_csv_json)
-            # existing_csv_json is typically "source_csv/YYYYMMDD-NNN/"
-            run_dir = p.name.rstrip("/") or p.parts[-1] if p.parts else ""
+            # existing_csv_json may be a directory ("source_csv/YYYYMMDD-NNN/")
+            # or a file inside that directory ("source_csv/YYYYMMDD-NNN/file.json").
+            if p.suffix == ".json":
+                run_dir = str(p.parent)
+            else:
+                run_dir = str(p)
             if run_dir:
-                ctx["IMAGE_CSV_RUN_DIR"] = str(p.parent / run_dir)
-                ctx["IMAGE_CSV_JSON_METAJSON"] = str(p.parent / run_dir / "meta.json")
+                ctx["IMAGE_CSV_RUN_DIR"] = run_dir
+                ctx["IMAGE_CSV_JSON"] = run_dir
+                ctx["IMAGE_CSV_JSON_METAJSON"] = str(Path(run_dir) / "meta.json")
         else:
             # First run — compute next sequential run number for today.
             image_folder = artifacts.get("IMAGE_FOLDER")
@@ -1863,9 +1889,11 @@ def build_context(
                 run_num = f"{highest_run + 1:03d}"
                 run_dir = f"{date_code}-{run_num}"
                 ctx["IMAGE_CSV_RUN_DIR"] = str(Path("source_csv") / run_dir)
+                ctx["IMAGE_CSV_JSON"] = str(Path("source_csv") / run_dir)
                 ctx["IMAGE_CSV_JSON_METAJSON"] = str(Path("source_csv") / run_dir / "meta.json")
         if ctx.get("IMAGE_CSV_RUN_DIR"):
             print(f"[step_runner] IMAGE_CSV RUN_DIR: {ctx['IMAGE_CSV_RUN_DIR']}", flush=True)
+            print(f"[step_runner] IMAGE_CSV JSON PATH: {ctx.get('IMAGE_CSV_JSON', '')}", flush=True)
             print(f"[step_runner] IMAGE_CSV METAJSON PATH: {ctx['IMAGE_CSV_JSON_METAJSON']}", flush=True)
 
     # Task source traceability
@@ -1888,9 +1916,13 @@ def build_context(
             existing = artifacts.get("IMAGE_CSV_JSON", "")
             if existing:
                 p = PurePath(existing)
-                run_dir = p.name.rstrip("/") or p.parts[-1] if p.parts else ""
-                if run_dir:
-                    run_dir = str(p.parent / run_dir)
+                # IMAGE_CSV_JSON may be a directory ("source_csv/YYYYMMDD-NNN") or
+                # a file inside that directory ("source_csv/YYYYMMDD-NNN/file.json").
+                # Use the directory component as the run directory.
+                if p.suffix == ".json":
+                    run_dir = str(p.parent)
+                else:
+                    run_dir = str(p)
         if run_dir:
             ctx["IMAGE_CSV_RUN_DIR"] = run_dir
             ctx["IMAGE_CSV_SUBMIT_RESULT_PATH"] = str(Path(run_dir) / "submission_results.json")
@@ -1931,6 +1963,15 @@ def build_context(
         step_cfg=step_cfg or {},
         state=state,
         context=ctx,
+    )
+
+    # Run workflow package context hooks (from context_extensions.py).
+    # Runs at the very end so extensions can override any value set above.
+    _apply_workflow_package_context_hooks(
+        ctx=ctx,
+        state=state,
+        step=step,
+        step_cfg=step_cfg,
     )
 
     return ctx

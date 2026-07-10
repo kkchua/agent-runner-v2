@@ -1,12 +1,12 @@
 ---
 template_id: "CB-04-IM"
 title: "Integration Map - agent-runner-v2"
-status: "active"
-generated: "2026-07-10T14:45:58+08:00"
+Status: draft
+managed_by: workflow-generated
+generated: "2026-07-10T20:06:30+08:00"
 workflow: "00_master_docs_bootstrap_v2"
 step: "04b_generate_integration_docs"
-change_id: "00DOC-GEN-20260710-004"
-managed_by: workflow-generated
+change_id: "00DOC-20260710-0098bf53"
 ---
 
 > Managed by workflow: `00_master_docs_bootstrap_v2` / step: `04b_generate_integration_docs`
@@ -16,11 +16,7 @@ managed_by: workflow-generated
 
 ## 1. Overview
 
-This document maps how modules connect, data flows through the system, and integration points with external systems for the agent-runner-v2 workflow orchestration engine.
-
-**Scope**: Complete integration topology including internal module dependencies, data flows, external system interfaces, and extension points.
-
----
+This document maps how modules connect, data flows through the system, and integration points with external systems.
 
 ## 2. Module Dependency Graph
 
@@ -28,542 +24,503 @@ This document maps how modules connect, data flows through the system, and integ
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                           CLI ENTRY POINT                                    │
-│                         run_agent.py (2,374 lines)                           │
+│                           CLI Entry Point                                    │
+│                     agent_runner_v2/run_agent.py                             │
 └─────────────────────────────────────────────────────────────────────────────┘
                                       │
                                       ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                         STEP RUNNER CORE                                     │
-│                      step_runner.py (2,674 lines)                            │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐ │
-│  │render_prompt │  │ build_context│  │  run_step    │  │   run_action     │ │
-│  └──────────────┘  └──────────────┘  └──────────────┘  └──────────────────┘ │
+│                        Workflow Bundle Resolution                            │
+│              bundle_loader.py + workflow_packages/                          │
+│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐                 │
+│  │ Global Bundle │ or │ Local Plugin │ or │ TEMPLATE_GROUPS│               │
+│  │  ~/.ukbe-runner│    │ workflows/<n>│    │  (legacy)      │               │
+│  └──────────────┘    └──────────────┘    └──────────────┘                 │
 └─────────────────────────────────────────────────────────────────────────────┘
                                       │
-                    ┌─────────────────┼─────────────────┐
-                    ▼                 ▼                 ▼
-┌───────────────────────┐  ┌──────────────────┐  ┌────────────────────────────┐
-│   CODER ADAPTERS      │  │  ACTIONS PACKAGE │  │   WORKFLOW ROUTER          │
-│ coder_adapters.py     │  │  (28 actions)    │  │   workflow_router.py       │
-│ (1,079 lines)         │  │                  │  │   (787 lines)              │
-│                       │  │  • validate_*  │  │                            │
-│  • invoke_coder()     │  │  • sync_*      │  │  • route_after_step()      │
-│  • Claude adapter     │  │  • generate_*  │  │  • route_after_failure()   │
-│  • Codex adapter      │  │  • execute_*   │  │                            │
-│  • Qwen adapter       │  │  • submit_*    │  │                            │
-└───────────────────────┘  └──────────────────┘  └────────────────────────────┘
-                    │                 │                 │
-                    └─────────────────┼─────────────────┘
                                       ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                          JOB STATE LIFECYCLE                                 │
-│                        job_state.py (1,806 lines)                            │
-│                                                                              │
-│   ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────────┐     │
-│   │ create_job  │  │  load_job   │  │  save_job   │  │ advance_step    │     │
-│   └─────────────┘  └─────────────┘  └─────────────┘  └─────────────────┘     │
+│                        Job State Management                                  │
+│                     agent_runner_v2/job_state.py                             │
+│  - Create/load job.json                                                      │
+│  - Manage step progression                                                   │
+│  - Handle failure history                                                    │
 └─────────────────────────────────────────────────────────────────────────────┘
-```
-
-### 2.2 Module Area Dependencies
-
-| Module Area | Modules | Depends On | Description |
-|-------------|---------|------------|-------------|
-| **core** | run_agent.py, step_runner.py, workflow_router.py | state, coder, backend | Main execution pipeline |
-| **state** | job_state.py, runtime_context.py, execution_request.py, execution_result.py | - | Job lifecycle and context management |
-| **coder** | coder_adapters.py, model_config.py | state | LLM backend invocation (Claude/Codex/Qwen) |
-| **backend** | backend_client.py, daemon.py, runner_logger.py | state | Worker mode and backend connectivity |
-| **actions** | 28 action modules | core, state | Deterministic runner actions |
-| **bootstrap** | bundle_loader.py, template_groups.py | constants | Workflow bundle loading and discovery |
-| **support** | constants.py, doc_paths.py, exceptions.py | - | Shared utilities and constants |
-
-### 2.3 Detailed Dependency Matrix
-
-```
-                    ┌──────────┬──────────┬──────────┬──────────┬──────────┬──────────┬──────────┬──────────┐
-                    │constants │  state   │  coder   │  core    │ actions  │ backend  │ bootstrap│ support  │
-┌───────────────────┼──────────┼──────────┼──────────┼──────────┼──────────┼──────────┼──────────┼──────────┤
-│ run_agent.py      │    ●     │    ●     │    ○     │    ○     │    ○     │    ●     │    ●     │    ●     │
-│ step_runner.py    │    ●     │    ●     │    ●     │    ○     │    ○     │    ○     │    ○     │    ●     │
-│ workflow_router.py│    ○     │    ●     │    ●     │    ○     │    ○     │    ○     │    ○     │    ●     │
-│ job_state.py      │    ●     │    ○     │    ○     │    ○     │    ○     │    ○     │    ○     │    ●     │
-│ coder_adapters.py │    ○     │    ●     │    ○     │    ○     │    ○     │    ○     │    ○     │    ●     │
-│ backend_client.py │    ○     │    ○     │    ○     │    ○     │    ○     │    ○     │    ○     │    ○     │
-│ daemon.py         │    ○     │    ●     │    ○     │    ○     │    ○     │    ○     │    ○     │    ○     │
-│ actions/*         │    ●     │    ●     │    ○     │    ○     │    ○     │    ●     │    ○     │    ●     │
-│ constants.py      │    ○     │    ○     │    ○     │    ○     │    ○     │    ○     │    ○     │    ○     │
-└───────────────────┴──────────┴──────────┴──────────┴──────────┴──────────┴──────────┴──────────┴──────────┘
-
-● = direct import dependency
-○ = indirect or configuration dependency
-```
-
----
-
-## 3. Data Flow Through the System
-
-### 3.1 Main Execution Path (CLI Mode)
-
-```
-┌─────────┐    ┌─────────┐    ┌─────────┐    ┌─────────┐    ┌─────────┐    ┌─────────┐
-│  CLI    │───▶│  Parse  │───▶│  Load   │───▶│  Create │───▶│ Execute │───▶│  Route  │
-│  Args   │    │  Args   │    │ Workflow│    │  Job    │    │  Steps  │    │  Next   │
-└─────────┘    └─────────┘    └─────────┘    └─────────┘    └─────────┘    └─────────┘
-     │                                                          │
-     │                    ┌───────────────────────────────────────┘
-     │                    │
-     │                    ▼
-     │           ┌────────────────────┐
-     │           │   For Each Step:   │
-     │           │                    │
-     │           │  ┌──────────────┐  │
-     │           │  │ Render       │  │
-     │           │  │ Prompt       │  │
-     │           │  └──────────────┘  │
-     │           │         │          │
-     │           │         ▼          │
-     │           │  ┌──────────────┐  │
-     │           │  │ Invoke Coder │  │
-     │           │  │ or Action    │  │
-     │           │  └──────────────┘  │
-     │           │         │          │
-     │           │         ▼          │
-     │           │  ┌──────────────┐  │
-     │           │  │ Read Meta    │  │
-     │           │  │ Validate     │  │
-     │           │  └──────────────┘  │
-     │           │         │          │
-     │           │         ▼          │
-     │           │  ┌──────────────┐  │
-     │           │  │ Route Result │  │
-     │           │  └──────────────┘  │
-     │           │                    │
-     │           └────────────────────┘
-     │                    │
-     └────────────────────┘
+                                      │
+                                      ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                        Step Execution Engine                                 │
+│                     agent_runner_v2/step_runner.py                           │
+│  ┌───────────────────────────────────────────────────────────────────────┐  │
+│  │  1. Render prompt (build_context + render_prompt)                       │  │
+│  │  2. Invoke coder OR execute action                                    │  │
+│  │  3. Read meta.json sidecar                                            │  │
+│  │  4. Validate artifacts                                                │  │
+│  │  5. Enrich sidecar with runner_data                                   │  │
+│  └───────────────────────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                      │
+                    ┌─────────────────┴─────────────────┐
+                    ▼                                   ▼
+┌─────────────────────────────────┐   ┌───────────────────────────────────────┐
+│      Coder Invocation           │   │      Action Execution               │
+│   agent_runner_v2/              │   │   agent_runner_v2/actions/           │
+│   coder_adapters.py             │   │   (30+ deterministic actions)       │
+│                                 │   │                                       │
+│  ┌─────────────────────────┐    │   │  - scan_repo_codebase                 │
+│  │ Claude/Codex/Qwen      │    │   │  - sync_codebase_docs               │
+│  │ via subprocess         │    │   │  - validate_delivery_docs           │
+│  │ (llm_response_schema)  │    │   │  - generate_site                      │
+│  └─────────────────────────┘    │   │  - execute_t2i / execute_i2v        │
+└─────────────────────────────────┘   │  - ... (see actions-package)        │
+                                      └───────────────────────────────────────┘
+                    │
                     ▼
-┌─────────┐    ┌─────────┐    ┌─────────┐
-│  Save   │◀───│ Update  │◀───│ Final   │
-│  State  │    │  State  │    │  Status │
-└─────────┘    └─────────┘    └─────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                        Post-Step Routing                                     │
+│                     agent_runner_v2/workflow_router.py                       │
+│  - route_after_step() → approve/reject/refine                              │
+│  - route_after_failure() → failure handling                                │
+│  - Enforce max_rejects limits                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                      │
+                                      ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                        Backend Integration (Optional)                      │
+│                     agent_runner_v2/backend_client.py                        │
+│  - submit_run(), approve_run(), get_run()                                  │
+│  - register_worker(), heartbeat(), claim_step()                            │
+│  - complete_step_run(), create_artifact(), create_event()                  │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### 3.2 Worker Mode Data Flow (Backend-Connected)
+### 2.2 Module Area Classification
+
+| Area | Modules | Responsibility |
+|------|---------|----------------|
+| **core** | `run_agent.py`, `step_runner.py`, `workflow_router.py` | CLI entry, step execution, routing |
+| **coder** | `coder_adapters.py`, `model_config.py` | LLM invocation, model configuration |
+| **state** | `job_state.py`, `runtime_context.py`, `execution_request.py`, `execution_result.py` | Job lifecycle, path context, request/result schemas |
+| **bootstrap** | `bundle_loader.py`, `bootstrap/workflows/default/template_groups.py` | Bundle seeding, workflow loading |
+| **backend** | `backend_client.py`, `daemon.py`, `runner_logger.py` | API client, daemon mode, logging |
+| **actions** | `actions/*.py` (28 modules) | Deterministic runner actions |
+| **support** | `constants.py`, `doc_paths.py`, `documentation_guardrails.py`, `workflow_packages/*` | Path constants, validation, plugin system |
+| **schema** | `exceptions.py`, `artifact_paths.py`, `action_result.py`, `runner_actions.py` | Error types, path schemas, result types |
+| **commands** | `approve_commands.py`, `submit_commands.py`, `engine_commands.py`, `submitter.py` | CLI command implementations |
+
+### 2.3 Dependency Direction Matrix
 
 ```
-┌──────────────┐     HTTP/API      ┌──────────────┐
-│   Backend    │◀───────────────▶ │   Worker     │
-│   Service    │  claim/submit    │   Process    │
-└──────────────┘                  └──────────────┘
-       │                                  │
-       │ 1. Poll for work                 │
-       │ 2. Claim step run                │
-       │ 3. Execute locally               │
-       │ 4. Submit results                │
-       │                                  │
-       ▼                                  ▼
-┌──────────────┐                  ┌──────────────┐
-│ Step Run     │                  │ ukbe-run-agent│
-│ Queue        │                  │ worker mode  │
-└──────────────┘                  └──────────────┘
+                    ┌──────────────┐
+                    │  run_agent   │ CLI entry
+                    └──────┬───────┘
+                           │
+        ┌──────────────────┼──────────────────┐
+        ▼                  ▼                  ▼
+   ┌─────────┐      ┌─────────────┐      ┌──────────┐
+   │job_state│      │ step_runner │      │ workflow_│
+   │         │◄────►│             │◄────►│ router   │
+   └────┬────┘      └──────┬──────┘      └────┬─────┘
+        │                  │                  │
+        ▼                  ▼                  ▼
+   ┌─────────┐      ┌─────────────┐      ┌──────────┐
+   │runtime_ │      │ coder_      │      │ backend_ │
+   │context  │      │ adapters    │      │ client   │
+   └─────────┘      └─────────────┘      └──────────┘
+        │                  │                  │
+        ▼                  ▼                  ▼
+   ┌─────────┐      ┌─────────────┐      ┌──────────┐
+   │constants│      │ actions/*   │      │ bundle_  │
+   │doc_paths│      │             │      │ loader   │
+   └─────────┘      └─────────────┘      └──────────┘
 ```
 
-### 3.3 Data Flow Artifacts
+## 3. Data Flow Diagrams
 
-| Stage | Input | Processing | Output | Sidecar |
-|-------|-------|------------|--------|---------|
-| **Job Creation** | seed_artifacts, group_cfg | `create_job()` | job.json | - |
-| **Step Preparation** | job.json, step_cfg | `build_context()` | context dict | - |
-| **Prompt Rendering** | template.txt, context | `render_prompt()` | rendered prompt | - |
-| **Coder Invocation** | rendered prompt, schema | `invoke_coder()` | process output | - |
-| **Result Validation** | meta.json, artifacts | `run_step()` | StepResult | enriched meta.json |
-| **Routing** | StepResult, state | `route_after_step()` | updated state | updated job.json |
+### 3.1 Local Workflow Execution Flow
 
----
+```
+┌──────────┐    ┌──────────┐    ┌──────────┐    ┌──────────┐    ┌──────────┐
+│  CLI     │───►│  Load    │───►│  Create  │───►│  Execute │───►│  Route   │
+│  Invoke  │    │  Workflow│    │  Job     │    │  Step    │    │  Next    │
+└──────────┘    └──────────┘    └──────────┘    └──────────┘    └──────────┘
+     │               │               │               │               │
+     ▼               ▼               ▼               ▼               ▼
+  Arguments    TEMPLATE_GROUPS    job.json      Prompt render    meta.json
+  --workflow   or workflow.toml   State init    Coder/action     Validation
+  --step                                                        Artifact check
+```
+
+### 3.2 Backend-Connected Worker Flow
+
+```
+┌──────────────┐         ┌──────────────┐         ┌──────────────┐
+│   Backend    │◄───────►│    Daemon    │◄──────►│   Worker     │
+│   API        │  Poll   │   (poller)   │  Spawn  │  (executor)  │
+└──────────────┘         └──────────────┘         └──────────────┘
+        │                         │                        │
+        │                         ▼                        ▼
+        │                ┌──────────────┐           ┌──────────────┐
+        │                │ claim_step() │           │ execute-step │
+        │                └──────────────┘           └──────────────┘
+        │                                                   │
+        ▼                                                   ▼
+┌──────────────┐                                    ┌──────────────┐
+│ complete_    │◄───────────────────────────────────│ meta.json    │
+│ step_run()   │         Submit results               │ sidecar      │
+└──────────────┘                                    └──────────────┘
+```
+
+### 3.3 Meta.json Sidecar Contract
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         Sidecar Data Flow                                  │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+  Step Execution
+       │
+       ▼
+  ┌─────────────────┐
+  │ coder_adapters  │──► LLM subprocess writes meta.json
+  └─────────────────┘    to step directory
+       │
+       ▼
+  ┌─────────────────┐
+  │  step_runner    │──► Read meta.json (REQUIRED)
+  │                 │    Validate schema
+  │                 │    Check artifact existence
+  └─────────────────┘
+       │
+       ▼
+  ┌─────────────────┐
+  │ enrich_sidecar() │──► Append runner_data section:
+  │                  │    - timestamps
+  │                  │    - coder_used
+  │                  │    - prompt_checksum
+  │                  │    - changed_paths (git diff)
+  │                  │    - allowed_write_paths
+  └─────────────────┘
+       │
+       ▼
+  ┌─────────────────┐
+  │ workflow_router │──► Route based on status:
+  │                 │    - APPROVED → next step
+  │                 │    - REJECTED → refine/replan
+  │                 │    - FAILURE → failure handling
+  └─────────────────┘
+```
 
 ## 4. Integration Points with External Systems
 
-### 4.1 External System Integration Table
+### 4.1 LLM Provider Integration
 
-| External System | Protocol | Direction | Purpose | Module | Authentication |
-|-----------------|----------|-----------|---------|--------|----------------|
-| **Backend API** | HTTP/REST | Bidirectional | Workflow orchestration, step claiming, result submission | backend_client.py | Bearer token via config |
-| **Claude (Anthropic)** | Subprocess/CLI | Outbound | LLM invocation for coder steps | coder_adapters.py | API key via env |
-| **Codex (OpenAI)** | Subprocess/CLI | Outbound | LLM invocation for coder steps | coder_adapters.py | API key via env |
-| **Qwen Code** | Subprocess/CLI | Outbound | LLM invocation for coder steps | coder_adapters.py | Local installation |
-| **ComfyUI** | HTTP/WebSocket | Outbound | Image generation pipeline | actions/submit_comfyui.py | Local instance |
-| **Video Generation (I2V/T2V)** | HTTP/API | Outbound | Video clip generation | actions/execute_i2v.py, execute_t2i.py | Service credentials |
-| **Voiceover Service** | HTTP/API | Outbound | Audio generation | actions/execute_voiceover.py | Service credentials |
-| **Pushover Notifications** | HTTP/API | Outbound | Push notifications | notification_manager.py | App token via env |
-| **GitHub (gh CLI)** | Subprocess | Outbound | Issue fetching for bug workflow | fetch-github-issue-for-bug-fix | gh CLI auth |
+| Provider | Module | Protocol | Direction | Purpose |
+|----------|--------|----------|-----------|---------|
+| **Claude** (Anthropic) | `coder_adapters.py` | Subprocess CLI | Outbound | Code generation, review |
+| **Codex** (OpenAI) | `coder_adapters.py` | Subprocess CLI | Outbound | Code generation, review |
+| **Qwen** (Alibaba) | `coder_adapters.py` | Subprocess CLI | Outbound | Code generation, review |
 
-### 4.2 Backend API Contract
+**Integration Pattern**: Each coder is invoked via subprocess with:
+- Prompt text (rendered from template)
+- Schema path (`llm_response_schema.json`)
+- Working directory (step directory)
+- Timeout configuration
 
-```
-┌────────────────────────────────────────────────────────────────────────────┐
-│                         Backend API Integration                             │
-├────────────────────────────────────────────────────────────────────────────┤
-│                                                                            │
-│   Endpoints:                                                               │
-│   • POST /api/v1/worker/register       - Register worker node              │
-│   • POST /api/v1/worker/heartbeat      - Health/status updates             │
-│   • POST /api/v1/worker/claim        - Poll for available step runs       │
-│   • POST /api/v1/step-runs/{id}/complete - Submit step results            │
-│   • GET  /api/v1/runs/{id}           - Get run details                   │
-│   • POST /api/v1/runs/{id}/approve    - Approve/reject run                 │
-│   • POST /api/v1/artifacts           - Create artifact record              │
-│   • POST /api/v1/events              - Create workflow event             │
-│                                                                            │
-│   Payload Structure (Step Complete):                                       │
-│   {                                                                        │
-│     "coder_result": {                                                      │
-│       "status": "APPROVED|REJECTED",                                       │
-│       "remark": "...",                                                    │
-│       "artifacts": { "KEY": "path/to/artifact.md" },                      │
-│       "recorded_at": "2026-07-10T14:45:58+08:00"                          │
-│     },                                                                     │
-│     "usage_data": { input_tokens, output_tokens, cost }                  │
-│   }                                                                        │
-│                                                                            │
-└────────────────────────────────────────────────────────────────────────────┘
-```
+**Sidecar Polling**: `coder_adapters.py` polls for `meta.json` with configurable intervals.
 
-### 4.3 LLM Provider Integration
+### 4.2 Backend API Integration
 
-| Provider | Model Aliases | Invocation Method | Response Format |
-|----------|---------------|-------------------|-----------------|
-| **Claude** | claude-opus, claude-son, claude-haiku | Subprocess (q CLI) | meta.json sidecar |
-| **Codex** | codex-latest | Subprocess (codex CLI) | meta.json sidecar |
-| **Qwen Code** | qwen | Subprocess (qwen CLI) | meta.json sidecar |
+| Endpoint | Module | Protocol | Direction | Purpose |
+|----------|--------|----------|-----------|---------|
+| `POST /runs` | `backend_client.py` | HTTP/JSON | Outbound | Submit new workflow run |
+| `GET /runs/{id}` | `backend_client.py` | HTTP/JSON | Bidirectional | Get run status |
+| `POST /runs/{id}/approve` | `backend_client.py` | HTTP/JSON | Outbound | Approve/reject step |
+| `POST /workers/register` | `backend_client.py` | HTTP/JSON | Outbound | Register worker |
+| `POST /workers/{id}/heartbeat` | `backend_client.py` | HTTP/JSON | Outbound | Worker heartbeat |
+| `POST /workers/{id}/claim` | `backend_client.py` | HTTP/JSON | Outbound | Claim step for execution |
+| `POST /step-runs/{id}/complete` | `backend_client.py` | HTTP/JSON | Outbound | Submit step results |
+| `POST /artifacts` | `backend_client.py` | HTTP/JSON | Outbound | Create artifact records |
+| `POST /events` | `backend_client.py` | HTTP/JSON | Outbound | Emit events |
 
-### 4.4 Notification Integration
+**Authentication**: Backend API credentials resolved via `.env` file or environment variables.
 
-```
-┌────────────────────────────────────────────────────────────────────────────┐
-│                      Notification Flow                                     │
-├────────────────────────────────────────────────────────────────────────────┤
-│                                                                            │
-│   Step Completion ──▶ notification_manager.py ──▶ Pushover API            │
-│        │                                           │                       │
-│        │              ┌─────────────────────────────┘                       │
-│        │              │                                                    │
-│        │         HTTP POST to api.pushover.net                             │
-│        │              │                                                    │
-│        │         ┌────┴────┐                                                 │
-│        │         │         │                                                 │
-│     Success    Mobile    Desktop                                             │
-│     Failure    Push      Push                                                │
-│                                                                            │
-└────────────────────────────────────────────────────────────────────────────┘
-```
+### 4.3 ComfyUI/Media Generation Integration
 
----
+| System | Module | Protocol | Direction | Purpose |
+|--------|--------|----------|-----------|---------|
+| **ComfyUI** | `actions/execute_t2i.py` | HTTP/WebSocket | Outbound | Text-to-image generation |
+| **ComfyUI** | `actions/execute_i2v.py` | HTTP/WebSocket | Outbound | Image-to-video generation |
+| **Voiceover** | `actions/execute_voiceover.py` | HTTP/API | Outbound | Audio generation |
+| **FFmpeg** | `actions/assemble_video.py` | Subprocess | Outbound | Video composition |
 
-## 5. Internal Module Boundaries and Extension Points
+### 4.4 Git Integration
 
-### 5.1 Module Area Boundaries
+| Operation | Module | Purpose |
+|-----------|--------|---------|
+| `git diff` | `step_runner.py` | Detect changed paths for sidecar enrichment |
+| `git status` | Multiple actions | Repository state validation |
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                            BOUNDARY: CLI Layer                              │
-│  run_agent.py - Argument parsing, command dispatch                          │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                            BOUNDARY: Core Execution                         │
-│  step_runner.py, workflow_router.py - Step lifecycle, routing logic         │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                            BOUNDARY: State Management                       │
-│  job_state.py, runtime_context.py - Job persistence, context resolution    │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                            BOUNDARY: Coder Abstraction                     │
-│  coder_adapters.py - LLM backend abstraction                                │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                            BOUNDARY: Action Framework                       │
-│  actions/*.py - Deterministic runner actions                                  │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                            BOUNDARY: Backend Integration                    │
-│  backend_client.py, daemon.py - External service connectivity               │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                            BOUNDARY: Bootstrap/Workflow                     │
-│  bundle_loader.py, template_groups.py - Workflow definition loading           │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                            BOUNDARY: Plugin System (In Progress)            │
-│  workflow_packages/*.py - New plugin-based workflow architecture            │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
+### 4.5 Notification Integration
 
-### 5.2 Extension Points
+| Service | Module | Protocol | Purpose |
+|---------|--------|----------|---------|
+| **Pushover** | `notifications.py`, `notification_manager.py` | HTTP/API | Push notifications for step completion/failure |
 
-| Extension Point | Interface | Description | Implementation |
-|-----------------|-----------|-------------|----------------|
-| **New Actions** | `run_action()` signature | Add deterministic runner actions | Create module in `actions/` |
-| **New Workflow** | `TEMPLATE_GROUPS` dict | Add workflow definition | Update `template_groups.py` or add `workflow.toml` |
-| **New Coder Backend** | `invoke_coder()` adapter | Support new LLM provider | Extend `coder_adapters.py` |
-| **Context Extensions** | `context_extensions.py` hook | Workflow-specific context injection | Add `context_extensions.py` to workflow package |
-| **Custom Validations** | Action step with `validate_*` | Domain-specific artifact validation | Create `actions/validate_*.py` |
-| **Notification Channels** | `notification_manager.py` | Add new notification backends | Extend `notification_manager.py` |
+## 5. Module Boundaries and Responsibilities
 
-### 5.3 Plugin Architecture (Migration In Progress)
+### 5.1 Core Execution Boundary
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                         Current vs Target Architecture                      │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│  CURRENT (template_groups.py):                                              │
-│  ┌─────────────────────────────────────────────────────────────────┐       │
-│  │ TEMPLATE_GROUPS = {                                             │       │
-│  │   "workflow_name": {                                            │       │
-│  │     "steps": [...],                                             │       │
-│  │     "produces": [...],                                          │       │
-│  │     "routing": {...}                                            │       │
-│  │   }                                                             │       │
-│  │ }                                                               │       │
-│  └─────────────────────────────────────────────────────────────────┘       │
-│                              │                                              │
-│                              │                                              │
-│  TARGET (Plugin Packages):                                                  │
-│  ┌─────────────────────────────────────────────────────────────────┐       │
-│  │ workflows/<name>/                                               │       │
-│  │   ├── workflow.toml          # Declarative manifest            │       │
-│  │   ├── prompts/               # Prompt templates                │       │
-│  │   └── context_extensions.py  # Custom context hooks            │       │
-│  └─────────────────────────────────────────────────────────────────┘       │
-│                              │                                              │
-│                              ▼                                              │
-│  ┌─────────────────────────────────────────────────────────────────┐       │
-│  │ WorkflowRegistry (Configuration Source Adapter)                │       │
-│  │   • Scans workflows/ directory                                    │       │
-│  │   • Falls back to TEMPLATE_GROUPS                                 │       │
-│  │   • Converts workflow.toml → TEMPLATE_GROUPS format             │       │
-│  └─────────────────────────────────────────────────────────────────┘       │
-│                              │                                              │
-│                              ▼                                              │
-│  ┌─────────────────────────────────────────────────────────────────┐       │
-│  │ Unchanged Execution Pipeline                                    │       │
-│  │   step_runner.py → coder_adapters.py → workflow_router.py      │       │
-│  └─────────────────────────────────────────────────────────────────┘       │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
+| Module | Invariants | Extension Points |
+|--------|------------|------------------|
+| `run_agent.py` | CLI argument parsing, command dispatch | New CLI commands |
+| `step_runner.py` | Prompt rendering, sidecar validation, artifact checking | New context builders |
+| `workflow_router.py` | Routing logic, retry enforcement, notification triggers | Custom routing rules |
 
----
+### 5.2 Coder Boundary
+
+| Module | Invariants | Extension Points |
+|--------|------------|------------------|
+| `coder_adapters.py` | Subprocess invocation, sidecar polling, timeout handling | New coder backends |
+| `model_config.py` | Model aliasing, configuration resolution | New model configurations |
+
+### 5.3 State Management Boundary
+
+| Module | Invariants | Extension Points |
+|--------|------------|------------------|
+| `job_state.py` | Job.json schema, step progression, failure tracking | New state migrations |
+| `runtime_context.py` | Path resolution, context management | New path types |
+
+### 5.4 Bootstrap Boundary
+
+| Module | Invariants | Extension Points |
+|--------|------------|------------------|
+| `bundle_loader.py` | Global/local workflow resolution, seeding | New bundle formats |
+| `workflow_packages/` | Plugin loading, TOML parsing | New workflow adapters |
 
 ## 6. Key Interaction Sequences
 
-### 6.1 Standard Workflow Step Execution
+### 6.1 Workflow Step Execution Sequence
 
 ```
-┌──────────┐         ┌──────────┐         ┌──────────┐         ┌──────────┐
-│   Job    │         │  Render  │         │  Invoke  │         │  Route   │
-│  State   │         │  Prompt  │         │  Coder   │         │  Result  │
-└────┬─────┘         └────┬─────┘         └────┬─────┘         └────┬─────┘
-     │                    │                    │                    │
-     │ 1. Load state      │                    │                    │
-     │────────────────────▶                    │                    │
-     │                    │                    │                    │
-     │                    │ 2. Substitute      │                    │
-     │                    │    placeholders    │                    │
-     │                    │────────────────────▶                    │
-     │                    │                    │                    │
-     │                    │                    │ 3. Execute coder   │
-     │                    │                    │    subprocess      │
-     │                    │                    │────────────────────▶
-     │                    │                    │                    │
-     │                    │                    │ 4. Wait for        │
-     │                    │                    │    meta.json       │
-     │                    │                    │◀───────────────────│
-     │                    │                    │                    │
-     │                    │                    │ 5. Validate        │
-     │                    │                    │    artifacts       │
-     │                    │                    │────────────────────▶
-     │                    │                    │                    │
-     │                    │                    │                    │ 6. Route
-     │                    │                    │                    │    next step
-     │◀───────────────────────────────────────────────────────────│
-     │                    │                    │                    │
+1. run_agent.py receives "run" command
+   └── Parse args: --workflow, --step, --job-id
+
+2. Load workflow configuration
+   └── bundle_loader.resolve_workflow_root()
+   └── Load from: global bundle → local plugin → TEMPLATE_GROUPS
+
+3. Load or create job state
+   └── job_state.load_job() or job_state.create_job()
+
+4. For each step in sequence:
+   a. step_runner.build_context()
+      └── Merge state, step_cfg, artifact paths
+      └── Inject REFERENCE_FILES placeholders
+
+   b. step_runner.render_prompt()
+      └── Resolve prompt file path (3-level fallback)
+      └── Substitute placeholders with context
+
+   c. step_runner.run_step() [for coder steps]
+      └── coder_adapters.invoke_coder()
+          └── Spawn subprocess (claude/codex/qwen)
+          └── Poll for meta.json
+      └── Validate artifacts exist
+      └── enrich_sidecar() with runner_data
+
+   d. step_runner.run_action() [for action steps]
+      └── Import action from actions/
+      └── Execute in-process
+      └── Return StepResult
+
+   e. workflow_router.route_after_step()
+      └── Determine next step based on status
+      └── Check max_rejects limit
+      └── Send notification if configured
+
+   f. job_state.advance_step()
+      └── Update job.json state
+      └── Persist to disk
 ```
 
-### 6.2 Review Loop Sequence
+### 6.2 Review/Refine Loop Sequence
 
 ```
-┌─────────┐    ┌─────────┐    ┌─────────┐    ┌─────────┐    ┌─────────┐
-│ Review  │    │ HUMAN   │    │  Check  │    │  Route  │    │ Continue│
-│ Request │───▶│DECISION │───▶│  Limit  │───▶│         │───▶│  / Fail │
-└─────────┘    └─────────┘    └─────────┘    └─────────┘    └─────────┘
-                  │               │               │
-                  │               │               │
-              ┌───┴───┐       ┌─┴─┐          ┌──┴───┐
-              │approve│       │< N│          │retry │
-              │reject │       │>=N│          │abort │
-              └───┬───┘       └─┬─┘          └──────┘
-                  │               │
-                  ▼               ▼
-              Continue        Max Rejects
-                              Reached
+1. Step returns status "REJECTED"
+
+2. workflow_router.route_after_step()
+   └── Check reject count vs max_rejects
+   └── If under limit: route to refine step
+   └── If over limit: route to replan step
+
+3. Refine step executes with original + feedback context
+
+4. Loop continues until:
+   - Status becomes "APPROVED" → advance
+   - Max rejects exceeded → escalate to replan
+   - Hard failure → route to failure handling
 ```
 
 ### 6.3 Failure Handling Sequence
 
 ```
-┌─────────────┐     ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│   Exception │     │   Classify  │     │    Route    │     │    Record   │
-│    Raised   │────▶│   Failure   │────▶│   After     │────▶│   History   │
-│             │     │             │     │   Failure   │     │             │
-└─────────────┘     └─────────────┘     └─────────────┘     └─────────────┘
-                           │                    │                    │
-                           ▼                    ▼                    ▼
-                    ┌──────────────┐      ┌─────────────┐      ┌─────────────┐
-                    │ Coder Error  │      │  Transient  │      │  Update     │
-                    │ Missing Meta │      │   Retry     │      │  job.json   │
-                    │ Invalid JSON │      │  Permanent  │      │             │
-                    └──────────────┘      │   Abort     │      └─────────────┘
-                                          └─────────────┘
+1. Exception raised during step execution
+   └── CoderInvocationError (LLM process failed)
+   └── MetaJsonMissingError (no sidecar written)
+   └── MetaJsonInvalidError (invalid sidecar schema)
+   └── ArtifactMissingError (declared artifacts don't exist)
+
+2. workflow_router.route_after_failure()
+   └── Capture exception details
+   └── Update failure history in job state
+   └── Classify failure type
+
+3. Decision:
+   └── Transient error → retry step
+   └── Hard failure → terminal state
+
+4. Notification sent if configured
 ```
 
-### 6.4 Artifact Validation Flow
+### 6.4 Daemon Mode Sequence
 
 ```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                           Artifact Validation                               │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│   Step Completion                                                           │
-│        │                                                                    │
-│        ▼                                                                    │
-│   ┌────────────────┐                                                        │
-│   │ Read meta.json │                                                        │
-│   └───────┬────────┘                                                        │
-│           │                                                                 │
-│           ▼                                                                 │
-│   ┌────────────────┐     ┌───────────────┐     ┌──────────────────────┐    │
-│   │ Validate       │────▶│ Check Schema  │────▶│ Validate Artifacts   │    │
-│   │ Schema         │     │ Version       │     │ Exist on Disk        │    │
-│   └────────────────┘     └───────────────┘     └──────────┬───────────┘    │
-│                                                            │                │
-│                                                            ▼                │
-│                                                   ┌──────────────────┐     │
-│                                                   │  Check Guardrails │     │
-│                                                   │  (if applicable)  │     │
-│                                                   └────────┬─────────┘     │
-│                                                            │                │
-│                                                            ▼                │
-│                                                   ┌──────────────────┐     │
-│                                                   │ Enrich Sidecar     │     │
-│                                                   │ with Runner Data   │     │
-│                                                   └────────┬─────────┘     │
-│                                                            │                │
-│                                                            ▼                │
-│                                                   ┌──────────────────┐     │
-│                                                   │ Update Job State   │     │
-│                                                   └──────────────────┘     │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
+1. Daemon startup
+   └── backend_client.register_worker()
+   └── Begin heartbeat loop
+
+2. Poll cycle:
+   └── backend_client.claim_step()
+   └── If step claimed:
+       └── Spawn subprocess: run_agent execute-step
+       └── Wait for completion
+       └── backend_client.complete_step_run()
+   └── Send heartbeat
+
+3. Code changes picked up automatically
+   └── Each subprocess loads fresh Python code
+   └── No daemon restart required
 ```
 
----
+## 7. Data Contracts
 
-## 7. Runtime Source of Truth
+### 7.1 Job State Contract
 
-### 7.1 Bootstrap vs Runtime Duality
+**File**: `~/.ukbe-runner/jobs/{workflow}/{job_id}/job.json`
 
-| Aspect | Bootstrap Source | Runtime Bundle | Sync Mechanism |
-|--------|-----------------|----------------|----------------|
-| **Location** | `agent_runner_v2/bootstrap/` | `%USERPROFILE%\.ukbe-runner\workflows\` | `ukbe-run-agent init` |
-| **Purpose** | Package source of truth | Active execution source | Seeding command |
-| **Prompts** | `prompts/<workflow>/*.txt` | Same structure | Copied on init |
-| **Templates** | `template_groups.py` | Loaded dynamically | Registry scan |
-| **Changes** | Version controlled | User-modified | Manual sync |
-
-### 7.2 Path Resolution Hierarchy
-
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                          Path Resolution Order                              │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│   1. Runtime Path (%USERPROFILE%\.ukbe-runner\workflows\<workflow>\)       │
-│      ↓ (if not found)                                                       │
-│   2. Local Project Path (./workflows/<workflow>/ - for plugin development)  │
-│      ↓ (if not found)                                                       │
-│   3. Bootstrap Path (agent_runner_v2/bootstrap/workflows/default/)          │
-│                                                                             │
-│   Resolution Function: workflow_packages.loader._resolve_workflow_path()  │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
+```json
+{
+  "job_id": "uuid",
+  "workflow": "workflow_name",
+  "template_group": "group_name",
+  "current_step": "step_name",
+  "status": "running|waiting|completed|failed",
+  "artifacts": {"ARTIFACT_KEY": "relative/path"},
+  "failure_history": [],
+  "review_state": {},
+  "created_at": "ISO8601",
+  "updated_at": "ISO8601"
+}
 ```
 
----
+### 7.2 Meta.json Sidecar Contract
 
-## 8. Cross-Module Communication Patterns
-
-### 8.1 Communication Mechanisms
-
-| Pattern | Used Between | Mechanism | Data Format |
-|---------|-------------|-----------|-------------|
-| **Function Calls** | Core modules | Direct Python invocation | Typed parameters, dataclasses |
-| **Job State** | All modules | job.json file | JSON with schema_version |
-| **Meta Sidecar** | Coder → Runner | meta.json file | v2 schema with coder_result |
-| **Subprocess** | Runner → Coder CLI | Popen with stdin/stdout | Plain text prompt, JSON result |
-| **HTTP REST** | Runner → Backend | urllib requests | JSON payloads |
-| **Context Dict** | Step preparation | In-memory dict | String-keyed context map |
-
-### 8.2 Data Contract: Meta.json Sidecar
+**File**: `{artifact_path}.meta.json`
 
 ```json
 {
   "schema_version": "v2",
   "coder_result": {
     "status": "APPROVED|REJECTED",
-    "remark": "Summary of work completed",
-    "artifacts": {
-      "ARTIFACT_KEY": "relative/path/to/artifact.md"
-    },
-    "recorded_at": "2026-07-10T14:45:58+08:00"
+    "remark": "Human-readable summary",
+    "artifacts": {"ARTIFACT_KEY": "relative/path"},
+    "recorded_at": "ISO8601"
   },
   "runner_data": {
     "step": "step_name",
-    "coder_used": "claude-opus-4",
-    "invoked_at": "2026-07-10T14:40:00+08:00",
-    "finished_at": "2026-07-10T14:45:58+08:00",
-    "prompt_checksum": "sha256:abc...",
-    "allowed_write_paths": [...],
-    "changed_paths": [...]
+    "coder_used": "claude|codex|qwen",
+    "invoked_at": "ISO8601",
+    "finished_at": "ISO8601",
+    "prompt_checksum": "sha256",
+    "changed_paths": ["git/changed/file.py"],
+    "allowed_write_paths": ["docs/..."]
   }
 }
 ```
 
+### 7.3 Workflow Bundle Contract
+
+**Plugin Package**: `workflows/{name}/workflow.toml`
+
+```toml
+[workflow]
+name = "workflow_name"
+version = "1.0.0"
+
+[steps.step_name]
+coder = "claude|codex|qwen|action"
+action = "action_name"  # for action steps
+prompt = "prompts/step.txt"
+allowed_artifacts = ["ARTIFACT_KEY"]
+next = "next_step"
+refine = "refine_step"
+replan = "replan_step"
+```
+
+## 8. Configuration Sources
+
+| Configuration | Source | Module | Priority |
+|---------------|--------|--------|----------|
+| Workflow bundles | `~/.ukbe-runner/workflows/` | `bundle_loader.py` | 1 (Global) |
+| Workflow plugins | `./workflows/{name}/` | `workflow_packages/loader.py` | 2 (Local) |
+| Legacy templates | `template_groups.py` | `template_groups.py` | 3 (Fallback) |
+| Backend API | `.env` → environment | `backend_client.py` | - |
+| Model configs | `~/.ukbe-runner/config.json` | `model_config.py` | - |
+| Runner home | Environment → default | `runtime_context.py` | - |
+
+## 9. Error Propagation Paths
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                            Error Sources                                    │
+└─────────────────────────────────────────────────────────────────────────────┘
+         │                    │                    │
+         ▼                    ▼                    ▼
+┌────────────────┐    ┌────────────────┐    ┌────────────────┐
+│  Coder Errors  │    │ Action Errors  │    │ Routing Errors │
+│                │    │                │    │                │
+│ • Timeout      │    │ • Validation   │    │ • Invalid next │
+│ • Crash        │    │ • I/O failure  │    │ • Max rejects  │
+│ • No meta.json │    │ • External API │    │ exceeded       │
+└────────────────┘    └────────────────┘    └────────────────┘
+         │                    │                    │
+         └────────────────────┼────────────────────┘
+                              ▼
+                    ┌────────────────┐
+                    │ workflow_router│
+                    │ route_after_   │
+                    │ failure()      │
+                    └────────────────┘
+                              │
+                              ▼
+                    ┌────────────────┐
+                    │  job_state     │
+                    │  Update status │
+                    │  Log failure   │
+                    └────────────────┘
+```
+
+## 10. Extension Points
+
+| Extension | Location | Contract |
+|-----------|----------|----------|
+| **New Action** | `actions/{action_name}.py` | Function accepting `(state, context, step_cfg)` returning `ActionResult` with `meta_path` |
+| **New Workflow** | `workflows/{name}/workflow.toml` | TOML manifest with steps, routing, artifact keys |
+| **New Coder** | `coder_adapters.py` | Subprocess wrapper following sidecar contract |
+| **New Template** | `bootstrap/workflows/default/prompts/{wf}/{step}.txt` | Text with `{PLACEHOLDER}` substitutions |
+| **Context Hook** | `workflows/{name}/context_extensions.py` | Module with `extend_context(context, state, step_cfg)` function |
+
 ---
 
-## 9. Summary
-
-### 9.1 Key Integration Points Index
-
-| Integration | Module | External System | Criticality |
-|-------------|--------|-----------------|-------------|
-| CLI Entry | run_agent.py | User/Shell | Critical |
-| Step Execution | step_runner.py | Coder CLI | Critical |
-| Job Persistence | job_state.py | File System | Critical |
-| Result Routing | workflow_router.py | Internal | Critical |
-| LLM Invocation | coder_adapters.py | Claude/Codex/Qwen | High |
-| Backend Sync | backend_client.py | Backend API | High |
-| Worker Mode | daemon.py | OS Process | Medium |
-| Notifications | notification_manager.py | Pushover | Low |
-
-### 9.2 Integration Risk Areas
-
-| Risk Area | Description | Mitigation |
-|-----------|-------------|------------|
-| **Bootstrap/Runtime Drift** | Changes to bootstrap not reflected in runtime | Use `init` command to reseed |
-| **Schema Version Compatibility** | meta.json v2 schema must be maintained | CURRENT_SCHEMA_VERSION constant |
-| **Path Resolution Across Platforms** | Windows vs POSIX path handling | PurePosixPath usage |
-| **LLM Provider Changes** | CLI interface changes | Adapter pattern in coder_adapters.py |
-| **Backend API Changes** | REST contract evolution | Versioned endpoints |
-
----
-
-## 10. Change Log
-
-| Date | Change | Modules Affected | Verified By |
-|------|--------|------------------|-------------|
-| 2026-07-10 | Initial integration map generated from codebase baseline | All | 00_master_docs_bootstrap_v2 |
+*This integration map was generated from repository analysis and reflects the system architecture as of the bootstrap timestamp.*

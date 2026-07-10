@@ -6,8 +6,8 @@ module_path: "agent_runner_v2/bootstrap/workflows/default/template_groups.py"
 module_area: "bootstrap"
 documentation_mode: "full"
 owner_doc_path: "docs/codebase/02_modules/agent-runner-v2-bootstrap-workflows-default-template-groups.md"
-last_verified_by_change: "00_master_docs_bootstrap_v2 / 00DOC-GEN-20260710-004 / 2026-07-10T14:00:58+08:00"
-created: "2026-07-10T14:00:58+08:00"
+last_verified_by_change: "00_master_docs_bootstrap_v2 / 00DOC-20260710-0098bf53 / 2026-07-10T19:43:53+08:00"
+created: "2026-07-10T19:43:53+08:00"
 owner: "00_master_docs_bootstrap_v2"
 ---
 

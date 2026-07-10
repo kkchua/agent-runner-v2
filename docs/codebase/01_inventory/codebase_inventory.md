@@ -2,17 +2,17 @@
 title: "Codebase Inventory - agent-runner-v2"
 template_id: "CODEBASE-INV-v1"
 status: "active"
-generated: "2026-07-10T14:00:58+08:00"
+generated: "2026-07-10T19:43:53+08:00"
 workflow: "00_master_docs_bootstrap_v2"
 step: "01_generate_codebase_baseline"
-change_id: "00DOC-GEN-20260710-004"
+change_id: "00DOC-20260710-0098bf53"
 ---
 
 # Codebase Inventory: agent-runner-v2
 
 ## 1. Inventory Scope
 
-This inventory was generated from a repository scan at `2026-07-10T14:00:58+08:00`.
+This inventory was generated from a repository scan at `2026-07-10T19:43:53+08:00`.
 
 ## 2. Python Source Modules
 
@@ -80,6 +80,7 @@ This inventory was generated from a repository scan at `2026-07-10T14:00:58+08:0
 | agent_runner_v2/step_runner.py | core | full | current | docs/codebase/02_modules/agent-runner-v2-step-runner.md | bootstrap/reconcile scan |
 | agent_runner_v2/submit_commands.py | commands | summary | current | docs/codebase/02_modules/agent-runner-v2-submit-commands.md | bootstrap/reconcile scan |
 | agent_runner_v2/submitter.py | commands | summary | current | docs/codebase/02_modules/agent-runner-v2-submitter.md | bootstrap/reconcile scan |
+| agent_runner_v2/sync_workflows.py | support | summary | current | docs/codebase/02_modules/agent-runner-v2-sync-workflows.md | bootstrap/reconcile scan |
 | agent_runner_v2/system_docs.py | support | summary | current | docs/codebase/02_modules/agent-runner-v2-system-docs.md | bootstrap/reconcile scan |
 | agent_runner_v2/tools/agent_tools.py | tools | summary | current | docs/codebase/02_modules/agent-runner-v2-tools-agent-tools.md | bootstrap/reconcile scan |
 | agent_runner_v2/workflow_packages/__init__.py | package | stub | current | docs/codebase/02_modules/agent-runner-v2-workflow-packages-init.md | bootstrap/reconcile scan |
@@ -223,17 +224,17 @@ This inventory was generated from a repository scan at `2026-07-10T14:00:58+08:0
 | agent_runner_v2/llm_response_schema.json | json | summary | current | docs/codebase/03_components/config-and-data.md | bootstrap/reconcile scan |
 | agent_runner_v2/model_mapping.json | json | summary | current | docs/codebase/03_components/config-and-data.md | bootstrap/reconcile scan |
 | agent_runner_v2/usage_schema.json | json | summary | current | docs/codebase/03_components/config-and-data.md | bootstrap/reconcile scan |
-| docs/codebase/04_changes/00DOC-GEN-20260710-001-bootstrap-snapshot.json | json | summary | current | docs/codebase/03_components/config-and-data.md | bootstrap/reconcile scan |
-| docs/codebase/04_changes/00DOC-GEN-20260710-002-bootstrap-snapshot.json | json | summary | current | docs/codebase/03_components/config-and-data.md | bootstrap/reconcile scan |
-| docs/codebase/04_changes/00DOC-GEN-20260710-003-bootstrap-snapshot.json | json | summary | current | docs/codebase/03_components/config-and-data.md | bootstrap/reconcile scan |
-| docs/codebase/04_changes/00DOC-GEN-20260710-004-bootstrap-snapshot.json | json | summary | current | docs/codebase/03_components/config-and-data.md | bootstrap/reconcile scan |
+| docs/codebase/04_changes/00DOC-20260710-0098bf53-bootstrap-snapshot.json | json | summary | current | docs/codebase/03_components/config-and-data.md | bootstrap/reconcile scan |
 | pyproject.toml | toml | summary | current | docs/codebase/03_components/config-and-data.md | bootstrap/reconcile scan |
 | workflows/00_master_docs_bootstrap_v2/workflow.toml | toml | summary | current | docs/codebase/03_components/config-and-data.md | bootstrap/reconcile scan |
+| workflows/10_execution_scaffold_v2/workflow.toml | toml | summary | current | docs/codebase/03_components/config-and-data.md | bootstrap/reconcile scan |
 
 ## 5. Scripts
 
 | File Path | Type | Documentation Mode | Status | Owner Doc Path | Last Verified By Change |
 |---|---|---|---|---|---|
+| _run-00_master_docs_bootstrap_v1.bat | .bat | summary | current | docs/codebase/03_components/scripts-suite.md | bootstrap/reconcile scan |
+| _run-10_execution_scaffold_v1.bat | .bat | summary | current | docs/codebase/03_components/scripts-suite.md | bootstrap/reconcile scan |
 | archive/batch/run-bug_fix_v1.bat | .bat | summary | current | docs/codebase/03_components/scripts-suite.md | bootstrap/reconcile scan |
 | archive/batch/run-codebase_bootstrap_v1.bat | .bat | summary | current | docs/codebase/03_components/scripts-suite.md | bootstrap/reconcile scan |
 | archive/batch/run-codebase_reconcile_v1.bat | .bat | summary | current | docs/codebase/03_components/scripts-suite.md | bootstrap/reconcile scan |
@@ -249,9 +250,8 @@ This inventory was generated from a repository scan at `2026-07-10T14:00:58+08:0
 | archive/batch/submit-codebase_sync_v1.bat | .bat | summary | current | docs/codebase/03_components/scripts-suite.md | bootstrap/reconcile scan |
 | archive/batch/submit-documentation_bootstrap_v1.bat | .bat | summary | current | docs/codebase/03_components/scripts-suite.md | bootstrap/reconcile scan |
 | archive/batch/submit-documentation_validation_v1.bat | .bat | summary | current | docs/codebase/03_components/scripts-suite.md | bootstrap/reconcile scan |
-| run-00_master_docs_bootstrap_v1.bat | .bat | summary | current | docs/codebase/03_components/scripts-suite.md | bootstrap/reconcile scan |
 | run-00_master_docs_bootstrap_v2.bat | .bat | summary | current | docs/codebase/03_components/scripts-suite.md | bootstrap/reconcile scan |
-| run-10_execution_scaffold_v1.bat | .bat | summary | current | docs/codebase/03_components/scripts-suite.md | bootstrap/reconcile scan |
+| run-10_execution_scaffold_v2.bat | .bat | summary | current | docs/codebase/03_components/scripts-suite.md | bootstrap/reconcile scan |
 | run-20_initiative_intake_v1.bat | .bat | summary | current | docs/codebase/03_components/scripts-suite.md | bootstrap/reconcile scan |
 | run-21_bug_fix_intake_v1.bat | .bat | summary | current | docs/codebase/03_components/scripts-suite.md | bootstrap/reconcile scan |
 | run-30_delivery_planning_v1.bat | .bat | summary | current | docs/codebase/03_components/scripts-suite.md | bootstrap/reconcile scan |
@@ -294,7 +294,9 @@ This inventory was generated from a repository scan at `2026-07-10T14:00:58+08:0
 | scripts/ukbe-run-delivery.bat | .bat | summary | current | docs/codebase/03_components/scripts-suite.md | bootstrap/reconcile scan |
 | scripts/ukbe-runner.sh | .sh | summary | current | docs/codebase/03_components/scripts-suite.md | bootstrap/reconcile scan |
 | submit-00_master_docs_bootstrap_v1.bat | .bat | summary | current | docs/codebase/03_components/scripts-suite.md | bootstrap/reconcile scan |
+| submit-00_master_docs_bootstrap_v2.bat | .bat | summary | current | docs/codebase/03_components/scripts-suite.md | bootstrap/reconcile scan |
 | submit-10_execution_scaffold_v1.bat | .bat | summary | current | docs/codebase/03_components/scripts-suite.md | bootstrap/reconcile scan |
+| submit-10_execution_scaffold_v2.bat | .bat | summary | current | docs/codebase/03_components/scripts-suite.md | bootstrap/reconcile scan |
 | submit-40_documentation_sync_v1.bat | .bat | summary | current | docs/codebase/03_components/scripts-suite.md | bootstrap/reconcile scan |
 | submit-41_audience_doc_v1.bat | .bat | summary | current | docs/codebase/03_components/scripts-suite.md | bootstrap/reconcile scan |
 | sync-10_execution_scaffold_v1-workflow-spec.bat | .bat | summary | current | docs/codebase/03_components/scripts-suite.md | bootstrap/reconcile scan |
@@ -360,6 +362,8 @@ This inventory was generated from a repository scan at `2026-07-10T14:00:58+08:0
 | archive/batch/README.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
 | CLAUDE.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
 | CODER_IMPLEMENTATION_SOP.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| GUIDE_CREATE_WORKFLOW_PACKAGE.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| GUIDE_MIGRATE_WORKFLOW_PACKAGE.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
 | HOW_TO_GUIDE.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
 | PUSHOVER_NOTIFICATIONS.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
 | QWEN.md | docs | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
@@ -393,17 +397,28 @@ This inventory was generated from a repository scan at `2026-07-10T14:00:58+08:0
 | workflows/00_master_docs_bootstrap_v2/prompts/04d_generate_architecture_flow_docs.txt | other | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
 | workflows/00_master_docs_bootstrap_v2/prompts/05_review_master_system_docs.txt | other | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
 | workflows/00_master_docs_bootstrap_v2/prompts/06_refine_master_system_docs.txt | other | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| workflows/10_execution_scaffold_v2/prompts/01_project_analysis.txt | other | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| workflows/10_execution_scaffold_v2/prompts/02_generate_sop.txt | other | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| workflows/10_execution_scaffold_v2/prompts/03_generate_templates.txt | other | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| workflows/10_execution_scaffold_v2/prompts/03_review_sop.txt | other | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| workflows/10_execution_scaffold_v2/prompts/04_generate_agents.txt | other | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| workflows/10_execution_scaffold_v2/prompts/05_refine_sop.txt | other | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| workflows/10_execution_scaffold_v2/prompts/05_replan_sop.txt | other | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| workflows/10_execution_scaffold_v2/prompts/06_refine_templates.txt | other | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| workflows/10_execution_scaffold_v2/prompts/06_review_templates.txt | other | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| workflows/10_execution_scaffold_v2/prompts/07_refine_agents.txt | other | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
+| workflows/10_execution_scaffold_v2/prompts/08_review_agents.txt | other | summary | current | docs/codebase/03_components/codebase-governance.md | bootstrap/reconcile scan |
 
 ## 9. Summary Statistics
 
 | Category | Total Files | Current | Needs Update | Pending Review | Superseded |
 |---|---|---|---|---|---|
-| configuration/data files | 14 | 14 | 0 | 0 | 0 |
-| other files | 18 | 18 | 0 | 0 | 0 |
-| python modules | 72 | 72 | 0 | 0 | 0 |
-| documentation files | 35 | 35 | 0 | 0 | 0 |
+| configuration/data files | 12 | 12 | 0 | 0 | 0 |
+| other files | 29 | 29 | 0 | 0 | 0 |
+| scripts | 69 | 69 | 0 | 0 | 0 |
+| python modules | 73 | 73 | 0 | 0 | 0 |
+| documentation files | 37 | 37 | 0 | 0 | 0 |
 | bootstrap workflow files | 115 | 115 | 0 | 0 | 0 |
-| scripts | 66 | 66 | 0 | 0 | 0 |
 | test files | 25 | 25 | 0 | 0 | 0 |
 
 ## 10. Status Legend

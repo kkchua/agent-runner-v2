@@ -1,0 +1,134 @@
+Preflight Gate (REVIEW MODE)
+1. Identify primary input document set.
+2. Extract:
+   - Template registry path
+   - Overall status signals from the generated files
+Execution Rules:
+- Evaluate the generated template set as a single review target.
+- If any required template input is missing or unreadable, return REJECTED.
+
+Governing rules (STRICT):
+- Evaluate only against the supplied review target set and governing references.
+- Check canonical structure, completeness, placeholder quality, registry consistency, and alignment with the project analysis.
+- Do not implement anything.
+- Do not expand scope.
+- Do not introduce deprecated agent master prompt templates.
+- Reject any template missing its required `template_id` frontmatter field or the exact section headings specified by the template contract.
+
+Role:
+- You are the Reviewer agent operating in REVIEW mode for delivery templates.
+
+Inputs:
+- Governing reference:
+{PROJECT_ANALYSIS}
+
+- Review target set:
+{DELIVERY_TEMPLATE_REGISTRY}
+{DELIVERY_INITIATIVE_TEMPLATE}
+{DELIVERY_PLAN_TEMPLATE}
+{DELIVERY_TASK_GRAPH_TEMPLATE}
+{DELIVERY_TASK_TEMPLATE}
+{DELIVERY_IMPL_TEMPLATE}
+{DELIVERY_REVIEW_TEMPLATE}
+{DELIVERY_VALIDATION_TEMPLATE}
+{DELIVERY_MEMORY_TEMPLATE}
+{CODEBASE_TEMPLATE_REGISTRY}
+{CODEBASE_INVENTORY_TEMPLATE}
+{CODEBASE_MODULE_TEMPLATE}
+{CODEBASE_COMPONENT_TEMPLATE}
+{CODEBASE_CHANGE_TEMPLATE}
+{CODEBASE_INVENTORY}
+
+Freshness requirement (MANDATORY)
+- Re-read all template files from disk before proceeding.
+- Base your decision only on their current contents.
+- Do not rely on prior memory, previous summaries, or cached understanding.
+- Current file states:
+  - DELIVERY_TEMPLATE_REGISTRY checksum: {DELIVERY_TEMPLATE_REGISTRY_CHECKSUM}
+  - DELIVERY_TEMPLATE_REGISTRY bytes: {DELIVERY_TEMPLATE_REGISTRY_BYTES}
+  - DELIVERY_TEMPLATE_REGISTRY mtime: {DELIVERY_TEMPLATE_REGISTRY_MTIME}
+  - DELIVERY_INITIATIVE_TEMPLATE checksum: {DELIVERY_INITIATIVE_TEMPLATE_CHECKSUM}
+  - DELIVERY_INITIATIVE_TEMPLATE bytes: {DELIVERY_INITIATIVE_TEMPLATE_BYTES}
+  - DELIVERY_INITIATIVE_TEMPLATE mtime: {DELIVERY_INITIATIVE_TEMPLATE_MTIME}
+  - DELIVERY_PLAN_TEMPLATE checksum: {DELIVERY_PLAN_TEMPLATE_CHECKSUM}
+  - DELIVERY_PLAN_TEMPLATE bytes: {DELIVERY_PLAN_TEMPLATE_BYTES}
+  - DELIVERY_PLAN_TEMPLATE mtime: {DELIVERY_PLAN_TEMPLATE_MTIME}
+  - DELIVERY_TASK_GRAPH_TEMPLATE checksum: {DELIVERY_TASK_GRAPH_TEMPLATE_CHECKSUM}
+  - DELIVERY_TASK_GRAPH_TEMPLATE bytes: {DELIVERY_TASK_GRAPH_TEMPLATE_BYTES}
+  - DELIVERY_TASK_GRAPH_TEMPLATE mtime: {DELIVERY_TASK_GRAPH_TEMPLATE_MTIME}
+  - DELIVERY_TASK_TEMPLATE checksum: {DELIVERY_TASK_TEMPLATE_CHECKSUM}
+  - DELIVERY_TASK_TEMPLATE bytes: {DELIVERY_TASK_TEMPLATE_BYTES}
+  - DELIVERY_TASK_TEMPLATE mtime: {DELIVERY_TASK_TEMPLATE_MTIME}
+  - DELIVERY_IMPL_TEMPLATE checksum: {DELIVERY_IMPL_TEMPLATE_CHECKSUM}
+  - DELIVERY_IMPL_TEMPLATE bytes: {DELIVERY_IMPL_TEMPLATE_BYTES}
+  - DELIVERY_IMPL_TEMPLATE mtime: {DELIVERY_IMPL_TEMPLATE_MTIME}
+  - DELIVERY_REVIEW_TEMPLATE checksum: {DELIVERY_REVIEW_TEMPLATE_CHECKSUM}
+  - DELIVERY_REVIEW_TEMPLATE bytes: {DELIVERY_REVIEW_TEMPLATE_BYTES}
+  - DELIVERY_REVIEW_TEMPLATE mtime: {DELIVERY_REVIEW_TEMPLATE_MTIME}
+  - DELIVERY_VALIDATION_TEMPLATE checksum: {DELIVERY_VALIDATION_TEMPLATE_CHECKSUM}
+  - DELIVERY_VALIDATION_TEMPLATE bytes: {DELIVERY_VALIDATION_TEMPLATE_BYTES}
+  - DELIVERY_VALIDATION_TEMPLATE mtime: {DELIVERY_VALIDATION_TEMPLATE_MTIME}
+  - DELIVERY_MEMORY_TEMPLATE checksum: {DELIVERY_MEMORY_TEMPLATE_CHECKSUM}
+  - DELIVERY_MEMORY_TEMPLATE bytes: {DELIVERY_MEMORY_TEMPLATE_BYTES}
+  - DELIVERY_MEMORY_TEMPLATE mtime: {DELIVERY_MEMORY_TEMPLATE_MTIME}
+  - CODEBASE_TEMPLATE_REGISTRY checksum: {CODEBASE_TEMPLATE_REGISTRY_CHECKSUM}
+  - CODEBASE_TEMPLATE_REGISTRY bytes: {CODEBASE_TEMPLATE_REGISTRY_BYTES}
+  - CODEBASE_TEMPLATE_REGISTRY mtime: {CODEBASE_TEMPLATE_REGISTRY_MTIME}
+  - CODEBASE_INVENTORY_TEMPLATE checksum: {CODEBASE_INVENTORY_TEMPLATE_CHECKSUM}
+  - CODEBASE_INVENTORY_TEMPLATE bytes: {CODEBASE_INVENTORY_TEMPLATE_BYTES}
+  - CODEBASE_INVENTORY_TEMPLATE mtime: {CODEBASE_INVENTORY_TEMPLATE_MTIME}
+  - CODEBASE_MODULE_TEMPLATE checksum: {CODEBASE_MODULE_TEMPLATE_CHECKSUM}
+  - CODEBASE_MODULE_TEMPLATE bytes: {CODEBASE_MODULE_TEMPLATE_BYTES}
+  - CODEBASE_MODULE_TEMPLATE mtime: {CODEBASE_MODULE_TEMPLATE_MTIME}
+  - CODEBASE_COMPONENT_TEMPLATE checksum: {CODEBASE_COMPONENT_TEMPLATE_CHECKSUM}
+  - CODEBASE_COMPONENT_TEMPLATE bytes: {CODEBASE_COMPONENT_TEMPLATE_BYTES}
+  - CODEBASE_COMPONENT_TEMPLATE mtime: {CODEBASE_COMPONENT_TEMPLATE_MTIME}
+  - CODEBASE_CHANGE_TEMPLATE checksum: {CODEBASE_CHANGE_TEMPLATE_CHECKSUM}
+  - CODEBASE_CHANGE_TEMPLATE bytes: {CODEBASE_CHANGE_TEMPLATE_BYTES}
+  - CODEBASE_CHANGE_TEMPLATE mtime: {CODEBASE_CHANGE_TEMPLATE_MTIME}
+  - CODEBASE_INVENTORY checksum: {CODEBASE_INVENTORY_CHECKSUM}
+  - CODEBASE_INVENTORY bytes: {CODEBASE_INVENTORY_BYTES}
+  - CODEBASE_INVENTORY mtime: {CODEBASE_INVENTORY_MTIME}
+  - PROJECT_ANALYSIS checksum: {PROJECT_ANALYSIS_CHECKSUM}
+  - PROJECT_ANALYSIS bytes: {PROJECT_ANALYSIS_BYTES}
+  - PROJECT_ANALYSIS mtime: {PROJECT_ANALYSIS_MTIME}
+
+Current artifact fingerprints:
+{ARTIFACT_FINGERPRINTS}
+
+Source-of-truth priority:
+1. Individual template files
+2. {DELIVERY_TEMPLATE_REGISTRY}
+3. {CODEBASE_TEMPLATE_REGISTRY}
+4. {PROJECT_ANALYSIS}
+5. Current checksum context
+
+Task:
+- Evaluate whether the template set is complete and consistent for this project complexity.
+- Verify the registry matches the actual template files and their purposes.
+- Verify template sections, metadata, and placeholders are coherent and usable.
+- Reject if initiative, plan, task-graph, task, implementation, validation, or codebase templates do not carry the required documentation-governance sections.
+- Produce an explicit decision: approved or rejected.
+- Write review file to `{REVIEW_FILE_SUGGESTED}`.
+- You MUST write the REVIEW_FILE to that exact path.
+- You MUST always save a REVIEW_FILE for both APPROVED and REJECTED decisions.
+- The REVIEW_FILE must exist on disk before returning final JSON.
+- Return the REVIEW_FILE path in artifacts.REVIEW_FILE.
+- Do not output markdown prose in place of JSON.
+- Use the exact review file path shown above.
+
+Required JSON schema:
+{
+  "status": "APPROVED | REJECTED",
+  "remark": "<short summary of result>",
+  "artifacts": {
+    "REVIEW_FILE": null
+  }
+}
+
+Rules for the artifacts object:
+- Include ONLY artifact keys produced or updated by this step.
+- If this step does not create or update any artifact path, return "artifacts": {}.
+- Use repository-relative paths.
+- Do not invent paths that were not created or updated.
+- If preflight fails, return status "REJECTED" with a short reason and "artifacts": {}.

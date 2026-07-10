@@ -2,142 +2,121 @@
 template_id: "SYS-03-DL"
 title: "Decision Log - agent-runner-v2"
 status: "active"
-generated: "2026-07-10T14:20:05+08:00"
+managed_by: workflow-generated
+generated: "2026-07-10T19:56:49+08:00"
 workflow: "00_master_docs_bootstrap_v2"
 step: "04_generate_architecture_docs"
-change_id: "00DOC-GEN-20260710-004"
-managed_by: workflow-generated
+change_id: "00DOC-20260710-0098bf53"
 ---
 
 > Managed by workflow: `00_master_docs_bootstrap_v2` / step: `04_generate_architecture_docs`
 > This file is workflow-generated and protected from manual edits.
 
-# Decision Log
+# Decision Log: agent-runner-v2
 
 ## Decision Table
 
-| ID | Date | Decision | Context | Status |
-|----|------|----------|---------|--------|
-| DEC-001 | 2024-Q2 | Extract from UKBE | Create standalone runner from UKBE monolith | ✅ Implemented |
-| DEC-002 | 2024-Q3 | v2 Sidecar Contract | meta.json as sole communication channel | ✅ Implemented |
-| DEC-003 | 2024-Q4 | Bootstrap/Runtime Duality | Packaged source seeds global runtime | ✅ Implemented |
-| DEC-004 | 2025-Q1 | Centralized Constants | Single source of truth for paths | ✅ Implemented |
-| DEC-005 | 2025-Q2 | Plugin Architecture | Self-contained workflow packages | 🔄 In Progress |
-| DEC-006 | 2025-Q3 | Auto-Injection | Remove manual sidecar boilerplate | ✅ Implemented |
-| DEC-007 | 2025-Q4 | Test Split | Unit/integration directory separation | ✅ Implemented |
-| DEC-008 | 2026-Q1 | Pathlib Windows Fix | Fix relative_to() on Windows | ✅ Implemented |
-| DEC-009 | 2026-Q2 | Workflow Package Discovery | Dual-path (global→local) loading | ✅ Implemented |
+| ID | Date | Decision | Rationale | Status |
+|----|------|----------|-----------|--------|
+| ADR-001 | 2024-Q1 | Extract agent-runner from UKBE | Need standalone workflow engine | Accepted |
+| ADR-002 | 2024-Q2 | v2 sidecar contract (meta.json only) | Eliminate ambiguous failure modes | Accepted |
+| ADR-003 | 2024-Q2 | Subprocess-per-step execution | Fresh code loading, isolation | Accepted |
+| ADR-004 | 2024-Q3 | Plugin workflow system | Replace 2453-line template_groups.py | In Progress |
+| ADR-005 | 2024-Q4 | Centralized constants.py | Zero hardcoded paths | Accepted |
+| ADR-006 | 2025-Q1 | Dual-path bundle discovery | Global first, local fallback | Accepted |
+| ADR-007 | 2025-Q1 | Adapter pattern for plugins | Minimize execution pipeline risk | Accepted |
+| ADR-008 | 2025-Q2 | Process-local runtime context | Thread-safe, testable | Accepted |
+| ADR-009 | 2025-Q2 | Documentation-first governance | Self-documenting system | Accepted |
+| ADR-010 | 2025-Q3 | Strict artifact validation | No silent recovery paths | Accepted |
+| ADR-011 | 2025-Q4 | Centralized section requirements | Validation without mapping layers | Accepted |
+| ADR-012 | 2026-Q1 | Windows pathlib compatibility | Fix relative_to() edge cases | Accepted |
+| ADR-013 | 2026-Q2 | Prompt placeholder normalization | REFERENCE_FILES keys as placeholders | Accepted |
 
-## Detailed Decisions
+## Decision Details
 
-### DEC-001: Extract from UKBE
+### ADR-002: v2 Sidecar Contract
 
-**Context**: The runner was embedded in the larger UKBE (Unified Knowledge Base Environment) system, creating deployment coupling.
+**Context**: Need clear communication channel between LLM and runner.
 
-**Decision**: Extract into standalone `agent-runner-v2` package with its own lifecycle.
-
-**Consequences**:
-- Independent versioning and deployment
-- Clearer responsibility boundaries
-- Separate repository for focused development
-
-### DEC-002: v2 Sidecar Contract
-
-**Context**: v1 used markdown write-backs and stdout parsing, creating ambiguity in result communication.
-
-**Decision**: meta.json is the **only** structured result channel. No markdown write-backs, no silent recovery, explicit routing.
+**Decision**: `meta.json` is the ONLY structured result channel.
 
 **Consequences**:
-- Unambiguous step results
-- Schema-versioned contracts
-- Hard failures routed explicitly through `route_after_failure()`
-- Required significant refactoring of all workflow steps
+- LLM must write valid JSON sidecar
+- No stdout parsing fallback
+- Hard failures for missing/invalid sidecars
+- Clear contract enforcement
 
-### DEC-003: Bootstrap/Runtime Duality
+### ADR-004: Plugin Workflow System
 
-**Context**: Workflows need to be packaged but also user-modifiable.
+**Context**: Monolithic template_groups.py at 2453+ lines is unmaintainable.
 
-**Decision**: Package bootstrap source in repo (`agent_runner_v2/bootstrap/`), seed to global runner home (`%USERPROFILE%\.ukbe-runner\`) via `init` command.
+**Decision**: Migrate to self-contained workflow packages with adapter pattern.
 
-**Consequences**:
-- Users can modify runtime workflows without editing package
-- Updates require explicit re-initialization
-- Two sources of truth require careful management
-
-### DEC-004: Centralized Constants
-
-**Context**: Hardcoded paths scattered across codebase created maintenance issues.
-
-**Decision**: Consolidate all path constants into `constants.py` with ARTIFACT_KEY_* and ARTIFACT_PATH_* constants.
+**Architecture**:
+```
+workflows/<name>/
+├── workflow.toml       # Manifest
+├── prompts/            # Templates
+└── context_extensions.py  # Hooks
+```
 
 **Consequences**:
-- Zero hardcoded strings in path construction
-- Section requirements use constants as keys
-- Single source of truth for validation
+- Adding workflow = create directory, not edit monolith
+- Adapter converts to existing dict format
+- Zero changes to execution pipeline
+- Dual-path discovery maintained
 
-### DEC-005: Plugin Architecture
+### ADR-005: Centralized Constants
 
-**Context**: `template_groups.py` grew to 2,453 lines with 21 workflows—unmaintainable.
+**Context**: Scattered string literals created maintenance nightmare.
 
-**Decision**: Migrate to self-contained workflow packages with `workflow.toml` manifests.
+**Decision**: All paths and section requirements in `constants.py`.
 
-**Status**: In progress. Adapter pattern maintains compatibility with existing execution pipeline.
+**Benefits**:
+- Single source of truth
+- Direct lookup without mapping layers
+- Zero hardcoded strings
+- Case consistency
 
-### DEC-006: Auto-Injection
+### ADR-007: Adapter Pattern for Plugins
 
-**Context**: Manual sidecar boilerplate in prompts was error-prone and inconsistent.
+**Context**: Risk of breaking proven execution pipeline.
 
-**Decision**: Automatically inject sidecar instructions at runtime via template substitution.
+**Decision**: Plugin system is configuration source adapter, not runtime replacement.
 
-**Consequences**:
-- Consistent sidecar format across all prompts
-- Reduced prompt maintenance burden
-- Centralized injection logic in `step_runner.py`
+**Flow**:
+```
+WorkflowBundle → Adapter → Dict format → Existing pipeline
+```
 
-### DEC-007: Test Split
+**Benefits**:
+- Proven execution pipeline unchanged
+- Minimal risk
+- Easy rollback
+- Backward compatible
 
-**Context**: Mixed test types in single directory made it hard to run quick checks.
+### ADR-013: Prompt Placeholder Normalization
 
-**Decision**: Separate `tests/unit/` (pure logic, isolated) from `tests/integration/` (real files, subprocesses).
+**Context**: Artifact key mismatches causing validation failures.
 
-**Consequences**:
-- Fast unit test feedback
-- Clear separation of concerns
-- Integration tests can use filesystem and network
+**Decision**: Use REFERENCE_FILES dict keys as placeholders.
 
-### DEC-008: Pathlib Windows Fix
-
-**Context**: `Path.relative_to()` fails on Windows when paths have different drive letters.
-
-**Decision**: Add explicit handling for Windows path edge cases.
-
-**Consequences**:
-- Cross-platform path operations work correctly
-- Windows development fully supported
-
-### DEC-009: Dual-Path Discovery
-
-**Context**: Workflow packages need both global (runner home) and local (project) sources.
-
-**Decision**: Global first, local fallback. No automatic fallback from global to local at runtime.
-
-**Consequences**:
-- Explicit path resolution
-- Predictable loading order
-- Local overrides possible but not automatic
+**Pattern**:
+- Placeholder: `{ARTIFACT_KEY_CODEBASE_DOC_SOP}`
+- Maps to value: `CODEBASE_DOC_SOP_v1`
+- LLM reports key in meta.json
+- Validation passes
 
 ## Follow-Up Decisions
 
-| ID | Description | Priority | Owner |
-|----|-------------|----------|-------|
-| DEC-FU-001 | Complete plugin migration for all 21 workflows | High | Architecture |
-| DEC-FU-002 | Document runtime bundle sync procedure | Medium | Documentation |
-| DEC-FU-003 | Backend API contract documentation | Medium | Backend |
-| DEC-FU-004 | Unix-first deployment option | Low | Platform |
+| Item | Description | Owner | Due |
+|------|-------------|-------|-----|
+| DEC-FU-001 | Complete plugin system migration | TBD | 2026-Q3 |
+| DEC-FU-002 | Deprecate TEMPLATE_GROUPS legacy path | TBD | 2026-Q4 |
+| DEC-FU-003 | Add workflow package template generator | TBD | 2026-Q3 |
+| DEC-FU-004 | Document cross-platform path handling | TBD | 2026-Q3 |
+| DEC-FU-005 | Add integration test coverage for plugin loading | TBD | 2026-Q3 |
 
-## Related Documents
+---
 
-| Document | Purpose |
-|----------|---------|
-| [COMPONENT_ARCHITECTURE.md](COMPONENT_ARCHITECTURE.md) | Component breakdown |
-| [BUNDLE_MIGRATION_PLAN.md](BUNDLE_MIGRATION_PLAN.md) | Migration strategy |
+*Last updated: 2026-07-10T19:56:49+08:00 via workflow `00_master_docs_bootstrap_v2`*

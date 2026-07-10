@@ -1,278 +1,246 @@
 ---
 template_id: "SYS-00-DS"
-title: "Documentation Standard"
+title: "Documentation Standard - agent-runner-v2"
 status: "active"
-generated: "2026-07-10T14:07:00+08:00"
+managed_by: workflow-generated
+generated: "2026-07-10T19:47:28+08:00"
 workflow: "00_master_docs_bootstrap_v2"
 step: "03_generate_system_overview_docs"
-change_id: "00DOC-GEN-20260710-004"
-managed_by: workflow-generated
+change_id: "00DOC-20260710-0098bf53"
 ---
 
 > Managed by workflow: `00_master_docs_bootstrap_v2` / step: `03_generate_system_overview_docs`
 > This file is workflow-generated and protected from manual edits.
 
-# Documentation Standard
+# Documentation Standard: agent-runner-v2
 
 ## Purpose
 
-This document defines the documentation requirements for the `agent-runner-v2` repository. It establishes:
-
-1. **Baseline rules** that apply to every repository in the ecosystem
-2. **Repo-selected profiles** that reflect this repository's current posture
-3. **Migration modes** that indicate how standards are being adopted
+This document defines the baseline documentation rules that apply to every repository in the ecosystem, explains how repo-specific profiles and migration modes are selected, and establishes the conventions for document structure, cross-referencing, and validation.
 
 ## Audience Model
 
-| Audience | Documentation Needs | Primary Sources |
-|----------|---------------------|-----------------|
-| **Stakeholders** | Why this exists, what it enables | System docs, business capabilities |
-| **Developers** | How it works, how to extend | Functional spec, developer guide |
-| **Operators** | How to run, troubleshoot | Runbook, system overview |
-| **Contributors** | How to participate | Documentation standard, developer guide |
+Documentation serves multiple audiences with different information needs:
+
+| Audience | Primary Need | Typical Background |
+|----------|--------------|-------------------|
+| **Stakeholders** | Business value, capabilities, governance | Business, product, executive |
+| **Developers** | Architecture, APIs, integration patterns | Engineering, implementation |
+| **Operators** | Runtime behavior, deployment, procedures | DevOps, SRE, platform |
+| **Testers** | Validation criteria, test procedures | QA, validation engineering |
+| **End Users** | Usage guidance, features | Application users |
 
 ## Document Set
 
-### System Documentation
+### System Governance Documents (00_governance/bootstrap/)
 
-System documentation lives in `docs/system/` and explains the platform holistically:
+These documents establish the governance baseline for the repository:
 
-| Document | Purpose | Maintained By |
-|----------|---------|---------------|
-| SYSTEM_OVERVIEW | Platform purpose and value flow | Bootstrap workflow |
-| BUSINESS_CAPABILITIES | Operational capabilities | Bootstrap workflow |
-| FUNCTIONAL_SPEC | Functional scope and behaviors | Bootstrap workflow |
-| NON_FUNCTIONAL_REQUIREMENTS | Quality and runtime expectations | Bootstrap workflow |
-| SYSTEM_CONTEXT | External boundaries and interfaces | Bootstrap workflow |
-| COMPONENT_ARCHITECTURE | Component breakdown | Bootstrap workflow |
-| DECISION_LOG | Architectural decisions | Bootstrap workflow |
-| DEVELOPER_GUIDE | Development setup | Bootstrap workflow |
-| RUNBOOK | Operational procedures | Bootstrap workflow |
+| Document | Template ID | Purpose |
+|----------|-------------|---------|
+| README.md | SYS-00-IDX | Documentation index and navigation |
+| DOCUMENTATION_STANDARD.md | SYS-00-DS | This document — standards and conventions |
+| BUNDLE_TAXONOMY.md | SYS-00-BT | Workflow bundle organization |
+| BUNDLE_MIGRATION_PLAN.md | SYS-00-BMP | Migration roadmap and posture |
+| SYSTEM_OVERVIEW.md | SYS-00-SO | Platform explanation and value flow |
+| BUSINESS_CAPABILITIES.md | SYS-00-BC | Operational capabilities |
+| FUNCTIONAL_SPEC.md | SYS-00-FS | Core behaviors and capabilities |
+| NON_FUNCTIONAL_REQUIREMENTS.md | SYS-00-NFR | Quality and operational requirements |
 
-### Codebase Documentation
+### Architecture Documents (00_governance/bootstrap/)
 
-Codebase documentation lives in `docs/codebase/` and tracks the repository state:
+| Document | Template ID | Purpose |
+|----------|-------------|---------|
+| SYSTEM_CONTEXT.md | SYS-00-SC | System boundaries and interfaces |
+| COMPONENT_ARCHITECTURE.md | SYS-00-CA | Component structure |
+| DECISION_LOG.md | SYS-00-DL | Architectural decisions |
+| SYSTEM_FILE_STRUCTURE.md | SYS-00-SFS | Repository organization |
+| DEVELOPER_GUIDE.md | SYS-00-DG | Implementation guidance |
+| RUNBOOK.md | SYS-00-RB | Operational procedures |
+| EXISTING_REPO_WORKFLOW_SOP.md | SYS-00-SOP | Repo workflow SOP |
 
-| Document | Purpose | Maintained By |
-|----------|---------|---------------|
-| CODEBASE_INVENTORY | Module and component inventory | Reconcile workflow |
-| Module docs (02_modules/) | Per-module documentation | Reconcile workflow |
-| Component docs (03_components/) | Cross-cutting concerns | Reconcile workflow |
-| Change impact docs (04_changes/) | Change tracking | Reconcile workflow |
+### Delivery Documents (delivery/)
 
-### Delivery Documentation
+| Artifact Type | Template | Purpose |
+|---------------|----------|---------|
+| INIT_FILE | 02_delivery_initiative_template | Initiative definition |
+| PLAN_FILE | 03_delivery_plan_template | Delivery plan |
+| TASK_GRAPH_FILE | 04_delivery_task_graph_template | Task decomposition |
+| TASK_FILE | 05_delivery_task_template | Individual task |
+| IMPL_FILE | 06_delivery_impl_template | Implementation plan |
+| REVIEW_FILE | 07_delivery_review_template | Review results |
+| VALIDATION_FILE | 08_delivery_validation_template | Validation results |
 
-Delivery documentation lives in `docs/delivery/` and tracks initiatives and tasks:
+### Codebase Documents (codebase/)
 
-| Document | Purpose | Maintained By |
-|----------|---------|---------------|
-| Initiatives | Planned and in-flight work | Initiative workflows |
-| Plans | Delivery plans for initiatives | Planning workflows |
-| Tasks | Implementation tasks | Execution workflows |
-| Reviews | Review outcomes | Execution workflows |
+| Document | Purpose |
+|----------|---------|
+| CODEBASE_INVENTORY.md | Module and component inventory |
+| CODEBASE_DOC_SOP.md | Codebase documentation SOP |
+| CHANGE_IMPACT.md | Change impact analysis |
 
 ## Architecture Baseline
 
-### Universal Documentation Requirements
+### Universal Documentation Rules
 
-Every repository in this ecosystem must maintain:
+These rules apply to every repository regardless of profile:
 
-1. **System documentation** in `docs/system/` covering:
-   - Platform overview and purpose
-   - Functional scope and capabilities
-   - Operational characteristics
+1. **Frontmatter Required**: All markdown documents MUST include YAML frontmatter with:
+   - `template_id`: Stable identifier for validation
+   - `title`: Human-readable document title
+   - `status`: Document lifecycle state
 
-2. **Codebase documentation** in `docs/codebase/` covering:
-   - Current repository structure
-   - Module inventory
-   - Recent changes
+2. **Workflow-Generated Banner**: Generated documents MUST include the standard banner immediately after frontmatter.
 
-3. **Delivery documentation** in `docs/delivery/` covering:
-   - Active initiatives
-   - Delivery plans
-   - Task execution records
+3. **Cross-Reference Convention**: Internal links use relative paths from the document's location.
 
-### Documentation Format Standards
+4. **Template ID Stability**: Once assigned, template IDs are immutable across document versions.
 
-All markdown documents must include:
+5. **Status Lifecycle**: Documents progress through: `draft` → `active` → `archived`
 
-```yaml
----
-template_id: "TEMPLATE-XXX"
-title: "Document Title"
-status: "active"
-generated: "2026-07-10T14:07:00+08:00"
-workflow: "workflow_name"
-step: "step_name"
-change_id: "CHANGE-ID"
-managed_by: workflow-generated
----
+### Path Constants
+
+All documentation paths MUST use centralized constants from `agent_runner_v2/constants.py`:
+
+```python
+from agent_runner_v2.constants import (
+    ARTIFACT_PATH_PROJECT_ANALYSIS,
+    FOLDER_KEY_SYSTEM_BOOTSTRAP,
+    artifact_path
+)
 ```
 
-All documents must carry the workflow-generated protection banner after frontmatter.
-
-### Directory Structure Standard
-
-```
-docs/
-├── system/              # Platform documentation
-│   ├── 00_governance/   # Master docs, standards
-│   ├── 01_context/      # System context
-│   ├── 10_architecture/ # Component architecture
-│   └── 20_operations/   # Runbooks, guides
-├── codebase/            # Repository documentation
-│   ├── 01_inventory/    # Codebase inventory
-│   ├── 02_modules/      # Module documentation
-│   ├── 03_components/   # Component documentation
-│   └── 04_changes/      # Change impact documents
-└── delivery/            # Delivery documentation
-    ├── 01_initiatives/  # Initiative drafts
-    ├── 02_drafts/       # Draft documents
-    ├── 03_plans/        # Delivery plans
-    ├── 04_tasks/        # Task definitions
-    ├── 05_implementations/ # Implementation records
-    └── 06_reviews/      # Review outcomes
-```
+**Prohibited**: Hardcoded path strings anywhere in the codebase.
 
 ## Repo-Selected Profile
 
-This repository follows the **`provisional` → `structured` profile**:
+### Profile Definitions
 
-| Aspect | Current State | Target State |
-|--------|---------------|--------------|
-| **Documentation coverage** | Partial | Comprehensive |
-| **Update automation** | Workflow-driven | Fully automated |
-| **Validation** | Manual | Automated |
-| **Cross-reference integrity** | Best effort | Guaranteed |
+| Profile | Characteristics | Documentation Depth |
+|---------|-----------------|---------------------|
+| **minimal** | Prototype, exploratory | Essential docs only |
+| **provisional** | Active development, migration in progress | Core set, may have gaps |
+| **explicit** | Stable, fully documented | Complete documented system |
+| **canonical** | Reference implementation | Complete + exemplary |
 
-### Current Profile Characteristics
+### Current Profile: `provisional`
 
-- **Monolithic workflow registry** (`template_groups.py`, 2,453 lines) indicates provisional structure
-- **Plugin migration in progress** toward structured workflow packages
-- **Centralized constants** (`constants.py`, 1,342 lines) indicate structured path management
-- **Comprehensive test coverage** (45+ unit tests) indicates structured quality approach
+The `agent-runner-v2` repository operates under the `provisional` profile:
 
-### Target Profile
+- Active plugin system migration in progress
+- Documentation being established by bootstrap workflows
+- Some gaps exist and are being addressed
+- Test coverage exists but comprehensive verification ongoing
 
-- Self-contained workflow packages with `workflow.toml` manifests
-- Automated documentation reconciliation on code changes
-- Validated cross-references between documents
-- Deterministic artifact paths via centralized constants
+### Target Profile: `explicit`
+
+Intended end-state:
+
+- All modules documented
+- Architecture decisions recorded
+- Operational procedures defined
+- Validation automated
 
 ## Migration Mode
 
-**Status**: `in_progress`
+### Migration Posture
 
-### Migration Activities
+The repository is currently in `in_progress` migration mode:
 
-| Activity | Status | Target Completion |
-|----------|--------|-------------------|
-| Plugin-based workflows | In progress | TBD |
-| Centralized constants | Complete | Done |
-| Documentation automation | In progress | TBD |
-| Test isolation | Complete | Done |
+- Legacy `TEMPLATE_GROUPS` monolith being replaced by plugin workflow system
+- Documentation being bootstrapped by automated workflows
+- Constants and path logic being centralized
+- No stable baseline yet established
 
-### Provisional Elements
+### Migration Path
 
-The following elements reflect provisional posture:
-
-- Monolithic `template_groups.py` with 21 hardcoded workflows
-- Workflow package system migration incomplete
-- Manual documentation synchronization required
-
-### Structured Elements
-
-The following elements reflect structured posture:
-
-- Centralized artifact path constants in `constants.py`
-- Strict sidecar contract (v2) for workflow communication
-- Comprehensive unit/integration test split
-- Deterministic runner action separation
+1. **Current**: Bootstrap documentation via `00_master_docs_bootstrap_v2`
+2. **Next**: Establish stable SOP and templates via `10_execution_scaffold_v1`
+3. **Target**: Explicit profile with full documentation coverage
 
 ## Conditional Standards
 
-### For Workflow-Generated Documents
+### When Profile = `provisional`
 
-Workflow-generated documents must:
+- Generated docs may have incomplete sections
+- Architecture decisions may be in flux
+- Documentation drift expected; reconciliation workflows required
+- Validation may have exceptions
 
-1. Include the `managed_by: workflow-generated` frontmatter field
-2. Display the workflow protection banner after frontmatter
-3. Reference the generating workflow and step
-4. Not be manually edited
+### When Profile = `explicit`
 
-### For Hand-Written Documents
-
-Hand-written documents should:
-
-1. Include appropriate frontmatter without `managed_by` field
-2. Follow markdown style conventions
-3. Reference related documents explicitly
-4. Be peer-reviewed before commit
-
-### For Code Documentation
-
-Code modules should:
-
-1. Include module-level docstrings explaining purpose
-2. Document public functions with type hints
-3. Reference related modules
-4. Follow the codebase documentation conventions in `CODER_IMPLEMENTATION_SOP.md`
+- All documents must pass validation
+- No undocumented public APIs
+- Architecture decisions must have ADRs
+- Drift detection must pass
 
 ## Update Triggers
 
-### Automatic Updates
+Documentation MUST be refreshed when:
 
-The following trigger automatic documentation updates:
-
-| Trigger | Workflow | Documents Updated |
-|---------|----------|-------------------|
-| Repository scan | `40_documentation_sync_v1` | Codebase inventory, module docs |
-| Bootstrap workflow | `00_master_docs_bootstrap_v2` | System documentation |
-| Delivery scaffold | `10_execution_scaffold_v1` | Delivery templates, SOPs |
-| Task execution | `31_task_execution_v1` | Task records, review outcomes |
-
-### Manual Updates
-
-The following require manual intervention:
-
-- Architectural decision records (ADR)
-- Runbook procedures
-- Developer guide updates for new patterns
+1. **Code changes** affect documented behavior
+2. **Architecture decisions** are made or changed
+3. **New modules** are added to the codebase
+4. **Workflow changes** affect operational procedures
+5. **Migration milestones** are reached
 
 ## Validation
 
-### Document Validation Requirements
+### Automated Validation
 
-Documents must pass:
+Documentation validation checks:
 
-1. **Structure validation** — Required sections present
-2. **Frontmatter validation** — Required fields populated
-3. **Reference validation** — Linked documents exist
-4. **Style validation** — Follows markdown conventions
+- Frontmatter presence and format
+- Template ID correctness
+- Cross-reference validity
+- Required section presence
+- Section content completeness
 
-### Validation Workflow
+### Validation Commands
 
-Validation is performed by:
+```bash
+# Validate system documents
+ukbe-run-agent run --template-group documentation_sync_v1 --step validate
 
-- `validate_codebase_docs.py` — Codebase documentation validation
-- `validate_system_docs.py` — System documentation validation
-- `validate_delivery_docs.py` — Delivery documentation validation
+# Validate delivery documents
+ukbe-run-agent run --template-group 10_execution_scaffold_v1 --step validate
+```
 
-### Validation Results
+### Validation Artifacts
 
-Results are recorded in:
+Validation produces:
+- `VALIDATION_FILE` with pass/fail status
+- `SYSTEM_DOCS_VALIDATION` with detailed results
 
-- `docs/codebase/04_changes/*-validation.md` — Codebase validation
-- Validation sidecar files (`*.meta.json`) alongside validated documents
+## Document Conventions
+
+### Section Headings
+
+Use these exact section headings where applicable:
+
+- `Purpose` — Why this document exists
+- `Scope` — What is and isn't covered
+- `Audience` — Who should read this
+- `Prerequisites` — What to know first
+- `Primary Flows` — Main execution paths
+- `Key Risks` — Known issues and mitigations
+
+### Cross-References
+
+```markdown
+[SYSTEM_OVERVIEW.md](SYSTEM_OVERVIEW.md)
+[Codebase Inventory](../../codebase/01_inventory/codebase_inventory.md)
+```
+
+### Code Blocks
+
+Use fenced code blocks with language identifiers:
+
+```python
+# Python example
+from agent_runner_v2.constants import ARTIFACT_KEY_PROJECT_ANALYSIS
+```
 
 ---
 
-## Related Documents
-
-- [README.md](README.md) — System documentation index
-- [SYSTEM_OVERVIEW.md](SYSTEM_OVERVIEW.md) — Platform overview
-- [PROJECT_ANALYSIS.md](PROJECT_ANALYSIS.md) — Repository analysis and posture
-
----
-
-*Generated by workflow: `00_master_docs_bootstrap_v2` — Step: `03_generate_system_overview_docs`*
+*Last updated: 2026-07-10T19:47:28+08:00 via workflow `00_master_docs_bootstrap_v2`*

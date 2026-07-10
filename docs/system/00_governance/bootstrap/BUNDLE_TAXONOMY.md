@@ -1,376 +1,258 @@
 ---
 template_id: "SYS-00-BT"
-title: "Bundle Taxonomy"
+title: "Bundle Taxonomy - agent-runner-v2"
 status: "active"
-generated: "2026-07-10T14:07:00+08:00"
+managed_by: workflow-generated
+generated: "2026-07-10T19:47:28+08:00"
 workflow: "00_master_docs_bootstrap_v2"
 step: "03_generate_system_overview_docs"
-change_id: "00DOC-GEN-20260710-004"
-managed_by: workflow-generated
+change_id: "00DOC-20260710-0098bf53"
 ---
 
 > Managed by workflow: `00_master_docs_bootstrap_v2` / step: `03_generate_system_overview_docs`
 > This file is workflow-generated and protected from manual edits.
 
-# Bundle Taxonomy
+# Bundle Taxonomy: agent-runner-v2
 
 ## Purpose
 
-This document defines the taxonomy of documentation bundles in the `agent-runner-v2` repository. It classifies:
+This document defines the organization and structure of workflow bundles in the agent-runner-v2 ecosystem. It establishes naming conventions, bundle types, and the relationship between bootstrap source and runtime bundles.
 
-1. **Bundle types** and their contents
-2. **Bundle relationships** and dependencies
-3. **Bundle lifecycle** from creation to archival
+## Scope
 
-## Audience
-
-| Role | Use Case |
-|------|----------|
-| **Developers** | Understanding what documentation artifacts exist and where |
-| **Operators** | Locating specific documentation bundles for maintenance |
-| **Workflow authors** | Understanding bundle structure for workflow development |
+This taxonomy covers:
+- Workflow bundle types and their purposes
+- Bundle directory structure and organization
+- Naming conventions for bundles and their contents
+- Bootstrap-to-runtime bundle relationships
+- Migration path from monolithic to plugin-based bundles
 
 ## Bundle Types
 
-### Core Bundles
+### 1. Bootstrap Bundles (Packaged)
+
+Located in: `agent_runner_v2/bootstrap/`
+
+**Purpose**: Seed the global runner home with default workflows, templates, and themes.
+
+| Bundle | Location | Contents |
+|--------|----------|----------|
+| Core System Docs | `bootstrap/bundles/core/current/` | Master documentation templates |
+| Default Workflows | `bootstrap/workflows/default/` | Built-in workflow definitions |
+| Default Themes | `bootstrap/themes/default/` | HTML site themes |
+
+**Key characteristic**: Bootstrap bundles are **source only** — they are not loaded directly at runtime. They exist to seed the global runner home via `ukbe-run-agent init`.
+
+### 2. Runtime Bundles (Global)
+
+Located in: `%USERPROFILE%\.ukbe-runner\`
+
+**Purpose**: Active execution environment for workflows.
+
+| Directory | Contents |
+|-----------|----------|
+| `workflows/<workflow>/` | Workflow definitions and prompts |
+| `bundles/core/current/` | System documentation templates |
+| `jobs/` | Job state and execution artifacts |
+| `logs/` | Execution logs |
+| `config.json` | Runner configuration |
+
+**Key characteristic**: Runtime bundles are the **source of truth** for execution. The runner loads workflows from here, not from the repo.
+
+### 3. Plugin Workflow Bundles (Project-Local)
+
+Located in: `<repo>/workflows/<workflow>/`
+
+**Purpose**: Self-contained workflow packages that can be developed and versioned independently.
+
+**Structure**:
+```
+workflows/<workflow_name>/
+├── workflow.toml          # Manifest and step definitions
+├── prompts/               # Prompt template files
+│   ├── 01_step_name.txt
+│   └── 02_another_step.txt
+└── context_extensions.py  # Optional context hooks
+```
+
+**Key characteristic**: Plugin bundles are converted to the same dict format as legacy `TEMPLATE_GROUPS`, enabling backward compatibility.
+
+## Bundle Directory Structure
+
+### Bootstrap Workflows
+
+```
+agent_runner_v2/bootstrap/workflows/default/
+├── template_groups.py          # Legacy monolithic workflow definitions
+├── job_schema.json             # Job validation schema
+├── llm_response_schema.json    # LLM response validation
+├── model_mapping.json          # Model alias mappings
+└── prompts/
+    ├── 00_master_docs_bootstrap_v1/
+    │   ├── 02_generate_project_analysis.txt
+    │   ├── 03_generate_system_overview_docs.txt
+    │   └── ...
+    ├── 10_execution_scaffold_v1/
+    ├── 20_initiative_intake_v1/
+    ├── 21_bug_fix_intake_v1/
+    ├── 30_delivery_planning_v1/
+    ├── 31_task_execution_v1/
+    ├── 40_documentation_sync_v1/
+    ├── 41_audience_doc_v1/
+    ├── 51_stakeholder_docs_v1/
+    ├── 52_developer_docs_v1/
+    ├── 53_operator_docs_v1/
+    ├── 54_tester_docs_v1/
+    ├── 55_user_docs_v1/
+    └── ...
+```
+
+### Runtime Workflows
+
+```
+%USERPROFILE%\.ukbe-runner\workflows\<workflow>\
+├── template_groups.py          # Copied from bootstrap or plugin
+└── prompts/                    # Copied from bootstrap or plugin
+    └── ...
+```
+
+### Plugin Workflows
+
+```
+<repo>/workflows/<workflow_name>/
+├── workflow.toml               # Declarative manifest
+├── prompts/                    # Prompt templates
+│   └── <step_name>.txt
+└── context_extensions.py       # Optional hooks
+```
+
+## Naming Conventions
+
+### Workflow Names
+
+Pattern: `<number>_<purpose>_<version>`
 
-Core bundles contain the fundamental documentation for the repository.
+| Workflow | Purpose | Version |
+|----------|---------|---------|
+| `00_master_docs_bootstrap_v1` | Master documentation generation | v1 |
+| `10_execution_scaffold_v1` | Delivery scaffold establishment | v1 |
+| `20_initiative_intake_v1` | Initiative intake | v1 |
+| `21_bug_fix_intake_v1` | Bug fix workflow | v1 |
+| `30_delivery_planning_v1` | Delivery planning | v1 |
+| `31_task_execution_v1` | Task execution | v1 |
+| `40_documentation_sync_v1` | Documentation synchronization | v1 |
+| `50_architecture_site_v1` | Architecture site generation | v1 |
 
-#### System Documentation Bundle
+### Prompt Files
 
-**Location**: `docs/system/00_governance/bootstrap/`
+Pattern: `<step_number>_<step_name>.txt`
 
-**Contents**:
-- README.md — System documentation index
-- DOCUMENTATION_STANDARD.md — Documentation standards
-- BUNDLE_TAXONOMY.md — This document
-- BUNDLE_MIGRATION_PLAN.md — Migration strategy
-- SYSTEM_OVERVIEW.md — Platform overview
-- BUSINESS_CAPABILITIES.md — Operational capabilities
-- FUNCTIONAL_SPEC.md — Functional specification
-- NON_FUNCTIONAL_REQUIREMENTS.md — Quality expectations
-- SYSTEM_CONTEXT.md — External boundaries
-- COMPONENT_ARCHITECTURE.md — Component breakdown
-- DECISION_LOG.md — Design decisions
-- SYSTEM_FILE_STRUCTURE.md — Repository organization
-- DEVELOPER_GUIDE.md — Development setup
-- RUNBOOK.md — Operational procedures
-- PROJECT_ANALYSIS.md — Repository analysis
+Examples:
+- `02_generate_project_analysis.txt`
+- `03_generate_system_overview_docs.txt`
+- `08_impl_task.txt`
 
-**Purpose**: Provides comprehensive understanding of the platform.
+### Artifact Keys
 
-**Maintained By**: `00_master_docs_bootstrap_v2` workflow
+Pattern: `ARTIFACT_KEY_<DESCRIPTION>`
 
-**Update Frequency**: Per major release or architecture change
-
-#### Codebase Documentation Bundle
-
-**Location**: `docs/codebase/`
-
-**Contents**:
-- 01_inventory/codebase_inventory.md — Module inventory
-- 02_modules/*.md — Per-module documentation
-- 03_components/*.md — Component documentation
-- 04_changes/*.md — Change impact documents
-
-**Purpose**: Tracks repository structure and state.
-
-**Maintained By**: `40_documentation_sync_v1` workflow, reconcile scans
-
-**Update Frequency**: Continuous, on code changes
-
-#### Bootstrap Bundle
-
-**Location**: `agent_runner_v2/bootstrap/`
-
-**Contents**:
-- bundles/core/current/ — Core documentation bundles (mirrors system docs)
-- themes/default/ — HTML theme templates
-- workflows/default/ — Default workflow definitions
-
-**Purpose**: Seeds runtime bundles for execution.
-
-**Maintained By**: `00_master_docs_bootstrap_v2` workflow
-
-**Update Frequency**: Per release
-
-### Workflow Bundles
-
-Workflow bundles contain workflow-specific definitions and templates.
-
-#### Workflow Package Bundle
-
-**Location**: `%USERPROFILE%\.ukbe-runner\workflows\<workflow_name>\`
-
-**Contents**:
-- workflow.toml — Workflow manifest
-- prompts/ — Prompt templates
-- context_extensions.py — Context hooks (optional)
-
-**Purpose**: Runtime execution source for workflows.
-
-**Maintained By**: Seeded from bootstrap, then runtime-managed
-
-**Update Frequency**: Per workflow version
-
-#### Workflow Prompt Bundle
-
-**Location**: `agent_runner_v2/bootstrap/workflows/default/prompts/<workflow_name>/`
-
-**Contents**:
-- *.txt — Prompt template files
-
-**Purpose**: Bootstrap source for workflow prompts.
-
-**Maintained By**: Workflow authors
-
-**Update Frequency**: Per workflow step change
-
-### Delivery Bundles
-
-Delivery bundles contain initiative and task documentation.
-
-#### Initiative Bundle
-
-**Location**: `docs/delivery/01_initiatives/`
-
-**Contents**:
-- DRAFT_*.md — Draft initiatives
-- PRE_INIT_*.md — Pre-initiative documents
-- INIT_*.md — Approved initiatives
-
-**Purpose**: Captures planned and in-flight work.
-
-**Maintained By**: `20_initiative_intake_v1` workflow
-
-**Update Frequency**: Per initiative
-
-#### Plan Bundle
-
-**Location**: `docs/delivery/03_plans/`
-
-**Contents**:
-- PLAN_*.md — Delivery plans
-
-**Purpose**: Documents delivery approach for initiatives.
-
-**Maintained By**: `30_delivery_planning_v1` workflow
-
-**Update Frequency**: Per planning cycle
-
-#### Task Bundle
-
-**Location**: `docs/delivery/04_tasks/`
-
-**Contents**:
-- TASK_*.md — Task definitions
-
-**Purpose**: Defines implementation tasks.
-
-**Maintained By**: `30_delivery_planning_v1` workflow
-
-**Update Frequency**: Per task creation
-
-#### Implementation Bundle
-
-**Location**: `docs/delivery/05_implementations/`
-
-**Contents**:
-- IMPL_*.md — Implementation records
-
-**Purpose**: Documents implementation execution.
-
-**Maintained By**: `31_task_execution_v1` workflow
-
-**Update Frequency**: Per task execution
-
-#### Review Bundle
-
-**Location**: `docs/delivery/06_reviews/`
-
-**Contents**:
-- REVIEW_*.md — Review outcomes
-
-**Purpose**: Captures review decisions.
-
-**Maintained By**: `31_task_execution_v1` workflow
-
-**Update Frequency**: Per review
-
-### Template Bundles
-
-Template bundles contain reusable document templates.
-
-#### Delivery Template Bundle
-
-**Location**: `docs/delivery/00_templates/`
-
-**Contents**:
-- 01_delivery_template_registry.md
-- 02_delivery_initiative_template.md
-- 03_delivery_plan_template.md
-- 04_delivery_task_graph_template.md
-- 05_delivery_task_template.md
-- 06_delivery_impl_template.md
-- 07_delivery_review_template.md
-- 08_delivery_validation_template.md
-- 09_delivery_memory_template.md
-
-**Purpose**: Standardizes delivery document format.
-
-**Maintained By**: `10_execution_scaffold_v1` workflow
-
-**Update Frequency**: Per template revision
-
-#### Codebase Template Bundle
-
-**Location**: `docs/codebase/00_templates/`
-
-**Contents**:
-- 01_codebase_template_registry.md
-- 02_codebase_inventory_template.md
-- 03_codebase_module_template.md
-- 04_codebase_component_template.md
-- 05_codebase_change_template.md
-
-**Purpose**: Standardizes codebase document format.
-
-**Maintained By**: `10_execution_scaffold_v1` workflow
-
-**Update Frequency**: Per template revision
+Examples:
+- `ARTIFACT_KEY_PROJECT_ANALYSIS`
+- `ARTIFACT_KEY_DELIVERY_SOP`
+- `ARTIFACT_KEY_CODEBASE_INVENTORY`
 
 ## Bundle Relationships
 
-### Dependency Graph
+### Bootstrap → Runtime Flow
 
 ```
-Bootstrap Bundle
-├── System Documentation Bundle (seeds)
-├── Workflow Prompt Bundle (seeds)
-└── Workflow Package Bundle (seeds runtime)
-
-System Documentation Bundle
-├── Codebase Documentation Bundle (references)
-└── Delivery Bundles (references)
-
-Delivery Bundles
-├── Template Bundles (uses)
-└── Bootstrap Bundle (runtime)
+Bootstrap Source (repo)
+    ↓
+ukbe-run-agent init
+    ↓
+Runtime Global (%USERPROFILE%\.ukbe-runner\)
+    ↓
+Runtime Execution (ukbe-run-agent run)
 ```
 
-### Inheritance
+### Plugin → Runtime Flow
 
-| Source Bundle | Target Bundle | Relationship |
-|-------------|---------------|--------------|
-| `agent_runner_v2/bootstrap/bundles/core/current/` | `docs/system/00_governance/bootstrap/` | Mirror / sync target |
-| `agent_runner_v2/bootstrap/workflows/default/` | `~/.ukbe-runner/workflows/` | Runtime seed |
-| Template bundles | Delivery bundles | Format standard |
+```
+Plugin Package (repo/workflows/<name>/)
+    ↓
+Adapter (workflow_packages/loader.py)
+    ↓
+Dict Format (same as TEMPLATE_GROUPS)
+    ↓
+Runtime Execution
+```
 
-## Bundle Lifecycle
+### Dual-Path Discovery
 
-### Creation
+At runtime, workflow discovery uses global-first, local-fallback:
 
-| Bundle Type | Creation Trigger | Creator |
-|-------------|------------------|---------|
-| Core bundles | Repository bootstrap | `00_master_docs_bootstrap_v2` |
-| Workflow bundles | Workflow definition | Workflow author |
-| Delivery bundles | Initiative/plan/task | Respective workflow |
-| Template bundles | Scaffold generation | `10_execution_scaffold_v1` |
+1. Check `%USERPROFILE%\.ukbe-runner\workflows\<workflow>\`
+2. Fallback to repo `workflows/<workflow>/`
 
-### Activation
+This supports both packaged workflows and project-specific overrides.
 
-Bundles become active when:
+## Migration: Monolith to Plugin
 
-1. **Core bundles**: Workflow completes successfully
-2. **Workflow bundles**: Seeded to runtime path
-3. **Delivery bundles**: Workflow step produces artifacts
-4. **Template bundles**: Scaffold workflow completes
+### Current State
 
-### Maintenance
+- Legacy `TEMPLATE_GROUPS` dict in `template_groups.py` (2453+ lines)
+- 21+ workflows defined in single file
+- Active migration to plugin system on `feat/plugin-workflow-system` branch
 
-| Bundle Type | Maintenance Workflow | Frequency |
-|-------------|---------------------|-----------|
-| System docs | `00_master_docs_bootstrap_v2` | Per major change |
-| Codebase docs | `40_documentation_sync_v1` | Continuous |
-| Delivery docs | Respective workflow | Per execution |
-| Templates | `10_execution_scaffold_v1` | Per revision |
+### Target State
 
-### Archival
+- Each workflow as self-contained plugin package
+- `workflow.toml` declarative manifests
+- Independent versioning and testing
+- Same execution pipeline via adapter pattern
 
-Bundles may be archived when:
+### Migration Path
 
-1. Superseded by newer versions
-2. Associated initiatives complete
-3. Workflow versions change
-
-Archival preserves history while indicating obsolescence.
-
-## Bundle Versioning
-
-### Version Strategy
-
-| Bundle Type | Versioning Approach |
-|-------------|---------------------|
-| System documentation | Change ID + generation timestamp |
-| Codebase documentation | Scan timestamp |
-| Delivery documents | Document ID + version |
-| Templates | Template ID + version |
-
-### Version Indicators
-
-- **Frontmatter**: `change_id`, `generated`, `version`
-- **Filename**: Embedded timestamps or version suffixes
-- **Directory**: Version-specific subdirectories
+1. **Phase 1**: Establish plugin infrastructure (`workflow_packages/`)
+2. **Phase 2**: Migrate workflows incrementally
+3. **Phase 3**: Deprecate monolithic `TEMPLATE_GROUPS`
+4. **Phase 4**: Remove legacy support
 
 ## Bundle Validation
 
-### Validation Requirements
+### Validation Checks
 
-| Bundle Type | Validation Rules |
-|-------------|------------------|
-| System docs | Structure, frontmatter, cross-references |
-| Codebase docs | Inventory accuracy, module coverage |
-| Delivery docs | Workflow contract compliance |
-| Templates | Schema compliance, placeholder completeness |
+- Workflow manifest schema compliance
+- Prompt file existence
+- Artifact key uniqueness
+- Cross-reference validity
+- Template placeholder correctness
 
-### Validation Workflow
+### Validation Artifacts
 
-Validation is performed by:
+- `VALIDATION_FILE` — validation results
+- `SYSTEM_DOCS_VALIDATION` — system doc validation
 
-- `validate_system_docs.py` — System documentation
-- `validate_codebase_docs.py` — Codebase documentation
-- `validate_delivery_docs.py` — Delivery documentation
+## Key Risks
 
-## Bundle Metadata
+### Bootstrap/Runtime Sync Risk
 
-### Required Metadata
+**Risk**: Changes to bootstrap files may not propagate to runtime bundles.
 
-All bundles must include:
+**Mitigation**: Use `sync_workflows.py` for two-tier discovery; document sync requirements.
 
-1. **template_id** — Unique identifier
-2. **title** — Human-readable name
-3. **status** — active, draft, archived
-4. **generated** — Creation timestamp
-5. **workflow** — Generating workflow
-6. **step** — Generating step
-7. **change_id** — Change identifier
-8. **managed_by** — workflow-generated or manual
+### Path Resolution Complexity
 
-### Optional Metadata
+**Risk**: Multiple path layers may drift or conflict.
 
-- version — Explicit version number
-- author — Document author
-- tags — Classification tags
-- related — Related document references
+**Mitigation**: Centralized constants in `constants.py`; zero hardcoded paths.
+
+### Plugin Compatibility
+
+**Risk**: Plugin bundles may not match expected schema.
+
+**Mitigation**: Adapter validation; schema enforcement at load time.
 
 ---
 
-## Related Documents
-
-- [README.md](README.md) — System documentation index
-- [BUNDLE_MIGRATION_PLAN.md](BUNDLE_MIGRATION_PLAN.md) — Migration strategy
-- [PROJECT_ANALYSIS.md](PROJECT_ANALYSIS.md) — Repository analysis
-
----
-
-*Generated by workflow: `00_master_docs_bootstrap_v2` — Step: `03_generate_system_overview_docs`*
+*Last updated: 2026-07-10T19:47:28+08:00 via workflow `00_master_docs_bootstrap_v2`*

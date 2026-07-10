@@ -22,9 +22,9 @@ REM EDIT THESE VARIABLES to match your setup:
 REM ==================================================================
 
 set "AGENT_RUNNER_ROOT=D:\MyProjectSpace\01_Workflows\agent-runner-v2"
-set "TEMPLATE_GROUP=10_execution_scaffold_v1"
-set "JOB_ID=10SCAFFOLD-20260709-fc09c688"
-set "STEP_NAME=validate_delivery_docs"
+set "TEMPLATE_GROUP=00_master_docs_bootstrap_v2"
+set "JOB_ID=00DOC-20260710-f9cc9341"
+set "STEP_NAME=05_review_master_system_docs"
 
 REM ==================================================================
 REM No changes needed below this line.

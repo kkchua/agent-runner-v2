@@ -1,266 +1,266 @@
 ---
 template_id: "SYS-00-NFR"
-title: "Non-Functional Requirements"
+title: "Non-Functional Requirements - agent-runner-v2"
 status: "active"
-generated: "2026-07-10T14:07:00+08:00"
+managed_by: workflow-generated
+generated: "2026-07-10T19:47:28+08:00"
 workflow: "00_master_docs_bootstrap_v2"
 step: "03_generate_system_overview_docs"
-change_id: "00DOC-GEN-20260710-004"
-managed_by: workflow-generated
+change_id: "00DOC-20260710-0098bf53"
 ---
 
 > Managed by workflow: `00_master_docs_bootstrap_v2` / step: `03_generate_system_overview_docs`
 > This file is workflow-generated and protected from manual edits.
 
-# Non-Functional Requirements
-
-## Purpose
-
-This document captures the runtime, quality, and operational expectations for the `agent-runner-v2` platform. These requirements are implicit in the current implementation and must be maintained.
+# Non-Functional Requirements: agent-runner-v2
 
 ## Quality Requirements
 
-### NFR-1: Performance
+### Performance
 
-| ID | Requirement | Target | Current |
-|----|-------------|--------|---------|
-| NFR-1.1 | Step startup time SHALL be under 5 seconds | < 5s | ✅ Met |
-| NFR-1.2 | Prompt rendering SHALL be under 1 second | < 1s | ✅ Met |
-| NFR-1.3 | State save/load SHALL be under 500ms | < 500ms | ✅ Met |
-| NFR-1.4 | Backend polling interval SHALL be configurable | 5-60s | ✅ Met |
-| NFR-1.5 | Memory usage SHALL remain under 512MB for daemon | < 512MB | ✅ Met |
+| Requirement | Target | Measurement |
+|-------------|--------|-------------|
+| **Workflow startup time** | <5 seconds | Time from command to first step execution |
+| **Step execution overhead** | <1 second | Time excluding LLM/action execution |
+| **Artifact validation** | <100ms per file | Time to validate artifact existence |
+| **Bundle loading** | <2 seconds | Time to load workflow definition |
+| **Job state write** | <50ms | Time to persist job.json |
 
-**Rationale**: Responsiveness for interactive use, efficiency for long-running daemons.
+### Scalability
 
-**Validation**: Performance benchmarks in test suite.
+| Requirement | Target | Notes |
+|-------------|--------|-------|
+| **Concurrent jobs** | 10+ | Per worker instance |
+| **Job history retention** | 90 days | Configurable |
+| **Artifact storage** | 10GB | Per project, configurable cleanup |
+| **Log retention** | 30 days | Rotated automatically |
+| **Workflow bundle size** | <50MB | Total bundle size |
 
-### NFR-2: Reliability
+### Reliability
 
-| ID | Requirement | Target | Current |
-|----|-------------|--------|---------|
-| NFR-2.1 | Job state SHALL be persisted after each step | 100% | ✅ Met |
-| NFR-2.2 | State corruption SHALL be detectable | N/A | ✅ Met |
-| NFR-2.3 | Retry logic SHALL handle transient failures | > 95% | ✅ Met |
-| NFR-2.4 | Daemon SHALL recover from child process failures | > 99% | ✅ Met |
-| NFR-2.5 | Network failures SHALL be handled gracefully | N/A | ✅ Met |
+| Requirement | Target | Measurement |
+|-------------|--------|-------------|
+| **Workflow success rate** | >95% | Jobs completing all steps |
+| **Step retry success** | >90% | After automatic retries |
+| **Daemon uptime** | >99% | Excluding planned maintenance |
+| **Data durability** | 100% | Job state persistence |
+| **Recovery time** | <5 minutes | From failure to resumed execution |
 
-**Rationale**: Workflow execution must be resilient to failures.
+### Availability
 
-**Validation**: Integration tests with failure injection.
-
-### NFR-3: Availability
-
-| ID | Requirement | Target | Current |
-|----|-------------|--------|---------|
-| NFR-3.1 | Daemon uptime SHALL be 99% during operation | 99% | ✅ Met |
-| NFR-3.2 | Worker SHALL reconnect after backend outage | < 60s | ✅ Met |
-| NFR-3.3 | No single point of failure for local execution | N/A | ✅ Met |
-
-**Rationale**: Production use requires reliable operation.
-
-**Validation**: Long-running tests, chaos engineering.
-
-### NFR-4: Scalability
-
-| ID | Requirement | Target | Current |
-|----|-------------|--------|---------|
-| NFR-4.1 | Multiple workers SHALL share workload | N/A | ✅ Met |
-| NFR-4.2 | Job state SHALL support 1000+ active jobs | 1000+ | ✅ Met |
-| NFR-4.3 | Artifact storage SHALL scale to 10GB per job | 10GB | ✅ Met |
-
-**Rationale**: Support team-scale usage.
-
-**Validation**: Load testing, storage benchmarks.
+| Component | Target | Notes |
+|-----------|--------|-------|
+| **Local execution** | 100% | No external dependencies |
+| **Backend-connected** | 99.5% | With backend available |
+| **Documentation sync** | 99% | Scheduled maintenance windows |
 
 ## Operational Requirements
 
-### NFR-5: Deployability
+### Deployability
 
-| ID | Requirement | Target | Current |
-|----|-------------|--------|---------|
-| NFR-5.1 | Installation SHALL be via pip | pip | ✅ Met |
-| NFR-5.2 | Initialization SHALL be single command | 1 command | ✅ Met |
-| NFR-5.3 | Configuration SHALL be file-based | JSON | ✅ Met |
-| NFR-5.4 | Secrets SHALL be environment-based | .env | ✅ Met |
+| Requirement | Specification |
+|-------------|---------------|
+| **Installation** | `pip install -e .` |
+| **Initialization** | `ukbe-run-agent init` |
+| **Configuration** | JSON config file |
+| **Updates** | pip upgrade, no migration scripts |
+| **Rollback** | pip install specific version |
 
-**Rationale**: Easy deployment across environments.
+### Maintainability
 
-**Validation**: CI/CD pipelines.
+| Requirement | Specification |
+|-------------|---------------|
+| **Code organization** | Modular, clear separation of concerns |
+| **Configuration** | Centralized constants, no hardcoded values |
+| **Logging** | Structured logs with rotation |
+| **Documentation** | Generated docs with drift detection |
+| **Test coverage** | Unit tests for pure logic, integration for workflows |
 
-### NFR-6: Observability
+### Supportability
 
-| ID | Requirement | Target | Current |
-|----|-------------|--------|---------|
-| NFR-6.1 | All steps SHALL be logged | 100% | ✅ Met |
-| NFR-6.2 | Job state SHALL be queryable | N/A | ✅ Met |
-| NFR-6.3 | Notifications SHALL be configurable | N/A | ✅ Met |
-| NFR-6.4 | Usage SHALL be trackable | N/A | ✅ Met |
+| Requirement | Specification |
+|-------------|---------------|
+| **Debuggability** | Verbose logging, job state inspection |
+| **Troubleshooting** | Clear error messages, stack traces |
+| **Monitoring** | Heartbeats, job status, notifications |
+| **Diagnostics** | CLI commands for job inspection |
 
-**Rationale**: Operational visibility and debugging.
+### Security
 
-**Validation**: Log analysis, monitoring integration.
+| Requirement | Specification |
+|-------------|---------------|
+| **Credential storage** | `.env` files, not committed |
+| **API keys** | Environment variables or config.json |
+| **Backend authentication** | Token-based with rotation |
+| **File permissions** | Restricted access to job data |
+| **Audit trail** | Job history, artifact checksums |
 
-### NFR-7: Maintainability
+## Platform Requirements
 
-| ID | Requirement | Target | Current |
-|----|-------------|--------|---------|
-| NFR-7.1 | Code SHALL have > 70% test coverage | > 70% | 🔄 In Progress |
-| NFR-7.2 | Documentation SHALL be workflow-generated | N/A | 🔄 In Progress |
-| NFR-7.3 | Dependencies SHALL be minimal | < 50 | ✅ Met |
-| NFR-7.4 | Configuration SHALL be centralized | N/A | ✅ Met |
+### Supported Platforms
 
-**Rationale**: Sustainable development.
+| Platform | Version | Status |
+|----------|---------|--------|
+| **Windows** | 10/11 | Primary development |
+| **macOS** | 12+ | Supported |
+| **Linux** | Ubuntu 20.04+ | Supported |
 
-**Validation**: Coverage reports, dependency analysis.
+### Python Requirements
 
-### NFR-8: Portability
+| Requirement | Specification |
+|-------------|---------------|
+| **Python version** | 3.10, 3.11, 3.12 |
+| **Virtual environment** | Required (`.venv`) |
+| **Dependencies** | Listed in `requirements.txt` |
+| **Dev dependencies** | Listed in `pyproject.toml` |
 
-| ID | Requirement | Target | Current |
-|----|-------------|--------|---------|
-| NFR-8.1 | Python 3.12+ SHALL be supported | 3.12+ | ✅ Met |
-| NFR-8.2 | Windows SHALL be primary platform | Win | ✅ Met |
-| NFR-8.3 | Unix/WSL SHALL be supported | Unix | ⚠️ Secondary |
-| NFR-8.4 | Path handling SHALL be cross-platform | N/A | ✅ Met |
+### Runtime Dependencies
 
-**Rationale**: Support developer environments.
+| Component | Purpose |
+|-----------|---------|
+| **Python standard library** | Core functionality |
+| **pydantic** | Data validation |
+| **requests** | HTTP client |
+| **markdown** | HTML generation |
+| **jinja2** | Template rendering |
 
-**Validation**: Cross-platform test suite.
+### External Dependencies
 
-## Security Requirements
+| Component | Purpose | Required |
+|-----------|---------|----------|
+| **LLM API** | AI execution | Yes (for coder steps) |
+| **Backend API** | Enterprise mode | No (optional) |
+| **Pushover** | Notifications | No (optional) |
+| **Git** | Version control | No (optional) |
 
-### NFR-9: Authentication
+## Usability Requirements
 
-| ID | Requirement | Target | Current |
-|----|-------------|--------|---------|
-| NFR-9.1 | Backend access SHALL require authentication | Yes | ✅ Met |
-| NFR-9.2 | API keys SHALL be stored securely | .env | ✅ Met |
-| NFR-9.3 | Credentials SHALL NOT be logged | No | ✅ Met |
+### CLI Usability
 
-**Rationale**: Protect sensitive credentials.
+| Requirement | Specification |
+|-------------|---------------|
+| **Command discovery** | `--help` on all commands |
+| **Error messages** | Clear, actionable guidance |
+| **Progress indication** | Step progress, timing |
+| **Configuration validation** | At startup, clear errors |
+| **Batch files** | Pre-configured for common workflows |
 
-**Validation**: Security audit, log review.
+### Documentation Usability
 
-### NFR-10: Isolation
+| Requirement | Specification |
+|-------------|---------------|
+| **Generated docs** | Auto-sync with code |
+| **Audience-specific** | Stakeholder, developer, operator views |
+| **Cross-references** | Working links, clear navigation |
+| **Searchability** | Index, table of contents |
+| **Versioning** | Change IDs, timestamps |
 
-| ID | Requirement | Target | Current |
-|----|-------------|--------|---------|
-| NFR-10.1 | Job executions SHALL be isolated | Process | ✅ Met |
-| NFR-10.2 | Artifact access SHALL be job-scoped | N/A | ✅ Met |
-| NFR-10.3 | Secrets SHALL be step-scoped | N/A | ✅ Met |
+### Workflow Authoring
 
-**Rationale**: Prevent cross-job interference.
-
-**Validation**: Process isolation tests.
+| Requirement | Specification |
+|-------------|---------------|
+| **Template syntax** | Clear placeholder convention |
+| **Validation** | Schema enforcement |
+| **Debugging** | Verbose mode, dry-run |
+| **Examples** | Built-in example workflows |
+| **Migration path** | From monolith to plugin |
 
 ## Compatibility Requirements
 
-### NFR-11: Backward Compatibility
+### Backward Compatibility
 
-| ID | Requirement | Target | Current |
-|----|-------------|--------|---------|
-| NFR-11.1 | Job state SHALL migrate forward | v6 | ✅ Met |
-| NFR-11.2 | Workflow definitions SHALL remain valid | Yes | ✅ Met |
-| NFR-11.3 | CLI interface SHALL remain stable | Deprecation | ✅ Met |
+| Requirement | Specification |
+|-------------|---------------|
+| **API stability** | Semantic versioning |
+| **Workflow compatibility** | Old workflows continue to work |
+| **Config migration** | Auto-migration or clear errors |
+| **Artifact format** | Versioned schemas |
 
-**Rationale**: Protect existing jobs and workflows.
+### Forward Compatibility
 
-**Validation**: Migration tests, CLI compatibility tests.
+| Requirement | Specification |
+|-------------|---------------|
+| **Plugin system** | New workflows without core changes |
+| **Model support** | New LLM backends via adapters |
+| **Action extensibility** | Custom actions supported |
+| **Theme customization** | Custom HTML themes |
 
-### NFR-12: Interoperability
+## Monitoring Requirements
 
-| ID | Requirement | Target | Current |
-|----|-------------|--------|---------|
-| NFR-12.1 | Backend API SHALL be REST-compatible | Yes | ✅ Met |
-| NFR-12.2 | LLM backends SHALL be pluggable | Yes | ✅ Met |
-| NFR-12.3 | Notification services SHALL be pluggable | Pushover | ⚠️ Limited |
+### Metrics
 
-**Rationale**: Integration with existing infrastructure.
+| Metric | Type | Collection |
+|--------|------|------------|
+| **Workflow duration** | Timing | Automatic |
+| **Step success rate** | Counter | Automatic |
+| **LLM tokens** | Usage | Backend-provided |
+| **Queue depth** | Gauge | Backend-provided |
+| **Error rate** | Counter | Automatic |
 
-**Validation**: Integration tests.
+### Logging
 
-## Quality Attributes
+| Requirement | Specification |
+|-------------|---------------|
+| **Log levels** | DEBUG, INFO, WARNING, ERROR |
+| **Log format** | Timestamp, level, message |
+| **Log rotation** | Size-based, 10 files |
+| **Log location** | `~/.ukbe-runner/logs/` |
+| **Audit logging** | Job lifecycle events |
 
-### QA-1: Testability
+### Alerting
 
-The system is designed for testability:
+| Requirement | Specification |
+|-------------|---------------|
+| **Notification channels** | Pushover, console |
+| **Alert conditions** | Failure, long-running, queue depth |
+| **Rate limiting** | Configurable per channel |
+| **Escalation** | Backend-driven |
 
-- Unit tests for pure logic (45+ tests)
-- Integration tests for end-to-end flows
-- Mock backends for offline testing
-- Temp paths for test isolation
+## Constraints
 
-### QA-2: Configurability
+### Technical Constraints
 
-The system supports extensive configuration:
+- **Python-only**: No compiled extensions required
+- **Filesystem-based**: Local file system for state
+- **Subprocess execution**: Fresh process per LLM call
+- **Sequential execution**: No parallel step execution
 
-- `config.json` for runner settings
-- `.env` for secrets
-- CLI arguments for overrides
-- Workflow-specific settings
+### Business Constraints
 
-### QA-3: Extensibility
+- **Open source**: MIT license
+- **Self-hosted**: No cloud dependency
+- **Backend optional**: Local mode works standalone
+- **Cost-conscious**: Supports multiple LLM backends
 
-The system supports extension:
+### Resource Constraints
 
-- Custom actions in `actions/` package
-- Workflow definitions in template groups
-- Plugin system (migration in progress)
-- Context extensions for workflows
+| Resource | Minimum | Recommended |
+|----------|---------|-------------|
+| **CPU** | 2 cores | 4 cores |
+| **Memory** | 4GB | 8GB |
+| **Disk** | 10GB | 50GB |
+| **Network** | 10 Mbps | 100 Mbps |
 
-### QA-4: Usability
+## Compliance Requirements
 
-The system emphasizes usability:
+### Data Handling
 
-- Single CLI entry point
-- Clear error messages
-- Progress tracking
-- Human-readable output
+| Requirement | Specification |
+|-------------|---------------|
+| **Data residency** | Local filesystem |
+| **Retention** | Configurable |
+| **Encryption** | Filesystem-level |
+| **Backup** | User responsibility |
 
-## Operational Expectations
+### Audit Requirements
 
-### Runtime Environment
-
-| Component | Requirement |
-|-----------|-------------|
-| Python | 3.12 or higher |
-| Memory | 512MB minimum, 1GB recommended |
-| Disk | 1GB free space minimum |
-| Network | Required for worker/daemon modes |
-
-### Resource Consumption
-
-| Resource | Typical | Peak |
-|----------|---------|------|
-| CPU | Low | Medium during coder calls |
-| Memory | 100MB | 256MB |
-| Disk | 10MB/job | 1GB/video workflows |
-| Network | Minimal | During uploads/downloads |
-
-### Monitoring
-
-| Metric | Collection | Alert Threshold |
-|--------|------------|-----------------|
-| Job failures | Per-step | > 5% failure rate |
-| Retry rate | Per-step | > 20% retry rate |
-| Queue depth | Worker mode | > 100 queued |
-| Daemon health | Heartbeat | > 60s missing |
-
-## Limitations
-
-| Limitation | Reason | Mitigation |
-|------------|--------|------------|
-| Windows primary | Development focus | Unix support secondary |
-| Local filesystem | Simplicity | Network storage via mount |
-| JSON state | Human-readable | Schema evolution managed |
-| Single daemon per workstation | Port conflicts | Multiple workers supported |
-
-## Related Documents
-
-- [SYSTEM_OVERVIEW.md](SYSTEM_OVERVIEW.md) — Platform overview
-- [FUNCTIONAL_SPEC.md](FUNCTIONAL_SPEC.md) — Functional capabilities
-- [RUNBOOK.md](RUNBOOK.md) — Operational procedures
-- [PROJECT_ANALYSIS.md](PROJECT_ANALYSIS.md) — Repository analysis
+| Requirement | Specification |
+|-------------|---------------|
+| **Job history** | Complete, immutable |
+| **Artifact lineage** | Checksum tracked |
+| **Approval records** | Timestamped, signed |
+| **Change tracking** | Git integration |
 
 ---
 
-*Generated by workflow: `00_master_docs_bootstrap_v2` — Step: `03_generate_system_overview_docs`*
+*Last updated: 2026-07-10T19:47:28+08:00 via workflow `00_master_docs_bootstrap_v2`*

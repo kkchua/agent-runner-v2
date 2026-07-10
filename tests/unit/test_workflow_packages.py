@@ -132,10 +132,10 @@ class TestWorkflowTOMLParsing:
         assert bundle.name == "00_master_docs_bootstrap_v2"
         assert bundle.version == "2"
         assert bundle.job_prefix == "00DOC"
-        assert len(bundle.step_order) == 13
+        assert len(bundle.step_order) == 14
         assert bundle.init_step == "00_scan_repo_codebase"
 
-    def test_all_13_steps_present(self, project_root):
+    def test_all_steps_present(self, project_root):
         pkg_dir = project_root / "workflows" / "00_master_docs_bootstrap_v2"
         if not pkg_dir.is_dir():
             pytest.skip("workflow package directory not found")
@@ -154,6 +154,7 @@ class TestWorkflowTOMLParsing:
             "07_validate_codebase_baseline",
             "08_validate_master_system_docs",
             "09_finalize_bootstrap",
+            "stepCompletion",
         ]
         assert bundle.step_order == expected_steps
 
@@ -184,7 +185,7 @@ class TestWorkflowTOMLParsing:
         # Refine step with loop return
         refine = bundle.steps["06_refine_master_system_docs"]
         assert refine.loop_returns_to == "05_review_master_system_docs"
-        assert "REVIEW_FILE_SUGGESTED_SUGGESTED" in refine.required_inputs
+        assert "REVIEW_FILE_SUGGESTED" in refine.required_inputs
 
     def test_produces_chain_is_consistent(self, project_root):
         """Verify that required_inputs across steps are satisfied by earlier steps."""
@@ -197,9 +198,9 @@ class TestWorkflowTOMLParsing:
         for step_name in bundle.step_order:
             sc = bundle.steps[step_name]
             for req in sc.required_inputs:
-                # REVIEW_FILE_SUGGESTED_SUGGESTED and VALIDATION_FILE are special
+                # REVIEW_FILE_SUGGESTED and VALIDATION_FILE are special
                 # — they are produced by the runner mechanics, not a step config
-                if req in ("REVIEW_FILE_SUGGESTED_SUGGESTED", "VALIDATION_FILE"):
+                if req in ("REVIEW_FILE_SUGGESTED", "VALIDATION_FILE"):
                     continue
                 assert req in cumulative or req in sc.produces, (
                     f"Step '{step_name}' requires '{req}' which is not "

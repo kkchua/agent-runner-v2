@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-10T13:58:28+08:00",
+  "generated_at": "2026-07-10T19:43:48+08:00",
   "mode": "bootstrap",
   "workflow_name": "00_master_docs_bootstrap_v2",
   "bundle_profile": "core+workflow",
@@ -8,7 +8,7 @@
   "architecture_profile": "provisional",
   "architecture_target_profile": "repo-selected",
   "architecture_migration_mode": "targeted_migration",
-  "job_id": "00DOC-GEN-20260710-004",
+  "job_id": "00DOC-20260710-0098bf53",
   "step": "00_scan_repo_codebase",
   "project_root": "D:\\MyProjectSpace\\01_Workflows\\agent-runner-v2",
   "items": [
@@ -28,6 +28,24 @@
       "doc_mode": "summary",
       "status": "current",
       "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "_run-00_master_docs_bootstrap_v1.bat",
+      "category": "scripts",
+      "subcategory": "scripts",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/scripts-suite.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "_run-10_execution_scaffold_v1.bat",
+      "category": "scripts",
+      "subcategory": "scripts",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/scripts-suite.md",
       "last_verified_by_change": "bootstrap/reconcile scan"
     },
     {
@@ -1885,6 +1903,15 @@
       "last_verified_by_change": "bootstrap/reconcile scan"
     },
     {
+      "rel_path": "agent_runner_v2/sync_workflows.py",
+      "category": "python modules",
+      "subcategory": "support",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-sync-workflows.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
       "rel_path": "agent_runner_v2/system_docs.py",
       "category": "python modules",
       "subcategory": "support",
@@ -2164,30 +2191,21 @@
       "last_verified_by_change": "bootstrap/reconcile scan"
     },
     {
-      "rel_path": "docs/codebase/04_changes/00DOC-GEN-20260710-001-bootstrap-snapshot.json",
-      "category": "configuration/data files",
-      "subcategory": "config",
+      "rel_path": "GUIDE_CREATE_WORKFLOW_PACKAGE.md",
+      "category": "documentation files",
+      "subcategory": "docs",
       "doc_mode": "summary",
       "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/config-and-data.md",
+      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
       "last_verified_by_change": "bootstrap/reconcile scan"
     },
     {
-      "rel_path": "docs/codebase/04_changes/00DOC-GEN-20260710-002-bootstrap-snapshot.json",
-      "category": "configuration/data files",
-      "subcategory": "config",
+      "rel_path": "GUIDE_MIGRATE_WORKFLOW_PACKAGE.md",
+      "category": "documentation files",
+      "subcategory": "docs",
       "doc_mode": "summary",
       "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/config-and-data.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
-      "rel_path": "docs/codebase/04_changes/00DOC-GEN-20260710-003-bootstrap-snapshot.json",
-      "category": "configuration/data files",
-      "subcategory": "config",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/config-and-data.md",
+      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
       "last_verified_by_change": "bootstrap/reconcile scan"
     },
     {
@@ -2254,15 +2272,6 @@
       "last_verified_by_change": "bootstrap/reconcile scan"
     },
     {
-      "rel_path": "run-00_master_docs_bootstrap_v1.bat",
-      "category": "scripts",
-      "subcategory": "scripts",
-      "doc_mode": "summary",
-      "status": "current",
-      "owner_doc_path": "docs/codebase/03_components/scripts-suite.md",
-      "last_verified_by_change": "bootstrap/reconcile scan"
-    },
-    {
       "rel_path": "run-00_master_docs_bootstrap_v2.bat",
       "category": "scripts",
       "subcategory": "scripts",
@@ -2272,7 +2281,7 @@
       "last_verified_by_change": "bootstrap/reconcile scan"
     },
     {
-      "rel_path": "run-10_execution_scaffold_v1.bat",
+      "rel_path": "run-10_execution_scaffold_v2.bat",
       "category": "scripts",
       "subcategory": "scripts",
       "doc_mode": "summary",
@@ -2659,7 +2668,25 @@
       "last_verified_by_change": "bootstrap/reconcile scan"
     },
     {
+      "rel_path": "submit-00_master_docs_bootstrap_v2.bat",
+      "category": "scripts",
+      "subcategory": "scripts",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/scripts-suite.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
       "rel_path": "submit-10_execution_scaffold_v1.bat",
+      "category": "scripts",
+      "subcategory": "scripts",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/scripts-suite.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "submit-10_execution_scaffold_v2.bat",
       "category": "scripts",
       "subcategory": "scripts",
       "doc_mode": "summary",
@@ -3101,6 +3128,114 @@
     },
     {
       "rel_path": "workflows/00_master_docs_bootstrap_v2/workflow.toml",
+      "category": "configuration/data files",
+      "subcategory": "config",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/config-and-data.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "workflows/10_execution_scaffold_v2/prompts/01_project_analysis.txt",
+      "category": "other files",
+      "subcategory": "other",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "workflows/10_execution_scaffold_v2/prompts/02_generate_sop.txt",
+      "category": "other files",
+      "subcategory": "other",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "workflows/10_execution_scaffold_v2/prompts/03_generate_templates.txt",
+      "category": "other files",
+      "subcategory": "other",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "workflows/10_execution_scaffold_v2/prompts/03_review_sop.txt",
+      "category": "other files",
+      "subcategory": "other",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "workflows/10_execution_scaffold_v2/prompts/04_generate_agents.txt",
+      "category": "other files",
+      "subcategory": "other",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "workflows/10_execution_scaffold_v2/prompts/05_refine_sop.txt",
+      "category": "other files",
+      "subcategory": "other",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "workflows/10_execution_scaffold_v2/prompts/05_replan_sop.txt",
+      "category": "other files",
+      "subcategory": "other",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "workflows/10_execution_scaffold_v2/prompts/06_refine_templates.txt",
+      "category": "other files",
+      "subcategory": "other",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "workflows/10_execution_scaffold_v2/prompts/06_review_templates.txt",
+      "category": "other files",
+      "subcategory": "other",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "workflows/10_execution_scaffold_v2/prompts/07_refine_agents.txt",
+      "category": "other files",
+      "subcategory": "other",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "workflows/10_execution_scaffold_v2/prompts/08_review_agents.txt",
+      "category": "other files",
+      "subcategory": "other",
+      "doc_mode": "summary",
+      "status": "current",
+      "owner_doc_path": "docs/codebase/03_components/codebase-governance.md",
+      "last_verified_by_change": "bootstrap/reconcile scan"
+    },
+    {
+      "rel_path": "workflows/10_execution_scaffold_v2/workflow.toml",
       "category": "configuration/data files",
       "subcategory": "config",
       "doc_mode": "summary",
@@ -7763,7 +7898,6 @@
       ],
       "public_classes": [],
       "constants": [
-        "EXECUTION_SCAFFOLD_WORKFLOW",
         "ARCHITECTURE_SITE_WORKFLOW",
         "WORKFLOW_GENERATED_MARKER",
         "DEFAULT_LEGACY_QUARANTINE_DIR"
@@ -11530,6 +11664,48 @@
       "test_references": []
     },
     {
+      "rel_path": "agent_runner_v2/sync_workflows.py",
+      "module_name": "agent_runner_v2.sync_workflows",
+      "module_area": "support",
+      "doc_mode": "summary",
+      "owner_doc_path": "docs/codebase/02_modules/agent-runner-v2-sync-workflows.md",
+      "summary": "Sync workflow definitions to the backend registry.",
+      "module_doc": "Sync workflow definitions to the backend registry.\n\nDiscovers workflows from two sources:\n1. ``TEMPLATE_GROUPS`` in the bootstrap module (legacy Python dict format)\n2. ``workflows/<name>/workflow.toml`` directories (plugin package format)\n\nPlugin packages override legacy entries on name collision.\nEach definition is POSTed to the backend API at ``/api/admin/workflows/sync``.",
+      "stdlib_imports": [
+        "__future__",
+        "argparse",
+        "json",
+        "os",
+        "pathlib",
+        "sys",
+        "urllib"
+      ],
+      "local_imports": [],
+      "external_imports": [
+        "bootstrap.workflows.default.template_groups",
+        "runtime_context",
+        "workflow_packages.loader"
+      ],
+      "public_functions": [
+        {
+          "name": "main",
+          "signature": "()",
+          "summary": "",
+          "docstring": "",
+          "parameters": [],
+          "return_type": "int",
+          "raises": [],
+          "decorators": [],
+          "is_async": false
+        }
+      ],
+      "public_classes": [],
+      "constants": [
+        "_WORKFLOWS_DIR"
+      ],
+      "test_references": []
+    },
+    {
       "rel_path": "agent_runner_v2/system_docs.py",
       "module_name": "agent_runner_v2.system_docs",
       "module_area": "support",
@@ -14174,32 +14350,39 @@
   ],
   "counts": {
     "configuration/data files": {
-      "current": 13,
+      "current": 11,
       "needs_update": 0,
       "pending_review": 0,
       "superseded": 0,
-      "total": 13
+      "total": 11
     },
     "other files": {
-      "current": 18,
+      "current": 29,
       "needs_update": 0,
       "pending_review": 0,
       "superseded": 0,
-      "total": 18
+      "total": 29
+    },
+    "scripts": {
+      "current": 69,
+      "needs_update": 0,
+      "pending_review": 0,
+      "superseded": 0,
+      "total": 69
     },
     "python modules": {
-      "current": 72,
+      "current": 73,
       "needs_update": 0,
       "pending_review": 0,
       "superseded": 0,
-      "total": 72
+      "total": 73
     },
     "documentation files": {
-      "current": 35,
+      "current": 37,
       "needs_update": 0,
       "pending_review": 0,
       "superseded": 0,
-      "total": 35
+      "total": 37
     },
     "bootstrap workflow files": {
       "current": 115,
@@ -14207,13 +14390,6 @@
       "pending_review": 0,
       "superseded": 0,
       "total": 115
-    },
-    "scripts": {
-      "current": 66,
-      "needs_update": 0,
-      "pending_review": 0,
-      "superseded": 0,
-      "total": 66
     },
     "test files": {
       "current": 25,
