@@ -3,10 +3,10 @@ title: "Component Documentation: tests suite"
 template_id: "CB-03"
 status: "active"
 component_id: "tests-suite"
-created: "2026-07-09T21:13:38+08:00"
+created: "2026-07-10T09:40:54+08:00"
 owner: "00_master_docs_bootstrap_v1"
-last_verified_by_change: "00_master_docs_bootstrap_v1 / 00DOC-GEN-20260709-002 / 2026-07-09T21:13:38+08:00"
-modules: ["tests/conftest.py", "tests/integration/__init__.py", "tests/integration/test_architecture_site.py", "tests/integration/test_backend_worker_mode.py", "tests/integration/test_daemon.py", "tests/integration/test_notification_e2e.py", "tests/integration/test_notification_integration.py", "tests/integration/test_notifications.py", "tests/integration/test_pushover.py", "tests/integration/test_ukbe_runner_wrapper.py", "tests/unit/__init__.py", "tests/unit/test_bundle_loader.py", "tests/unit/test_codebase_docs.py", "tests/unit/test_documentation_governance.py", "tests/unit/test_documentation_guardrails_cleanup.py", "tests/unit/test_run_agent_status.py", "tests/unit/test_runtime_context_paths.py", "tests/unit/test_tool_instruction_block.py"]
+last_verified_by_change: "00_master_docs_bootstrap_v1 / 00DOC-GEN-20260710-004 / 2026-07-10T09:40:54+08:00"
+modules: ["tests/conftest.py", "tests/integration/__init__.py", "tests/integration/test_architecture_site.py", "tests/integration/test_backend_worker_mode.py", "tests/integration/test_daemon.py", "tests/integration/test_notification_e2e.py", "tests/integration/test_notification_integration.py", "tests/integration/test_notifications.py", "tests/integration/test_pushover.py", "tests/integration/test_ukbe_runner_wrapper.py", "tests/unit/__init__.py", "tests/unit/test_bundle_loader.py", "tests/unit/test_codebase_docs.py", "tests/unit/test_constants_registry.py", "tests/unit/test_documentation_governance.py", "tests/unit/test_documentation_guardrails_cleanup.py", "tests/unit/test_run_agent_status.py", "tests/unit/test_runtime_context_paths.py", "tests/unit/test_step_runner_write_contract.py", "tests/unit/test_tool_instruction_block.py"]
 ---
 
 # Component Documentation: tests suite
@@ -34,10 +34,12 @@ Repository test suite coverage grouped as a single logical component.
 | `tests/unit/__init__.py` | test coverage |
 | `tests/unit/test_bundle_loader.py` | test coverage |
 | `tests/unit/test_codebase_docs.py` | test coverage |
+| `tests/unit/test_constants_registry.py` | test coverage |
 | `tests/unit/test_documentation_governance.py` | test coverage |
 | `tests/unit/test_documentation_guardrails_cleanup.py` | test coverage |
 | `tests/unit/test_run_agent_status.py` | test coverage |
 | `tests/unit/test_runtime_context_paths.py` | test coverage |
+| `tests/unit/test_step_runner_write_contract.py` | test coverage |
 | `tests/unit/test_tool_instruction_block.py` | test coverage |
 
 ## 2. Architecture
@@ -67,10 +69,12 @@ Repository files are scanned, normalized into inventory rows, and rendered into 
 | `tests/unit/__init__.py` | outbound | markdown | test coverage |
 | `tests/unit/test_bundle_loader.py` | outbound | markdown | test coverage |
 | `tests/unit/test_codebase_docs.py` | outbound | markdown | test coverage |
+| `tests/unit/test_constants_registry.py` | outbound | markdown | test coverage |
 | `tests/unit/test_documentation_governance.py` | outbound | markdown | test coverage |
 | `tests/unit/test_documentation_guardrails_cleanup.py` | outbound | markdown | test coverage |
 | `tests/unit/test_run_agent_status.py` | outbound | markdown | test coverage |
 | `tests/unit/test_runtime_context_paths.py` | outbound | markdown | test coverage |
+| `tests/unit/test_step_runner_write_contract.py` | outbound | markdown | test coverage |
 | `tests/unit/test_tool_instruction_block.py` | outbound | markdown | test coverage |
 
 ## 3. Behavior
@@ -115,4 +119,4 @@ Auto-generated baseline; extend with component-specific checks as needed.
 
 | Date | Change | Modules Affected | Verified By |
 |------|--------|-----------------|-------------|
-| 2026-07-09 | Initial baseline generated from repository scan | 18 modules/files | 00_master_docs_bootstrap_v1 |
+| 2026-07-10 | Initial baseline generated from repository scan | 20 modules/files | 00_master_docs_bootstrap_v1 |

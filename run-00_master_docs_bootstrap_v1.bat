@@ -13,6 +13,11 @@ REM   2. Double-click or run it
 
 setlocal enabledelayedexpansion
 
+REM --- Activate .venv if it exists ---
+if exist "%~dp0.venv\Scripts\activate.bat" (
+    call "%~dp0.venv\Scripts\activate.bat"
+)
+
 REM ==================================================================
 REM EDIT THESE VARIABLES to match your setup:
 REM ==================================================================
@@ -27,7 +32,7 @@ REM Path to the project to bootstrap docs into
 set "TARGET_PROJECT_ROOT=D:\MyProjectSpace\01_Workflows\agent-runner-v2"
 
 REM Job ID to resume (leave blank to auto-create a new job)
-set "JOB_ID=00DOC-GEN-20260704-002"
+set "JOB_ID=00DOC-GEN-20260710-004"
 
 REM Set DRY_RUN=true to render prompts only (no coder invocation)
 set "DRY_RUN=false"

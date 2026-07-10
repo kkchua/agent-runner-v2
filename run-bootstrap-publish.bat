@@ -11,6 +11,11 @@ REM   --bundle-root defaults to <project-root>\agent_runner_v2\bootstrap\bundles
 
 setlocal enabledelayedexpansion
 
+REM --- Activate .venv if it exists ---
+if exist "%~dp0.venv\Scripts\activate.bat" (
+    call "%~dp0.venv\Scripts\activate.bat"
+)
+
 set "UKBE_CLI=ukbe-run-agent"
 set "PROJECT_ROOT="
 set "SOURCE_ROOT="
@@ -72,7 +77,7 @@ if not exist "%PROJECT_ROOT%" (
     exit /b 1
 )
 
-set "TEMP_ROOT=%PROJECT_ROOT%\.tmp"
+set "TEMP_ROOT=%PROJECT_ROOT%\temp"
 if not exist "%TEMP_ROOT%" mkdir "%TEMP_ROOT%" >nul 2>nul
 set "TEMP=%TEMP_ROOT%"
 set "TMP=%TEMP_ROOT%"

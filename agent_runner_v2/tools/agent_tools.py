@@ -1,8 +1,9 @@
 """
 agent_tools.py — Task coder tool functions for agent-runner steps.
 
-Two operations:
-  create_todos(step_id, todos)        → records all todo items as pending
+Three operations:
+  create_todos(step_id, todos)         → records all todo items as pending
+  mark_process(step_id, index, notes)  → marks a todo item as processing
   mark_complete(step_id, index, notes) → marks a todo item as completed
 
 Writes append-only JSON lines to the file at PROGRESS_FILE env var.
@@ -70,18 +71,31 @@ def create_todos(step_id: str, todos: list) -> dict:
     return {"status": "ok", "step_id": step_id, "inserted": len(todos)}
 
 
-def mark_complete(step_id: str, todo_index: int, notes: str = "") -> dict:
-    """Mark the todo at 1-based index as completed, resolving the original item description."""
+def _resolve_todo_item(todo_index: int) -> str:
     item = f"item-{todo_index}"
     try:
         if PROGRESS_FILE.exists():
             for line in PROGRESS_FILE.read_text(encoding="utf-8").splitlines():
                 rec = json.loads(line)
-                if rec.get("index") == todo_index and rec.get("status") == "pending":
+                if rec.get("index") == todo_index and rec.get("item"):
                     item = rec.get("item", item)
                     break
     except Exception:
         pass
-    _write(step_id, todo_index, item, "done", notes=notes)      # file write MUST succeed
-    _post_progress(step_id, todo_index, item, "done", notes=notes)  # DB post is best-effort
+    return item
+
+
+def mark_process(step_id: str, todo_index: int, notes: str = "") -> dict:
+    """Mark the todo at 1-based index as processing."""
+    item = _resolve_todo_item(todo_index)
+    _write(step_id, todo_index, item, "processing", notes=notes)
+    _post_progress(step_id, todo_index, item, "processing", notes=notes)
+    return {"status": "ok", "step_id": step_id, "todo_index": todo_index}
+
+
+def mark_complete(step_id: str, todo_index: int, notes: str = "") -> dict:
+    """Mark the todo at 1-based index as completed, resolving the original item description."""
+    item = _resolve_todo_item(todo_index)
+    _write(step_id, todo_index, item, "completed", notes=notes)      # file write MUST succeed
+    _post_progress(step_id, todo_index, item, "completed", notes=notes)  # DB post is best-effort
     return {"status": "ok", "step_id": step_id, "todo_index": todo_index}

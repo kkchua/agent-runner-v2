@@ -2,13 +2,14 @@
 from __future__ import annotations
 
 """
-actions/validate_architecture_site.py - Validate the published architecture HTML site.
+actions/validate_architecture_site.py - Validate the published documentation hub index.
 """
 
 from pathlib import Path
 
 from ..action_result import ActionResult
-from ..architecture_site import SITE_PAGES
+from ..architecture_site import AUDIENCE_SITES
+from ..doc_paths import docs_site_rel
 from ..runtime_context import resolve_step_meta_rel, write_meta_sidecar
 
 
@@ -23,26 +24,32 @@ def validate_architecture_site(*, context: dict[str, str], state: dict, step_cfg
     step = str(state.get("current_step") or "validate_architecture_site")
     meta_rel = resolve_step_meta_rel(context=context, state=state, context_key="VALIDATION_FILE_METAJSON", default_step=step)
 
-    index_path = project_root / "docs/site/architecture/index.html"
-    required_pages = [project_root / rel for rel in SITE_PAGES]
+    index_path = project_root / docs_site_rel("index.html")
+    manifest_path = project_root / docs_site_rel("manifest.json")
+
     checks: list[tuple[str, bool, str]] = []
-    checks.append(("index exists", index_path.exists(), str(index_path.relative_to(project_root))))
-    checks.append(("pages exist", all(path.exists() for path in required_pages), "site page set"))
+    checks.append(("index exists", index_path.exists(), docs_site_rel("index.html")))
+    checks.append(("manifest exists", manifest_path.exists(), docs_site_rel("manifest.json")))
 
     if index_path.exists():
         content = index_path.read_text(encoding="utf-8")
-        checks.append(("index title", "<title>" in content and "Architecture Overview" in content, "title present"))
-        checks.append(("architecture posture", "Architecture at a Glance" in content and "Product Strategy" in content, "core sections present"))
-        checks.append(("audience views", "Audience Views" in content and "Major Pieces" in content, "audience and major pieces sections present"))
+        checks.append(("index title", "<title>" in content and "Documentation Hub" in content, "title present"))
+        checks.append(("audience cards", "Stakeholder Documentation" in content and "Developer Documentation" in content, "audience sections present"))
+        checks.append(("navigation", "<nav>" in content, "navigation present"))
+
+        # Check for audience site links
+        for site in AUDIENCE_SITES:
+            link_present = f'href="{site["path"]}index.html"' in content
+            checks.append((f"{site['name']} link", link_present, f"link to {site['path']}index.html"))
     else:
         checks.append(("index title", False, "missing index"))
-        checks.append(("architecture posture", False, "missing index"))
-        checks.append(("audience views", False, "missing index"))
+        checks.append(("audience cards", False, "missing index"))
+        checks.append(("navigation", False, "missing index"))
 
     passed = all(ok for _, ok, _ in checks)
-    validation_path = project_root / "docs/site/architecture/validation.md"
+    validation_path = project_root / docs_site_rel("validation.md")
     lines = [
-        "# Architecture Site Validation\n\n",
+        "# Documentation Hub Validation\n\n",
         f"- Workflow: `{state.get('template_group') or mode}`\n",
         f"- Step: `{step}`\n",
         f"- Job: `{job_id}`\n\n",
@@ -59,14 +66,13 @@ def validate_architecture_site(*, context: dict[str, str], state: dict, step_cfg
             meta_rel,
             project_root=project_root,
             status="APPROVED" if passed else "REJECTED",
-            remark=f"Architecture HTML site validation {mode} {'passed' if passed else 'failed'}.",
-            artifacts={"VALIDATION_FILE": "docs/site/architecture/validation.md"},
+            remark=f"Documentation hub validation {mode} {'passed' if passed else 'failed'}.",
+            artifacts={"VALIDATION_FILE": docs_site_rel("validation.md")},
         )
 
     return ActionResult(
         status="APPROVED" if passed else "REJECTED",
-        remark=f"Architecture HTML site validation {mode} {'passed' if passed else 'failed'}.",
-        artifacts={"VALIDATION_FILE": "docs/site/architecture/validation.md"},
+        remark=f"Documentation hub validation {mode} {'passed' if passed else 'failed'}.",
+        artifacts={"VALIDATION_FILE": docs_site_rel("validation.md")},
         reject_code=None if passed else "ARCHITECTURE_SITE_VALIDATION_FAILED",
     )
-

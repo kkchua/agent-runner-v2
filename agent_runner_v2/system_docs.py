@@ -81,7 +81,7 @@ def _architecture_profile(snapshot: dict) -> dict[str, str]:
         "current_profile": str(snapshot.get("architecture_profile") or "provisional"),
         "target_profile": str(snapshot.get("architecture_target_profile") or "repo-selected"),
         "migration_mode": str(snapshot.get("architecture_migration_mode") or "targeted_migration"),
-        "source": str(snapshot.get("architecture_profile_source") or "project_analysis.md"),
+        "source": str(snapshot.get("architecture_profile_source") or "PROJECT_ANALYSIS.md"),
     }
 
 

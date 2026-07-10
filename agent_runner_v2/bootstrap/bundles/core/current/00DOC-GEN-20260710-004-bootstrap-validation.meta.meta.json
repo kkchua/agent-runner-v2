@@ -1,0 +1,27 @@
+{
+  "schema_version": "v2",
+  "coder_result": {
+    "status": "APPROVED",
+    "remark": "Master system documentation review completed successfully. All 16 required documents validated for coherence, completeness, and alignment with repository baseline. No blocking issues found.",
+    "artifacts": {
+      "REVIEW_FILE_SUGGESTED": "docs/system/00_governance/bootstrap/00DOC-GEN-20260710-004-bootstrap-validation.md"
+    },
+    "recorded_at": "2026-07-10T10:28:20+08:00"
+  },
+  "runner_data": {
+    "step": "05_review_master_system_docs",
+    "coder_used": "qwen",
+    "invoked_at": "2026-07-10T10:21:51",
+    "finished_at": "2026-07-10T10:28:20",
+    "prompt_checksum": "sha256:108f2c1154cb724fff8e735777fadc882b6c38c12202efe87ab98bc7726e5fff",
+    "allowed_write_paths": [
+      "docs\\system\\00_governance\\bootstrap\\00DOC-GEN-20260710-004-bootstrap-validation.md",
+      "docs\\system\\00_governance\\bootstrap\\00DOC-GEN-20260710-004-bootstrap-validation.meta.meta.json"
+    ],
+    "changed_paths": [
+      "docs\\system\\00_governance\\bootstrap\\00DOC-GEN-20260710-004-bootstrap-validation.md"
+    ],
+    "enriched_at": "2026-07-10T10:28:20",
+    "runner_version": "v2"
+  }
+}

@@ -3,9 +3,9 @@ title: "Component Documentation: workflow families"
 template_id: "CB-03"
 status: "active"
 component_id: "workflow-families"
-created: "2026-07-09T21:13:38+08:00"
+created: "2026-07-10T09:40:54+08:00"
 owner: "00_master_docs_bootstrap_v1"
-last_verified_by_change: "00_master_docs_bootstrap_v1 / 00DOC-GEN-20260709-002 / 2026-07-09T21:13:38+08:00"
+last_verified_by_change: "00_master_docs_bootstrap_v1 / 00DOC-GEN-20260710-004 / 2026-07-10T09:40:54+08:00"
 modules: ["00_master_docs_bootstrap_v1", "10_execution_scaffold_v1", "20_initiative_intake_v1", "21_bug_fix_intake_v1", "30_delivery_planning_v1", "31_task_execution_v1", "40_documentation_sync_v1", "41_stakeholder_doc_v1", "41_developer_doc_v1", "41_operator_doc_v1", "41_tester_doc_v1", "41_user_doc_v1", "50_architecture_site_v1", "51_stakeholder_docs_v1", "52_developer_docs_v1", "53_operator_docs_v1", "54_tester_docs_v1", "55_user_docs_v1", "image_csv_gen_v2", "videoxpress_gen_v1", "tiktok_video_pipeline_v1"]
 ---
 
@@ -121,4 +121,4 @@ Auto-generated baseline; extend with component-specific checks as needed.
 
 | Date | Change | Modules Affected | Verified By |
 |------|--------|-----------------|-------------|
-| 2026-07-09 | Initial baseline generated from repository scan | 21 modules/files | 00_master_docs_bootstrap_v1 |
+| 2026-07-10 | Initial baseline generated from repository scan | 21 modules/files | 00_master_docs_bootstrap_v1 |

@@ -16,6 +16,8 @@ Usage:
 
 from __future__ import annotations
 
+from pathlib import PurePosixPath
+
 # ============================================================================
 # File Extension Constants
 # ============================================================================
@@ -58,6 +60,15 @@ FILENAME_SITE_INDEX_HTML = "index.html"
 FILENAME_SITE_MANIFEST_JSON = "manifest.json"
 FILENAME_SITE_CONTENT_MD = "content.md"
 FILENAME_SITE_INDEX_BASE = "index"  # Base name for index files (used with different extensions)
+FILENAME_META_JSON = "meta.json"
+FILENAME_SUBMISSION_RESULTS_JSON = "submission_results.json"
+FILENAME_SUBMISSION_RESULTS_META_JSON = "submission_results.meta.json"
+
+# Bug-fix workflow filenames
+FILENAME_BUG_REPORT = "BUG_REPORT"
+FILENAME_BUG_REPRODUCTION = "BUG_REPRODUCTION"
+FILENAME_ROOT_CAUSE = "ROOT_CAUSE"
+FILENAME_PATCH = "PATCH"
 
 # Architecture site HTML filenames
 FILENAME_ARCH_STAKEHOLDER_HTML = "stakeholders.html"
@@ -323,6 +334,22 @@ def placeholder(key: str) -> str:
     return f"{{{key}}}"
 
 
+def relpath(*parts: str) -> str:
+    """Join path fragments into a repository-relative POSIX path."""
+    return PurePosixPath(*parts).as_posix()
+
+
+def file_in_folder(folder_key: str, filename: str) -> str:
+    """Build a repository-relative path for a literal filename in a known folder."""
+    return relpath(folder_key, filename)
+
+
+def artifact_meta_path(artifact_rel: str) -> str:
+    """Return the sidecar path for an artifact path."""
+    path = PurePosixPath(str(artifact_rel))
+    return str(path.parent / f"{path.stem}.meta.json")
+
+
 # ============================================================================
 # Pre-computed Artifact Path Constants
 # ============================================================================
@@ -399,6 +426,197 @@ ARTIFACT_PATH_TESTER_SITE_MARKDOWN = f"{FOLDER_KEY_TESTER_SITE}/{FILENAME_SITE_C
 ARTIFACT_PATH_USER_SITE_MARKDOWN = f"{FOLDER_KEY_USER_SITE}/{FILENAME_SITE_CONTENT_MD}"
 
 
+# Audience site workflow metadata
+AUDIENCE_SITE_WORKFLOWS: dict[str, dict[str, str]] = {
+    "51_stakeholder_docs_v1": {
+        "markdown_rel": file_in_folder(FOLDER_KEY_STAKEHOLDER_SITE, FILENAME_SITE_CONTENT_MD),
+        "html_rel": file_in_folder(FOLDER_KEY_STAKEHOLDER_SITE, FILENAME_SITE_INDEX_HTML),
+        "pdf_rel": file_in_folder(FOLDER_KEY_STAKEHOLDER_SITE, f"{FILENAME_SITE_INDEX_BASE}{EXT_PDF}"),
+        "manifest_rel": file_in_folder(FOLDER_KEY_STAKEHOLDER_SITE, FILENAME_SITE_MANIFEST_JSON),
+        "archive_dir_rel": relpath(FOLDER_KEY_STAKEHOLDER_SITE, "versions"),
+        "title": "Stakeholder Documentation",
+        "subtitle": "Business value, capabilities, and governance overview for decision-makers.",
+        "audience": "Stakeholders",
+        "audience_label": "Stakeholder",
+        "nav_path": "stakeholders/",
+    },
+    "52_developer_docs_v1": {
+        "markdown_rel": file_in_folder(FOLDER_KEY_DEVELOPER_SITE, FILENAME_SITE_CONTENT_MD),
+        "html_rel": file_in_folder(FOLDER_KEY_DEVELOPER_SITE, FILENAME_SITE_INDEX_HTML),
+        "pdf_rel": file_in_folder(FOLDER_KEY_DEVELOPER_SITE, f"{FILENAME_SITE_INDEX_BASE}{EXT_PDF}"),
+        "manifest_rel": file_in_folder(FOLDER_KEY_DEVELOPER_SITE, FILENAME_SITE_MANIFEST_JSON),
+        "archive_dir_rel": relpath(FOLDER_KEY_DEVELOPER_SITE, "versions"),
+        "title": "Developer Documentation",
+        "subtitle": "Architecture, API reference, and integration patterns for engineers.",
+        "audience": "Developers",
+        "audience_label": "Developer",
+        "nav_path": "developers/",
+    },
+    "53_operator_docs_v1": {
+        "markdown_rel": file_in_folder(FOLDER_KEY_OPERATOR_SITE, FILENAME_SITE_CONTENT_MD),
+        "html_rel": file_in_folder(FOLDER_KEY_OPERATOR_SITE, FILENAME_SITE_INDEX_HTML),
+        "pdf_rel": file_in_folder(FOLDER_KEY_OPERATOR_SITE, f"{FILENAME_SITE_INDEX_BASE}{EXT_PDF}"),
+        "manifest_rel": file_in_folder(FOLDER_KEY_OPERATOR_SITE, FILENAME_SITE_MANIFEST_JSON),
+        "archive_dir_rel": relpath(FOLDER_KEY_OPERATOR_SITE, "versions"),
+        "title": "Operator Documentation",
+        "subtitle": "Runbooks, failure handling, and operational procedures for DevOps.",
+        "audience": "Operators",
+        "audience_label": "Operator",
+        "nav_path": "operators/",
+    },
+    "54_tester_docs_v1": {
+        "markdown_rel": file_in_folder(FOLDER_KEY_TESTER_SITE, FILENAME_SITE_CONTENT_MD),
+        "html_rel": file_in_folder(FOLDER_KEY_TESTER_SITE, FILENAME_SITE_INDEX_HTML),
+        "pdf_rel": file_in_folder(FOLDER_KEY_TESTER_SITE, f"{FILENAME_SITE_INDEX_BASE}{EXT_PDF}"),
+        "manifest_rel": file_in_folder(FOLDER_KEY_TESTER_SITE, FILENAME_SITE_MANIFEST_JSON),
+        "archive_dir_rel": relpath(FOLDER_KEY_TESTER_SITE, "versions"),
+        "title": "Tester Documentation",
+        "subtitle": "Test procedures, validation criteria, and quality gates for QA.",
+        "audience": "Testers",
+        "audience_label": "Tester",
+        "nav_path": "testers/",
+    },
+    "55_user_docs_v1": {
+        "markdown_rel": file_in_folder(FOLDER_KEY_USER_SITE, FILENAME_SITE_CONTENT_MD),
+        "html_rel": file_in_folder(FOLDER_KEY_USER_SITE, FILENAME_SITE_INDEX_HTML),
+        "pdf_rel": file_in_folder(FOLDER_KEY_USER_SITE, f"{FILENAME_SITE_INDEX_BASE}{EXT_PDF}"),
+        "manifest_rel": file_in_folder(FOLDER_KEY_USER_SITE, FILENAME_SITE_MANIFEST_JSON),
+        "archive_dir_rel": relpath(FOLDER_KEY_USER_SITE, "versions"),
+        "title": "User Documentation",
+        "subtitle": "Installation, configuration, and usage guides for end users.",
+        "audience": "Users",
+        "audience_label": "User",
+        "nav_path": "users/",
+    },
+}
+
+AUDIENCE_MARKDOWN_ARCHIVE_WORKFLOWS: dict[str, dict[str, str]] = {
+    "41_stakeholder_doc_v1": {
+        "target_rel": file_in_folder(FOLDER_KEY_STAKEHOLDER_SITE, FILENAME_SITE_CONTENT_MD),
+        "archive_dir_rel": relpath(FOLDER_KEY_STAKEHOLDER_SITE, "versions"),
+    },
+    "41_developer_doc_v1": {
+        "target_rel": file_in_folder(FOLDER_KEY_DEVELOPER_SITE, FILENAME_SITE_CONTENT_MD),
+        "archive_dir_rel": relpath(FOLDER_KEY_DEVELOPER_SITE, "versions"),
+    },
+    "41_operator_doc_v1": {
+        "target_rel": file_in_folder(FOLDER_KEY_OPERATOR_SITE, FILENAME_SITE_CONTENT_MD),
+        "archive_dir_rel": relpath(FOLDER_KEY_OPERATOR_SITE, "versions"),
+    },
+    "41_tester_doc_v1": {
+        "target_rel": file_in_folder(FOLDER_KEY_TESTER_SITE, FILENAME_SITE_CONTENT_MD),
+        "archive_dir_rel": relpath(FOLDER_KEY_TESTER_SITE, "versions"),
+    },
+    "41_user_doc_v1": {
+        "target_rel": file_in_folder(FOLDER_KEY_USER_SITE, FILENAME_SITE_CONTENT_MD),
+        "archive_dir_rel": relpath(FOLDER_KEY_USER_SITE, "versions"),
+    },
+}
+
+ARCHITECTURE_AUDIENCE_SITES: list[dict[str, str | list[str]]] = [
+    {
+        "name": "Stakeholder Documentation",
+        "description": "Business value, capabilities, strategic intent, and governance overview for decision-makers.",
+        "path": "stakeholders/",
+        "audience": "Stakeholders, Management",
+        "content": [
+            "Executive summary",
+            "Business capabilities",
+            "Strategic intent",
+            "Governance overview",
+        ],
+    },
+    {
+        "name": "Developer Documentation",
+        "description": "Architecture, API reference, integration patterns, and getting started guide for engineers.",
+        "path": "developers/",
+        "audience": "Developers, Engineers",
+        "content": [
+            "Architecture overview",
+            "Module reference",
+            "Integration map",
+            "Getting started",
+        ],
+    },
+    {
+        "name": "Operator Documentation",
+        "description": "Runbooks, failure handling, monitoring, and operational procedures for DevOps.",
+        "path": "operators/",
+        "audience": "Operators, DevOps",
+        "content": [
+            "Deployment guide",
+            "Runbook procedures",
+            "Failure modes and recovery",
+            "Monitoring and alerts",
+        ],
+    },
+    {
+        "name": "Tester Documentation",
+        "description": "Test procedures, validation criteria, quality gates, and coverage information for QA.",
+        "path": "testers/",
+        "audience": "Testers, QA Engineers",
+        "content": [
+            "Test strategy",
+            "Validation criteria",
+            "Test coverage",
+            "Quality gates",
+        ],
+    },
+    {
+        "name": "User Documentation",
+        "description": "Installation, configuration, usage guides, and FAQ for end users.",
+        "path": "users/",
+        "audience": "End Users",
+        "content": [
+            "Installation guide",
+            "Quick start",
+            "Configuration",
+            "FAQ and troubleshooting",
+        ],
+    },
+]
+
+DELIVERY_SCAFFOLD_DIRS = [
+    FOLDER_KEY_DELIVERY_INITIATIVES,
+    FOLDER_KEY_DELIVERY_PLANS,
+    FOLDER_KEY_DELIVERY_TASKS,
+    FOLDER_KEY_DELIVERY_IMPLEMENTATIONS,
+    FOLDER_KEY_DELIVERY_REVIEWS,
+    FOLDER_KEY_DELIVERY_MEMORY,
+    FOLDER_KEY_DELIVERY_STANDARDS,
+    "docs/codebase/00_templates",
+    "docs/codebase/05_archives",
+    FOLDER_KEY_SYSTEM_DELIVERY_TEMPLATE_ROOT,
+    FOLDER_KEY_SYSTEM_CODEBASE_TEMPLATE_ROOT,
+]
+
+RUN_AGENT_REQUIRED_DOC_DIRS = [
+    *DELIVERY_SCAFFOLD_DIRS,
+    FOLDER_KEY_CODEBASE_STANDARDS,
+    FOLDER_KEY_CODEBASE_INVENTORY,
+    FOLDER_KEY_CODEBASE_MODULES,
+    FOLDER_KEY_CODEBASE_COMPONENTS,
+    FOLDER_KEY_CODEBASE_CHANGES,
+    relpath(FOLDER_KEY_DOCS, "system", "00_governance"),
+    FOLDER_KEY_SYSTEM_BOOTSTRAP,
+    FOLDER_KEY_SYSTEM_TEMPLATE_ROOT,
+    FOLDER_KEY_SYSTEM_DELIVERY_TEMPLATE_ROOT,
+    FOLDER_KEY_SYSTEM_CODEBASE_TEMPLATE_ROOT,
+    relpath(FOLDER_KEY_DOCS, "system", "01_overview"),
+    relpath(FOLDER_KEY_DOCS, "system", "02_functional"),
+    relpath(FOLDER_KEY_DOCS, "system", "03_architecture"),
+    relpath(FOLDER_KEY_DOCS, "engineering"),
+    relpath(FOLDER_KEY_DOCS, "operations"),
+]
+
+BUG_FIX_OUTPUT_PATHS: dict[str, str] = {
+    ARTIFACT_KEY_BUG_REPORT: relpath(FOLDER_KEY_DELIVERY_IMPLEMENTATIONS, "{step_dir_rel}", f"{FILENAME_BUG_REPORT}{EXT_MD}"),
+    ARTIFACT_KEY_REPRO: relpath(FOLDER_KEY_DELIVERY_IMPLEMENTATIONS, "{step_dir_rel}", f"{FILENAME_BUG_REPRODUCTION}{EXT_MD}"),
+    ARTIFACT_KEY_ROOT_CAUSE: relpath(FOLDER_KEY_DELIVERY_IMPLEMENTATIONS, "{step_dir_rel}", f"{FILENAME_ROOT_CAUSE}{EXT_MD}"),
+    ARTIFACT_KEY_PATCH: relpath(FOLDER_KEY_DELIVERY_IMPLEMENTATIONS, "{step_dir_rel}", f"{FILENAME_PATCH}{EXT_MD}"),
+}
+
+
 # ============================================================================
 # Reference Files Constant
 # ============================================================================
@@ -430,7 +648,9 @@ REFERENCE_FILES = {
     "DELIVERY_SOP": ARTIFACT_PATH_WORKFLOW_SOP,  # Alias to same path
     # Codebase standards
     "CODEBASE_DOC_SOP": ARTIFACT_PATH_CODEBASE_DOC_SOP,
+    "CODEBASE_DOC_SOP_v1": ARTIFACT_PATH_CODEBASE_DOC_SOP,  # Alias for artifact key
     "CODEBASE_DOC_STATUS_RULES": ARTIFACT_PATH_CODEBASE_DOC_STATUS_RULES,
+    "CODEBASE_DOC_STATUS_RULES_v1": ARTIFACT_PATH_CODEBASE_DOC_STATUS_RULES,  # Alias for artifact key
     "CODEBASE_INVENTORY": ARTIFACT_PATH_CODEBASE_INVENTORY,
     # System docs
     "DOCUMENTATION_STANDARD": ARTIFACT_PATH_DOCUMENTATION_STANDARD,
@@ -526,8 +746,6 @@ def get_master_docs_output_paths(job_id: str = "{job_id}", mode: str = "{mode}")
 # Path Helper Functions (from doc_paths.py)
 # ============================================================================
 # These functions construct paths dynamically using base folder constants.
-
-from pathlib import PurePosixPath
 
 def _rel(*parts: str) -> str:
     """Convert path parts to POSIX-style string."""
@@ -696,6 +914,120 @@ def known_artifact_paths() -> dict[str, str]:
     # Audience site artifacts
     paths.update(audience_site_artifacts())
     return paths
+
+
+PROMPT_LITERAL_ALIASES: dict[str, str] = {
+    ARTIFACT_PATH_README: ARTIFACT_KEY_SYSTEM_DOCS_INDEX,
+    ARTIFACT_PATH_DOCUMENTATION_STANDARD: ARTIFACT_KEY_SYSTEM_DOC_STANDARD,
+}
+
+
+def prompt_literal_substitutions() -> dict[str, str]:
+    """Map known literal file paths to canonical prompt placeholders."""
+    substitutions = {
+        literal_path: placeholder(alias_key)
+        for literal_path, alias_key in PROMPT_LITERAL_ALIASES.items()
+    }
+    substitutions.update(
+        {
+            literal_path: placeholder(artifact_key)
+            for artifact_key, literal_path in known_artifact_paths().items()
+        }
+    )
+    return substitutions
+
+
+SIDECAR_INSTRUCTION_TEMPLATE = """
+
+===========================================================
+CRITICAL: RESULT REPORTING REQUIREMENT (AUTOMATED INJECTION)
+===========================================================
+
+After completing your work, you MUST report results via meta.json sidecar.
+
+**Sidecar path**: `{META_JSON_PATH}`
+
+**Required steps**:
+1. Write your artifact file(s) to disk using write_file tool
+2. Verify each artifact file exists on disk
+3. Create the meta.json sidecar using write_file tool with this EXACT structure:
+   {{
+     "schema_version": "v2",
+     "coder_result": {{
+       "status": "APPROVED" or "REJECTED",
+       "remark": "Brief summary of what you accomplished",
+       "artifacts": {{
+         {ARTIFACT_ENTRIES}
+       }},
+       "recorded_at": "{CURRENT_TIMESTAMP}"
+     }}
+   }}
+4. Verify meta.json exists on disk before finishing
+
+**Status decision rule**:
+- Return APPROVED only if ALL required artifacts exist on disk AND meta.json is written
+- Return REJECTED if any artifact is missing or cannot be created
+
+**Output format rule**:
+- Return ONLY valid JSON matching this structure:
+  {{
+    "status": "APPROVED" or "REJECTED",
+    "remark": "<summary>",
+    "artifacts": {{
+      {ARTIFACT_ENTRIES}
+    }}
+  }}
+- Do NOT return markdown, explanations, or conversational text
+- The runner reads results ONLY from meta.json and your JSON output
+
+**Verification requirement**:
+- You MUST verify files exist on disk before returning APPROVED
+- Use exact artifact paths provided in context variables above
+
+This requirement is MANDATORY - failure to follow these steps will cause workflow failure.
+===========================================================
+"""
+
+
+TOOL_INSTRUCTION_TEMPLATE = """
+
+## Workflow Rules
+
+You MUST use the tools below for EVERY step. Do NOT skip them. Do NOT answer directly without calling them first.
+
+CRITICAL: Do NOT ask any clarifying questions. Do NOT ask for more info. Execute immediately using the tools.
+
+Your step ID is: {STEP_NAME}
+
+### create_todos(step_id, todos)
+Call FIRST. Break the task into concrete steps, one record per todo.
+Usage: "{PYTHON_CMD}" -c "import sys; sys.path.insert(0, {TOOLS_DIR_PY}); import os; os.environ['PROGRESS_FILE']={PROGRESS_FILE_PY}; from agent_tools import create_todos; create_todos({STEP_NAME_PY}, ['Step 1', 'Step 2'])"
+
+### mark_process(step_id, index, notes='')
+Call immediately BEFORE starting each todo item. This inserts a `processing` status record.
+Usage: "{PYTHON_CMD}" -c "import sys; sys.path.insert(0, {TOOLS_DIR_PY}); import os; os.environ['PROGRESS_FILE']={PROGRESS_FILE_PY}; from agent_tools import mark_process; mark_process({STEP_NAME_PY}, 1, notes='Started')"
+
+### mark_complete(step_id, index, notes='')
+Call immediately AFTER finishing each todo item. This inserts a `completed` status record. 1-based index.
+Usage: "{PYTHON_CMD}" -c "import sys; sys.path.insert(0, {TOOLS_DIR_PY}); import os; os.environ['PROGRESS_FILE']={PROGRESS_FILE_PY}; from agent_tools import mark_complete; mark_complete({STEP_NAME_PY}, 1, notes='Done')"
+
+## Mandatory Sequence
+1. create_todos(step_id) - list all your steps first
+2. Before starting todo item `i`, call mark_process(step_id, i)
+3. Execute todo item `i`
+4. After finishing todo item `i`, call mark_complete(step_id, i)
+5. You MUST complete the full `pending -> processing -> completed` record sequence for every todo item before returning your final result
+
+Example for a 3-step task:
+  create_todos('{STEP_NAME}', ['Read input file', 'Generate output', 'Write result'])
+  mark_process('{STEP_NAME}', 1, notes='Started reading input')
+  mark_complete('{STEP_NAME}', 1, notes='File read successfully')
+  mark_process('{STEP_NAME}', 2, notes='Started generating output')
+  mark_complete('{STEP_NAME}', 2, notes='Output generated')
+  mark_process('{STEP_NAME}', 3, notes='Started writing result')
+  mark_complete('{STEP_NAME}', 3, notes='Result written to disk')
+
+Actually call the functions with real arguments - do NOT just describe your answer."""
 
 
 def architecture_site_pages() -> dict[str, str]:

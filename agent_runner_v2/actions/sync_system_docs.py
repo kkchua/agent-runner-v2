@@ -39,7 +39,7 @@ def _write_text(path: Path, content: str) -> None:
 
 
 def _architecture_profile_from_project_analysis(project_root: Path) -> dict[str, str]:
-    analysis_path = project_root / system_doc_rel("project_analysis.md")
+    analysis_path = project_root / system_doc_rel("PROJECT_ANALYSIS.md")
     if not analysis_path.exists():
         return {}
     text = analysis_path.read_text(encoding="utf-8")
@@ -62,7 +62,7 @@ def _architecture_profile_from_project_analysis(project_root: Path) -> dict[str,
         result["architecture_migration_mode"] = "targeted_migration"
     if "architecture_baseline" not in result:
         result["architecture_baseline"] = "universal baseline"
-    result["architecture_profile_source"] = system_doc_rel("project_analysis.md")
+    result["architecture_profile_source"] = system_doc_rel("PROJECT_ANALYSIS.md")
     return result
 
 

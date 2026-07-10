@@ -22,6 +22,22 @@ from typing import Any
 from .runtime_context import GLOBAL_RUNNER_HOME
 
 
+def _get_job_step_dir(template_group: str, job_id: str, step_name: str, step_sequence_no: int) -> Path:
+    """Compute the job step directory path matching manual mode's structure.
+    
+    Args:
+        template_group: Workflow template group name (e.g., 'delivery_scaffold_v1')
+        job_id: Job identifier (run_code from backend)
+        step_name: Step name (e.g., 'project_analysis')
+        step_sequence_no: Sequential step number for contiguous working dirs
+    
+    Returns:
+        Path to job step directory (e.g., ~/.ukbe-runner/jobs/<template_group>/<job_id>/01_project_analysis)
+    """
+    from .job_state import job_dir
+    return job_dir(template_group, job_id) / f"{step_sequence_no:02d}_{step_name}"
+
+
 def _utcnow_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
@@ -200,12 +216,19 @@ def _spawn_child(*, claim: dict[str, Any], runtime_root: Path, cli_pythonpath: s
         env['PYTHONPATH'] = cli_pythonpath + os.pathsep + env.get('PYTHONPATH', '')
 
     log_handle = combined_log_path.open('ab')
+    
+    # Set working directory to project_root so subprocess can find .env file
+    project_root = request_payload.get("project_root") or request_payload.get("workspace_root")
+    subprocess_cwd = Path(project_root).resolve() if project_root else Path.cwd()
+    
+    logger.log('info', 'subprocess_cwd', message=f'Setting subprocess cwd to {subprocess_cwd}', details={'project_root': project_root, 'subprocess_cwd': str(subprocess_cwd)})
+    
     proc = subprocess.Popen(
         [sys.executable, '-m', 'agent_runner_v2.run_agent', 'execute-step', '--request-file', str(request_path), '--result-file', str(result_path)],
         stdout=log_handle,
         stderr=subprocess.STDOUT,
         env=env,
-        cwd=str(Path.cwd()),
+        cwd=str(subprocess_cwd),
     )
     started_monotonic = time.monotonic()
     child = ChildExecution(
@@ -319,6 +342,29 @@ def _run_supervisor(*, worker_id: str, worker_label: str, backend_url: str, poll
                     child.submission_done = True
                     child.state = 'completed' if result.get('status') == 'completed' else 'failed'
                     logger.log('info', 'result_submitted', message='submitted child result', child=child, details={'status': result.get('status'), 'outcome': result.get('outcome'), 'exit_code': proc_rc})
+                    
+                    # After successful submission, also write result.json to job step directory (matching manual mode)
+                    try:
+                        template_group = child.request_payload.get("template_group", "")
+                        job_id = child.run_code  # run_code is the job_id
+                        step_sequence_no = int(child.request_payload.get("step_execution_spec", {}).get("step_sequence_no") or 
+                                              child.request_payload.get("step_execution_spec", {}).get("step_order") or 1)
+                        
+                        step_dir = _get_job_step_dir(
+                            template_group=template_group,
+                            job_id=job_id,
+                            step_name=child.step_name,
+                            step_sequence_no=step_sequence_no,
+                        )
+                        step_dir.mkdir(parents=True, exist_ok=True)
+                        
+                        # Write result.json with same structure as manual mode
+                        result_json_path = step_dir / "result.json"
+                        result_json_path.write_text(json.dumps(result, indent=2, ensure_ascii=False), encoding="utf-8")
+                        
+                        logger.log('info', 'result_json_written', message='wrote result.json to job step directory', child=child, details={'path': str(result_json_path)})
+                    except Exception as write_exc:
+                        logger.log('warning', 'result_json_write_failed', message='failed to write result.json to job step directory', child=child, details={'error': str(write_exc)})
                 except Exception as exc:
                     child.state = 'submit_failed'
                     child.watchdog_reason = str(exc)

@@ -24,6 +24,8 @@ from .doc_paths import delivery_doc_rel
 from .exceptions import ArtifactMissingError, MetaJsonInvalidError, MetaJsonMissingError, PreflightBlockedError
 from .documentation_guardrails import MASTER_BOOTSTRAP_WORKFLOW, master_bootstrap_artifact_candidates
 from .runtime_context import JOBS_ROOT, PROJECT_ROOT, get_workflow_module
+from .notifications import send_notification
+from .notification_manager import send_workflow_notification, send_step_notification
 
 CURRENT_SCHEMA_VERSION = 6  # v2 bumps to 6 (adds runner_version)
 
@@ -665,6 +667,8 @@ def reconcile_job_state(state: dict[str, Any], group_cfg: dict[str, Any]) -> dic
     ):
         set_job_status(state, "COMPLETED")
         state["current_step"] = None
+        # Send notification for auto-completed delivery planning workflow
+        send_workflow_notification("COMPLETED", dict(state))
         return state
 
     if get_job_status(state) in {"COMPLETED", "FAILED"}:
@@ -1300,6 +1304,9 @@ def advance_step(
     state.setdefault("human_retry_count_by_step", {})[step] = 0
     clear_last_failure(state)
 
+    # Check for step-level notification configuration
+    send_step_notification("STEP_COMPLETED", state, step, step_cfg)
+
     if step_cfg.get("loop_returns_to"):
         return _handle_refine_success(state, step, step_cfg, artifacts)
 
@@ -1480,6 +1487,8 @@ def _advance_to_next(
     if next_step is None:
         set_job_status(state, "COMPLETED")
         state["current_step"] = None
+        # Send notification for workflow completion
+        send_workflow_notification("COMPLETED", dict(state))
     else:
         set_job_status(state, "IN_PROGRESS")
         state["current_step"] = next_step
@@ -1559,6 +1568,8 @@ def approve_step(
         set_job_status(state, "COMPLETED")
         state["current_step"] = None
         save_job(group_name, state["job_id"], state)
+        # Send notification for workflow completion
+        send_workflow_notification("COMPLETED", dict(state))
         return state
 
     state["completed_steps"] = list(dict.fromkeys(completed_steps + [step]))
@@ -1568,12 +1579,17 @@ def approve_step(
         set_job_status(state, "COMPLETED")
         state["current_step"] = None
         save_job(group_name, state["job_id"], state)
+        # Send notification for workflow completion
+        send_workflow_notification("COMPLETED", dict(state))
         return state
 
     next_step = get_next_step_skipping_refine_replan(group_cfg, state)
     if next_step is None:
         set_job_status(state, "COMPLETED")
         state["current_step"] = None
+        save_job(group_name, state["job_id"], state)
+        # Send notification for workflow completion
+        send_workflow_notification("COMPLETED", dict(state))
     else:
         set_job_status(state, "IN_PROGRESS")
         state["current_step"] = next_step
@@ -1624,18 +1640,25 @@ def force_approve_step(
         set_job_status(state, "COMPLETED")
         state["current_step"] = None
         save_job(group_name, state["job_id"], state)
+        # Send notification for workflow completion
+        send_workflow_notification("COMPLETED", dict(state))
         return state
 
     if group_name == "delivery_planning_v1" and step == "review_task_graph":
         set_job_status(state, "COMPLETED")
         state["current_step"] = None
         save_job(group_name, state["job_id"], state)
+        # Send notification for workflow completion
+        send_workflow_notification("COMPLETED", dict(state))
         return state
 
     next_step = get_next_step_skipping_refine_replan(group_cfg, state)
     if next_step is None:
         set_job_status(state, "COMPLETED")
         state["current_step"] = None
+        save_job(group_name, state["job_id"], state)
+        # Send notification for workflow completion
+        send_workflow_notification("COMPLETED", dict(state))
     else:
         set_job_status(state, "IN_PROGRESS")
         state["current_step"] = next_step

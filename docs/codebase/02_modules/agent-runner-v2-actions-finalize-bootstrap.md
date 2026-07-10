@@ -6,8 +6,8 @@ module_path: "agent_runner_v2/actions/finalize_bootstrap.py"
 module_area: "actions"
 documentation_mode: "full"
 owner_doc_path: "docs/codebase/02_modules/agent-runner-v2-actions-finalize-bootstrap.md"
-last_verified_by_change: "00_master_docs_bootstrap_v1 / 00DOC-GEN-20260709-002 / 2026-07-09T21:13:38+08:00"
-created: "2026-07-09T21:13:38+08:00"
+last_verified_by_change: "00_master_docs_bootstrap_v1 / 00DOC-GEN-20260710-004 / 2026-07-10T09:40:54+08:00"
+created: "2026-07-10T09:40:54+08:00"
 owner: "00_master_docs_bootstrap_v1"
 ---
 
@@ -30,6 +30,7 @@ This module belongs to the `actions` area and is documented as `full`.
 | `__future__` | stdlib module | imported dependency |
 | `pathlib` | stdlib module | imported dependency |
 | `action_result` | external module | repository dependency |
+| `constants` | external module | repository dependency |
 | `runtime_context` | external module | repository dependency |
 
 ## 2. Public API
@@ -82,4 +83,4 @@ No documented exceptions.
 
 | Date | Change | Verified By |
 |------|--------|-------------|
-| 2026-07-09 | Initial baseline generated from repository scan | 00_master_docs_bootstrap_v1 |
+| 2026-07-10 | Initial baseline generated from repository scan | 00_master_docs_bootstrap_v1 |

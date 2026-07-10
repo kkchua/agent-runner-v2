@@ -1,24 +1,80 @@
 ---
 template_id: "OPS-01-RB"
-managed_by: workflow-generated
-generated: "2026-07-09T21:26:23+08:00"
+title: "Runbook - agent-runner-v2"
+status: "active"
+change_id: "00DOC-GEN-20260710-004"
 workflow: "00_master_docs_bootstrap_v1"
 step: "04_generate_architecture_docs"
-change_id: "00DOC-GEN-20260709-002"
+managed_by: workflow-generated
+generated: "2026-07-10T09:52:38+08:00"
 ---
 
 > Managed by workflow: `00_master_docs_bootstrap_v1` / step: `04_generate_architecture_docs`
 > This file is workflow-generated and protected from manual edits.
 
-# Runbook
+# Runbook: agent-runner-v2
 
 ## Operations Scope
 
-This runbook covers operational procedures for running agent-runner-v2 in production environments, including:
-- Daemon supervision and monitoring
-- Job state inspection and troubleshooting
-- Log analysis and failure investigation
-- Routine maintenance procedures
+This runbook covers operational procedures for the agent-runner-v2 workflow orchestration engine. It addresses routine operations, failure scenarios, and recovery procedures for operators.
+
+## Where Things Live
+
+### Job State Location
+
+```
+%USERPROFILE%\.ukbe-runner\jobs\{workflow}\{job_id}\job.json
+```
+
+**Contents**:
+- Current step
+- Status (IN_PROGRESS, WAITING_FOR_HUMAN_APPROVAL, COMPLETED, FAILED)
+- Artifacts produced
+- Retry counts
+- Failure history
+- Model usage data
+
+### Runtime Bundles Location
+
+```
+%USERPROFILE%\.ukbe-runner\workflows\default\
+├── template_groups.py      # Workflow definitions
+├── constants.py            # Path constants
+├── prompts/                # 290+ prompt templates
+├── job_schema.json         # Job JSON schema
+├── llm_response_schema.json # LLM response schema
+└── model_mapping.json      # Model aliases
+```
+
+**Important**: Bootstrap files in the repo only seed runtime. Active changes require explicit sync.
+
+### Logs Location
+
+```
+%USERPROFILE%\.ukbe-runner\logs\ukbe-runner.log
+```
+
+**Log rotation**: Automatic, based on size and date.
+
+### Sidecar Files Location
+
+```
+%USERPROFILE%\.ukbe-runner\jobs\{workflow}\{step}\meta.json
+```
+
+**Naming**: `{step_id}.meta.json` or `{step_id}\meta.json` depending on step type.
+
+### Configuration Location
+
+```
+%USERPROFILE%\.ukbe-runner\config.json
+```
+
+**Contains**:
+- Backend URL
+- API keys (encrypted)
+- Notification settings
+- Workflow overrides
 
 ## Routine Procedures
 
@@ -26,270 +82,384 @@ This runbook covers operational procedures for running agent-runner-v2 in produc
 
 **Command**:
 ```bash
-ukbe-run-agent daemon <worker-id> [options]
+ukbe-run-agent daemon
 ```
 
-**Example**:
-```bash
-ukbe-run-agent daemon workstation-01 --backend-url http://backend:8100
+**Or**:
+```batch
+run-daemon.bat
 ```
 
 **What it does**:
-- Polls backend for available work
-- Spawns child processes for step execution
-- Tracks child state and emits heartbeats
-- Writes execution logs to `~/.ukbe-runner/logs/`
+- Polls backend for pending jobs
+- Spawns subprocess for each step
+- Streams events to backend
+- Sends notifications on completion
+
+**Monitoring**:
+- Check logs: `%USERPROFILE%\.ukbe-runner\logs\ukbe-runner.log`
+- Check backend: WebSocket events
+- Check notifications: Pushover delivery
 
 ### Checking Job Status
 
-**Command**:
+**View job file**:
 ```bash
-ukbe-run-agent status <job-id>
+cat %USERPROFILE%\.ukbe-runner\jobs\<workflow>\<job_id>\job.json
 ```
 
-**Output**:
-- Job status (IN_PROGRESS, COMPLETED, FAILED, etc.)
-- Current step
-- Retry history
-- Artifact paths
+**Key fields**:
+- `job_status`: Current state
+- `current_step`: Where execution is
+- `completed_steps`: What's done
+- `failed_steps`: What failed
+- `artifacts`: Produced files
 
-### Listing Active Jobs
-
-**Command**:
-```bash
-ukbe-run-agent list [--workflow <name>]
-```
-
-### Restarting a Failed Step
+### Approving a Step
 
 **Command**:
 ```bash
-ukbe-run-agent retry <job-id> [--step <step-name>]
+ukbe-run-agent approve-step <job_id> <step_id>
 ```
 
-### Force-Approving a Step
+**Or**:
+```batch
+run-approve-step.bat <job_id> <step_id>
+```
+
+**Required when**:
+- Step status is `WAITING_FOR_HUMAN_APPROVAL`
+- Review decision is `PENDING`
+
+### Resetting a Step
 
 **Command**:
 ```bash
-ukbe-run-agent force-approve <job-id> [--step <step-name>]
+ukbe-run-agent run <workflow> --job-id <id> --step <step> --reset
 ```
 
-**Caution**: Only use when the step outcome is known good but validation failed.
-
-## Where Runtime State Lives
-
-### Job State
-
-**Location**: `~/.ukbe-runner/jobs/<workflow>/<job-id>/`
-
-| File | Purpose |
-|------|---------|
-| `job.json` | Full job state, step history, artifacts |
-| `<NN>_<step>/` | Step working directories |
-| `<NN>_<step>/meta.json` | Step result sidecar |
-| `<NN>_<step>/prompt.txt` | Rendered prompt |
-
-**Job State Schema**:
-- Version: 6 (v2)
-- Key fields: `job_status`, `template_group`, `artifacts`, `retry_history`
-
-### Runtime Bundles
-
-**Location**: `~/.ukbe-runner/workflows/<workflow>/`
-
-**Key Files**:
-- `template_groups.py` — Workflow definitions
-- `prompts/` — Prompt templates
-- `job_schema.json` — Job schema
-- `model_mapping.json` — Coder aliases
-
-**Important**: Runtime loads from here, not the repo. Changes to repo bootstrap must be synced.
-
-### Logs
-
-**Location**: `~/.ukbe-runner/logs/`
-
-| Log Type | Location | Format |
-|----------|----------|--------|
-| Daemon events | `daemon/<worker-id>/events.jsonl` | JSON Lines |
-| Step execution | `steps/<workflow>/<job-id>/` | Per-step logs |
-| Runner output | `runner/` | Text logs |
-
-### Sidecars
-
-**Location**: `~/.ukbe-runner/jobs/<workflow>/<job-id>/<NN>_<step>/meta.json`
-
-**Purpose**: Structured result communication from coder to runner.
-
-**Schema**:
-```json
-{
-  "schema_version": "v2",
-  "coder_result": {
-    "status": "APPROVED",
-    "remark": "Brief summary",
-    "artifacts": {"KEY": "path/to/file.md"},
-    "recorded_at": "2026-07-09T21:26:23+08:00"
-  }
-}
+**Or**:
+```batch
+run-reset-step.bat <workflow> <step> <job_id>
 ```
+
+**Use when**:
+- Need to re-run a step
+- Step failed and requires intervention
+- Testing changes
+
+### Syncing Bootstrap to Runtime
+
+**Manual sync**:
+```bash
+copy agent_runner_v2\bootstrap\workflows\default\* %USERPROFILE%\.ukbe-runner\workflows\default\
+```
+
+**Or via workflow**:
+```batch
+run-bootstrap-publish.bat
+```
+
+**Required after**:
+- Changing `template_groups.py`
+- Changing `constants.py`
+- Adding new prompt templates
+
+### Cleaning Generated Docs
+
+**Command**:
+```batch
+run-cleanup-generated-docs.bat
+```
+
+**Use when**:
+- Disk space low
+- Starting fresh documentation
+- Troubleshooting doc issues
 
 ## Failure Handling
 
-### Common Failure Modes
+### Common Failures
 
-| Failure | Symptom | Resolution |
-|---------|---------|------------|
-| `MetaJsonMissingError` | Coder didn't write sidecar | Check coder output, retry step |
-| `MetaJsonInvalidError` | Sidecar malformed JSON | Check coder output, retry step |
-| `ArtifactMissingError` | Declared artifact not found | Check coder output, retry step |
-| `CoderInvocationError` | Coder process failed | Check coder installation, retry |
-| `PreflightBlockedError` | Required artifact missing | Check prior step output |
+#### MetaJsonMissingError
 
-### Control Classes
+**Symptom**: Step fails with "MetaJsonMissingError"
 
-| Class | Meaning | Action |
-|-------|---------|--------|
-| `AUTO_RETRYABLE` | Transient failure, can retry | Automatic retry (if configured) |
-| `HUMAN_RETRY_REQUIRED` | Needs human decision | Manual retry or intervention |
-| `FATAL` | Unrecoverable failure | Job fails, investigate root cause |
+**Cause**: LLM didn't write meta.json sidecar
 
-### Investigating Step Failures
+**Recovery**:
+1. Check prompt sidecar injection is enabled
+2. Verify artifact paths are correct
+3. Reset step and retry
+4. Check LLM response in logs
 
-1. **Find the job**:
-   ```bash
-   ukbe-run-agent list | grep FAILED
-   ```
+**Prevention**:
+- Ensure prompt templates include sidecar instructions
+- Verify `SIDECAR_INSTRUCTION_TEMPLATE` in constants.py
 
-2. **Check job state**:
-   ```bash
-   ukbe-run-agent status <job-id>
-   ```
+#### ArtifactMissingError
 
-3. **Review step directory**:
-   ```bash
-   cat ~/.ukbe-runner/jobs/<workflow>/<job-id>/<step>/meta.json
-   ```
+**Symptom**: Step fails with "ArtifactMissingError"
 
-4. **Check daemon logs** (if daemon mode):
-   ```bash
-   tail -50 ~/.ukbe-runner/logs/daemon/<worker-id>/events.jsonl
-   ```
+**Cause**: Expected artifact file not found
 
-5. **Check step logs**:
-   ```bash
-   ls ~/.ukbe-runner/logs/steps/<workflow>/<job-id>/
-   ```
+**Recovery**:
+1. Check `produces` list in step config
+2. Verify LLM actually wrote the file
+3. Check file path in meta.json
+4. Reset step and retry
 
-### Orphaned Child Processes
+#### PreflightBlockedError
 
-**Symptom**: Jobs stuck IN_PROGRESS, no active child process.
+**Symptom**: Step blocked at preflight
 
-**Resolution**:
-1. Identify orphaned job: `ukbe-run-agent list`
-2. Check process: `ps aux | grep <job-id>`
-3. Kill orphaned process if necessary
-4. Mark job failed or retry
+**Cause**: Missing required artifacts from previous steps
 
-### Daemon Recovery
+**Recovery**:
+1. Check artifact dependencies
+2. Verify upstream steps completed
+3. Re-run missing upstream steps
+4. Retry current step
 
-**If daemon crashes**:
-1. Check daemon logs: `~/.ukbe-runner/logs/daemon/<worker-id>/`
-2. Identify last claimed work
-3. Restart daemon: `ukbe-run-agent daemon <worker-id>`
-4. Backend will re-claim orphaned work automatically
+#### BackendConnectionError
 
-## Configuration
+**Symptom**: Cannot connect to backend
 
-### Config File
+**Cause**: Network issue, backend down, wrong URL
 
-**Location**: `~/.ukbe-runner/config.json`
+**Recovery**:
+1. Check `config.json` for correct backend URL
+2. Verify network connectivity
+3. Check backend service status
+4. Retry with exponential backoff
 
-**Example**:
-```json
-{
-  "default_coder": "qwen",
-  "workflows": {
-    "default": {
-      "path": "workflows/default"
-    }
-  },
-  "engine_version": "SNAPSHOT"
-}
+#### Windows Pathlib Bug
+
+**Symptom**: Path.relative_to() fails on valid subpaths
+
+**Cause**: Windows pathlib edge case
+
+**Recovery**: Already fixed via `_safe_relative_to()` helper
+
+**If encountered**:
+1. Update to latest code
+2. Ensure `_safe_relative_to()` is used
+
+### Retry Procedures
+
+#### Auto-Retry
+
+**Trigger**: `CONTROL_CLASSES: AUTO_RETRYABLE`
+
+**Behavior**:
+- Increments `auto_retry_count_by_step`
+- Waits with exponential backoff
+- Retries up to max limit
+
+**Monitor**: Check `retry_history` in job.json
+
+#### Human Retry
+
+**Trigger**: `CONTROL_CLASSES: HUMAN_RETRY_REQUIRED`
+
+**Behavior**:
+- Sets status to `WAITING_FOR_HUMAN_INTERVENTION`
+- Sends notification
+- Waits for manual retry
+
+**Action required**:
+1. Review failure reason
+2. Fix underlying issue
+3. Run: `ukbe-run-agent approve-step <job> <step>` or reset
+
+#### Fatal Failures
+
+**Trigger**: `CONTROL_CLASSES: FATAL`
+
+**Behavior**:
+- Job status set to `FAILED`
+- No automatic retry
+- Requires manual investigation
+
+**Action required**:
+1. Check logs for stack trace
+2. Review `last_failure` in job.json
+3. Fix code/config issue
+4. Create new job
+
+### Notification Issues
+
+#### Pushover Not Receiving
+
+**Check**:
+1. `PUSHOVER_TOKEN` and `PUSHOVER_USER` in `.env`
+2. Pushover service status
+3. Network connectivity
+4. Rate limits
+
+#### Missing Notifications
+
+**Check**:
+1. Step config has `enable_notifications: true`
+2. `notification_manager.py` is functioning
+3. No errors in notification delivery
+
+### Daemon Issues
+
+#### Daemon Not Starting
+
+**Check**:
+1. Port conflicts
+2. Configuration errors
+3. Missing dependencies
+4. Permissions
+
+#### Steps Not Executing
+
+**Check**:
+1. Backend connectivity
+2. Job queue has pending jobs
+3. Worker slots available
+4. Daemon process running
+
+#### High Memory Usage
+
+**Note**: Daemon spawns fresh subprocess for each step. Memory leaks in steps don't affect daemon.
+
+**If daemon itself has issues**:
+1. Check for memory leaks in daemon.py
+2. Review long-running operations
+3. Consider restart
+
+### Workflow Issues
+
+#### Workflow Not Found
+
+**Cause**: Runtime bundle missing or outdated
+
+**Fix**:
+```bash
+ukbe-run-agent init --force
+# Or manually sync bootstrap
 ```
 
-### Environment Variables
+#### Placeholder Substitution Failures
 
-| Variable | Purpose |
-|----------|---------|
-| `AGENT_RUNNER_BACKEND_URL` | Backend URL for worker mode |
-| `AGENT_RUNNER_WORKER_ID` | Worker ID for poll mode |
-| `AGENT_RUNNER_V2_SRC` | Override Python source path |
-| `WORKER_LABEL` | Worker queue label (live/dev) |
-| `PUSHOVER_APP_TOKEN` | Pushover app token |
-| `PUSHOVER_USER_KEY` | Pushover user key |
+**Symptom**: Prompts contain `{PLACEHOLDER}` instead of values
+
+**Cause**: `REFERENCE_FILES` mismatch or missing key
+
+**Fix**:
+1. Check `REFERENCE_FILES` in `constants.py`
+2. Verify template uses correct placeholder
+3. Sync bootstrap to runtime
+
+### Environment Issues
+
+#### Python Version Mismatch
+
+**Recommended**: Python 3.12
+
+**If using Python 3.14**:
+- May have compatibility issues
+- Some dependencies may not support
+
+#### Virtual Environment Issues
+
+**Symptom**: Import errors, missing modules
+
+**Fix**:
+```bash
+# Recreate venv
+rm -rf .venv
+python -m venv .venv
+.venv\Scripts\activate
+pip install -e ".[dev]"
+```
+
+## Recovery Procedures
+
+### Job Recovery
+
+**From WAITING_FOR_HUMAN_APPROVAL**:
+```bash
+ukbe-run-agent approve-step <job_id> <step_id>
+```
+
+**From FAILED**:
+1. Analyze failure in `last_failure`
+2. Fix root cause
+3. Create new job with same parameters
+4. Or use `recover_exhausted_planning_job()` if applicable
+
+**From IN_PROGRESS (hung)**:
+1. Check if process is running
+2. Kill if necessary: `taskkill /F /IM python.exe`
+3. Reset step
+4. Retry
+
+### State Recovery
+
+**Corrupted job.json**:
+1. Check backup files (if any)
+2. Recreate from scratch
+3. Report issue
+
+**Missing workflow module**:
+1. Re-initialize: `ukbe-run-agent init`
+2. Or manually copy from bootstrap
+
+### Log Recovery
+
+**Logs rotated away**:
+- Check backup logs if configured
+- Review Windows Event Log if daemon crashed
 
 ## Monitoring
 
-### Health Checks
-
-**Daemon Health**:
-- Check `events.jsonl` for recent heartbeats
-- Verify child processes are spawning
-- Check backend connectivity
-
-**Job Health**:
-- Check for stuck IN_PROGRESS jobs
-- Monitor retry counts
-- Watch for repeated failures
-
 ### Key Metrics
 
-| Metric | Where | Healthy Threshold |
-|--------|-------|-------------------|
-| Job completion rate | Backend dashboard | > 95% |
-| Step retry rate | Job logs | < 10% |
-| Daemon heartbeat | events.jsonl | < 60s since last |
-| Child spawn time | events.jsonl | < 5s |
+| Metric | How to Check | Alert Threshold |
+|--------|--------------|-----------------|
+| Failed jobs | Count in logs | > 5% failure rate |
+| Retry rate | `retry_history` length | > 3 retries/step |
+| Step duration | `updated_at` - `created_at` | > 30 min |
+| Backend latency | Log timestamps | > 5 seconds |
 
-## Troubleshooting
+### Health Checks
 
-### Workflow Bundle Not Found
+**Daemon health**:
+```bash
+ukbe-run-agent status
+```
 
-**Error**: `Workflow module is not loaded`
+**Backend connectivity**:
+```bash
+curl <backend_url>/health
+```
 
-**Resolution**:
-1. Check workflow exists: `ls ~/.ukbe-runner/workflows/`
-2. Re-initialize: `ukbe-run-agent init --workflow default`
-3. Sync if using custom bundle: `sync-workflows-to-backend.bat`
+**Disk space**:
+```bash
+dir %USERPROFILE%\.ukbe-runner
+```
 
-### Coder Not Found
+## Escalation
 
-**Error**: `CoderInvocationError: coder not found`
+### When to Escalate
 
-**Resolution**:
-1. Verify coder installation: `claude --version` or `qwen --version`
-2. Check PATH: `echo $PATH` or `echo %PATH%`
-3. Check coder alias in `model_mapping.json`
+- Fatal failures affecting multiple jobs
+- Data corruption in job state
+- Security incidents
+- Performance degradation
 
-### Backend Connection Failed
+### Escalation Path
 
-**Error**: `BackendClient: connection refused`
-
-**Resolution**:
-1. Verify backend URL: `AGENT_RUNNER_BACKEND_URL`
-2. Check network connectivity
-3. Verify backend is running
-
-### Step Timeout
-
-**Error**: `Step timed out after N seconds`
-
-**Resolution**:
-1. Check step configuration: `coder_timeout_seconds`
-2. Increase timeout if legitimate long-running step
-3. Check coder output for hanging
+1. Check logs for root cause
+2. Document failure pattern
+3. Check existing issues
+4. Create detailed bug report
+5. Notify development team
 
 ---
 
-*Generated by workflow: 00_master_docs_bootstrap_v1 / step: 04_generate_architecture_docs*
+*Generated by workflow `00_master_docs_bootstrap_v1` step `04_generate_architecture_docs` on 2026-07-10T09:52:38+08:00*

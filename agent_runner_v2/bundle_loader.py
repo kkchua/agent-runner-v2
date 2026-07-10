@@ -248,6 +248,12 @@ def init_workspace(
     (domain_dir / domain / "current").mkdir(parents=True, exist_ok=True)
     (workflow_dir / workflow_name / "current").mkdir(parents=True, exist_ok=True)
 
+    # Copy config.json.example to runner home if it doesn't exist
+    config_example_src = package_bootstrap_root() / "config.json.example"
+    config_example_dst = runner_home / "config.json.example"
+    if config_example_src.exists() and not config_example_dst.exists():
+        shutil.copy2(config_example_src, config_example_dst)
+
     manifest = bundle_manifest(workflow_name=workflow_name, domain=domain, profile=bundle_profile)
     manifest_path = bundle_manifest_path(runner_home)
     manifest_path.parent.mkdir(parents=True, exist_ok=True)
@@ -271,4 +277,5 @@ def init_workspace(
         "bootstrap_install": bootstrap_install,
         "workflow_root": str(wf_root),
         "config_path": str(config_path(workspace_root)),
+        "config_example_path": str(config_example_dst) if config_example_dst.exists() else None,
     }

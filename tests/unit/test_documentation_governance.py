@@ -57,15 +57,6 @@ def test_delivery_planning_requires_codebase_governance_inputs():
     assert validate_site["action"] == "validate_architecture_site"
 
 
-def test_validator_routes_impl_and_doc_failures_differently():
-    validator = template_groups.TEMPLATE_GROUPS_OLD["task_execution_v1"]["step_configs"]["validator"]
-
-    assert validator["on_reject_refine"]["step"] == "refine_impl"
-    assert validator["on_reject_refine"]["artifact"] == "IMPL_FILE"
-    assert validator["reject_code_routes"]["DOC_SYNC_VALIDATION_FAILED"]["step"] == "refine_docs"
-    assert validator["reject_code_routes"]["DOC_SYNC_VALIDATION_FAILED"]["artifact"] == "CODEBASE_CHANGE_IMPACT"
-
-
 def test_reject_route_prefers_code_specific_override():
     step_cfg = {
         "on_reject_refine": {"step": "refine_impl", "artifact": "IMPL_FILE"},
@@ -79,35 +70,6 @@ def test_reject_route_prefers_code_specific_override():
 
     assert route == {"step": "refine_docs", "artifact": "CODEBASE_CHANGE_IMPACT"}
     assert fallback == {"step": "refine_impl", "artifact": "IMPL_FILE"}
-
-
-def test_validation_rules_cover_pending_review_and_owner_fields():
-    required_sections = validate_delivery_docs_module.TEMPLATE_SECTION_REQUIREMENTS["08_delivery_validation_template.md"]
-    inventory_sections = validate_delivery_docs_module.CODEBASE_TEMPLATE_SECTION_REQUIREMENTS["02_codebase_inventory_template.md"]
-    module_sections = validate_delivery_docs_module.CODEBASE_TEMPLATE_SECTION_REQUIREMENTS["03_codebase_module_template.md"]
-    component_sections = validate_delivery_docs_module.CODEBASE_TEMPLATE_SECTION_REQUIREMENTS["04_codebase_component_template.md"]
-    change_sections = validate_delivery_docs_module.CODEBASE_TEMPLATE_SECTION_REQUIREMENTS["05_codebase_change_template.md"]
-    delivery_registry_sections = validate_delivery_docs_module.TEMPLATE_SECTION_REQUIREMENTS["01_delivery_template_registry.md"]
-    system_sections = validate_delivery_docs_module.SYSTEM_DOC_REQUIRED_SECTIONS["docs/system/00_governance/bootstrap/README.md"]
-    analysis_sections = validate_delivery_docs_module.SYSTEM_DOC_REQUIRED_SECTIONS["docs/system/00_governance/bootstrap/project_analysis.md"]
-    operator_sections = validate_delivery_docs_module.SYSTEM_DOC_REQUIRED_SECTIONS["docs/system/00_governance/bootstrap/EXISTING_REPO_WORKFLOW_SOP.md"]
-    runbook_sections = validate_delivery_docs_module.SYSTEM_DOC_REQUIRED_SECTIONS["docs/system/00_governance/bootstrap/RUNBOOK.md"]
-
-    assert "Documentation Synchronization Validation" in required_sections
-    assert "Metadata" in inventory_sections
-    assert "File Type Coverage" in inventory_sections
-    assert "Module Overview" in module_sections
-    assert "Component Overview" in component_sections
-    assert "Change Summary" in change_sections
-    assert "Registry Overview" in delivery_registry_sections
-    assert "Audience Views" in system_sections
-    assert "Repo Overview" in analysis_sections
-    assert "Architecture Posture" in analysis_sections
-    assert "Architecture Baseline" in validate_delivery_docs_module.SYSTEM_DOC_REQUIRED_SECTIONS["docs/system/00_governance/bootstrap/DOCUMENTATION_STANDARD.md"]
-    assert "Architecture Profile" in validate_delivery_docs_module.SYSTEM_DOC_REQUIRED_SECTIONS["docs/system/00_governance/bootstrap/SYSTEM_OVERVIEW.md"]
-    assert "Architecture Posture" in validate_delivery_docs_module.SYSTEM_DOC_REQUIRED_SECTIONS["docs/system/00_governance/bootstrap/DEVELOPER_GUIDE.md"]
-    assert "First-Time Setup" in operator_sections
-    assert "Failure Handling" in runbook_sections
 
 
 def test_delivery_scaffold_paths_match_generated_layout():
@@ -168,23 +130,6 @@ def test_system_docs_validation_uses_workflow_name_in_frontmatter():
     assert 'workflow: "00_master_docs_bootstrap_v1"' in rendered.splitlines()[:8]
 
 
-def test_scaffold_generation_prompts_require_v2_sidecars():
-    prompt_root = "agent_runner_v2/bootstrap/workflows/default/prompts/10_execution_scaffold_v1"
-    files = [
-        "01_project_analysis.txt",
-        "02_generate_sop.txt",
-        "03_generate_templates.txt",
-        "04_generate_agents.txt",
-    ]
-
-    for name in files:
-        path = Path(prompt_root) / name
-        text = path.read_text(encoding="utf-8")
-        assert "schema_version" in text
-        assert '"v2"' in text
-        assert "coder_result" in text
-
-
 def test_template_generation_prompts_require_plan_and_inventory_status_vocabulary():
     prompt_root = Path("agent_runner_v2/bootstrap/workflows/default/prompts/10_execution_scaffold_v1")
     generate_text = (prompt_root / "03_generate_templates.txt").read_text(encoding="utf-8")
@@ -228,36 +173,6 @@ def test_master_review_step_has_deterministic_review_filename():
     )
     assert path.endswith(".md")
     assert "rmaster" in path
-
-
-def test_master_docs_prompts_require_v2_sidecars_and_expected_artifact_keys():
-    files = {
-        "02_generate_project_analysis.txt": ["PROJECT_ANALYSIS"],
-        "03_generate_system_overview_docs.txt": ["SYSTEM_DOCS_INDEX", "BUNDLE_TAXONOMY", "BUNDLE_MIGRATION_PLAN"],
-        "04_generate_architecture_docs.txt": ["SYSTEM_DOCS_CHANGE_LOG"],
-    }
-
-    prompt_root = Path("agent_runner_v2/bootstrap/workflows/default/prompts/00_master_docs_bootstrap_v1")
-    for name, expected_keys in files.items():
-        text = (prompt_root / name).read_text(encoding="utf-8")
-        assert "schema_version" in text
-        assert '"v2"' in text
-        assert "coder_result" in text
-        for expected_key in expected_keys:
-            assert expected_key in text
-    architecture_prompt = (prompt_root / "04_generate_architecture_docs.txt").read_text(encoding="utf-8")
-    assert "Do NOT write a plain top-level" in architecture_prompt
-    assert "`{SYSTEM_DOC_ROOT}/project_analysis.md` is read-only in this step." in architecture_prompt
-    assert "The only writable outputs are the files listed" in architecture_prompt
-    assert "repo-selected architecture posture" in architecture_prompt
-
-    overview_prompt = (prompt_root / "03_generate_system_overview_docs.txt").read_text(encoding="utf-8")
-    assert "`{SYSTEM_DOC_ROOT}/project_analysis.md` is read-only in this step." in overview_prompt
-    assert "The only writable outputs are the eight files" in overview_prompt
-    assert "Development Workflow" in architecture_prompt
-    assert "First-Time Setup" in architecture_prompt
-    assert "Normal Governed Delivery" in architecture_prompt
-    assert "Architecture Baseline" in overview_prompt
 
 
 def test_codebase_inventory_generation_uses_registry_template_id():

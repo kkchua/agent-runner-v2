@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import shutil
+import subprocess
+
 from agent_runner_v2 import codebase_docs
 
 
@@ -37,6 +40,48 @@ def test_build_snapshot_excludes_tmp_and_pytest_artifacts(tmp_path, monkeypatch)
     assert "README.md" in rel_paths
     assert all(not path.startswith(".tmp/") for path in rel_paths)
     assert all(".pytest_cache" not in path for path in rel_paths)
+
+
+def test_build_snapshot_respects_gitignore(tmp_path, monkeypatch):
+    if shutil.which("git") is None:
+        return
+
+    (tmp_path / "agent_runner_v2").mkdir()
+    (tmp_path / "agent_runner_v2" / "__init__.py").write_text("", encoding="utf-8")
+    (tmp_path / "README.md").write_text("# Repo\n", encoding="utf-8")
+    (tmp_path / ".gitignore").write_text("ignored.txt\nignored_dir/\n", encoding="utf-8")
+    (tmp_path / "ignored.txt").write_text("hidden\n", encoding="utf-8")
+    (tmp_path / "ignored_dir").mkdir()
+    (tmp_path / "ignored_dir" / "secret.py").write_text("print('x')\n", encoding="utf-8")
+    (tmp_path / "visible.py").write_text("print('ok')\n", encoding="utf-8")
+
+    subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True)
+
+    class _Bundle:
+        TEMPLATE_GROUPS = {
+            "00_master_docs_bootstrap_v1": {
+                "visibility": "canonical",
+                "job_prefix": "00DOC",
+                "job_init_step": "00_scan_repo_codebase",
+                "job_init_inputs": [],
+                "steps": [],
+                "step_configs": {},
+            }
+        }
+
+    monkeypatch.setattr(codebase_docs, "get_workflow_module", lambda: _Bundle)
+
+    snapshot = codebase_docs.build_snapshot(
+        tmp_path,
+        mode="bootstrap",
+        job_id="00DOC-GEN-TEST",
+        step="00_scan_repo_codebase",
+    )
+
+    rel_paths = {item.rel_path for item in snapshot["items"]}
+    assert "visible.py" in rel_paths
+    assert "ignored.txt" not in rel_paths
+    assert all(not path.startswith("ignored_dir/") for path in rel_paths)
 
 
 def test_render_inventory_uses_workflow_name_in_frontmatter(tmp_path, monkeypatch):

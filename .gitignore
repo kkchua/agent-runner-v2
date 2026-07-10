@@ -4,6 +4,7 @@ __pycache__/
 .mypy_cache/
 .ukbe-runner/
 .tmp/
+.pytest-temp/
 temp/
 dist/
 build/

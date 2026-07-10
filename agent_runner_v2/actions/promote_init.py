@@ -13,6 +13,7 @@ import re
 from pathlib import Path
 
 from ..action_result import ActionResult
+from ..constants import FOLDER_KEY_DELIVERY_INITIATIVES, EXT_MD, relpath
 from ..runtime_context import write_meta_sidecar
 
 logger = logging.getLogger(__name__)
@@ -92,14 +93,15 @@ def promote_init(
         return ActionResult(status="REJECTED", remark=remark, artifacts={})
 
     slug = _to_slug(title)
-    filename = f"{init_id}_{slug}.md"
-    dest_dir = project_root / "docs" / "delivery" / "01_initiatives"
+    filename = f"{init_id}_{slug}{EXT_MD}"
+    dest_dir_rel = FOLDER_KEY_DELIVERY_INITIATIVES
+    dest_dir = project_root / dest_dir_rel
     dest_dir.mkdir(parents=True, exist_ok=True)
     dest_path = dest_dir / filename
 
     promoted_content = _STATUS_RE.sub(r"\1`Approved`", content, count=1)
     dest_path.write_text(promoted_content, encoding="utf-8")
-    init_file_rel = f"docs/delivery/01_initiatives/{filename}"
+    init_file_rel = relpath(dest_dir_rel, filename)
     print(f"[promote_init] wrote INIT_FILE → {init_file_rel}", flush=True)
 
     if meta_rel:

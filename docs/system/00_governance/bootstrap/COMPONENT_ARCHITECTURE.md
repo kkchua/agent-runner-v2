@@ -1,181 +1,302 @@
 ---
 template_id: "SYS-03-CA"
-managed_by: workflow-generated
-generated: "2026-07-09T21:26:23+08:00"
+title: "Component Architecture - agent-runner-v2"
+status: "active"
+change_id: "00DOC-GEN-20260710-004"
 workflow: "00_master_docs_bootstrap_v1"
 step: "04_generate_architecture_docs"
-change_id: "00DOC-GEN-20260709-002"
+managed_by: workflow-generated
+generated: "2026-07-10T09:52:38+08:00"
 ---
 
 > Managed by workflow: `00_master_docs_bootstrap_v1` / step: `04_generate_architecture_docs`
 > This file is workflow-generated and protected from manual edits.
 
-# Component Architecture
+# Component Architecture: agent-runner-v2
+
+## Architecture Profile
+
+| Field | Value |
+|-------|-------|
+| `current_profile` | `provisional` |
+| `target_profile` | `explicit` (delivery scaffold governance model) |
+| `migration_mode` | `bootstrap-in-progress` |
+| `repo_state` | `provisional` |
+
+### Architecture Standard Alignment
+
+This repository follows a **provisional** architecture standard with explicit design patterns:
+
+- **No universal DDD**: Domain-driven design is applied selectively where workflow domains have clear boundaries
+- **No universal EDA**: Event-driven architecture is used for backend communication and notifications, not as a universal pattern
+- **Repo-selected profile**: The codebase demonstrates explicit architecture through strong module separation and contract-based design
 
 ## Component Groups
 
 ### Core Execution Components
 
-| Component | Module | Responsibility | Lines |
-|-----------|--------|----------------|-------|
-| **CLI Entry Point** | `run_agent.py` | Argument parsing, command dispatch, orchestration | ~2,300 |
-| **Step Runner** | `step_runner.py` | Prompt rendering, coder invocation, sidecar validation | ~2,400 |
-| **Workflow Router** | `workflow_router.py` | Post-step routing for approve/reject/failure | ~800 |
-| **Job State** | `job_state.py` | Job.json lifecycle, state transitions, retry logic | ~1,800 |
-
-**Interaction Flow**:
 ```
-CLI (run_agent.py) → Step Runner → Coder/Action → Sidecar → Workflow Router → Next Step
-                              ↓
-                        Job State (persist/retrieve)
+┌─────────────────────────────────────────────────────────────────┐
+│                      Core Execution Layer                        │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  ┌─────────────────┐    ┌─────────────────┐    ┌──────────────┐ │
+│  │   run_agent.py  │───▶│  step_runner.py │───▶│ workflow_    │ │
+│  │   CLI Entry     │    │  Step Execution │    │ router.py    │ │
+│  │   2,308 lines   │    │  2,662 lines    │    │ 787 lines    │ │
+│  └─────────────────┘    └─────────────────┘    └──────────────┘ │
+│           │                      │                    │        │
+│           ▼                      ▼                    ▼        │
+│  ┌─────────────────┐    ┌─────────────────┐    ┌──────────────┐ │
+│  │   job_state.py  │◀──▶│ runtime_context│◀──▶│ constants.py │ │
+│  │   State Mgmt    │    │   Context       │    │ 1,333 lines  │ │
+│  │   1,806 lines   │    │   301 lines     │    │ Path constants│ │
+│  └─────────────────┘    └─────────────────┘    └──────────────┘ │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-### Coder Integration Components
+#### run_agent.py (CLI Entry)
+- **Responsibility**: CLI parsing, workflow bundle loading, job lifecycle orchestration
+- **Key Functions**: `parse_args()`, `cmd_run()`, `cmd_execute_step()`, `cmd_worker()`
+- **Patterns**: Command pattern, factory pattern for step execution
+- **Dependencies**: All other core modules
 
-| Component | Module | Responsibility |
-|-----------|--------|----------------|
-| **Coder Adapters** | `coder_adapters.py` | Claude/Codex/Qwen invocation and polling |
-| **Model Config** | `model_config.py` | Coder resolution from aliases |
-| **Execution Result** | `execution_result.py` | Result type definitions |
-| **Execution Request** | `execution_request.py` | Request type definitions |
+#### step_runner.py (Step Execution)
+- **Responsibility**: Prompt rendering, coder invocation, artifact validation, meta.json handling
+- **Key Functions**: `run_step()`, `render_prompt()`, `run_action()`, `validate_artifacts()`
+- **Patterns**: Template method, strategy pattern (coder vs action)
+- **Critical Contract**: Meta.json is the ONLY communication channel
 
-### Runtime Context Components
+#### workflow_router.py (Routing)
+- **Responsibility**: Post-step routing, retry logic, approval handling, failure routing
+- **Key Functions**: `route_after_step()`, `route_after_failure()`
+- **Patterns**: State machine, chain of responsibility
+- **Exit Codes**: 0=continue, 1=intervention, 2=fatal
 
-| Component | Module | Responsibility |
-|-----------|--------|----------------|
-| **Runtime Context** | `runtime_context.py` | Active workflow/runtime path context |
-| **Bundle Loader** | `bundle_loader.py` | Bootstrap seeding and workflow bundle loading |
-| **Constants** | `constants.py` | Centralized artifact path constants |
-| **Doc Paths** | `doc_paths.py` | Path resolution helpers |
+#### job_state.py (State Management)
+- **Responsibility**: Job.json lifecycle, status transitions, retry tracking, artifact binding
+- **Key Functions**: `create_job()`, `load_job()`, `save_job()`, `advance_step()`, `set_job_status()`
+- **Patterns**: Repository pattern, state machine
+- **Schema Version**: 6 (v2 runner)
 
-### Backend Integration Components
+### Adapter Components
 
-| Component | Module | Responsibility |
-|-----------|--------|----------------|
-| **Backend Client** | `backend_client.py` | HTTP API communication |
-| **Daemon** | `daemon.py` | Worker supervision and child process management |
-| **Runner Logger** | `runner_logger.py` | Structured logging |
-| **Notifications** | `notifications.py`, `notification_manager.py` | Pushover notifications |
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                      Adapter Layer                               │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  ┌─────────────────┐    ┌─────────────────┐    ┌──────────────┐ │
+│  │ coder_adapters  │    │ backend_client  │    │ daemon.py    │ │
+│  │  (3 coders)     │    │                 │    │              │ │
+│  │ - Claude        │    │ - WebSocket     │    │ - Supervisor │ │
+│  │ - Codex         │    │ - HTTP API      │    │ - Polling    │ │
+│  │ - Qwen          │    │ - Events        │    │ - Worker     │ │
+│  └─────────────────┘    └─────────────────┘    └──────────────┘ │
+│                                                                  │
+│  ┌─────────────────┐    ┌─────────────────┐                     │
+│  │  notifications  │    │ notification_  │                     │
+│  │                 │    │   manager.py   │                     │
+│  │ - Pushover      │    │                 │                     │
+│  │ - Email         │    │ - Step events  │                     │
+│  │ - Console       │    │ - Workflow events│                    │
+│  └─────────────────┘    └─────────────────┘                     │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
 
-### Deterministic Actions
+#### coder_adapters.py
+- **Responsibility**: LLM invocation abstraction, response handling, error normalization
+- **Key Functions**: `invoke_coder()`, `resolve_coder()`, `dataclass_dict()`
+- **Supported Models**: Claude 4, Codex, Qwen aliases
 
-The `agent_runner_v2/actions/` package contains 29 deterministic runner actions:
+#### backend_client.py
+- **Responsibility**: Backend API communication, event streaming, job synchronization
+- **Key Functions**: `BackendClient.request()`, `stream_events()`
+- **Protocols**: HTTP REST, WebSocket for events
 
-| Category | Actions |
-|----------|---------|
-| **Documentation** | `validate_delivery_docs.py`, `validate_codebase_docs.py`, `sync_system_docs.py`, `sync_codebase_docs.py` |
-| **Architecture Site** | `generate_site.py`, `publish_architecture_site.py`, `validate_*_site.py` |
-| **Bootstrap** | `prepare_delivery_scaffold.py`, `finalize_bootstrap.py`, `scan_repo_codebase.py` |
-| **Media** | `execute_t2i.py`, `execute_i2v.py`, `execute_voiceover.py`, `assemble_video.py` |
-| **Artifacts** | `copy_artifact.py`, `promote_artifact.py`, `archive_previous_version.py` |
+### Action Components
 
-### Documentation Guardrails
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                      Actions Layer (29 modules)                  │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  Validation Actions          Documentation Actions               │
+│  ┌──────────────────┐       ┌──────────────────┐              │
+│  │ validate_delivery│       │ sync_codebase    │              │
+│  │ validate_system  │       │ sync_system_docs │              │
+│  │ validate_arch    │       │ scan_repo        │              │
+│  │ validate_*_site  │       │ generate_site    │              │
+│  └──────────────────┘       └──────────────────┘              │
+│                                                                  │
+│  Bootstrap Actions           Workflow Actions                    │
+│  ┌──────────────────┐       ┌──────────────────┐              │
+│  │ finalize_bootstrap│       │ prepare_delivery │              │
+│  │ promote_artifact │       │ copy_artifact    │              │
+│  │ promote_init     │       │ execute_*        │              │
+│  └──────────────────┘       └──────────────────┘              │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
 
-| Component | Module | Responsibility |
-|-----------|--------|----------------|
-| **Documentation Guardrails** | `documentation_guardrails.py` | Generated doc manifest and protection |
-| **System Docs** | `system_docs.py` | System documentation utilities |
-| **Codebase Docs** | `codebase_docs.py` | Codebase documentation utilities |
-| **Architecture Site** | `architecture_site.py` | Site generation utilities |
+#### Action Categories
+
+| Category | Actions | Purpose |
+|----------|---------|---------|
+| **Validation** | 10 actions | Document and site validation |
+| **Documentation** | 5 actions | Doc sync, scanning, generation |
+| **Bootstrap** | 3 actions | Bundle finalization, promotion |
+| **Media** | 4 actions | Image/video/audio execution |
+| **Utility** | 7 actions | Copy, archive, submit |
+
+### Bootstrap Components
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                      Bootstrap Layer                             │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  ┌─────────────────┐    ┌─────────────────┐    ┌──────────────┐ │
+│  │  bundle_loader  │    │ template_groups │    │   prompts/   │ │
+│  │                 │    │    .py          │    │              │ │
+│  │ - Core bundles  │    │ - 290+ steps    │    │ - 290+ files │ │
+│  │ - Workflow root │    │ - 21 workflows  │    │ - 21 dirs    │ │
+│  │ - Seeding       │    │ - TEMPLATES     │    │              │ │
+│  └─────────────────┘    └─────────────────┘    └──────────────┘ │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+#### bundle_loader.py
+- **Responsibility**: Bootstrap bundle loading, workflow resolution, project initialization
+- **Key Functions**: `init_workspace()`, `load_workflow_module()`, `resolve_workflow_root()`
+- **Pattern**: Plugin architecture for workflow modules
+
+#### template_groups.py
+- **Responsibility**: Workflow step definitions, template configurations, artifact mappings
+- **Size**: 2,453 lines, 21 workflow families, 290+ steps
+- **Key Structures**: `TEMPLATES`, `ARTIFACT_KEYS`, `REFERENCE_FILES`
+
+### Documentation Components
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                   Documentation Layer                            │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  ┌─────────────────┐    ┌─────────────────┐    ┌──────────────┐ │
+│  │ documentation_  │    │   doc_paths.py  │    │ artifact_    │ │
+│  │   guardrails    │    │                 │    │   paths.py   │ │
+│  │                 │    │ - Path helpers  │    │              │ │
+│  │ - Protection    │    │ - Rel paths     │    │ - Compute    │ │
+│  │ - Validation    │    │ - Templates     │    │ - Resolve    │ │
+│  └─────────────────┘    └─────────────────┘    └──────────────┘ │
+│                                                                  │
+│  ┌─────────────────┐    ┌─────────────────┐                     │
+│  │ codebase_docs.py│    │  system_docs.py  │                     │
+│  │                 │    │                  │                     │
+│  │ - Inventory     │    │ - System docs    │                     │
+│  │ - Modules       │    │ - Validation     │                     │
+│  │ - Components    │    │ - Sync           │                     │
+│  └─────────────────┘    └─────────────────┘                     │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+## Dependency Map
+
+```
+                    ┌──────────────┐
+                    │    CLI       │
+                    │  run_agent   │
+                    └──────┬───────┘
+                           │
+           ┌───────────────┼───────────────┐
+           ▼               ▼               ▼
+    ┌────────────┐  ┌────────────┐  ┌────────────┐
+    │ step_runner│  │ job_state  │  │   router   │
+    └─────┬──────┘  └─────┬──────┘  └─────┬──────┘
+          │               │               │
+          ▼               ▼               ▼
+    ┌────────────┐  ┌────────────┐  ┌────────────┐
+    │  adapters  │  │   state    │  │   actions  │
+    │  backend   │  │   context  │  │            │
+    └────────────┘  └────────────┘  └────────────┘
+          │               │               │
+          └───────────────┼───────────────┘
+                          ▼
+                    ┌────────────┐
+                    │  constants │
+                    │   (SSOT)   │
+                    └────────────┘
+```
+
+## Component Boundaries
+
+| Component | Boundary | Enforced By |
+|-----------|----------|-------------|
+| **Core** | Execution flow | Function signatures, dataclasses |
+| **Adapters** | External systems | Interface abstraction |
+| **Actions** | Deterministic ops | Module separation, pure functions |
+| **Bootstrap** | Workflow definitions | Module loading, path resolution |
+| **Docs** | Path/protection | constants.py, guardrails |
 
 ## Architectural Notes
 
-### Architecture Profile
-
-**Current Profile**: `explicit`
-**Target Profile**: `universal-bootstrap`
-**Migration Mode**: `maintenance`
-
-This repository follows the **explicit** architecture profile, meaning:
-- Architecture decisions are explicitly documented
-- Contracts are strictly enforced in code
-- Generated documents are protected from manual edits
-- Test coverage requirements are mandatory
-
-The `universal-bootstrap` target profile indicates the system is designed as a reusable workflow orchestration platform, not a one-off tool.
-
-### DDD and EDA Status
-
-| Pattern | Status | Notes |
-|---------|--------|-------|
-| **Domain-Driven Design (DDD)** | Conditional | Used for workflow domain modeling, not universal |
-| **Event-Driven Architecture (EDA)** | Conditional | Job state changes emit notifications, not core pattern |
-| **Layered Architecture** | Applied | Clear separation between CLI, core, and adapters |
-| **Hexagonal Architecture** | Partial | Coder adapters provide abstraction, bundles are runtime dependencies |
-
-**Rationale**: DDD and EDA are conditional rather than universal standards because:
-- The workflow domain has clear bounded contexts (delivery, codebase, system)
-- Event notifications are operational, not business-logic critical
-- The system prioritizes explicit control flow over event choreography
-
-### Dependency Flow
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                           CLI Layer                              │
-│                      (run_agent.py, *.bat)                       │
-└─────────────────────────────────────────────────────────────────┘
-                                  │
-                                  ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                         Core Layer                               │
-│  (step_runner.py, workflow_router.py, job_state.py)          │
-└─────────────────────────────────────────────────────────────────┘
-                                  │
-              ┌───────────────────┼───────────────────┐
-              ▼                   ▼                   ▼
-┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐
-│   Coder Layer    │  │  Action Layer  │  │  Runtime Layer  │
-│ (coder_adapters)│  │   (actions/)   │  │ (runtime_ctx,   │
-│                 │  │                │  │  bundle_loader) │
-└─────────────────┘  └─────────────────┘  └─────────────────┘
-              │                   │                   │
-              ▼                   ▼                   ▼
-        ┌──────────┐       ┌──────────┐       ┌──────────┐
-        │ External │       │    FS    │       │   FS/    │
-        │  Coders  │       │ (artifacts)│    │  Config  │
-        └──────────┘       └──────────┘       └──────────┘
-```
-
-### Component Boundaries
-
-**Strict Separation**:
-- `step_runner.py` only does prompt rendering and sidecar validation
-- `workflow_router.py` only makes routing decisions
-- `job_state.py` only manages job.json persistence
-- `coder_adapters.py` only invokes external coders
-- `actions/` only contains deterministic side-effect-free (relative to workflow state) actions
-
-**No module exceeds ~2,500 lines**; responsibilities are narrowly scoped.
-
-### Bootstrap/Runtime Separation
-
-| Aspect | Bootstrap Source | Runtime Bundle |
-|--------|-----------------|----------------|
-| **Location** | `agent_runner_v2/bootstrap/` | `~/.ukbe-runner/workflows/` |
-| **Purpose** | Package-local seed/template | Active execution source |
-| **Updates** | Via code changes + sync | Used by running workflows |
-| **Loading** | `bundle_loader.py` | `runtime_context.py` |
-
-**Critical**: Runtime loads from global runner home, not repo tree. Changes to bootstrap must be synced via `sync-workflows-to-backend.bat` or `ukbe-run-agent init`.
-
-### v2 Contract Enforcement
-
-Key architectural differences from v1:
+### v2 Contract Differences
 
 | Aspect | v1 | v2 |
 |--------|-----|-----|
-| Sidecar | Optional fallback | Only communication channel |
-| Markdown writes | Runner writes metadata | Runner never writes markdown |
-| Recovery | Disk recovery functions | Explicit failure routing |
-| Content analysis | Runner extracts blocking issues | Coder owns content analysis |
-| Pre-invocation | Sidecar written before coder | Sidecar only from coder |
+| Communication | Multiple channels | Meta.json only |
+| Recovery | Silent recovery functions | Explicit routing |
+| Metadata writes | Runner writes markdown | Runner only reads |
+| Sidecar | Optional | Mandatory |
+| Failure handling | Automatic retry | Explicit routing |
 
-This strict contract enables:
-- Clear separation of concerns
-- Deterministic replay
-- Simplified reasoning about state
+### Centralized Constants Pattern
+
+The `constants.py` module (1,333 lines) provides:
+- **Single source of truth** for all paths
+- **Layered constants**: FOLDER_KEY → ARTIFACT_KEY → ARTIFACT_PATH
+- **Zero hardcoded strings** in path construction
+- **REFERENCE_FILES** dictionary for runtime lookup
+
+### Step Runner Contract
+
+```
+Input: step_config, state, context
+  │
+  ▼
+Render prompt (template substitution)
+  │
+  ▼
+Invoke coder OR run action
+  │
+  ▼
+Read meta.json (MANDATORY)
+  │
+  ▼
+Validate artifacts (produces list)
+  │
+  ▼
+Return StepResult(status, remark, artifacts)
+```
+
+### Review/Refine Loop Pattern
+
+```
+Generate ──▶ Review ──▶ Decision
+                │
+           REJECTED
+                │
+                ▼
+            Refine ──▶ (loop back)
+```
+
+Max iterations enforced before human intervention.
 
 ---
 
-*Generated by workflow: 00_master_docs_bootstrap_v1 / step: 04_generate_architecture_docs*
+*Generated by workflow `00_master_docs_bootstrap_v1` step `04_generate_architecture_docs` on 2026-07-10T09:52:38+08:00*

@@ -37,6 +37,8 @@ from .job_state import (
     set_job_status,
     set_last_failure,
 )
+from .notifications import send_notification
+from .notification_manager import send_workflow_notification, send_step_notification
 from .runtime_context import PROJECT_ROOT
 from .step_runner import StepResult
 
@@ -133,6 +135,7 @@ def route_after_failure(
     group_name: str,
     state: dict,
     step: str,
+    step_cfg: dict | None = None,
     coder_used: str,
     exc: Exception,
     max_rejects: int,
@@ -201,11 +204,17 @@ def route_after_failure(
         failure_source=failure_source,
     )
 
+    # Check for step-level failure notification configuration
+    if step_cfg:
+        send_step_notification("STEP_FAILED", state, step, step_cfg)
+
     if non_progressing:
         set_job_status(state, "WAITING_FOR_HUMAN_INTERVENTION")
         state["current_step"] = step
         state["pending_intervention_for"] = step
         save_job(group_name, state["job_id"], state)
+        # Send notification for human intervention required
+        send_workflow_notification("WAITING_FOR_HUMAN_INTERVENTION", dict(state))
         return state, 1
 
     if failure_class == "FATAL" or current_count >= max_rejects:
@@ -214,6 +223,8 @@ def route_after_failure(
             failed_steps.append(step)
         state["current_step"] = step
         save_job(group_name, state["job_id"], state)
+        # Send notification for workflow failure
+        send_workflow_notification("FAILED", dict(state))
         return state, 2
 
     set_job_status(
@@ -330,6 +341,8 @@ def _route_rejected(
             failed_steps.append(step)
         state["current_step"] = step
         save_job(group_name, state["job_id"], state)
+        # Send notification for workflow failure
+        send_workflow_notification("FAILED", dict(state))
         return state, 2
 
     set_job_status(

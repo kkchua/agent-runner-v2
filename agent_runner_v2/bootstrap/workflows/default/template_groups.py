@@ -1377,6 +1377,7 @@ TEMPLATE_GROUPS: Dict[str, Dict[str, Any]] = {
                 "required_inputs": ["TASK_FILE", "IMPL_FILE"],
                 "optional_inputs": ["PLAN_FILE", "TASK_GRAPH_FILE"],
                 "produces": [],
+                "updates": ["IMPL_FILE"],
                 "max_rejects": 1,
                 "result_meta_key": "IMPL_FILE",
                 "coder": {"default": "qwen-developer", "allowed": ["claude", "codex", "qwen-developer"]},

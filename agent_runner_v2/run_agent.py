@@ -82,7 +82,7 @@ from .runtime_context import (
     get_delivery_root, get_workflow_module,
     set_context, set_workflow_module, set_delivery_root,
 )
-from .constants import codebase_doc_rel, delivery_doc_rel, system_doc_rel
+from .constants import RUN_AGENT_REQUIRED_DOC_DIRS, codebase_doc_rel, delivery_doc_rel, system_doc_rel
 from .doc_paths import repo_doc_rel
 from .constants import known_artifact_paths
 from .step_runner import (
@@ -1036,6 +1036,7 @@ def _build_group_cfg_from_execution_spec(spec: dict[str, Any], template_group: s
     optional_inputs = [item.get("artifact_key") for item in spec.get("optional_inputs") or [] if item.get("artifact_key")]
     immutable_inputs = [item.get("artifact_key") for item in spec.get("immutable_inputs") or [] if item.get("artifact_key")]
     produces = [item.get("artifact_key") for item in spec.get("produces") or [] if item.get("artifact_key")]
+    updates = [item.get("artifact_key") for item in spec.get("updates") or [] if item.get("artifact_key")]
     step_cfg = dict(raw_config)
     step_cfg["prompt_file"] = spec.get("prompt_file")
     step_cfg["action"] = spec.get("action_name") or raw_config.get("action")
@@ -1049,6 +1050,8 @@ def _build_group_cfg_from_execution_spec(spec: dict[str, Any], template_group: s
     if immutable_inputs:
         step_cfg["immutable_inputs"] = immutable_inputs
     step_cfg["produces"] = produces
+    if updates:
+        step_cfg["updates"] = updates
     target_artifact = spec.get("target_artifact")
     if target_artifact:
         step_cfg["target_artifact"] = target_artifact
@@ -1930,38 +1933,7 @@ def _execute_backend_step_request(
 
 def _ensure_delivery_folders(target_root: Path) -> None:
     """Create the standard delivery and codebase documentation structure."""
-    folders = [
-        delivery_doc_rel("01_initiatives"),
-        delivery_doc_rel("02_plans"),
-        delivery_doc_rel("02_plans/artifacts"),
-        delivery_doc_rel("03_tasks"),
-        delivery_doc_rel("04_implementation_plans"),
-        delivery_doc_rel("05_reviews"),
-        delivery_doc_rel("06_memory"),
-        delivery_doc_rel("00_standards"),
-        system_doc_rel(),
-        system_doc_rel("templates"),
-        system_doc_rel("templates/delivery"),
-        system_doc_rel("templates/codebase"),
-        codebase_doc_rel("00_standards"),
-        codebase_doc_rel("00_templates"),
-        codebase_doc_rel("01_inventory"),
-        codebase_doc_rel("02_modules"),
-        codebase_doc_rel("03_components"),
-        codebase_doc_rel("04_changes"),
-        codebase_doc_rel("05_archives"),
-        repo_doc_rel("system", "00_governance"),
-        repo_doc_rel("system", "00_governance", "bootstrap"),
-        repo_doc_rel("system", "00_governance", "bootstrap", "templates"),
-        repo_doc_rel("system", "00_governance", "bootstrap", "templates", "delivery"),
-        repo_doc_rel("system", "00_governance", "bootstrap", "templates", "codebase"),
-        repo_doc_rel("system", "01_overview"),
-        repo_doc_rel("system", "02_functional"),
-        repo_doc_rel("system", "03_architecture"),
-        repo_doc_rel("engineering"),
-        repo_doc_rel("operations"),
-    ]
-    for folder in folders:
+    for folder in RUN_AGENT_REQUIRED_DOC_DIRS:
         (target_root / folder).mkdir(parents=True, exist_ok=True)
 
 
