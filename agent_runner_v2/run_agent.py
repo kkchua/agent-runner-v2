@@ -1655,6 +1655,8 @@ def _prepare_step_execution(
 
     step_dir = make_step_dir(group_cfg, state, step)
     step_dir.mkdir(parents=True, exist_ok=True)
+    # Ensure PROGRESS_FILE resolves to the same step directory as make_step_dir
+    state["backend_step_dir_rel"] = str(step_dir)
 
     context = build_context(state, step=step, step_cfg=step_cfg)
     context["WORKFLOW_KEY_OVERRIDE"] = workflow_key_override or ""
