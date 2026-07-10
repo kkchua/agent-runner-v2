@@ -11,6 +11,16 @@ REM   sync-workflows-to-backend.bat delivery_scaffold_v1 bug_fix_v1
 
 setlocal enabledelayedexpansion
 
+REM --- Activate .venv if it exists ---
+if exist "%~dp0.venv\Scripts\activate.bat" (
+    call "%~dp0.venv\Scripts\activate.bat"
+)
+
+REM Ensure Python is in PATH for backend scripts
+if not defined PYTHON (
+    where python >nul 2>&1 && set "PYTHON=python" || echo WARNING: python not found in PATH
+)
+
 REM ==================================================================
 REM EDIT THESE VARIABLES to match your setup:
 REM ==================================================================
@@ -59,7 +69,7 @@ echo  Workflow Sync Publish
 echo ===========================================================================
 echo  Runner Root:    %AGENT_RUNNER_ROOT%
 echo  Backend Root:   %BACKEND_ROOT%
-echo  Backend URL:    %BACKEND_URL%
+echo  Backend URL:     %BACKEND_URL%
 if not "!ARGS!"=="" (
     echo  Workflows:      !ARGS!
 ) else (
@@ -68,8 +78,13 @@ if not "!ARGS!"=="" (
 echo ===========================================================================
 echo(
 
+REM Use .venv Python to directly call the backend's sync script
 pushd "%BACKEND_ROOT%"
-call "%BACKEND_SYNC_BAT%" --backend-url "%BACKEND_URL%" %*
+if exist "%~dp0.venv\Scripts\python.exe" (
+    "%~dp0.venv\Scripts\python.exe" sync-workflows.py --backend-url "%BACKEND_URL%" %*
+) else (
+    python sync-workflows.py --backend-url "%BACKEND_URL%" %*
+)
 set "EXIT_CODE=!ERRORLEVEL!"
 popd
 

@@ -67,19 +67,73 @@ class InvocationResult:
 DEFAULT_CODER_TIMEOUT_SECONDS = 600
 SIDECAR_POLL_INTERVAL_SECONDS = 3.0
 SIDECAR_SETTLE_DELAY_SECONDS = 1.0  # Increased from 0.5s to ensure coder finishes writing meta.json
+DEFAULT_SIDECAR_POST_COMPLETE_GRACE_SECONDS = 12.0  # Allow final progress updates / cleanup before forced termination
+
+
+def _load_global_config() -> dict:
+    r"""Load the global config.json from %USERPROFILE%\.ukbe-runner\config.json."""
+    config_path = Path.home() / ".ukbe-runner" / "config.json"
+    if not config_path.exists():
+        return {}
+    try:
+        return json.loads(config_path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return {}
 
 
 def _coder_timeout_seconds(override: int | None = None) -> int:
+    """Resolve coder timeout with cascading priority:
+    
+    1. Step-level override (timeout_seconds_override parameter)
+    2. Environment variable (AGENT_RUNNER_CODER_TIMEOUT_SECONDS)
+    3. Global config.json (coder_timeout_seconds key)
+    4. Hardcoded default (DEFAULT_CODER_TIMEOUT_SECONDS = 600)
+    """
+    # Priority 1: Step-level override
     if isinstance(override, int) and override > 0:
         return override
+    
+    # Priority 2: Environment variable
     raw = os.environ.get("AGENT_RUNNER_CODER_TIMEOUT_SECONDS", "").strip()
-    if not raw:
-        return DEFAULT_CODER_TIMEOUT_SECONDS
-    try:
-        value = int(raw)
-    except ValueError:
-        return DEFAULT_CODER_TIMEOUT_SECONDS
-    return value if value > 0 else DEFAULT_CODER_TIMEOUT_SECONDS
+    if raw:
+        try:
+            value = int(raw)
+            return value if value > 0 else DEFAULT_CODER_TIMEOUT_SECONDS
+        except ValueError:
+            pass
+    
+    # Priority 3: Global config.json
+    cfg = _load_global_config()
+    config_timeout = cfg.get("coder_timeout_seconds")
+    if isinstance(config_timeout, (int, float)) and config_timeout > 0:
+        return int(config_timeout)
+    
+    # Priority 4: Hardcoded default
+    return DEFAULT_CODER_TIMEOUT_SECONDS
+
+
+def _sidecar_post_complete_grace_seconds() -> float:
+    """Resolve post-sidecar grace window priority:
+
+    1. Environment variable: AGENT_RUNNER_SIDECAR_POST_COMPLETE_GRACE_SECONDS
+    2. Global config.json: sidecar_post_complete_grace_seconds
+    3. Hardcoded default
+    """
+    raw = os.environ.get("AGENT_RUNNER_SIDECAR_POST_COMPLETE_GRACE_SECONDS", "").strip()
+    if raw:
+        try:
+            value = float(raw)
+            if value >= 0:
+                return value
+        except ValueError:
+            pass
+
+    cfg = _load_global_config()
+    config_value = cfg.get("sidecar_post_complete_grace_seconds")
+    if isinstance(config_value, (int, float)) and config_value >= 0:
+        return float(config_value)
+
+    return DEFAULT_SIDECAR_POST_COMPLETE_GRACE_SECONDS
 
 
 def _coerce_timeout_output(value: Any) -> str:
@@ -294,6 +348,7 @@ def _run_with_sidecar_poll(
         deadline = time.monotonic() + timeout_seconds
         sidecar_triggered = False
         poll_count = 0
+        post_sidecar_grace_seconds = _sidecar_post_complete_grace_seconds()
 
         # Polling loop: Wait for EITHER condition to be true:
         # 1. Process exits (proc.poll() returns non-None) - normal completion
@@ -335,13 +390,24 @@ def _run_with_sidecar_poll(
                             print(f"[coder_adapters] poll #{poll_count}: sidecar is new/updated, validating JSON...", flush=True)
                             if _is_valid_sidecar_json(sidecar_path):
                                 # Sidecar is valid: coder finished its work!
-                                # Pause briefly to ensure coder finishes all writes to meta.json
-                                print(f"[coder_adapters] poll #{poll_count}: sidecar JSON valid! sleeping {SIDECAR_SETTLE_DELAY_SECONDS}s before terminating", flush=True)
+                                # Pause briefly to ensure coder finishes all writes to meta.json,
+                                # then allow a short grace window for final progress callbacks.
+                                print(f"[coder_adapters] poll #{poll_count}: sidecar JSON valid! sleeping {SIDECAR_SETTLE_DELAY_SECONDS}s before grace window", flush=True)
                                 time.sleep(SIDECAR_SETTLE_DELAY_SECONDS)
                                 sidecar_triggered = True
                                 label = f" step={step}" if step else ""
-                                print(f"[coder_adapters] sidecar detected — coder completed work, terminating process{label}", flush=True)
-                                _terminate_process_tree(proc)
+                                grace_deadline = time.monotonic() + post_sidecar_grace_seconds
+                                exited_during_grace = False
+                                while time.monotonic() < grace_deadline:
+                                    poll_result = proc.poll()
+                                    if poll_result is not None:
+                                        exited_during_grace = True
+                                        print(f"[coder_adapters] sidecar detected — process exited naturally during grace window return_code={poll_result}{label}", flush=True)
+                                        break
+                                    time.sleep(0.1)
+                                if not exited_during_grace:
+                                    print(f"[coder_adapters] sidecar detected — grace window ({post_sidecar_grace_seconds}s) elapsed, terminating process{label}", flush=True)
+                                    _terminate_process_tree(proc)
                                 break
                             else:
                                 print(f"[coder_adapters] poll #{poll_count}: sidecar exists but JSON validation failed", flush=True)

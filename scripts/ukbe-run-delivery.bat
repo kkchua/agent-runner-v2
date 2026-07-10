@@ -127,7 +127,7 @@ if not exist "%PROJECT_ROOT%" (
 )
 
 REM Keep scratch space inside the repo so runs are self-contained.
-set "TEMP_ROOT=%PROJECT_ROOT%\.tmp"
+set "TEMP_ROOT=%PROJECT_ROOT%\temp"
 if not exist "%TEMP_ROOT%" mkdir "%TEMP_ROOT%" >nul 2>nul
 set "TEMP=%TEMP_ROOT%"
 set "TMP=%TEMP_ROOT%"

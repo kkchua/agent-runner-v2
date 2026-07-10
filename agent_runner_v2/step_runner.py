@@ -19,6 +19,7 @@ import hashlib
 import json
 import re
 import shutil
+import sys
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path, PurePath
@@ -35,7 +36,7 @@ from .doc_paths import (
     system_doc_rel,
 )
 from .constants import (
-    placeholder,
+    BUG_FIX_OUTPUT_PATHS as CONSTANTS_BUG_FIX_OUTPUT_PATHS,
     FOLDER_KEY_DELIVERY_IMPLEMENTATIONS,
     FOLDER_KEY_DELIVERY_TASKS,
     FOLDER_KEY_DELIVERY_PLANS,
@@ -48,6 +49,9 @@ from .constants import (
     EXT_MD,
     EXT_JSON,
     known_artifact_paths,
+    prompt_literal_substitutions,
+    SIDECAR_INSTRUCTION_TEMPLATE as CONSTANTS_SIDECAR_INSTRUCTION_TEMPLATE,
+    TOOL_INSTRUCTION_TEMPLATE as CONSTANTS_TOOL_INSTRUCTION_TEMPLATE,
 )
 from .runtime_context import (
     ARTIFACT_ROOT,
@@ -184,6 +188,18 @@ def run_step(
     # Resolve meta.json path before invocation so it can be used as an early-exit signal.
     # Safe to compute here — context is pre-built and immutable; we do NOT call build_context() again.
     meta_path = _resolve_meta_json_path(step_cfg=step_cfg, context=context, project_root=project_root, step_dir=step_dir)
+    _validate_step_write_contract_config(step_cfg=step_cfg, step=step)
+    allowed_write_paths = _resolve_allowed_write_paths(
+        step_cfg=step_cfg,
+        context=context,
+        state=state,
+        project_root=project_root,
+        meta_path=meta_path,
+    )
+    audit_before = _snapshot_allowed_write_roots(
+        allowed_paths=allowed_write_paths,
+        project_root=project_root,
+    )
 
     try:
         timeout_seconds = step_cfg.get("coder_timeout_seconds")
@@ -224,6 +240,12 @@ def run_step(
         raise
 
     finished_at = _now_iso()
+    changed_paths = _verify_only_allowed_paths_changed(
+        before=audit_before,
+        allowed_paths=allowed_write_paths,
+        project_root=project_root,
+        step=step,
+    )
 
     # Save invocation artefacts
     _save_text(step_dir / "raw_output.txt", invocation.stdout)
@@ -290,6 +312,8 @@ def run_step(
         finished_at=finished_at,
         prompt_checksum=checksum,
         project_root=project_root,
+        allowed_write_paths=sorted(_path_for_report(path, project_root) for path in allowed_write_paths),
+        changed_paths=changed_paths,
     )
 
     return StepResult(
@@ -373,6 +397,8 @@ def run_action(
         finished_at=finished_at,
         prompt_checksum="n/a",
         project_root=project_root,
+        allowed_write_paths=[],
+        changed_paths=[],
     )
 
     return StepResult(
@@ -606,43 +632,32 @@ def _validate_artifacts_in_produces_list(
 ) -> None:
     """Raise ArtifactMissingError if any artifact is not in the step's produces list.
     
-    This enforces the declarative document protection model:
+    This enforces the declarative write-contract model:
     - Each step declares what it produces in template_groups.py
     - LLM can only report artifacts in that list
-    - Prevents workflows from modifying documents they don't own
+    - Prevents workflows from reporting undeclared outputs
     
-    Note: Auto-normalizes common LLM mistakes:
-    - REVIEW_FILE_SUGGESTED_METAJSON → REVIEW_FILE_SUGGESTED (strips _METAJSON suffix)
-    - Keys containing a produces item as substring are accepted
+    Note: Only explicit alias normalization is allowed:
+    - REVIEW_FILE_SUGGESTED_METAJSON → REVIEW_FILE_SUGGESTED
+    - REVIEW_FILE_SUGGESTED_PATH → REVIEW_FILE_SUGGESTED
     """
     if not produces:
-        # Action steps or steps without produces declaration - skip validation
+        # Action steps or steps without declared outputs - skip validation
         return
     
     # Convert produces list to set for comparison
     allowed = set(produces)
     
-    # Normalize artifacts: strip common suffixes that LLM mistakenly adds
+    # Normalize artifacts using explicit alias suffixes only.
     normalized_artifacts = {}
     for artifact_key, artifact_path in artifacts.items():
-        # Strip _METAJSON suffix if present
-        if artifact_key.endswith("_METAJSON"):
-            normalized_key = artifact_key[:-len("_METAJSON")]
-            normalized_artifacts[normalized_key] = artifact_path
-        else:
-            normalized_artifacts[artifact_key] = artifact_path
+        normalized_key = _normalize_artifact_contract_key(artifact_key)
+        normalized_artifacts[normalized_key] = artifact_path
     
     # Check each normalized artifact against produces list
     unauthorized = []
     for artifact_key in normalized_artifacts.keys():
-        # Exact match
-        if artifact_key in allowed:
-            continue
-        
-        # Substring match: allow keys like REVIEW_FILE_SUGGESTED_PATH if REVIEW_FILE_SUGGESTED is in produces
-        is_allowed = any(allowed_key in artifact_key for allowed_key in allowed)
-        
-        if not is_allowed:
+        if artifact_key not in allowed:
             unauthorized.append(artifact_key)
     
     if unauthorized:
@@ -651,6 +666,128 @@ def _validate_artifacts_in_produces_list(
             f"Allowed artifacts: {sorted(allowed)}",
             missing=unauthorized,
         )
+
+
+def _normalize_artifact_contract_key(artifact_key: str) -> str:
+    key = str(artifact_key or "").strip()
+    for suffix in ("_METAJSON", "_PATH"):
+        if key.endswith(suffix):
+            return key[:-len(suffix)]
+    return key
+
+
+def _declared_write_keys(step_cfg: dict[str, Any]) -> list[str]:
+    keys: list[str] = []
+    for raw_key in step_cfg.get("produces", []) or []:
+        key = str(raw_key or "").strip()
+        if key and key not in keys:
+            keys.append(key)
+    for raw_key in step_cfg.get("updates", []) or []:
+        key = str(raw_key or "").strip()
+        if key and key not in keys:
+            keys.append(key)
+    target_artifact = str(step_cfg.get("target_artifact") or "").strip()
+    if target_artifact and target_artifact not in keys:
+        keys.append(target_artifact)
+    return keys
+
+
+def _step_requires_write_contract(step_cfg: dict[str, Any]) -> bool:
+    if step_cfg.get("action"):
+        return False
+    if step_cfg.get("result_meta_key") or step_cfg.get("result_meta_key_from_context"):
+        return True
+    if _declared_write_keys(step_cfg):
+        return True
+    return False
+
+
+def _validate_step_write_contract_config(*, step_cfg: dict[str, Any], step: str) -> None:
+    if not _step_requires_write_contract(step_cfg):
+        return
+    declared = _declared_write_keys(step_cfg)
+    if declared:
+        return
+    raise RuntimeError(
+        f"Step '{step}' is write-capable but declares no write contract. "
+        "Add 'produces' for created artifacts or 'updates' for in-place edits."
+    )
+
+
+def _resolve_contract_path_from_context(
+    *,
+    artifact_key: str,
+    context: dict[str, str],
+    state: dict[str, Any],
+) -> str:
+    for candidate in (
+        context.get(artifact_key, ""),
+        context.get(f"{artifact_key}_PATH", ""),
+        (state.get("artifacts") or {}).get(artifact_key, ""),
+    ):
+        value = str(candidate or "").strip()
+        if value:
+            return value
+    return ""
+
+
+def _resolve_allowed_write_paths(
+    *,
+    step_cfg: dict[str, Any],
+    context: dict[str, str],
+    state: dict[str, Any],
+    project_root: Path,
+    meta_path: Path,
+) -> set[Path]:
+    allowed_paths: set[Path] = {meta_path.resolve()}
+    for artifact_key in _declared_write_keys(step_cfg):
+        path_str = _resolve_contract_path_from_context(
+            artifact_key=artifact_key,
+            context=context,
+            state=state,
+        )
+        if not path_str:
+            continue
+        resolved = resolve_repo_or_runtime_path(
+            path_str,
+            project_root=project_root,
+            runtime_root=JOBS_ROOT,
+        )
+        allowed_paths.add(resolved.resolve())
+    return allowed_paths
+
+
+def _snapshot_allowed_write_roots(*, allowed_paths: set[Path], project_root: Path) -> dict[Path, str]:
+    snapshot: dict[Path, str] = {}
+    for path in allowed_paths:
+        resolved = path.resolve()
+        if not resolved.exists() or not resolved.is_file():
+            snapshot[resolved] = ""
+            continue
+        try:
+            snapshot[resolved] = _hash_file(resolved)
+        except OSError:
+            snapshot[resolved] = ""
+    return snapshot
+
+
+def _verify_only_allowed_paths_changed(
+    *,
+    before: dict[Path, str],
+    allowed_paths: set[Path],
+    project_root: Path,
+    step: str,
+) -> list[str]:
+    after = _snapshot_allowed_write_roots(allowed_paths=allowed_paths, project_root=project_root)
+    changed_abs: list[Path] = []
+    for path in sorted(allowed_paths):
+        if before.get(path) != after.get(path):
+            changed_abs.append(path)
+    return [_path_for_report(path, project_root) for path in changed_abs]
+
+
+def _hash_file(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def _canonicalize_master_bootstrap_artifacts(
@@ -897,7 +1034,7 @@ def _set_bug_fix_aliases(*, ctx: dict[str, str], state: dict, step: str, artifac
     run_id = str(state.get("job_id") or state.get("workflow_run_id") or "bug-fix-run")
     step_index = (step_names.index(step) + 1) if step in step_names else 1
 
-    for artifact_key, rel_path in BUG_FIX_OUTPUT_PATHS.items():
+    for artifact_key, rel_path in CONSTANTS_BUG_FIX_OUTPUT_PATHS.items():
         artifact_value = artifacts.get(artifact_key) or rel_path.format(
             run_id=run_id,
             step=step,
@@ -910,8 +1047,8 @@ def _set_bug_fix_aliases(*, ctx: dict[str, str], state: dict, step: str, artifac
         ctx[f"{artifact_key}_METAJSON"] = default_meta
 
     for artifact_key in produces:
-        if artifact_key in BUG_FIX_OUTPUT_PATHS and not artifacts.get(artifact_key):
-            output_path = BUG_FIX_OUTPUT_PATHS[artifact_key].format(
+        if artifact_key in CONSTANTS_BUG_FIX_OUTPUT_PATHS and not artifacts.get(artifact_key):
+            output_path = CONSTANTS_BUG_FIX_OUTPUT_PATHS[artifact_key].format(
                 run_id=run_id,
                 step=step,
                 step_index=step_index,
@@ -1106,6 +1243,8 @@ def enrich_sidecar(
     finished_at: str,
     prompt_checksum: str,
     project_root: Path,
+    allowed_write_paths: list[str],
+    changed_paths: list[str],
 ) -> None:
     """Atomically append runner_data section to existing meta.json.
 
@@ -1122,6 +1261,8 @@ def enrich_sidecar(
         "invoked_at": invoked_at,
         "finished_at": finished_at,
         "prompt_checksum": f"sha256:{prompt_checksum}",
+        "allowed_write_paths": allowed_write_paths,
+        "changed_paths": changed_paths,
         "enriched_at": _now_iso(),
         "runner_version": "v2",
     }
@@ -1649,24 +1790,18 @@ def build_context(
 
     ctx["STEP_NAME"] = step
 
-    # Step-scoped progress.jsonl path — lives inside the step job directory
-    try:
-        from .job_state import job_dir
-        _template_group = (state or {}).get("template_group", "")
-        _job_id = (state or {}).get("job_id", "")
-        _seq = int((state or {}).get("backend_step_sequence") or (state or {}).get("backend_step_order") or 0)
-        if _template_group and _job_id and _seq:
-            ctx["PROGRESS_FILE"] = str(job_dir(_template_group, _job_id) / f"{_seq:02d}_{step}" / "progress.jsonl")
-        else:
-            ctx["PROGRESS_FILE"] = "progress.jsonl"
-    except Exception:
-        ctx["PROGRESS_FILE"] = "progress.jsonl"
+    # Step-scoped progress.jsonl path — lives inside the step job directory.
+    ctx["PROGRESS_FILE"] = _resolve_progress_file_path(state=state, step=step)
 
     try:
         _tools_dir = str((PACKAGE_ROOT / "tools").resolve())
         ctx["TOOLS_DIR"] = _tools_dir
     except Exception:
         ctx["TOOLS_DIR"] = ""
+    ctx["PYTHON_CMD"] = sys.executable or "python3"
+    ctx["TOOLS_DIR_PY"] = _python_string_literal(ctx.get("TOOLS_DIR", ""))
+    ctx["PROGRESS_FILE_PY"] = _python_string_literal(ctx.get("PROGRESS_FILE", ""))
+    ctx["STEP_NAME_PY"] = _python_string_literal(step)
 
     # Load site configuration from docs/sites.config (per-repo configuration)
     site_config = _load_site_config(state=state)
@@ -1679,6 +1814,11 @@ def build_context(
     ctx["SITE_LAYOUT_TEMPLATE"] = theme.get("layout_template", "")
     ctx["SITE_THEME_CSS"] = theme.get("theme_css", "")
     ctx["SITE_LAYOUT_INSTRUCTIONS"] = theme.get("layout_instructions", "")
+    ctx["ALLOWED_WRITE_PATHS"] = _prompt_allowed_write_paths(
+        step_cfg=step_cfg or {},
+        state=state,
+        context=ctx,
+    )
 
     return ctx
 
@@ -1719,11 +1859,16 @@ def render_prompt(template_text: str, context: dict[str, str], step_cfg: dict | 
     import os as _os
     from datetime import datetime as _datetime
     _src = _os.path.abspath(__file__)
-    _tools_dir = context.get("TOOLS_DIR", "")
+    render_context = dict(context)
+    render_context.setdefault("PYTHON_CMD", sys.executable or "python3")
+    render_context.setdefault("TOOLS_DIR_PY", _python_string_literal(render_context.get("TOOLS_DIR", "")))
+    render_context.setdefault("PROGRESS_FILE_PY", _python_string_literal(render_context.get("PROGRESS_FILE", "")))
+    render_context.setdefault("STEP_NAME_PY", _python_string_literal(render_context.get("STEP_NAME", "")))
+    _tools_dir = render_context.get("TOOLS_DIR", "")
     print(f"[render_prompt] step_runner={_src}", flush=True)
     print(f"[render_prompt] TOOLS_DIR={_tools_dir!r}", flush=True)
     rendered = _rewrite_prompt_literals(template_text)
-    for key, value in context.items():
+    for key, value in render_context.items():
         rendered = rendered.replace(f"{{{key}}}", _stringify_prompt_value(value))
     
     # NEW: Inject standardized sidecar instructions (if this step produces artifacts)
@@ -1751,7 +1896,7 @@ def render_prompt(template_text: str, context: dict[str, str], step_cfg: dict | 
                 current_timestamp = _datetime.now().astimezone().isoformat(timespec="seconds")
                 
                 # Format and append sidecar instructions
-                sidecar_text = SIDECAR_INSTRUCTION_TEMPLATE.format(
+                sidecar_text = CONSTANTS_SIDECAR_INSTRUCTION_TEMPLATE.format(
                     META_JSON_PATH=meta_json_path,
                     ARTIFACT_ENTRIES=artifact_entries,
                     CURRENT_TIMESTAMP=current_timestamp
@@ -1760,10 +1905,18 @@ def render_prompt(template_text: str, context: dict[str, str], step_cfg: dict | 
                 print(f"[render_prompt] SIDECAR_INSTRUCTION appended for {result_key}", flush=True)
             else:
                 print(f"[render_prompt] SIDECAR_INSTRUCTION skipped: {result_key}_METAJSON not in context", flush=True)
+        allowed_write_paths = str(render_context.get("ALLOWED_WRITE_PATHS") or "").strip()
+        if allowed_write_paths:
+            rendered += (
+                "\n\n## Allowed Write Paths\n\n"
+                "You may create or update ONLY the exact files listed below for this step.\n"
+                "Do not modify any other repository or runtime files.\n\n"
+                f"{allowed_write_paths}\n"
+            )
     
     if _tools_dir:
-        block = _TOOL_INSTRUCTION_TEMPLATE
-        for key, value in context.items():
+        block = CONSTANTS_TOOL_INSTRUCTION_TEMPLATE
+        for key, value in render_context.items():
             block = block.replace(f"{{{key}}}", _stringify_prompt_value(value))
         rendered = rendered + block
         print("[render_prompt] TOOL_INSTRUCTION appended", flush=True)
@@ -1777,6 +1930,11 @@ def _rewrite_prompt_literals(template_text: str) -> str:
     
     Uses ARTIFACT_PATH_* constants from constants module and placeholder() helper.
     """
+    rendered = template_text
+    for literal, token in sorted(prompt_literal_substitutions().items(), key=lambda item: len(item[0]), reverse=True):
+        rendered = rendered.replace(literal, token)
+    return rendered
+
     from .constants import (
         # Import all path constants to build the mapping
         ARTIFACT_PATH_PROJECT_ANALYSIS,
@@ -1892,6 +2050,11 @@ def _stringify_prompt_value(value: Any) -> str:
     if isinstance(value, str):
         return value
     return str(value)
+
+
+def _python_string_literal(value: Any) -> str:
+    """Render a value as a Python string literal for inline `python -c` snippets."""
+    return repr(_stringify_prompt_value(value))
 
 
 def prompt_checksum(prompt_text: str) -> str:
@@ -2041,7 +2204,7 @@ def _build_new_review_file_path(*, state: dict, step: str, step_cfg: dict) -> st
     while True:
         candidate = review_dir / f"REV-{date_code}-{seq:02d}_{step_code}_{tid}_{slug}.md"
         if not candidate.exists():
-            p = PurePath(str(candidate.relative_to(ARTIFACT_ROOT)))
+            p = PurePath(str(candidate.relative_to(Path(ARTIFACT_ROOT))))
             return str(p)
         seq += 1
 
@@ -2077,7 +2240,7 @@ def _build_validation_file_path(*, state: dict, step: str, step_cfg: dict) -> st
         while candidate.exists():
             candidate = validation_dir / f"{str(state.get('job_id') or 'codebase-scan')}-{mode}-validation_{seq:02d}.md"
             seq += 1
-        return str(PurePath(str(candidate.relative_to(ARTIFACT_ROOT))))
+        return str(PurePath(str(candidate.relative_to(Path(ARTIFACT_ROOT)))))
 
     # Handle delivery/task execution workflows (with IMPL_FILE)
     impl_path = (state.get("artifacts") or {}).get("IMPL_FILE")
@@ -2091,7 +2254,7 @@ def _build_validation_file_path(*, state: dict, step: str, step_cfg: dict) -> st
             if seq > 1:
                 candidate = review_dir / f"VALIDATION-{_review_filename_date_code()}-{seq}-{tid}_{slug}.md"
             if not candidate.exists():
-                return str(PurePath(str(candidate.relative_to(ARTIFACT_ROOT))))
+                return str(PurePath(str(candidate.relative_to(Path(ARTIFACT_ROOT)))))
             seq += 1
     
     # Handle bug fix workflows (don't require IMPL_FILE)
@@ -2142,7 +2305,7 @@ def _build_pre_init_file_path(*, state: dict) -> str:
     while True:
         candidate = pre_init_dir / f"PRE-INIT-{date_code}-{seq:02d}_{slug}.md"
         if not candidate.exists():
-            return str(PurePath(str(candidate.relative_to(ARTIFACT_ROOT))))
+            return str(PurePath(str(candidate.relative_to(Path(ARTIFACT_ROOT)))))
         seq += 1
 
 
@@ -2169,7 +2332,7 @@ def _build_plan_file_path(*, state: dict) -> str:
     while True:
         candidate = plan_dir / f"PLAN-{date_code}-{seq:02d}_{slug}.md"
         if not candidate.exists():
-            return str(PurePath(str(candidate.relative_to(ARTIFACT_ROOT))))
+            return str(PurePath(str(candidate.relative_to(Path(ARTIFACT_ROOT)))))
         seq += 1
 
 
@@ -2189,7 +2352,7 @@ def _build_task_graph_file_path(*, state: dict) -> str:
     tg_dir = ARTIFACT_ROOT / FOLDER_KEY_DELIVERY_PLANS / "artifacts"
     date_code = dt.datetime.now().strftime("%Y%m%d")
     candidate = tg_dir / f"TASK-GRAPH-{date_code}-{plan_id}.md"
-    return str(PurePath(str(candidate.relative_to(ARTIFACT_ROOT))))
+    return str(PurePath(str(candidate.relative_to(Path(ARTIFACT_ROOT)))))
 
 
 def _build_impl_file_path(*, state: dict) -> str:
@@ -2217,7 +2380,7 @@ def _build_impl_file_path(*, state: dict) -> str:
     while True:
         candidate = impl_dir / f"IMPL-{date_code}-{seq:02d}_{slug}.md"
         if not candidate.exists():
-            return str(PurePath(str(candidate.relative_to(ARTIFACT_ROOT))))
+            return str(PurePath(str(candidate.relative_to(Path(ARTIFACT_ROOT)))))
         seq += 1
 
 
@@ -2232,7 +2395,7 @@ def _build_codebase_change_impact_path(*, state: dict) -> str:
         while candidate.exists():
             candidate = change_dir / f"{str(state.get('job_id') or 'codebase-scan')}-{mode}_{seq:02d}.md"
             seq += 1
-        return str(PurePath(str(candidate.relative_to(ARTIFACT_ROOT))))
+        return str(PurePath(str(candidate.relative_to(Path(ARTIFACT_ROOT)))))
 
     from .job_state import task_execution_binding_current_item, task_queue_current_item
 
@@ -2247,7 +2410,7 @@ def _build_codebase_change_impact_path(*, state: dict) -> str:
     while candidate.exists():
         candidate = change_dir / f"{base}_{slug}_{seq:02d}.md"
         seq += 1
-    return str(PurePath(str(candidate.relative_to(ARTIFACT_ROOT))))
+    return str(PurePath(str(candidate.relative_to(Path(ARTIFACT_ROOT)))))
 
 
 def _review_prompt_metadata_context(*, state: dict, step: str, step_cfg: dict) -> dict[str, str]:
@@ -2328,6 +2491,64 @@ def _format_artifact_fingerprint_block(artifacts: dict) -> str:
                 f"- {key}: checksum={fp['checksum']}, bytes={fp['bytes']}, mtime={fp['mtime']}"
             )
     return "\n".join(lines)
+
+
+def _prompt_allowed_write_paths(
+    *,
+    step_cfg: dict[str, Any],
+    state: dict[str, Any],
+    context: dict[str, str],
+) -> str:
+    lines: list[str] = []
+    for artifact_key in _declared_write_keys(step_cfg):
+        path_value = _resolve_contract_path_from_context(
+            artifact_key=artifact_key,
+            context=context,
+            state=state,
+        )
+        if path_value:
+            lines.append(f"- {path_value}")
+
+    result_key = str(step_cfg.get("result_meta_key") or step_cfg.get("result_meta_key_from_context") or "").strip()
+    meta_value = ""
+    if result_key.endswith("_METAJSON"):
+        meta_value = str(context.get(result_key) or "").strip()
+    elif result_key:
+        meta_value = str(context.get(f"{result_key}_METAJSON") or "").strip()
+    if meta_value:
+        lines.append(f"- {meta_value}")
+
+    unique_lines: list[str] = []
+    seen: set[str] = set()
+    for line in lines:
+        if line not in seen:
+            seen.add(line)
+            unique_lines.append(line)
+    return "\n".join(unique_lines)
+
+
+def _resolve_progress_file_path(*, state: dict[str, Any], step: str) -> str:
+    step_dir_rel = str((state or {}).get("backend_step_dir_rel") or "").strip()
+    if step_dir_rel:
+        return _normalize_backend_job_path(str(PurePath(step_dir_rel) / "progress.jsonl"))
+
+    template_group = str((state or {}).get("template_group") or "").strip()
+    job_id = str((state or {}).get("job_id") or "").strip()
+    seq = int((state or {}).get("backend_step_sequence") or (state or {}).get("backend_step_order") or 0)
+    if not seq and template_group and step:
+        try:
+            steps = _workflow_module().TEMPLATE_GROUPS.get(template_group, {}).get("steps", [])
+            try:
+                seq = steps.index(step) + 1
+            except ValueError:
+                seq = 0
+        except RuntimeError:
+            seq = 0
+
+    safe_group = template_group or "_unknown_group"
+    safe_job = job_id or "_unknown_job"
+    safe_seq = seq if seq > 0 else 0
+    return str(Path(JOBS_ROOT) / safe_group / safe_job / f"{safe_seq:02d}_{step}" / "progress.jsonl")
 
 
 # ---------------------------------------------------------------------------

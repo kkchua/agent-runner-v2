@@ -8,6 +8,24 @@ from pathlib import Path
 from typing import Iterable
 
 from .doc_paths import architecture_site_rel, codebase_doc_rel, delivery_doc_rel, system_doc_rel
+from .constants import (
+    get_master_docs_output_paths,
+    delivery_scaffold_docs,
+    FOLDER_KEY_CODEBASE_CHANGES,
+    FILENAME_CHANGE_LOG_PATTERN,
+    FILENAME_VALIDATION_PATTERN,
+    FILENAME_BOOTSTRAP_SUMMARY_PATTERN,
+    EXT_MD,
+    EXT_JSON,
+    FILENAME_SITE_INDEX_HTML,
+    FILENAME_SITE_MANIFEST_JSON,
+    FILENAME_ARCH_STAKEHOLDER_HTML,
+    FILENAME_ARCH_DEVELOPER_HTML,
+    FILENAME_ARCH_FUNCTIONAL_HTML,
+    FILENAME_ARCH_RUNTIME_HTML,
+    FILENAME_ARCH_COMPONENTS_HTML,
+    FILENAME_ARCH_VALIDATION_MD,
+)
 
 
 MASTER_BOOTSTRAP_WORKFLOW = "00_master_docs_bootstrap_v1"
@@ -26,49 +44,19 @@ def managed_banner(*, workflow: str, step: str) -> str:
 
 
 def master_bootstrap_doc_paths(*, job_id: str, mode: str) -> list[str]:
-    return [
-        codebase_doc_rel(f"04_changes/{job_id}-{mode}-snapshot.json"),
-        codebase_doc_rel(f"04_changes/{job_id}-{mode}.md"),
-        codebase_doc_rel("01_inventory/codebase_inventory.md"),
-        system_doc_rel("project_analysis.md"),
-        system_doc_rel("README.md"),
-        system_doc_rel("DOCUMENTATION_STANDARD.md"),
-        system_doc_rel("BUNDLE_TAXONOMY.md"),
-        system_doc_rel("BUNDLE_MIGRATION_PLAN.md"),
-        system_doc_rel("SYSTEM_OVERVIEW.md"),
-        system_doc_rel("BUSINESS_CAPABILITIES.md"),
-        system_doc_rel("FUNCTIONAL_SPEC.md"),
-        system_doc_rel("NON_FUNCTIONAL_REQUIREMENTS.md"),
-        system_doc_rel("SYSTEM_CONTEXT.md"),
-        system_doc_rel("COMPONENT_ARCHITECTURE.md"),
-        system_doc_rel("DECISION_LOG.md"),
-        system_doc_rel("SYSTEM_FILE_STRUCTURE.md"),
-        system_doc_rel("DEVELOPER_GUIDE.md"),
-        system_doc_rel("RUNBOOK.md"),
-        system_doc_rel("EXISTING_REPO_WORKFLOW_SOP.md"),
-        system_doc_rel(f"{job_id}-{mode}-change-log.md"),
-        system_doc_rel(f"{job_id}-{mode}-validation.md"),
-        system_doc_rel(f"{job_id}-bootstrap-summary.md"),
-    ]
+    """Get all master bootstrap workflow document paths."""
+    output_paths = get_master_docs_output_paths(job_id=job_id, mode=mode)
+    return list(output_paths.values())
 
 
 def legacy_master_bootstrap_doc_paths(*, job_id: str, mode: str) -> list[str]:
+    """Get legacy master bootstrap document paths (subset without dynamic filenames)."""
+    # Use the same paths but filter out job-specific files
+    all_paths = get_master_docs_output_paths(job_id=job_id, mode=mode)
+    # Return only the static paths (those without job_id/mode in filename)
     return [
-        system_doc_rel("README.md"),
-        system_doc_rel("DOCUMENTATION_STANDARD.md"),
-        system_doc_rel("SYSTEM_OVERVIEW.md"),
-        system_doc_rel("BUSINESS_CAPABILITIES.md"),
-        system_doc_rel("FUNCTIONAL_SPEC.md"),
-        system_doc_rel("NON_FUNCTIONAL_REQUIREMENTS.md"),
-        system_doc_rel("SYSTEM_CONTEXT.md"),
-        system_doc_rel("COMPONENT_ARCHITECTURE.md"),
-        system_doc_rel("DECISION_LOG.md"),
-        system_doc_rel("SYSTEM_FILE_STRUCTURE.md"),
-        system_doc_rel("DEVELOPER_GUIDE.md"),
-        system_doc_rel("RUNBOOK.md"),
-        system_doc_rel("EXISTING_REPO_WORKFLOW_SOP.md"),
-        system_doc_rel(f"{job_id}-bootstrap-change-log.md"),
-        system_doc_rel(f"{job_id}-bootstrap-validation.md"),
+        path for key, path in all_paths.items()
+        if key not in ["SYSTEM_DOCS_CHANGE_LOG", "SYSTEM_DOCS_VALIDATION", "BOOTSTRAP_SUMMARY", "CODEBASE_SCAN_SNAPSHOT"]
     ]
 
 
@@ -102,11 +90,18 @@ def scan_workflow_generated_paths(*, project_root: Path, template_group: str) ->
         return []
     matches: list[str] = []
     quarantine_root = (project_root / DEFAULT_LEGACY_QUARANTINE_DIR).resolve()
+    sites_root = (docs_root / "sites").resolve()
     for path in docs_root.rglob("*"):
         if not path.is_file():
             continue
+        # Only scan markdown files
+        if path.suffix.lower() != ".md":
+            continue
         try:
-            if quarantine_root in path.resolve().parents:
+            resolved = path.resolve()
+            if quarantine_root in resolved.parents:
+                continue
+            if sites_root in resolved.parents or resolved == sites_root:
                 continue
         except OSError:
             continue
@@ -136,48 +131,17 @@ def workflow_legacy_doc_paths(*, template_group: str, state: dict) -> list[str]:
 
 
 def master_bootstrap_artifact_candidates(*, job_id: str, mode: str) -> dict[str, list[str]]:
-    canonical = {
-        "PROJECT_ANALYSIS": system_doc_rel("project_analysis.md"),
-        "SYSTEM_DOCS_INDEX": system_doc_rel("README.md"),
-        "SYSTEM_DOCS_CHANGE_LOG": system_doc_rel(f"{job_id}-{mode}-change-log.md"),
-        "SYSTEM_DOCS_VALIDATION": system_doc_rel(f"{job_id}-{mode}-validation.md"),
-        "SYSTEM_DOC_STANDARD": system_doc_rel("DOCUMENTATION_STANDARD.md"),
-        "BUNDLE_TAXONOMY": system_doc_rel("BUNDLE_TAXONOMY.md"),
-        "BUNDLE_MIGRATION_PLAN": system_doc_rel("BUNDLE_MIGRATION_PLAN.md"),
-        "SYSTEM_OVERVIEW": system_doc_rel("SYSTEM_OVERVIEW.md"),
-        "BUSINESS_CAPABILITIES": system_doc_rel("BUSINESS_CAPABILITIES.md"),
-        "FUNCTIONAL_SPEC": system_doc_rel("FUNCTIONAL_SPEC.md"),
-        "NON_FUNCTIONAL_REQUIREMENTS": system_doc_rel("NON_FUNCTIONAL_REQUIREMENTS.md"),
-        "SYSTEM_CONTEXT": system_doc_rel("SYSTEM_CONTEXT.md"),
-        "COMPONENT_ARCHITECTURE": system_doc_rel("COMPONENT_ARCHITECTURE.md"),
-        "DECISION_LOG": system_doc_rel("DECISION_LOG.md"),
-        "SYSTEM_FILE_STRUCTURE": system_doc_rel("SYSTEM_FILE_STRUCTURE.md"),
-        "DEVELOPER_GUIDE": system_doc_rel("DEVELOPER_GUIDE.md"),
-        "RUNBOOK": system_doc_rel("RUNBOOK.md"),
-        "EXISTING_REPO_WORKFLOW_SOP": system_doc_rel("EXISTING_REPO_WORKFLOW_SOP.md"),
-        "BOOTSTRAP_SUMMARY": system_doc_rel(f"{job_id}-bootstrap-summary.md"),
-    }
-    legacy = {
-        "PROJECT_ANALYSIS": [system_doc_rel("project_analysis.md")],
-        "SYSTEM_DOCS_INDEX": [system_doc_rel("README.md")],
-        "SYSTEM_DOCS_CHANGE_LOG": [system_doc_rel(f"{job_id}-bootstrap-change-log.md")],
-        "SYSTEM_DOCS_VALIDATION": [system_doc_rel(f"{job_id}-bootstrap-validation.md")],
-        "SYSTEM_DOC_STANDARD": [system_doc_rel("DOCUMENTATION_STANDARD.md")],
-        "BUNDLE_TAXONOMY": [system_doc_rel("BUNDLE_TAXONOMY.md")],
-        "BUNDLE_MIGRATION_PLAN": [system_doc_rel("BUNDLE_MIGRATION_PLAN.md")],
-        "SYSTEM_OVERVIEW": [system_doc_rel("SYSTEM_OVERVIEW.md")],
-        "BUSINESS_CAPABILITIES": [system_doc_rel("BUSINESS_CAPABILITIES.md")],
-        "FUNCTIONAL_SPEC": [system_doc_rel("FUNCTIONAL_SPEC.md")],
-        "NON_FUNCTIONAL_REQUIREMENTS": [system_doc_rel("NON_FUNCTIONAL_REQUIREMENTS.md")],
-        "SYSTEM_CONTEXT": [system_doc_rel("SYSTEM_CONTEXT.md")],
-        "COMPONENT_ARCHITECTURE": [system_doc_rel("COMPONENT_ARCHITECTURE.md")],
-        "DECISION_LOG": [system_doc_rel("DECISION_LOG.md")],
-        "SYSTEM_FILE_STRUCTURE": [system_doc_rel("SYSTEM_FILE_STRUCTURE.md")],
-        "DEVELOPER_GUIDE": [system_doc_rel("DEVELOPER_GUIDE.md")],
-        "RUNBOOK": [system_doc_rel("RUNBOOK.md")],
-        "EXISTING_REPO_WORKFLOW_SOP": [system_doc_rel("EXISTING_REPO_WORKFLOW_SOP.md")],
-        "BOOTSTRAP_SUMMARY": [system_doc_rel(f"{job_id}-bootstrap-summary.md")],
-    }
+    """Get artifact path candidates for master bootstrap workflow."""
+    canonical = get_master_docs_output_paths(job_id=job_id, mode=mode)
+    
+    # Build legacy paths (subset without dynamic filenames)
+    legacy: dict[str, list[str]] = {}
+    for key in canonical:
+        if key not in ["SYSTEM_DOCS_CHANGE_LOG", "SYSTEM_DOCS_VALIDATION", "BOOTSTRAP_SUMMARY", "CODEBASE_SCAN_SNAPSHOT"]:
+            legacy[key] = [canonical[key]]
+        else:
+            legacy[key] = []
+    
     return {
         key: [canonical[key], *legacy.get(key, [])]
         for key in canonical
@@ -185,48 +149,22 @@ def master_bootstrap_artifact_candidates(*, job_id: str, mode: str) -> dict[str,
 
 
 def execution_scaffold_doc_paths() -> list[str]:
-    return [
-        system_doc_rel("WORKFLOW_SOP_v1.md"),
-        system_doc_rel("DELIVERY_STATUS_RULES_v1.md"),
-        codebase_doc_rel("00_standards/CODEBASE_DOC_SOP_v1.md"),
-        codebase_doc_rel("00_standards/CODEBASE_DOC_STATUS_RULES_v1.md"),
-        system_doc_rel("EXISTING_REPO_WORKFLOW_SOP.md"),
-        system_doc_rel("templates/delivery/01_delivery_template_registry.md"),
-        system_doc_rel("templates/delivery/02_delivery_initiative_template.md"),
-        system_doc_rel("templates/delivery/03_delivery_plan_template.md"),
-        system_doc_rel("templates/delivery/04_delivery_task_graph_template.md"),
-        system_doc_rel("templates/delivery/05_delivery_task_template.md"),
-        system_doc_rel("templates/delivery/06_delivery_impl_template.md"),
-        system_doc_rel("templates/delivery/07_delivery_review_template.md"),
-        system_doc_rel("templates/delivery/08_delivery_validation_template.md"),
-        system_doc_rel("templates/delivery/09_delivery_memory_template.md"),
-        system_doc_rel("templates/codebase/01_codebase_template_registry.md"),
-        system_doc_rel("templates/codebase/02_codebase_inventory_template.md"),
-        system_doc_rel("templates/codebase/03_codebase_module_template.md"),
-        system_doc_rel("templates/codebase/04_codebase_component_template.md"),
-        system_doc_rel("templates/codebase/05_codebase_change_template.md"),
-        codebase_doc_rel("01_inventory/codebase_inventory.md"),
-        delivery_doc_rel("00_standards/DELIVERY_AGENTS_MD.md"),
-        delivery_doc_rel("00_standards/DELIVERY_AGENT_PLANNER.md"),
-        delivery_doc_rel("00_standards/DELIVERY_AGENT_TASK_DECOMPOSER.md"),
-        delivery_doc_rel("00_standards/DELIVERY_AGENT_IMPL_PLANNER.md"),
-        delivery_doc_rel("00_standards/DELIVERY_AGENT_EXECUTOR.md"),
-        delivery_doc_rel("00_standards/DELIVERY_AGENT_REVIEWER.md"),
-        delivery_doc_rel("00_standards/DELIVERY_AGENT_MEMORY_MANAGER.md"),
-        delivery_doc_rel("DELIVERY_FOLDER_MAP.json"),
-    ]
+    """Get all execution scaffold workflow document paths."""
+    output_paths = delivery_scaffold_docs()
+    return list(output_paths.values())
 
 
 def architecture_site_doc_paths() -> list[str]:
+    """Get all architecture site document paths."""
     return [
-        architecture_site_rel("index.html"),
-        architecture_site_rel("stakeholders.html"),
-        architecture_site_rel("developers.html"),
-        architecture_site_rel("functional.html"),
-        architecture_site_rel("runtime.html"),
-        architecture_site_rel("components.html"),
-        architecture_site_rel("manifest.json"),
-        architecture_site_rel("validation.md"),
+        architecture_site_rel(FILENAME_SITE_INDEX_HTML),
+        architecture_site_rel(FILENAME_ARCH_STAKEHOLDER_HTML),
+        architecture_site_rel(FILENAME_ARCH_DEVELOPER_HTML),
+        architecture_site_rel(FILENAME_ARCH_FUNCTIONAL_HTML),
+        architecture_site_rel(FILENAME_ARCH_RUNTIME_HTML),
+        architecture_site_rel(FILENAME_ARCH_COMPONENTS_HTML),
+        architecture_site_rel(FILENAME_SITE_MANIFEST_JSON),
+        architecture_site_rel(FILENAME_ARCH_VALIDATION_MD),
     ]
 
 

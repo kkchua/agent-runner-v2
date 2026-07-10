@@ -1,114 +1,233 @@
 ---
 template_id: "SYS-03-DL"
-managed_by: workflow-generated
-generated: "2026-07-09T21:26:23+08:00"
+title: "Decision Log - agent-runner-v2"
+status: "active"
+change_id: "00DOC-GEN-20260710-004"
 workflow: "00_master_docs_bootstrap_v1"
 step: "04_generate_architecture_docs"
-change_id: "00DOC-GEN-20260709-002"
+managed_by: workflow-generated
+generated: "2026-07-10T09:52:38+08:00"
 ---
 
 > Managed by workflow: `00_master_docs_bootstrap_v1` / step: `04_generate_architecture_docs`
 > This file is workflow-generated and protected from manual edits.
 
-# Decision Log
+# Decision Log: agent-runner-v2
 
 ## Decision Table
 
-| ID | Date | Decision | Context | Rationale | Status |
-|----|------|----------|---------|-----------|--------|
-| DEC-001 | 2024-Q2 | Extract agent-runner from UKBE | UKBE monolith becoming unmanageable | Enable standalone usage, clearer contracts | Accepted |
-| DEC-002 | 2024-Q3 | v2 rewrite with strict sidecar contract | v1 had multiple communication channels | Simplify reasoning, eliminate fallback paths | Accepted |
-| DEC-003 | 2024-Q4 | Bootstrap/Runtime separation | Need package-local seeds + global runtime | Enable package distribution while allowing runtime customization | Accepted |
-| DEC-004 | 2024-Q4 | Centralized constants in `constants.py` | Path strings scattered across modules | Single source of truth, prevent drift | Accepted |
-| DEC-005 | 2025-Q1 | Unit/Integration test split | Tests mixing concerns, slow execution | Faster unit tests, clear separation | Accepted |
-| DEC-006 | 2025-Q1 | Windows primary platform | Development team on Windows | Batch file workflow launchers, Windows path handling | Accepted |
-| DEC-007 | 2025-Q2 | Daemon mode with child processes | Need workstation supervision | Fresh subprocess per step picks up code changes automatically | Accepted |
-| DEC-008 | 2025-Q2 | Artifact key placeholders in prompts | Hardcoded paths in prompts | Runtime path resolution, bootstrap/runtime flexibility | Accepted |
-| DEC-009 | 2025-Q3 | Generated document protection | Manual edits to generated docs | Prevent drift, enable regeneration | Accepted |
-| DEC-010 | 2025-Q4 | 12+ workflow family definitions | Growing delivery patterns | Encode best practices, reduce setup time | Accepted |
-| DEC-011 | 2026-Q1 | Template ID system | Document identification drift | Stable identifiers for validation | Accepted |
-| DEC-012 | 2026-Q1 | Meta.json auto-injection | Coder forgetting sidecar format | Guaranteed sidecar instruction presence | Accepted |
-| DEC-013 | 2026-Q2 | Documentation sync workflow | Documentation drift from code | Automated reconciliation | Accepted |
-| DEC-014 | 2026-Q2 | Architecture site generation | HTML views for stakeholders | Multi-audience communication | Accepted |
-| DEC-015 | 2026-Q3 | Schema version 6 (v2) | Job state compatibility | Clear versioning, migration path | Accepted |
+| ID | Date | Decision | Rationale | Status |
+|----|------|----------|-----------|--------|
+| ADR-001 | 2024-Q2 | Extract runner from UKBE | Need standalone workflow engine | Implemented |
+| ADR-002 | 2024-Q3 | Meta.json as only channel | Eliminate ambiguity in LLM communication | Implemented |
+| ADR-003 | 2024-Q3 | Remove silent recovery | Explicit failure routing for transparency | Implemented |
+| ADR-004 | 2024-Q4 | Centralized constants | Single source of truth for paths | Implemented |
+| ADR-005 | 2024-Q4 | Bootstrap/runtime separation | Allow runtime customization without code changes | Implemented |
+| ADR-006 | 2025-Q1 | Declarative doc protection | `produces` lists instead of guardrails | Implemented |
+| ADR-007 | 2025-Q1 | Review/refine loops | Human-in-the-loop for quality gates | Implemented |
+| ADR-008 | 2025-Q2 | v2 sidecar schema | Structured result reporting | Implemented |
+| ADR-009 | 2025-Q2 | Daemon mode | Background job processing | Implemented |
+| ADR-010 | 2025-Q3 | Backend integration | Persistent job state, event streaming | Implemented |
+| ADR-011 | 2026-Q1 | Prompt sidecar injection | Automated sidecar instructions | Implemented |
+| ADR-012 | 2026-Q2 | Architecture site generation | HTML documentation for stakeholders | Implemented |
+| ADR-013 | 2026-Q3 | Windows pathlib fix | Handle Windows path edge cases | Implemented |
+| ADR-014 | 2026-Q3 | Pure unit tests | No filesystem dependencies in unit tests | Implemented |
 
-## Key Decisions Explained
+## Architecture Decisions
 
-### DEC-002: Strict Sidecar Contract
+### ADR-001: Extract runner from UKBE
 
-**Context**: v1 had multiple ways for coders to communicate results (stdout JSON, markdown metadata, sidecar). This created ambiguity and fallback complexity.
+**Context**: The workflow orchestration logic was embedded in the larger UKBE system.
 
-**Decision**: v2 uses `meta.json` sidecar as the **only** structured communication channel.
-
-**Consequences**:
-- (+) Clear contract between runner and coder
-- (+) Deterministic result parsing
-- (+) No fallback ambiguity
-- (-) Coders must understand and implement sidecar contract
-- (-) No recovery from missing sidecar
-
-### DEC-003: Bootstrap/Runtime Separation
-
-**Context**: Package needs to ship workflow definitions, but runtime needs user-customizable workflows.
-
-**Decision**: Ship bootstrap source in package; copy to global runner home on `init`.
+**Decision**: Extract into standalone `agent-runner-v2` package.
 
 **Consequences**:
-- (+) Package can be distributed with default workflows
-- (+) Users can customize runtime workflows without modifying package
-- (+) Clean upgrade path (re-init preserves or refreshes)
-- (-) Changes to bootstrap require explicit sync to take effect
-- (-) Two sources of truth during development
+- (+) Reusable across projects
+- (+) Clearer responsibilities
+- (-) Additional packaging overhead
+- (-) Version synchronization needs
 
-### DEC-004: Centralized Constants
+### ADR-002: Meta.json as Only Channel
 
-**Context**: Path strings scattered across modules, causing inconsistencies.
+**Context**: v1 had multiple communication channels (stdout parsing, markdown write-backs, sidecars) causing ambiguity.
 
-**Decision**: All artifact keys, folder keys, and path construction in `constants.py`.
-
-**Consequences**:
-- (+) Single source of truth for all paths
-- (+) Prevents case mismatches
-- (+) Enables artifact key placeholder substitution
-- (-) Large constants file (~1,000 lines)
-- (-) Must import constants module for any path operation
-
-### DEC-007: Daemon with Child Processes
-
-**Context**: Need long-running workstation supervisor that can execute steps without blocking.
-
-**Decision**: Daemon polls backend, spawns child `execute-step` subprocess per unit of work.
+**Decision**: Meta.json sidecar is the ONLY structured result channel.
 
 **Consequences**:
-- (+) Code changes picked up automatically (fresh import per step)
-- (+) Process isolation between steps
-- (+) Child can be killed without affecting daemon
-- (-) Process management complexity
-- (-) Inter-process communication via files
+- (+) Clear contract between runner and coders
+- (+) Validatable schema
+- (+) No stdout parsing fragility
+- (-) Requires file I/O for every step
+- (-) LLM must be instructed to write files
 
-### DEC-009: Generated Document Protection
+### ADR-003: Remove Silent Recovery
 
-**Context**: Manual edits to workflow-generated documentation caused drift.
+**Context**: v1 had automatic recovery functions that masked failures.
 
-**Decision**: Generated docs carry `managed_by: workflow-generated` frontmatter and protection banner.
+**Decision**: No silent recovery; all failures route explicitly through `route_after_failure()`.
 
 **Consequences**:
-- (+) Clear ownership
-- (+) Enables automated cleanup/refresh
-- (+) Prevents accidental manual edits
-- (-) Cannot manually fix typos in generated docs
-- (-) Regeneration overwrites all content
+- (+) Transparent failure handling
+- (+) Clear retry/replan decisions
+- (-) More explicit error handling code required
+- (-) Potential for more interruptions
+
+### ADR-004: Centralized Constants
+
+**Context**: Path strings were scattered throughout the codebase.
+
+**Decision**: All paths defined in `constants.py` with layered constant system.
+
+**Consequences**:
+- (+) Single source of truth
+- (+) No path inconsistencies
+- (+) Easy to refactor paths
+- (-) Large constants file (1,333 lines)
+- (-) Import dependency on constants
+
+### ADR-005: Bootstrap/Runtime Separation
+
+**Context**: Workflow definitions needed to be customizable per installation.
+
+**Decision**: Packaged bootstrap seeds runtime bundles; runtime loads from `%USERPROFILE%\.ukbe-runner`.
+
+**Consequences**:
+- (+) Runtime customization without code changes
+- (+) Multiple workflow versions can coexist
+- (-) Sync required after bootstrap changes
+- (-) Potential for drift between bootstrap and runtime
+
+### ADR-006: Declarative Document Protection
+
+**Context**: Document guardrails were implemented procedurally.
+
+**Decision**: Use declarative `produces` lists in step configs; skip validation for scaffold workflows.
+
+**Consequences**:
+- (+) Clear contract in step definition
+- (+) Simpler implementation
+- (+) Scaffold workflows can write without restrictions
+- (-) Requires discipline in defining produces lists
+
+### ADR-007: Review/Refine Loops
+
+**Context**: Quality gates needed human oversight.
+
+**Decision**: Implement review/refine loops with max iteration limits.
+
+**Consequences**:
+- (+) Quality gates with human authority
+- (+) Coder can refine based on feedback
+- (-) Potential for infinite loops without limits
+- (-) Added complexity in routing logic
+
+### ADR-008: v2 Sidecar Schema
+
+**Context**: Needed structured result reporting.
+
+**Decision**: JSON schema with `schema_version`, `coder_result` containing `status`, `remark`, `artifacts`.
+
+**Consequences**:
+- (+) Machine-parseable results
+- (+) Versioned schema for evolution
+- (+) Clear artifact reporting
+- (-) LLM must be instructed on exact format
+
+### ADR-009: Daemon Mode
+
+**Context**: Long-running background processing needed.
+
+**Decision**: Daemon polls backend, spawns subprocess for each step.
+
+**Consequences**:
+- (+) Fresh Python process per step (no memory leaks)
+- (+) Code changes picked up automatically
+- (+) Isolation between steps
+- (-) Process spawn overhead
+- (-) No shared state between steps
+
+### ADR-010: Backend Integration
+
+**Context**: Job state needed persistence beyond local files.
+
+**Decision**: WebSocket for events, HTTP for API; local files as cache.
+
+**Consequences**:
+- (+) Persistent job state
+- (+) Event streaming for monitoring
+- (+) Multi-device access
+- (-) Network dependency
+- (-) Backend availability requirement
+
+### ADR-011: Prompt Sidecar Injection
+
+**Context**: LLMs often forgot to write meta.json.
+
+**Decision**: Automatically inject sidecar instructions into every prompt at runtime.
+
+**Consequences**:
+- (+) LLM reminded of contract every time
+- (+) Consistent formatting
+- (+) Path variables substituted automatically
+- (-) Longer prompts
+- (-) Some LLM context used for boilerplate
+
+### ADR-012: Architecture Site Generation
+
+**Context**: Stakeholders needed accessible documentation.
+
+**Decision**: Generate HTML sites from markdown documentation.
+
+**Consequences**:
+- (+) Browsable documentation
+- (+) Audience-specific views
+- (+) Searchable content
+- (-) Additional build step
+- (-) HTML generation complexity
+
+### ADR-013: Windows Pathlib Fix
+
+**Context**: `Path.relative_to()` failed on Windows for valid subpaths.
+
+**Decision**: Use `_safe_relative_to()` helper with fallback to `os.path.relpath()`.
+
+**Consequences**:
+- (+) Windows compatibility
+- (+) No behavior change on Unix
+- (-) Additional function call overhead
+- (-) Slightly more complex code
+
+### ADR-014: Pure Unit Tests
+
+**Context**: Unit tests were using `tmp_path` causing permission issues on Windows.
+
+**Decision**: Unit tests must test pure logic without filesystem dependencies.
+
+**Consequences**:
+- (+) Fast, reliable unit tests
+- (+) No Windows permission issues
+- (+) True unit isolation
+- (-) Integration tests needed for file I/O
+- (-) More test categories to maintain
 
 ## Follow-Up Decisions
 
-| ID | Description | Status | Owner |
-|----|-------------|--------|-------|
-| FUP-001 | Backend API documentation | Pending | Backend team |
-| FUP-002 | Coder timeout configuration guide | Pending | Documentation |
-| FUP-003 | Failure mode taxonomy documentation | Pending | Documentation |
-| FUP-004 | Bundle migration procedure operationalization | Pending | Operations |
-| FUP-005 | Architecture site theme customization | Pending | UX |
+### Pending
+
+| ID | Topic | Blocked By | Proposed Resolution |
+|----|-------|------------|---------------------|
+| ADR-P001 | Async step execution | Complexity | Evaluate asyncio vs threads |
+| ADR-P002 | Plugin architecture | Stability | Design formal plugin API |
+| ADR-P003 | Metrics collection | Backend support | Define metrics schema |
+
+### Superseded
+
+| ID | Original Decision | Superseded By | Reason |
+|----|-------------------|---------------|--------|
+| ADR-S001 | Procedural guardrails | ADR-006 | Declarative is cleaner |
+| ADR-S002 | stdout JSON parsing | ADR-002 | Sidecar is more reliable |
+| ADR-S003 | Markdown metadata sync | ADR-002 | Runner doesn't write docs |
 
 ---
 
-*Generated by workflow: 00_master_docs_bootstrap_v1 / step: 04_generate_architecture_docs*
+*Generated by workflow `00_master_docs_bootstrap_v1` step `04_generate_architecture_docs` on 2026-07-10T09:52:38+08:00*

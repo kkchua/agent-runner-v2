@@ -6,8 +6,8 @@ module_path: "agent_runner_v2/constants.py"
 module_area: "support"
 documentation_mode: "summary"
 owner_doc_path: "docs/codebase/02_modules/agent-runner-v2-constants.md"
-last_verified_by_change: "00_master_docs_bootstrap_v1 / 00DOC-GEN-20260709-002 / 2026-07-09T21:13:38+08:00"
-created: "2026-07-09T21:13:38+08:00"
+last_verified_by_change: "00_master_docs_bootstrap_v1 / 00DOC-GEN-20260710-004 / 2026-07-10T09:40:54+08:00"
+created: "2026-07-10T09:40:54+08:00"
 owner: "00_master_docs_bootstrap_v1"
 ---
 
@@ -68,6 +68,55 @@ No public classes.
 | Name | Type | Default | Description |
 |------|------|---------|-------------|
 | `key` | `str` | — | Artifact key (e.g., ARTIFACT_KEY_PROJECT_ANALYSIS) |
+
+**Returns**: `str`
+
+---
+
+#### relpath()
+
+**Signature**: `relpath(*parts: str)`
+
+**Purpose**: Join path fragments into a repository-relative POSIX path.
+
+**Parameters**:
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `*parts` | `str` | — | — |
+
+**Returns**: `str`
+
+---
+
+#### file_in_folder()
+
+**Signature**: `file_in_folder(folder_key: str, filename: str)`
+
+**Purpose**: Build a repository-relative path for a literal filename in a known folder.
+
+**Parameters**:
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `folder_key` | `str` | — | — |
+| `filename` | `str` | — | — |
+
+**Returns**: `str`
+
+---
+
+#### artifact_meta_path()
+
+**Signature**: `artifact_meta_path(artifact_rel: str)`
+
+**Purpose**: Return the sidecar path for an artifact path.
+
+**Parameters**:
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `artifact_rel` | `str` | — | — |
 
 **Returns**: `str`
 
@@ -360,6 +409,16 @@ No public classes.
 
 ---
 
+#### prompt_literal_substitutions()
+
+**Signature**: `prompt_literal_substitutions()`
+
+**Purpose**: Map known literal file paths to canonical prompt placeholders.
+
+**Returns**: `dict[str, str]`
+
+---
+
 #### architecture_site_pages()
 
 **Signature**: `architecture_site_pages()`
@@ -452,6 +511,13 @@ No public classes.
 | `FILENAME_SITE_MANIFEST_JSON` | module configuration |
 | `FILENAME_SITE_CONTENT_MD` | module configuration |
 | `FILENAME_SITE_INDEX_BASE` | module configuration |
+| `FILENAME_META_JSON` | module configuration |
+| `FILENAME_SUBMISSION_RESULTS_JSON` | module configuration |
+| `FILENAME_SUBMISSION_RESULTS_META_JSON` | module configuration |
+| `FILENAME_BUG_REPORT` | module configuration |
+| `FILENAME_BUG_REPRODUCTION` | module configuration |
+| `FILENAME_ROOT_CAUSE` | module configuration |
+| `FILENAME_PATCH` | module configuration |
 | `FILENAME_ARCH_STAKEHOLDER_HTML` | module configuration |
 | `FILENAME_ARCH_DEVELOPER_HTML` | module configuration |
 | `FILENAME_ARCH_FUNCTIONAL_HTML` | module configuration |
@@ -667,8 +733,12 @@ No public classes.
 | `ARTIFACT_PATH_OPERATOR_SITE_MARKDOWN` | module configuration |
 | `ARTIFACT_PATH_TESTER_SITE_MARKDOWN` | module configuration |
 | `ARTIFACT_PATH_USER_SITE_MARKDOWN` | module configuration |
+| `DELIVERY_SCAFFOLD_DIRS` | module configuration |
+| `RUN_AGENT_REQUIRED_DOC_DIRS` | module configuration |
 | `REFERENCE_FILES` | module configuration |
 | `FOLDER_ROOT_CONSTANTS` | module configuration |
+| `SIDECAR_INSTRUCTION_TEMPLATE` | module configuration |
+| `TOOL_INSTRUCTION_TEMPLATE` | module configuration |
 | `DELIVERY_SOP_REQUIRED_SECTIONS` | module configuration |
 | `DELIVERY_STATUS_RULES_REQUIRED_SECTIONS` | module configuration |
 | `CODEBASE_SOP_REQUIRED_SECTIONS` | module configuration |
@@ -693,4 +763,4 @@ No documented exceptions.
 
 | Date | Change | Verified By |
 |------|--------|-------------|
-| 2026-07-09 | Initial baseline generated from repository scan | 00_master_docs_bootstrap_v1 |
+| 2026-07-10 | Initial baseline generated from repository scan | 00_master_docs_bootstrap_v1 |

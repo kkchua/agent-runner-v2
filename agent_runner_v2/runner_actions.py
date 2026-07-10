@@ -32,12 +32,20 @@ from .actions.sync_system_docs import sync_system_docs
 from .actions.validate_codebase_docs import validate_codebase_docs
 from .actions.validate_delivery_docs import validate_delivery_docs
 from .actions.validate_architecture_site import validate_architecture_site
+from .actions.validate_stakeholder_site import validate_stakeholder_site
+from .actions.validate_developer_site import validate_developer_site
+from .actions.validate_operator_site import validate_operator_site
+from .actions.validate_tester_site import validate_tester_site
+from .actions.validate_user_site import validate_user_site
 from .actions.validate_system_docs import validate_system_docs
 from .actions.execute_t2i import execute_t2i
 from .actions.execute_i2v import execute_i2v
 from .actions.execute_voiceover import execute_voiceover
 from .actions.assemble_video import assemble_video
 from .actions.publish_architecture_site import publish_architecture_site
+from .actions.generate_site import generate_site
+from .actions.generate_site_pdf import generate_site_pdf
+from .actions.archive_previous_version import archive_previous_version
 
 logger = logging.getLogger(__name__)
 
@@ -49,6 +57,9 @@ logger = logging.getLogger(__name__)
 ACTION_REGISTRY: dict[str, Callable] = {
     "copy_artifact": copy_artifact,
     "finalize_bootstrap": finalize_bootstrap,
+    "generate_site": generate_site,
+    "generate_site_pdf": generate_site_pdf,
+    "archive_previous_version": archive_previous_version,
     "promote_artifact": promote_artifact,
     "promote_init": promote_init,
     "prepare_delivery_scaffold": prepare_delivery_scaffold,
@@ -59,6 +70,11 @@ ACTION_REGISTRY: dict[str, Callable] = {
     "validate_codebase_docs": validate_codebase_docs,
     "validate_delivery_docs": validate_delivery_docs,
     "validate_architecture_site": validate_architecture_site,
+    "validate_stakeholder_site": validate_stakeholder_site,
+    "validate_developer_site": validate_developer_site,
+    "validate_operator_site": validate_operator_site,
+    "validate_tester_site": validate_tester_site,
+    "validate_user_site": validate_user_site,
     "validate_system_docs": validate_system_docs,
     "execute_t2i": execute_t2i,
     "execute_i2v": execute_i2v,

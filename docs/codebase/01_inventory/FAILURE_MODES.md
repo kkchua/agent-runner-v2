@@ -1,124 +1,111 @@
 ---
 template_id: "CB-04-FM"
+title: "Failure Modes Catalog - agent-runner-v2"
+status: "active"
+change_id: "00DOC-GEN-20260710-004"
 workflow: "00_master_docs_bootstrap_v1"
 step: "04c_generate_failure_docs"
-generated: "2026-07-09T21:38:49+08:00"
 managed_by: workflow-generated
-change_id: "00DOC-GEN-20260709-002"
+generated: "2026-07-10T10:10:12+08:00"
 ---
 
 > Managed by workflow: `00_master_docs_bootstrap_v1` / step: `04c_generate_failure_docs`
 > This file is workflow-generated and protected from manual edits.
 
-# Failure Modes: agent-runner-v2
+# Failure Modes Catalog: agent-runner-v2
 
-Comprehensive catalog of all error conditions, exception handling patterns, and recovery procedures in the agent-runner-v2 codebase.
+This document provides a comprehensive catalog of all error conditions, exception handling patterns, and recovery procedures in the agent-runner-v2 codebase.
 
-## 1. Exception Taxonomy
+## Table of Contents
 
-### 1.1 Core Exception Types
+1. [Exception Catalog](#exception-catalog)
+2. [Failure Classification System](#failure-classification-system)
+3. [Error Handling Patterns](#error-handling-patterns)
+4. [Retry and Recovery Procedures](#retry-and-recovery-procedures)
+5. [Operational Troubleshooting Guide](#operational-troubleshooting-guide)
+6. [Common Failure Scenarios](#common-failure-scenarios)
 
-The codebase defines explicit exception types in `agent_runner_v2/exceptions.py`:
+---
 
-| Exception | Module | Purpose |
-|-----------|--------|---------|
-| `PreflightBlockedError` | `exceptions.py` | Raised when preflight checks block step execution (e.g., artifact status not approved) |
-| `MetaJsonMissingError` | `exceptions.py` | Raised when coder did not write expected meta.json sidecar after invocation |
-| `MetaJsonInvalidError` | `exceptions.py` | Raised when meta.json exists but fails schema validation |
-| `ArtifactMissingError` | `exceptions.py` | Raised when coder_result.artifacts references paths that don't exist on disk |
-| `CoderInvocationError` | `coder_adapters.py` | Raised when coder process fails (non-zero return code, timeout, or communication error) |
+## Exception Catalog
 
-### 1.2 Exception Inheritance
+### Core Exception Types (exceptions.py)
 
-```
-Exception (built-in)
-├── PreflightBlockedError
-├── MetaJsonMissingError
-├── MetaJsonInvalidError
-├── ArtifactMissingError
-└── CoderInvocationError (dataclass)
-```
+| Exception | When Raised | Raised By | Handling | Recovery |
+|-----------|-------------|-----------|----------|----------|
+| `PreflightBlockedError` | Preflight check blocks step execution (e.g., artifact status not approved, missing dependencies) | `job_state.py` - various preflight validation functions | Caught in `run_agent.py`, routed to failure handling | Human intervention required - review preflight conditions |
+| `MetaJsonMissingError` | Coder did not write expected meta.json sidecar after invocation | `step_runner.py` - `_read_and_validate_meta_json()` | Hard failure - no recovery, no disk fallback | Human retry required - check coder output and sidecar path |
+| `MetaJsonInvalidError` | meta.json exists but fails schema validation (missing required fields, invalid JSON, wrong version) | `step_runner.py` - `_read_and_validate_meta_json()` | Hard failure with descriptive error message | Human retry required - validate sidecar schema |
+| `ArtifactMissingError` | meta.json references artifact paths that don't exist on disk | `step_runner.py` - `_validate_artifact_files_exist()` | Hard failure with list of missing paths | Human retry required - verify artifact generation |
 
-## 2. Failure Classification System
+### Coder Adapter Exception (coder_adapters.py)
 
-### 2.1 CONTROL_CLASSES
+| Exception | When Raised | Raised By | Handling | Recovery |
+|-----------|-------------|-----------|----------|----------|
+| `CoderInvocationError` | Coder process failed (non-zero exit, timeout, API error) | `coder_adapters.py` - all `_invoke_*` functions | Caught in `run_agent.py`, routed to failure handling | Transient errors are auto-retryable; persistent errors require human intervention |
 
-Defined in `agent_runner_v2/job_state.py`:
+### Standard Library Exceptions Used
+
+| Exception | Usage Context | Handling Pattern |
+|-----------|---------------|------------------|
+| `ValueError` | Configuration validation, parameter validation, preflight checks | Raised for invalid inputs; caught and classified in `classify_pre_run_failure()` |
+| `FileNotFoundError` | Missing job files, missing artifact directories | Raised when required files don't exist; caught and converted to failure envelope |
+| `RuntimeError` | Workflow module not loaded, backend request failures | Raised for unrecoverable runtime conditions |
+| `subprocess.TimeoutExpired` | Coder subprocess timeout | Caught and wrapped in `CoderInvocationError` |
+| `json.JSONDecodeError` | Invalid JSON in sidecar or job state | Caught and classified as `CORRUPTED_JOB_STATE` (FATAL) |
+
+---
+
+## Failure Classification System
+
+### Control Classes (job_state.py)
+
+The `CONTROL_CLASSES` constant defines three failure severity levels:
 
 ```python
 CONTROL_CLASSES = {"AUTO_RETRYABLE", "HUMAN_RETRY_REQUIRED", "FATAL"}
 ```
 
-| Class | Meaning | Routing Behavior |
-|-------|---------|------------------|
-| `AUTO_RETRYABLE` | Transient error that may succeed on retry | Sets job status to `WAITING_FOR_AUTO_RETRY` |
-| `HUMAN_RETRY_REQUIRED` | Requires human intervention to resolve | Sets job status to `WAITING_FOR_HUMAN_INTERVENTION` |
-| `FATAL` | Unrecoverable error, workflow cannot continue | Sets job status to `FAILED` |
+| Class | Description | Auto-Retry | Human Intervention | Examples |
+|-------|-------------|------------|-------------------|----------|
+| `AUTO_RETRYABLE` | Transient errors that may succeed on retry | Yes | No | Network timeouts, rate limits, API temporary failures |
+| `HUMAN_RETRY_REQUIRED` | Errors requiring human review before retry | No | Yes | Invalid sidecar, missing artifacts, configuration errors |
+| `FATAL` | Errors that cannot be recovered | No | Terminal | Policy violations, out-of-scope requests, corrupted state |
 
-### 2.2 FAILURE_SOURCES
+### Failure Sources (job_state.py)
+
+The `FAILURE_SOURCES` constant identifies where failures originate:
 
 ```python
 FAILURE_SOURCES = {"runner", "adapter", "model", "validator"}
 ```
 
-| Source | Description | Typical Failures |
-|--------|-------------|------------------|
-| `runner` | Internal runner logic error | Configuration errors, state inconsistencies |
-| `adapter` | Coder adapter invocation failure | Process spawn failure, timeout, communication error |
-| `model` | LLM/coder returned REJECTED | Content rejection, validation failure |
-| `validator` | Post-invocation validation failure | Missing meta.json, invalid schema, missing artifacts |
+| Source | Description | Typical Failure Codes |
+|--------|-------------|---------------------|
+| `runner` | Core runner logic and orchestration | `INVALID_RUNNER_CONFIGURATION`, `UNKNOWN_CODER` |
+| `adapter` | Coder adapter layer (Claude, Codex, Qwen) | `ADAPTER_INVOCATION_FAILED`, `TRANSIENT_API_ERROR` |
+| `model` | LLM coder decisions and outputs | `MODEL_REJECTED`, various content errors |
+| `validator` | Validation layer (meta.json, artifacts) | `META_JSON_MISSING`, `META_JSON_INVALID`, `ARTIFACT_MISSING` |
 
-### 2.3 Non-Terminal Job Statuses
+### Exception Classification Mapping
 
-```python
-NON_TERMINAL_JOB_STATUSES = {
-    "IN_PROGRESS",
-    "WAITING_FOR_AUTO_RETRY",
-    "WAITING_FOR_HUMAN_INTERVENTION",
-    "WAITING_FOR_HUMAN_APPROVAL",
-}
-```
+The `_classify_exception_v2()` function in `workflow_router.py` maps exceptions to failure classes:
 
-## 3. Exception Catalog
+| Exception | Failure Class | Failure Code | Failure Source |
+|-----------|---------------|--------------|----------------|
+| `CoderInvocationError` (transient) | `AUTO_RETRYABLE` | `TRANSIENT_API_ERROR` | `adapter` |
+| `CoderInvocationError` (persistent) | `HUMAN_RETRY_REQUIRED` | `ADAPTER_INVOCATION_FAILED` | `adapter` |
+| `MetaJsonMissingError` | `HUMAN_RETRY_REQUIRED` | `META_JSON_MISSING` | `validator` |
+| `MetaJsonInvalidError` | `HUMAN_RETRY_REQUIRED` | `META_JSON_INVALID` | `validator` |
+| `ArtifactMissingError` | `HUMAN_RETRY_REQUIRED` | `ARTIFACT_FILES_MISSING` | `validator` |
+| Unknown exceptions | `FATAL` | `UNEXPECTED_RUNNER_ERROR` | `runner` |
 
-### 3.1 Exception Detail Table
+### Transient Error Detection
 
-| Exception | When Raised | Raised By | Handling | Recovery |
-|-----------|-------------|-----------|----------|----------|
-| `PreflightBlockedError` | Artifact required by step has status not in `APPROVED`, `COMPLETED`, or `DRAFT` | `check_preflight_artifact_status()` in `job_state.py` | Caught in `run_agent.py`, routes to failure with `HUMAN_RETRY_REQUIRED` | Approve or complete the blocking artifact; ensure document is in correct status |
-| `MetaJsonMissingError` | Coder completed but meta.json sidecar not found at expected path | `_read_and_validate_meta_json()` in `step_runner.py` | Routed via `route_after_failure()` with `HUMAN_RETRY_REQUIRED` | Check coder logs; ensure coder writes sidecar; verify path resolution |
-| `MetaJsonInvalidError` | meta.json exists but fails schema validation (missing fields, wrong type, invalid status) | `_read_and_validate_meta_json()` in `step_runner.py` | Routed via `route_after_failure()` with `HUMAN_RETRY_REQUIRED` | Check coder output; ensure valid JSON structure with required fields |
-| `ArtifactMissingError` | meta.json references artifact paths that don't exist on disk | `_validate_artifact_files_exist()` in `step_runner.py` | Routed via `route_after_failure()` with `HUMAN_RETRY_REQUIRED` | Check coder file writes; verify paths in meta.json match actual files |
-| `ArtifactMissingError` (unauthorized) | Step reported artifacts not in its `produces` list | `_validate_artifacts_in_produces_list()` in `step_runner.py` | Routed via `route_after_failure()` with `HUMAN_RETRY_REQUIRED` | Update step config `produces` list or coder to only write declared artifacts |
-| `CoderInvocationError` | Coder process returned non-zero exit code | `invoke_coder()` in `coder_adapters.py` | Routed via `route_after_failure()` with classification based on error message | Check process logs; verify coder installation; check timeout settings |
-| `CoderInvocationError` (timeout) | Coder process exceeded timeout without producing valid sidecar | `_run_with_sidecar_poll()` in `coder_adapters.py` | Routed via `route_after_failure()` with `AUTO_RETRYABLE` if transient | Increase timeout; check coder performance; verify network connectivity |
-
-### 3.2 Exception Classification Logic
-
-Located in `workflow_router.py`:
-
-```python
-def _classify_exception_v2(exc: Exception) -> tuple[str, str, str]:
-    """Map v2 exception types to (failure_class, failure_code, failure_source)."""
-    if isinstance(exc, CoderInvocationError):
-        if _looks_like_transient_error(str(exc)):
-            return "AUTO_RETRYABLE", "TRANSIENT_API_ERROR", "adapter"
-        return "HUMAN_RETRY_REQUIRED", "ADAPTER_INVOCATION_FAILED", "adapter"
-    if isinstance(exc, MetaJsonMissingError):
-        return "HUMAN_RETRY_REQUIRED", "META_JSON_MISSING", "validator"
-    if isinstance(exc, MetaJsonInvalidError):
-        return "HUMAN_RETRY_REQUIRED", "META_JSON_INVALID", "validator"
-    if isinstance(exc, ArtifactMissingError):
-        return "HUMAN_RETRY_REQUIRED", "ARTIFACT_FILES_MISSING", "validator"
-    # Unknown exception — treat as fatal
-    return "FATAL", "UNEXPECTED_RUNNER_ERROR", "runner"
-```
-
-Transient error detection:
+The `_looks_like_transient_error()` function identifies auto-retryable conditions:
 
 ```python
 def _looks_like_transient_error(message: str) -> bool:
-    lowered = message.lower()
     hints = (
         "connection error", "fetch failed", "timed out", "timeout", "temporar",
         "rate limit", "429", "service unavailable", "api error", "network error",
@@ -126,319 +113,298 @@ def _looks_like_transient_error(message: str) -> bool:
     return any(hint in lowered for hint in hints)
 ```
 
-## 4. Error Handling Patterns by Step Type
+---
 
-### 4.1 Coder Steps (LLM Invocation)
+## Error Handling Patterns
 
-**Execution flow in `step_runner.py:run_step()`:**
+### Coder Step Execution Flow
 
-1. **Pre-invocation**: Resolve meta.json path before coder runs
-2. **Invocation**: Call `invoke_coder()` which may raise `CoderInvocationError`
-3. **Sidecar reading**: `_repair_or_validate_meta_json()` may raise `MetaJsonMissingError` or `MetaJsonInvalidError`
-4. **Artifact validation**: `_validate_artifact_files_exist()` may raise `ArtifactMissingError`
-5. **Template conformance**: `_validate_template_conformance()` (optional)
-6. **Produces validation**: `_validate_artifacts_in_produces_list()` may raise `ArtifactMissingError`
-
-**Failure routing:**
-- All exceptions bubble up to `run_agent.py`
-- Caught and routed via `workflow_router.route_after_failure()`
-- Exit codes: 0=continue, 1=intervention required, 2=fatal
-
-### 4.2 Action Steps (Deterministic)
-
-**Execution flow in `step_runner.py:run_action()`:**
-
-1. Execute action via `runner_actions.execute()`
-2. Action writes its own meta.json
-3. Validate with `_read_and_validate_meta_json()`
-4. Validate artifacts exist
-5. Enrich sidecar with runner_data
-
-**Failure routing:**
-- Action-specific exceptions caught same as coder steps
-- Action is responsible for writing valid meta.json
-
-### 4.3 Review Steps
-
-**Rejection handling in `workflow_router.py:_route_rejected()`:**
-
-1. Check for `on_reject_refine` configuration
-2. If configured, enter refine/replan loop
-3. If not, classify as model rejection
-4. Update failure tracking
-5. Route to auto-retry or human intervention
-
-## 5. Retry and Recovery Procedures
-
-### 5.1 Retry Mechanisms
-
-**Auto-retry (CONTROL_CLASS = AUTO_RETRYABLE):**
-
-```python
-set_job_status(state, "WAITING_FOR_AUTO_RETRY")
+```
+run_step() in step_runner.py
+├── invoke_coder() → May raise CoderInvocationError
+├── _read_and_validate_meta_json() → May raise MetaJsonMissingError, MetaJsonInvalidError
+├── _validate_artifact_files_exist() → May raise ArtifactMissingError
+├── _validate_artifacts_in_produces_list() → May raise ArtifactMissingError (unauthorized)
+└── Returns StepResult
 ```
 
-Triggered by:
-- Transient API errors (connection, timeout, rate limit)
-- Service unavailable errors
+### Action Step Execution Flow
 
-**Human retry (CONTROL_CLASS = HUMAN_RETRY_REQUIRED):**
-
-```python
-set_job_status(state, "WAITING_FOR_HUMAN_INTERVENTION")
-state["pending_intervention_for"] = step
+```
+run_action() in step_runner.py
+├── execute_action() from runner_actions.py
+├── _read_and_validate_meta_json() → May raise MetaJsonMissingError, MetaJsonInvalidError
+├── _validate_artifact_files_exist() → May raise ArtifactMissingError
+└── Returns StepResult
 ```
 
-Triggered by:
-- Configuration errors
-- Schema validation failures
-- Missing artifacts
-- Model rejections that exceed retry limits
+### Failure Routing Flow
 
-### 5.2 Refine/Replan Loop Mechanics
-
-**Loop configuration in template_groups.py:**
-
-```python
-"on_reject_refine": {
-    "step": "refine_step_name",
-    "artifact": "ARTIFACT_KEY",
-    "max_iterations": 2,
-    "exhausted_failure_code": "REFINEMENT_EXHAUSTED",
-    "exhausted_failure_class": "HUMAN_RETRY_REQUIRED",
-}
+```
+Exception raised
+├── Caught in run_agent.py main execution loop
+├── classify_pre_run_failure() for pre-run failures
+│   └── Returns failure envelope with class, code, source
+└── route_after_failure() in workflow_router.py
+    ├── _classify_exception_v2() maps exception to (class, code, source)
+    ├── set_last_failure() records failure in job state
+    ├── append_failure_history() adds to failure history
+    └── Routes to:
+        ├── AUTO_RETRYABLE → WAITING_FOR_AUTO_RETRY
+        ├── HUMAN_RETRY_REQUIRED → WAITING_FOR_HUMAN_INTERVENTION
+        └── FATAL → FAILED (terminal)
 ```
 
-**Loop execution:**
+### Model Rejection Handling
 
-1. Review step returns REJECTED
-2. `_route_loop_or_replan()` checks iteration count
-3. If under max_iterations: trigger refine step
-4. If exhausted: check for replan configuration
-5. If replan exhausted: mark as HUMAN_RETRY_REQUIRED
+When a step returns `REJECTED` status (not an exception):
 
-**Replan configuration:**
-
-```python
-"on_exhaust_replan": {
-    "step": "replan_step_name",
-    "artifact": "ARTIFACT_KEY",
-    "max_replans": 1,
-    "terminal_failure_code": "REPLAN_EXHAUSTED",
-}
+```
+route_after_step() in workflow_router.py
+├── If on_reject_refine configured → _route_loop_or_replan()
+│   ├── Loop iteration check
+│   ├── Replan attempt check
+│   └── Exhaustion → HUMAN_RETRY_REQUIRED
+└── Otherwise → _classify_model_rejection()
+    ├── Check reject_code against CONTROL_CLASSES
+    ├── Check for transient error patterns
+    └── Classify as AUTO_RETRYABLE, HUMAN_RETRY_REQUIRED, or FATAL
 ```
 
-### 5.3 Planning Attempt Budget
+---
 
-Prevents infinite refinement loops:
+## Retry and Recovery Procedures
 
-```python
-def _consume_planning_attempt_budget(*, state: dict, group_cfg: dict) -> tuple[bool, int]:
-    limit = int(group_cfg.get("max_planning_attempts", 0) or 0)
-    if limit <= 0:
-        return True, 0
-    current = int(state.get("planning_attempt_count", 0)) + 1
-    state["planning_attempt_count"] = current
-    return current <= limit, current
-```
+### Retry Counter Mechanics
 
-When budget exceeded:
-- Failure class: `HUMAN_RETRY_REQUIRED`
-- Failure code: `PLANNING_ATTEMPT_BUDGET_EXCEEDED`
+Three retry counters are maintained per step in job state:
 
-## 6. Failure State Tracking
+| Counter | Purpose | Increment Condition |
+|---------|---------|---------------------|
+| `reject_counts` | Total rejection count for a step | Every rejection or failure |
+| `auto_retry_count_by_step` | Auto-retry specific count | Only for AUTO_RETRYABLE failures |
+| `human_retry_count_by_step` | Human retry specific count | Only for HUMAN_RETRY_REQUIRED failures |
 
-### 6.1 Job State Failure Fields
+### Max Rejects Threshold
+
+The `max_rejects` parameter (default from group config) determines when a step is considered failed:
 
 ```python
-# Current failure (last occurrence)
-state["last_failure_class"]      # CONTROL_CLASSES value
-state["last_failure_code"]       # Specific error code
-state["last_failure_reason"]     # Human-readable message
-state["last_failure_source"]     # FAILURE_SOURCES value
-state["pending_intervention_for"] # Step requiring intervention
-
-# Historical record
-state["failure_history"] = [
-    {
-        "step": str,
-        "failure_class": str,
-        "failure_code": str,
-        "failure_source": str,
-        "timestamp": str,
-    }
-]
-
-# Retry counters
-state["reject_counts"]                # Total rejects by step
-state["auto_retry_count_by_step"]      # Auto retries by step
-state["human_retry_count_by_step"]    # Human retries by step
+if failure_class == "FATAL" or current_count >= max_rejects:
+    set_job_status(state, "FAILED")
+    # Terminal state
 ```
 
-### 6.2 Retry History
+### Recovery State Machine
+
+```
+IN_PROGRESS
+├── Step completes APPROVED → advance to next step
+├── Step returns REJECTED → evaluate retry/replan
+│   ├── Loop iteration available → refine step
+│   ├── Replan available → replan step
+│   └── Exhausted → WAITING_FOR_HUMAN_INTERVENTION
+└── Exception → route_after_failure()
+    ├── AUTO_RETRYABLE → WAITING_FOR_AUTO_RETRY
+    ├── HUMAN_RETRY_REQUIRED → WAITING_FOR_HUMAN_INTERVENTION
+    └── FATAL → FAILED
+
+WAITING_FOR_AUTO_RETRY
+└── Automatic retry on next poll/execution
+
+WAITING_FOR_HUMAN_INTERVENTION
+└── Requires manual --approve-step or investigation
+
+FAILED
+└── Terminal - requires new job or manual recovery
+```
+
+### Preflight Blocked Recovery
+
+When `PreflightBlockedError` is raised:
 
 ```python
-state["retry_history"] = [
-    {
-        "step": str,
-        "attempted_at": str,
-        "coder_used": str,
-        "return_code": int | None,
-        "result_status": str,
-        "result_remark": str,
-        "reject_code": str | None,
-        "reject_type": str | None,  # failure_class for failures
-        "failure_source": str | None,
-    }
-]
+# In run_agent.py
+try:
+    check_preflight_artifact_status(...)
+except PreflightBlockedError as exc:
+    envelope = classify_pre_run_failure(exc)
+    # Record failure and route
+    set_last_failure(...)
+    append_failure_history(...)
 ```
 
-## 7. Common Failure Scenarios
+Common preflight block conditions:
+- `PREFLIGHT_STATUS_NOT_APPROVED`: Required artifact not in approved state
+- `PREFLIGHT_ARTIFACT_MISSING`: Required artifact file not found
+- `PREFLIGHT_TASK_QUEUE_EXHAUSTED`: Task generation queue exhausted
 
-### 7.1 Sidecar Failures
+---
 
-| Scenario | Cause | Diagnosis | Recovery |
-|----------|-------|-----------|----------|
-| Missing meta.json | Coder crashed or exited without writing sidecar | Check `raw_output.txt` and `stderr.txt` in step directory | Restart step; check coder health |
-| Invalid JSON | Coder wrote malformed JSON | Check meta.json content for syntax errors | Fix coder JSON generation; retry |
-| Missing recorded_at | Coder wrote incomplete sidecar | Check meta.json has all required fields | Ensure coder includes timestamp |
-| Invalid status | Status not APPROVED/REJECTED | Check coder result status normalization | Update coder to output valid status |
+## Operational Troubleshooting Guide
 
-### 7.2 Artifact Failures
+### Diagnosing Failures
 
-| Scenario | Cause | Diagnosis | Recovery |
-|----------|-------|-----------|----------|
-| Artifact file missing | Coder claimed file in meta.json but didn't write it | Check meta.json artifacts vs actual files | Ensure coder writes files before sidecar |
-| Unauthorized artifact | Step wrote artifact not in `produces` list | Check step config `produces` | Add artifact to `produces` or restrict coder |
-| Path resolution failure | Artifact path cannot be resolved | Check path format and base directory | Use relative paths from project root |
+1. **Check job.json status:**
+   ```bash
+   ukbe-run-agent run --template-group <group> --job-id <id> --check-job-status
+   ```
 
-### 7.3 Coder Invocation Failures
+2. **Review last failure fields:**
+   - `last_failure_class`: AUTO_RETRYABLE, HUMAN_RETRY_REQUIRED, FATAL
+   - `last_failure_code`: Specific error code
+   - `last_failure_reason`: Human-readable description
+   - `last_failure_source`: runner, adapter, model, validator
 
-| Scenario | Cause | Diagnosis | Recovery |
-|----------|-------|-----------|----------|
-| Process timeout | Coder exceeded timeout seconds | Check `duration_ms` in usage | Increase timeout; optimize coder |
-| Non-zero exit code | Coder process crashed | Check stderr.txt for stack traces | Fix coder bug; retry |
-| Sidecar poll timeout | Coder running but no valid sidecar | Check sidecar validation logs | Debug coder sidecar writing |
+3. **Examine failure_history:**
+   ```json
+   {
+     "step": "step_name",
+     "failure_class": "HUMAN_RETRY_REQUIRED",
+     "failure_code": "META_JSON_MISSING",
+     "failure_source": "validator",
+     "timestamp": "2026-07-10T10:10:12"
+   }
+   ```
 
-### 7.4 Configuration Failures
+### Common Error Codes and Resolution
 
-| Scenario | Cause | Diagnosis | Recovery |
-|----------|-------|-----------|----------|
-| Unknown coder | Coder not in model_mapping.json | Check coder name in step config | Configure coder in model_mapping.json |
-| Missing prompt file | Prompt template not found | Check prompt path resolution | Ensure prompt file exists in workflow bundle |
-| Invalid step config | Step configuration malformed | Check step_cfg structure | Fix template_groups.py step definition |
+| Error Code | Meaning | Resolution |
+|------------|---------|------------|
+| `META_JSON_MISSING` | Coder didn't write sidecar | Check coder logs, verify prompt instructions |
+| `META_JSON_INVALID` | Sidecar schema invalid | Validate JSON structure, check required fields |
+| `ARTIFACT_MISSING` | Referenced files don't exist | Verify artifact generation, check paths |
+| `ADAPTER_INVOCATION_FAILED` | Coder process failed | Check API keys, network, coder configuration |
+| `TRANSIENT_API_ERROR` | Temporary API failure | Auto-retry will handle; check rate limits |
+| `PREFLIGHT_STATUS_NOT_APPROVED` | Required artifact not approved | Approve prerequisite steps first |
+| `PLANNING_ATTEMPT_BUDGET_EXCEEDED` | Max planning attempts reached | Review planning loop configuration |
+| `REFINEMENT_EXHAUSTED` | Max refinement iterations reached | Review coder output quality, adjust thresholds |
 
-## 8. Operational Troubleshooting Guide
+### Notification on Failure
 
-### 8.1 Checking Job State
+The runner sends notifications for failure events:
+
+```python
+# workflow_router.py
+send_workflow_notification("FAILED", dict(state))  # Terminal failures
+send_workflow_notification("WAITING_FOR_HUMAN_INTERVENTION", dict(state))  # Intervention required
+send_step_notification("STEP_FAILED", state, step, step_cfg)  # Step-specific failures
+```
+
+### Recovery Commands
 
 ```bash
-# View job state
-cat ~/.ukbe-runner/jobs/<workflow>/<job_id>/job.json | jq .
+# Force approve a stuck step
+ukbe-run-agent run --template-group <group> --job-id <id> --approve-step <step>
 
-# Check specific failure fields
-cat ~/.ukbe-runner/jobs/<workflow>/<job_id>/job.json | jq '{status, last_failure_class, last_failure_code, last_failure_reason}'
+# Force approve regardless of review decision
+ukbe-run-agent run --template-group <group> --job-id <id> --force-approve-step <step>
+
+# Reapply routing logic
+ukbe-run-agent run --template-group <group> --job-id <id> --reapply-routing
+
+# Override current step
+ukbe-run-agent run --template-group <group> --job-id <id> --override-step <step>
 ```
 
-### 8.2 Examining Step Outputs
+---
 
-```bash
-# List step directories
-ls -la ~/.ukbe-runner/jobs/<workflow>/<job_id>/
+## Common Failure Scenarios
 
-# Check step outputs
-cat ~/.ukbe-runner/jobs/<workflow>/<job_id>/<step_dir>/raw_output.txt
-cat ~/.ukbe-runner/jobs/<workflow>/<job_id>/<step_dir>/stderr.txt
-cat ~/.ukbe-runner/jobs/<workflow>/<job_id>/<step_dir>/meta.json | jq .
-```
+### Scenario 1: Sidecar Not Written
 
-### 8.3 Retry Commands
+**Symptoms:**
+- `MetaJsonMissingError` raised
+- `failure_code`: `META_JSON_MISSING`
 
-```bash
-# Retry failed step
-ukbe-run-agent run --workflow <workflow> --retry <job_id>
+**Causes:**
+- Coder didn't understand sidecar requirement
+- Coder process crashed before writing
+- Wrong path calculation
 
-# Force approve (emergency only)
-ukbe-run-agent approve --workflow <workflow> --job-id <job_id> --step <step>
-```
+**Resolution:**
+1. Check step directory for any output files
+2. Review coder logs in `raw_output.txt` and `stderr.txt`
+3. Verify prompt includes sidecar instruction template
+4. Retry with corrected prompt
 
-### 8.4 Log Analysis
+### Scenario 2: Artifact Files Missing
 
-Key log locations:
-- Step directory: `raw_output.txt`, `stderr.txt`, `usage.json`
-- Job directory: `job.json`
-- Runner logs: Console output from `run_agent.py`
+**Symptoms:**
+- `ArtifactMissingError` raised
+- List of missing paths in error message
 
-Sidecar validation debug logs (when enabled):
-- `[_is_valid_sidecar_json]` entries show validation progress
-- Check mtime stability checks for file write races
+**Causes:**
+- Coder claimed artifacts it didn't create
+- Path resolution error
+- File write failed silently
 
-## 9. Failure Code Reference
+**Resolution:**
+1. Check step directory for actual files created
+2. Verify `produces` list in step configuration
+3. Check for path construction errors
+4. Retry with corrected artifact paths
 
-### 9.1 System Failure Codes
+### Scenario 3: Coder Timeout
 
-| Code | Class | Description |
-|------|-------|-------------|
-| `TRANSIENT_API_ERROR` | AUTO_RETRYABLE | Network/connection/temporary API failure |
-| `ADAPTER_INVOCATION_FAILED` | HUMAN_RETRY_REQUIRED | Coder process failed to spawn or communicate |
-| `META_JSON_MISSING` | HUMAN_RETRY_REQUIRED | Coder did not write required meta.json sidecar |
-| `META_JSON_INVALID` | HUMAN_RETRY_REQUIRED | meta.json failed schema validation |
-| `ARTIFACT_FILES_MISSING` | HUMAN_RETRY_REQUIRED | Referenced artifact files don't exist |
-| `INVALID_RUNNER_CONFIGURATION` | HUMAN_RETRY_REQUIRED | Step or workflow configuration error |
-| `UNKNOWN_CODER` | HUMAN_RETRY_REQUIRED | Coder not found in configuration |
-| `PLANNING_ATTEMPT_BUDGET_EXCEEDED` | HUMAN_RETRY_REQUIRED | Max refinement/replan attempts exceeded |
-| `UNEXPECTED_RUNNER_ERROR` | FATAL | Unhandled exception in runner |
+**Symptoms:**
+- `CoderInvocationError` with timeout message
+- `failure_code`: `TRANSIENT_API_ERROR` (if transient) or `ADAPTER_INVOCATION_FAILED`
 
-### 9.2 Workflow-Specific Failure Codes
+**Causes:**
+- Network latency
+- API rate limiting
+- Complex operation taking too long
 
-Defined in `template_groups.py` for each workflow:
+**Resolution:**
+1. Check `AGENT_RUNNER_CODER_TIMEOUT_SECONDS` environment variable
+2. Review global config.json for `coder_timeout_seconds`
+3. For persistent timeouts, consider increasing timeout or breaking step into smaller steps
 
-| Workflow | Failure Code | Description |
-|----------|--------------|-------------|
-| master_docs_bootstrap_v1 | `MASTER_SYSTEM_DOC_REFINEMENT_EXHAUSTED` | Refinement loop exhausted for master docs |
-| execution_scaffold_v1 | `SOP_REFINEMENT_EXHAUSTED` | SOP refinement exhausted |
-| execution_scaffold_v1 | `TEMPLATE_REFINEMENT_EXHAUSTED` | Template refinement exhausted |
-| execution_scaffold_v1 | `AGENT_REFINEMENT_EXHAUSTED` | Agent refinement exhausted |
-| initiative_intake_v1 | `PRE_INIT_REFINEMENT_EXHAUSTED` | Pre-init refinement exhausted |
-| delivery_planning_v1 | `PLAN_REFINEMENT_EXHAUSTED` | Plan refinement exhausted |
-| delivery_planning_v1 | `TASK_GRAPH_REFINEMENT_EXHAUSTED` | Task graph refinement exhausted |
-| task_execution_v1 | `TASK_REFINEMENT_EXHAUSTED` | Task refinement exhausted |
-| task_execution_v1 | `IMPL_REFINEMENT_EXHAUSTED` | Implementation refinement exhausted |
-| documentation_sync_v1 | `DOC_SYNC_REFINEMENT_EXHAUSTED` | Doc sync refinement exhausted |
-| audience_doc_v1 | `STAKEHOLDER_REFINEMENT_EXHAUSTED` | Stakeholder doc refinement exhausted |
-| audience_doc_v1 | `DEVELOPER_REFINEMENT_EXHAUSTED` | Developer doc refinement exhausted |
-| audience_doc_v1 | `OPERATOR_REFINEMENT_EXHAUSTED` | Operator doc refinement exhausted |
-| audience_doc_v1 | `TESTER_REFINEMENT_EXHAUSTED` | Tester doc refinement exhausted |
-| audience_doc_v1 | `USER_REFINEMENT_EXHAUSTED` | User doc refinement exhausted |
+### Scenario 4: Model Rejection Loop
 
-## 10. Prevention Best Practices
+**Symptoms:**
+- Repeated REJECTED status
+- `reject_counts` incrementing
+- Loop/replan exhaustion
 
-### 10.1 For Workflow Authors
+**Causes:**
+- Coder consistently producing inadequate output
+- Review criteria too strict
+- Template conformance issues
 
-1. **Always declare produces**: Ensure `produces` list in step config matches artifacts written
-2. **Set appropriate timeouts**: Configure `coder_timeout_seconds` based on expected duration
-3. **Configure refinement limits**: Set `max_iterations` and `max_replans` to prevent infinite loops
-4. **Use descriptive failure codes**: Custom failure codes aid debugging
+**Resolution:**
+1. Review `REVIEW_FILE` for specific issues
+2. Check `loop_history` and `replan_history` for patterns
+3. Adjust `max_iterations` or `max_replans` if needed
+4. Force approve or manual intervention if coder is stuck
 
-### 10.2 For Coder Implementers
+### Scenario 5: Preflight Block on Missing Artifact
 
-1. **Write sidecar last**: Ensure all artifacts are written before meta.json
-2. **Validate before writing**: Check artifacts exist before claiming them in sidecar
-3. **Use valid status**: Only write "APPROVED" or "REJECTED" (uppercase)
-4. **Include timestamp**: Always set `recorded_at` in ISO format
-5. **Handle timeouts**: Respect timeout and write sidecar promptly
+**Symptoms:**
+- `PreflightBlockedError` with `PREFLIGHT_ARTIFACT_MISSING`
+- Step won't start
 
-### 10.3 For Operators
+**Causes:**
+- Previous step didn't produce required artifact
+- Artifact was deleted
+- Wrong artifact key in configuration
 
-1. **Monitor auto-retries**: Repeated auto-retries indicate systemic issues
-2. **Check step outputs**: Always review `raw_output.txt` and `stderr.txt`
-3. **Preserve job state**: Don't delete job directories for failed runs
-4. **Use force approve sparingly**: Only when coder result is acceptable despite REJECTED status
+**Resolution:**
+1. Verify prerequisite step completed successfully
+2. Check artifact paths in job state
+3. Re-run prerequisite step if needed
+4. Force approve with `--force-approve-step` if artifact exists but not detected
 
-## 11. Related Documentation
+---
 
-- `docs/codebase/02_modules/agent-runner-v2-exceptions.md` — Exception module documentation
-- `docs/codebase/02_modules/agent-runner-v2-step-runner.md` — Step execution documentation
-- `docs/codebase/02_modules/agent-runner-v2-workflow-router.md` — Routing logic documentation
-- `docs/codebase/02_modules/agent-runner-v2-job-state.md` — Job state management documentation
-- `docs/codebase/02_modules/agent-runner-v2-coder-adapters.md` — Coder invocation documentation
+## Related Documentation
+
+- [SYSTEM_OVERVIEW.md](../00_governance/bootstrap/SYSTEM_OVERVIEW.md) - System architecture
+- [RUNBOOK.md](../00_governance/bootstrap/RUNBOOK.md) - Operational procedures
+- [COMPONENT_ARCHITECTURE.md](../00_governance/bootstrap/COMPONENT_ARCHITECTURE.md) - Component details
+- [PROJECT_ANALYSIS.md](../00_governance/bootstrap/PROJECT_ANALYSIS.md) - Project context
+
+---
+
+*Generated by workflow `00_master_docs_bootstrap_v1` step `04c_generate_failure_docs` on 2026-07-10T10:10:12+08:00*

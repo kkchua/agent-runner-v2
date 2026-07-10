@@ -1,10 +1,12 @@
 ---
 template_id: "SYS-00-NFR"
-managed_by: workflow-generated
-generated: "2026-07-09T21:18:02+08:00"
+title: "Non-Functional Requirements"
+status: "active"
+change_id: "00DOC-GEN-20260710-004"
 workflow: "00_master_docs_bootstrap_v1"
 step: "03_generate_system_overview_docs"
-change_id: "00DOC-GEN-20260709-002"
+managed_by: workflow-generated
+generated: "2026-07-10T09:43:38+08:00"
 ---
 
 > Managed by workflow: `00_master_docs_bootstrap_v1` / step: `03_generate_system_overview_docs`
@@ -14,254 +16,285 @@ change_id: "00DOC-GEN-20260709-002"
 
 ## Purpose
 
-This document captures the runtime, quality, and operational expectations for agent-runner-v2. It defines how the system should perform, behave, and operate under various conditions, independent of specific functional requirements.
+This document captures the runtime, quality, and operational expectations for `agent-runner-v2`. These requirements constrain how the system behaves, independent of specific features.
 
 ## Quality Requirements
 
-### Reliability
+### Performance
 
-| Requirement | Target | Measurement |
-|-------------|--------|-------------|
-| **Availability** | 99.5% for daemon mode | Uptime percentage over 30 days |
-| **Step Success Rate** | >95% | Successful completions vs total attempts |
-| **Recovery Success** | >90% | Successful recoveries after failure |
-| **State Consistency** | 100% | Job state corruption incidents |
+#### Response Time
 
-### Fault Tolerance
+| Metric | Target | Critical |
+|--------|--------|----------|
+| Step execution initiation | <5s | Yes |
+| Prompt rendering | <1s | No |
+| Artifact validation | <3s | Yes |
+| Workflow routing | <1s | Yes |
 
-| Scenario | Requirement |
-|----------|-------------|
-| **Coder Timeout** | Retry with exponential backoff, max 3 attempts |
-| **Backend Unavailable** | Retry with 30s intervals, queue locally |
-| **Sidecar Corruption** | Reject step, route to failure handling |
-| **State Corruption** | Detect via schema validation, attempt migration |
-| **Child Process Failure** | Terminate, report failure, claim next work |
-
-### Data Integrity
-
-| Requirement | Implementation |
-|-------------|----------------|
-| **Job State Persistence** | Atomic writes with checksum validation |
-| **Artifact Verification** | Path existence check before routing |
-| **Sidecar Validation** | JSON schema validation, required field check |
-| **Path Resolution** | Absolute path normalization, traversal protection |
-
-## Performance Requirements
-
-### Response Time
-
-| Operation | Target | Maximum |
-|-----------|--------|---------|
-| **Prompt Rendering** | <100ms | 500ms |
-| **Preflight Check** | <50ms | 200ms |
-| **Job State Load** | <100ms | 500ms |
-| **Job State Save** | <200ms | 1s |
-| **Sidecar Read** | <50ms | 200ms |
-
-### Throughput
+#### Throughput
 
 | Metric | Target | Notes |
 |--------|--------|-------|
-| **Steps per Hour (Local)** | 10-20 | Depends on coder response time |
-| **Steps per Hour (Worker)** | 30-60 | Parallel execution across workers |
-| **Concurrent Jobs** | 10 | Per daemon instance |
-| **Poll Interval** | 10s | Worker poll frequency |
+| Concurrent workflows | 10+ | Configurable |
+| Steps per hour | 100+ | Depends on model latency |
+| Jobs per day | 1000+ | Backend limited |
 
-### Resource Usage
+#### Resource Usage
 
-| Resource | Target | Maximum |
-|----------|--------|---------|
-| **Memory (Daemon)** | <100MB | 500MB |
-| **Memory (Step)** | <500MB | 2GB |
-| **Disk (Job State)** | <10KB per job | 50KB |
-| **Disk (Logs)** | <100MB per day | Rotated |
-| **CPU (Idle)** | <1% | 5% |
+| Resource | Target | Limit |
+|----------|--------|-------|
+| Memory per job | <100MB | Hard limit |
+| Disk per job | <50MB | Artifact dependent |
+| CPU usage | Moderate | Burst acceptable |
+
+### Reliability
+
+#### Availability
+
+| Level | Target | Measurement |
+|-------|--------|-------------|
+| System uptime | 99.9% | Excluding planned maintenance |
+| Job completion rate | >95% | Of started jobs |
+| Step success rate | >98% | Of executed steps |
+
+#### Fault Tolerance
+
+| Scenario | Behavior |
+|----------|----------|
+| Model timeout | Mark step failed, trigger retry |
+| Meta.json missing | Hard failure, explicit routing |
+| Artifact missing | Validation failure, explicit error |
+| Backend unavailable | Queue for retry, exponential backoff |
+
+#### Recovery
+
+| Capability | Requirement |
+|------------|-------------|
+| Job state recovery | Automatic on restart |
+| Step retry | Configurable attempts |
+| Manual intervention | Supported via approval gates |
+
+### Maintainability
+
+#### Code Quality
+
+| Metric | Target |
+|--------|--------|
+| Test coverage | >80% (unit tests) |
+| Type hints | Required for public APIs |
+| Documentation | Required for modules |
+
+#### Modularity
+
+| Principle | Requirement |
+|-----------|-------------|
+| Single responsibility | One purpose per module |
+| Loose coupling | Minimize inter-module dependencies |
+| High cohesion | Related functions grouped |
+
+### Portability
+
+#### Platform Support
+
+| Platform | Support Level |
+|----------|---------------|
+| Windows 10/11 | Primary |
+| macOS | Compatible |
+| Linux | Compatible |
+
+#### Python Versions
+
+| Version | Support |
+|---------|---------|
+| 3.12 | Recommended |
+| 3.11 | Supported |
+| 3.10 | Supported |
+| <3.10 | Not supported |
+
+### Security
+
+#### Data Protection
+
+| Requirement | Implementation |
+|-------------|----------------|
+| No secrets in code | Use .env files |
+| Encrypted storage | Backend responsibility |
+| Access control | Backend-enforced |
+
+#### Execution Safety
+
+| Requirement | Implementation |
+|-------------|----------------|
+| Sandboxed actions | Subprocess isolation |
+| No arbitrary code execution | Deterministic actions only |
+| Input validation | Schema validation |
 
 ## Operational Requirements
 
-### Deployment
+### Deployability
 
-| Requirement | Specification |
-|-------------|-------------|
-| **Installation** | pip install -e . |
-| **Initialization** | ukbe-run-agent init |
-| **Configuration** | config.json in runner home |
-| **Upgrade** | pip install --upgrade + init |
+#### Installation
 
-### Monitoring
+| Requirement | Details |
+|-------------|---------|
+| Package install | `pip install -e .` |
+| Dependencies | Listed in pyproject.toml |
+| Bootstrap | `ukbe-run-agent init` |
 
-| Requirement | Implementation |
-|-------------|----------------|
-| **Heartbeat** | Every 30s in daemon mode |
-| **Log Rotation** | Daily rotation, 7 day retention |
-| **Metrics Exposure** | Job state queryable via CLI |
-| **Health Check** | Backend ping endpoint |
+#### Configuration
 
-### Maintenance
+| Requirement | Details |
+|-------------|---------|
+| Config file | `%USERPROFILE%\.ukbe-runner\config.json` |
+| Environment | `.env` file support |
+| Runtime override | Command-line arguments |
 
-| Task | Frequency | Automation |
-|------|-----------|------------|
-| **Log Cleanup** | Daily | Automatic |
-| **Job Archive** | Weekly | Manual script |
-| **Bundle Sync** | As needed | Manual trigger |
-| **Schema Migration** | On version change | Automatic with confirmation |
+### Observability
 
-## Security Requirements
+#### Logging
 
-### Authentication
+| Requirement | Details |
+|-------------|---------|
+| Log location | `%USERPROFILE%\.ukbe-runner\logs\` |
+| Log levels | DEBUG, INFO, WARNING, ERROR |
+| Rotation | Daily rotation |
 
-| Requirement | Implementation |
-|-------------|----------------|
-| **Backend Auth** | API key in config.json |
-| **Coder Access** | System-level coder authentication |
-| **Local Access** | File system permissions |
+#### Metrics
 
-### Authorization
+| Metric | Collection |
+|--------|------------|
+| Step duration | Automatic |
+| Model usage | Tracked in job state |
+| Success/failure rates | Computed from job history |
 
-| Requirement | Implementation |
-|-------------|----------------|
-| **Job Ownership** | User-scoped job directories |
-| **Artifact Access** | Path-based access control |
-| **Workflow Access** | No restriction (local execution) |
+#### Notifications
 
-### Data Protection
+| Event | Notification |
+|-------|--------------|
+| Job complete | Pushover (configurable) |
+| Step failure | Pushover (configurable) |
+| Human approval needed | Pushover (configurable) |
 
-| Requirement | Implementation |
-|-------------|----------------|
-| **Sensitive Data** | .env files excluded from git |
-| **Credentials** | Stored in config.json, not code |
-| **Job Data** | Local storage only (unless backend-connected) |
+### Scalability
 
-## Compatibility Requirements
+#### Horizontal Scaling
 
-### Platform Support
+| Aspect | Support |
+|--------|---------|
+| Multiple workers | Yes (backend-managed) |
+| Load balancing | Backend responsibility |
+| State distribution | Backend-managed |
 
-| Platform | Support Level | Notes |
-|----------|---------------|-------|
-| **Windows** | Primary | Development and deployment platform |
-| **macOS** | Supported | Via compatibility layer |
-| **Linux** | Supported | CI/CD, server deployment |
+#### Vertical Scaling
 
-### Python Version
+| Resource | Scaling |
+|----------|---------|
+| Memory | Per-process limits |
+| Disk | Artifact retention policy |
+| CPU | Model-dependent |
 
-| Version | Support | Notes |
-|---------|---------|-------|
-| **3.12** | Primary | Recommended version |
-| **3.11** | Supported | Minimum supported |
-| **3.13+** | Testing | Compatibility testing |
+## Runtime Expectations
 
-### External Dependencies
+### Execution Environment
 
-| Dependency | Version | Purpose |
-|------------|---------|---------|
-| **Claude Code** | Latest | Coder invocation |
-| **Codex CLI** | Latest | Coder invocation |
-| **Qwen Code** | Latest | Coder invocation |
-| **Python** | 3.11+ | Runtime |
-
-## Scalability Requirements
-
-### Horizontal Scaling
+#### CLI Mode
 
 | Aspect | Requirement |
 |--------|-------------|
-| **Worker Distribution** | Multiple workstations claim work from backend |
-| **Concurrent Execution** | Daemon spawns child processes per step |
-| **Backend Coordination** | Backend manages work queue, tracks state |
+| Interactive | Support for manual execution |
+| Batch | Support for scripted execution |
+| Output | Structured logging |
 
-### Vertical Scaling
-
-| Aspect | Requirement |
-|--------|-------------|
-| **Resource Isolation** | Child processes isolated from daemon |
-| **Resource Limits** | Configurable timeouts and memory limits |
-| **Cleanup** | Automatic temp file cleanup post-step |
-
-## Usability Requirements
-
-### CLI Interface
-
-| Requirement | Implementation |
-|-------------|----------------|
-| **Command Discovery** | --help on all commands |
-| **Consistent Interface** | Common flags across modes |
-| **Progress Visibility** | Step status in job state |
-| **Error Clarity** | Descriptive error messages |
-
-### Documentation
-
-| Requirement | Implementation |
-|-------------|----------------|
-| **Usage Examples** | README.md with common commands |
-| **Troubleshooting** | HOW_TO_GUIDE.md |
-| **API Reference** | Function docstrings |
-| **Architecture** | System documentation set |
-
-## Portability Requirements
-
-### Configuration Portability
+#### Worker Mode
 
 | Aspect | Requirement |
 |--------|-------------|
-| **Config Location** | %USERPROFILE%\.ukbe-runner\config.json |
-| **Relative Paths** | Job state uses relative paths |
-| **Cross-Platform** | Pathlib for cross-platform paths |
+| Backend poll | Configurable interval |
+| Step execution | Single step per invocation |
+| Isolation | Fresh subprocess per step |
 
-### Workflow Portability
+#### Daemon Mode
 
 | Aspect | Requirement |
 |--------|-------------|
-| **Bundle Seeding** | Bootstrap seeds runtime bundles |
-| **Version Pinning** | Workflows can pin to bundle versions |
-| **Export/Import** | Jobs can be archived and restored |
+| Long-running | Continuous operation |
+| Supervision | Worker process management |
+| Recovery | Automatic restart on failure |
 
-## Maintainability Requirements
+### Integration Points
 
-### Code Organization
+#### Backend API
 
-| Requirement | Implementation |
-|-------------|----------------|
-| **Module Size** | No module >2,500 lines |
-| **Separation of Concerns** | Narrow module responsibilities |
-| **Constants Centralization** | All paths in constants.py |
-| **Test Separation** | Unit vs integration split |
+| Requirement | Details |
+|-------------|---------|
+| Protocol | REST over HTTPS |
+| Authentication | Token-based |
+| Retry | Exponential backoff |
+| Timeout | Configurable |
 
-### Documentation
+#### Model APIs
 
-| Requirement | Implementation |
-|-------------|----------------|
-| **Doc Coverage** | All public functions documented |
-| **Generated Docs** | Workflow-generated, protected |
-| **Change Tracking** | Change impact documentation |
-
-### Testing
-
-| Requirement | Implementation |
-|-------------|----------------|
-| **Unit Test Coverage** | Pure logic isolated from filesystem |
-| **Integration Test Coverage** | Real files, external systems |
-| **Test Markers** | pytest markers for selection |
+| Requirement | Details |
+|-------------|---------|
+| Claude | Anthropic API |
+| Codex | OpenAI API |
+| Qwen | Local inference |
+| Fallback | None (hard failure) |
 
 ## Constraints
 
 ### Technical Constraints
 
-| Constraint | Rationale |
-|------------|-----------|
-| **No Markdown Write-Backs** | v2 contract — sidecar only |
-| **No Pre-Invocation Sidecar Writes** | Coder owns sidecar |
-| **No Recovery Functions** | Explicit failure routing |
-| **Meta.json Only** | Single structured communication channel |
+| Constraint | Implication |
+|------------|-------------|
+| Python 3.10+ | Modern language features available |
+| No async/await | Synchronous execution model |
+| File-based state | Simple but limited scalability |
+| Subprocess model | Code changes picked up automatically |
 
-### Operational Constraints
+### Business Constraints
 
-| Constraint | Rationale |
-|------------|-----------|
-| **Bootstrap/Runtime Distinction** | Runtime loads from user home, not repo |
-| **External Coder Dependency** | Runtime requires installed coders |
-| **Windows Path Handling** | Special handling for pathlib edge cases |
-| **Daemon Child Processes** | Fresh subprocess per step for code reload |
+| Constraint | Implication |
+|------------|-------------|
+| Single user per runner | No multi-tenancy |
+| Local execution | No distributed steps |
+| Manual workflow trigger | No scheduled execution |
+
+### Compliance Constraints
+
+| Constraint | Implication |
+|------------|-------------|
+| No PII in logs | Data sanitization required |
+| Audit trail | All actions logged |
+| Document versioning | Change tracking required |
+
+## Validation and Verification
+
+### Testing Requirements
+
+| Type | Coverage | Target |
+|------|----------|--------|
+| Unit tests | Logic functions | >80% |
+| Integration tests | End-to-end | Key paths |
+| Validation tests | Document structure | All templates |
+
+### Monitoring Requirements
+
+| Aspect | Requirement |
+|--------|-------------|
+| Health checks | Backend poll success |
+| Alerts | Failure rate threshold |
+| Dashboards | Job status overview |
 
 ---
 
-*Generated by workflow: 00_master_docs_bootstrap_v1 / step: 03_generate_system_overview_docs*
+## Related Documents
+
+- [SYSTEM_OVERVIEW.md](SYSTEM_OVERVIEW.md) — System explanation
+- [BUSINESS_CAPABILITIES.md](BUSINESS_CAPABILITIES.md) — Business value
+- [FUNCTIONAL_SPEC.md](FUNCTIONAL_SPEC.md) — Functional behaviors
+- [RUNBOOK.md](RUNBOOK.md) — Operational procedures
+
+---
+
+*Generated by workflow `00_master_docs_bootstrap_v1` step `03_generate_system_overview_docs` on 2026-07-10T09:43:38+08:00*

@@ -44,4 +44,4 @@ markers = [
     "integration: Integration tests - test with real files, external systems, subprocesses",
 ]
 tmp_path_retention_policy = "none"
-addopts = "-p no:cacheprovider"
+addopts = "-p no:cacheprovider --basetemp=.pytest-temp"

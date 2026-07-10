@@ -45,7 +45,7 @@ def test_render_documents_create_todos():
     rendered = render_prompt(template, _TEST_CONTEXT)
     assert "create_todos" in rendered
     assert _TEST_CONTEXT["STEP_NAME"] in rendered
-    assert _TEST_CONTEXT["TOOLS_DIR"] in rendered
+    assert repr(_TEST_CONTEXT["TOOLS_DIR"]) in rendered
 
 
 def test_render_documents_mark_complete():
@@ -54,6 +54,14 @@ def test_render_documents_mark_complete():
     rendered = render_prompt(template, _TEST_CONTEXT)
     assert "mark_complete" in rendered
     assert "1-based index" in rendered
+
+
+def test_render_documents_mark_process():
+    """Assert the rendered block contains mark_process usage."""
+    template = _read_template("31_task_execution_v1", "10_executor.txt")
+    rendered = render_prompt(template, _TEST_CONTEXT)
+    assert "mark_process" in rendered
+    assert "processing" in rendered
 
 
 # ---------------------------------------------------------------------------
@@ -65,7 +73,15 @@ def test_render_progress_file_in_workflow_rules():
     """Assert the rendered prompt contains the PROGRESS_FILE path in the Workflow Rules block."""
     template = _read_template("31_task_execution_v1", "10_executor.txt")
     rendered = render_prompt(template, _TEST_CONTEXT)
-    assert _TEST_CONTEXT["PROGRESS_FILE"] in rendered
+    assert repr(_TEST_CONTEXT["PROGRESS_FILE"]) in rendered
+
+
+def test_render_uses_python_command_placeholder():
+    """Assert the rendered block includes a quoted Python command prefix."""
+    template = _read_template("31_task_execution_v1", "10_executor.txt")
+    rendered = render_prompt(template, _TEST_CONTEXT)
+    assert '"{PYTHON_CMD}"' not in rendered
+    assert " -c \"import sys;" in rendered
 
 
 def test_render_no_database_leakage():

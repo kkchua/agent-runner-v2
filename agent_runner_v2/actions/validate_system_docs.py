@@ -23,7 +23,7 @@ from .documentation_validation_core import (
 
 
 SYSTEM_DOC_REQUIRED_SECTIONS: dict[str, list[str]] = {
-    system_doc_rel("project_analysis.md"): [
+    system_doc_rel("PROJECT_ANALYSIS.md"): [
         "Repo Overview",
         "Codebase Structure",
         "Operational Risks",
@@ -106,7 +106,7 @@ def validate_system_docs(*, context: dict[str, str], state: dict, step_cfg: dict
     )
 
     required_files = (
-        system_doc_rel("project_analysis.md"),
+        system_doc_rel("PROJECT_ANALYSIS.md"),
         system_doc_rel("README.md"),
         system_doc_rel("DOCUMENTATION_STANDARD.md"),
         system_doc_rel("BUNDLE_TAXONOMY.md"),

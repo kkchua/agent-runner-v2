@@ -16,11 +16,13 @@ def test_publish_bootstrap_bundle_copies_repo_bootstrap_docs_into_package_bundle
     (source_root / "templates" / "delivery" / "01_delivery_template_registry.md").write_text("registry", encoding="utf-8")
 
     package_root = tmp_path / "package"
-    monkeypatch.setattr(bundle_loader, "PACKAGE_ROOT", package_root)
+    expected_root = package_root / "bootstrap" / "bundles" / "core" / "current"
+    
+    monkeypatch.setattr(bundle_loader, "bootstrap_source_root", lambda ws: source_root)
+    monkeypatch.setattr(bundle_loader, "package_bootstrap_root", lambda: expected_root)
 
     result = bundle_loader.publish_bootstrap_bundle(workspace_root)
 
-    expected_root = package_root / "bootstrap" / "bundles" / "core" / "current"
     assert (expected_root / "README.md").exists()
     assert (expected_root / "templates" / "delivery" / "01_delivery_template_registry.md").exists()
     assert result["package_bootstrap_root"] == str(expected_root)
@@ -73,8 +75,11 @@ def test_init_workspace_auto_publishes_bootstrap_bundle_when_package_bundle_miss
     source_root.mkdir(parents=True, exist_ok=True)
     (source_root / "README.md").write_text("# Workspace Bootstrap\n", encoding="utf-8")
 
+    expected_package_root = fake_package_root / "bootstrap" / "bundles" / "core" / "current"
+    
     monkeypatch.setattr(bundle_loader, "GLOBAL_RUNNER_HOME", fake_home / ".ukbe-runner")
-    monkeypatch.setattr(bundle_loader, "PACKAGE_ROOT", fake_package_root)
+    monkeypatch.setattr(bundle_loader, "bootstrap_source_root", lambda ws: source_root)
+    monkeypatch.setattr(bundle_loader, "package_bootstrap_root", lambda: expected_package_root)
 
     def _fake_seed_workflow_bundle(target_root: Path, workflow_name: str = "example") -> Path:
         wf_root = target_root / workflow_name
@@ -86,7 +91,6 @@ def test_init_workspace_auto_publishes_bootstrap_bundle_when_package_bundle_miss
 
     result = bundle_loader.init_workspace(workspace_root)
 
-    expected_package_root = fake_package_root / "bootstrap" / "bundles" / "core" / "current"
     expected_global_root = fake_home / ".ukbe-runner" / "bundles" / "core" / "current"
     assert (expected_package_root / "README.md").exists()
     assert (expected_global_root / "README.md").exists()
@@ -206,63 +210,6 @@ def test_master_docs_bootstrap_workflow_definition_exists():
     ]
     assert group["step_configs"]["08_validate_master_system_docs"]["action"] == "validate_system_docs"
     assert group["step_configs"]["09_finalize_bootstrap"]["action"] == "finalize_bootstrap"
-
-
-def test_legacy_workflow_families_are_hidden():
-    template_groups_module = load_bootstrap_workflow_module()
-    hidden = [
-        "delivery_scaffold_v1",
-        "initiative_intake_v1",
-        "delivery_planning_v1",
-        "task_execution_v1",
-        "documentation_sync_v1",
-        "codebase_bootstrap_v1",
-        "codebase_reconcile_v1",
-        "system_docs_bootstrap_v1",
-        "documentation_bootstrap_v1",
-        "codebase_rescan_v1",
-        "documentation_validation_v1",
-        "bug_fix_v1",
-    ]
-
-    for name in hidden:
-        assert template_groups_module.TEMPLATE_GROUPS_OLD[name]["visibility"] == "hidden"
-
-
-def test_codebase_rescan_workflow_definition_exists():
-    template_groups_module = load_bootstrap_workflow_module()
-    group = template_groups_module.TEMPLATE_GROUPS_OLD["codebase_rescan_v1"]
-    assert group["job_prefix"] == "CDRESCAN"
-    assert group["steps"] == ["scan_codebase", "validate_codebase_docs"]
-    assert group["step_configs"]["scan_codebase"]["mode"] == "reconcile"
-    assert group["step_configs"]["validate_codebase_docs"]["mode"] == "reconcile"
-
-
-def test_documentation_validation_workflow_definition_exists():
-    template_groups_module = load_bootstrap_workflow_module()
-    group = template_groups_module.TEMPLATE_GROUPS_OLD["documentation_validation_v1"]
-    assert group["job_prefix"] == "DOCVAL"
-    assert group["steps"] == ["validate_documentation_set"]
-    assert group["step_configs"]["validate_documentation_set"]["action"] == "validate_delivery_docs"
-
-
-def test_bug_fix_workflow_definition_exists():
-    template_groups_module = load_bootstrap_workflow_module()
-    group = template_groups_module.TEMPLATE_GROUPS_OLD["bug_fix_v1"]
-    assert group["job_prefix"] == "BUGFIX"
-    assert group["job_init_inputs"] == ["BUG_DRAFT_FILE"]
-    assert group["steps"] == [
-        "triage_bug",
-        "reproduce_bug",
-        "isolate_root_cause",
-        "patch_bug",
-        "regression_validate",
-        "sync_codebase_docs",
-        "sync_system_docs",
-    ]
-    assert "21_bug_fix_intake_v1" in group["step_configs"]["triage_bug"]["prompt_file"]
-    assert group["step_configs"]["triage_bug"]["prompt_file"].endswith("01_triage_bug.txt")
-    assert group["step_configs"]["sync_system_docs"]["action"] == "sync_system_docs"
 
 
 def test_bug_fix_prompt_bundle_exists():

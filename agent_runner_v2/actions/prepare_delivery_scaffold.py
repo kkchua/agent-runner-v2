@@ -8,22 +8,8 @@ actions/prepare_delivery_scaffold.py - Create canonical delivery/codebase scaffo
 from pathlib import Path
 
 from ..action_result import ActionResult
+from ..constants import DELIVERY_SCAFFOLD_DIRS
 from ..runtime_context import resolve_step_meta_rel, write_meta_sidecar
-
-
-SCAFFOLD_DIRS = [
-    "docs/delivery/01_initiatives",
-    "docs/delivery/02_plans",
-    "docs/delivery/03_tasks",
-    "docs/delivery/04_implementation_plans",
-    "docs/delivery/05_reviews",
-    "docs/delivery/06_memory",
-    "docs/delivery/00_standards",
-    "docs/codebase/00_templates",
-    "docs/codebase/05_archives",
-    "docs/system/00_governance/bootstrap/templates/delivery",
-    "docs/system/00_governance/bootstrap/templates/codebase",
-]
 
 
 def prepare_delivery_scaffold(*, context: dict[str, str], state: dict, step_cfg: dict, project_root: Path) -> ActionResult:
@@ -35,7 +21,7 @@ def prepare_delivery_scaffold(*, context: dict[str, str], state: dict, step_cfg:
         default_step=step,
     )
 
-    for rel_path in SCAFFOLD_DIRS:
+    for rel_path in DELIVERY_SCAFFOLD_DIRS:
         (project_root / rel_path).mkdir(parents=True, exist_ok=True)
 
     artifacts: dict[str, str] = {}

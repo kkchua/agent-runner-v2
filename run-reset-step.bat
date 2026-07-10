@@ -12,13 +12,18 @@ REM Runtime workflow bundles are stored under %USERPROFILE%\.ukbe-runner\workflo
 
 setlocal enabledelayedexpansion
 
+REM --- Activate .venv if it exists ---
+if exist "%~dp0.venv\Scripts\activate.bat" (
+    call "%~dp0.venv\Scripts\activate.bat"
+)
+
 REM ==================================================================
 REM EDIT THESE VARIABLES to match your setup:
 REM ==================================================================
 
 set "AGENT_RUNNER_ROOT=D:\MyProjectSpace\01_Workflows\agent-runner-v2"
 set "TEMPLATE_GROUP=10_execution_scaffold_v1"
-set "JOB_ID=10SCAFFOLD-GEN-20260703-001"
+set "JOB_ID=10SCAFFOLD-20260709-fc09c688"
 set "STEP_NAME=validate_delivery_docs"
 
 REM ==================================================================

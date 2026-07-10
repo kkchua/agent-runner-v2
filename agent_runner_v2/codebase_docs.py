@@ -7,6 +7,7 @@ codebase_docs.py — Deterministic repo scan and codebase-doc generation helpers
 import ast
 import json
 import re
+import subprocess
 import sys
 from dataclasses import dataclass
 from datetime import datetime
@@ -112,7 +113,7 @@ def _component_owner_doc(component_name: str) -> str:
 
 
 def _module_doc_path(rel_path: str) -> str:
-    stem = _slugify(rel_path.replace("/", "__").replace("\\", "__").removesuffix(".py"))
+    stem = _slugify(rel_path.replace("/", "__").replace(r"\\", "__").removesuffix(".py"))
     return codebase_doc_rel(f"02_modules/{stem}.md")
 
 
@@ -130,6 +131,10 @@ def _read_text(path: Path) -> str:
 
 
 def _iter_repo_files(project_root: Path) -> list[Path]:
+    git_files = _iter_git_tracked_and_unignored_files(project_root)
+    if git_files is not None:
+        return git_files
+
     files: list[Path] = []
     for path in project_root.rglob("*"):
         if path.is_dir():
@@ -140,6 +145,36 @@ def _iter_repo_files(project_root: Path) -> list[Path]:
         if rel.suffix in {".pyc", ".pyo", ".tmp"}:
             continue
         files.append(path)
+    return sorted(files, key=lambda p: p.relative_to(project_root).as_posix().lower())
+
+
+def _iter_git_tracked_and_unignored_files(project_root: Path) -> list[Path] | None:
+    if not (project_root / ".git").exists():
+        return None
+    try:
+        proc = subprocess.run(
+            ["git", "ls-files", "--cached", "--others", "--exclude-standard", "-z"],
+            cwd=project_root,
+            capture_output=True,
+            text=False,
+            check=True,
+        )
+    except (FileNotFoundError, subprocess.CalledProcessError):
+        return None
+
+    files: list[Path] = []
+    for raw_rel in proc.stdout.split(b"\0"):
+        if not raw_rel:
+            continue
+        rel_posix = raw_rel.decode("utf-8", errors="surrogateescape").replace("\\", "/")
+        rel = PurePosixPath(rel_posix)
+        if any(part in EXCLUDED_DIRS for part in rel.parts):
+            continue
+        if rel.suffix in {".pyc", ".pyo", ".tmp"}:
+            continue
+        path = project_root / Path(rel_posix)
+        if path.exists() and path.is_file():
+            files.append(path)
     return sorted(files, key=lambda p: p.relative_to(project_root).as_posix().lower())
 
 
@@ -198,6 +233,237 @@ def _classify_file(project_root: Path, path: Path) -> ScanItem:
     )
 
 
+def _annotation_to_str(annotation: ast.expr | None) -> str:
+    """Convert AST annotation to string representation."""
+    if annotation is None:
+        return ""
+    if isinstance(annotation, ast.Name):
+        return annotation.id
+    if isinstance(annotation, ast.Constant):
+        return repr(annotation.value)
+    if isinstance(annotation, ast.Attribute):
+        return f"{_annotation_to_str(annotation.value)}.{annotation.attr}"
+    if isinstance(annotation, ast.Subscript):
+        return f"{_annotation_to_str(annotation.value)}[{_annotation_to_str(annotation.slice)}]"
+    if isinstance(annotation, ast.Tuple):
+        return ", ".join(_annotation_to_str(e) for e in annotation.elts)
+    if isinstance(annotation, ast.BinOp) and isinstance(annotation.op, ast.BitOr):
+        return f"{_annotation_to_str(annotation.left)} | {_annotation_to_str(annotation.right)}"
+    return ""
+
+
+def _build_signature(node: ast.FunctionDef | ast.AsyncFunctionDef) -> str:
+    """Build full function signature with type hints."""
+    args = node.args
+    parts: list[str] = []
+
+    # Positional args
+    num_args = len(args.args)
+    num_defaults = len(args.defaults)
+    first_default_idx = num_args - num_defaults
+
+    for i, arg in enumerate(args.args):
+        if arg.arg == "self" or arg.arg == "cls":
+            continue
+        part = arg.arg
+        if arg.annotation:
+            part += f": {_annotation_to_str(arg.annotation)}"
+        if i >= first_default_idx:
+            default_idx = i - first_default_idx
+            default = args.defaults[default_idx]
+            part += f" = {_annotation_to_str(default)}"
+        parts.append(part)
+
+    # *args
+    if args.vararg:
+        part = f"*{args.vararg.arg}"
+        if args.vararg.annotation:
+            part += f": {_annotation_to_str(args.vararg.annotation)}"
+        parts.append(part)
+    elif args.kwonlyargs:
+        parts.append("*")
+
+    # keyword-only args
+    for i, arg in enumerate(args.kwonlyargs):
+        part = arg.arg
+        if arg.annotation:
+            part += f": {_annotation_to_str(arg.annotation)}"
+        if i < len(args.kw_defaults) and args.kw_defaults[i] is not None:
+            part += f" = {_annotation_to_str(args.kw_defaults[i])}"
+        parts.append(part)
+
+    # **kwargs
+    if args.kwarg:
+        part = f"**{args.kwarg.arg}"
+        if args.kwarg.annotation:
+            part += f": {_annotation_to_str(args.kwarg.annotation)}"
+        parts.append(part)
+
+    return f"({', '.join(parts)})"
+
+
+def _extract_parameters(node: ast.FunctionDef | ast.AsyncFunctionDef) -> list[dict[str, str]]:
+    """Extract parameter details with types and defaults."""
+    args = node.args
+    params: list[dict[str, str]] = []
+
+    num_args = len(args.args)
+    num_defaults = len(args.defaults)
+    first_default_idx = num_args - num_defaults
+
+    for i, arg in enumerate(args.args):
+        if arg.arg == "self" or arg.arg == "cls":
+            continue
+        param: dict[str, str] = {
+            "name": arg.arg,
+            "type": _annotation_to_str(arg.annotation) if arg.annotation else "",
+            "default": "",
+            "kind": "positional",
+        }
+        if i >= first_default_idx:
+            default_idx = i - first_default_idx
+            default = args.defaults[default_idx]
+            param["default"] = _annotation_to_str(default)
+        params.append(param)
+
+    # *args
+    if args.vararg:
+        params.append({
+            "name": f"*{args.vararg.arg}",
+            "type": _annotation_to_str(args.vararg.annotation) if args.vararg.annotation else "",
+            "default": "",
+            "kind": "varargs",
+        })
+
+    # keyword-only args
+    for i, arg in enumerate(args.kwonlyargs):
+        param = {
+            "name": arg.arg,
+            "type": _annotation_to_str(arg.annotation) if arg.annotation else "",
+            "default": "",
+            "kind": "keyword-only",
+        }
+        if i < len(args.kw_defaults) and args.kw_defaults[i] is not None:
+            param["default"] = _annotation_to_str(args.kw_defaults[i])
+        params.append(param)
+
+    # **kwargs
+    if args.kwarg:
+        params.append({
+            "name": f"**{args.kwarg.arg}",
+            "type": _annotation_to_str(args.kwarg.annotation) if args.kwarg.annotation else "",
+            "default": "",
+            "kind": "kwargs",
+        })
+
+    return params
+
+
+def _extract_return_type(node: ast.FunctionDef | ast.AsyncFunctionDef) -> str:
+    """Extract return type annotation."""
+    if node.returns:
+        return _annotation_to_str(node.returns)
+    return ""
+
+
+def _extract_raises(docstring: str) -> list[dict[str, str]]:
+    """Parse Raises section from docstring.
+
+    Handles formats like:
+        Raises:
+            ExceptionType — description
+            ExceptionType: description
+            ExceptionType - description
+    """
+    raises: list[dict[str, str]] = []
+    if not docstring:
+        return raises
+
+    lines = docstring.splitlines()
+    in_raises = False
+    current_exception = ""
+    current_description: list[str] = []
+
+    for line in lines:
+        stripped = line.strip()
+
+        # Check for Raises: header
+        if stripped.lower().startswith("raises:"):
+            in_raises = True
+            continue
+
+        # Check for another section header (ends Raises section)
+        # Section headers are typically all caps or end with colon and are not indented in docstring
+        if in_raises and stripped:
+            # Check if this looks like a new section (e.g., "Returns:", "Note:", etc.)
+            lower = stripped.lower()
+            if (lower.startswith(("returns:", "yields:", "note:", "example:", "examples:",
+                                  "args:", "arguments:", "attributes:", "see also:",
+                                  "references:", "warnings:"))):
+                if current_exception:
+                    raises.append({
+                        "exception": current_exception,
+                        "description": " ".join(current_description).strip(),
+                    })
+                in_raises = False
+                continue
+
+        if in_raises and stripped:
+            # Check if this is a new exception line
+            # Look for patterns: "ExceptionName - desc", "ExceptionName: desc", "ExceptionName — desc"
+            is_exception_line = False
+            for sep in [" - ", " — ", ":"]:
+                if sep in stripped:
+                    # Check if the part before separator looks like an exception name
+                    parts = stripped.split(sep, 1)
+                    potential_name = parts[0].strip()
+                    # Exception names are typically CamelCase or have underscores
+                    if potential_name and potential_name[0].isupper():
+                        # Save previous exception if any
+                        if current_exception:
+                            raises.append({
+                                "exception": current_exception,
+                                "description": " ".join(current_description).strip(),
+                            })
+                            current_description = []
+
+                        # Parse new exception
+                        current_exception = potential_name
+                        if len(parts) > 1:
+                            current_description = [parts[1].strip()]
+                        is_exception_line = True
+                        break
+
+            if not is_exception_line and current_exception:
+                # Continuation of description
+                current_description.append(stripped)
+
+    # Don't forget the last exception
+    if current_exception:
+        raises.append({
+            "exception": current_exception,
+            "description": " ".join(current_description).strip(),
+        })
+
+    return raises
+
+
+def _extract_decorators(node: ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef) -> list[str]:
+    """Extract decorator names from a function or class definition."""
+    decorators: list[str] = []
+    for decorator in node.decorator_list:
+        if isinstance(decorator, ast.Name):
+            decorators.append(decorator.id)
+        elif isinstance(decorator, ast.Attribute):
+            decorators.append(f"{_annotation_to_str(decorator.value)}.{decorator.attr}")
+        elif isinstance(decorator, ast.Call):
+            if isinstance(decorator.func, ast.Name):
+                decorators.append(decorator.func.id)
+            elif isinstance(decorator.func, ast.Attribute):
+                decorators.append(f"{_annotation_to_str(decorator.func.value)}.{decorator.func.attr}")
+    return decorators
+
+
 def _scan_python_module(project_root: Path, path: Path) -> dict[str, Any]:
     rel_path = path.relative_to(project_root).as_posix()
     try:
@@ -217,21 +483,39 @@ def _scan_python_module(project_root: Path, path: Path) -> dict[str, Any]:
             mod = node.module or ""
             if mod:
                 imports.append(mod)
-        elif isinstance(node, ast.FunctionDef) and not node.name.startswith("_"):
-            args = []
-            for arg in node.args.args:
-                if arg.arg == "self":
-                    continue
-                args.append(arg.arg)
+        elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and not node.name.startswith("_"):
+            docstring = ast.get_docstring(node) or ""
             functions.append({
                 "name": node.name,
-                "signature": f"({', '.join(args)})",
-                "summary": (ast.get_docstring(node) or "").splitlines()[0] if ast.get_docstring(node) else "",
+                "signature": _build_signature(node),
+                "summary": docstring.splitlines()[0] if docstring else "",
+                "docstring": docstring,
+                "parameters": _extract_parameters(node),
+                "return_type": _extract_return_type(node),
+                "raises": _extract_raises(docstring),
+                "decorators": _extract_decorators(node),
+                "is_async": isinstance(node, ast.AsyncFunctionDef),
             })
         elif isinstance(node, ast.ClassDef) and not node.name.startswith("_"):
+            docstring = ast.get_docstring(node) or ""
+            # Extract class methods
+            methods: list[dict[str, Any]] = []
+            for item in node.body:
+                if isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef)) and not item.name.startswith("_"):
+                    method_doc = ast.get_docstring(item) or ""
+                    methods.append({
+                        "name": item.name,
+                        "signature": _build_signature(item),
+                        "summary": method_doc.splitlines()[0] if method_doc else "",
+                        "return_type": _extract_return_type(item),
+                    })
             classes.append({
                 "name": node.name,
-                "summary": (ast.get_docstring(node) or "").splitlines()[0] if ast.get_docstring(node) else "",
+                "summary": docstring.splitlines()[0] if docstring else "",
+                "docstring": docstring,
+                "decorators": _extract_decorators(node),
+                "bases": [_annotation_to_str(base) for base in node.bases],
+                "methods": methods,
             })
         elif isinstance(node, ast.Assign):
             for target in node.targets:
@@ -512,43 +796,182 @@ def render_module_doc(snapshot: dict[str, Any], module_record: dict[str, Any]) -
         lines.append(f"| `{imp}` | external module | repository dependency |\n")
     if not (module_record["stdlib_imports"] or module_record["local_imports"] or module_record["external_imports"]):
         lines.append("| | stdlib module | |\n")
+
+    # Enhanced Classes section
     lines.append("\n## 2. Public API\n\n### 2.1 Classes\n\n")
-    lines.append("| Class | Purpose | Key Methods |\n|-------|---------|-------------|\n")
-    for cls in module_record["public_classes"]:
-        lines.append(f"| `{cls['name']}` | {cls['summary'] or 'public class'} | |\n")
-    if not module_record["public_classes"]:
-        lines.append("| | | |\n")
-    lines.append("\n### 2.2 Functions\n\n| Function | Signature | Purpose |\n|----------|-----------|---------|\n")
+    if module_record["public_classes"]:
+        for cls in module_record["public_classes"]:
+            lines.append(f"#### {cls['name']}\n\n")
+            if cls.get('bases'):
+                lines.append(f"**Inherits from**: {', '.join(f'`{b}`' for b in cls['bases'])}\n\n")
+            if cls.get('decorators'):
+                lines.append(f"**Decorators**: {', '.join(f'`@{d}`' for d in cls['decorators'])}\n\n")
+            lines.append(f"**Purpose**: {cls.get('summary') or 'Public class'}\n\n")
+            if cls.get('methods'):
+                lines.append("**Methods**:\n\n")
+                for method in cls['methods']:
+                    sig = method.get('signature', '()')
+                    ret = method.get('return_type', '')
+                    ret_str = f" → `{ret}`" if ret else ""
+                    lines.append(f"- `{method['name']}{sig}`{ret_str} — {method.get('summary') or 'method'}\n")
+                lines.append("\n")
+    else:
+        lines.append("No public classes.\n\n")
+
+    # Enhanced Functions section
+    lines.append("\n### 2.2 Functions\n\n")
+    if module_record["public_functions"]:
+        for fn in module_record["public_functions"]:
+            async_prefix = "async " if fn.get("is_async") else ""
+            lines.append(f"#### {async_prefix}{fn['name']}()\n\n")
+
+            # Decorators
+            if fn.get('decorators'):
+                lines.append(f"**Decorators**: {', '.join(f'`@{d}`' for d in fn['decorators'])}\n\n")
+
+            # Signature
+            lines.append(f"**Signature**: `{fn['name']}{fn['signature']}`\n\n")
+
+            # Summary/Purpose
+            if fn.get('summary'):
+                lines.append(f"**Purpose**: {fn['summary']}\n\n")
+
+            # Full docstring (if different from summary)
+            docstring = fn.get('docstring', '')
+            if docstring and docstring.splitlines()[0] != fn.get('summary', ''):
+                # Extract just the description part (before Raises, Returns, etc.)
+                desc_lines = []
+                for line in docstring.splitlines():
+                    if line.strip().lower().startswith(('raises:', 'returns:', 'yields:', 'note:', 'example:', 'args:', 'attributes:')):
+                        break
+                    desc_lines.append(line)
+                desc = '\n'.join(desc_lines).strip()
+                if desc and desc != fn.get('summary', ''):
+                    lines.append(f"**Description**:\n\n{desc}\n\n")
+
+            # Parameters table
+            params = fn.get('parameters', [])
+            if params:
+                lines.append("**Parameters**:\n\n")
+                lines.append("| Name | Type | Default | Description |\n|------|------|---------|-------------|\n")
+                for param in params:
+                    name = param.get('name', '')
+                    ptype = param.get('type', '')
+                    default = param.get('default', '')
+                    kind = param.get('kind', '')
+                    type_str = f"`{ptype}`" if ptype else "—"
+                    default_str = f"`{default}`" if default else "—"
+                    # Try to get description from docstring
+                    param_desc = _extract_param_description(docstring, name)
+                    lines.append(f"| `{name}` | {type_str} | {default_str} | {param_desc} |\n")
+                lines.append("\n")
+
+            # Return type
+            ret_type = fn.get('return_type', '')
+            if ret_type:
+                lines.append(f"**Returns**: `{ret_type}`\n\n")
+
+            # Raises section
+            raises = fn.get('raises', [])
+            if raises:
+                lines.append("**Raises**:\n\n")
+                for exc in raises:
+                    exc_name = exc.get('exception', '')
+                    exc_desc = exc.get('description', '')
+                    lines.append(f"- `{exc_name}` — {exc_desc}\n")
+                lines.append("\n")
+
+            lines.append("---\n\n")
+    else:
+        lines.append("No public functions.\n\n")
+
+    # Constants section
+    lines.append("\n### 2.3 Constants / Configuration\n\n")
+    if module_record["constants"]:
+        lines.append("| Name | Purpose |\n|------|--------|\n")
+        for const in module_record["constants"]:
+            lines.append(f"| `{const}` | module configuration |\n")
+        lines.append("\n")
+    else:
+        lines.append("No public constants.\n\n")
+
+    # Error Handling Summary (aggregated from all functions)
+    lines.append("\n## 3. Error Handling\n\n")
+    all_raises: dict[str, list[str]] = {}
     for fn in module_record["public_functions"]:
-        lines.append(f"| `{fn['name']}` | `{fn['signature']}` | {fn['summary'] or 'public function'} |\n")
-    if not module_record["public_functions"]:
-        lines.append("| | | |\n")
-    lines.append("\n### 2.3 Constants / Configuration\n\n| Name | Value / Type | Purpose |\n|------|-------------|---------|\n")
-    for const in module_record["constants"]:
-        lines.append(f"| `{const}` | constant | module configuration |\n")
-    if not module_record["constants"]:
-        lines.append("| | | |\n")
-    lines.append(
-        "\n## 3. Internal Implementation\n\n### 3.1 Key Data Structures\n\n"
-        "Auto-generated baseline documentation derived from the current source tree.\n\n"
-        "### 3.2 Algorithm / Flow\n\n"
-        "See the source module for implementation details; this document captures the public contract and scan-derived summary.\n\n"
-        "## 4. I/O Contract\n\n### 4.1 Inputs\n\n"
-        "Derived from function parameters, imports, and file-level responsibilities.\n\n"
-        "### 4.2 Outputs\n\n"
-        "Derived from function return values and side effects observed in the source file.\n\n"
-        "### 4.3 Side Effects\n\n"
-        "Tracked at a baseline level by the repository scan.\n\n"
-        "## 5. Error Handling\n\n| Error Condition | Handling | Recovery |\n|----------------|----------|----------|\n| | | |\n\n"
-        "## 6. Testing\n\n### 6.1 Test Coverage\n\n| Test File | Coverage Area |\n|-----------|--------------|\n"
-    )
+        for exc in fn.get("raises", []):
+            exc_name = exc.get("exception", "")
+            exc_desc = exc.get("description", "")
+            if exc_name:
+                if exc_name not in all_raises:
+                    all_raises[exc_name] = []
+                if exc_desc and exc_desc not in all_raises[exc_name]:
+                    all_raises[exc_name].append(exc_desc)
+
+    if all_raises:
+        lines.append("| Exception | When | Raised By |\n|-----------|------|----------|\n")
+        for exc_name, descriptions in sorted(all_raises.items()):
+            desc = descriptions[0] if descriptions else ""
+            # Find which functions raise this
+            raised_by = [fn['name'] for fn in module_record["public_functions"]
+                        if any(e.get('exception') == exc_name for e in fn.get('raises', []))]
+            raised_by_str = ', '.join(f'`{f}`' for f in raised_by[:3])
+            lines.append(f"| `{exc_name}` | {desc} | {raised_by_str} |\n")
+        lines.append("\n")
+    else:
+        lines.append("No documented exceptions.\n\n")
+
+    # Testing section
+    lines.append("\n## 4. Testing\n\n### 4.1 Test Coverage\n\n")
+    lines.append("| Test File | Coverage Area |\n|-----------|---------------|\n")
     for test in module_record["test_references"]:
         lines.append(f"| `{test}` | `{module_name}` |\n")
     if not module_record["test_references"]:
-        lines.append("| | |\n")
-    lines.append("\n### 6.2 Known Gaps\n\nAuto-generated baseline. Review and refine as the codebase evolves.\n\n## 7. Change Log\n\n| Date | Change | Verified By |\n|------|--------|-------------|\n")
+        lines.append("| (none) | No test references found |\n")
+    lines.append("\n")
+
+    # Change Log
+    lines.append("\n## 5. Change Log\n\n")
+    lines.append("| Date | Change | Verified By |\n|------|--------|-------------|\n")
     lines.append(f"| {_today_date()} | Initial baseline generated from repository scan | {workflow_name} |\n")
     return "".join(lines)
+
+
+def _extract_param_description(docstring: str, param_name: str) -> str:
+    """Extract parameter description from docstring Args/Parameters section."""
+    if not docstring:
+        return "—"
+
+    lines = docstring.splitlines()
+    in_args = False
+    for line in lines:
+        stripped = line.strip()
+
+        # Check for Args/Parameters header
+        if stripped.lower().startswith(('args:', 'arguments:', 'parameters:', 'params:')):
+            in_args = True
+            continue
+
+        # Check for another section (ends Args)
+        if in_args and stripped and not stripped.startswith(' ') and ':' in stripped:
+            if not stripped[0].islower():
+                in_args = False
+                continue
+
+        if in_args and stripped:
+            # Check if this is the parameter we're looking for
+            # Format: "param_name: description" or "param_name (type): description"
+            for sep in [':', ' (']:
+                if stripped.startswith(param_name + sep) or stripped.startswith(param_name + ' '):
+                    # Extract description
+                    if ':' in stripped:
+                        desc = stripped.split(':', 1)[1].strip()
+                        return desc if desc else "—"
+            # Check for continuation lines (indented)
+            if line.startswith('    ') and not stripped.startswith(param_name):
+                continue
+
+    return "—"
 
 
 def render_component_doc(snapshot: dict[str, Any], *, component_name: str, rows: list[dict[str, str]], overview: str) -> str:

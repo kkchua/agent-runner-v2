@@ -7,6 +7,11 @@ REM reconciles against each claimed backend step before execution.
 
 setlocal enabledelayedexpansion
 
+REM --- Activate .venv if it exists ---
+if exist "%~dp0.venv\Scripts\activate.bat" (
+    call "%~dp0.venv\Scripts\activate.bat"
+)
+
 REM ==================================================================
 REM EDIT THESE VARIABLES to match your setup:
 REM ==================================================================

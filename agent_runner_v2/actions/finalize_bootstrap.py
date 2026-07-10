@@ -8,6 +8,7 @@ actions/finalize_bootstrap.py - Final bootstrap summary for the master-doc workf
 from pathlib import Path
 
 from ..action_result import ActionResult
+from ..constants import ARTIFACT_KEY_BOOTSTRAP_SUMMARY, get_master_docs_output_paths
 from ..runtime_context import resolve_step_meta_rel, write_meta_sidecar
 
 
@@ -63,7 +64,8 @@ def finalize_bootstrap(*, context: dict[str, str], state: dict, step_cfg: dict, 
             reject_code="BOOTSTRAP_FINALIZATION_FAILED",
         )
 
-    summary_path = project_root / "docs" / "system" / "00_governance" / "bootstrap" / f"{job_id}-bootstrap-summary.md"
+    summary_rel = get_master_docs_output_paths(job_id=job_id, mode=mode)[ARTIFACT_KEY_BOOTSTRAP_SUMMARY]
+    summary_path = project_root / summary_rel
     summary_lines = [
         "# Bootstrap Summary",
         "",
@@ -86,8 +88,7 @@ def finalize_bootstrap(*, context: dict[str, str], state: dict, step_cfg: dict, 
     )
     _write_text(summary_path, "\n".join(summary_lines) + "\n")
 
-    artifact_rel = summary_path.relative_to(project_root).as_posix()
-    artifacts = {"BOOTSTRAP_SUMMARY": artifact_rel}
+    artifacts = {ARTIFACT_KEY_BOOTSTRAP_SUMMARY: summary_rel}
     if meta_rel:
         write_meta_sidecar(
             meta_rel,
