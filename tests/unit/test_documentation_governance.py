@@ -89,7 +89,7 @@ def test_delivery_scaffold_paths_match_generated_layout():
         "docs/system/00_governance/bootstrap/templates/codebase/04_codebase_component_template.md"
     )
     assert validate_delivery_docs_module.DELIVERY_AGENT_ROOT.as_posix() == "docs/delivery/00_standards"
-    assert Path("docs/delivery/00_standards/DELIVERY_AGENTS_MD.md").as_posix().endswith("DELIVERY_AGENTS_MD.md")
+    assert Path("docs/system/00_governance/bootstrap/DELIVERY_AGENTS.md").as_posix().endswith("DELIVERY_AGENTS.md")
     assert Path("docs/delivery/00_standards/DELIVERY_AGENT_REVIEWER.md").as_posix().endswith("DELIVERY_AGENT_REVIEWER.md")
 
 
@@ -111,7 +111,7 @@ def test_generated_doc_inventory_covers_master_and_scaffold_outputs():
     assert "docs/system/00_governance/bootstrap/DOCUMENTATION_STANDARD.md" in master_paths
     assert "docs/system/00_governance/bootstrap/00DOC-GEN-20260702-003-bootstrap-change-log.md" in master_paths
     assert "docs/system/00_governance/bootstrap/WORKFLOW_SOP_v1.md" in scaffold_paths
-    assert "docs/delivery/00_standards/DELIVERY_AGENTS_MD.md" in scaffold_paths
+    assert "docs/system/00_governance/bootstrap/DELIVERY_AGENTS.md" in scaffold_paths
     assert "docs/delivery/DELIVERY_FOLDER_MAP.json" in scaffold_paths
 
 
