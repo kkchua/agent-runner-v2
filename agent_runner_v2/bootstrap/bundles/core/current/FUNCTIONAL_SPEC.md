@@ -1,12 +1,12 @@
 ---
-template_id: "SYS-00-FS"
 title: "Functional Specification"
+template_id: "SYS-00-FS"
 status: "active"
-change_id: "00DOC-GEN-20260710-004"
+generated: "2026-07-10T11:45:32+08:00"
 workflow: "00_master_docs_bootstrap_v1"
 step: "03_generate_system_overview_docs"
+change_id: "00DOC-20260710-15f76235"
 managed_by: workflow-generated
-generated: "2026-07-10T09:43:38+08:00"
 ---
 
 > Managed by workflow: `00_master_docs_bootstrap_v1` / step: `03_generate_system_overview_docs`
@@ -14,341 +14,405 @@ generated: "2026-07-10T09:43:38+08:00"
 
 # Functional Specification
 
-## Purpose
-
-This document describes the functional capabilities of `agent-runner-v2`—what the system does, how it behaves, and the major features available to users and developers.
-
 ## System Purpose
 
-`agent-runner-v2` is a workflow orchestration engine that executes structured multi-step workflows using LLM models and deterministic actions. It provides:
+`agent-runner-v2` is a workflow execution platform that orchestrates LLM-based and deterministic actions to accomplish structured tasks. The system serves as an execution engine for:
 
-- **Workflow execution**: Step-by-step execution with routing
-- **Quality control**: Review loops and approval gates
-- **Resilience**: Retry logic and failure handling
-- **Observability**: Execution history and artifact tracking
+- **Code generation and modification** via LLM coders
+- **Documentation generation and validation** via specialized actions
+- **Media content generation** via external service integration
+- **Workflow governance** via validation and reconciliation
+
+The primary value is providing a structured, repeatable, observable execution environment for AI-assisted software development workflows.
+
+## Scope
+
+### In Scope
+
+| Category | Functions |
+|----------|-----------|
+| **Workflow Execution** | Multi-step workflow orchestration, prompt rendering, step routing |
+| **LLM Integration** | Claude, Codex, Qwen invocation with model-specific handling |
+| **Action Library** | 26 deterministic actions for common operations |
+| **Job Management** | Job lifecycle, state persistence, artifact tracking |
+| **Backend Integration** | Worker mode, polling, daemon supervision |
+| **Bundle Management** | Workflow seeding, template loading, runtime updates |
+
+### Out of Scope
+
+| Category | Exclusions |
+|----------|------------|
+| **LLM Training** | Fine-tuning, model customization |
+| **General Scheduling** | Cron-like job scheduling, distributed task queues |
+| **Web Interface** | GUI, web dashboards, real-time collaboration |
+| **Version Control** | Git operations (delegates to external tools) |
 
 ## Functional Capabilities
 
-### 1. Workflow Execution
+### FC-01: Workflow Execution
 
-#### 1.1 Step Execution
+**Description**: Execute multi-step workflows with deterministic routing and artifact management.
 
-**Function**: Execute a single workflow step
+**Requirements**:
+- FR-01.1: Load workflow definition from bundle
+- FR-01.2: Execute steps in sequence according to workflow definition
+- FR-01.3: Support conditional routing (next/failure paths)
+- FR-01.4: Persist job state between steps
+- FR-01.5: Track artifact production and consumption
 
-**Inputs**:
-- Workflow name
-- Step name
-- Job state
-- Configuration
+**Acceptance Criteria**:
+- Workflows complete without manual intervention
+- Failed steps route to failure handlers
+- Job state is recoverable after interruption
 
-**Outputs**:
-- Step result (APPROVED/REJECTED)
-- Generated artifacts
-- Updated job state
+### FC-02: Job State Management
 
-**Behavior**:
-1. Load workflow bundle from runtime
-2. Render prompt template with context
-3. Invoke coder (LLM) or action (Python)
-4. Read meta.json sidecar
-5. Validate artifacts
-6. Return result
+**Description**: Manage job lifecycle from creation through completion.
 
-#### 1.2 Workflow Routing
+**Requirements**:
+- FR-02.1: Create jobs with unique IDs
+- FR-02.2: Persist job state to JSON files
+- FR-02.3: Support job querying and status checking
+- FR-02.4: Handle job resumption after interruption
+- FR-02.5: Archive completed jobs
 
-**Function**: Route to next step based on result
+**Acceptance Criteria**:
+- Job files are valid JSON
+- State changes are atomic
+- Jobs can be resumed across process restarts
 
-**Inputs**:
-- Current step result
-- Job state
-- Workflow configuration
+### FC-03: Multi-Model Support
 
-**Outputs**:
-- Next step name
-- Updated job state
-- Exit code
+**Description**: Support multiple LLM providers with model-specific handling.
 
-**Behavior**:
-- APPROVED → Next step
-- REJECTED → Refine or retry
-- Failure → Failure handling
+**Requirements**:
+- FR-03.1: Support Claude (Anthropic) API
+- FR-03.2: Support Codex (OpenAI) API
+- FR-03.3: Support Qwen (Alibaba) API
+- FR-03.4: Allow model-specific prompt templates
+- FR-03.5: Provide model aliasing
 
-### 2. Coder Invocation
+**Acceptance Criteria**:
+- Each model can be invoked independently
+- Model-specific prompts are loaded when available
+- Aliases resolve to correct model configurations
 
-#### 2.1 Model Resolution
+### FC-04: Step Result Routing
 
-**Function**: Resolve model alias to actual model
+**Description**: Route step execution results to appropriate next steps.
 
-**Aliases**:
-| Alias | Model |
-|-------|-------|
-| default | claude-opus-4 |
-| fast | claude-sonnet-4 |
-| code | codex |
-| local | qwen |
+**Requirements**:
+- FR-04.1: Parse meta.json sidecar for structured results
+- FR-04.2: Route to 'next' step on success
+- FR-04.3: Route to 'failure' step on failure
+- FR-04.4: Support approval gates
+- FR-04.5: Support review/refine loops
 
-#### 2.2 Multi-Model Support
+**Acceptance Criteria**:
+- Routing decisions based on meta.json status
+- No silent recovery paths
+- Explicit failure routing
 
-**Function**: Invoke different models with same interface
+### FC-05: Artifact Validation
 
-**Adapters**:
-- `claude_adapter.py`: Claude API
-- `codex_adapter.py`: OpenAI Codex
-- `qwen_adapter.py`: Local Qwen
+**Description**: Validate artifacts produced by workflow steps.
 
-**Common Interface**:
-```python
-def invoke_coder(prompt: str, model: str, timeout: int) -> CoderResult
-```
+**Requirements**:
+- FR-05.1: Check artifact existence
+- FR-05.2: Validate artifact format (markdown structure)
+- FR-05.3: Validate section requirements
+- FR-05.4: Report validation failures
+- FR-05.5: Support artifact promotion
 
-### 3. Artifact Management
+**Acceptance Criteria**:
+- All declared artifacts are checked
+- Validation failures block workflow progression
+- Reports include specific error details
 
-#### 3.1 Path Resolution
+### FC-06: Local Execution Mode
 
-**Function**: Resolve artifact keys to paths
+**Description**: Execute workflows locally without backend connection.
 
-**Constants**:
-- `ARTIFACT_KEY_*`: Artifact identifiers
-- `ARTIFACT_PATH_*`: Pre-computed paths
-- `FOLDER_KEY_*`: Directory constants
+**Requirements**:
+- FR-06.1: Run workflows from local files
+- FR-06.2: Store artifacts locally
+- FR-06.3: Support workflow parameter injection
+- FR-06.4: Support artifact reference substitution
+- FR-06.5: Provide local job management
 
-**Resolution**:
-```python
-path = artifact_path(ARTIFACT_KEY_PROJECT_ANALYSIS, FOLDER_KEY_SYSTEM_BOOTSTRAP)
-```
+**Acceptance Criteria**:
+- No backend connectivity required
+- All artifacts stored in local filesystem
+- Jobs can be listed and inspected
 
-#### 3.2 Validation
+### FC-07: Backend Worker Mode
 
-**Function**: Validate artifact existence and content
+**Description**: Execute steps assigned by backend.
 
-**Checks**:
-- File exists
-- Frontmatter valid
-- Required sections present
-- Cross-references resolve
+**Requirements**:
+- FR-07.1: Poll backend for available work
+- FR-07.2: Claim steps from backend queue
+- FR-07.3: Execute claimed steps
+- FR-07.4: Report results to backend
+- FR-07.5: Handle backend errors gracefully
 
-#### 3.3 Protection
+**Acceptance Criteria**:
+- Workers claim and execute steps reliably
+- Results are submitted successfully
+- Backend unavailability is handled
 
-**Function**: Protect documents from unauthorized writes
+### FC-08: Daemon Supervision
 
-**Rules**:
-- Can write only if in `produces` list
-- Workflow-scoped protection
-- Step-scoped overrides
+**Description**: Supervise workflow execution as a long-running daemon.
 
-### 4. Review and Refine
+**Requirements**:
+- FR-08.1: Run continuously as supervisor
+- FR-08.2: Spawn child processes for steps
+- FR-08.3: Monitor child process health
+- FR-08.4: Emit heartbeats to backend
+- FR-08.5: Aggregate child logs
 
-#### 4.1 Review Cycle
+**Acceptance Criteria**:
+- Daemon runs indefinitely
+- Child failures don't crash daemon
+- Heartbeats maintain worker registration
 
-**Function**: Review generated artifacts
+### FC-09: Documentation Generation
 
-**Flow**:
-```
-Generate → Review → Decision
-              ↓
-       (Approve / Reject)
-              ↓
-    (Continue / Refine)
-```
+**Description**: Generate documentation artifacts through workflows.
 
-**Decision Criteria**:
-- Content quality
-- Standards compliance
-- Completeness
+**Requirements**:
+- FR-09.1: Generate module documentation
+- FR-09.2: Generate system documentation
+- FR-09.3: Generate architecture documentation
+- FR-09.4: Generate multi-audience documentation
+- FR-09.5: Generate HTML sites from markdown
 
-#### 4.2 Refine Loop
+**Acceptance Criteria**:
+- Generated docs follow templates
+- Cross-references are valid
+- Sites are renderable HTML
 
-**Function**: Refine artifacts based on feedback
+### FC-10: Documentation Validation
 
-**Behavior**:
-- Takes review feedback as input
-- Modifies artifact in-place or creates new
-- Returns updated artifact
-- Limited iterations (configurable)
+**Description**: Validate documentation against standards.
 
-### 5. Retry Logic
+**Requirements**:
+- FR-10.1: Validate frontmatter completeness
+- FR-10.2: Validate required sections present
+- FR-10.3: Validate cross-reference resolution
+- FR-10.4: Validate section requirements
+- FR-10.5: Report validation results
 
-#### 5.1 Auto-Retry
+**Acceptance Criteria**:
+- All validation checks execute
+- Results indicate pass/fail status
+- Errors reference specific issues
 
-**Function**: Retry step on transient failure
+### FC-11: Delivery Scaffold
 
-**Configuration**:
-- `max_retries`: Maximum retry attempts
-- `retry_delay`: Delay between retries
-- `retry_codes`: Which reject codes trigger retry
+**Description**: Bootstrap new repositories with governance documentation.
 
-#### 5.2 Human-Retry
+**Requirements**:
+- FR-11.1: Generate SOP documents
+- FR-11.2: Generate template registry
+- FR-11.3: Generate agent contracts
+- FR-11.4: Generate status rules
+- FR-11.5: Populate folder structure
 
-**Function**: Allow human-triggered retry
+**Acceptance Criteria**:
+- Scaffold creates all required documents
+- Documents follow template_id conventions
+- Structure matches governance standards
 
-**Behavior**:
-- Human reviews failure
-- Decides to retry or abort
-- Retry count tracked separately
+### FC-12: Review and Refine Loops
 
-### 6. Job State Management
+**Description**: Support iterative review/refine cycles in workflows.
 
-#### 6.1 State Persistence
+**Requirements**:
+- FR-12.1: Route to review steps
+- FR-12.2: Accept approve/reject decisions
+- FR-12.3: Route to refinement on reject
+- FR-12.4: Track review iterations
+- FR-12.5: Support human-in-the-loop approval
 
-**Function**: Save and load job state
+**Acceptance Criteria**:
+- Reviews block until approved
+- Rejections trigger refinement
+- Iteration counts are tracked
 
-**Storage**: `job.json` in job directory
+### FC-13: Failure Handling
 
-**Contents**:
-- Current step
-- Completed steps
-- Artifacts
-- Retry counts
-- Failure history
+**Description**: Handle step failures gracefully.
 
-#### 6.2 State Transitions
+**Requirements**:
+- FR-13.1: Detect step failures
+- FR-13.2: Route to failure handlers
+- FR-13.3: Support retry logic
+- FR-13.4: Support failure recovery
+- FR-13.5: Report failure details
 
-**States**:
-| State | Description |
-|-------|-------------|
-| PENDING | Job created, not started |
-| IN_PROGRESS | Executing steps |
-| WAITING_FOR_HUMAN_APPROVAL | Human review required |
-| COMPLETED | All steps completed |
-| FAILED | Step failed, not retrying |
+**Acceptance Criteria**:
+- Failures are detected promptly
+- No silent failures
+- Failure paths are explicit
 
-### 7. Deterministic Actions
+### FC-14: Runner Home Initialization
 
-#### 7.1 Action Execution
+**Description**: Initialize runtime environment for workflows.
 
-**Function**: Execute Python functions as steps
+**Requirements**:
+- FR-14.1: Create runner home directory
+- FR-14.2: Create config.json
+- FR-14.3: Seed workflow bundles
+- FR-14.4: Create logs directory
+- FR-14.5: Create jobs directory
 
-**Location**: `agent_runner_v2/actions/`
-
-**Examples**:
-- `finalize_bootstrap.py`: Finalize bootstrap bundles
-- `validate_delivery_docs.py`: Validate delivery docs
-- `sync_codebase_docs.py`: Sync codebase documentation
-- `promote_artifact.py`: Promote artifacts
-
-#### 7.2 Action Interface
-
-```python
-def action_func(
-    *,
-    group_name: str,
-    step: str,
-    state: dict,
-    step_cfg: dict,
-    action_args: dict
-) -> dict:
-    """Execute action and return result."""
-    return {
-        "status": "APPROVED",
-        "remark": "Action completed",
-        "artifacts": {...}
-    }
-```
+**Acceptance Criteria**:
+- Init creates all required directories
+- Config template is valid JSON
+- Bundles are copied from bootstrap
 
 ## Actors
 
-### Primary Actors
+### Human Actors
 
-| Actor | Role | Interactions |
-|-------|------|--------------|
-| **Developer** | Uses workflows | Triggers execution, reviews results |
-| **Operator** | Manages system | Monitors jobs, handles failures |
-| **Workflow** | Automated execution | Executes steps, makes decisions |
-| **Coder** | LLM model | Generates content, reviews artifacts |
-| **Action** | Python function | Performs deterministic operations |
+| Actor | Role | Primary Interactions |
+|-------|------|---------------------|
+| **Workflow User** | Initiates workflow execution | `ukbe-run-agent run` |
+| **Operator** | Manages daemon and workers | `ukbe-run-agent daemon`, monitoring |
+| **Approver** | Reviews and approves outputs | Approval workflows |
+| **Developer** | Extends actions and workflows | Action development, template editing |
 
-### Secondary Actors
+### System Actors
 
-| Actor | Role | Interactions |
-|-------|------|--------------|
-| **Backend** | State source | Provides job state, receives results |
-| **Notification Service** | Alerts | Sends notifications on events |
-| **File System** | Storage | Reads/writes artifacts |
+| Actor | Role | Primary Interactions |
+|-------|------|---------------------|
+| **Backend API** | Assigns work to workers | Step assignment, result submission |
+| **LLM Providers** | Executes coder steps | Claude, Codex, Qwen APIs |
+| **External Services** | Media generation | ComfyUI, video assembly |
 
 ## Core Behaviors
 
-### Behavior: Execute Workflow Step
+### Behavior 1: Step Execution
 
+**Trigger**: Workflow step is reached
+
+**Preconditions**:
+- Job exists with valid state
+- Step configuration is loaded
+- Input artifacts are available
+
+**Main Flow**:
+1. Load step configuration from template groups
+2. Render prompt template with artifact substitution
+3. If coder step: invoke LLM via adapter
+4. If action step: execute Python function
+5. Wait for completion
+6. Read meta.json sidecar
+7. Validate artifacts
+8. Route to next step or failure handler
+
+**Postconditions**:
+- Artifacts written to disk
+- meta.json exists with result
+- Job state updated
+
+### Behavior 2: Worker Claim
+
+**Trigger**: Daemon polls backend
+
+**Preconditions**:
+- Backend is reachable
+- Worker is registered
+- Daemon is running
+
+**Main Flow**:
+1. Poll backend for available steps
+2. If step available: claim assignment
+3. Spawn child process for execution
+4. Monitor child process
+5. Read result file
+6. Submit result to backend
+7. Return to polling
+
+**Postconditions**:
+- Step is executed
+- Result is submitted
+- Child process terminates
+
+### Behavior 3: Documentation Sync
+
+**Trigger**: `documentation_sync_v1` workflow invoked
+
+**Preconditions**:
+- Codebase has changed
+- Documentation may be stale
+
+**Main Flow**:
+1. Scan repository for modules
+2. Compare with existing documentation
+3. Generate missing module docs
+4. Update stale module docs
+5. Generate change impact document
+6. Validate documentation
+7. Report sync results
+
+**Postconditions**:
+- Documentation reflects current code
+- Change impact documented
+- Validation passed
+
+## Data Requirements
+
+### Job State Schema
+
+```json
+{
+  "job_id": "JOB-YYYYMMDD-XXXXXXXX",
+  "template_group": "workflow_name_v1",
+  "state": "running|completed|failed",
+  "current_step": "step_name",
+  "artifacts": {
+    "ARTIFACT_KEY": "path/to/artifact.md"
+  },
+  "created_at": "2026-07-10T11:45:32+08:00",
+  "updated_at": "2026-07-10T11:45:32+08:00",
+  "step_history": [...],
+  "metadata": {...}
+}
 ```
-GIVEN a workflow and step are specified
-AND the job state is valid
-WHEN the step is executed
-THEN the prompt is rendered
-AND the coder is invoked
-AND the meta.json is read
-AND artifacts are validated
-AND the result is returned
+
+### Meta.json Schema
+
+```json
+{
+  "schema_version": "v2",
+  "coder_result": {
+    "status": "APPROVED|REJECTED",
+    "remark": "Human-readable summary",
+    "artifacts": {
+      "ARTIFACT_KEY": "path/to/artifact.md"
+    },
+    "recorded_at": "2026-07-10T11:45:32+08:00"
+  }
+}
 ```
 
-### Behavior: Route After Success
+### Execution Request Schema
 
+```json
+{
+  "template_group": "workflow_name_v1",
+  "step": "step_name",
+  "job_id": "JOB-...",
+  "artifacts": {...},
+  "context": {...}
+}
 ```
-GIVEN a step completed successfully
-AND the result is APPROVED
-WHEN routing occurs
-THEN the next step is determined
-AND the job state is updated
-AND execution continues
-```
-
-### Behavior: Handle Rejection
-
-```
-GIVEN a step completed
-AND the result is REJECTED
-WHEN handling rejection
-THEN the retry count is checked
-AND if under limit, refine is triggered
-AND if over limit, human approval is requested
-```
-
-### Behavior: Handle Failure
-
-```
-GIVEN a step failed
-WHEN handling failure
-THEN the failure is logged
-AND the retry count is checked
-AND if retryable, retry is attempted
-AND if not, job status is set to FAILED
-```
-
-### Behavior: Validate Artifacts
-
-```
-GIVEN a step produced artifacts
-WHEN validating
-THEN each artifact is checked for existence
-AND frontmatter is validated
-AND sections are checked
-AND cross-references are verified
-```
-
-## Workflow Families
-
-The system supports 21 workflow families with 290+ steps:
-
-| Family | Steps | Purpose |
-|--------|-------|---------|
-| `00_master_docs_bootstrap_v1` | 13 | Bootstrap system documentation |
-| `10_execution_scaffold_v1` | 13 | Scaffold delivery governance |
-| `20_initiative_intake_v1` | 5 | Initiative capture |
-| `21_bug_fix_intake_v1` | 7 | Bug triage and fix |
-| `30_delivery_planning_v1` | 10 | Plan and task graph generation |
-| `31_task_execution_v1` | 12 | Implementation and validation |
-| `40_documentation_sync_v1` | 5 | Doc reconciliation |
-| `50_architecture_site_v1` | 2 | HTML site generation |
-| `41_audience_doc_v1` | 4 | Audience-specific docs |
-| `51-55_*_docs_v1` | 1-4 | Stakeholder/developer/operator/tester/user docs |
-
----
 
 ## Related Documents
 
-- [SYSTEM_OVERVIEW.md](SYSTEM_OVERVIEW.md) — System explanation
-- [BUSINESS_CAPABILITIES.md](BUSINESS_CAPABILITIES.md) — Business value
-- [NON_FUNCTIONAL_REQUIREMENTS.md](NON_FUNCTIONAL_REQUIREMENTS.md) — Quality expectations
-
----
-
-*Generated by workflow `00_master_docs_bootstrap_v1` step `03_generate_system_overview_docs` on 2026-07-10T09:43:38+08:00*
+- [SYSTEM_OVERVIEW.md](SYSTEM_OVERVIEW.md) — Platform overview
+- [BUSINESS_CAPABILITIES.md](BUSINESS_CAPABILITIES.md) — Business capabilities
+- [NON_FUNCTIONAL_REQUIREMENTS.md](NON_FUNCTIONAL_REQUIREMENTS.md) — Quality attributes

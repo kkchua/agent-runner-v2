@@ -1,12 +1,12 @@
 ---
-template_id: "SYS-00-BT"
 title: "Bundle Taxonomy"
+template_id: "SYS-00-BT"
 status: "active"
-change_id: "00DOC-GEN-20260710-004"
+generated: "2026-07-10T11:45:32+08:00"
 workflow: "00_master_docs_bootstrap_v1"
 step: "03_generate_system_overview_docs"
+change_id: "00DOC-20260710-15f76235"
 managed_by: workflow-generated
-generated: "2026-07-10T09:43:38+08:00"
 ---
 
 > Managed by workflow: `00_master_docs_bootstrap_v1` / step: `03_generate_system_overview_docs`
@@ -16,221 +16,302 @@ generated: "2026-07-10T09:43:38+08:00"
 
 ## Purpose
 
-This document defines the taxonomy of bundles used in the `agent-runner-v2` ecosystem. Bundles are self-contained units of configuration, templates, and assets that workflows consume at runtime.
-
-## Bundle Types
-
-### Core Bundles
-
-Core bundles ship with the package and seed the runtime environment.
-
-| Bundle | Location | Purpose |
-|--------|----------|---------|
-| `core` | `agent_runner_v2/bootstrap/bundles/core/` | System documentation and governance |
-| `workflows` | `agent_runner_v2/bootstrap/workflows/default/` | Workflow definitions and prompts |
-| `themes` | `agent_runner_v2/bootstrap/themes/` | HTML/CSS themes for generated sites |
-
-### Runtime Bundles
-
-Runtime bundles live in the user's home directory and are the actual source of truth during execution.
-
-| Bundle | Location | Purpose |
-|--------|----------|---------|
-| `core` | `%USERPROFILE%\.ukbe-runner\bundles\core\` | Active system documentation |
-| `workflows` | `%USERPROFILE%\.ukbe-runner\workflows\<workflow>\` | Active workflow definitions |
-| `jobs` | `%USERPROFILE%\.ukbe-runner\jobs\` | Job state and artifacts |
+This document defines the taxonomy for workflow bundles in the `agent-runner-v2` ecosystem. It establishes naming conventions, directory structures, and versioning rules for workflow definitions, prompt templates, and supporting assets.
 
 ## Bundle Structure
 
-### Core Bundle Layout
+### Runtime Bundle Location
+
+Workflow bundles are loaded at runtime from:
 
 ```
-bundles/core/
-├── current/                     # Current version
-│   ├── README.md               # Bundle index
-│   ├── PROJECT_ANALYSIS.md     # Project analysis
-│   ├── SYSTEM_OVERVIEW.md      # System overview
-│   ├── DOCUMENTATION_STANDARD.md
-│   ├── BUNDLE_TAXONOMY.md      # This file
-│   ├── BUNDLE_MIGRATION_PLAN.md
-│   ├── BUSINESS_CAPABILITIES.md
-│   ├── FUNCTIONAL_SPEC.md
-│   ├── NON_FUNCTIONAL_REQUIREMENTS.md
-│   ├── SYSTEM_CONTEXT.md
-│   ├── COMPONENT_ARCHITECTURE.md
-│   ├── DECISION_LOG.md
-│   ├── SYSTEM_FILE_STRUCTURE.md
-│   ├── DEVELOPER_GUIDE.md
-│   ├── RUNBOOK.md
-│   └── EXISTING_REPO_WORKFLOW_SOP.md
-├── previous/                    # Previous versions (archived)
-└── manifest.json               # Bundle manifest
+%USERPROFILE%\.ukbe-runner\workflows\<workflow>\
 ```
 
-### Workflow Bundle Layout
+### Bootstrap Bundle Source
+
+Packaged bootstrap templates exist in the repository at:
 
 ```
-workflows/<workflow>/
+agent_runner_v2/bootstrap/workflows/default/
+```
+
+These seed the runtime bundles during `ukbe-run-agent init`.
+
+## Directory Layout
+
+### Standard Workflow Bundle
+
+```
+workflows/<workflow_name>/
 ├── template_groups.py          # Workflow step definitions
-├── job_schema.json             # Job state schema
-├── llm_response_schema.json    # Meta.json schema
-├── model_mapping.json          # Model aliases
+├── job_schema.json             # Job state validation schema
+├── llm_response_schema.json    # LLM response validation schema
+├── model_mapping.json          # Model aliases and configurations
+└── prompts/
+    └── <workflow_name>/
+        ├── 01_step_name.txt    # Step prompt template
+        ├── 01_step_name_qwen.txt  # Model-specific variant
+        └── ...
+```
+
+### Bootstrap Bundle Layout
+
+```
+agent_runner_v2/bootstrap/workflows/default/
+├── template_groups.py          # All workflow definitions
+├── job_schema.json
+├── llm_response_schema.json
+├── model_mapping.json
 └── prompts/
     ├── 00_master_docs_bootstrap_v1/
-    │   ├── 02_generate_project_analysis.txt
-    │   ├── 03_generate_system_overview_docs.txt
-    │   └── ...
     ├── 10_execution_scaffold_v1/
     ├── 20_initiative_intake_v1/
+    ├── 21_bug_fix_intake_v1/
+    ├── 30_delivery_planning_v1/
+    ├── 31_task_execution_v1/
+    ├── 40_documentation_sync_v1/
+    ├── 41_audience_doc_v1/
     └── ...
 ```
 
-### Theme Bundle Layout
+## Workflow Naming Convention
+
+### Family ID Format
 
 ```
-themes/
-└── default/
-    ├── layout.html             # Base HTML layout
-    ├── styles.css              # CSS styles
-    └── assets/                 # Static assets
+<NN>_<descriptive_name>_v<version>
 ```
 
-## Bundle Identifiers
+| Component | Description | Example |
+|-----------|-------------|---------|
+| `NN` | Two-digit numeric prefix (ordering) | `00`, `20`, `31` |
+| `descriptive_name` | snake_case workflow purpose | `master_docs_bootstrap` |
+| `v<version>` | Version suffix | `v1`, `v2` |
 
-### Naming Conventions
+### Prefix Ranges
 
-| Element | Pattern | Example |
-|---------|---------|---------|
-| Bundle ID | `<type>_<name>` | `core_default`, `workflow_delivery` |
-| Version | `v<major>` | `v1`, `v2` |
-| Timestamp | `YYYYMMDD-HHMMSS` | `20260710-094338` |
-| Change ID | `00DOC-GEN-<timestamp>-<seq>` | `00DOC-GEN-20260710-004` |
+| Range | Category | Examples |
+|-------|----------|----------|
+| `00-09` | Bootstrap/Scaffold | `00_master_docs_bootstrap_v1` |
+| `10-19` | Execution Scaffold | `10_execution_scaffold_v1` |
+| `20-29` | Intake/Planning | `20_initiative_intake_v1`, `21_bug_fix_intake_v1` |
+| `30-39` | Delivery Planning | `30_delivery_planning_v1` |
+| `31-49` | Task Execution | `31_task_execution_v1` |
+| `40-59` | Documentation | `40_documentation_sync_v1`, `41_audience_doc_v1` |
+| `50-69` | Stakeholder Sites | `50_architecture_site_v1` |
+| `70-99` | Reserved | (future use) |
 
-### Bundle Manifest
+## Step Naming Convention
 
-Each bundle includes a `manifest.json`:
+### Step File Format
+
+```
+<NN>_<step_name>.txt
+<NN>_<step_name>_<model_alias>.txt
+```
+
+| Component | Description | Example |
+|-----------|-------------|---------|
+| `NN` | Two-digit step number (ordering within workflow) | `01`, `02` |
+| `step_name` | snake_case step purpose | `generate_plan` |
+| `model_alias` | Optional model-specific suffix | `qwen`, `claude` |
+
+### Step Numbering
+
+- Steps within a workflow are ordered by numeric prefix
+- Gaps allowed for future insertion (e.g., `01`, `03`, `05`)
+- Review/refine pairs share the same number with different suffixes
+
+## Prompt Template Variants
+
+### Model-Specific Prompts
+
+When a step requires model-specific prompting, create variants:
+
+```
+08_impl_task.txt          # Default (Claude)
+08_impl_task_qwen.txt     # Qwen variant
+08_impl_task_codex.txt    # Codex variant
+```
+
+### Variant Selection
+
+1. Runner checks for `{step}_{model_alias}.txt` first
+2. Falls back to `{step}.txt` if model-specific variant not found
+3. Model alias resolved via `model_mapping.json`
+
+## Schema Files
+
+### job_schema.json
+
+Validates `job.json` structure:
 
 ```json
 {
-  "bundle_id": "core",
-  "version": "2026.07.10",
-  "created_at": "2026-07-10T09:43:38+08:00",
-  "change_id": "00DOC-GEN-20260710-004",
-  "workflow": "00_master_docs_bootstrap_v1",
-  "documents": [
-    {"path": "README.md", "template_id": "SYS-00-IDX"},
-    {"path": "SYSTEM_OVERVIEW.md", "template_id": "SYS-00-SO"}
-  ],
-  "dependencies": [],
-  "supersedes": "00DOC-GEN-20260709-003"
+  "type": "object",
+  "required": ["job_id", "template_group", "state", "artifacts"],
+  "properties": {
+    "job_id": { "type": "string" },
+    "template_group": { "type": "string" },
+    "state": { "type": "string" },
+    "artifacts": { "type": "object" },
+    "created_at": { "type": "string" },
+    "updated_at": { "type": "string" }
+  }
 }
 ```
 
-## Bundle Lifecycle
+### llm_response_schema.json
 
-### Creation
+Validates LLM response structure for structured outputs.
 
-1. Workflow generates documents
-2. Documents are written to `bootstrap/bundles/<type>/current/`
-3. Manifest is generated
-4. Bundle is validated
+### model_mapping.json
 
-### Seeding
+Maps model aliases to configurations:
 
-1. `ukbe-run-agent init` copies bundles to `%USERPROFILE%\.ukbe-runner\`
-2. Runtime loads from user home, not package
-3. Changes require re-seeding or explicit sync
+```json
+{
+  "claude": {
+    "provider": "anthropic",
+    "model": "claude-sonnet-4-20250514"
+  },
+  "qwen": {
+    "provider": "alibaba",
+    "model": "qwen-coder"
+  },
+  "codex": {
+    "provider": "openai",
+    "model": "codex-latest"
+  }
+}
+```
 
-### Archival
+## Template Groups Structure
 
-1. Previous versions moved to `previous/<timestamp>/`
-2. Manifest updated with `superseded_by`
-3. Retention policy applied (default: 10 versions)
+### Workflow Definition
 
-### Sync
+```python
+WORKFLOW_FAMILIES = {
+    "workflow_name_v1": {
+        "description": "Human-readable description",
+        "produces": ["ARTIFACT_KEY_1", "ARTIFACT_KEY_2"],
+        "steps": [
+            {
+                "name": "step_name",
+                "prompt": "prompts/workflow_name_v1/01_step_name.txt",
+                "coder": True,
+                "action": None,
+                "next": "next_step_name",
+                "failure": "failure_step_name"
+            }
+        ]
+    }
+}
+```
 
-Bootstrap-to-runtime sync is required when:
-- Workflow definitions change
-- Prompt templates are updated
-- Constants are modified
-- New workflows are added
+### Step Configuration
 
-## Bundle Relationships
+| Field | Type | Description |
+|-------|------|-------------|
+| `name` | string | Step identifier |
+| `prompt` | string | Path to prompt template |
+| `coder` | boolean | Whether to invoke LLM |
+| `action` | string | Action function name (if not coder) |
+| `next` | string | Next step on success |
+| `failure` | string | Next step on failure |
+| `enable_notifications` | boolean | Send step notifications |
 
-### Dependency Graph
+## Artifact Key Convention
+
+### Key Format
 
 ```
-core (governance)
-    ↑
-    └── referenced by all other bundles
-
-workflows (execution)
-    ↑
-    └── depends on core for standards
-    └── consumed by runner at runtime
-
-themes (presentation)
-    ↑
-    └── depends on core for structure
-    └── consumed by site generation
+<category>_<descriptor>_<suffix>
 ```
+
+| Category | Purpose | Examples |
+|----------|---------|----------|
+| `INIT` | Initiative documents | `INIT_FILE`, `PRE_INIT_FILE` |
+| `PLAN` | Planning documents | `PLAN_FILE`, `TASK_GRAPH_FILE` |
+| `TASK` | Task documents | `TASK_FILE`, `IMPL_FILE` |
+| `VALIDATION` | Validation artifacts | `VALIDATION_FILE`, `REVIEW_FILE` |
+| `CODEBASE` | Codebase documentation | `CODEBASE_DOC_SOP`, `CODEBASE_INVENTORY` |
+| `DELIVERY` | Delivery governance | `DELIVERY_SOP`, `DELIVERY_STATUS_RULES` |
+| `SYSTEM` | System documentation | `SYSTEM_CONTEXT`, `COMPONENT_ARCHITECTURE` |
+
+### File Suffix Convention
+
+| Suffix | Meaning |
+|--------|---------|
+| `_FILE` | Primary document |
+| `_v1`, `_v2` | Versioned template |
+| `_MD` | Markdown format |
+| `_JSON` | JSON format |
+
+## Bundle Versioning
+
+### Version Components
+
+| Level | Format | Example |
+|-------|--------|---------|
+| Workflow | `v<N>` | `v1`, `v2` |
+| Bundle | `default` | (single bundle per distribution) |
+| Schema | SemVer | `1.0.0` |
 
 ### Version Compatibility
 
-| Bundle | Compatible Versions | Notes |
-|--------|---------------------|-------|
-| core v1 | workflows v1 | Initial release |
-| core v2 | workflows v1-v2 | Added new templates |
+- Major version changes require `init` re-run
+- Minor changes are backward compatible
+- Patch changes are transparent
 
-## Bundle Validation
+## Migration Path
 
-### Validation Rules
+### Adding New Workflows
 
-1. **Manifest validation**:
-   - Required fields present
-   - Version format valid
-   - Documents array non-empty
+1. Create prompt templates in `bootstrap/workflows/default/prompts/<workflow>/`
+2. Add workflow definition to `template_groups.py`
+3. Run `ukbe-run-agent init` to seed runtime bundles
+4. Test workflow execution
 
-2. **Document validation**:
-   - All declared documents exist
-   - Frontmatter valid
-   - Template IDs match
+### Modifying Existing Workflows
 
-3. **Cross-reference validation**:
-   - Internal links resolve
-   - Dependencies exist
-   - No circular dependencies
+1. Update bootstrap templates
+2. Run `ukbe-run-agent init` to update runtime bundles
+3. Existing jobs continue with previous version
+4. New jobs use updated templates
 
-### Validation Tools
+### Workflow Deprecation
 
-| Tool | Purpose |
-|------|---------|
-| `finalize_bootstrap.py` | Validate and finalize bundles |
-| `prepare_delivery_scaffold.py` | Prepare scaffold bundles |
+1. Mark workflow as deprecated in `template_groups.py`
+2. Set `deprecated: true` in workflow config
+3. Remove from active documentation after 2 major versions
 
-## Best Practices
+## Validation Rules
 
-### For Bundle Authors
+### Structural Validation
 
-1. Always include a manifest
-2. Use semantic versioning
-3. Document breaking changes
-4. Maintain changelog
+- All prompt files referenced in `template_groups.py` must exist
+- All step `next` and `failure` targets must be valid step names
+- All `produces` artifacts must be valid artifact keys
+- Workflow names must follow naming convention
 
-### For Bundle Consumers
+### Content Validation
 
-1. Check version compatibility
-2. Validate before use
-3. Archive old versions
-4. Monitor for updates
+- Prompt templates must use valid artifact key placeholders
+- Prompts must not contain hardcoded paths
+- Schema files must be valid JSON
 
----
+Run validation:
+```bash
+ukbe-run-agent run --template-group documentation_sync_v1
+```
 
-## Related Documents
+## Reference
 
-- [BUNDLE_MIGRATION_PLAN.md](BUNDLE_MIGRATION_PLAN.md) — Migration paths
-- [DOCUMENTATION_STANDARD.md](DOCUMENTATION_STANDARD.md) — Doc standards
-
----
-
-*Generated by workflow `00_master_docs_bootstrap_v1` step `03_generate_system_overview_docs` on 2026-07-10T09:43:38+08:00*
+| Resource | Location |
+|----------|----------|
+| Template Groups | `agent_runner_v2/bootstrap/workflows/default/template_groups.py` |
+| Job Schema | `agent_runner_v2/bootstrap/workflows/default/job_schema.json` |
+| Model Mapping | `agent_runner_v2/bootstrap/workflows/default/model_mapping.json` |
+| Prompt Templates | `agent_runner_v2/bootstrap/workflows/default/prompts/` |

@@ -2,295 +2,347 @@
 template_id: "SYS-00-BC"
 title: "Business Capabilities"
 status: "active"
-change_id: "00DOC-GEN-20260710-004"
-workflow: "00_master_docs_bootstrap_v1"
+generated: "2026-07-10T14:07:00+08:00"
+workflow: "00_master_docs_bootstrap_v2"
 step: "03_generate_system_overview_docs"
+change_id: "00DOC-GEN-20260710-004"
 managed_by: workflow-generated
-generated: "2026-07-10T09:43:38+08:00"
 ---
 
-> Managed by workflow: `00_master_docs_bootstrap_v1` / step: `03_generate_system_overview_docs`
+> Managed by workflow: `00_master_docs_bootstrap_v2` / step: `03_generate_system_overview_docs`
 > This file is workflow-generated and protected from manual edits.
 
 # Business Capabilities
 
 ## Purpose
 
-This document describes the operational capabilities that `agent-runner-v2` enables. It maps technical functionality to business value, helping stakeholders understand what the platform makes possible.
+This document describes the operational capabilities that `agent-runner-v2` enables. It explains what users can accomplish with the platform, organized by capability area.
+
+## Audience
+
+| Role | Interest |
+|------|----------|
+| **Stakeholders** | Understanding platform value and use cases |
+| **Product managers** | Feature prioritization and roadmap planning |
+| **Operators** | Operational possibilities and constraints |
+| **New users** | What can be built with this platform |
 
 ## Capability Map
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                    Business Outcomes                             │
-├─────────────────────────────────────────────────────────────────┤
-│  • Faster delivery          • Higher quality                     │
-│  • Reduced risk             • Better compliance                  │
-│  • Improved traceability    • Lower cognitive load               │
-└─────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                    Operational Capabilities                      │
-├─────────────────────────────────────────────────────────────────┤
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐          │
-│  │  Workflow    │  │   Quality    │  │    Scale     │          │
-│  │  Automation  │  │   Assurance  │  │   & Speed    │          │
-│  └──────────────┘  └──────────────┘  └──────────────┘          │
-└─────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                    Technical Capabilities                        │
-├─────────────────────────────────────────────────────────────────┤
-│  Multi-Model Execution │ Review Loops │ Artifact Management     │
-│  Retry Logic          │ Approval Gates │ Deterministic Actions   │
-│  Workflow Routing     │ Sidecar Validation │ Step Recovery       │
-└─────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│                    AGENT-RUNNER-V2                          │
+├─────────────────────────────────────────────────────────────┤
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐       │
+│  │   WORKFLOW  │  │   CODER     │  │   ACTION    │       │
+│  │ ORCHESTRATION│  │  EXECUTION  │  │  EXECUTION  │       │
+│  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘       │
+│         │                │                │              │
+│         ▼                ▼                ▼              │
+│  ┌──────────────────────────────────────────────────┐   │
+│  │              EXECUTION MODES                        │   │
+│  │  ┌─────────┐  ┌─────────┐  ┌─────────────────┐   │   │
+│  │  │  Manual │  │ Worker  │  │     Daemon      │   │   │
+│  │  │   Run   │  │  Poll   │  │  Supervision    │   │   │
+│  │  └─────────┘  └─────────┘  └─────────────────┘   │   │
+│  └──────────────────────────────────────────────────┘   │
+├─────────────────────────────────────────────────────────────┤
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐       │
+│  │   REVIEW    │  │   STATE     │  │     NOTIFICATION   ││
+│  │    LOOPS    │  │ MANAGEMENT  │  │     MANAGEMENT     ││
+│  └─────────────┘  └─────────────┘  └─────────────┘       │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-## Workflow Automation
+## Capability Areas
 
-### Capability: Structured Multi-Step Execution
+### 1. Workflow Orchestration
 
-**What it enables**:
-- Complex workflows decomposed into discrete steps
-- Each step has clear inputs, outputs, and routing
-- Steps can be manual (LLM) or automated (Python actions)
+**Description**: Define and execute multi-step workflows with structured routing between steps.
 
-**Business Value**:
-- **Consistency**: Same process every time
-- **Visibility**: Clear progress tracking
-- **Auditability**: Complete execution history
+**Capabilities**:
 
-**Example Workflows**:
-- Initiative intake and refinement
-- Delivery planning with task graphs
-- Task execution with implementation and validation
-- Documentation synchronization
-- Architecture site generation
+| Capability | Description |
+|------------|-------------|
+| **Multi-step execution** | Execute sequences of steps with state persistence between steps |
+| **Conditional routing** | Route to different next steps based on previous step results |
+| **Retry logic** | Automatic retry of failed steps with configurable limits |
+| **Review loops** | Built-in review/reject/approve cycles for quality assurance |
+| **Parallel execution** | Support for concurrent step execution where applicable |
+| **State persistence** | Job state saved and resumed across step boundaries |
 
-### Capability: Review/Refine Loops
+**Operational Value**:
 
-**What it enables**:
-- Quality gates at key decision points
-- Automatic refinement on rejection
-- Convergence tracking with iteration limits
+- Reduces manual coordination overhead
+- Ensures consistent execution patterns
+- Enables long-running workflows
+- Supports human-in-the-loop approval
 
-**Business Value**:
-- **Quality**: Catches issues before they propagate
-- **Learning**: Model improves through feedback
-- **Control**: Human oversight where needed
+**Workflow Families**:
 
-**Example Patterns**:
-```
-Generate → Review → (Approve | Refine → Review)
-```
+The platform includes 21 predefined workflow families:
 
-## Quality Assurance
+| Workflow Family | Steps | Purpose |
+|-----------------|-------|---------|
+| `00_master_docs_bootstrap_v1/v2` | 13 | Master system documentation generation |
+| `10_execution_scaffold_v1` | 13 | Delivery scaffold generation |
+| `20_initiative_intake_v1` | 5 | Initiative capture and refinement |
+| `21_bug_fix_intake_v1` | 7 | Bug triage and patching |
+| `30_delivery_planning_v1` | 10 | Plan and task graph generation |
+| `31_task_execution_v1` | 12 | Implementation and validation |
+| `40_documentation_sync_v1` | 5 | Documentation reconciliation |
+| `50_architecture_site_v1` | 2 | HTML architecture site publishing |
+| Image/video pipelines | 3-10 | Content generation workflows |
 
-### Capability: Deterministic Actions
+### 2. Coder Execution
 
-**What it enables**:
-- Python functions for predictable operations
-- Same input always produces same output
-- No ambiguity in execution
+**Description**: Invoke LLM backends with unified interface and result handling.
 
-**Business Value**:
-- **Reliability**: Known behavior
-- **Testability**: Can be unit tested
-- **Maintainability**: Clear logic
+**Capabilities**:
 
-**Example Actions**:
-- `finalize_bootstrap.py`: Bundle finalization
-- `validate_delivery_docs.py`: Document validation
-- `sync_codebase_docs.py`: Documentation sync
-- `promote_artifact.py`: Artifact promotion
+| Capability | Description |
+|------------|-------------|
+| **Multi-backend support** | Claude, Codex, Qwen with unified interface |
+| **Model aliasing** | Map logical names to configured models |
+| **Prompt templating** | Template substitution with artifact context |
+| **Result validation** | Structured result parsing via meta.json |
+| **Usage tracking** | Token usage and cost tracking |
+| **Error handling** | Graceful degradation on coder failures |
 
-### Capability: Artifact Validation
+**Operational Value**:
 
-**What it enables**:
-- Verify expected artifacts exist
-- Check content conforms to standards
-- Validate cross-references
+- Reduces vendor lock-in
+- Enables backend selection per step
+- Standardizes result handling
+- Tracks operational costs
 
-**Business Value**:
-- **Completeness**: Nothing missing
-- **Correctness**: Standards compliance
-- **Traceability**: Link validation
+**Supported Backends**:
 
-**Validation Types**:
-- Existence checks (file exists)
-- Structure checks (frontmatter, sections)
-- Content checks (no placeholders)
-- Cross-reference checks (links resolve)
+| Backend | Model Types | Use Case |
+|---------|-------------|----------|
+| Claude | Sonnet, Opus, Haiku | Complex reasoning, long context |
+| Codex | GPT-4o, GPT-4 | Code generation, general tasks |
+| Qwen | Various | Alternative provider, cost optimization |
 
-## Scale and Speed
+### 3. Action Execution
 
-### Capability: Multi-Model Support
+**Description**: Execute deterministic, non-LLM operations as workflow steps.
 
-**What it enables**:
-- Claude for complex reasoning
-- Codex for code generation
-- Qwen for general tasks
-- Aliased models for specific purposes
+**Capabilities**:
 
-**Business Value**:
-- **Optimization**: Best model for each task
-- **Resilience**: Fallback options
-- **Cost control**: Cheaper models where appropriate
+| Capability | Description |
+|------------|-------------|
+| **28 deterministic actions** | Pre-defined actions for common operations |
+| **Custom actions** | Support for user-defined action implementations |
+| **Action validation** | Pre and post-action validation |
+| **Artifact generation** | Actions that produce and validate artifacts |
+| **External integration** | Actions that interact with external systems |
 
-**Model Mapping**:
-```json
-{
-  "default": "claude-opus-4",
-  "fast": "claude-sonnet-4",
-  "code": "codex",
-  "local": "qwen"
-}
-```
+**Operational Value**:
 
-### Capability: Retry with Backoff
+- Guarantees deterministic outcomes
+- Enables non-LLM operations in workflows
+- Provides building blocks for complex workflows
+- Maintains audit trail
 
-**What it enables**:
-- Automatic retry on transient failures
-- Configurable retry limits
-- Progress tracking across attempts
+**Action Categories**:
 
-**Business Value**:
-- **Resilience**: Handles temporary issues
-- **Efficiency**: No manual restart needed
-- **Reliability**: Eventually succeeds
+| Category | Actions | Purpose |
+|----------|---------|---------|
+| **Documentation** | validate_*, sync_* | Documentation validation and sync |
+| **Site generation** | generate_site, publish_* | HTML site generation |
+| **Media** | execute_t2i, execute_i2v, execute_voiceover | Content generation |
+| **Artifact** | copy_artifact, promote_artifact, archive_* | Artifact lifecycle |
+| **Scaffold** | prepare_delivery_scaffold, finalize_bootstrap | Setup operations |
 
-**Retry Types**:
-- Auto-retry: Automatic retry on rejection
-- Human-retry: Retry after human intervention
-- Replan: Alternative approach on failure
+### 4. Execution Modes
 
-## Governance and Compliance
+**Description**: Multiple execution patterns for different operational contexts.
 
-### Capability: Declarative Document Protection
+#### 4.1 Manual Execution
 
-**What it enables**:
-- `produces` lists control write access
-- No unauthorized document modifications
-- Clear ownership and lifecycle
+| Capability | Description |
+|------------|-------------|
+| **CLI interface** | Command-line execution with argument passing |
+| **Interactive mode** | Human-in-the-loop for approvals |
+| **Local artifacts** | File-system based artifact management |
+| **Immediate feedback** | Synchronous execution with console output |
+| **Development friendly** | Ideal for testing and development |
 
-**Business Value**:
-- **Security**: Controlled access
-- **Compliance**: Audit trail
-- **Stability**: Protected documents
+**Use Cases**:
+- Development and testing
+- One-off workflow runs
+- Initial workflow development
+- Local debugging
 
-**Protection Model**:
-- Allow-list based (can write if in `produces`)
-- Workflow-scoped (protection per workflow)
-- Step-scoped (protection per step)
+#### 4.2 Worker Mode
 
-### Capability: Complete Execution History
+| Capability | Description |
+|------------|-------------|
+| **Backend polling** | Poll backend for available work |
+| **Distributed workers** | Multiple workers sharing workload |
+| **Event notifications** | Real-time status updates |
+| **Result submission** | Structured result reporting |
+| **Worker identity** | Stable worker IDs for attribution |
 
-**What it enables**:
-- Every step recorded in job state
-- Model usage tracked
-- Decision rationale captured
+**Use Cases**:
+- Production execution
+- Distributed workloads
+- Backend-driven workflows
+- Scalable processing
 
-**Business Value**:
-- **Auditability**: Full traceability
-- **Analysis**: Performance insights
-- **Learning": Pattern identification
+#### 4.3 Daemon Mode
 
-**Tracked Data**:
-- Step completions and failures
-- Retry history
-- Model usage per step
-- Decision rationale
-- Artifact provenance
+| Capability | Description |
+|------------|-------------|
+| **Supervision** | Long-running workstation supervisor |
+| **Child process management** | Spawns and monitors child processes |
+| **Automatic recovery** | Restarts failed children |
+| **Log aggregation** | Centralized logging |
+| **Heartbeat tracking** | Health monitoring |
+
+**Use Cases**:
+- Continuous operation
+- Workstation-based processing
+- Background execution
+- Production deployment
+
+### 5. Review and Refinement
+
+**Description**: Built-in quality assurance through review loops.
+
+**Capabilities**:
+
+| Capability | Description |
+|------------|-------------|
+| **Review gates** | Mandatory review steps in workflows |
+| **Approve/reject routing** | Conditional routing based on review outcome |
+| **Refinement loops** | Automatic retry with feedback incorporation |
+| **Review tracking** | Review state persistence |
+| **Human approval** | Human-in-the-loop for critical steps |
+
+**Operational Value**:
+
+- Ensures output quality
+- Captures review rationale
+- Enables continuous improvement
+- Supports compliance requirements
+
+### 6. State Management
+
+**Description**: Comprehensive job state tracking and persistence.
+
+**Capabilities**:
+
+| Capability | Description |
+|------------|-------------|
+| **Job lifecycle** | Create → Execute → Complete/Failed |
+| **State persistence** | JSON-based state storage |
+| **Schema versioning** | Backward compatible state evolution |
+| **Retry history** | Track retry attempts and outcomes |
+| **Artifact tracking** | Record produced and consumed artifacts |
+| **Usage aggregation** | Aggregate token usage across steps |
+
+**Operational Value**:
+
+- Enables long-running workflows
+- Supports failure recovery
+- Provides audit trail
+- Tracks operational costs
+
+### 7. Notification Management
+
+**Description**: Real-time notifications for workflow events.
+
+**Capabilities**:
+
+| Capability | Description |
+|------------|-------------|
+| **Pushover integration** | Mobile notifications |
+| **Event types** | Start, complete, failure, approval needed |
+| **Step-level notifications** | Per-step notification configuration |
+| **Workflow notifications** | Workflow-level summary notifications |
+
+**Operational Value**:
+
+- Reduces monitoring overhead
+- Enables mobile awareness
+- Supports on-call workflows
+- Improves response time
 
 ## Operational Interpretation
 
-### For Development Teams
+### For Developers
 
-| Capability | How It Helps |
-|------------|--------------|
-| Workflow Automation | Standardized delivery process |
-| Review Loops | Quality gates prevent defects |
-| Multi-Model Support | Right tool for each job |
-| Artifact Validation | Nothing slips through |
+The platform enables:
 
-### For Operations Teams
+- **Rapid workflow development** — Define workflows in code or configuration
+- **Local testing** — Test workflows before deployment
+- **Backend integration** — Connect to backend for production execution
+- **Quality assurance** — Built-in review and refinement
 
-| Capability | How It Helps |
-|------------|--------------|
-| Deterministic Actions | Predictable behavior |
-| Retry Logic | Self-healing workflows |
-| Execution History | Full observability |
-| Document Protection | Controlled environment |
+### For Operators
 
-### For Management
+The platform provides:
 
-| Capability | How It Helps |
-|------------|--------------|
-| Complete History | Compliance and audit |
-| Quality Gates | Risk reduction |
-| Standardized Process | Consistent outcomes |
-| Multi-Model | Cost optimization |
+- **Multiple execution modes** — Choose appropriate mode for context
+- **Monitoring and alerting** — Notifications and status tracking
+- **Scalability** — Distributed worker pools
+- **Reliability** — Retry logic and state persistence
+
+### For Stakeholders
+
+The platform delivers:
+
+- **Consistent execution** — Standardized workflow patterns
+- **Quality assurance** — Review loops and validation
+- **Cost visibility** — Usage tracking and attribution
+- **Auditability** — Complete execution history
 
 ## Capability Dependencies
 
 ```
-Workflow Automation
-    ├── Requires: Step Runner
-    ├── Requires: Workflow Router
-    └── Enables: Review Loops
+Workflow Orchestration
+├── Coder Execution
+├── Action Execution
+├── State Management
+└── Review/Refinement
 
-Review Loops
-    ├── Requires: Workflow Automation
-    ├── Requires: Artifact Validation
-    └── Enables: Quality Gates
+Execution Modes
+├── Manual Execution
+├── Worker Mode
+└── Daemon Mode
 
-Quality Gates
-    ├── Requires: Review Loops
-    ├── Requires: Document Protection
-    └── Enables: Compliance
-
-Multi-Model Support
-    ├── Requires: Coder Adapters
-    └── Enables: Optimization
+Support Capabilities
+├── Notification Management
+└── State Management
 ```
 
-## Metrics and KPIs
+## Limitations
 
-### Efficiency Metrics
+| Capability Area | Current Limitation |
+|-----------------|-------------------|
+| **Workflow definition** | Monolithic registry (migration in progress) |
+| **Cross-platform** | Windows-centric (Unix support secondary) |
+| **Backend integration** | Requires backend for worker/daemon modes |
+| **Media generation** | Requires external tools (ComfyUI, etc.) |
 
-| Metric | Target | Measurement |
-|--------|--------|-------------|
-| Workflow completion rate | >95% | Jobs completing successfully |
-| Average retry count | <2 | Retries per step |
-| Review convergence rate | >80% | Reviews approved on first try |
+## Future Capabilities
 
-### Quality Metrics
-
-| Metric | Target | Measurement |
-|--------|--------|-------------|
-| Artifact validation pass rate | >98% | Documents passing validation |
-| Cross-reference accuracy | >99% | Links that resolve |
-| Document freshness | <7 days | Time since last update |
-
-### Scale Metrics
-
-| Metric | Target | Measurement |
-|--------|--------|-------------|
-| Concurrent workflows | >10 | Parallel executions |
-| Step execution time | <30s | Average step duration |
-| Model availability | >99% | Successful model calls |
-
----
+| Capability | Status |
+|------------|--------|
+| Plugin-based workflows | In progress |
+| Full Unix/Linux support | Planned |
+| Additional LLM backends | Future consideration |
+| Enhanced monitoring | Planned |
 
 ## Related Documents
 
-- [SYSTEM_OVERVIEW.md](SYSTEM_OVERVIEW.md) — System explanation
-- [FUNCTIONAL_SPEC.md](FUNCTIONAL_SPEC.md) — Technical behaviors
-- [NON_FUNCTIONAL_REQUIREMENTS.md](NON_FUNCTIONAL_REQUIREMENTS.md) — Quality requirements
+- [SYSTEM_OVERVIEW.md](SYSTEM_OVERVIEW.md) — Platform overview
+- [FUNCTIONAL_SPEC.md](FUNCTIONAL_SPEC.md) — Functional capabilities
+- [NON_FUNCTIONAL_REQUIREMENTS.md](NON_FUNCTIONAL_REQUIREMENTS.md) — Quality expectations
+- [PROJECT_ANALYSIS.md](PROJECT_ANALYSIS.md) — Repository analysis
 
 ---
 
-*Generated by workflow `00_master_docs_bootstrap_v1` step `03_generate_system_overview_docs` on 2026-07-10T09:43:38+08:00*
+*Generated by workflow: `00_master_docs_bootstrap_v2` — Step: `03_generate_system_overview_docs`*

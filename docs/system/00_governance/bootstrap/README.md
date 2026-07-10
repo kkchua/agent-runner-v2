@@ -2,100 +2,113 @@
 template_id: "SYS-00-IDX"
 title: "System Documentation Index"
 status: "active"
-change_id: "00DOC-GEN-20260710-004"
-workflow: "00_master_docs_bootstrap_v1"
+generated: "2026-07-10T14:07:00+08:00"
+workflow: "00_master_docs_bootstrap_v2"
 step: "03_generate_system_overview_docs"
+change_id: "00DOC-GEN-20260710-004"
 managed_by: workflow-generated
-generated: "2026-07-10T09:43:38+08:00"
 ---
 
-> Managed by workflow: `00_master_docs_bootstrap_v1` / step: `03_generate_system_overview_docs`
+> Managed by workflow: `00_master_docs_bootstrap_v2` / step: `03_generate_system_overview_docs`
 > This file is workflow-generated and protected from manual edits.
 
 # System Documentation Index
 
-## Purpose
+## Overview
 
-This index catalogs the complete master system documentation set for the `agent-runner-v2` repository. These documents establish the governance baseline, architectural posture, and operational context for the workflow orchestration engine.
+This directory contains the authoritative system documentation for the `agent-runner-v2` repository. These documents establish the platform's purpose, capabilities, operational model, and documentation standards.
+
+## System Documentation Purpose
+
+The system documentation serves three primary purposes:
+
+1. **Stakeholder Orientation** — Explain what the platform does and why it exists
+2. **Developer Guidance** — Describe the functional scope and expected behaviors
+3. **Operational Reference** — Document runtime characteristics and quality expectations
 
 ## Audience Views
 
-Different readers should focus on different documents:
-
-| Audience | Primary Documents | Why These Matter |
-|----------|-------------------|------------------|
-| **Stakeholders** | SYSTEM_OVERVIEW.md, BUSINESS_CAPABILITIES.md, NON_FUNCTIONAL_REQUIREMENTS.md | Understand what the platform enables and its operational characteristics |
-| **Developers** | FUNCTIONAL_SPEC.md, SYSTEM_OVERVIEW.md, DOCUMENTATION_STANDARD.md | Learn how the system works and how to extend it |
-| **Operators** | NON_FUNCTIONAL_REQUIREMENTS.md, SYSTEM_OVERVIEW.md | Understand runtime behavior and operational expectations |
-| **New Team Members** | README.md → SYSTEM_OVERVIEW.md → FUNCTIONAL_SPEC.md | Progressive disclosure from overview to details |
-| **Documentation Maintainers** | DOCUMENTATION_STANDARD.md, BUNDLE_TAXONOMY.md, BUNDLE_MIGRATION_PLAN.md | Understand how docs are structured and managed |
+| Audience | Primary Documents | Key Questions Answered |
+|----------|-----------------|------------------------|
+| **Stakeholders** | SYSTEM_OVERVIEW, BUSINESS_CAPABILITIES | What is this? What does it enable? Why invest? |
+| **Developers** | FUNCTIONAL_SPEC, NON_FUNCTIONAL_REQUIREMENTS | What does it do? How should it behave? |
+| **Operators** | NON_FUNCTIONAL_REQUIREMENTS, SYSTEM_OVERVIEW | How does it run? What are the constraints? |
+| **New Contributors** | DOCUMENTATION_STANDARD, SYSTEM_OVERVIEW | How do we document here? What are the conventions? |
 
 ## Document Map
 
-### Governance Documents
+### Governance and Standards
 
 | Document | Template ID | Purpose |
 |----------|-------------|---------|
-| [PROJECT_ANALYSIS.md](PROJECT_ANALYSIS.md) | SYS-00-PA | Repository scan and architectural posture assessment |
-| **README.md** (this file) | SYS-00-IDX | Index and navigation for the master doc set |
-| [DOCUMENTATION_STANDARD.md](DOCUMENTATION_STANDARD.md) | SYS-00-DS | Baseline documentation rules and repo-specific profiles |
-| [BUNDLE_TAXONOMY.md](BUNDLE_TAXONOMY.md) | SYS-00-BT | Bundle structure, types, and organization |
-| [BUNDLE_MIGRATION_PLAN.md](BUNDLE_MIGRATION_PLAN.md) | SYS-00-BMP | Migration paths between bundle versions |
+| [README.md](README.md) | SYS-00-IDX | This index — entry point to system documentation |
+| [DOCUMENTATION_STANDARD.md](DOCUMENTATION_STANDARD.md) | SYS-00-DS | Documentation baseline rules and repo-specific profiles |
+| [BUNDLE_TAXONOMY.md](BUNDLE_TAXONOMY.md) | SYS-00-BT | Classification of documentation bundles and their relationships |
+| [BUNDLE_MIGRATION_PLAN.md](BUNDLE_MIGRATION_PLAN.md) | SYS-00-BMP | Migration strategy for documentation bundle transitions |
 
-### System Overview Documents
+### Platform Overview
 
 | Document | Template ID | Purpose |
 |----------|-------------|---------|
-| [SYSTEM_OVERVIEW.md](SYSTEM_OVERVIEW.md) | SYS-00-SO | Platform explanation, workflow model, and value flow |
-| [BUSINESS_CAPABILITIES.md](BUSINESS_CAPABILITIES.md) | SYS-00-BC | What the runner enables operationally |
+| [SYSTEM_OVERVIEW.md](SYSTEM_OVERVIEW.md) | SYS-00-SO | Platform purpose, workflow model, and value flow |
+| [BUSINESS_CAPABILITIES.md](BUSINESS_CAPABILITIES.md) | SYS-00-BC | Operational capabilities the runner enables |
 | [FUNCTIONAL_SPEC.md](FUNCTIONAL_SPEC.md) | SYS-00-FS | Major behaviors and workflow capabilities |
 | [NON_FUNCTIONAL_REQUIREMENTS.md](NON_FUNCTIONAL_REQUIREMENTS.md) | SYS-00-NFR | Runtime, quality, and operational expectations |
 
-### Architecture Documents (Generated in Step 04)
+### Architecture and Operations
 
 | Document | Template ID | Purpose |
 |----------|-------------|---------|
-| SYSTEM_CONTEXT.md | SYS-00-SC | System context and external interfaces |
-| COMPONENT_ARCHITECTURE.md | SYS-00-CA | Component-level architecture documentation |
-| DECISION_LOG.md | SYS-00-DL | Architecture decision records |
-| SYSTEM_FILE_STRUCTURE.md | SYS-00-SFS | File organization rationale |
-| DEVELOPER_GUIDE.md | SYS-00-DG | Developer onboarding guide |
-| RUNBOOK.md | SYS-00-RB | Operational runbook |
-| EXISTING_REPO_WORKFLOW_SOP.md | SYS-00-ERWS | Workflow SOP for existing repos |
+| [SYSTEM_CONTEXT.md](SYSTEM_CONTEXT.md) | SYS-00-SC | External systems, boundaries, and interfaces |
+| [COMPONENT_ARCHITECTURE.md](COMPONENT_ARCHITECTURE.md) | SYS-00-CA | Component breakdown and interaction patterns |
+| [DECISION_LOG.md](DECISION_LOG.md) | SYS-00-DL | Key architectural and design decisions |
+| [SYSTEM_FILE_STRUCTURE.md](SYSTEM_FILE_STRUCTURE.md) | SYS-00-SFS | Repository organization conventions |
+| [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md) | SYS-00-DG | Development setup and contribution guidelines |
+| [RUNBOOK.md](RUNBOOK.md) | SYS-00-RB | Operational procedures and troubleshooting |
+
+### Project Analysis
+
+| Document | Template ID | Purpose |
+|----------|-------------|---------|
+| [PROJECT_ANALYSIS.md](PROJECT_ANALYSIS.md) | SYS-00-PA | Repository structure, risks, and architecture posture |
 
 ## Reading Order
 
-For **understanding the system**:
-1. SYSTEM_OVERVIEW.md — The big picture
-2. BUSINESS_CAPABILITIES.md — What it enables
-3. FUNCTIONAL_SPEC.md — How it behaves
-4. NON_FUNCTIONAL_REQUIREMENTS.md — Quality expectations
+For **first-time readers**, follow this sequence:
 
-For **working with the system**:
-1. DOCUMENTATION_STANDARD.md — How docs are structured
-2. BUNDLE_TAXONOMY.md — How bundles are organized
-3. SYSTEM_CONTEXT.md — External dependencies
-4. COMPONENT_ARCHITECTURE.md — Internal structure
+1. **SYSTEM_OVERVIEW.md** — Understand what the platform is and does
+2. **BUSINESS_CAPABILITIES.md** — Grasp the operational value
+3. **FUNCTIONAL_SPEC.md** — Learn the functional scope
+4. **DOCUMENTATION_STANDARD.md** — Know how to read and contribute to docs
 
-For **operating the system**:
-1. NON_FUNCTIONAL_REQUIREMENTS.md — Runtime expectations
-2. RUNBOOK.md — Operational procedures
-3. DECISION_LOG.md — Why things are the way they are
+For **developers joining the project**:
+
+1. **SYSTEM_OVERVIEW.md** — Platform fundamentals
+2. **DOCUMENTATION_STANDARD.md** — Documentation conventions
+3. **FUNCTIONAL_SPEC.md** — Expected behaviors
+4. **NON_FUNCTIONAL_REQUIREMENTS.md** — Quality expectations
+5. **DEVELOPER_GUIDE.md** — Development setup
+
+For **operators**:
+
+1. **SYSTEM_OVERVIEW.md** — Platform architecture
+2. **NON_FUNCTIONAL_REQUIREMENTS.md** — Runtime expectations
+3. **RUNBOOK.md** — Operational procedures
 
 ## Document Status
 
-| Document | Status | Generated |
-|----------|--------|-----------|
-| PROJECT_ANALYSIS.md | active | 2026-07-10T09:41:02+08:00 |
-| README.md | active | 2026-07-10T09:43:38+08:00 |
-| DOCUMENTATION_STANDARD.md | active | 2026-07-10T09:43:38+08:00 |
-| BUNDLE_TAXONOMY.md | active | 2026-07-10T09:43:38+08:00 |
-| BUNDLE_MIGRATION_PLAN.md | active | 2026-07-10T09:43:38+08:00 |
-| SYSTEM_OVERVIEW.md | active | 2026-07-10T09:43:38+08:00 |
-| BUSINESS_CAPABILITIES.md | active | 2026-07-10T09:43:38+08:00 |
-| FUNCTIONAL_SPEC.md | active | 2026-07-10T09:43:38+08:00 |
-| NON_FUNCTIONAL_REQUIREMENTS.md | active | 2026-07-10T09:43:38+08:00 |
+All documents in this directory are **workflow-generated** and protected from manual edits. Changes must be made through the appropriate workflow steps:
+
+- **System overview documents**: `00_master_docs_bootstrap_v2` workflow
+- **Codebase documentation**: `40_documentation_sync_v1` workflow
+- **Delivery documentation**: `10_execution_scaffold_v1` workflow
+
+## Change Tracking
+
+| Change ID | Date | Description |
+|-----------|------|-------------|
+| 00DOC-GEN-20260710-004 | 2026-07-10 | Initial system documentation bootstrap |
 
 ---
 
-*Generated by workflow `00_master_docs_bootstrap_v1` step `03_generate_system_overview_docs` on 2026-07-10T09:43:38+08:00*
+*Generated by workflow: `00_master_docs_bootstrap_v2` — Step: `03_generate_system_overview_docs`*

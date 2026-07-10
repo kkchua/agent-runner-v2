@@ -1,12 +1,12 @@
 ---
-template_id: "SYS-00-BC"
 title: "Business Capabilities"
+template_id: "SYS-00-BC"
 status: "active"
-change_id: "00DOC-GEN-20260710-004"
+generated: "2026-07-10T11:45:32+08:00"
 workflow: "00_master_docs_bootstrap_v1"
 step: "03_generate_system_overview_docs"
+change_id: "00DOC-20260710-15f76235"
 managed_by: workflow-generated
-generated: "2026-07-10T09:43:38+08:00"
 ---
 
 > Managed by workflow: `00_master_docs_bootstrap_v1` / step: `03_generate_system_overview_docs`
@@ -14,283 +14,334 @@ generated: "2026-07-10T09:43:38+08:00"
 
 # Business Capabilities
 
-## Purpose
-
-This document describes the operational capabilities that `agent-runner-v2` enables. It maps technical functionality to business value, helping stakeholders understand what the platform makes possible.
-
 ## Capability Map
 
+The agent-runner-v2 platform enables 10 core business capabilities organized by operational domain:
+
+| ID | Capability | Domain | Maturity |
+|----|------------|--------|----------|
+| BC-01 | Initiative Intake | Delivery | Active |
+| BC-02 | Delivery Planning | Delivery | Active |
+| BC-03 | Task Execution | Delivery | Active |
+| BC-04 | Documentation Governance | Governance | Active |
+| BC-05 | Delivery Scaffold | Governance | Active |
+| BC-06 | Bug Triage & Fix | Operations | Active |
+| BC-07 | Media Content Generation | Content | Active |
+| BC-08 | Multi-Model Orchestration | Platform | Active |
+| BC-09 | Distributed Worker Execution | Platform | Active |
+| BC-10 | Operational Supervision | Operations | Active |
+
+## Capability Details
+
+### BC-01: Initiative Intake
+
+**Description**: Capture, refine, and validate initiative proposals before committing to delivery.
+
+**Business Value**:
+- Reduces waste from poorly-defined initiatives
+- Ensures requirements clarity before planning
+- Provides decision support for initiative approval
+
+**Workflows**:
+- `20_initiative_intake_v1` — Initiative intake and pre-init refinement
+
+**Key Artifacts**:
+- `DRAFT_INIT_FILE` — Initial draft capture
+- `PRE_INIT_FILE` — Pre-initiative refinement
+- `INIT_FILE` — Approved initiative document
+
+**Stakeholders**: Product managers, technical leads, initiative sponsors
+
+---
+
+### BC-02: Delivery Planning
+
+**Description**: Transform approved initiatives into structured delivery plans with task graphs and contracts.
+
+**Business Value**:
+- Provides clear delivery roadmap
+- Decomposes work into manageable tasks
+- Establishes task contracts with acceptance criteria
+
+**Workflows**:
+- `30_delivery_planning_v1` — Plan generation, task-graph generation, task contract generation
+
+**Key Artifacts**:
+- `PLAN_FILE` — Delivery plan document
+- `TASK_GRAPH_FILE` — Task dependency graph
+- `TASK_FILE` — Individual task contracts
+
+**Stakeholders**: Delivery managers, tech leads, developers
+
+---
+
+### BC-03: Task Execution
+
+**Description**: Execute planned tasks with implementation, review, documentation sync, and validation.
+
+**Business Value**:
+- Ensures quality through review loops
+- Maintains documentation alongside code
+- Validates deliverables against acceptance criteria
+
+**Workflows**:
+- `31_task_execution_v1` — Implementation planning, review, execution, documentation sync, validation
+
+**Key Artifacts**:
+- `IMPL_FILE` — Implementation plan
+- `REVIEW_FILE` — Review findings
+- `VALIDATION_FILE` — Validation results
+
+**Stakeholders**: Developers, QA engineers, technical writers
+
+---
+
+### BC-04: Documentation Governance
+
+**Description**: Maintain documentation quality through reconciliation, validation, and synchronization workflows.
+
+**Business Value**:
+- Prevents documentation drift from code
+- Ensures documentation completeness
+- Validates document structure and cross-references
+
+**Workflows**:
+- `40_documentation_sync_v1` — Documentation reconciliation and validation
+- `41_audience_doc_v1` / `50_architecture_site_v1` — Multi-audience documentation
+
+**Key Artifacts**:
+- `CODEBASE_INVENTORY` — Module inventory
+- `CODEBASE_CHANGE_IMPACT` — Change impact analysis
+- `DELIVERY_STATUS_RULES` — Documentation status rules
+
+**Stakeholders**: Technical writers, developers, architects
+
+---
+
+### BC-05: Delivery Scaffold
+
+**Description**: Bootstrap new repositories with complete governance documentation, templates, and agent contracts.
+
+**Business Value**:
+- Accelerates new project setup
+- Establishes documentation standards early
+- Provides reusable governance patterns
+
+**Workflows**:
+- `10_execution_scaffold_v1` — Scaffolds docs/delivery/ and docs/codebase/ governance
+
+**Key Artifacts**:
+- `DELIVERY_SOP` — Delivery standard operating procedure
+- `DELIVERY_TEMPLATE_REGISTRY` — Template registry
+- `DELIVERY_AGENTS_MD` — Agent contracts
+
+**Stakeholders**: Technical leads, project initiators, architects
+
+---
+
+### BC-06: Bug Triage & Fix
+
+**Description**: Systematic bug triage, reproduction, root cause analysis, patching, and regression validation.
+
+**Business Value**:
+- Reduces time to resolution
+- Ensures proper fix validation
+- Prevents regression through structured testing
+
+**Workflows**:
+- `21_bug_fix_intake_v1` — Bug triage, reproduction, root cause, patching, regression validation
+
+**Key Artifacts**:
+- `BUG_DRAFT_FILE` — Bug triage document
+- `REPRO_FILE` — Reproduction steps
+- `PATCH_FILE` — Fix implementation
+- `REGRESSION_FILE` — Validation results
+
+**Stakeholders**: Support engineers, developers, QA
+
+---
+
+### BC-07: Media Content Generation
+
+**Description**: Automated media generation pipelines including image generation, video assembly, and voiceover.
+
+**Business Value**:
+- Scales content production
+- Maintains consistency across assets
+- Reduces manual media creation effort
+
+**Workflows**:
+- `image_csv_gen_v1/v2` — Image prompt generation from CSV
+- `tiktok_video_pipeline_v1` — TikTok video production pipeline
+- `videoxpress_gen_v1` — Video express generation
+
+**Key Artifacts**:
+- Image prompts CSV
+- Video workflow definitions
+- Assembled media files
+
+**Stakeholders**: Content creators, marketing teams, media producers
+
+---
+
+### BC-08: Multi-Model Orchestration
+
+**Description**: Orchestrate LLM workflows across multiple providers (Claude, Codex, Qwen) with model-specific optimizations.
+
+**Business Value**:
+- Uses best model for each task
+- Provides redundancy and flexibility
+- Optimizes cost/performance
+
+**Features**:
+- Model-specific prompt templates
+- Automatic model selection
+- Fallback handling
+
+**Stakeholders**: Platform engineers, workflow designers
+
+---
+
+### BC-09: Distributed Worker Execution
+
+**Description**: Execute workflows through backend-connected workers with queue-based work distribution.
+
+**Business Value**:
+- Scales execution across workstations
+- Centralizes work coordination
+- Provides execution visibility
+
+**Modes**:
+- `worker` — Continuous worker loop
+- `poll` — One-shot poll mode
+- `daemon` — Workstation supervisor
+
+**Stakeholders**: Operations teams, platform administrators
+
+---
+
+### BC-10: Operational Supervision
+
+**Description**: Monitor, supervise, and maintain workflow execution with daemon-based workstation management.
+
+**Business Value**:
+- Provides operational visibility
+- Enables hands-off execution
+- Facilitates troubleshooting
+
+**Features**:
+- Heartbeat monitoring
+- Log aggregation
+- Child process supervision
+
+**Stakeholders**: Operations engineers, support staff
+
+## Capability Dependency Graph
+
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                    Business Outcomes                             │
-├─────────────────────────────────────────────────────────────────┤
-│  • Faster delivery          • Higher quality                     │
-│  • Reduced risk             • Better compliance                  │
-│  • Improved traceability    • Lower cognitive load               │
-└─────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                    Operational Capabilities                      │
-├─────────────────────────────────────────────────────────────────┤
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐          │
-│  │  Workflow    │  │   Quality    │  │    Scale     │          │
-│  │  Automation  │  │   Assurance  │  │   & Speed    │          │
-│  └──────────────┘  └──────────────┘  └──────────────┘          │
-└─────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                    Technical Capabilities                        │
-├─────────────────────────────────────────────────────────────────┤
-│  Multi-Model Execution │ Review Loops │ Artifact Management     │
-│  Retry Logic          │ Approval Gates │ Deterministic Actions   │
-│  Workflow Routing     │ Sidecar Validation │ Step Recovery       │
-└─────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│                    BC-05: Delivery Scaffold                 │
+│                    (Foundation Capability)                  │
+└───────────────────────────┬─────────────────────────────────┘
+                            │
+        ┌───────────────────┼───────────────────┐
+        ▼                   ▼                   ▼
+┌───────────────┐   ┌───────────────┐   ┌───────────────┐
+│  BC-01:       │   │  BC-04:       │   │  BC-06:       │
+│ Initiative    │   │ Documentation │   │ Bug Triage    │
+│ Intake        │   │ Governance    │   │               │
+└───────┬───────┘   └───────────────┘   └───────────────┘
+        │
+        ▼
+┌───────────────┐
+│  BC-02:       │
+│ Delivery      │
+│ Planning      │
+└───────┬───────┘
+        │
+        ▼
+┌───────────────┐
+│  BC-03:       │
+│ Task          │
+│ Execution     │
+└───────────────┘
+        │
+        ▼
+┌───────────────┐
+│  BC-07:       │
+│ Media Content │
+│ Generation    │
+└───────────────┘
+
+Supporting Platform Capabilities:
+┌───────────────┐   ┌───────────────┐   ┌───────────────┐
+│  BC-08:       │   │  BC-09:       │   │  BC-10:       │
+│ Multi-Model   │   │ Distributed   │   │ Operational   │
+│ Orchestration │   │ Worker        │   │ Supervision   │
+│               │   │ Execution     │   │               │
+└───────────────┘   └───────────────┘   └───────────────┘
 ```
 
-## Workflow Automation
+## Capability Maturity Levels
 
-### Capability: Structured Multi-Step Execution
+| Level | Description | Criteria |
+|-------|-------------|----------|
+| **Experimental** | New capability, limited use | Workflow exists, minimal validation |
+| **Active** | Production use, stable | Proven in production, documented |
+| **Mature** | Widely adopted, optimized | Multiple teams using, metrics collected |
+| **Legacy** | Being superseded | Replacement capability exists |
 
-**What it enables**:
-- Complex workflows decomposed into discrete steps
-- Each step has clear inputs, outputs, and routing
-- Steps can be manual (LLM) or automated (Python actions)
+### Current Maturity Assessment
 
-**Business Value**:
-- **Consistency**: Same process every time
-- **Visibility**: Clear progress tracking
-- **Auditability**: Complete execution history
-
-**Example Workflows**:
-- Initiative intake and refinement
-- Delivery planning with task graphs
-- Task execution with implementation and validation
-- Documentation synchronization
-- Architecture site generation
-
-### Capability: Review/Refine Loops
-
-**What it enables**:
-- Quality gates at key decision points
-- Automatic refinement on rejection
-- Convergence tracking with iteration limits
-
-**Business Value**:
-- **Quality**: Catches issues before they propagate
-- **Learning**: Model improves through feedback
-- **Control**: Human oversight where needed
-
-**Example Patterns**:
-```
-Generate → Review → (Approve | Refine → Review)
-```
-
-## Quality Assurance
-
-### Capability: Deterministic Actions
-
-**What it enables**:
-- Python functions for predictable operations
-- Same input always produces same output
-- No ambiguity in execution
-
-**Business Value**:
-- **Reliability**: Known behavior
-- **Testability**: Can be unit tested
-- **Maintainability**: Clear logic
-
-**Example Actions**:
-- `finalize_bootstrap.py`: Bundle finalization
-- `validate_delivery_docs.py`: Document validation
-- `sync_codebase_docs.py`: Documentation sync
-- `promote_artifact.py`: Artifact promotion
-
-### Capability: Artifact Validation
-
-**What it enables**:
-- Verify expected artifacts exist
-- Check content conforms to standards
-- Validate cross-references
-
-**Business Value**:
-- **Completeness**: Nothing missing
-- **Correctness**: Standards compliance
-- **Traceability**: Link validation
-
-**Validation Types**:
-- Existence checks (file exists)
-- Structure checks (frontmatter, sections)
-- Content checks (no placeholders)
-- Cross-reference checks (links resolve)
-
-## Scale and Speed
-
-### Capability: Multi-Model Support
-
-**What it enables**:
-- Claude for complex reasoning
-- Codex for code generation
-- Qwen for general tasks
-- Aliased models for specific purposes
-
-**Business Value**:
-- **Optimization**: Best model for each task
-- **Resilience**: Fallback options
-- **Cost control**: Cheaper models where appropriate
-
-**Model Mapping**:
-```json
-{
-  "default": "claude-opus-4",
-  "fast": "claude-sonnet-4",
-  "code": "codex",
-  "local": "qwen"
-}
-```
-
-### Capability: Retry with Backoff
-
-**What it enables**:
-- Automatic retry on transient failures
-- Configurable retry limits
-- Progress tracking across attempts
-
-**Business Value**:
-- **Resilience**: Handles temporary issues
-- **Efficiency**: No manual restart needed
-- **Reliability**: Eventually succeeds
-
-**Retry Types**:
-- Auto-retry: Automatic retry on rejection
-- Human-retry: Retry after human intervention
-- Replan: Alternative approach on failure
-
-## Governance and Compliance
-
-### Capability: Declarative Document Protection
-
-**What it enables**:
-- `produces` lists control write access
-- No unauthorized document modifications
-- Clear ownership and lifecycle
-
-**Business Value**:
-- **Security**: Controlled access
-- **Compliance**: Audit trail
-- **Stability**: Protected documents
-
-**Protection Model**:
-- Allow-list based (can write if in `produces`)
-- Workflow-scoped (protection per workflow)
-- Step-scoped (protection per step)
-
-### Capability: Complete Execution History
-
-**What it enables**:
-- Every step recorded in job state
-- Model usage tracked
-- Decision rationale captured
-
-**Business Value**:
-- **Auditability**: Full traceability
-- **Analysis**: Performance insights
-- **Learning": Pattern identification
-
-**Tracked Data**:
-- Step completions and failures
-- Retry history
-- Model usage per step
-- Decision rationale
-- Artifact provenance
+| Capability | Current | Target | Notes |
+|------------|---------|--------|-------|
+| Initiative Intake | Active | Mature | Core delivery workflow |
+| Delivery Planning | Active | Mature | Core delivery workflow |
+| Task Execution | Active | Mature | Core delivery workflow |
+| Documentation Governance | Active | Mature | Active sync workflows |
+| Delivery Scaffold | Active | Mature | Bootstrap capability |
+| Bug Triage | Active | Active | Recently added |
+| Media Content | Active | Active | Specialized use |
+| Multi-Model Orchestration | Active | Mature | Core platform feature |
+| Distributed Worker | Active | Mature | Production deployment |
+| Operational Supervision | Active | Mature | Production deployment |
 
 ## Operational Interpretation
 
-### For Development Teams
+### For Stakeholders
 
-| Capability | How It Helps |
-|------------|--------------|
-| Workflow Automation | Standardized delivery process |
-| Review Loops | Quality gates prevent defects |
-| Multi-Model Support | Right tool for each job |
-| Artifact Validation | Nothing slips through |
+**What this means for the business**:
+- Faster initiative turnaround through structured intake
+- Higher quality deliverables through review loops
+- Reduced documentation debt through governance
+- Scalable content production through automation
 
-### For Operations Teams
+### For Developers
 
-| Capability | How It Helps |
-|------------|--------------|
-| Deterministic Actions | Predictable behavior |
-| Retry Logic | Self-healing workflows |
-| Execution History | Full observability |
-| Document Protection | Controlled environment |
+**What this means for engineering**:
+- Clear task contracts with acceptance criteria
+- Automated documentation synchronization
+- Multi-model flexibility for different tasks
+- Deterministic actions for reliable operations
 
-### For Management
+### For Operators
 
-| Capability | How It Helps |
-|------------|--------------|
-| Complete History | Compliance and audit |
-| Quality Gates | Risk reduction |
-| Standardized Process | Consistent outcomes |
-| Multi-Model | Cost optimization |
+**What this means for operations**:
+- Centralized work distribution via backend
+- Daemon-based workstation supervision
+- Comprehensive logging and monitoring
+- Clear troubleshooting procedures
 
-## Capability Dependencies
+### For Governance
 
-```
-Workflow Automation
-    ├── Requires: Step Runner
-    ├── Requires: Workflow Router
-    └── Enables: Review Loops
-
-Review Loops
-    ├── Requires: Workflow Automation
-    ├── Requires: Artifact Validation
-    └── Enables: Quality Gates
-
-Quality Gates
-    ├── Requires: Review Loops
-    ├── Requires: Document Protection
-    └── Enables: Compliance
-
-Multi-Model Support
-    ├── Requires: Coder Adapters
-    └── Enables: Optimization
-```
-
-## Metrics and KPIs
-
-### Efficiency Metrics
-
-| Metric | Target | Measurement |
-|--------|--------|-------------|
-| Workflow completion rate | >95% | Jobs completing successfully |
-| Average retry count | <2 | Retries per step |
-| Review convergence rate | >80% | Reviews approved on first try |
-
-### Quality Metrics
-
-| Metric | Target | Measurement |
-|--------|--------|-------------|
-| Artifact validation pass rate | >98% | Documents passing validation |
-| Cross-reference accuracy | >99% | Links that resolve |
-| Document freshness | <7 days | Time since last update |
-
-### Scale Metrics
-
-| Metric | Target | Measurement |
-|--------|--------|-------------|
-| Concurrent workflows | >10 | Parallel executions |
-| Step execution time | <30s | Average step duration |
-| Model availability | >99% | Successful model calls |
-
----
+**What this means for compliance**:
+- Structured documentation standards
+- Change impact tracking
+- Audit trail through job state
+- Validation gates for quality
 
 ## Related Documents
 
-- [SYSTEM_OVERVIEW.md](SYSTEM_OVERVIEW.md) — System explanation
-- [FUNCTIONAL_SPEC.md](FUNCTIONAL_SPEC.md) — Technical behaviors
-- [NON_FUNCTIONAL_REQUIREMENTS.md](NON_FUNCTIONAL_REQUIREMENTS.md) — Quality requirements
-
----
-
-*Generated by workflow `00_master_docs_bootstrap_v1` step `03_generate_system_overview_docs` on 2026-07-10T09:43:38+08:00*
+- [SYSTEM_OVERVIEW.md](SYSTEM_OVERVIEW.md) — Platform overview
+- [FUNCTIONAL_SPEC.md](FUNCTIONAL_SPEC.md) — Functional requirements
+- [BUNDLE_TAXONOMY.md](BUNDLE_TAXONOMY.md) — Workflow definitions

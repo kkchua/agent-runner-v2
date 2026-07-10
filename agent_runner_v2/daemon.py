@@ -129,6 +129,8 @@ class ChildExecution:
     run_code: str
     step_run_id: str
     step_name: str
+    run_payload: dict[str, Any]
+    step_run_payload: dict[str, Any]
     request_payload: dict[str, Any]
     request_path: Path
     result_path: Path
@@ -236,6 +238,8 @@ def _spawn_child(*, claim: dict[str, Any], runtime_root: Path, cli_pythonpath: s
         run_code=str(run.get('run_code') or ''),
         step_run_id=step_run_id,
         step_name=str(step_run.get('step_name') or ''),
+        run_payload=run,
+        step_run_payload=step_run,
         request_payload=request_payload,
         request_path=request_path,
         result_path=result_path,
@@ -283,7 +287,7 @@ def _terminate_child(child: ChildExecution, logger: _DaemonLogger, sigkill: bool
 
 def _run_supervisor(*, worker_id: str, worker_label: str, backend_url: str, poll_seconds: int, max_parallel: int, stalled_seconds: int, step_timeout_seconds: int, kill_grace_seconds: int, runtime_dir: Path, log_file: Path, cli_pythonpath: str | None, step_spec_source: str, once: bool = False) -> int:
     from .backend_client import BackendClient
-    from .run_agent import _submit_worker_result
+    from .run_agent import _finalize_worker_completion, _submit_worker_result
 
     logger = _DaemonLogger(log_file, worker_id)
     client = BackendClient(backend_url)
@@ -338,10 +342,35 @@ def _run_supervisor(*, worker_id: str, worker_label: str, backend_url: str, poll
             if not child.submission_done:
                 result = _child_result(child)
                 try:
-                    _submit_worker_result(client=client, run={'id': child.run_id}, step_run={'id': child.step_run_id}, result=result)
+                    completion = _submit_worker_result(
+                        client=client,
+                        run=child.run_payload,
+                        step_run=child.step_run_payload,
+                        result=result,
+                    )
                     child.submission_done = True
                     child.state = 'completed' if result.get('status') == 'completed' else 'failed'
                     logger.log('info', 'result_submitted', message='submitted child result', child=child, details={'status': result.get('status'), 'outcome': result.get('outcome'), 'exit_code': proc_rc})
+                    try:
+                        completion_info = _finalize_worker_completion(
+                            client=client,
+                            run=child.run_payload,
+                            step_run=child.step_run_payload,
+                            completion=completion,
+                        )
+                        logger.log(
+                            'info',
+                            'completion_finalized',
+                            message='finalized backend completion state',
+                            child=child,
+                            details={
+                                'run_status': (completion_info.get('run') or {}).get('status'),
+                                'last_event': completion_info.get('last_event'),
+                                'next_step_name': ((completion_info.get('next_step_run') or {}).get('step_name')),
+                            },
+                        )
+                    except Exception as finalize_exc:
+                        logger.log('warning', 'completion_finalize_failed', message='failed to finalize backend completion state', child=child, details={'error': str(finalize_exc)})
                     
                     # After successful submission, also write result.json to job step directory (matching manual mode)
                     try:

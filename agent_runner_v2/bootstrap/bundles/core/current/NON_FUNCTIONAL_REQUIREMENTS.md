@@ -1,12 +1,12 @@
 ---
-template_id: "SYS-00-NFR"
 title: "Non-Functional Requirements"
+template_id: "SYS-00-NFR"
 status: "active"
-change_id: "00DOC-GEN-20260710-004"
+generated: "2026-07-10T11:45:32+08:00"
 workflow: "00_master_docs_bootstrap_v1"
 step: "03_generate_system_overview_docs"
+change_id: "00DOC-20260710-15f76235"
 managed_by: workflow-generated
-generated: "2026-07-10T09:43:38+08:00"
 ---
 
 > Managed by workflow: `00_master_docs_bootstrap_v1` / step: `03_generate_system_overview_docs`
@@ -14,287 +14,227 @@ generated: "2026-07-10T09:43:38+08:00"
 
 # Non-Functional Requirements
 
-## Purpose
+## Quality Attributes
 
-This document captures the runtime, quality, and operational expectations for `agent-runner-v2`. These requirements constrain how the system behaves, independent of specific features.
+### QA-01: Reliability
 
-## Quality Requirements
+**Description**: The system shall operate without failure under expected conditions.
 
-### Performance
+**Requirements**:
+| ID | Requirement | Metric |
+|----|-------------|--------|
+| NFR-01.1 | Workflow execution completion rate | ≥ 99% of workflows complete without system failure |
+| NFR-01.2 | Step retry success rate | ≥ 95% of retried steps succeed |
+| NFR-01.3 | Daemon uptime | ≥ 99% availability during operational hours |
+| NFR-01.4 | Job state persistence | 100% of job state changes persisted to disk |
 
-#### Response Time
+**Rationale**: Users depend on workflows completing reliably. System failures should be rare and recoverable.
 
-| Metric | Target | Critical |
-|--------|--------|----------|
-| Step execution initiation | <5s | Yes |
-| Prompt rendering | <1s | No |
-| Artifact validation | <3s | Yes |
-| Workflow routing | <1s | Yes |
+### QA-02: Determinism
 
-#### Throughput
+**Description**: The system shall produce consistent results given the same inputs.
 
-| Metric | Target | Notes |
-|--------|--------|-------|
-| Concurrent workflows | 10+ | Configurable |
-| Steps per hour | 100+ | Depends on model latency |
-| Jobs per day | 1000+ | Backend limited |
+**Requirements**:
+| ID | Requirement | Metric |
+|----|-------------|--------|
+| NFR-02.1 | Deterministic routing | Same inputs → same routing decisions |
+| NFR-02.2 | Artifact path stability | Artifact paths deterministic across runs |
+| NFR-02.3 | Prompt reproducibility | Same artifacts → same rendered prompts |
 
-#### Resource Usage
+**Rationale**: Determinism enables debugging, replay, and predictable behavior.
 
-| Resource | Target | Limit |
-|----------|--------|-------|
-| Memory per job | <100MB | Hard limit |
-| Disk per job | <50MB | Artifact dependent |
-| CPU usage | Moderate | Burst acceptable |
+### QA-03: Traceability
 
-### Reliability
+**Description**: All operations shall be traceable through logs and artifacts.
 
-#### Availability
+**Requirements**:
+| ID | Requirement | Metric |
+|----|-------------|--------|
+| NFR-03.1 | Step execution logging | Every step execution logged |
+| NFR-03.2 | Artifact provenance | All artifacts traceable to producing step |
+| NFR-03.3 | Job history | Complete step history preserved |
+| NFR-03.4 | Decision audit trail | All routing decisions auditable |
 
-| Level | Target | Measurement |
-|-------|--------|-------------|
-| System uptime | 99.9% | Excluding planned maintenance |
-| Job completion rate | >95% | Of started jobs |
-| Step success rate | >98% | Of executed steps |
+**Rationale**: Traceability supports debugging, compliance, and operational visibility.
 
-#### Fault Tolerance
+### QA-04: Extensibility
 
-| Scenario | Behavior |
-|----------|----------|
-| Model timeout | Mark step failed, trigger retry |
-| Meta.json missing | Hard failure, explicit routing |
-| Artifact missing | Validation failure, explicit error |
-| Backend unavailable | Queue for retry, exponential backoff |
+**Description**: The system shall support extension without core modifications.
 
-#### Recovery
+**Requirements**:
+| ID | Requirement | Metric |
+|----|-------------|--------|
+| NFR-04.1 | Action addition | New actions added without core changes |
+| NFR-04.2 | Workflow addition | New workflows added via templates only |
+| NFR-04.3 | Model addition | New LLM providers added via adapters |
+| NFR-04.4 | Extension points | ≥ 5 documented extension mechanisms |
 
-| Capability | Requirement |
-|------------|-------------|
-| Job state recovery | Automatic on restart |
-| Step retry | Configurable attempts |
-| Manual intervention | Supported via approval gates |
+**Rationale**: Extensibility enables customization without forking.
 
-### Maintainability
+### QA-05: Portability
 
-#### Code Quality
+**Description**: The system shall run on multiple platforms.
 
-| Metric | Target |
-|--------|--------|
-| Test coverage | >80% (unit tests) |
-| Type hints | Required for public APIs |
-| Documentation | Required for modules |
+**Requirements**:
+| ID | Requirement | Metric |
+|----|-------------|--------|
+| NFR-05.1 | Python compatibility | Python 3.11+ support |
+| NFR-05.2 | OS compatibility | Windows 10+, macOS 12+, Linux |
+| NFR-05.3 | Path handling | Cross-platform path resolution |
+| NFR-05.4 | Zero dependencies | No external runtime dependencies |
 
-#### Modularity
+**Rationale**: Portability enables deployment flexibility.
 
-| Principle | Requirement |
-|-----------|-------------|
-| Single responsibility | One purpose per module |
-| Loose coupling | Minimize inter-module dependencies |
-| High cohesion | Related functions grouped |
+### QA-06: Performance
 
-### Portability
+**Description**: The system shall execute within acceptable time bounds.
 
-#### Platform Support
+**Requirements**:
+| ID | Requirement | Metric |
+|----|-------------|--------|
+| NFR-06.1 | Step startup time | ≤ 5 seconds (excluding LLM time) |
+| NFR-06.2 | Prompt rendering | ≤ 1 second |
+| NFR-06.3 | Artifact validation | ≤ 2 seconds per document |
+| NFR-06.4 | Job state persistence | ≤ 100ms |
 
-| Platform | Support Level |
-|----------|---------------|
-| Windows 10/11 | Primary |
-| macOS | Compatible |
-| Linux | Compatible |
+**Rationale**: Performance impacts user experience and throughput.
 
-#### Python Versions
+### QA-07: Security
 
-| Version | Support |
-|---------|---------|
-| 3.12 | Recommended |
-| 3.11 | Supported |
-| 3.10 | Supported |
-| <3.10 | Not supported |
+**Description**: The system shall operate securely.
 
-### Security
+**Requirements**:
+| ID | Requirement | Metric |
+|----|-------------|--------|
+| NFR-07.1 | No credential exposure | API keys never logged or exposed |
+| NFR-07.2 | Path traversal protection | Input paths validated |
+| NFR-07.3 | Secure defaults | Safe default configurations |
+| NFR-07.4 | Least privilege | Minimal permissions required |
 
-#### Data Protection
+**Rationale**: Security protects user data and credentials.
 
-| Requirement | Implementation |
-|-------------|----------------|
-| No secrets in code | Use .env files |
-| Encrypted storage | Backend responsibility |
-| Access control | Backend-enforced |
+### QA-08: Observability
 
-#### Execution Safety
+**Description**: The system shall be observable in production.
 
-| Requirement | Implementation |
-|-------------|----------------|
-| Sandboxed actions | Subprocess isolation |
-| No arbitrary code execution | Deterministic actions only |
-| Input validation | Schema validation |
+**Requirements**:
+| ID | Requirement | Metric |
+|----|-------------|--------|
+| NFR-08.1 | Structured logging | JSON log format |
+| NFR-08.2 | Log levels | DEBUG, INFO, WARN, ERROR levels |
+| NFR-08.3 | Metrics export | Key metrics extractable |
+| NFR-08.4 | Health checks | Daemon health check endpoint |
 
-## Operational Requirements
+**Rationale**: Observability enables monitoring and troubleshooting.
 
-### Deployability
+### QA-09: Maintainability
 
-#### Installation
+**Description**: The system shall be maintainable over time.
 
-| Requirement | Details |
-|-------------|---------|
-| Package install | `pip install -e .` |
-| Dependencies | Listed in pyproject.toml |
-| Bootstrap | `ukbe-run-agent init` |
+**Requirements**:
+| ID | Requirement | Metric |
+|----|-------------|--------|
+| NFR-09.1 | Code coverage | ≥ 80% test coverage |
+| NFR-09.2 | Documentation coverage | All modules documented |
+| NFR-09.3 | Backward compatibility | 2 major version support |
+| NFR-09.4 | Dependency count | Zero runtime dependencies |
 
-#### Configuration
+**Rationale**: Maintainability reduces long-term costs.
 
-| Requirement | Details |
-|-------------|---------|
-| Config file | `%USERPROFILE%\.ukbe-runner\config.json` |
-| Environment | `.env` file support |
-| Runtime override | Command-line arguments |
+### QA-10: Compatibility
 
-### Observability
+**Description**: The system shall integrate with existing infrastructure.
 
-#### Logging
+**Requirements**:
+| ID | Requirement | Metric |
+|----|-------------|--------|
+| NFR-10.1 | Backend API compatibility | Compatible with backend v1 API |
+| NFR-10.2 | LLM API compatibility | Support current API versions |
+| NFR-10.3 | Job format compatibility | Forward/backward compatible state |
+| NFR-10.4 | Workflow compatibility | Existing workflows continue working |
 
-| Requirement | Details |
-|-------------|---------|
-| Log location | `%USERPROFILE%\.ukbe-runner\logs\` |
-| Log levels | DEBUG, INFO, WARNING, ERROR |
-| Rotation | Daily rotation |
-
-#### Metrics
-
-| Metric | Collection |
-|--------|------------|
-| Step duration | Automatic |
-| Model usage | Tracked in job state |
-| Success/failure rates | Computed from job history |
-
-#### Notifications
-
-| Event | Notification |
-|-------|--------------|
-| Job complete | Pushover (configurable) |
-| Step failure | Pushover (configurable) |
-| Human approval needed | Pushover (configurable) |
-
-### Scalability
-
-#### Horizontal Scaling
-
-| Aspect | Support |
-|--------|---------|
-| Multiple workers | Yes (backend-managed) |
-| Load balancing | Backend responsibility |
-| State distribution | Backend-managed |
-
-#### Vertical Scaling
-
-| Resource | Scaling |
-|----------|---------|
-| Memory | Per-process limits |
-| Disk | Artifact retention policy |
-| CPU | Model-dependent |
-
-## Runtime Expectations
-
-### Execution Environment
-
-#### CLI Mode
-
-| Aspect | Requirement |
-|--------|-------------|
-| Interactive | Support for manual execution |
-| Batch | Support for scripted execution |
-| Output | Structured logging |
-
-#### Worker Mode
-
-| Aspect | Requirement |
-|--------|-------------|
-| Backend poll | Configurable interval |
-| Step execution | Single step per invocation |
-| Isolation | Fresh subprocess per step |
-
-#### Daemon Mode
-
-| Aspect | Requirement |
-|--------|-------------|
-| Long-running | Continuous operation |
-| Supervision | Worker process management |
-| Recovery | Automatic restart on failure |
-
-### Integration Points
-
-#### Backend API
-
-| Requirement | Details |
-|-------------|---------|
-| Protocol | REST over HTTPS |
-| Authentication | Token-based |
-| Retry | Exponential backoff |
-| Timeout | Configurable |
-
-#### Model APIs
-
-| Requirement | Details |
-|-------------|---------|
-| Claude | Anthropic API |
-| Codex | OpenAI API |
-| Qwen | Local inference |
-| Fallback | None (hard failure) |
+**Rationale**: Compatibility protects existing investments.
 
 ## Constraints
 
 ### Technical Constraints
 
-| Constraint | Implication |
-|------------|-------------|
-| Python 3.10+ | Modern language features available |
-| No async/await | Synchronous execution model |
-| File-based state | Simple but limited scalability |
-| Subprocess model | Code changes picked up automatically |
+| ID | Constraint | Rationale |
+|----|------------|-----------|
+| C-01 | Python 3.11+ required | Type hints, modern features |
+| C-02 | Zero runtime dependencies | Deployment simplicity |
+| C-03 | File-based state only | No database required |
+| C-04 | CLI-only interface | No GUI dependencies |
+| C-05 | Single-threaded execution | Determinism, simplicity |
 
-### Business Constraints
+### Operational Constraints
 
-| Constraint | Implication |
-|------------|-------------|
-| Single user per runner | No multi-tenancy |
-| Local execution | No distributed steps |
-| Manual workflow trigger | No scheduled execution |
+| ID | Constraint | Rationale |
+|----|------------|-----------|
+| C-06 | Requires filesystem access | Artifact storage |
+| C-07 | Network required for LLM/backend | External dependencies |
+| C-08 | Windows primary target | Current deployment |
+| C-09 | UTF-8 encoding required | International text |
 
-### Compliance Constraints
+## Operational Characteristics
 
-| Constraint | Implication |
-|------------|-------------|
-| No PII in logs | Data sanitization required |
-| Audit trail | All actions logged |
-| Document versioning | Change tracking required |
+### Resource Usage
 
-## Validation and Verification
+| Resource | Expected Usage | Limit |
+|----------|---------------|-------|
+| Memory | 50-200 MB | 500 MB |
+| Disk (jobs) | 10 MB per job | 1 GB total |
+| Disk (logs) | 100 MB per day | 30 days retention |
+| Network | Varies by LLM | Unlimited |
 
-### Testing Requirements
+### Scalability
 
-| Type | Coverage | Target |
-|------|----------|--------|
-| Unit tests | Logic functions | >80% |
-| Integration tests | End-to-end | Key paths |
-| Validation tests | Document structure | All templates |
+| Aspect | Limit | Mitigation |
+|--------|-------|------------|
+| Concurrent workflows | 1 per process | Multiple processes |
+| Job history | Unlimited | Archival |
+| Artifact size | 10 MB | External storage |
+| Workflow complexity | 100 steps | Sub-workflows |
 
-### Monitoring Requirements
+### Availability
 
-| Aspect | Requirement |
-|--------|-------------|
-| Health checks | Backend poll success |
-| Alerts | Failure rate threshold |
-| Dashboards | Job status overview |
+| Component | Target | Recovery |
+|-----------|--------|----------|
+| Local execution | On-demand | N/A |
+| Worker mode | 95% | Restart |
+| Daemon | 99% | Auto-restart |
+| Backend connection | Best effort | Retry |
 
----
+### Recovery
+
+| Scenario | Recovery Time | Recovery Point |
+|----------|---------------|----------------|
+| Process crash | Immediate | Last step |
+| System restart | 1 minute | Last persisted state |
+| Backend outage | 5 minutes | Queue backlog |
+
+## Compliance and Governance
+
+### Documentation Standards
+
+| Requirement | Standard |
+|-------------|----------|
+| Frontmatter format | YAML with required fields |
+| Template ID stability | Immutable once assigned |
+| Section requirements | Mandatory sections per doc type |
+| Cross-reference validity | Links must resolve |
+
+### Change Governance
+
+| Requirement | Standard |
+|-------------|----------|
+| Workflow changes | Version bump |
+| Schema changes | Migration path |
+| Breaking changes | Major version |
+| Documentation changes | Change ID |
 
 ## Related Documents
 
-- [SYSTEM_OVERVIEW.md](SYSTEM_OVERVIEW.md) — System explanation
-- [BUSINESS_CAPABILITIES.md](BUSINESS_CAPABILITIES.md) — Business value
-- [FUNCTIONAL_SPEC.md](FUNCTIONAL_SPEC.md) — Functional behaviors
-- [RUNBOOK.md](RUNBOOK.md) — Operational procedures
-
----
-
-*Generated by workflow `00_master_docs_bootstrap_v1` step `03_generate_system_overview_docs` on 2026-07-10T09:43:38+08:00*
+- [FUNCTIONAL_SPEC.md](FUNCTIONAL_SPEC.md) — Functional requirements
+- [SYSTEM_OVERVIEW.md](SYSTEM_OVERVIEW.md) — Architecture profile
+- [DOCUMENTATION_STANDARD.md](DOCUMENTATION_STANDARD.md) — Documentation governance

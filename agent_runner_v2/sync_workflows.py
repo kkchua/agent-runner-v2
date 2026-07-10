@@ -69,6 +69,20 @@ def _load_all_workflows() -> dict[str, dict]:
     return workflows
 
 
+def _strip_bundle_refs(definition: dict) -> dict:
+    """Remove runtime-only ``_workflow_bundle`` references before serialization.
+
+    ``bundle_to_template_group_dict()`` stamps a non-serializable
+    ``WorkflowBundle`` object on each step config for runtime use
+    (context hook injection in ``step_runner``). The backend sync
+    API only needs the plain dict shape.
+    """
+    step_configs = definition.get("step_configs", {})
+    for cfg in step_configs.values():
+        cfg.pop("_workflow_bundle", None)
+    return definition
+
+
 def _post_sync(
     backend_url: str,
     workflow_name: str,
@@ -136,7 +150,7 @@ def main() -> int:
 
     failed = False
     for workflow_name in workflow_names:
-        definition = workflows[workflow_name]
+        definition = _strip_bundle_refs(workflows[workflow_name])
         try:
             response = _post_sync(
                 args.backend_url,

@@ -66,7 +66,7 @@ class InvocationResult:
 
 DEFAULT_CODER_TIMEOUT_SECONDS = 600
 SIDECAR_POLL_INTERVAL_SECONDS = 3.0
-SIDECAR_SETTLE_DELAY_SECONDS = 1.0  # Increased from 0.5s to ensure coder finishes writing meta.json
+SIDECAR_SETTLE_DELAY_SECONDS = 5.0  # Increased from 0.5s to ensure coder finishes writing meta.json
 DEFAULT_SIDECAR_POST_COMPLETE_GRACE_SECONDS = 12.0  # Allow final progress updates / cleanup before forced termination
 
 

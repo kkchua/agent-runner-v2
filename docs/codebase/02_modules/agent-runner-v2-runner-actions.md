@@ -6,9 +6,9 @@ module_path: "agent_runner_v2/runner_actions.py"
 module_area: "schema"
 documentation_mode: "summary"
 owner_doc_path: "docs/codebase/02_modules/agent-runner-v2-runner-actions.md"
-last_verified_by_change: "00_master_docs_bootstrap_v1 / 00DOC-GEN-20260710-004 / 2026-07-10T09:40:54+08:00"
-created: "2026-07-10T09:40:54+08:00"
-owner: "00_master_docs_bootstrap_v1"
+last_verified_by_change: "00_master_docs_bootstrap_v2 / 00DOC-GEN-20260710-004 / 2026-07-10T14:00:58+08:00"
+created: "2026-07-10T14:00:58+08:00"
+owner: "00_master_docs_bootstrap_v2"
 ---
 
 # Module Documentation: agent_runner_v2.runner_actions
@@ -55,7 +55,6 @@ This module belongs to the `schema` area and is documented as `summary`.
 | `actions.validate_developer_site` | external module | repository dependency |
 | `actions.validate_operator_site` | external module | repository dependency |
 | `actions.validate_stakeholder_site` | external module | repository dependency |
-| `actions.validate_system_docs` | external module | repository dependency |
 | `actions.validate_tester_site` | external module | repository dependency |
 | `actions.validate_user_site` | external module | repository dependency |
 
@@ -89,7 +88,7 @@ No public classes.
 
 **Raises**:
 
-- `KeyError` — if action_name is not in the registry.
+- `KeyError` — if action_name is not found in either registry.
 - `Exception` — action-specific failures (caller routes to failure).
 
 ---
@@ -115,7 +114,7 @@ No public constants.
 | Exception | When | Raised By |
 |-----------|------|----------|
 | `Exception` | action-specific failures (caller routes to failure). | `execute` |
-| `KeyError` | if action_name is not in the registry. | `execute` |
+| `KeyError` | if action_name is not found in either registry. | `execute` |
 
 
 ## 4. Testing
@@ -131,4 +130,4 @@ No public constants.
 
 | Date | Change | Verified By |
 |------|--------|-------------|
-| 2026-07-10 | Initial baseline generated from repository scan | 00_master_docs_bootstrap_v1 |
+| 2026-07-10 | Initial baseline generated from repository scan | 00_master_docs_bootstrap_v2 |

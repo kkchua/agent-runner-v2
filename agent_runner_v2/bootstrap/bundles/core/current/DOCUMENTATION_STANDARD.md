@@ -1,12 +1,12 @@
 ---
-template_id: "SYS-00-DS"
 title: "Documentation Standard"
+template_id: "SYS-00-DS"
 status: "active"
-change_id: "00DOC-GEN-20260710-004"
+generated: "2026-07-10T11:45:32+08:00"
 workflow: "00_master_docs_bootstrap_v1"
 step: "03_generate_system_overview_docs"
+change_id: "00DOC-20260710-15f76235"
 managed_by: workflow-generated
-generated: "2026-07-10T09:43:38+08:00"
 ---
 
 > Managed by workflow: `00_master_docs_bootstrap_v1` / step: `03_generate_system_overview_docs`
@@ -16,250 +16,237 @@ generated: "2026-07-10T09:43:38+08:00"
 
 ## Purpose
 
-This document defines the documentation standards for the `agent-runner-v2` repository. It establishes the baseline rules that apply to every repository in the ecosystem, explains how repo-specific profiles are selected, and describes the migration modes for transitioning between standards.
+This document establishes the documentation governance rules for the `agent-runner-v2` repository. It defines the baseline standards that apply to every document, how repo-specific profiles are selected, and the migration posture for documentation evolution.
+
+The standard ensures:
+- Consistent structure across all documentation trees
+- Clear ownership and lifecycle management
+- Traceability between code changes and documentation updates
+- Multi-audience accessibility
 
 ## Audience Model
 
-| Audience | What They Need | How This Doc Helps |
-|----------|----------------|-------------------|
-| Documentation Authors | Know what to write and where | Clear structure and template requirements |
-| Code Reviewers | Validate doc completeness | Checklist and validation criteria |
-| New Contributors | Understand the doc system | Overview of organization and conventions |
-| Tool Builders | Parse and process docs | Metadata schema and file conventions |
+Documentation is written for distinct audiences with different information needs:
+
+| Audience | Role | Information Need |
+|----------|------|------------------|
+| **Stakeholders** | Product managers, executives, business analysts | Business value, capabilities, strategic alignment |
+| **Developers** | Software engineers, integrators, extension authors | Implementation details, APIs, extension points |
+| **Operators** | DevOps engineers, system administrators, support staff | Deployment, monitoring, troubleshooting |
+| **Testers** | QA engineers, validation specialists | Test procedures, acceptance criteria, quality gates |
+| **Functional Users** | End users, content creators | Usage patterns, workflows, best practices |
+
+Each document declares its primary audience in the frontmatter to help readers find relevant content.
 
 ## Document Set
 
-### Ecosystem Document Hierarchy
+The repository maintains three documentation trees:
 
-```
-system/                    # Ecosystem-level documentation
-├── 00_governance/         # Governance docs (this bootstrap set)
-│   └── bootstrap/          # Master system docs
-├── 01_architecture/        # Architecture standards
-├── 02_engineering/         # Engineering standards
-└── 03_operations/          # Operations standards
+### System Documentation (`docs/system/`)
 
-codebase/                  # Repository-level documentation
-├── 00_standards/           # Codebase-specific standards
-├── 01_inventory/           # Auto-generated inventory
-├── 02_modules/             # Module documentation
-├── 03_components/          # Component documentation
-└── 04_changes/             # Change impact documents
+Governance and architecture documentation spanning:
+- **00 Governance**: Standards, taxonomy, migration plans
+- **01 Overview**: Platform introduction and business capabilities
+- **02 Functional**: Requirements and specifications
+- **03 Architecture**: Component architecture and design records
 
-delivery/                  # Workflow artifacts
-├── 01_initiatives/         # Initiative documents
-├── 02_plans/               # Delivery plans
-├── 03_task_graphs/         # Task graph definitions
-├── 04_tasks/               # Task specifications
-├── 05_implementations/     # Implementation plans
-├── 06_reviews/             # Review documents
-└── 08_agents/              # Agent contracts
-```
+### Codebase Documentation (`docs/codebase/`)
 
-### Document Types
+Implementation-level documentation spanning:
+- **01 Inventory**: Module inventory and cross-references
+- **02 Modules**: Per-module documentation (67 modules)
+- **03 Components**: Component interaction patterns
+- **04 Changes**: Change impact documents
 
-| Type | Location | Purpose | Template ID Prefix |
-|------|----------|---------|-------------------|
-| Governance | system/00_governance/ | Ecosystem standards and posture | SYS-00-* |
-| Architecture | system/01_architecture/ | System architecture docs | SYS-01-* |
-| Engineering | system/02_engineering/ | Engineering standards | SYS-02-* |
-| Operations | system/03_operations/ | Operational procedures | SYS-03-* |
-| Codebase Standards | codebase/00_standards/ | Repo-specific conventions | CBS-* |
-| Module Docs | codebase/02_modules/ | Module documentation | MOD-* |
-| Component Docs | codebase/03_components/ | Component documentation | COMP-* |
-| Change Impact | codebase/04_changes/ | Change impact analysis | CB-04 |
-| Delivery | delivery/ | Workflow artifacts | Various |
+### Delivery Documentation (`docs/delivery/`)
+
+Project delivery artifacts spanning:
+- **01 Initiatives**: Initiative intake documents (draft, pre-init, init)
+- **02 Plans**: Delivery plans and task graphs
+- **03 Tasks**: Task contracts and execution records
+- **04 Validation**: Validation reports and quality gates
 
 ## Architecture Baseline
 
-### Universal Documentation Rules
+The universal baseline applies to every repository using this documentation standard:
 
-These rules apply to **every** repository in the ecosystem:
+### Required Frontmatter
 
-1. **All markdown documents MUST include YAML frontmatter** with:
-   - `template_id`: Unique template identifier
-   - `status`: Document status (active, draft, archived)
-   - `title`: Human-readable title
+Every markdown document MUST include YAML frontmatter:
 
-2. **Workflow-generated documents are protected**:
-   - Marked with `managed_by: workflow-generated` in frontmatter
-   - Include the workflow-generated banner after frontmatter
-   - Should not be edited manually (changes will be overwritten)
+```yaml
+---
+title: "Document Title"
+template_id: "TEMPLATE-XXX"
+status: "active" | "draft" | "deprecated"
+generated: "2026-07-10T11:45:32+08:00"
+workflow: "workflow_name"
+step: "step_name"
+change_id: "CHANGE-ID"
+managed_by: "workflow-generated" | "manual"
+---
+```
 
-3. **Section requirements are mandatory**:
-   - Documents must include all sections defined in their template
-   - Section order must match the template specification
-   - Section headings must match exactly (case-sensitive)
+### Required Sections
 
-4. **Artifact paths use centralized constants**:
-   - No hardcoded paths in code or documentation
-   - All paths reference `constants.py` definitions
-   - Path construction uses `ARTIFACT_PATH_*` constants
+| Document Type | Required Sections |
+|---------------|-------------------|
+| System Overview | Purpose, Scope, Primary Flows, Architecture Profile, Key Risks |
+| Business Capabilities | Capability Map, Operational Interpretation, Maturity Assessment |
+| Functional Spec | Purpose, Functional Capabilities, Actors, Core Behaviors |
+| Non-Functional Requirements | Quality Attributes, Constraints, Operational Characteristics |
 
-5. **Meta.json sidecar is the result channel**:
-   - All workflow steps report results via `meta.json`
-   - Sidecar must follow the v2 schema
-   - No markdown write-backs by the runner
+### Workflow-Generated Documents
+
+Documents generated by workflows are protected from manual edits. They include:
+- The workflow-generated banner immediately after frontmatter
+- `managed_by: workflow-generated` in frontmatter
+- Stable `template_id` for programmatic identification
 
 ## Repo-Selected Profile
 
-### Profile Selection
+The repository selects documentation profiles based on its maturity and structure:
 
-Repositories select a documentation profile based on their maturity and purpose:
+| Profile | Description | Criteria |
+|---------|-------------|----------|
+| `minimal` | Essential docs only | New repo, < 10 modules, no active workflows |
+| `structured_delivery` | Delivery-focused governance | Active delivery workflows, task tracking |
+| `comprehensive` | Full documentation set | > 50 modules, multiple workflow families, multi-audience needs |
 
-| Profile | Description | When to Use |
-|---------|-------------|-------------|
-| `provisional` | No clear standard yet; early-stage repo | New projects, experiments |
-| `explicit` | Delivery scaffold governance model | Production workflows |
-| `minimal` | Essential docs only | Simple tools, libraries |
-| `comprehensive` | Full documentation suite | Complex systems, platforms |
+### Current Profile: `structured_delivery`
 
-### Current Repository Profile
+**Rationale**:
+- Active workflow families: 8+ defined workflows
+- Module count: 67 modules with documentation
+- Multi-audience documentation: system, codebase, delivery trees
+- Documentation governance: active validation and sync workflows
 
-| Field | Value |
-|-------|-------|
-| `current_profile` | `provisional` |
-| `target_profile` | `explicit` (delivery scaffold governance model) |
-| `migration_mode` | `bootstrap-in-progress` |
-| `repo_state` | `provisional` |
-
-### Profile Assessment Criteria
-
-A repository is `provisional` when:
-- No architecture standard document exists
-- Documentation is being bootstrapped
-- Structure is still evolving
-
-A repository reaches `explicit` when:
-- All master system docs are generated
-- Delivery scaffold SOPs are in place
-- Template registry is populated
-- Agent contracts are defined
+**Evidence**:
+- `docs/codebase/02_modules/` contains 67 module docs
+- `agent_runner_v2/bootstrap/workflows/default/` defines 8+ workflow families
+- Active `40_documentation_sync_v1` workflow for reconciliation
 
 ## Migration Mode
 
-### Bootstrap-In-Progress
+The migration posture defines how the repository evolves its documentation:
 
-The current migration mode is `bootstrap-in-progress`. This means:
+| Mode | Description | Applicability |
+|------|-------------|---------------|
+| `greenfield` | New documentation from scratch | Brand new repository |
+| `incremental` | Gradual adoption of standards | Existing repo with partial documentation |
+| `reconciliation` | Sync existing docs to standard | Established repo with drift |
 
-1. **Documents are being generated** via the `00_master_docs_bootstrap_v1` workflow
-2. **Structure is provisional** and may change during bootstrap
-3. **Validation is relaxed** for missing cross-references
-4. **Review gates are active** for generated documents
+### Current Mode: `incremental`
 
-### Migration Path
+**Rationale**:
+- Repository has existing documentation (67 module docs)
+- Currently generating master system docs to fill gaps
+- Bootstrap workflow actively reconciling codebase docs
 
-```
-provisional → bootstrap-in-progress → explicit → comprehensive
-     ↑                    ↓              ↓
-  initial state      validate       enhance
-```
-
-### Completion Criteria
-
-To exit `bootstrap-in-progress` and enter `explicit`:
-- [x] PROJECT_ANALYSIS.md generated
-- [x] System overview docs generated (this step)
-- [ ] Architecture docs generated (step 04)
-- [ ] Integration docs generated (step 04b)
-- [ ] Failure docs generated (step 04c)
-- [ ] Architecture flow docs generated (step 04d)
-- [ ] Master system docs reviewed (step 05)
-- [ ] Master system docs refined (step 06, if needed)
+**Migration Path**:
+1. Generate master system docs (current step)
+2. Generate architecture and operations docs
+3. Establish ongoing sync workflows for maintenance
 
 ## Conditional Standards
 
-### When to Apply Strict Validation
+Certain standards apply only when specific conditions are met:
 
-Strict validation applies when:
-- Document status is `active`
-- Template ID matches known templates
-- Document is not in bootstrap mode
+### Module Documentation
 
-### When to Allow Exceptions
+**Condition**: Python module exists in `agent_runner_v2/`
+**Standard**: Must have corresponding doc in `docs/codebase/02_modules/`
+**Validation**: `40_documentation_sync_v1` workflow checks coverage
 
-Exceptions are permitted when:
-- Document status is `draft`
-- Repository is in `bootstrap-in-progress` mode
-- Exception is documented in change impact
+### Workflow Prompt Documentation
 
-### Version Compatibility
+**Condition**: Workflow prompt template exists
+**Standard**: Must be referenced in workflow family documentation
+**Validation**: Template groups validate prompt existence
 
-| Schema Version | Compatible With | Notes |
-|----------------|-----------------|-------|
-| v2 | Current | Meta.json sidecar schema |
-| v1 | Legacy | Fallback for old workflows |
+### Change Impact Documentation
+
+**Condition**: Code change affects documented interfaces
+**Standard**: Must create change impact document
+**Trigger**: Manual creation via workflow or automatic detection
 
 ## Update Triggers
 
-### Automatic Updates
+Documentation updates are triggered by:
 
-Documents are automatically regenerated when:
-- Workflow is triggered with `regenerate: true`
-- Source code changes affect documentation
-- Template requirements change
-
-### Manual Updates
-
-Manual updates require:
-1. Change impact document
-2. Workflow approval
-3. Review gate passage
-
-### Change Classification
-
-| Change Type | Trigger | Action |
-|-------------|---------|--------|
-| Minor | Typo, formatting | Auto-approve |
-| Medium | Section updates | Review required |
-| Major | Structure change | Approval gate |
+| Trigger | Action |
+|---------|--------|
+| Code change affecting module interface | Update module doc, create change impact |
+| New workflow family added | Update workflow documentation, bundle taxonomy |
+| Architecture decision made | Update decision log, relevant architecture docs |
+| Schema change | Update all docs referencing the schema |
+| Bootstrap workflow run | Regenerate master system docs from current state |
 
 ## Validation
 
-### Document Validation Rules
+Documentation validation occurs at multiple levels:
 
-1. **Frontmatter validation**:
-   - Required fields present
-   - Template ID matches known templates
-   - Status is valid value
+### Structural Validation
 
-2. **Structure validation**:
-   - All required sections present
-   - Section order matches template
-   - Headings match exactly
+- Frontmatter completeness
+- Required sections present
+- Cross-reference resolution
+- Template ID consistency
 
-3. **Content validation**:
-   - No placeholder text
-   - Cross-references resolve
-   - Links are valid
+### Content Validation
 
-4. **Sidecar validation**:
-   - Meta.json follows schema
-   - Artifacts declared in `produces` exist
-   - Status is APPROVED or REJECTED
+- Links resolve to existing files
+- Code references match current implementation
+- Screenshots/images exist
+- Tables have consistent formatting
+
+### Semantic Validation
+
+- Audience-appropriate language
+- Technical accuracy
+- Completeness against scope
+- Consistency with related documents
 
 ### Validation Tools
 
-| Tool | Purpose | Location |
-|------|---------|----------|
-| validate_system_docs.py | System doc validation | actions/ |
-| validate_delivery_docs.py | Delivery doc validation | actions/ |
-| validate_codebase_docs.py | Codebase doc validation | actions/ |
+The runner provides validation actions:
+- `validate_system_docs.py` — System documentation validation
+- `validate_codebase_docs.py` — Codebase documentation validation
+- `validate_delivery_docs.py` — Delivery documentation validation
 
-### Validation Frequency
+Run validation:
+```bash
+ukbe-run-agent run --template-group documentation_sync_v1
+```
 
-- **Pre-commit**: Fast validation (frontmatter, structure)
-- **CI/CD**: Full validation (content, cross-references)
-- **Release**: Complete validation (all rules)
+## Document Lifecycle
 
----
+| Status | Description | Transition To |
+|--------|-------------|---------------|
+| `draft` | Work in progress | `active` |
+| `active` | Current, maintained | `deprecated` |
+| `deprecated` | Superseded, kept for history | (none) |
 
-## Related Documents
+Workflow-generated documents are always `active` or `deprecated`. Manual documents may be `draft` during development.
 
-- [PROJECT_ANALYSIS.md](PROJECT_ANALYSIS.md) — Repository posture assessment
-- [BUNDLE_TAXONOMY.md](BUNDLE_TAXONOMY.md) — Bundle organization
-- [BUNDLE_MIGRATION_PLAN.md](BUNDLE_MIGRATION_PLAN.md) — Migration guidance
+## Naming Conventions
 
----
+### File Names
 
-*Generated by workflow `00_master_docs_bootstrap_v1` step `03_generate_system_overview_docs` on 2026-07-10T09:43:38+08:00*
+- System docs: `UPPER_SNAKE_CASE.md`
+- Codebase module docs: `kebab-case.md`
+- Delivery docs: `PREFIX-YYYYMMDD-description.md`
+
+### Directory Names
+
+- Numbered sections: `NN_descriptive_name/`
+- Functional groups: `descriptive_name/`
+
+## Exceptions
+
+Exceptions to this standard require:
+1. Documented rationale in the exception file
+2. Approval by technical lead
+3. Review at next documentation sync
+
+Temporary exceptions are tracked in `docs/system/00_governance/EXCEPTIONS.md`.

@@ -32,7 +32,7 @@ REM Path to the project to scaffold delivery docs into
 set "TARGET_PROJECT_ROOT=D:\MyProjectSpace\01_Workflows\agent-runner-v2"
 
 REM Job ID to resume (leave blank to auto-create a new job)
-set "JOB_ID=10SCAFFOLD-20260709-29b2fc50"
+set "JOB_ID="
 
 REM Set DRY_RUN=true to render prompts only (no coder invocation)
 set "DRY_RUN=false"

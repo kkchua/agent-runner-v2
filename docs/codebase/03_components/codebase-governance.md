@@ -3,10 +3,10 @@ title: "Component Documentation: codebase governance"
 template_id: "CB-03"
 status: "active"
 component_id: "codebase-governance"
-created: "2026-07-10T09:40:54+08:00"
-owner: "00_master_docs_bootstrap_v1"
-last_verified_by_change: "00_master_docs_bootstrap_v1 / 00DOC-GEN-20260710-004 / 2026-07-10T09:40:54+08:00"
-modules: ["agent_runner_v2/bootstrap/bundles/core/current/00DOC-GEN-20260709-002-bootstrap-change-log.md", "agent_runner_v2/bootstrap/bundles/core/current/00DOC-GEN-20260709-002-bootstrap-summary.md", "agent_runner_v2/bootstrap/bundles/core/current/00DOC-GEN-20260709-002-bootstrap-validation.md", "agent_runner_v2/bootstrap/bundles/core/current/BUNDLE_MIGRATION_PLAN.md", "agent_runner_v2/bootstrap/bundles/core/current/BUNDLE_TAXONOMY.md", "agent_runner_v2/bootstrap/bundles/core/current/BUSINESS_CAPABILITIES.md", "agent_runner_v2/bootstrap/bundles/core/current/COMPONENT_ARCHITECTURE.md", "agent_runner_v2/bootstrap/bundles/core/current/DECISION_LOG.md", "agent_runner_v2/bootstrap/bundles/core/current/DEVELOPER_GUIDE.md", "agent_runner_v2/bootstrap/bundles/core/current/DOCUMENTATION_STANDARD.md", "agent_runner_v2/bootstrap/bundles/core/current/EXISTING_REPO_WORKFLOW_SOP.md", "agent_runner_v2/bootstrap/bundles/core/current/FUNCTIONAL_SPEC.md", "agent_runner_v2/bootstrap/bundles/core/current/NON_FUNCTIONAL_REQUIREMENTS.md", "agent_runner_v2/bootstrap/bundles/core/current/project_analysis.md", "agent_runner_v2/bootstrap/bundles/core/current/README.md", "agent_runner_v2/bootstrap/bundles/core/current/RUNBOOK.md", "agent_runner_v2/bootstrap/bundles/core/current/SYSTEM_CONTEXT.md", "agent_runner_v2/bootstrap/bundles/core/current/SYSTEM_FILE_STRUCTURE.md", "agent_runner_v2/bootstrap/bundles/core/current/SYSTEM_OVERVIEW.md", "agent_runner_v2/bootstrap/themes/default/layout.html", "agent_runner_v2/image_csv_generation.md", "agent_runner_v2/QWEN.md", "archive/batch/README.md", "CLAUDE.md", "HOW_TO_GUIDE.md", "PUSHOVER_NOTIFICATIONS.md", "QWEN.md", "README.md", "tests/integration/README.md", "tests/unit/README.md", "TODO_LIST.md", "UNIT_TEST_FIXES.md", "UNIT_TEST_RESULTS.md", "WINDOWS_COMPATIBILITY.md"]
+created: "2026-07-10T14:00:58+08:00"
+owner: "00_master_docs_bootstrap_v2"
+last_verified_by_change: "00_master_docs_bootstrap_v2 / 00DOC-GEN-20260710-004 / 2026-07-10T14:00:58+08:00"
+modules: ["agent_runner_v2/bootstrap/bundles/core/current/00DOC-20260710-15f76235-bootstrap-change-log.md", "agent_runner_v2/bootstrap/bundles/core/current/00DOC-20260710-15f76235-bootstrap-summary.md", "agent_runner_v2/bootstrap/bundles/core/current/00DOC-20260710-15f76235-bootstrap-validation.md", "agent_runner_v2/bootstrap/bundles/core/current/BUNDLE_MIGRATION_PLAN.md", "agent_runner_v2/bootstrap/bundles/core/current/BUNDLE_TAXONOMY.md", "agent_runner_v2/bootstrap/bundles/core/current/BUSINESS_CAPABILITIES.md", "agent_runner_v2/bootstrap/bundles/core/current/COMPONENT_ARCHITECTURE.md", "agent_runner_v2/bootstrap/bundles/core/current/DECISION_LOG.md", "agent_runner_v2/bootstrap/bundles/core/current/DEVELOPER_GUIDE.md", "agent_runner_v2/bootstrap/bundles/core/current/DOCUMENTATION_STANDARD.md", "agent_runner_v2/bootstrap/bundles/core/current/EXISTING_REPO_WORKFLOW_SOP.md", "agent_runner_v2/bootstrap/bundles/core/current/FUNCTIONAL_SPEC.md", "agent_runner_v2/bootstrap/bundles/core/current/NON_FUNCTIONAL_REQUIREMENTS.md", "agent_runner_v2/bootstrap/bundles/core/current/project_analysis.md", "agent_runner_v2/bootstrap/bundles/core/current/README.md", "agent_runner_v2/bootstrap/bundles/core/current/RUNBOOK.md", "agent_runner_v2/bootstrap/bundles/core/current/SYSTEM_CONTEXT.md", "agent_runner_v2/bootstrap/bundles/core/current/SYSTEM_FILE_STRUCTURE.md", "agent_runner_v2/bootstrap/bundles/core/current/SYSTEM_OVERVIEW.md", "agent_runner_v2/bootstrap/themes/default/layout.html", "agent_runner_v2/image_csv_generation.md", "agent_runner_v2/QWEN.md", "archive/batch/README.md", "CLAUDE.md", "CODER_IMPLEMENTATION_SOP.md", "HOW_TO_GUIDE.md", "PUSHOVER_NOTIFICATIONS.md", "QWEN.md", "README.md", "tests/integration/README.md", "tests/unit/README.md", "TODO_LIST.md", "UNIT_TEST_FIXES.md", "UNIT_TEST_RESULTS.md", "WINDOWS_COMPATIBILITY.md"]
 ---
 
 # Component Documentation: codebase governance
@@ -21,9 +21,9 @@ The codebase documentation standards, templates, inventory, and validation rules
 
 | Module | Role in Component |
 |--------|-------------------|
-| `agent_runner_v2/bootstrap/bundles/core/current/00DOC-GEN-20260709-002-bootstrap-change-log.md` | documentation artifact |
-| `agent_runner_v2/bootstrap/bundles/core/current/00DOC-GEN-20260709-002-bootstrap-summary.md` | documentation artifact |
-| `agent_runner_v2/bootstrap/bundles/core/current/00DOC-GEN-20260709-002-bootstrap-validation.md` | documentation artifact |
+| `agent_runner_v2/bootstrap/bundles/core/current/00DOC-20260710-15f76235-bootstrap-change-log.md` | documentation artifact |
+| `agent_runner_v2/bootstrap/bundles/core/current/00DOC-20260710-15f76235-bootstrap-summary.md` | documentation artifact |
+| `agent_runner_v2/bootstrap/bundles/core/current/00DOC-20260710-15f76235-bootstrap-validation.md` | documentation artifact |
 | `agent_runner_v2/bootstrap/bundles/core/current/BUNDLE_MIGRATION_PLAN.md` | documentation artifact |
 | `agent_runner_v2/bootstrap/bundles/core/current/BUNDLE_TAXONOMY.md` | documentation artifact |
 | `agent_runner_v2/bootstrap/bundles/core/current/BUSINESS_CAPABILITIES.md` | documentation artifact |
@@ -45,6 +45,7 @@ The codebase documentation standards, templates, inventory, and validation rules
 | `agent_runner_v2/QWEN.md` | documentation artifact |
 | `archive/batch/README.md` | documentation artifact |
 | `CLAUDE.md` | documentation artifact |
+| `CODER_IMPLEMENTATION_SOP.md` | documentation artifact |
 | `HOW_TO_GUIDE.md` | documentation artifact |
 | `PUSHOVER_NOTIFICATIONS.md` | documentation artifact |
 | `QWEN.md` | documentation artifact |
@@ -70,9 +71,9 @@ Repository files are scanned, normalized into inventory rows, and rendered into 
 
 | Interface | Direction | Protocol | Description |
 |-----------|-----------|----------|-------------|
-| `agent_runner_v2/bootstrap/bundles/core/current/00DOC-GEN-20260709-002-bootstrap-change-log.md` | outbound | markdown | documentation artifact |
-| `agent_runner_v2/bootstrap/bundles/core/current/00DOC-GEN-20260709-002-bootstrap-summary.md` | outbound | markdown | documentation artifact |
-| `agent_runner_v2/bootstrap/bundles/core/current/00DOC-GEN-20260709-002-bootstrap-validation.md` | outbound | markdown | documentation artifact |
+| `agent_runner_v2/bootstrap/bundles/core/current/00DOC-20260710-15f76235-bootstrap-change-log.md` | outbound | markdown | documentation artifact |
+| `agent_runner_v2/bootstrap/bundles/core/current/00DOC-20260710-15f76235-bootstrap-summary.md` | outbound | markdown | documentation artifact |
+| `agent_runner_v2/bootstrap/bundles/core/current/00DOC-20260710-15f76235-bootstrap-validation.md` | outbound | markdown | documentation artifact |
 | `agent_runner_v2/bootstrap/bundles/core/current/BUNDLE_MIGRATION_PLAN.md` | outbound | markdown | documentation artifact |
 | `agent_runner_v2/bootstrap/bundles/core/current/BUNDLE_TAXONOMY.md` | outbound | markdown | documentation artifact |
 | `agent_runner_v2/bootstrap/bundles/core/current/BUSINESS_CAPABILITIES.md` | outbound | markdown | documentation artifact |
@@ -94,6 +95,7 @@ Repository files are scanned, normalized into inventory rows, and rendered into 
 | `agent_runner_v2/QWEN.md` | outbound | markdown | documentation artifact |
 | `archive/batch/README.md` | outbound | markdown | documentation artifact |
 | `CLAUDE.md` | outbound | markdown | documentation artifact |
+| `CODER_IMPLEMENTATION_SOP.md` | outbound | markdown | documentation artifact |
 | `HOW_TO_GUIDE.md` | outbound | markdown | documentation artifact |
 | `PUSHOVER_NOTIFICATIONS.md` | outbound | markdown | documentation artifact |
 | `QWEN.md` | outbound | markdown | documentation artifact |
@@ -147,4 +149,4 @@ Auto-generated baseline; extend with component-specific checks as needed.
 
 | Date | Change | Modules Affected | Verified By |
 |------|--------|-----------------|-------------|
-| 2026-07-10 | Initial baseline generated from repository scan | 34 modules/files | 00_master_docs_bootstrap_v1 |
+| 2026-07-10 | Initial baseline generated from repository scan | 35 modules/files | 00_master_docs_bootstrap_v2 |
