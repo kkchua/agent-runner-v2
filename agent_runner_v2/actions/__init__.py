@@ -9,6 +9,7 @@ from .finalize_bootstrap import finalize_bootstrap
 from .prepare_delivery_scaffold import prepare_delivery_scaffold
 from .publish_architecture_site import publish_architecture_site
 from .validate_architecture_site import validate_architecture_site
+from .step_completion import step_completion
 
 __all__ = [
     "submit_comfyui",
@@ -22,4 +23,5 @@ __all__ = [
     "prepare_delivery_scaffold",
     "publish_architecture_site",
     "validate_architecture_site",
+    "step_completion",
 ]

@@ -2,249 +2,380 @@
 template_id: "SYS-00-PA"
 title: "Project Analysis - agent-runner-v2"
 status: "active"
-generated: "2026-07-10T14:01:15+08:00"
+managed_by: workflow-generated
+generated: "2026-07-10T19:43:59+08:00"
 workflow: "00_master_docs_bootstrap_v2"
 step: "02_generate_project_analysis"
-change_id: "00DOC-GEN-20260710-004"
-managed_by: workflow-generated
+change_id: "00DOC-20260710-0098bf53"
 ---
 
 > Managed by workflow: `00_master_docs_bootstrap_v2` / step: `02_generate_project_analysis`
 > This file is workflow-generated and protected from manual edits.
 
-# Repo Overview
+# Project Analysis: agent-runner-v2
 
-`agent-runner-v2` is a standalone Python LLM workflow orchestration engine extracted from UKBE (Unified Knowledge Base Environment). It provides structured multi-step workflow execution across Claude, Codex, Qwen, and aliased models, with built-in review loops, retry mechanisms, approval gates, and deterministic runner actions.
+## Repo Overview
 
-The package exposes a CLI entry point `ukbe-run-agent` that supports three primary execution modes:
+`agent-runner-v2` is a standalone Python LLM workflow orchestration engine extracted from UKBE. It runs structured multi-step workflows across Claude, Codex, Qwen, and aliased models, with review loops, retries, approval gates, and deterministic runner actions.
 
-1. **Manual workflow execution** (`ukbe-run-agent run`) - Local workflow execution with prompt rendering and coder invocation
-2. **Backend-connected worker** (`ukbe-run-agent worker`, `poll`, `execute-step`) - Worker mode for backend-driven execution
-3. **Daemon supervisor** (`ukbe-run-agent daemon`) - Workstation supervisor that claims work and spawns child processes
+The system provides a CLI entry point (`ukbe-run-agent`) that supports three primary usage modes:
 
-The runtime follows a v2 execution model where `meta.json` sidecar files are the sole structured communication channel between coders and the runner, eliminating markdown write-backs and silent recovery paths.
+1. **Local workflow execution** - Manual workflow runs via `ukbe-run-agent run`
+2. **Backend-connected worker operation** - Single-step execution via `worker`, `poll`, and `execute-step` commands
+3. **Workstation supervision** - Daemon mode via `ukbe-run-agent daemon`
 
-# Codebase Structure
+The backend is the source of truth for runs, step runs, artifacts, events, and approvals. The runner handles prompt rendering, coder/action execution, output validation, and step result submission.
 
-## Package Layout
+Key differentiators:
+- Strict v2 sidecar contract (`meta.json` as the only structured result channel)
+- No markdown write-backs by the runner
+- No silent recovery paths - hard failures route explicitly through runner failure handling
+- Plugin-based workflow bundle system with dual-path discovery (global first, local fallback)
+
+## Codebase Structure
+
+### Package Layout
 
 ```
-agent_runner_v2/                    # Main Python package
-├── __init__.py                     # Package stub
-├── run_agent.py                    # CLI entry point (2,374 lines)
-├── step_runner.py                  # Core step execution (2,674 lines)
-├── workflow_router.py              # Post-step routing (787 lines)
-├── job_state.py                    # Job.json lifecycle (1,806 lines)
-├── coder_adapters.py               # Coder invocation (1,079 lines)
-├── constants.py                    # Centralized path constants (1,342 lines)
-├── bundle_loader.py                # Bootstrap/runtime bundle loading
-├── runtime_context.py              # Runtime path context
-├── actions/                        # 28 deterministic runner actions
-│   ├── __init__.py
-│   ├── archive_previous_version.py
-│   ├── assemble_video.py
-│   ├── copy_artifact.py
-│   ├── documentation_validation_core.py
-│   ├── execute_i2v.py
-│   ├── execute_t2i.py
-│   ├── execute_voiceover.py
-│   ├── finalize_bootstrap.py
-│   ├── generate_site.py
-│   ├── generate_site_pdf.py
-│   ├── prepare_delivery_scaffold.py
-│   ├── promote_artifact.py
-│   ├── promote_init.py
-│   ├── publish_architecture_site.py
-│   ├── scan_repo_codebase.py
-│   ├── submit_comfyui.py
-│   ├── sync_codebase_docs.py
-│   ├── sync_system_docs.py
-│   ├── validate_*.py               # 12 validation actions
-│   └── ...
-├── bootstrap/                      # Bootstrap source (seeds runtime)
-│   ├── bundles/core/current/       # Core documentation bundles
-│   ├── themes/default/             # HTML theme templates
-│   └── workflows/default/          # Default workflow definitions
-│       ├── template_groups.py      # 2,453-line workflow registry
-│       ├── prompts/                # 200+ prompt templates
-│       └── *.json                  # Schema and mapping files
-├── workflow_packages/              # Plugin-based workflow system
-│   ├── __init__.py
+agent_runner_v2/
+├── __init__.py                    # Package stub
+├── run_agent.py                   # CLI entry point (core)
+├── step_runner.py                 # Step execution contract (core)
+├── workflow_router.py             # Post-step routing (core)
+├── job_state.py                   # Job.json lifecycle (state)
+├── runtime_context.py             # Runtime path context (state)
+├── coder_adapters.py              # LLM invocation (coder)
+├── bundle_loader.py               # Bootstrap seeding and loading (bootstrap)
+├── constants.py                   # Centralized artifact paths (support)
+├── template_groups.py             # Package-local workflow definitions
+├── workflow_packages/             # Plugin-based workflow system
 │   ├── base.py
 │   ├── loader.py
 │   └── registry.py
-└── tools/                          # Development utilities
+├── actions/                       # Deterministic runner actions (30+ actions)
+│   ├── scan_repo_codebase.py
+│   ├── sync_codebase_docs.py
+│   ├── validate_delivery_docs.py
+│   └── ... (27 more action modules)
+├── bootstrap/                     # Bootstrap source
+│   ├── workflows/default/         # Default workflow bundle
+│   ├── bundles/core/current/      # Master system docs bundle
+│   └── themes/default/            # HTML site themes
+├── config/                        # Configuration
+│   └── section_requirements.py
+└── tools/                         # Tool utilities
     └── agent_tools.py
 ```
 
-## Documentation Structure
+### Workflow Bundles
+
+The system uses a two-tier workflow discovery:
+
+1. **Global runtime bundles**: `%USERPROFILE%\.ukbe-runner\workflows\<workflow>\`
+2. **Project-local workflows**: `workflows/<workflow>/workflow.toml` (plugin packages)
+
+Bootstrap source in `agent_runner_v2/bootstrap/workflows/default/` seeds the global runtime bundles.
+
+### Scripts and Entry Points
+
+- `ukbe-run-agent` - Main CLI entry point
+- 40+ batch files for workflow execution (`run-*.bat`, `submit-*.bat`)
+- Shell scripts for Unix environments (`scripts/*.sh`)
+
+### Documentation Structure
 
 ```
 docs/
-└── codebase/                       # Codebase documentation (workflow-generated)
-    ├── 01_inventory/
-    │   └── codebase_inventory.md   # 422-line module inventory
-    ├── 02_modules/                 # 72 module documentation files
-    ├── 03_components/              # 6 component documentation files
-    └── 04_changes/                 # Change impact documents
+├── system/                        # System documentation (generated)
+│   └── 00_governance/bootstrap/
+├── codebase/                      # Codebase documentation
+│   ├── 01_inventory/              # Inventory documents
+│   ├── 02_modules/                # Module documentation (73 modules)
+│   ├── 03_components/             # Component documentation
+│   └── 04_changes/              # Change impact documents
+delivery/                          # Delivery artifacts
 ```
 
-## Test Structure
+### Tests
 
 ```
 tests/
-├── conftest.py                     # Shared fixtures
-├── unit/                           # 45+ pure unit tests (isolated logic)
-└── integration/                    # Integration tests (real files, subprocesses)
+├── unit/                          # Isolated logic tests (45 passing)
+├── integration/                   # Integration tests
+└── conftest.py                    # Shared fixtures
 ```
 
-## Scripts and Entrypoints
+## Workflow and Runtime Model
 
-- `run-*.bat` - 35 batch files for workflow execution (Windows)
-- `scripts/ukbe-run-delivery.bat` - Shared delivery runner
-- `scripts/ukbe-daemon.bat` - Daemon launcher
-- `scripts/ukbe-runner.sh` - Unix wrapper
+### Core Execution Loop
 
-# Workflow and Runtime Model
+Each workflow step follows this sequence:
 
-## Execution Model
+1. **Load workflow bundle** - From global runner home or local plugin
+2. **Render prompt** - Using template with context substitution
+3. **Invoke coder or action**:
+   - **Coder steps**: Call Claude/Codex/Qwen via adapters
+   - **Action steps**: Execute deterministic Python actions
+4. **Read meta.json sidecar** - The only structured result channel
+5. **Validate artifacts** - Check existence of declared outputs
+6. **Route to next step** - Based on result status and workflow config
 
-Each workflow step follows a strict execution contract:
+### Sidecar Contract (v2)
 
-1. **Load** - Load workflow bundle from runtime path (`%USERPROFILE%\.ukbe-runner\workflows\`)
-2. **Render** - Render prompt from template with artifact context substitution
-3. **Invoke** - Call coder (Claude/Codex/Qwen) or execute deterministic action
-4. **Validate** - Read `meta.json` sidecar written by the step
-5. **Route** - Route to next step based on sidecar status (APPROVED/REJECTED)
-
-## Coder/Action Split
-
-- **Coder steps** - Invoke LLM backends via `coder_adapters.py`, return results via `meta.json`
-- **Action steps** - Execute deterministic Python functions in `actions/` package
-
-## Sidecar Contract (v2)
-
-The `meta.json` sidecar is the **only** structured result channel:
+The `meta.json` sidecar is the canonical result channel:
 
 ```json
 {
   "schema_version": "v2",
   "coder_result": {
     "status": "APPROVED|REJECTED",
-    "remark": "Summary of work accomplished",
-    "artifacts": {"KEY": "path/to/artifact.md"},
-    "recorded_at": "2026-07-10T14:01:15+08:00"
+    "remark": "Human-readable summary",
+    "artifacts": {"ARTIFACT_KEY": "relative/path/to/file.md"},
+    "recorded_at": "2026-07-10T19:43:59+08:00"
   }
 }
 ```
 
-Key v2 rules:
+Key rules:
+- `meta.json` is mandatory - missing sidecar is a hard failure
 - No markdown write-backs by the runner
-- No silent recovery paths
-- Hard failures route explicitly through `route_after_failure()`
-- No pre-invocation sidecar writes
+- Artifact paths are relative to project root
+- Runner enriches sidecar with timing, checksums, and changed paths
 
-## Runtime Source of Truth
+### Coder/Action Split
 
-Two distinct sources exist:
+| Aspect | Coder Steps | Action Steps |
+|--------|-------------|--------------|
+| Execution | Subprocess to LLM | In-process Python call |
+| Output | Written by LLM | Written by action code |
+| Validation | Artifact existence | Same |
+| Retry | Configurable | Same |
+| Timeout | Configurable | Same |
 
-1. **Packaged bootstrap source** (`agent_runner_v2/bootstrap/`) - Seeds runtime bundles
-2. **Runtime workflow bundle** (`%USERPROFILE%\.ukbe-runner\workflows\<workflow>\`) - Active execution source
+### Workflow Bundle/Runtime Distinction
 
-Runtime prompt/templates are loaded from the global runner home, not from the repo tree directly. The repo bootstrap files only seed those runtime bundles.
+**Packaged bootstrap source** (in repo):
+- `agent_runner_v2/bootstrap/workflows/default/`
+- Used only for seeding global bundles
+- Not loaded directly at runtime
 
-## Workflow Families
+**Runtime workflow bundles** (global):
+- `%USERPROFILE%\.ukbe-runner\workflows\<workflow>\`
+- Loaded by `bundle_loader.py`
+- Source of truth for execution
 
-21 workflow families defined in `template_groups.py`:
+**Plugin workflow packages** (project-local):
+- `workflows/<workflow>/workflow.toml`
+- Self-contained with manifest, prompts, and optional hooks
+- Converted to same dict format as legacy TEMPLATE_GROUPS
 
-| Workflow | Steps | Purpose |
-|----------|-------|---------|
-| `00_master_docs_bootstrap_v1/v2` | 13 | Master system documentation generation |
-| `10_execution_scaffold_v1` | 13 | Delivery scaffold generation |
-| `20_initiative_intake_v1` | 5 | Initiative capture and refinement |
-| `21_bug_fix_intake_v1` | 7 | Bug triage and patching |
-| `30_delivery_planning_v1` | 10 | Plan and task graph generation |
-| `31_task_execution_v1` | 12 | Implementation and validation |
-| `40_documentation_sync_v1` | 5 | Documentation reconciliation |
-| `41_*_doc_v1` | 4 each | Audience-specific documentation |
-| `50_architecture_site_v1` | 2 | HTML architecture site publishing |
-| `51-55_*_docs_v1` | 1-4 | Audience site generation |
-| `image_csv_gen_v1/v2` | 3-5 | Image generation pipeline |
-| `videoxpress_gen_v1` | 9 | Video generation pipeline |
-| `tiktok_video_pipeline_v1` | 10 | TikTok content pipeline |
+### Routing Model
 
-# Operational Risks
+Post-step routing supports:
+- **approve** - Step accepted, advance to next
+- **reject** - Step rejected, route to refine/replan
+- **failure** - Hard failure, route through failure handling
+- **waiting** - Awaiting external input
 
-| Risk | Severity | Evidence |
-|------|----------|----------|
-| **Monolithic template_groups.py** | High | 2,453-line file with 21 workflows; plugin migration in progress but not complete |
-| **Runtime bundle drift** | Medium | Bootstrap source may diverge from runtime; no automatic sync mechanism documented |
-| **Windows-centric batch files** | Medium | 35 .bat files vs minimal Unix shell support; WSL support exists but secondary |
-| **Meta.json schema versioning** | Low | CURRENT_SCHEMA_VERSION = 6; backward compatibility enforced but migration complexity accumulates |
-| **Test isolation gaps** | Medium | Integration tests use tmp_path (filesystem); unit tests should be pure logic but some file dependencies remain |
-| **Plugin system migration** | Medium | Workflow package system partially implemented; dual-path discovery (global → local) adds complexity |
-| **Documentation coverage** | Low | `docs/` currently only has `codebase/`; `delivery/` and `system/` expected but not populated |
+Review/refine loops enforce `max_rejects` limits before escalating to replan.
 
-# Architectural Observations
+## Operational Risks
 
-## Strengths
+### 1. Bootstrap/Runtime Sync Risk
 
-1. **Centralized Constants** - `constants.py` provides single source of truth for all artifact paths and keys; eliminates hardcoded strings
-2. **Strict Sidecar Contract** - v2 model eliminates ambiguity with meta.json as sole communication channel
-3. **Deterministic Actions** - 28 well-defined runner actions separate from LLM-based coder steps
-4. **Multi-Backend Support** - Claude, Codex, Qwen adapters with unified invocation interface
-5. **Plugin Architecture** - Workflow packages with `workflow.toml` manifests enable declarative workflow definition
+**Risk**: Changes to bootstrap workflow files may not propagate to global runtime bundles, causing execution to use stale templates.
 
-## Constraints
+**Evidence**: The codebase has `template_groups.py` (legacy monolithic) alongside the new plugin system. Runtime loads from global runner home, not from repo directly.
 
-1. **Bootstrap/Runtime Duality** - Must maintain two copies of workflow definitions; changes require explicit sync
-2. **Path Handling Complexity** - Windows path handling requires careful `PurePosixPath` usage for cross-platform consistency
-3. **Notification Coupling** - Pushover notifications integrated but requires `.env` configuration
-4. **Backend Dependency** - Worker mode requires backend connectivity; local mode has limited functionality
+**Mitigation**: `sync_workflows.py` provides two-tier discovery (TEMPLATE_GROUPS + plugin workflow.toml), but manual sync is required.
 
-## Implementation Patterns
+### 2. Meta.json Contract Violation
 
-- **Dataclass-based results** - `StepResult`, `CoderInvocationError`, `UsageData` provide typed interfaces
-- **PathProxy pattern** - Lazy path resolution for runtime context
-- **Template substitution** - Prompt placeholders use `{ARTIFACT_KEY}` pattern replaced at runtime
-- **Validation layering** - Guardrails in `documentation_guardrails.py` protect generated documents
+**Risk**: LLM backends may not write valid meta.json sidecars, causing hard failures.
 
-# Architecture Posture
+**Evidence**: `step_runner.py` raises `MetaJsonMissingError` and `MetaJsonInvalidError` as hard failures with no silent recovery.
+
+**Mitigation**: Prompt templates include explicit sidecar instructions; validation schema enforced.
+
+### 3. Path Resolution Complexity
+
+**Risk**: Multiple path resolution layers (constants.py, doc_paths.py, runtime_context.py) may drift or conflict.
+
+**Evidence**: Recent refactoring moved all path constants to `constants.py`, but memory notes indicate this was a significant cleanup effort.
+
+**Mitigation**: Centralized constants.py with layered constant system and zero hardcoded strings.
+
+### 4. Test Coverage Gaps
+
+**Risk**: Module documentation shows "(none) No test references found" for most core modules.
+
+**Evidence**: Only 45 unit tests exist; core modules like `run_agent.py`, `step_runner.py`, `workflow_router.py` have no documented test coverage.
+
+**Mitigation**: Tests exist but coverage tracking is not integrated into module docs.
+
+### 5. Plugin System Migration
+
+**Risk**: Migration from monolithic TEMPLATE_GROUPS to plugin workflow system is in progress on `feat/plugin-workflow-system` branch.
+
+**Evidence**: Git status shows modified `template_groups.py` and new `workflow_packages/` modules.
+
+**Mitigation**: Adapter pattern ensures backward compatibility; runtime execution pipeline unchanged.
+
+### 6. Windows-Specific Path Issues
+
+**Risk**: Path manipulation on Windows may hit `pathlib` edge cases (e.g., `relative_to()` failures).
+
+**Evidence**: Memory notes indicate recent fix for Windows pathlib bug.
+
+**Mitigation**: Fix applied; requires ongoing vigilance for cross-platform compatibility.
+
+## Architectural Observations
+
+### 1. Strict Contract Enforcement
+
+The v2 architecture enforces strict contracts at boundaries:
+- Meta.json is the only valid result channel
+- Artifact paths must exist or trigger hard failures
+- Prompt rendering uses centralized placeholder substitution
+
+This design eliminates ambiguous failure modes but requires disciplined LLM backend compliance.
+
+### 2. Adapter Pattern for Workflow Loading
+
+The plugin system is a **configuration source adapter**, not a runtime replacement:
+
+```
+WorkflowBundle (workflow.toml + prompts/)
+    ↓
+Adapter (workflow_packages/loader.py)
+    ↓
+Dict format (same as TEMPLATE_GROUPS)
+    ↓
+Existing execution pipeline
+```
+
+This minimizes risk while enabling maintainable workflow development.
+
+### 3. Dual-Path Discovery
+
+Runtime workflow discovery uses global-first, local-fallback:
+
+1. Check `%USERPROFILE%\.ukbe-runner\workflows\<workflow>\`
+2. Fallback to repo `workflows/<workflow>/`
+
+This supports both packaged workflows and project-specific overrides.
+
+### 4. Centralized Constants
+
+All documentation artifact paths and section requirements moved to `constants.py`:
+- Pre-computed path constants
+- Zero hardcoded strings in path construction
+- Direct lookup during validation without intermediate mapping
+
+This addresses previous maintenance nightmares from scattered string literals.
+
+### 5. Process-Per-Step Execution
+
+The daemon spawns fresh subprocesses for each step:
+- Code changes are picked up automatically
+- No daemon restart required for updates
+- Isolation between steps prevents state corruption
+
+### 6. Documentation-First Governance
+
+The system enforces documentation as a first-class artifact:
+- Workflows generate and validate docs
+- Codebase inventory auto-synchronizes
+- Architecture sites publish audience-specific views
+
+This creates a self-documenting system with drift detection.
+
+## Architecture Posture
 
 | Attribute | Value |
 |-----------|-------|
 | **current_profile** | `provisional` |
-| **target_profile** | `structured` |
+| **target_profile** | `explicit` |
 | **migration_mode** | `in_progress` |
-| **repo_state** | `explicit` |
+| **repo_state** | `provisional` |
 
-## Evidence Sources
+### Evidence Sources
 
-- `template_groups.py` contains monolithic workflow registry (provisional)
-- `workflow_packages/` directory exists with plugin base classes (migration in progress)
-- `constants.py` provides centralized artifact keys and paths (structured pattern)
-- `step_runner.py` implements strict v2 sidecar contract (structured pattern)
-- Comprehensive test suite with unit/integration split (structured pattern)
-- 21 workflow families with defined step sequences (explicit)
+1. **Plugin system migration**: Active branch `feat/plugin-workflow-system` with modified template_groups.py and new workflow_packages/ modules
+2. **Constants refactoring**: Recent memory notes confirm migration to centralized constants.py completed
+3. **Bootstrap/runtime distinction**: QWEN.md and README.md explicitly document two-tier source of truth
+4. **v2 sidecar contract**: CODER_IMPLEMENTATION_SOP.md and QWEN.md specify strict meta.json enforcement
+5. **Test infrastructure**: 45 unit tests passing; integration tests separated; coverage gaps noted
 
-## Posture Analysis
+### Posture Assessment
 
-The repository exhibits characteristics of both provisional and structured profiles:
+The repository is in a **provisional** architecture state because:
 
-- **Provisional elements**: Monolithic `template_groups.py` (2,453 lines) with hardcoded workflow definitions; plugin system migration incomplete
-- **Structured elements**: Centralized constants, strict sidecar contracts, comprehensive test coverage, deterministic action separation
+1. **Active migration**: Plugin workflow system is replacing legacy TEMPLATE_GROUPS
+2. **Runtime complexity**: Bootstrap vs runtime distinction requires careful synchronization
+3. **Documentation in flux**: Bootstrap documents are being generated by the current workflow
+4. **Test coverage**: While tests exist, comprehensive coverage verification is ongoing
 
-The migration from monolithic to plugin-based workflows is actively underway, with the `workflow_packages/` module providing the target architecture while `template_groups.py` remains the runtime source of truth.
+The intended **target_profile** is `explicit` - a fully documented, tested, and typed system with clear architectural boundaries and automated validation.
 
-# Unresolved Documentation Gaps
+## Unresolved Documentation Gaps
 
-1. **Runtime Bundle Sync** - No documented procedure for synchronizing bootstrap changes to runtime bundles
-2. **Plugin Development Guide** - Missing documentation for creating new workflow packages
-3. **Backend API Contract** - Worker mode backend API documentation incomplete
-4. **Notification Configuration** - Pushover and notification setup not fully documented
-5. **Daemon Operation** - Limited documentation for daemon supervisor deployment and monitoring
-6. **Workflow Debugging** - No documented troubleshooting guide for step failures
-7. **Cross-Platform Deployment** - Windows-centric documentation; Unix/WSL coverage incomplete
-8. **Schema Migration** - Version 6 schema migration history not documented
-9. **Artifact Lifecycle** - Document promotion and archival policies not documented
-10. **Integration Patterns** - Backend integration patterns for external workflow triggers not documented
+### 1. Workflow Package Migration Guide
+
+**Gap**: No comprehensive guide for migrating existing workflows from TEMPLATE_GROUPS to plugin packages.
+
+**Impact**: Developers may continue adding to monolithic template_groups.py
+
+**Action for later steps**: Generate migration guide as part of BUNDLE_MIGRATION_PLAN.md
+
+### 2. Runtime Bundle Synchronization SOP
+
+**Gap**: No documented procedure for ensuring bootstrap changes propagate to global runtime bundles.
+
+**Impact**: Runtime may execute stale workflow definitions
+
+**Action for later steps**: Document sync workflow in EXISTING_REPO_WORKFLOW_SOP.md
+
+### 3. Test Coverage by Module
+
+**Gap**: Module documentation shows "No test references found" but tests may exist.
+
+**Impact**: Cannot assess actual test coverage gaps
+
+**Action for later steps**: Reconcile codebase inventory with test discovery
+
+### 4. Cross-Platform Path Handling
+
+**Gap**: Windows-specific pathlib issues were fixed but not comprehensively documented.
+
+**Impact**: Future contributors may reintroduce Windows incompatibilities
+
+**Action for later steps**: Document Windows path constraints in DEVELOPER_GUIDE.md
+
+### 5. Notification System Configuration
+
+**Gap**: Pushover notifications mentioned in PUSHOVER_NOTIFICATIONS.md but integration points unclear.
+
+**Impact**: Operational visibility may be inconsistent
+
+**Action for later steps**: Document notification lifecycle in RUNBOOK.md
+
+### 6. Backend API Contract
+
+**Gap**: Backend-connected worker modes depend on API contract not documented in this repo.
+
+**Impact**: Integration maintenance requires external knowledge
+
+**Action for later steps**: Reference backend API documentation or document integration points
+
+### 7. Daemon State Recovery
+
+**Gap**: Daemon failure recovery and child process orphaning not documented.
+
+**Impact**: Operational incidents may require tribal knowledge
+
+**Action for later steps**: Document recovery procedures in RUNBOOK.md
+
+---
+
+*This analysis serves as the baseline for downstream master document generation. It reflects the repository state as of the bootstrap scan timestamp and should be refreshed when significant structural changes occur.*

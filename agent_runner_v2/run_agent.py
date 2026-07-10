@@ -95,7 +95,7 @@ from .step_runner import (
     run_step,
 )
 from .documentation_guardrails import (
-    EXECUTION_SCAFFOLD_WORKFLOW,
+    EXECUTION_SCAFFOLD_WORKFLOWS,
     MASTER_BOOTSTRAP_WORKFLOWS,
     generated_doc_manifest,
     managed_banner,
@@ -1379,6 +1379,7 @@ def _submit_worker_result(*, client: BackendClient, run: dict[str, Any], step_ru
             })
 
     review = result.get("review")
+    next_step = result.get("next_step")
     complete_payload: dict[str, Any] = {
         "status": result.get("status", "failed"),
         "outcome": result.get("outcome"),
@@ -1388,6 +1389,8 @@ def _submit_worker_result(*, client: BackendClient, run: dict[str, Any], step_ru
     }
     if review:
         complete_payload["review"] = review
+    if next_step:
+        complete_payload["next_step"] = next_step
     completion = client.complete_step_run(step_run_id=str(step_run["id"]), payload=complete_payload)
 
     event_payload = {
@@ -1661,6 +1664,17 @@ def _prepare_step_execution(
     context = build_context(state, step=step, step_cfg=step_cfg)
     context["WORKFLOW_KEY_OVERRIDE"] = workflow_key_override or ""
 
+    # Sync the resolved meta.json path into context so render_prompt's sidecar
+    # injection uses the same path that _resolve_meta_json_path will resolve.
+    # When result_meta_key_from_context is not set, the meta.json defaults to
+    # <step_dir>/meta.json (same as every other step).
+    meta_from_ctx = step_cfg.get("result_meta_key_from_context")
+    if not meta_from_ctx:
+        result_key = step_cfg.get("result_meta_key", "")
+        if result_key:
+            meta_ctx_key = result_key if result_key.endswith("_METAJSON") else f"{result_key}_METAJSON"
+            context[meta_ctx_key] = str(step_dir / "meta.json")
+
     loop_ctx = state.get("loop_context", {})
     if step_cfg.get("loop_returns_to") and loop_ctx.get("active") and loop_ctx.get("loop_source_review"):
         context["REVIEW_FILE"] = loop_ctx["loop_source_review"]
@@ -1719,7 +1733,7 @@ def _augment_generated_doc_prompt(
     step_cfg: dict[str, Any],
     state: dict[str, Any],
 ) -> str:
-    if template_group not in MASTER_BOOTSTRAP_WORKFLOWS and template_group != EXECUTION_SCAFFOLD_WORKFLOW:
+    if template_group not in MASTER_BOOTSTRAP_WORKFLOWS and template_group not in EXECUTION_SCAFFOLD_WORKFLOWS:
         return template_text
 
     banner = managed_banner(workflow=template_group, step=step)
@@ -1914,7 +1928,7 @@ def _execute_backend_step_request(
         return ExecutionResult(status="failed", outcome="failed", step_name=step, coder_used=coder_used, failure=failure)
 
     review = None
-    if step.startswith("review_") or step.startswith("validator"):
+    if step_cfg and step_cfg.get("on_reject_refine"):
         review = {
             "decision": step_result.status.lower(),
             "remark": step_result.remark,
@@ -1942,6 +1956,20 @@ def _execute_backend_step_request(
         project_root=effective_root,
     )
 
+    # Determine the next step based on the result so the backend receives
+    # explicit routing information instead of inferring it.
+    from .job_state import advance_step
+    state_snapshot = dict(state)
+    advance_state, _ = advance_step(
+        group_cfg=group_cfg,
+        state=state_snapshot,
+        step=step,
+        step_cfg=step_cfg,
+        result_status=step_result.status,
+        coder_used=coder_used,
+    )
+    next_step = advance_state.get("current_step")
+
     return ExecutionResult(
         status="completed",
         outcome=step_result.status.lower(),
@@ -1958,6 +1986,7 @@ def _execute_backend_step_request(
             "job_id": state.get("job_id"),
             "step_dir": _safe_relative_to(prepared.step_dir, JOBS_ROOT),
         },
+        next_step=next_step,
     )
 
 
@@ -2018,16 +2047,17 @@ def _load_group(
 
 def _validate_static_reference_files(workspace_root: Path, group_cfg: dict | None = None, template_group: str = "") -> None:
     # Bootstrap and scaffold workflows generate docs — they don't need pre-existing reference files
-    if template_group in ("00_master_docs_bootstrap_v1", "00_master_docs_bootstrap_v2", "10_execution_scaffold_v1", "delivery_scaffold_v1") or template_group.startswith("delivery_scaffold"):
+    if template_group in ("00_master_docs_bootstrap_v1", "00_master_docs_bootstrap_v2", "10_execution_scaffold_v1", "10_execution_scaffold_v2", "delivery_scaffold_v1") or template_group.startswith("delivery_scaffold"):
         return
 
-    bundle = get_workflow_module()
-    if bundle is None:
-        raise RuntimeError("Workflow module is not loaded. Runtime must use the global workflow bundle.")
-
-    reference_files = bundle.REFERENCE_FILES
-    if group_cfg is not None and "reference_files" in group_cfg:
-        reference_files = group_cfg.get("reference_files") or {}
+    # Only validate reference files declared in the workflow config itself.
+    # Plugin workflows without a reference_files section have no static
+    # file dependencies and skip validation entirely.
+    if group_cfg is None or "reference_files" not in group_cfg:
+        return
+    reference_files = group_cfg.get("reference_files") or {}
+    if not reference_files:
+        return
 
     # Separate reference files into two categories:
     # 1. Global bundle files: System governance docs (WORKFLOW_SOP, DELIVERY_AGENTS_MD, etc.)

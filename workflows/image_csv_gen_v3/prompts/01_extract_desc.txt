@@ -1,0 +1,71 @@
+TASK
+Scan all images in {IMAGE_FOLDER} (PNG, JPG, WEBP files).
+For each image, read it and produce a structured visual description covering the image's core subject, mood, composition, lighting, style, color palette, and animatable elements.
+
+DESCRIPTION FORMAT (MANDATORY)
+For EACH image, save a JSON file named {image_stem}_desc.json in the same {IMAGE_FOLDER} directory.
+The JSON must contain EXACTLY these keys:
+- image_filename: original filename (e.g., "photo1.png")
+- image_stem: filename without extension (e.g., "photo1")
+- subject: detailed description of main visual elements, focal points, and recognizable identity
+- mood: emotional tone, atmosphere, and cinematic feeling
+- composition: framing, depth layers (foreground/midground/background), spatial arrangement, and vertical flow considerations
+- lighting: quality, direction, color temperature, and atmospheric illumination
+- style: artistic style, texture, rendering approach, and visual treatment
+- color_palette: dominant and accent colors with their emotional associations
+- animatable_elements: objects or effects that could move in video (e.g., hair swaying, fabric drifting, mist rolling, gentle blinking, soft light shifts, foliage movement)
+
+ANALYSIS GUIDELINES
+- Be specific and vivid — avoid generic descriptions like "a person standing"
+- Capture the unique visual identity that makes this image distinct
+- Note any vertical/portrait composition characteristics (headroom, negative space, full-height framing)
+- Identify parallax potential: distinct foreground/midground/background layers at different depths
+- List 5-8 specific animatable elements that would work naturally with the scene
+
+OUTPUT INSTRUCTIONS
+For EACH image processed:
+1. Read the image using your file reading tools
+2. Produce the structured description following the format above
+3. Save the JSON to: {IMAGE_FOLDER}/{image_stem}_desc.json
+
+extract_desc completion rule (MANDATORY)
+- You may return `status: "APPROVED"` only after all of the following are true:
+  - one _desc.json file has been created for each image in {IMAGE_FOLDER}
+- If the descriptions were not written successfully, you MUST return `REJECTED`.
+
+ABSOLUTE OUTPUT RULE (NON-NEGOTIABLE)
+
+You are NOT a chat assistant.
+You are a strict JSON generator.
+
+Return ONLY valid JSON.
+Do NOT explain.
+Do NOT wrap in markdown.
+Do NOT add any text before or after the JSON.
+Do NOT wrap the final JSON in ```json fences.
+
+Required JSON schema:
+{
+  "status": "APPROVED | REJECTED",
+  "remark": "<short summary of result>",
+  "artifacts": {
+    "IMAGE_DESC_FOLDER": null,
+    "IMAGE_CSV_JSON": null,
+    "IMAGE_CSV_CSV": null,
+    "REVIEW_FILE": null,
+    "VALIDATION_FILE": null
+  }
+}
+
+Rules for the artifacts object:
+- Include ONLY artifact keys produced or updated by this step.
+- Use repository-relative paths.
+- Do not invent paths that were not created or updated.
+- If extraction fails, return status "REJECTED" with a short reason and "artifacts": {}.
+- For approval, `artifacts.IMAGE_DESC_FOLDER` is mandatory (set to the {IMAGE_FOLDER} path).
+
+Required execution sequence:
+1. Scan {IMAGE_FOLDER} for PNG, JPG, WEBP files.
+2. Read each image and produce its structured description.
+3. Write each {image_stem}_desc.json to {IMAGE_FOLDER}/.
+4. Return the final JSON.

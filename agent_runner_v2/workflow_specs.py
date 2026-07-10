@@ -83,6 +83,7 @@ def build_step_execution_spec(
         "edit_mode": step_cfg.get("edit_mode"),
         "result_meta_key": step_cfg.get("result_meta_key"),
         "result_meta_key_from_context": step_cfg.get("result_meta_key_from_context"),
+        "onsuccess": step_cfg.get("onsuccess"),
         "template_ref": step_cfg.get("template_ref"),
         "target_artifact": step_cfg.get("target_artifact"),
         "required_inputs": [{"artifact_key": key} for key in list(step_cfg.get("required_inputs") or [])],

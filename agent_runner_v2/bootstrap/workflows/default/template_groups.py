@@ -409,7 +409,7 @@ TEMPLATE_GROUPS: Dict[str, Dict[str, Any]] = {
                     "exhausted_failure_class": "HUMAN_RETRY_REQUIRED",
                 },
                 "requires_human_approval_after": False,
-                "result_meta_key_from_context": "REVIEW_FILE_SUGGESTED_METAJSON",
+                "result_meta_key": "REVIEW_FILE_SUGGESTED",
                 "coder": {
                     "default": "qwen-reviewer",
                     "allowed": ["claude", "codex", "qwen-reviewer"],
@@ -419,7 +419,7 @@ TEMPLATE_GROUPS: Dict[str, Dict[str, Any]] = {
             },
             "06_refine_master_system_docs": {
                 "prompt_file": _p("prompts", "00_master_docs_bootstrap_v1", "06_refine_master_system_docs.txt"),
-                "required_inputs": [ARTIFACT_KEY_CODEBASE_SCAN_SNAPSHOT, ARTIFACT_KEY_CODEBASE_CHANGE_IMPACT, ARTIFACT_KEY_CODEBASE_INVENTORY, ARTIFACT_KEY_PROJECT_ANALYSIS, ARTIFACT_KEY_SYSTEM_DOCS_INDEX, ARTIFACT_KEY_SYSTEM_DOCS_CHANGE_LOG, "REVIEW_FILE_SUGGESTED_SUGGESTED", ARTIFACT_KEY_INTEGRATION_MAP, ARTIFACT_KEY_FAILURE_MODES, ARTIFACT_KEY_ARCHITECTURE_FLOW],
+                "required_inputs": [ARTIFACT_KEY_CODEBASE_SCAN_SNAPSHOT, ARTIFACT_KEY_CODEBASE_CHANGE_IMPACT, ARTIFACT_KEY_CODEBASE_INVENTORY, ARTIFACT_KEY_PROJECT_ANALYSIS, ARTIFACT_KEY_SYSTEM_DOCS_INDEX, ARTIFACT_KEY_SYSTEM_DOCS_CHANGE_LOG, "REVIEW_FILE_SUGGESTED", ARTIFACT_KEY_INTEGRATION_MAP, ARTIFACT_KEY_FAILURE_MODES, ARTIFACT_KEY_ARCHITECTURE_FLOW],
                 "produces": [ARTIFACT_KEY_PROJECT_ANALYSIS, ARTIFACT_KEY_SYSTEM_DOCS_INDEX, ARTIFACT_KEY_SYSTEM_DOCS_CHANGE_LOG, ARTIFACT_KEY_INTEGRATION_MAP, ARTIFACT_KEY_FAILURE_MODES, ARTIFACT_KEY_ARCHITECTURE_FLOW],
                 "target_artifact": ARTIFACT_KEY_PROJECT_ANALYSIS,
                 "edit_mode": "in_place",

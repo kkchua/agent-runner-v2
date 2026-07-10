@@ -3,10 +3,10 @@ title: "Component Documentation: scripts suite"
 template_id: "CB-03"
 status: "active"
 component_id: "scripts-suite"
-created: "2026-07-10T14:00:58+08:00"
+created: "2026-07-10T19:43:53+08:00"
 owner: "00_master_docs_bootstrap_v2"
-last_verified_by_change: "00_master_docs_bootstrap_v2 / 00DOC-GEN-20260710-004 / 2026-07-10T14:00:58+08:00"
-modules: ["archive/batch/run-bug_fix_v1.bat", "archive/batch/run-codebase_bootstrap_v1.bat", "archive/batch/run-codebase_reconcile_v1.bat", "archive/batch/run-codebase_rescan_v1.bat", "archive/batch/run-codebase_sync_v1.bat", "archive/batch/run-documentation_bootstrap_v1.bat", "archive/batch/run-documentation_validation_v1.bat", "archive/batch/run-system_docs_bootstrap_v1.bat", "archive/batch/submit-bug_fix_v1.bat", "archive/batch/submit-codebase_bootstrap_v1.bat", "archive/batch/submit-codebase_reconcile_v1.bat", "archive/batch/submit-codebase_rescan_v1.bat", "archive/batch/submit-codebase_sync_v1.bat", "archive/batch/submit-documentation_bootstrap_v1.bat", "archive/batch/submit-documentation_validation_v1.bat", "run-00_master_docs_bootstrap_v1.bat", "run-00_master_docs_bootstrap_v2.bat", "run-10_execution_scaffold_v1.bat", "run-20_initiative_intake_v1.bat", "run-21_bug_fix_intake_v1.bat", "run-30_delivery_planning_v1.bat", "run-31_task_execution_v1.bat", "run-40_documentation_sync_v1.bat", "run-41_developer_doc_v1.bat", "run-41_operator_doc_v1.bat", "run-41_stakeholder_doc_v1.bat", "run-41_tester_doc_v1.bat", "run-41_user_doc_v1.bat", "run-50_architecture_site_v1.bat", "run-51_stakeholder_docs_v1.bat", "run-52_developer_docs_v1.bat", "run-53_operator_docs_v1.bat", "run-54_tester_docs_v1.bat", "run-55_user_docs_v1.bat", "run-all-tests.bat", "run-approve-step.bat", "run-bootstrap-publish.bat", "run-cleanup-generated-docs.bat", "run-daemon.bat", "run-integration-tests.bat", "run-reset-step.bat", "run-tests.bat", "sample-run-delivery.bat", "scripts/approve-run.sh", "scripts/examples/approve-run.sh", "scripts/examples/submit-delivery-planning.sh", "scripts/examples/submit-delivery-scaffold.sh", "scripts/examples/submit-image-csv-gen-v1.sh", "scripts/examples/submit-image-csv-gen-v2.sh", "scripts/examples/submit-initiative-intake.sh", "scripts/examples/submit-task-execution.sh", "scripts/README.md", "scripts/submit-delivery-planning.sh", "scripts/submit-delivery-scaffold.sh", "scripts/submit-initiative-intake.sh", "scripts/ukbe-daemon-wsl.sh", "scripts/ukbe-daemon.bat", "scripts/ukbe-run-delivery.bat", "scripts/ukbe-runner.sh", "submit-00_master_docs_bootstrap_v1.bat", "submit-10_execution_scaffold_v1.bat", "submit-40_documentation_sync_v1.bat", "submit-41_audience_doc_v1.bat", "sync-10_execution_scaffold_v1-workflow-spec.bat", "sync-workflows-to-backend.bat", "test-runner.bat"]
+last_verified_by_change: "00_master_docs_bootstrap_v2 / 00DOC-20260710-0098bf53 / 2026-07-10T19:43:53+08:00"
+modules: ["_run-00_master_docs_bootstrap_v1.bat", "_run-10_execution_scaffold_v1.bat", "archive/batch/run-bug_fix_v1.bat", "archive/batch/run-codebase_bootstrap_v1.bat", "archive/batch/run-codebase_reconcile_v1.bat", "archive/batch/run-codebase_rescan_v1.bat", "archive/batch/run-codebase_sync_v1.bat", "archive/batch/run-documentation_bootstrap_v1.bat", "archive/batch/run-documentation_validation_v1.bat", "archive/batch/run-system_docs_bootstrap_v1.bat", "archive/batch/submit-bug_fix_v1.bat", "archive/batch/submit-codebase_bootstrap_v1.bat", "archive/batch/submit-codebase_reconcile_v1.bat", "archive/batch/submit-codebase_rescan_v1.bat", "archive/batch/submit-codebase_sync_v1.bat", "archive/batch/submit-documentation_bootstrap_v1.bat", "archive/batch/submit-documentation_validation_v1.bat", "run-00_master_docs_bootstrap_v2.bat", "run-10_execution_scaffold_v2.bat", "run-20_initiative_intake_v1.bat", "run-21_bug_fix_intake_v1.bat", "run-30_delivery_planning_v1.bat", "run-31_task_execution_v1.bat", "run-40_documentation_sync_v1.bat", "run-41_developer_doc_v1.bat", "run-41_operator_doc_v1.bat", "run-41_stakeholder_doc_v1.bat", "run-41_tester_doc_v1.bat", "run-41_user_doc_v1.bat", "run-50_architecture_site_v1.bat", "run-51_stakeholder_docs_v1.bat", "run-52_developer_docs_v1.bat", "run-53_operator_docs_v1.bat", "run-54_tester_docs_v1.bat", "run-55_user_docs_v1.bat", "run-all-tests.bat", "run-approve-step.bat", "run-bootstrap-publish.bat", "run-cleanup-generated-docs.bat", "run-daemon.bat", "run-integration-tests.bat", "run-reset-step.bat", "run-tests.bat", "sample-run-delivery.bat", "scripts/approve-run.sh", "scripts/examples/approve-run.sh", "scripts/examples/submit-delivery-planning.sh", "scripts/examples/submit-delivery-scaffold.sh", "scripts/examples/submit-image-csv-gen-v1.sh", "scripts/examples/submit-image-csv-gen-v2.sh", "scripts/examples/submit-initiative-intake.sh", "scripts/examples/submit-task-execution.sh", "scripts/README.md", "scripts/submit-delivery-planning.sh", "scripts/submit-delivery-scaffold.sh", "scripts/submit-initiative-intake.sh", "scripts/ukbe-daemon-wsl.sh", "scripts/ukbe-daemon.bat", "scripts/ukbe-run-delivery.bat", "scripts/ukbe-runner.sh", "submit-00_master_docs_bootstrap_v1.bat", "submit-00_master_docs_bootstrap_v2.bat", "submit-10_execution_scaffold_v1.bat", "submit-10_execution_scaffold_v2.bat", "submit-40_documentation_sync_v1.bat", "submit-41_audience_doc_v1.bat", "sync-10_execution_scaffold_v1-workflow-spec.bat", "sync-workflows-to-backend.bat", "test-runner.bat"]
 ---
 
 # Component Documentation: scripts suite
@@ -21,6 +21,8 @@ Shell and batch scripts used to run and operate the repository workflows.
 
 | Module | Role in Component |
 |--------|-------------------|
+| `_run-00_master_docs_bootstrap_v1.bat` | automation / entrypoint |
+| `_run-10_execution_scaffold_v1.bat` | automation / entrypoint |
 | `archive/batch/run-bug_fix_v1.bat` | automation / entrypoint |
 | `archive/batch/run-codebase_bootstrap_v1.bat` | automation / entrypoint |
 | `archive/batch/run-codebase_reconcile_v1.bat` | automation / entrypoint |
@@ -36,9 +38,8 @@ Shell and batch scripts used to run and operate the repository workflows.
 | `archive/batch/submit-codebase_sync_v1.bat` | automation / entrypoint |
 | `archive/batch/submit-documentation_bootstrap_v1.bat` | automation / entrypoint |
 | `archive/batch/submit-documentation_validation_v1.bat` | automation / entrypoint |
-| `run-00_master_docs_bootstrap_v1.bat` | automation / entrypoint |
 | `run-00_master_docs_bootstrap_v2.bat` | automation / entrypoint |
-| `run-10_execution_scaffold_v1.bat` | automation / entrypoint |
+| `run-10_execution_scaffold_v2.bat` | automation / entrypoint |
 | `run-20_initiative_intake_v1.bat` | automation / entrypoint |
 | `run-21_bug_fix_intake_v1.bat` | automation / entrypoint |
 | `run-30_delivery_planning_v1.bat` | automation / entrypoint |
@@ -81,7 +82,9 @@ Shell and batch scripts used to run and operate the repository workflows.
 | `scripts/ukbe-run-delivery.bat` | automation / entrypoint |
 | `scripts/ukbe-runner.sh` | automation / entrypoint |
 | `submit-00_master_docs_bootstrap_v1.bat` | automation / entrypoint |
+| `submit-00_master_docs_bootstrap_v2.bat` | automation / entrypoint |
 | `submit-10_execution_scaffold_v1.bat` | automation / entrypoint |
+| `submit-10_execution_scaffold_v2.bat` | automation / entrypoint |
 | `submit-40_documentation_sync_v1.bat` | automation / entrypoint |
 | `submit-41_audience_doc_v1.bat` | automation / entrypoint |
 | `sync-10_execution_scaffold_v1-workflow-spec.bat` | automation / entrypoint |
@@ -102,6 +105,8 @@ Repository files are scanned, normalized into inventory rows, and rendered into 
 
 | Interface | Direction | Protocol | Description |
 |-----------|-----------|----------|-------------|
+| `_run-00_master_docs_bootstrap_v1.bat` | outbound | markdown | automation / entrypoint |
+| `_run-10_execution_scaffold_v1.bat` | outbound | markdown | automation / entrypoint |
 | `archive/batch/run-bug_fix_v1.bat` | outbound | markdown | automation / entrypoint |
 | `archive/batch/run-codebase_bootstrap_v1.bat` | outbound | markdown | automation / entrypoint |
 | `archive/batch/run-codebase_reconcile_v1.bat` | outbound | markdown | automation / entrypoint |
@@ -117,9 +122,8 @@ Repository files are scanned, normalized into inventory rows, and rendered into 
 | `archive/batch/submit-codebase_sync_v1.bat` | outbound | markdown | automation / entrypoint |
 | `archive/batch/submit-documentation_bootstrap_v1.bat` | outbound | markdown | automation / entrypoint |
 | `archive/batch/submit-documentation_validation_v1.bat` | outbound | markdown | automation / entrypoint |
-| `run-00_master_docs_bootstrap_v1.bat` | outbound | markdown | automation / entrypoint |
 | `run-00_master_docs_bootstrap_v2.bat` | outbound | markdown | automation / entrypoint |
-| `run-10_execution_scaffold_v1.bat` | outbound | markdown | automation / entrypoint |
+| `run-10_execution_scaffold_v2.bat` | outbound | markdown | automation / entrypoint |
 | `run-20_initiative_intake_v1.bat` | outbound | markdown | automation / entrypoint |
 | `run-21_bug_fix_intake_v1.bat` | outbound | markdown | automation / entrypoint |
 | `run-30_delivery_planning_v1.bat` | outbound | markdown | automation / entrypoint |
@@ -162,7 +166,9 @@ Repository files are scanned, normalized into inventory rows, and rendered into 
 | `scripts/ukbe-run-delivery.bat` | outbound | markdown | automation / entrypoint |
 | `scripts/ukbe-runner.sh` | outbound | markdown | automation / entrypoint |
 | `submit-00_master_docs_bootstrap_v1.bat` | outbound | markdown | automation / entrypoint |
+| `submit-00_master_docs_bootstrap_v2.bat` | outbound | markdown | automation / entrypoint |
 | `submit-10_execution_scaffold_v1.bat` | outbound | markdown | automation / entrypoint |
+| `submit-10_execution_scaffold_v2.bat` | outbound | markdown | automation / entrypoint |
 | `submit-40_documentation_sync_v1.bat` | outbound | markdown | automation / entrypoint |
 | `submit-41_audience_doc_v1.bat` | outbound | markdown | automation / entrypoint |
 | `sync-10_execution_scaffold_v1-workflow-spec.bat` | outbound | markdown | automation / entrypoint |
@@ -211,4 +217,4 @@ Auto-generated baseline; extend with component-specific checks as needed.
 
 | Date | Change | Modules Affected | Verified By |
 |------|--------|-----------------|-------------|
-| 2026-07-10 | Initial baseline generated from repository scan | 66 modules/files | 00_master_docs_bootstrap_v2 |
+| 2026-07-10 | Initial baseline generated from repository scan | 69 modules/files | 00_master_docs_bootstrap_v2 |

@@ -6,6 +6,7 @@ import pytest
 
 from agent_runner_v2.exceptions import ArtifactMissingError
 from agent_runner_v2.step_runner import (
+    _resolve_meta_json_path,
     _resolve_progress_file_path,
     _resolve_allowed_write_paths,
     _snapshot_allowed_write_roots,
@@ -96,3 +97,51 @@ def test_resolve_progress_file_path_never_falls_back_to_repo_root() -> None:
     )
     assert resolved.endswith(r"31_task_execution_v1\JOB-123\00_executor\progress.jsonl")
     assert resolved != "progress.jsonl"
+
+
+def test_resolve_meta_json_path_uses_meta_key_directly_when_already_meta(tmp_path: Path) -> None:
+    """_METAJSON context keys are pre-resolved paths — no second .meta suffix."""
+    project_root = tmp_path
+    step_cfg = {"result_meta_key_from_context": "REVIEW_FILE_SUGGESTED_METAJSON"}
+    context = {"REVIEW_FILE_SUGGESTED_METAJSON": "docs/system/00_governance/bootstrap/00DOC-test-bootstrap-validation.meta.json"}
+
+    result = _resolve_meta_json_path(
+        step_cfg=step_cfg,
+        context=context,
+        project_root=project_root,
+    )
+
+    expected = project_root / "docs/system/00_governance/bootstrap/00DOC-test-bootstrap-validation.meta.json"
+    assert result == expected, f"Expected {expected}, got {result}"
+
+
+def test_resolve_meta_json_path_applies_artifact_rel_to_meta_rel_for_artifact_key(tmp_path: Path) -> None:
+    """Non-_METAJSON keys point to artifact paths — meta.json is derived."""
+    project_root = tmp_path
+    step_cfg = {"result_meta_key_from_context": "REVIEW_FILE_SUGGESTED"}
+    context = {"REVIEW_FILE_SUGGESTED": "docs/delivery/01_initiatives/INIT-1.md"}
+
+    result = _resolve_meta_json_path(
+        step_cfg=step_cfg,
+        context=context,
+        project_root=project_root,
+    )
+
+    expected = project_root / "docs/delivery/01_initiatives/INIT-1.meta.json"
+    assert result == expected, f"Expected {expected}, got {result}"
+
+
+def test_resolve_meta_json_path_falls_back_to_step_dir(tmp_path: Path) -> None:
+    """When neither meta key is present, fall back to step_dir / meta.json."""
+    project_root = tmp_path
+    step_dir = tmp_path / "steps" / "10_executor"
+    step_dir.mkdir(parents=True, exist_ok=True)
+
+    result = _resolve_meta_json_path(
+        step_cfg={},
+        context={},
+        project_root=project_root,
+        step_dir=step_dir,
+    )
+
+    assert result == step_dir / "meta.json"

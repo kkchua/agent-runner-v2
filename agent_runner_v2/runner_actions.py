@@ -45,6 +45,7 @@ from .actions.publish_architecture_site import publish_architecture_site
 from .actions.generate_site import generate_site
 from .actions.generate_site_pdf import generate_site_pdf
 from .actions.archive_previous_version import archive_previous_version
+from .actions.step_completion import step_completion
 
 logger = logging.getLogger(__name__)
 
@@ -78,6 +79,8 @@ ACTION_REGISTRY: dict[str, Callable] = {
     "execute_voiceover": execute_voiceover,
     "assemble_video": assemble_video,
     "publish_architecture_site": publish_architecture_site,
+    "finalize_bootstrap": finalize_bootstrap,
+    "step_completion": step_completion,
 }
 
 

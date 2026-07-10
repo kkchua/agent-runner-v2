@@ -1,0 +1,371 @@
+[workflow]
+name = "10_execution_scaffold_v2"
+version = "2"
+label = "Execution Scaffold v2"
+job_prefix = "10SCAFFOLD"
+description = "Scaffolds delivery governance (SOPs, templates, agents) and codebase documentation structure"
+visibility = "canonical"
+
+[workflow.init]
+step = "project_analysis"
+inputs = []
+default_max_rejects = 2
+
+# ---------------------------------------------------------------------------
+# Step 00 — project analysis
+# ---------------------------------------------------------------------------
+[[step]]
+name = "project_analysis"
+prompt = "prompts/01_project_analysis.txt"
+enable_notifications = true
+
+[step.artifacts]
+produces = ["PROJECT_ANALYSIS"]
+result_meta_key = "PROJECT_ANALYSIS"
+
+[step.coder]
+default = "claude-architect"
+allowed = ["claude-architect", "codex-architect", "qwen-architect"]
+
+# ---------------------------------------------------------------------------
+# Step 01 — prepare delivery scaffold directories
+# ---------------------------------------------------------------------------
+[[step]]
+name = "prepare_delivery_scaffold_dirs"
+action = "prepare_delivery_scaffold"
+
+[step.artifacts]
+produces = []
+result_meta_key = ""
+
+# ---------------------------------------------------------------------------
+# Step 02 — generate SOP
+# ---------------------------------------------------------------------------
+[[step]]
+name = "generate_sop"
+prompt = "prompts/02_generate_sop.txt"
+enable_notifications = true
+
+[step.artifacts]
+required_inputs = ["PROJECT_ANALYSIS"]
+produces = [
+ "DELIVERY_SOP", "DELIVERY_STATUS_RULES", "CODEBASE_DOC_SOP",
+ "CODEBASE_DOC_STATUS_RULES", "EXISTING_REPO_WORKFLOW_SOP",
+]
+result_meta_key = "DELIVERY_SOP"
+
+[step.artifacts.produced_document_status]
+artifact = "DELIVERY_SOP"
+required_status = "draft"
+
+[step.coder]
+default = "qwen-architect"
+allowed = ["claude-architect", "codex-architect", "qwen-architect"]
+
+# ---------------------------------------------------------------------------
+# Step 03 — review SOP
+# ---------------------------------------------------------------------------
+[[step]]
+name = "review_sop"
+prompt = "prompts/03_review_sop.txt"
+enable_notifications = true
+
+[step.artifacts]
+required_inputs = [
+ "PROJECT_ANALYSIS", "DELIVERY_SOP", "DELIVERY_STATUS_RULES",
+ "CODEBASE_DOC_SOP", "CODEBASE_DOC_STATUS_RULES",
+ "EXISTING_REPO_WORKFLOW_SOP",
+]
+produces = ["REVIEW_FILE_SUGGESTED"]
+result_meta_key_from_context = "REVIEW_FILE_SUGGESTED_SUGGESTED"
+
+[step.coder]
+default = "qwen-reviewer"
+allowed = ["claude-reviewer", "codex-reviewer", "qwen-reviewer"]
+must_differ = false
+
+[step.on_reject_refine]
+step = "refine_sop"
+artifact = "DELIVERY_SOP"
+max_iterations = 2
+exhausted_failure_code = "SOP_REFINEMENT_EXHAUSTED"
+exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
+
+[step.on_exhaust_replan]
+step = "replan_sop"
+artifact = "DELIVERY_SOP"
+max_iterations = 1
+exhausted_failure_code = "SOP_REPLAN_EXHAUSTED"
+exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
+
+requires_human_approval_after = false
+
+# ---------------------------------------------------------------------------
+# Step 04 — refine SOP
+# ---------------------------------------------------------------------------
+[[step]]
+name = "refine_sop"
+prompt = "prompts/05_refine_sop.txt"
+
+[step.artifacts]
+required_inputs = [
+ "PROJECT_ANALYSIS", "DELIVERY_SOP", "DELIVERY_STATUS_RULES",
+ "CODEBASE_DOC_SOP", "CODEBASE_DOC_STATUS_RULES",
+ "EXISTING_REPO_WORKFLOW_SOP", "REVIEW_FILE_SUGGESTED",
+]
+produces = [
+ "DELIVERY_SOP", "DELIVERY_STATUS_RULES", "CODEBASE_DOC_SOP",
+ "CODEBASE_DOC_STATUS_RULES", "EXISTING_REPO_WORKFLOW_SOP",
+]
+target_artifact = "DELIVERY_SOP"
+edit_mode = "in_place"
+result_meta_key = "DELIVERY_SOP"
+loop_returns_to = "review_sop"
+
+[step.coder]
+default = "qwen-architect"
+allowed = ["claude-architect", "codex-architect", "qwen-architect"]
+
+# ---------------------------------------------------------------------------
+# Step 05 — replan SOP (exhausted refinement fallback)
+# ---------------------------------------------------------------------------
+[[step]]
+name = "replan_sop"
+prompt = "prompts/05_replan_sop.txt"
+
+[step.artifacts]
+required_inputs = [
+ "PROJECT_ANALYSIS", "DELIVERY_SOP", "DELIVERY_STATUS_RULES",
+ "CODEBASE_DOC_SOP", "CODEBASE_DOC_STATUS_RULES",
+ "EXISTING_REPO_WORKFLOW_SOP", "REVIEW_FILE_SUGGESTED",
+]
+produces = [
+ "DELIVERY_SOP", "DELIVERY_STATUS_RULES", "CODEBASE_DOC_SOP",
+ "CODEBASE_DOC_STATUS_RULES", "EXISTING_REPO_WORKFLOW_SOP",
+]
+target_artifact = "DELIVERY_SOP"
+edit_mode = "in_place"
+result_meta_key = "DELIVERY_SOP"
+replan_returns_to = "generate_sop"
+
+[step.coder]
+default = "qwen-architect"
+allowed = ["claude-architect", "codex-architect", "qwen-architect"]
+
+# ---------------------------------------------------------------------------
+# Step 06 — generate templates
+# ---------------------------------------------------------------------------
+[[step]]
+name = "generate_templates"
+prompt = "prompts/03_generate_templates.txt"
+enable_notifications = true
+
+[step.artifacts]
+required_inputs = ["PROJECT_ANALYSIS"]
+produces = [
+ "DELIVERY_TEMPLATE_REGISTRY", "DELIVERY_INITIATIVE_TEMPLATE",
+ "DELIVERY_PLAN_TEMPLATE", "DELIVERY_TASK_GRAPH_TEMPLATE",
+ "DELIVERY_TASK_TEMPLATE", "DELIVERY_IMPL_TEMPLATE",
+ "DELIVERY_REVIEW_TEMPLATE", "DELIVERY_VALIDATION_TEMPLATE",
+ "DELIVERY_MEMORY_TEMPLATE", "CODEBASE_TEMPLATE_REGISTRY",
+ "CODEBASE_INVENTORY_TEMPLATE", "CODEBASE_MODULE_TEMPLATE",
+ "CODEBASE_COMPONENT_TEMPLATE", "CODEBASE_CHANGE_TEMPLATE",
+ "CODEBASE_INVENTORY",
+]
+result_meta_key = "DELIVERY_TEMPLATE_REGISTRY"
+
+[step.coder]
+default = "qwen-architect"
+allowed = ["claude-architect", "codex-architect", "qwen-architect"]
+
+# ---------------------------------------------------------------------------
+# Step 07 — review templates
+# ---------------------------------------------------------------------------
+[[step]]
+name = "review_templates"
+prompt = "prompts/06_review_templates.txt"
+enable_notifications = true
+
+[step.artifacts]
+required_inputs = [
+ "PROJECT_ANALYSIS", "DELIVERY_TEMPLATE_REGISTRY",
+ "DELIVERY_INITIATIVE_TEMPLATE", "DELIVERY_PLAN_TEMPLATE",
+ "DELIVERY_TASK_GRAPH_TEMPLATE", "DELIVERY_TASK_TEMPLATE",
+ "DELIVERY_IMPL_TEMPLATE", "DELIVERY_REVIEW_TEMPLATE",
+ "DELIVERY_VALIDATION_TEMPLATE", "DELIVERY_MEMORY_TEMPLATE",
+ "CODEBASE_TEMPLATE_REGISTRY", "CODEBASE_INVENTORY_TEMPLATE",
+ "CODEBASE_MODULE_TEMPLATE", "CODEBASE_COMPONENT_TEMPLATE",
+ "CODEBASE_CHANGE_TEMPLATE", "CODEBASE_INVENTORY",
+]
+produces = ["REVIEW_FILE_SUGGESTED"]
+result_meta_key_from_context = "REVIEW_FILE_SUGGESTED_SUGGESTED"
+
+[step.coder]
+default = "codex-reviewer"
+allowed = ["claude-reviewer", "codex-reviewer", "qwen-reviewer"]
+must_differ = false
+
+[step.on_reject_refine]
+step = "refine_templates"
+artifact = "DELIVERY_TEMPLATE_REGISTRY"
+max_iterations = 2
+exhausted_failure_code = "TEMPLATE_REFINEMENT_EXHAUSTED"
+exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
+
+requires_human_approval_after = false
+
+# ---------------------------------------------------------------------------
+# Step 08 — refine templates
+# ---------------------------------------------------------------------------
+[[step]]
+name = "refine_templates"
+prompt = "prompts/06_refine_templates.txt"
+
+[step.artifacts]
+required_inputs = [
+ "PROJECT_ANALYSIS", "DELIVERY_TEMPLATE_REGISTRY",
+ "DELIVERY_INITIATIVE_TEMPLATE", "DELIVERY_PLAN_TEMPLATE",
+ "DELIVERY_TASK_GRAPH_TEMPLATE", "DELIVERY_TASK_TEMPLATE",
+ "DELIVERY_IMPL_TEMPLATE", "DELIVERY_REVIEW_TEMPLATE",
+ "DELIVERY_VALIDATION_TEMPLATE", "DELIVERY_MEMORY_TEMPLATE",
+ "CODEBASE_TEMPLATE_REGISTRY", "CODEBASE_INVENTORY_TEMPLATE",
+ "CODEBASE_MODULE_TEMPLATE", "CODEBASE_COMPONENT_TEMPLATE",
+ "CODEBASE_CHANGE_TEMPLATE", "CODEBASE_INVENTORY",
+ "REVIEW_FILE_SUGGESTED",
+]
+produces = [
+ "DELIVERY_TEMPLATE_REGISTRY", "DELIVERY_INITIATIVE_TEMPLATE",
+ "DELIVERY_PLAN_TEMPLATE", "DELIVERY_TASK_GRAPH_TEMPLATE",
+ "DELIVERY_TASK_TEMPLATE", "DELIVERY_IMPL_TEMPLATE",
+ "DELIVERY_REVIEW_TEMPLATE", "DELIVERY_VALIDATION_TEMPLATE",
+ "DELIVERY_MEMORY_TEMPLATE", "CODEBASE_TEMPLATE_REGISTRY",
+ "CODEBASE_INVENTORY_TEMPLATE", "CODEBASE_MODULE_TEMPLATE",
+ "CODEBASE_COMPONENT_TEMPLATE", "CODEBASE_CHANGE_TEMPLATE",
+ "CODEBASE_INVENTORY",
+]
+target_artifact = "DELIVERY_TEMPLATE_REGISTRY"
+edit_mode = "in_place"
+result_meta_key = "DELIVERY_TEMPLATE_REGISTRY"
+loop_returns_to = "review_templates"
+
+[step.coder]
+default = "codex-architect"
+allowed = ["claude-architect", "codex-architect", "qwen-architect"]
+
+# ---------------------------------------------------------------------------
+# Step 09 — generate agents
+# ---------------------------------------------------------------------------
+[[step]]
+name = "generate_agents"
+prompt = "prompts/04_generate_agents.txt"
+enable_notifications = true
+
+[step.artifacts]
+required_inputs = [
+ "PROJECT_ANALYSIS", "DELIVERY_SOP", "DELIVERY_STATUS_RULES",
+ "CODEBASE_DOC_SOP", "CODEBASE_DOC_STATUS_RULES",
+]
+produces = [
+ "DELIVERY_AGENTS", "DELIVERY_AGENT_PLANNER",
+ "DELIVERY_AGENT_TASK_DECOMPOSER", "DELIVERY_AGENT_IMPL_PLANNER",
+ "DELIVERY_AGENT_EXECUTOR", "DELIVERY_AGENT_REVIEWER",
+ "DELIVERY_AGENT_MEMORY_MANAGER",
+]
+result_meta_key = "DELIVERY_AGENTS"
+
+[step.coder]
+default = "codex-architect"
+allowed = ["claude-architect", "codex-architect", "qwen-architect"]
+
+# ---------------------------------------------------------------------------
+# Step 10 — review agents
+# ---------------------------------------------------------------------------
+[[step]]
+name = "review_agents"
+prompt = "prompts/08_review_agents.txt"
+enable_notifications = true
+
+[step.artifacts]
+required_inputs = [
+ "PROJECT_ANALYSIS", "DELIVERY_SOP", "DELIVERY_STATUS_RULES",
+ "CODEBASE_DOC_SOP", "CODEBASE_DOC_STATUS_RULES",
+ "DELIVERY_AGENTS", "DELIVERY_AGENT_PLANNER",
+ "DELIVERY_AGENT_TASK_DECOMPOSER", "DELIVERY_AGENT_IMPL_PLANNER",
+ "DELIVERY_AGENT_EXECUTOR", "DELIVERY_AGENT_REVIEWER",
+ "DELIVERY_AGENT_MEMORY_MANAGER",
+]
+produces = ["REVIEW_FILE_SUGGESTED"]
+result_meta_key_from_context = "REVIEW_FILE_SUGGESTED_SUGGESTED"
+
+[step.coder]
+default = "qwen-reviewer"
+allowed = ["claude-reviewer", "codex-reviewer", "qwen-reviewer"]
+must_differ = false
+
+[step.on_reject_refine]
+step = "refine_agents"
+artifact = "DELIVERY_AGENTS"
+max_iterations = 2
+exhausted_failure_code = "AGENT_REFINEMENT_EXHAUSTED"
+exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
+
+requires_human_approval_after = false
+
+# ---------------------------------------------------------------------------
+# Step 11 — refine agents
+# ---------------------------------------------------------------------------
+[[step]]
+name = "refine_agents"
+prompt = "prompts/07_refine_agents.txt"
+
+[step.artifacts]
+required_inputs = [
+ "PROJECT_ANALYSIS", "DELIVERY_SOP", "DELIVERY_STATUS_RULES",
+ "CODEBASE_DOC_SOP", "CODEBASE_DOC_STATUS_RULES",
+ "DELIVERY_AGENTS", "DELIVERY_AGENT_PLANNER",
+ "DELIVERY_AGENT_TASK_DECOMPOSER", "DELIVERY_AGENT_IMPL_PLANNER",
+ "DELIVERY_AGENT_EXECUTOR", "DELIVERY_AGENT_REVIEWER",
+ "DELIVERY_AGENT_MEMORY_MANAGER", "REVIEW_FILE_SUGGESTED",
+]
+produces = [
+ "DELIVERY_AGENTS", "DELIVERY_AGENT_PLANNER",
+ "DELIVERY_AGENT_TASK_DECOMPOSER", "DELIVERY_AGENT_IMPL_PLANNER",
+ "DELIVERY_AGENT_EXECUTOR", "DELIVERY_AGENT_REVIEWER",
+ "DELIVERY_AGENT_MEMORY_MANAGER",
+]
+target_artifact = "DELIVERY_AGENTS"
+edit_mode = "in_place"
+result_meta_key = "DELIVERY_AGENTS"
+loop_returns_to = "review_agents"
+
+[step.coder]
+default = "codex-architect"
+allowed = ["claude-architect", "codex-architect", "qwen-architect"]
+
+# ---------------------------------------------------------------------------
+# Step 12 — validate delivery docs
+# ---------------------------------------------------------------------------
+[[step]]
+name = "validate_delivery_docs"
+action = "validate_delivery_docs"
+
+[step.artifacts]
+required_inputs = [
+ "DELIVERY_SOP", "DELIVERY_STATUS_RULES",
+ "DELIVERY_TEMPLATE_REGISTRY", "DELIVERY_INITIATIVE_TEMPLATE",
+ "DELIVERY_PLAN_TEMPLATE", "DELIVERY_TASK_GRAPH_TEMPLATE",
+ "DELIVERY_TASK_TEMPLATE", "DELIVERY_IMPL_TEMPLATE",
+ "DELIVERY_REVIEW_TEMPLATE", "DELIVERY_VALIDATION_TEMPLATE",
+ "DELIVERY_MEMORY_TEMPLATE",
+ "DELIVERY_AGENTS", "DELIVERY_AGENT_PLANNER",
+ "DELIVERY_AGENT_TASK_DECOMPOSER", "DELIVERY_AGENT_IMPL_PLANNER",
+ "DELIVERY_AGENT_EXECUTOR", "DELIVERY_AGENT_REVIEWER",
+ "DELIVERY_AGENT_MEMORY_MANAGER",
+ "CODEBASE_DOC_SOP", "CODEBASE_DOC_STATUS_RULES",
+ "EXISTING_REPO_WORKFLOW_SOP",
+ "CODEBASE_TEMPLATE_REGISTRY", "CODEBASE_INVENTORY_TEMPLATE",
+ "CODEBASE_MODULE_TEMPLATE", "CODEBASE_COMPONENT_TEMPLATE",
+ "CODEBASE_CHANGE_TEMPLATE", "CODEBASE_INVENTORY",
+]
+produces = ["DELIVERY_FOLDER_MAP"]
+result_meta_key = "DELIVERY_FOLDER_MAP"

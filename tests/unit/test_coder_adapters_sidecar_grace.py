@@ -11,7 +11,7 @@ def test_run_with_sidecar_poll_allows_post_sidecar_grace(monkeypatch, tmp_path: 
     sidecar_path = tmp_path / "meta.json"
     monkeypatch.setattr(coder_adapters, "SIDECAR_POLL_INTERVAL_SECONDS", 0.01)
     monkeypatch.setattr(coder_adapters, "SIDECAR_SETTLE_DELAY_SECONDS", 0.0)
-    monkeypatch.setattr(coder_adapters, "SIDECAR_POST_COMPLETE_GRACE_SECONDS", 0.5)
+    monkeypatch.setattr(coder_adapters, "DEFAULT_SIDECAR_POST_COMPLETE_GRACE_SECONDS", 0.5)
 
     script = (
         "import json, pathlib, sys, time; "

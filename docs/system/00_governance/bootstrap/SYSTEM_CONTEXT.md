@@ -2,133 +2,132 @@
 template_id: "SYS-03-CTX"
 title: "System Context - agent-runner-v2"
 status: "active"
-generated: "2026-07-10T14:20:05+08:00"
+managed_by: workflow-generated
+generated: "2026-07-10T19:56:49+08:00"
 workflow: "00_master_docs_bootstrap_v2"
 step: "04_generate_architecture_docs"
-change_id: "00DOC-GEN-20260710-004"
-managed_by: workflow-generated
+change_id: "00DOC-20260710-0098bf53"
 ---
 
 > Managed by workflow: `00_master_docs_bootstrap_v2` / step: `04_generate_architecture_docs`
 > This file is workflow-generated and protected from manual edits.
 
-# System Context
+# System Context: agent-runner-v2
 
 ## Context Statement
 
-`agent-runner-v2` is a standalone Python LLM workflow orchestration engine that executes structured multi-step workflows across Claude, Codex, Qwen, and aliased models. The system operates as a hybrid local/connected platform: it runs workflows locally using packaged bootstrap assets while optionally connecting to a backend service for distributed execution and job coordination.
+The agent-runner-v2 system operates as a standalone Python LLM workflow orchestration engine that bridges human intent (via structured workflows) to LLM-powered execution and deterministic action outputs. It sits at the intersection of:
+
+1. **Human users** who define initiatives, tasks, and requirements
+2. **LLM backends** (Claude, Codex, Qwen) that perform intelligent work
+3. **File system artifacts** that persist workflow state and outputs
+4. **Optional backend services** that provide enterprise job management
+
+The system is designed to operate standalone (local mode) or connected to a backend (enterprise mode), with the same core execution semantics in both configurations.
 
 ## Primary Context Elements
 
-### System Scope
+### External Actors
 
-| Element | Description |
-|---------|-------------|
-| **System Name** | agent-runner-v2 (UKBE Runner v2) |
-| **System Type** | Workflow orchestration engine with LLM integration |
-| **Execution Model** | Local-first with optional backend connectivity |
-| **Primary Language** | Python 3.12+ |
-| **Target Platforms** | Windows (primary), Unix/WSL (secondary) |
+| Actor | Role | Interface |
+|-------|------|-----------|
+| **Developer** | Creates and debugs workflows | CLI (`ukbe-run-agent`), batch files |
+| **Operator** | Runs daemon, monitors health | CLI (`daemon` command), logs |
+| **Reviewer** | Reviews and approves step outputs | Markdown files, notifications |
+| **Stakeholder** | Consumes documentation outputs | Generated HTML sites, markdown docs |
+
+### System Actors
+
+| Actor | Role | Interface |
+|-------|------|-----------|
+| **LLM Backend** | Performs AI-powered work | Subprocess invocation via `coder_adapters.py` |
+| **Backend API** | Enterprise job queue and state | HTTP API via `backend_client.py` |
+| **Notification Service** | Delivers alerts | Pushover API, console output |
+| **File System** | Persists state and artifacts | Standard filesystem operations |
 
 ### External Systems
 
-| System | Relationship | Interface | Protocol |
-|--------|--------------|-----------|----------|
-| **Anthropic Claude** | Coder backend | `coder_adapters.py` | HTTP REST API |
-| **OpenAI Codex** | Coder backend | `coder_adapters.py` | HTTP REST API |
-| **Alibaba Qwen** | Coder backend | `coder_adapters.py` | HTTP REST API |
-| **UKBE Backend** | Optional job coordination | `backend_client.py` | HTTP/WebSocket |
-| **Pushover** | Notification delivery | `notifications.py` | HTTPS API |
-| **ComfyUI** | Image generation | `actions/submit_comfyui.py` | HTTP REST API |
-| **File System** | Artifact storage | `step_runner.py`, `job_state.py` | Local I/O |
+| System | Purpose | Integration Point |
+|--------|---------|-------------------|
+| **Anthropic Claude API** | LLM execution for coding tasks | `coder_adapters.py` → subprocess |
+| **OpenAI Codex API** | LLM execution for coding tasks | `coder_adapters.py` → subprocess |
+| **Alibaba Qwen** | LLM execution for coding tasks | `coder_adapters.py` → subprocess |
+| **Pushover API** | Mobile push notifications | `notifications.py` → HTTP POST |
+| **Backend Service** | Job queue and orchestration | `backend_client.py` → HTTP API |
+| **Git** | Version control for artifacts | Shell commands via `subprocess` |
 
 ### System Boundaries
 
-| Boundary | Inside | Outside |
-|----------|--------|---------|
-| **Execution Boundary** | Workflow steps, actions, job state | External coder APIs, user prompts |
-| **Storage Boundary** | Local job files, runtime bundles, logs | Backend persistence, external services |
-| **Network Boundary** | Optional backend polling, API calls | Internet-based coder services |
-| **Configuration Boundary** | `%USERPROFILE%\.ukbe-runner\config.json` | Environment variables, `.env` files |
-
-### Actors
-
-| Actor | Role | Interaction Pattern |
-|-------|------|---------------------|
-| **Developer** | Uses runner for daily development tasks | CLI commands, batch files |
-| **Workflow Author** | Creates and modifies workflow definitions | Template editing, prompt authoring |
-| **Operator** | Monitors daemon and job execution | Logs, notifications, dashboard |
-| **Backend System** | Coordinates distributed job execution | API polling, work claiming |
-| **LLM Backend** | Executes coder steps | Synchronous API calls |
-
-### Runtime Context
-
-| Context Element | Location | Purpose |
-|-----------------|----------|---------|
-| **Runner Home** | `%USERPROFILE%\.ukbe-runner\` | Global configuration, jobs, workflows, logs |
-| **Jobs Directory** | `%USERPROFILE%\.ukbe-runner\jobs\` | Job state files (`job.json`, step artifacts) |
-| **Workflow Bundles** | `%USERPROFILE%\.ukbe-runner\workflows\<workflow>\` | Runtime workflow definitions |
-| **Logs Directory** | `%USERPROFILE%\.ukbe-runner\logs\` | Execution logs and debug output |
-| **Package Root** | `agent_runner_v2/` (repo) | Source code and bootstrap assets |
-| **Bootstrap Source** | `agent_runner_v2/bootstrap/` | Packaged workflow seeds |
-
-### Data Flow
-
 ```
-┌─────────────────┐     ┌──────────────────┐     ┌─────────────────┐
-│   CLI/Batch     │────▶│   run_agent.py   │────▶│   step_runner   │
-│   Entry Point   │     │   Orchestration  │     │   Prompt Render │
-└─────────────────┘     └──────────────────┘     └────────┬────────┘
-                                                        │
-                        ┌──────────────────┐             │
-                        │   meta.json      │◀────────────┘
-                        │   Sidecar        │    Invoke Coder/Action
-                        │   (v2 Contract)  │
-                        └────────┬─────────┘
-                                 │
-            ┌────────────────────┼────────────────────┐
-            ▼                    ▼                    ▼
-     ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-     │   Claude    │     │   Codex     │     │   Action    │
-     │   Backend   │     │   Backend   │     │   Handler   │
-     └─────────────┘     └─────────────┘     └─────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│                        agent-runner-v2                          │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────────┐ │
+│  │   CLI Entry │  │  Step       │  │   Workflow              │ │
+│  │   (run_agent│→ │  Runner     │→ │   Router                │ │
+│  │   .py)      │  │             │  │                         │ │
+│  └─────────────┘  └─────────────┘  └─────────────────────────┘ │
+│         │                │                    │                 │
+│         ▼                ▼                    ▼                 │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────────┐ │
+│  │  Bundle     │  │  Coder      │  │   Job State             │ │
+│  │  Loader     │  │  Adapters   │  │   (job_state.py)        │ │
+│  └─────────────┘  └─────────────┘  └─────────────────────────┘ │
+│         │                │                                      │
+│         ▼                ▼                                      │
+│  ┌──────────────────────────────────────────────────────────┐  │
+│  │                    Runtime Context                        │  │
+│  │              (paths, workflow module, etc.)               │  │
+│  └──────────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────┘
+         │                │                │
+         ▼                ▼                ▼
+┌─────────────┐  ┌─────────────┐  ┌─────────────────────────────┐
+│   Global    │  │   Project   │  │   LLM Backends              │
+│   Runner    │  │   Root      │  │   (Claude, Codex, Qwen)    │
+│   Home      │  │             │  │                             │
+│   (~/.ukbe- │  │             │  │                             │
+│   runner)   │  │             │  │                             │
+└─────────────┘  └─────────────┘  └─────────────────────────────┘
 ```
 
-### Key Interfaces
+### Data Stores
 
-| Interface | Description | Contract |
-|-----------|-------------|----------|
-| **CLI Interface** | `ukbe-run-agent` commands | Subcommands: `run`, `worker`, `poll`, `daemon`, `init`, `execute-step` |
-| **Step Contract** | Execution unit | Prompt template → Coder/Action → meta.json sidecar |
-| **Sidecar Contract** | Result communication | JSON with `schema_version`, `coder_result` (status, remark, artifacts) |
-| **Job State** | Persistence format | `job.json` with step history, artifacts, routing decisions |
-| **Workflow Definition** | Template groups | `template_groups.py` or plugin `workflow.toml` |
+| Store | Purpose | Location |
+|-------|---------|----------|
+| **Job State** | Execution state per job | `~/.ukbe-runner/jobs/<job_id>/job.json` |
+| **Workflow Bundles** | Workflow definitions | `~/.ukbe-runner/workflows/<workflow>/` |
+| **Step Sidecars** | Step results and metadata | `<job_step_dir>/meta.json` |
+| **Artifacts** | Generated documents, code | Project-local paths |
+| **Logs** | Execution logs | `~/.ukbe-runner/logs/` |
+| **Config** | Runner configuration | `~/.ukbe-runner/config.json` |
 
-### Environment Dependencies
+### Execution Contexts
 
-| Dependency | Required For | Configuration |
-|------------|--------------|---------------|
-| **Python 3.12+** | Runtime execution | `.venv` virtual environment |
-| **Anthropic API Key** | Claude coder steps | `.env` (`ANTHROPIC_API_KEY`) |
-| **OpenAI API Key** | Codex coder steps | `.env` (`OPENAI_API_KEY`) |
-| **Pushover Tokens** | Notifications | `.env` (`PUSHOVER_APP_TOKEN`, `PUSHOVER_USER_KEY`) |
-| **Backend Endpoint** | Worker mode | `config.json` (`backend.url`) |
+| Context | Purpose | Trigger |
+|---------|---------|---------|
+| **Local Execution** | Development and testing | `ukbe-run-agent run` |
+| **Worker Mode** | Single-step execution | `ukbe-run-agent worker` |
+| **Daemon Mode** | Supervised continuous execution | `ukbe-run-agent daemon` |
+| **Backend Mode** | Enterprise-managed execution | Backend claims work |
 
-### Constraints
+### Configuration Context
 
-| Constraint | Impact |
-|------------|--------|
-| **Windows-centric batch files** | Unix/WSL support secondary |
-| **Bootstrap/Runtime duality** | Changes require explicit sync |
-| **v2 Sidecar contract** | No markdown write-backs, no silent recovery |
-| **Monolithic template_groups.py** | Migration to plugin system in progress |
-| **No automatic bundle sync** | Manual `init` required for updates |
+| Config | Scope | Source |
+|--------|-------|--------|
+| **Runner Config** | Global settings | `~/.ukbe-runner/config.json` |
+| **Workflow Config** | Per-workflow settings | `workflow.toml` or `template_groups.py` |
+| **Step Config** | Per-step settings | Step definition in workflow |
+| **Environment** | Secrets and overrides | `.env` file, environment variables |
 
-### Related Documents
+### Security Boundaries
 
-| Document | Purpose |
-|----------|---------|
-| [COMPONENT_ARCHITECTURE.md](COMPONENT_ARCHITECTURE.md) | Component breakdown and interactions |
-| [SYSTEM_FILE_STRUCTURE.md](SYSTEM_FILE_STRUCTURE.md) | Repository organization |
-| [RUNBOOK.md](RUNBOOK.md) | Operational procedures |
-| [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md) | Development setup and workflows |
+| Boundary | Protection |
+|----------|------------|
+| **Credential Storage** | `.env` files excluded from Git |
+| **Job State Isolation** | Per-job directories |
+| **Subprocess Isolation** | Fresh process per step |
+| **File System Access** | Project-root-relative paths only |
+
+---
+
+*Last updated: 2026-07-10T19:56:49+08:00 via workflow `00_master_docs_bootstrap_v2`*

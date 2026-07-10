@@ -404,9 +404,12 @@ def load_job(group_name: str, job_id: str) -> dict[str, Any]:
     if not path.exists():
         raise FileNotFoundError(f"Job state not found: {path}")
     state = load_json(path)
-    if state.get("template_group") != group_name:
+    # Backend-managed jobs store workflow_name instead of template_group.
+    # Accept either as the group association proof.
+    actual_group = state.get("template_group") or state.get("workflow_name")
+    if actual_group is not None and actual_group != group_name:
         raise ValueError(
-            f"Job {job_id} belongs to template group {state.get('template_group')!r}, not {group_name!r}"
+            f"Job {job_id} belongs to {actual_group!r}, not {group_name!r}"
         )
     return state
 
@@ -534,6 +537,20 @@ def migrate_job_state(state: dict[str, Any]) -> dict[str, Any]:
 
 
 def ensure_backward_compatible_state(state: dict[str, Any]) -> dict[str, Any]:
+    # --- Backend-managed job normalization ---------------------------------
+    # Backend daemon creates jobs with different field names (run_code,
+    # current_step_name, context_payload). Map them to v2 runner fields
+    # so all downstream handlers (override-step, check-job-status, etc.)
+    # can use the normal field access patterns.
+    if state.get("run_code") and not state.get("job_id"):
+        state["job_id"] = state["run_code"]
+    if state.get("workflow_name") and not state.get("template_group"):
+        state["template_group"] = state["workflow_name"]
+    if state.get("current_step_name") and not state.get("current_step"):
+        state["current_step"] = state["current_step_name"]
+    if state.get("context_payload") and not state.get("artifacts"):
+        state["artifacts"] = state["context_payload"]
+
     state.setdefault("state_schema_version", 1)
     state.setdefault("runner_version", "v2")
     state.setdefault("step_usage", {})
@@ -1323,7 +1340,7 @@ def advance_step(
             and step == "task" and task_queue_is_initialized(state)):
         return _handle_task_queue_success(state, step, artifacts)
 
-    return _advance_to_next(group_cfg, state, step)
+    return _advance_to_next(group_cfg, state, step, step_cfg)
 
 
 def _handle_refine_success(
@@ -1480,10 +1497,15 @@ def _handle_task_queue_success(
 
 
 def _advance_to_next(
-    group_cfg: dict[str, Any], state: dict[str, Any], step: str,
+    group_cfg: dict[str, Any], state: dict[str, Any], step: str, step_cfg: dict[str, Any] | None = None,
 ) -> tuple[dict[str, Any], int]:
     state["completed_steps"] = list(dict.fromkeys(state.setdefault("completed_steps", []) + [step]))
-    next_step = get_next_step_skipping_refine_replan(group_cfg, state)
+    # Use explicit onsuccess if defined; otherwise fall back to list-order advancement.
+    onsuccess = (step_cfg or {}).get("onsuccess") if step_cfg else None
+    if onsuccess:
+        next_step = onsuccess
+    else:
+        next_step = get_next_step_skipping_refine_replan(group_cfg, state)
     if next_step is None:
         set_job_status(state, "COMPLETED")
         state["current_step"] = None

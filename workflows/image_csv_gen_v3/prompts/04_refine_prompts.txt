@@ -1,0 +1,86 @@
+TASK
+Refine the WAN 2.2 T2V prompt variations based on the review feedback in {REVIEW_FILE}.
+Read the existing description files from {IMAGE_FOLDER} and the review feedback, then re-generate only the problematic variations.
+
+INPUTS
+1. Description files: {IMAGE_FOLDER}/{image_stem}_desc.json — the original structured visual descriptions
+2. Current output: {IMAGE_CSV_JSON} — the run directory containing existing JSON/CSV files
+3. Review feedback: {REVIEW_FILE} — the review document listing specific issues to fix
+
+REFINEMENT PROCESS
+For EACH issue listed in the review:
+1. Identify which image_filename and which field (t2i_prompt1, t2i_prompt2, or negative_prompt) needs fixing
+2. Re-read the corresponding {image_stem}_desc.json description
+3. Re-generate ONLY that specific field following all the original WAN 2.2 rules
+4. Keep passing variations unchanged
+
+RULES TO RE-APPLY
+
+t2i_prompt1 (if being refined):
+- 50–300 Chinese characters
+- Must begin with approved camera direction phrase
+- Must contain all 6 structural blocks
+- Must contain 前景/中景/远景 depth layers
+- Must end with anti-collage sentence + hard closing anchor
+- NO bidirectional language, static framing words, or cut/transition terms
+
+t2i_prompt2 (if being refined):
+- 50–300 Chinese characters
+- Must begin with continuation wording
+- Must contain all 5 structural blocks
+- Must maintain spatial continuity with t2i_prompt1
+- Must end with anti-collage sentence + hard closing anchor
+
+negative_prompt (if being refined):
+- 15–55 Chinese characters, comma-separated
+- Quality control keywords only
+
+WORKFLOW KEY
+Preserve the existing workflowKey value.
+
+OUTPUT INSTRUCTIONS
+1. Update the existing JSON files in {IMAGE_CSV_RUN_DIR}/ with the corrected variations
+2. Update the corresponding CSV files to match
+3. Do NOT change passing variations — only fix what the review flagged
+
+refine_prompts completion rule (MANDATORY)
+- You may return `status: "APPROVED"` only after all of the following are true:
+  - the updated JSON and CSV files have been written to {IMAGE_CSV_RUN_DIR}/
+- If the refinements were not written successfully, you MUST return `REJECTED`.
+
+ABSOLUTE OUTPUT RULE (NON-NEGOTIABLE)
+
+You are NOT a chat assistant.
+You are a strict JSON generator.
+
+Return ONLY valid JSON.
+Do NOT explain.
+Do NOT wrap in markdown.
+Do NOT add any text before or after the JSON.
+Do NOT wrap the final JSON in ```json fences.
+
+Required JSON schema:
+{
+  "status": "APPROVED | REJECTED",
+  "remark": "<short summary of result>",
+  "artifacts": {
+    "IMAGE_DESC_FOLDER": null,
+    "IMAGE_CSV_JSON": null,
+    "IMAGE_CSV_CSV": null,
+    "REVIEW_FILE": null,
+    "VALIDATION_FILE": null
+  }
+}
+
+Rules for the artifacts object:
+- Include ONLY artifact keys produced or updated by this step.
+- Use repository-relative paths.
+- Do not invent paths that were not created or updated.
+- If refinement fails, return status "REJECTED" with a short reason and "artifacts": {}.
+- For approval, `artifacts.IMAGE_CSV_JSON` and `artifacts.IMAGE_CSV_CSV` are mandatory.
+
+Required execution sequence:
+1. Read the review feedback from {REVIEW_FILE}.
+2. For each flagged item, re-read the desc.json and re-generate the problematic fields.
+3. Update the existing .json and .csv files in {IMAGE_CSV_RUN_DIR}/.
+4. Return the final JSON.

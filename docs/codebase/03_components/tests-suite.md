@@ -3,9 +3,9 @@ title: "Component Documentation: tests suite"
 template_id: "CB-03"
 status: "active"
 component_id: "tests-suite"
-created: "2026-07-10T14:00:58+08:00"
+created: "2026-07-10T19:43:53+08:00"
 owner: "00_master_docs_bootstrap_v2"
-last_verified_by_change: "00_master_docs_bootstrap_v2 / 00DOC-GEN-20260710-004 / 2026-07-10T14:00:58+08:00"
+last_verified_by_change: "00_master_docs_bootstrap_v2 / 00DOC-20260710-0098bf53 / 2026-07-10T19:43:53+08:00"
 modules: ["tests/conftest.py", "tests/integration/__init__.py", "tests/integration/test_architecture_site.py", "tests/integration/test_backend_worker_mode.py", "tests/integration/test_daemon.py", "tests/integration/test_notification_e2e.py", "tests/integration/test_notification_integration.py", "tests/integration/test_notifications.py", "tests/integration/test_pushover.py", "tests/integration/test_ukbe_runner_wrapper.py", "tests/unit/__init__.py", "tests/unit/test_agent_tools.py", "tests/unit/test_bundle_loader.py", "tests/unit/test_codebase_docs.py", "tests/unit/test_coder_adapters_sidecar_grace.py", "tests/unit/test_constants_registry.py", "tests/unit/test_context_extensions.py", "tests/unit/test_documentation_governance.py", "tests/unit/test_documentation_guardrails_cleanup.py", "tests/unit/test_run_agent_status.py", "tests/unit/test_runtime_context_paths.py", "tests/unit/test_step_runner_write_contract.py", "tests/unit/test_tool_instruction_block.py", "tests/unit/test_workflow_packages.py", "tests/unit/test_workflow_registry.py"]
 ---
 

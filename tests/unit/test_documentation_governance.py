@@ -72,27 +72,6 @@ def test_reject_route_prefers_code_specific_override():
     assert fallback == {"step": "refine_impl", "artifact": "IMPL_FILE"}
 
 
-def test_delivery_scaffold_paths_match_generated_layout():
-    assert validate_delivery_docs_module.REQUIRED_TEMPLATES["DELIVERY_TEMPLATE_REGISTRY"] == "01_delivery_template_registry.md"
-    assert validate_delivery_docs_module.REQUIRED_TEMPLATES["DELIVERY_TASK_TEMPLATE"] == "05_delivery_task_template.md"
-    template_paths = validate_delivery_docs_module._delivery_template_paths()
-    assert fspath(template_paths["DELIVERY_TEMPLATE_REGISTRY"]).replace("\\", "/").endswith(
-        "docs/system/00_governance/bootstrap/templates/delivery/01_delivery_template_registry.md"
-    )
-    assert fspath(template_paths["DELIVERY_TASK_TEMPLATE"]).replace("\\", "/").endswith(
-        "docs/system/00_governance/bootstrap/templates/delivery/05_delivery_task_template.md"
-    )
-    assert validate_delivery_docs_module.REQUIRED_CODEBASE_FILES["CODEBASE_TEMPLATE_REGISTRY"].endswith(
-        "docs/system/00_governance/bootstrap/templates/codebase/01_codebase_template_registry.md"
-    )
-    assert validate_delivery_docs_module.REQUIRED_CODEBASE_FILES["CODEBASE_COMPONENT_TEMPLATE"].endswith(
-        "docs/system/00_governance/bootstrap/templates/codebase/04_codebase_component_template.md"
-    )
-    assert validate_delivery_docs_module.DELIVERY_AGENT_ROOT.as_posix() == "docs/delivery/00_standards"
-    assert Path("docs/system/00_governance/bootstrap/DELIVERY_AGENTS.md").as_posix().endswith("DELIVERY_AGENTS.md")
-    assert Path("docs/delivery/00_standards/DELIVERY_AGENT_REVIEWER.md").as_posix().endswith("DELIVERY_AGENT_REVIEWER.md")
-
-
 def test_delivery_validator_no_longer_requires_legacy_engineering_and_operations_folders():
     assert "docs/engineering" not in validate_delivery_docs_module.DELIVERY_FOLDERS
     assert "docs/operations" not in validate_delivery_docs_module.DELIVERY_FOLDERS

@@ -1,391 +1,297 @@
 ---
 template_id: "SYS-00-BMP"
-title: "Bundle Migration Plan"
+title: "Bundle Migration Plan - agent-runner-v2"
 status: "active"
-generated: "2026-07-10T14:07:00+08:00"
+managed_by: workflow-generated
+generated: "2026-07-10T19:47:28+08:00"
 workflow: "00_master_docs_bootstrap_v2"
 step: "03_generate_system_overview_docs"
-change_id: "00DOC-GEN-20260710-004"
-managed_by: workflow-generated
+change_id: "00DOC-20260710-0098bf53"
 ---
 
 > Managed by workflow: `00_master_docs_bootstrap_v2` / step: `03_generate_system_overview_docs`
 > This file is workflow-generated and protected from manual edits.
 
-# Bundle Migration Plan
+# Bundle Migration Plan: agent-runner-v2
 
 ## Purpose
 
-This document defines the migration strategy for documentation bundles in the `agent-runner-v2` repository. It addresses:
+This document outlines the migration path from the monolithic workflow bundle system to the plugin-based workflow system. It defines current state, target state, migration phases, and rollback procedures.
 
-1. **Current state** of documentation bundles
-2. **Target state** for documentation organization
-3. **Migration path** from current to target
-4. **Validation criteria** for successful migration
+## Scope
 
-## Audience
+This plan covers:
+- Migration from `TEMPLATE_GROUPS` monolith to plugin packages
+- Bootstrap-to-runtime synchronization
+- Backward compatibility maintenance
+- Risk mitigation and rollback
 
-| Role | Use Case |
-|------|----------|
-| **Maintainers** | Understanding migration priorities and sequencing |
-| **Contributors** | Knowing what structures are stable vs. in flux |
-| **Operators** | Planning around migration activities |
+## Current State
 
-## Current State Assessment
+### Monolithic System
 
-### Existing Bundle Structure
+**Location**: `agent_runner_v2/bootstrap/workflows/default/template_groups.py`
 
-The repository currently maintains documentation in three primary locations:
+**Characteristics**:
+- Single 2453+ line Python file
+- 21+ workflow definitions
+- Hardcoded step configurations
+- Mixed concerns (workflows, prompts, routing logic)
 
-#### 1. Bootstrap Bundles
+**Pain Points**:
+- Unmaintainable at scale
+- No independent versioning
+- Difficult to test in isolation
+- Adding workflow = editing massive file
+- Code review complexity
 
-**Location**: `agent_runner_v2/bootstrap/`
+### Active Migration Branch
 
-**Structure**:
-```
-bootstrap/
-├── bundles/core/current/     # Core documentation bundles
-├── themes/default/           # HTML theme templates
-└── workflows/default/        # Workflow definitions
-    ├── template_groups.py    # 2,453-line monolithic registry
-    └── prompts/              # 200+ prompt templates
-```
+**Branch**: `feat/plugin-workflow-system`
 
-**Status**: Active and functional
+**Status**: In progress
 
-**Issues**:
-- Monolithic `template_groups.py` is difficult to maintain
-- Manual synchronization required with runtime bundles
-- No automated drift detection
-
-#### 2. Runtime Bundles
-
-**Location**: `%USERPROFILE%\.ukbe-runner\`
-
-**Structure**:
-```
-.ukbe-runner/
-├── config.json               # Runner configuration
-├── jobs/                     # Job execution records
-├── workflows/                # Active workflow bundles
-└── logs/                     # Execution logs
-```
-
-**Status**: Seeded from bootstrap, runtime-managed
-
-**Issues**:
-- Can diverge from bootstrap source
-- No automatic sync mechanism
-- Version tracking manual
-
-#### 3. Repository Documentation
-
-**Location**: `docs/`
-
-**Structure**:
-```
-docs/
-├── system/                   # System documentation
-├── codebase/                 # Codebase documentation
-└── delivery/                 # Delivery documentation
-```
-
-**Status**: Partially populated
-
-**Issues**:
-- `docs/system/` minimal before bootstrap
-- `docs/delivery/` structure exists, content workflow-generated
-- `docs/codebase/` populated by reconcile workflow
-
-### Migration Drivers
-
-| Driver | Impact | Priority |
-|--------|--------|----------|
-| Monolithic workflow registry | High maintainability burden | High |
-| Bootstrap/runtime drift | Risk of execution inconsistency | High |
-| Documentation gaps | Incomplete stakeholder visibility | Medium |
-| Cross-platform support | Windows-centric limits adoption | Medium |
-| Test isolation | Some tests still filesystem-dependent | Low |
+**Git Status**:
+- Modified `template_groups.py`
+- New `workflow_packages/` module
+- Modified core execution modules
 
 ## Target State
 
-### Desired Bundle Architecture
+### Plugin-Based System
 
-#### Plugin-Based Workflow System
+**Location**: `<repo>/workflows/<workflow_name>/`
 
-**Target Structure**:
-```
-workflows/
-├── <workflow_name>/
-│   ├── workflow.toml         # Declarative manifest
-│   ├── prompts/              # Prompt templates
-│   └── context_extensions.py # Optional context hooks
-```
-
-**Benefits**:
+**Characteristics**:
 - Self-contained workflow packages
-- Declarative configuration
-- Easier testing and versioning
-- Reduced merge conflicts
+- Declarative `workflow.toml` manifests
+- Versioned independently
+- Testable in isolation
+- Clear separation of concerns
 
-#### Synchronized Runtime
-
-**Target Behavior**:
-- Automatic bootstrap-to-runtime sync
-- Version tracking with drift detection
-- Clear upgrade path
-- Rollback capability
-
-#### Comprehensive Documentation
-
-**Target Coverage**:
-- Complete system documentation
-- Full codebase inventory
-- Active delivery tracking
-- Up-to-date templates
-
-### Migration Phases
-
-#### Phase 1: Foundation (Complete)
-
-**Status**: ✅ Complete
-
-**Achievements**:
-- Centralized constants in `constants.py`
-- Comprehensive test coverage (45+ unit tests)
-- Strict sidecar contract (v2)
-- Deterministic action separation
-
-**Verification**:
-- Unit tests pass
-- Constants used throughout codebase
-- No hardcoded paths in new code
-
-#### Phase 2: Workflow Package Migration (In Progress)
-
-**Status**: 🔄 In Progress
-
-**Goals**:
-- Migrate 21 workflows from `template_groups.py` to plugin packages
-- Maintain backward compatibility
-- Enable gradual adoption
-
-**Approach**:
-1. Create `workflow_packages/` module with base classes
-2. Implement `workflow.toml` parser
-3. Create adapter from `WorkflowBundle` to legacy format
-4. Migrate workflows incrementally
-
-**Timeline**: TBD
-
-**Blockers**:
-- Runtime bundle discovery path changes
-- Template substitution backward compatibility
-- Validation rule migration
-
-#### Phase 3: Documentation Completion (In Progress)
-
-**Status**: 🔄 In Progress
-
-**Goals**:
-- Complete system documentation
-- Maintain codebase documentation currency
-- Populate delivery documentation
-
-**Approach**:
-1. Execute `00_master_docs_bootstrap_v2` workflow
-2. Enable `40_documentation_sync_v1` reconciliation
-3. Standardize delivery documentation
-
-**Timeline**: Current (2026-07-10)
-
-**Current Activity**:
-- Generating system documentation
-- Establishing documentation standards
-- Creating bundle taxonomy
-
-#### Phase 4: Cross-Platform Enhancement (Planned)
-
-**Status**: 📋 Planned
-
-**Goals**:
-- Full Unix/Linux support
-- WSL optimization
-- Container deployment
-
-**Approach**:
-1. Shell script equivalents for batch files
-2. Path handling abstraction
-3. Cross-platform testing
-
-**Timeline**: Future
-
-#### Phase 5: Automation Enhancement (Planned)
-
-**Status**: 📋 Planned
-
-**Goals**:
-- Automatic documentation reconciliation
-- Drift detection and alerts
-- Self-healing documentation
-
-**Approach**:
-1. Git hooks for reconcile
-2. CI/CD integration
-3. Scheduled reconciliation
-
-**Timeline**: Future
-
-## Migration Path
-
-### Workflow Registry Migration
-
-#### Current → Adapter → Target
-
+**Structure**:
 ```
-template_groups.py (monolithic)
-    ↓
-WorkflowBundle adapter (converts to legacy format)
-    ↓
-workflow_packages/ (plugin system)
-    ↓
-workflow.toml + prompts/ (declarative)
+workflows/<workflow_name>/
+├── workflow.toml          # Manifest, steps, routing, policies
+├── prompts/               # Prompt template files
+│   └── <step>.txt
+└── context_extensions.py  # Optional context hooks
 ```
 
-#### Backward Compatibility
+## Migration Phases
 
-During migration:
-- Adapter preserves legacy interface
+### Phase 1: Infrastructure (COMPLETE)
+
+**Goal**: Establish plugin infrastructure without breaking existing system.
+
+**Deliverables**:
+- [x] `workflow_packages/base.py` — WorkflowBundle dataclass
+- [x] `workflow_packages/loader.py` — TOML parsing and validation
+- [x] `workflow_packages/registry.py` — Bundle discovery
+- [x] `workflow_packages/actions/` — Plugin action handlers
+
+**Risk Level**: Low (additive only)
+
+### Phase 2: Adapter Implementation (IN PROGRESS)
+
+**Goal**: Bridge plugin format to existing execution pipeline.
+
+**Deliverables**:
+- [x] Dual-path discovery (TEMPLATE_GROUPS + plugin)
+- [x] Adapter converts WorkflowBundle → TEMPLATE_GROUPS dict format
+- [x] Context extension hooks for workflow-specific logic
+- [ ] Remove hardcoded `_set_*_aliases()` from step_runner.py
+
+**Risk Level**: Medium (changes discovery path)
+
+**Rollback**: Revert to TEMPLATE_GROUPS-only discovery
+
+### Phase 3: Workflow Migration (PENDING)
+
+**Goal**: Migrate existing workflows to plugin format.
+
+**Approach**: Incremental migration per workflow family:
+
+1. Create `workflows/<name>/workflow.toml`
+2. Copy prompts to `workflows/<name>/prompts/`
+3. Extract context hooks to `context_extensions.py`
+4. Test plugin version alongside TEMPLATE_GROUPS
+5. Remove from TEMPLATE_GROUPS once stable
+
+**Priority Order**:
+1. Documentation workflows (`40_documentation_sync_v1`)
+2. Delivery workflows (`30_delivery_planning_v1`, `31_task_execution_v1`)
+3. Scaffold workflows (`10_execution_scaffold_v1`)
+4. Intake workflows (`20_initiative_intake_v1`, `21_bug_fix_intake_v1`)
+5. Bootstrap workflows (`00_master_docs_bootstrap_v1`)
+
+**Risk Level**: Medium (per-workflow validation required)
+
+**Rollback**: Keep TEMPLATE_GROUPS entry until plugin verified
+
+### Phase 4: Legacy Deprecation (FUTURE)
+
+**Goal**: Remove monolithic TEMPLATE_GROUPS support.
+
+**Prerequisites**:
+- All workflows migrated to plugins
+- Plugin system stable for N releases
+- Documentation updated
+- Migration guide published
+
+**Risk Level**: Low (cleanup only)
+
+## Backward Compatibility
+
+### Adapter Pattern
+
+The plugin system is a **configuration source adapter**, not a runtime replacement:
+
+```
+WorkflowBundle (workflow.toml + prompts/)
+    ↓
+Adapter (workflow_packages/loader.py)
+    ↓
+Dict format (same as TEMPLATE_GROUPS produces)
+    ↓
+Existing execution pipeline
+```
+
+This ensures:
+- Zero changes to `step_runner.py`, `workflow_router.py`, `coder_adapters.py`
 - Existing workflows continue to work
-- New workflows use plugin system
-- Gradual migration path
+- Gradual migration possible
 
-### Bootstrap/Runtime Sync
+### Dual-Path Discovery
 
-#### Current State
+```python
+# Pseudo-code
+def load_workflow(workflow_name):
+    # Global runtime first
+    if exists(global_runtime_path / workflow_name):
+        return load_from_global(workflow_name)
+    
+    # Project-local plugin fallback
+    if exists(repo_path / "workflows" / workflow_name / "workflow.toml"):
+        return load_plugin(workflow_name)
+    
+    # TEMPLATE_GROUPS fallback
+    return TEMPLATE_GROUPS[workflow_name]
+```
 
-- Bootstrap seeds runtime on `ukbe-run-agent init`
-- Changes to bootstrap require manual sync
-- No automatic drift detection
+## Migration Risks
 
-#### Target State
+### Risk 1: Runtime/Plugin Drift
 
-- Version-tagged bundles
-- Automatic sync on version mismatch
-- Drift detection with alerts
-- Configurable sync policy
+**Risk**: Plugin and TEMPLATE_GROUPS versions diverge.
 
-#### Migration Steps
+**Mitigation**:
+- Validation workflow compares outputs
+- CI checks for drift
+- Single source of truth for prompts
 
-1. Add version metadata to bundles
-2. Implement sync command
-3. Add drift detection
-4. Enable automatic sync (opt-in)
+### Risk 2: Context Hook Complexity
 
-### Documentation Migration
+**Risk**: `_set_*_aliases()` functions scattered in step_runner.py.
 
-#### System Documentation
+**Mitigation**:
+- Move to `context_extensions.py` in each plugin
+- Document hook interface
+- Test hooks in isolation
 
-**From**: Minimal or scattered documentation
+### Risk 3: Path Resolution Changes
 
-**To**: Comprehensive system documentation in `docs/system/`
+**Risk**: Plugin paths different from TEMPLATE_GROUPS paths.
 
-**Migration**:
-- Execute bootstrap workflow
-- Generate all system docs
-- Establish update triggers
+**Mitigation**:
+- Centralized path constants
+- Validation at load time
+- Clear error messages
 
-#### Codebase Documentation
+### Risk 4: Sync Issues
 
-**From**: Ad-hoc or missing
+**Risk**: Bootstrap changes don't propagate to runtime.
 
-**To**: Complete inventory with automated updates
+**Mitigation**:
+- `sync_workflows.py` two-tier discovery
+- Automated sync in CI
+- Clear documentation
 
-**Migration**:
-- Reconcile workflow generates inventory
-- Continuous sync on code changes
-- Change tracking automatic
+## Rollback Procedures
 
-#### Delivery Documentation
+### Rollback Adapter Changes
 
-**From**: Structure only
+```bash
+# Revert to TEMPLATE_GROUPS-only discovery
+git checkout HEAD -- agent_runner_v2/bundle_loader.py
+```
 
-**To**: Populated with templates and active records
+### Rollback Plugin Migration
 
-**Migration**:
-- Execute scaffold workflow
-- Generate templates
-- Workflow execution populates records
+For individual workflow:
+1. Keep TEMPLATE_GROUPS entry (don't delete)
+2. Remove plugin directory
+3. Restore TEMPLATE_GROUPS version
 
-## Validation Criteria
+### Emergency Rollback
 
-### Phase Completion Criteria
+If critical issue detected:
+1. Revert to last known good commit
+2. Disable plugin discovery in config
+3. Fall back to TEMPLATE_GROUPS exclusively
 
-| Phase | Completion Criteria |
-|-------|-------------------|
-| Foundation | All tests pass, constants centralized |
-| Workflow Packages | All 21 workflows migrated, tests pass |
-| Documentation | All planned docs exist and validate |
-| Cross-Platform | Tests pass on Windows, Linux, macOS |
-| Automation | Reconciliation runs automatically |
+## Validation Checkpoints
 
-### Success Metrics
+### Per-Phase Validation
 
-| Metric | Current | Target |
-|--------|---------|--------|
-| Test coverage | 45+ unit tests | 80%+ coverage |
-| Documentation completeness | Partial | 100% |
-| Workflow package migration | 0% | 100% |
-| Cross-platform support | Windows primary | Multi-platform |
-| Bootstrap/runtime drift | Manual detection | Automatic |
+| Phase | Validation | Success Criteria |
+|-------|------------|------------------|
+| 1 | Unit tests pass | All 45 unit tests pass |
+| 2 | Dual discovery | Both paths resolve same workflow |
+| 3 | Workflow parity | Plugin output matches TEMPLATE_GROUPS |
+| 4 | Cleanup | No TEMPLATE_GROUPS references remain |
 
-## Risk Mitigation
+### Continuous Validation
 
-| Risk | Mitigation |
-|------|------------|
-| Migration breaks existing workflows | Adapter pattern maintains compatibility |
-| Documentation becomes stale | Automated reconciliation workflows |
-| Cross-platform issues | Incremental testing, CI/CD |
-| Performance regression | Benchmarking, profiling |
-| User confusion | Clear documentation, migration guide |
+- CI runs full test suite
+- Integration tests verify end-to-end
+- Documentation sync validates bundles
 
-## Rollback Strategy
+## Documentation Updates
 
-### Version Control
+### Required Updates
 
-- All migrations version-controlled
-- Tagged releases before major changes
-- Branch-based migration testing
+- [ ] `GUIDE_CREATE_WORKFLOW_PACKAGE.md` — Create new workflow
+- [ ] `GUIDE_MIGRATE_WORKFLOW_PACKAGE.md` — Migrate existing workflow
+- [ ] `QWEN.md` — Runtime source of truth explanation
+- [ ] `CODER_IMPLEMENTATION_SOP.md` — Plugin conventions
 
-### Compatibility Layers
+### Developer Communication
 
-- Adapter pattern preserves interfaces
-- Feature flags for new behavior
-- Gradual cutover possible
+- Migration status in README
+- Branch documentation
+- Team announcement
 
-### Recovery Procedures
+## Timeline
 
-1. Revert to last known good version
-2. Restore from backup bundles
-3. Re-run initialization
-4. Verify with validation tests
+| Phase | Target | Status |
+|-------|--------|--------|
+| 1. Infrastructure | 2026-07-01 | COMPLETE |
+| 2. Adapter | 2026-07-15 | IN PROGRESS |
+| 3. Workflow Migration | 2026-08-01 | PENDING |
+| 4. Legacy Deprecation | 2026-09-01 | FUTURE |
 
-## Timeline Summary
+## Success Criteria
 
-| Phase | Status | Started | Target |
-|-------|--------|---------|--------|
-| Foundation | Complete | Earlier | Complete |
-| Documentation | In Progress | 2026-07-10 | 2026-07-15 |
-| Workflow Packages | Planned | TBD | TBD |
-| Cross-Platform | Planned | TBD | TBD |
-| Automation | Planned | TBD | TBD |
+Migration complete when:
 
-## Related Documents
-
-- [BUNDLE_TAXONOMY.md](BUNDLE_TAXONOMY.md) — Bundle classification
-- [PROJECT_ANALYSIS.md](PROJECT_ANALYSIS.md) — Repository analysis
-- [SYSTEM_OVERVIEW.md](SYSTEM_OVERVIEW.md) — Platform overview
+- [ ] All workflows migrated to plugins
+- [ ] TEMPLATE_GROUPS file removed
+- [ ] Plugin system documentation complete
+- [ ] All tests pass (unit + integration)
+- [ ] No regression in workflow execution
+- [ ] Developer guide published
 
 ---
 
-*Generated by workflow: `00_master_docs_bootstrap_v2` — Step: `03_generate_system_overview_docs`*
+*Last updated: 2026-07-10T19:47:28+08:00 via workflow `00_master_docs_bootstrap_v2`*

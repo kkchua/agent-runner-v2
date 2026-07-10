@@ -32,7 +32,10 @@ MASTER_BOOTSTRAP_WORKFLOWS: set[str] = {
     "00_master_docs_bootstrap_v1",
     "00_master_docs_bootstrap_v2",
 }
-EXECUTION_SCAFFOLD_WORKFLOW = "10_execution_scaffold_v1"
+EXECUTION_SCAFFOLD_WORKFLOWS: set[str] = {
+    "10_execution_scaffold_v1",
+    "10_execution_scaffold_v2",
+}
 ARCHITECTURE_SITE_WORKFLOW = "50_architecture_site_v1"
 
 WORKFLOW_GENERATED_MARKER = "workflow-generated"
@@ -118,7 +121,7 @@ def workflow_canonical_doc_paths(*, template_group: str, state: dict) -> list[st
     mode = str((state.get("current_step_cfg") or {}).get("mode") or state.get("current_mode") or "bootstrap")
     if template_group in MASTER_BOOTSTRAP_WORKFLOWS:
         return master_bootstrap_doc_paths(job_id=job_id, mode=mode)
-    if template_group == EXECUTION_SCAFFOLD_WORKFLOW:
+    if template_group in EXECUTION_SCAFFOLD_WORKFLOWS:
         return execution_scaffold_doc_paths()
     if template_group == ARCHITECTURE_SITE_WORKFLOW:
         return architecture_site_doc_paths()
