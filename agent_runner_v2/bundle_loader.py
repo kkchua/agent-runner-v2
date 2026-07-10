@@ -213,12 +213,12 @@ def seed_workflow_bundle(target_root: Path, workflow_name: str = "example") -> P
     return wf_root
 
 
-def seed_workflow_packages(workspace_root: Path) -> list[Path]:
+def seed_workflow_packages(workspace_root: Path, workflow_name: str = "default") -> list[Path]:
     """Copy plugin workflow packages from the repo into the global runner home.
 
     Scans ``<workspace_root>/workflows/`` for directories that contain a
-    ``workflow.toml`` manifest and copies each one to
-    ``%USERPROFILE%/.ukbe-runner/workflows/<name>/``.
+    ``workflow.toml`` manifest and copies each one into the active workflow
+    bundle at ``%USERPROFILE%/.ukbe-runner/workflows/<workflow_name>/<name>/``.
 
     This is the plugin-package analogue of ``seed_workflow_bundle()``.
     """
@@ -226,8 +226,10 @@ def seed_workflow_packages(workspace_root: Path) -> list[Path]:
     if not repo_packages_dir.is_dir():
         return []
 
-    global_root = global_workflows_root()
-    global_root.mkdir(parents=True, exist_ok=True)
+    # Plugin packages live inside the active workflow bundle directory,
+    # alongside template_groups.py — e.g. workflows/default/<pkg_name>/
+    bundle_root = global_workflow_root(workflow_name)
+    bundle_root.mkdir(parents=True, exist_ok=True)
     seeded: list[Path] = []
 
     for candidate in sorted(repo_packages_dir.iterdir()):
@@ -238,7 +240,7 @@ def seed_workflow_packages(workspace_root: Path) -> list[Path]:
             continue
 
         pkg_name = candidate.name
-        dest = global_root / pkg_name
+        dest = bundle_root / pkg_name
         _replace_tree(candidate, dest)
         seeded.append(dest)
 
@@ -277,7 +279,7 @@ def init_workspace(
     wf_root = seed_workflow_bundle(workflows_dir, workflow_name="example")
 
     # Seed plugin workflow packages (workflow.toml-based) from the repo
-    seeded_packages = seed_workflow_packages(workspace_root)
+    seeded_packages = seed_workflow_packages(workspace_root, workflow_name=workflow_name)
 
     (core_dir / "current").mkdir(parents=True, exist_ok=True)
     (domain_dir / domain / "current").mkdir(parents=True, exist_ok=True)

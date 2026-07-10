@@ -390,7 +390,7 @@ def main(argv: list[str] | None = None) -> int:
     execution_binding: dict | None = None
 
     try:
-        group_cfg = _load_group(args.template_group, workspace_root=workspace_root)
+        group_cfg = _load_group(args.template_group, workspace_root=workspace_root, workflow_root=workflow_bundle_root)
         _validate_static_reference_files(workspace_root, group_cfg, template_group=args.template_group)
 
         if (args.task_graph_id or args.task_node_id) and args.template_group != "task_execution_v1":
@@ -936,7 +936,7 @@ def _execute_step_command(request_path: Path, result_path: Path | None = None) -
 
         spec_source = (request.step_spec_source or "backend").strip().lower()
         if spec_source == "global":
-            group_cfg = _load_group(request.template_group, workspace_root=workspace_root)
+            group_cfg = _load_group(request.template_group, workspace_root=workspace_root, workflow_root=workflow_bundle_root)
             step_cfg = group_cfg["step_configs"].get(request.step_name)
             if not step_cfg:
                 raise ValueError(f"Step {request.step_name!r} is not defined for template group {request.template_group!r}")
@@ -963,7 +963,7 @@ def _execute_step_command(request_path: Path, result_path: Path | None = None) -
                 request.step_name,
             )
         else:
-            group_cfg = _load_group(request.template_group, workspace_root=workspace_root)
+            group_cfg = _load_group(request.template_group, workspace_root=workspace_root, workflow_root=workflow_bundle_root)
             step_cfg = group_cfg["step_configs"].get(request.step_name)
             if not step_cfg:
                 raise ValueError(f"Step {request.step_name!r} is not defined for template group {request.template_group!r}")
@@ -1969,11 +1969,15 @@ def _ensure_delivery_folders(target_root: Path) -> None:
         (target_root / folder).mkdir(parents=True, exist_ok=True)
 
 
-def _load_group(group_name: str, workspace_root: Path | None = None) -> dict:
+def _load_group(
+    group_name: str,
+    workspace_root: Path | None = None,
+    workflow_root: Path | None = None,
+) -> dict:
     """Load a template group config, checking workflow packages first.
 
     Precedence:
-    1. ``workflows/<group_name>/workflow.toml`` (plugin package) — if found,
+    1. ``<workflow_root>/<group_name>/workflow.toml`` (plugin package) — if found,
        the package is parsed and adapted to the TEMPLATE_GROUPS dict format.
     2. ``TEMPLATE_GROUPS[group_name]`` in the runtime workflow bundle.
 
@@ -1981,8 +1985,12 @@ def _load_group(group_name: str, workspace_root: Path | None = None) -> dict:
     replace the monolithic ``template_groups.py``.
     """
     # Check for a plugin workflow package first
-    if workspace_root is not None:
-        bundle = discover_workflow_package(group_name, project_root=workspace_root)
+    if workspace_root is not None or workflow_root is not None:
+        bundle = discover_workflow_package(
+            group_name,
+            project_root=workspace_root,
+            workflow_root=workflow_root,
+        )
         if bundle is not None:
             group_dict = bundle_to_template_group_dict(bundle)
             # Stamp the bundle reference onto the dict for downstream use
