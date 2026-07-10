@@ -1473,7 +1473,7 @@ def _load_additional_sections(*, state: dict, step: str) -> str:
 # Workflow package context hooks
 # ---------------------------------------------------------------------------
 
-_CONTEXT_HOOK_CACHE: dict[str, bool] = {}
+_CONTEXT_HOOK_CACHE: dict[str, object | None] = {}
 
 
 def _apply_workflow_package_context_hooks(
@@ -1499,37 +1499,57 @@ def _apply_workflow_package_context_hooks(
     if ext_path is None:
         return
 
+    # Cache key: module path → loaded build_context_extensions callable (or None)
     cache_key = str(ext_path)
-    if cache_key in _CONTEXT_HOOK_CACHE:
-        return
 
+    if cache_key in _CONTEXT_HOOK_CACHE:
+        hooks_fn = _CONTEXT_HOOK_CACHE[cache_key]
+    else:
+        # First load — import the module and discover the hook function
+        hooks_fn = _load_context_extensions_module(ext_path, cache_key)
+        _CONTEXT_HOOK_CACHE[cache_key] = hooks_fn
+
+    if hooks_fn is not None:
+        try:
+            extensions = hooks_fn(state=state, step=step, step_cfg=step_cfg, ctx=ctx)
+            if isinstance(extensions, dict):
+                ctx.update(extensions)
+        except Exception:
+            import logging  # noqa: PLC0415
+
+            logging.getLogger(__name__).exception(
+                "Context extension hook failed for %s", ext_path
+            )
+
+
+def _load_context_extensions_module(
+    ext_path: Path, cache_key: str
+) -> object | None:
+    """Import ``context_extensions.py`` and return the hook callable.
+
+    Returns ``None`` when the file doesn't exist or loading fails, and
+    caches that result so we don't retry on every step.
+    """
     if not ext_path.is_file():
-        _CONTEXT_HOOK_CACHE[cache_key] = False
-        return
+        return None
 
     try:
         spec = importlib.util.spec_from_file_location(
             "workflow_context_extensions", ext_path
         )
         if spec is None or spec.loader is None:
-            _CONTEXT_HOOK_CACHE[cache_key] = False
-            return
+            return None
         mod = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(mod)
 
-        hooks_fn = getattr(mod, "build_context_extensions", None)
-        if hooks_fn is not None:
-            extensions = hooks_fn(state=state, step=step, step_cfg=step_cfg, ctx=ctx)
-            if isinstance(extensions, dict):
-                ctx.update(extensions)
-        _CONTEXT_HOOK_CACHE[cache_key] = True
+        return getattr(mod, "build_context_extensions", None)
     except Exception:
         import logging  # noqa: PLC0415
 
         logging.getLogger(__name__).exception(
             "Failed to load context extensions from %s", ext_path
         )
-        _CONTEXT_HOOK_CACHE[cache_key] = False
+        return None
 
 
 def build_context(

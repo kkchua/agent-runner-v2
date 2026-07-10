@@ -1,0 +1,285 @@
+[workflow]
+name = "00_master_docs_bootstrap_v2"
+version = "2"
+label = "Master Documentation Bootstrap v2"
+job_prefix = "00DOC"
+description = "Scans repo, generates project analysis, system overview, architecture docs, reviews, validates, and finalises bootstrap docs"
+visibility = "canonical"
+
+[workflow.init]
+step = "00_scan_repo_codebase"
+inputs = []
+default_max_rejects = 3
+
+# ---------------------------------------------------------------------------
+# Step 00 — scan repo
+# ---------------------------------------------------------------------------
+[[step]]
+name = "00_scan_repo_codebase"
+action = "scan_repo_codebase"
+mode = "bootstrap"
+
+[step.artifacts]
+produces = ["CODEBASE_SCAN_SNAPSHOT"]
+result_meta_key = "CODEBASE_SCAN_SNAPSHOT"
+
+# ---------------------------------------------------------------------------
+# Step 01 — generate codebase baseline (inventory + change impact)
+# ---------------------------------------------------------------------------
+[[step]]
+name = "01_generate_codebase_baseline"
+action = "sync_codebase_docs"
+mode = "bootstrap"
+
+[step.artifacts]
+required_inputs = ["CODEBASE_SCAN_SNAPSHOT"]
+produces = ["CODEBASE_CHANGE_IMPACT", "CODEBASE_INVENTORY"]
+result_meta_key = "CODEBASE_CHANGE_IMPACT"
+
+# ---------------------------------------------------------------------------
+# Step 02 — generate project analysis
+# ---------------------------------------------------------------------------
+[[step]]
+name = "02_generate_project_analysis"
+prompt = "prompts/02_generate_project_analysis.txt"
+enable_notifications = true
+
+[step.artifacts]
+required_inputs = ["CODEBASE_SCAN_SNAPSHOT", "CODEBASE_CHANGE_IMPACT", "CODEBASE_INVENTORY"]
+produces = ["PROJECT_ANALYSIS"]
+result_meta_key = "PROJECT_ANALYSIS"
+
+[step.coder]
+default = "qwen-architect"
+allowed = ["claude", "codex", "qwen-architect"]
+
+# ---------------------------------------------------------------------------
+# Step 03 — generate system overview docs
+# ---------------------------------------------------------------------------
+[[step]]
+name = "03_generate_system_overview_docs"
+prompt = "prompts/03_generate_system_overview_docs.txt"
+enable_notifications = true
+
+[step.artifacts]
+required_inputs = [
+    "CODEBASE_SCAN_SNAPSHOT", "CODEBASE_CHANGE_IMPACT",
+    "CODEBASE_INVENTORY", "PROJECT_ANALYSIS",
+]
+produces = [
+    "SYSTEM_DOCS_INDEX", "SYSTEM_DOC_STANDARD", "BUNDLE_TAXONOMY",
+    "BUNDLE_MIGRATION_PLAN", "SYSTEM_OVERVIEW", "BUSINESS_CAPABILITIES",
+    "FUNCTIONAL_SPEC", "NON_FUNCTIONAL_REQUIREMENTS",
+]
+result_meta_key = "SYSTEM_DOCS_INDEX"
+
+[step.coder]
+default = "qwen-architect"
+allowed = ["claude", "codex", "qwen-architect"]
+
+# ---------------------------------------------------------------------------
+# Step 04 — generate architecture docs
+# ---------------------------------------------------------------------------
+[[step]]
+name = "04_generate_architecture_docs"
+prompt = "prompts/04_generate_architecture_docs.txt"
+enable_notifications = true
+
+[step.artifacts]
+required_inputs = [
+    "CODEBASE_SCAN_SNAPSHOT", "CODEBASE_CHANGE_IMPACT",
+    "CODEBASE_INVENTORY", "PROJECT_ANALYSIS", "SYSTEM_DOCS_INDEX",
+]
+produces = [
+    "SYSTEM_DOCS_CHANGE_LOG", "SYSTEM_CONTEXT", "COMPONENT_ARCHITECTURE",
+    "DECISION_LOG", "SYSTEM_FILE_STRUCTURE", "DEVELOPER_GUIDE",
+    "RUNBOOK", "EXISTING_REPO_WORKFLOW_SOP",
+]
+result_meta_key = "SYSTEM_DOCS_CHANGE_LOG"
+
+[step.coder]
+default = "qwen-architect"
+allowed = ["claude", "codex", "qwen-architect"]
+
+# ---------------------------------------------------------------------------
+# Step 04b — generate integration docs
+# ---------------------------------------------------------------------------
+[[step]]
+name = "04b_generate_integration_docs"
+prompt = "prompts/04b_generate_integration_docs.txt"
+enable_notifications = true
+
+[step.artifacts]
+required_inputs = [
+    "CODEBASE_SCAN_SNAPSHOT", "CODEBASE_CHANGE_IMPACT",
+    "CODEBASE_INVENTORY", "PROJECT_ANALYSIS",
+]
+produces = ["INTEGRATION_MAP"]
+result_meta_key = "INTEGRATION_MAP"
+
+[step.artifacts.produced_document_status]
+artifact = "INTEGRATION_MAP"
+required_status = "draft"
+
+[step.coder]
+default = "qwen-architect"
+allowed = ["claude", "codex", "qwen-architect"]
+
+# ---------------------------------------------------------------------------
+# Step 04c — generate failure modes docs
+# ---------------------------------------------------------------------------
+[[step]]
+name = "04c_generate_failure_docs"
+prompt = "prompts/04c_generate_failure_docs.txt"
+enable_notifications = true
+
+[step.artifacts]
+required_inputs = [
+    "CODEBASE_SCAN_SNAPSHOT", "CODEBASE_CHANGE_IMPACT",
+    "CODEBASE_INVENTORY", "PROJECT_ANALYSIS",
+]
+produces = ["FAILURE_MODES"]
+result_meta_key = "FAILURE_MODES"
+
+[step.artifacts.produced_document_status]
+artifact = "FAILURE_MODES"
+required_status = "draft"
+
+[step.coder]
+default = "qwen-architect"
+allowed = ["claude", "codex", "qwen-architect"]
+
+# ---------------------------------------------------------------------------
+# Step 04d — generate architecture flow docs
+# ---------------------------------------------------------------------------
+[[step]]
+name = "04d_generate_architecture_flow_docs"
+prompt = "prompts/04d_generate_architecture_flow_docs.txt"
+enable_notifications = true
+
+[step.artifacts]
+required_inputs = [
+    "CODEBASE_SCAN_SNAPSHOT", "CODEBASE_CHANGE_IMPACT",
+    "CODEBASE_INVENTORY", "PROJECT_ANALYSIS",
+]
+produces = ["ARCHITECTURE_FLOW"]
+result_meta_key = "ARCHITECTURE_FLOW"
+
+[step.artifacts.produced_document_status]
+artifact = "ARCHITECTURE_FLOW"
+required_status = "draft"
+
+[step.coder]
+default = "qwen-architect"
+allowed = ["claude", "codex", "qwen-architect"]
+
+# ---------------------------------------------------------------------------
+# Step 05 — review master system docs
+# ---------------------------------------------------------------------------
+[[step]]
+name = "05_review_master_system_docs"
+prompt = "prompts/05_review_master_system_docs.txt"
+enable_notifications = true
+
+[step.artifacts]
+required_inputs = [
+    "CODEBASE_SCAN_SNAPSHOT", "CODEBASE_CHANGE_IMPACT",
+    "CODEBASE_INVENTORY", "PROJECT_ANALYSIS",
+    "SYSTEM_DOCS_INDEX", "SYSTEM_DOCS_CHANGE_LOG",
+    "INTEGRATION_MAP", "FAILURE_MODES", "ARCHITECTURE_FLOW",
+    "SYSTEM_CONTEXT", "COMPONENT_ARCHITECTURE", "DECISION_LOG",
+    "SYSTEM_FILE_STRUCTURE", "DEVELOPER_GUIDE", "RUNBOOK",
+]
+produces = ["REVIEW_FILE_SUGGESTED"]
+result_meta_key_from_context = "REVIEW_FILE_SUGGESTED_METAJSON"
+requires_human_approval_after = false
+
+[step.coder]
+default = "qwen-reviewer"
+allowed = ["claude", "codex", "qwen-reviewer"]
+must_differ = false
+
+[step.on_reject_refine]
+step = "06_refine_master_system_docs"
+artifact = "PROJECT_ANALYSIS"
+max_iterations = 2
+exhausted_failure_code = "MASTER_SYSTEM_DOC_REFINEMENT_EXHAUSTED"
+exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
+
+# ---------------------------------------------------------------------------
+# Step 06 — refine master system docs
+# ---------------------------------------------------------------------------
+[[step]]
+name = "06_refine_master_system_docs"
+prompt = "prompts/06_refine_master_system_docs.txt"
+
+[step.artifacts]
+required_inputs = [
+    "CODEBASE_SCAN_SNAPSHOT", "CODEBASE_CHANGE_IMPACT",
+    "CODEBASE_INVENTORY", "PROJECT_ANALYSIS",
+    "SYSTEM_DOCS_INDEX", "SYSTEM_DOCS_CHANGE_LOG",
+    "REVIEW_FILE_SUGGESTED_SUGGESTED",
+    "INTEGRATION_MAP", "FAILURE_MODES", "ARCHITECTURE_FLOW",
+]
+produces = [
+    "PROJECT_ANALYSIS", "SYSTEM_DOCS_INDEX", "SYSTEM_DOCS_CHANGE_LOG",
+    "INTEGRATION_MAP", "FAILURE_MODES", "ARCHITECTURE_FLOW",
+]
+target_artifact = "PROJECT_ANALYSIS"
+edit_mode = "in_place"
+result_meta_key = "PROJECT_ANALYSIS"
+loop_returns_to = "05_review_master_system_docs"
+
+[step.coder]
+default = "qwen-architect"
+allowed = ["claude", "codex", "qwen-architect"]
+
+# ---------------------------------------------------------------------------
+# Step 07 — validate codebase baseline
+# ---------------------------------------------------------------------------
+[[step]]
+name = "07_validate_codebase_baseline"
+action = "validate_codebase_docs"
+mode = "bootstrap"
+
+[step.artifacts]
+required_inputs = ["CODEBASE_SCAN_SNAPSHOT", "CODEBASE_CHANGE_IMPACT", "CODEBASE_INVENTORY"]
+produces = ["VALIDATION_FILE"]
+result_meta_key = "VALIDATION_FILE"
+
+# ---------------------------------------------------------------------------
+# Step 08 — validate master system docs
+# ---------------------------------------------------------------------------
+[[step]]
+name = "08_validate_master_system_docs"
+action = "validate_system_docs"
+mode = "bootstrap"
+enable_notifications = true
+
+[step.artifacts]
+required_inputs = [
+    "PROJECT_ANALYSIS", "SYSTEM_DOCS_INDEX", "SYSTEM_DOCS_CHANGE_LOG",
+    "INTEGRATION_MAP", "FAILURE_MODES", "ARCHITECTURE_FLOW",
+]
+produces = ["SYSTEM_DOCS_VALIDATION"]
+result_meta_key = "SYSTEM_DOCS_VALIDATION"
+
+# ---------------------------------------------------------------------------
+# Step 09 — finalize bootstrap
+# ---------------------------------------------------------------------------
+[[step]]
+name = "09_finalize_bootstrap"
+action = "finalize_bootstrap"
+mode = "bootstrap"
+enable_notifications = true
+
+[step.artifacts]
+required_inputs = [
+    "CODEBASE_SCAN_SNAPSHOT", "CODEBASE_CHANGE_IMPACT",
+    "CODEBASE_INVENTORY", "PROJECT_ANALYSIS",
+    "SYSTEM_DOCS_INDEX", "SYSTEM_DOCS_CHANGE_LOG",
+    "VALIDATION_FILE", "SYSTEM_DOCS_VALIDATION",
+    "INTEGRATION_MAP", "FAILURE_MODES", "ARCHITECTURE_FLOW",
+]
+produces = ["BOOTSTRAP_SUMMARY"]
+result_meta_key = "BOOTSTRAP_SUMMARY"

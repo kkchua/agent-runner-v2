@@ -267,6 +267,12 @@ def bundle_to_template_group_dict(bundle: WorkflowBundle) -> dict[str, Any]:
 
         step_configs[step_name] = cfg
 
+    # Stamp the bundle reference on each step config so downstream code
+    # (e.g. context hook injection in step_runner) can discover the
+    # workflow package's context_extensions.py.
+    for cfg in step_configs.values():
+        cfg["_workflow_bundle"] = bundle
+
     # Build the top-level group dict
     group: dict[str, Any] = {
         "job_prefix": bundle.job_prefix,
