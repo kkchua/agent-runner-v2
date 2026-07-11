@@ -11,6 +11,7 @@ Each definition is POSTed to the backend API at ``/api/admin/workflows/sync``.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import sys
