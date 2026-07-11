@@ -158,6 +158,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         p.add_argument("--project-root", default=".", help="Workspace directory containing the repo-local bootstrap docs.")
         p.add_argument("--source-root", default="", help="Optional explicit source directory to publish.")
         p.add_argument("--bundle-root", default="", help="Optional explicit package bundle destination.")
+        p.add_argument("--plugin-workflows-root", default="", help="Optional explicit plugin workflows directory (defaults to <project-root>/workflows).")
         ns = p.parse_args(raw[1:])
         ns.command = "bootstrap-publish"
         return ns
@@ -287,10 +288,12 @@ def main(argv: list[str] | None = None) -> int:
         workspace_root = Path(args.project_root or ".").resolve()
         source_root = Path(args.source_root).resolve() if args.source_root else None
         bundle_root = Path(args.bundle_root).resolve() if args.bundle_root else None
+        plugin_root = Path(args.plugin_workflows_root).resolve() if args.plugin_workflows_root else None
         result = publish_bootstrap_bundle(
             workspace_root,
             source_root=source_root,
             package_root=bundle_root,
+            plugin_workflows_root=plugin_root,
         )
         print(json.dumps(result, indent=2, ensure_ascii=False))
         return 0
@@ -1201,6 +1204,31 @@ def _build_worker_request_payload(
             )
         except Exception:
             spec = dict(step_execution_spec or {})
+    
+    # Always enrich backend spec with local workflow definition to ensure required_inputs are available
+    if mode in {"backend", "hybrid"}:
+        try:
+            from .job_state import get_template_group_cfg, build_step_execution_spec
+            group_cfg = get_template_group_cfg(
+                template_group=template_group,
+                workspace_root=workspace_path,
+                workflow_name=workflow_name or "default",
+            )
+            local_spec = build_step_execution_spec(
+                template_group=template_group,
+                step_name=step_name,
+                group_cfg=group_cfg,
+            )
+            # Fill in missing fields from local spec
+            if "required_inputs" not in spec and "required_inputs" in local_spec:
+                spec["required_inputs"] = local_spec["required_inputs"]
+            if "optional_inputs" not in spec and "optional_inputs" in local_spec:
+                spec["optional_inputs"] = local_spec["optional_inputs"]
+            if "produces" not in spec and "produces" in local_spec:
+                spec["produces"] = local_spec["produces"]
+        except Exception:
+            pass  # Fall back to backend-only spec if enrichment fails
+    
     input_artifacts = dict(run.get("input_payload") or {})
     required_artifact_keys = {
         item.get("artifact_key")
@@ -1888,27 +1916,6 @@ def _execute_backend_step_request(
             step_cfg=step_cfg,
             effective_root=effective_root,
         )
-        
-        # Send step-level notification if configured (for backend/daemon mode)
-        if step_result.status == "APPROVED":
-            print(f"[backend_mode] Step {step} completed successfully, checking for notifications", flush=True)
-            
-            # Update timestamp for duration calculation
-            from .job_state import now_iso
-            state["updated_at"] = now_iso()
-            
-            # Ensure state has workflow info for notifications
-            if "workflow_name" not in state:
-                state["workflow_name"] = request.template_group
-            if "template_group" not in state:
-                state["template_group"] = request.template_group
-            
-            print(f"[backend_mode] State keys: {list(state.keys())}", flush=True)
-            print(f"[backend_mode] workflow_name={state.get('workflow_name')}, template_group={state.get('template_group')}", flush=True)
-            print(f"[backend_mode] created_at={state.get('created_at')}, updated_at={state.get('updated_at')}", flush=True)
-
-            from .notification_manager import send_step_notification
-            send_step_notification("STEP_COMPLETED", state, step, step_cfg)
     except PreflightBlockedError as exc:
         failure = ExecutionFailure(
             failure_class="HUMAN_RETRY_REQUIRED",
