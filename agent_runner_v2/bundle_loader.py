@@ -5,6 +5,7 @@ from __future__ import annotations
 import importlib.util
 import json
 import shutil
+import sys
 from pathlib import Path
 from types import ModuleType
 
@@ -311,12 +312,12 @@ def init_workspace(
 
     workflows_dir = global_workflows_root()
     workflows_dir.mkdir(parents=True, exist_ok=True)
-    
-    # Seed the default workflow bundle (contains legacy TEMPLATE_GROUPS + plugin packages)
-    wf_root = seed_workflow_bundle(workflows_dir, workflow_name="default")
-    
-    # Also seed plugin workflow packages from repo into the default bundle
-    seeded_plugins = seed_workflow_packages(workspace_root, workflow_name="default")
+
+    # Seed the example workflow bundle (copied from bootstrap/workflows/default/)
+    wf_root = seed_workflow_bundle(workflows_dir, workflow_name="example")
+
+    # Also seed plugin workflow packages from repo into the example bundle
+    seeded_plugins = seed_workflow_packages(workspace_root, workflow_name="example")
 
     (core_dir / "current").mkdir(parents=True, exist_ok=True)
     (domain_dir / domain / "current").mkdir(parents=True, exist_ok=True)
