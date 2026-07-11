@@ -24,8 +24,11 @@ from .workflow_packages.loader import (
     load_workflow_package,
 )
 
-# Root of the ``workflows/`` directory containing plugin packages.
-_WORKFLOWS_DIR = PACKAGE_ROOT.parent / "workflows"
+# Root of the ``workflows/`` directory containing plugin packages IN BOOTSTRAP.
+# Plugin workflows are first developed in repo root workflows/, then published
+# to bootstrap/workflows/default/ via run-bootstrap-publish.bat. The sync script
+# loads from the bootstrap location (source of truth), not the dev location.
+_WORKFLOWS_DIR = PACKAGE_ROOT / "bootstrap" / "workflows" / "default"
 
 
 def _discover_plugin_workflows() -> dict[str, dict]:
@@ -56,16 +59,19 @@ def _load_all_workflows() -> dict[str, dict]:
     """Combine legacy ``TEMPLATE_GROUPS`` and plugin packages.
 
     Plugin packages take priority when a name exists in both sources.
+    Plugin packages are loaded from bootstrap/workflows/default/ (source of truth),
+    not from repo root workflows/ (development location).
     """
     workflows = dict(TEMPLATE_GROUPS)
     plugin = _discover_plugin_workflows()
     for name, definition in plugin.items():
         if name in workflows:
             print(
-                f"[sync] Plugin package {name!r} overrides legacy TEMPLATE_GROUPS entry.",
+                f"[sync] Bootstrap plugin {name!r} overrides legacy TEMPLATE_GROUPS entry.",
                 file=sys.stderr,
             )
         workflows[name] = definition
+    
     return workflows
 
 
