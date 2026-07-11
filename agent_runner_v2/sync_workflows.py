@@ -64,6 +64,11 @@ def _load_all_workflows() -> dict[str, dict]:
     """
     workflows = dict(TEMPLATE_GROUPS)
     plugin = _discover_plugin_workflows()
+    
+    # Debug: show what we're loading
+    print(f"[sync] Loaded {len(TEMPLATE_GROUPS)} workflows from TEMPLATE_GROUPS", file=sys.stderr)
+    print(f"[sync] Discovered {len(plugin)} plugin workflows from bootstrap", file=sys.stderr)
+    
     for name, definition in plugin.items():
         if name in workflows:
             print(
@@ -71,7 +76,7 @@ def _load_all_workflows() -> dict[str, dict]:
                 file=sys.stderr,
             )
         workflows[name] = definition
-    
+
     return workflows
 
 
