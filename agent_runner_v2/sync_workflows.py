@@ -162,6 +162,18 @@ def main() -> int:
     failed = False
     for workflow_name in workflow_names:
         definition = _strip_bundle_refs(workflows[workflow_name])
+        
+        # Debug: calculate hash locally to match backend calculation
+        source_hash = hashlib.sha256(
+            json.dumps(definition, sort_keys=True).encode("utf-8")
+        ).hexdigest()
+        
+        print(f"\n[{workflow_name}] Preparing sync:", file=sys.stderr)
+        print(f"  default_max_rejects: {definition.get('default_max_rejects')}", file=sys.stderr)
+        print(f"  steps count: {len(definition.get('steps', []))}", file=sys.stderr)
+        print(f"  step_configs count: {len(definition.get('step_configs', {}))}", file=sys.stderr)
+        print(f"  source_hash (first 16): {source_hash[:16]}...", file=sys.stderr)
+        
         try:
             response = _post_sync(
                 args.backend_url,
