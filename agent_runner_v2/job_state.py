@@ -16,11 +16,17 @@ import json
 import os
 import re
 import tempfile
+import time
 from pathlib import Path
 from typing import Any
 
 from .doc_paths import delivery_doc_rel
 
+from .execution_support import (
+    build_failure_envelope,
+    classify_pre_run_failure,
+    default_usage_summary,
+)
 from .exceptions import ArtifactMissingError, MetaJsonInvalidError, MetaJsonMissingError, PreflightBlockedError
 from .documentation_guardrails import MASTER_BOOTSTRAP_WORKFLOWS, master_bootstrap_artifact_candidates
 from .runtime_context import JOBS_ROOT, PROJECT_ROOT, get_workflow_module
@@ -124,6 +130,60 @@ def get_step_index(group_cfg: dict[str, Any], step: str) -> int:
     return group_cfg["steps"].index(step) + 1
 
 
+def _allocate_unique_step_dir(base_dir: Path) -> Path:
+    if not base_dir.exists():
+        return base_dir
+    next_run = 2
+    while True:
+        candidate = base_dir.with_name(f"{base_dir.name}_run{next_run}")
+        if not candidate.exists():
+            return candidate
+        next_run += 1
+
+
+def create_step_dir(
+    group_cfg: dict[str, Any],
+    state: dict[str, Any],
+    step: str,
+    *,
+    max_attempts: int = 20,
+    retry_delay_seconds: float = 0.1,
+) -> Path:
+    """Allocate and create a unique step directory robustly.
+
+    Windows can transiently deny access to an existing step folder during
+    reruns or interrupted jobs. In that case, advance to the next ``_runN``
+    suffix instead of failing the entire resume path immediately.
+    """
+    base_dir = make_step_dir(group_cfg, state, step)
+    candidate = base_dir
+    next_run = 2
+    attempts = 0
+
+    while attempts < max_attempts:
+        try:
+            candidate.mkdir(parents=True, exist_ok=False)
+            return candidate
+        except FileExistsError:
+            attempts += 1
+            candidate = base_dir.with_name(f"{base_dir.name}_run{next_run}")
+            next_run += 1
+        except PermissionError:
+            attempts += 1
+            if candidate.exists() and candidate.is_dir():
+                candidate = base_dir.with_name(f"{base_dir.name}_run{next_run}")
+                next_run += 1
+                time.sleep(retry_delay_seconds)
+                continue
+            if attempts >= max_attempts:
+                raise
+            time.sleep(retry_delay_seconds * attempts)
+
+    raise PermissionError(
+        f"Unable to allocate writable step directory for step {step!r} after {max_attempts} attempts under {base_dir.parent}"
+    )
+
+
 def make_step_dir(group_cfg: dict[str, Any], state: dict[str, Any], step: str) -> Path:
     # Use backend runtime step sequence for working dirs when available, fall back to definition order/index.
     idx = state.get("backend_step_sequence", state.get("backend_step_order", get_step_index(group_cfg, step)))
@@ -132,7 +192,8 @@ def make_step_dir(group_cfg: dict[str, Any], state: dict[str, Any], step: str) -
         suffix = f"_iter{ctx['loop_iteration']}"
     else:
         suffix = ""
-    return job_dir(state["template_group"], state["job_id"]) / f"{idx:02d}_{step}{suffix}"
+    base_dir = job_dir(state["template_group"], state["job_id"]) / f"{idx:02d}_{step}{suffix}"
+    return _allocate_unique_step_dir(base_dir)
 
 
 # ---------------------------------------------------------------------------
@@ -144,22 +205,30 @@ def load_json(path: Path) -> dict[str, Any]:
 
 
 def save_json(path: Path, data: dict[str, Any]) -> None:
-    ensure_dir(path.parent)
-    path.write_text(json.dumps(data, indent=2), encoding="utf-8")
+    save_json_atomic(path, data)
 
 
 def save_json_atomic(path: Path, data: dict[str, Any]) -> None:
     ensure_dir(path.parent)
-    fd, temp_name = tempfile.mkstemp(prefix=f".{path.name}.", dir=str(path.parent))
-    try:
-        with os.fdopen(fd, "w", encoding="utf-8") as handle:
-            json.dump(data, handle, indent=2)
-            handle.flush()
-            os.fsync(handle.fileno())
-        os.replace(temp_name, path)
-    except Exception:
-        Path(temp_name).unlink(missing_ok=True)
-        raise
+    attempts = 0
+    while True:
+        fd, temp_name = tempfile.mkstemp(prefix=f".{path.name}.", dir=str(path.parent))
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as handle:
+                json.dump(data, handle, indent=2)
+                handle.flush()
+                os.fsync(handle.fileno())
+            os.replace(temp_name, path)
+            return
+        except PermissionError:
+            attempts += 1
+            Path(temp_name).unlink(missing_ok=True)
+            if attempts >= 5:
+                raise
+            time.sleep(0.1 * attempts)
+        except Exception:
+            Path(temp_name).unlink(missing_ok=True)
+            raise
 
 
 def save_text(path: Path, content: str) -> None:
@@ -201,17 +270,6 @@ def append_failure_history(
         "failure_source": failure_source,
         "timestamp": now_iso(),
     })
-
-
-def build_failure_envelope(
-    *, failure_class: str, failure_code: str, failure_reason: str, failure_source: str,
-) -> dict[str, str]:
-    return {
-        "failure_class": failure_class,
-        "failure_code": failure_code,
-        "failure_reason": failure_reason,
-        "failure_source": failure_source,
-    }
 
 
 def record_step_usage(state: dict[str, Any], step: str, usage_data: dict[str, Any]) -> None:
@@ -258,14 +316,6 @@ def default_task_execution_binding() -> dict[str, Any]:
         "task_graph_id": None, "task_graph_file": None, "task_graph_checksum": None,
         "plan_id": None, "plan_file": None, "task_node_id": None,
         "task_title": None, "task_node_snapshot": None, "bound_at": None,
-    }
-
-
-def default_usage_summary() -> dict[str, Any]:
-    return {
-        "steps_with_usage": 0, "steps_without_usage": 0,
-        "input_tokens": None, "output_tokens": None,
-        "total_tokens": None, "cost": None, "duration_ms": None,
     }
 
 
@@ -1749,79 +1799,3 @@ def enforce_retry_limit_before_run(*, state: dict[str, Any], step: str, max_reje
         )
 
 
-# ---------------------------------------------------------------------------
-# Pre-run failure classification
-# ---------------------------------------------------------------------------
-
-def looks_like_transient_error(message: str) -> bool:
-    hints = ("connection error", "fetch failed", "timed out", "timeout", "temporar",
-              "rate limit", "429", "service unavailable", "api error", "network error")
-    return any(hint in message.lower() for hint in hints)
-
-
-def classify_pre_run_failure(exc: Exception) -> dict[str, str]:
-    message = str(exc).strip()
-    lowered = message.lower()
-    if looks_like_transient_error(message):
-        return build_failure_envelope(
-            failure_class="AUTO_RETRYABLE", failure_code="TRANSIENT_PRE_RUN_FAILURE",
-            failure_reason=message, failure_source="runner",
-        )
-    if isinstance(exc, FileNotFoundError):
-        code = "MISSING_REQUIRED_FILE"
-        if "prompt file not found" in lowered or "missing static reference file" in lowered:
-            code = "MISSING_TEMPLATE_OR_REFERENCE"
-        elif "missing required job init input" in lowered or "missing required input artifact" in lowered:
-            code = "MISSING_INPUT_ARTIFACT"
-        elif "job state not found" in lowered:
-            code = "MISSING_JOB_STATE"
-        return build_failure_envelope(
-            failure_class="HUMAN_RETRY_REQUIRED", failure_code=code,
-            failure_reason=message, failure_source="runner",
-        )
-    if isinstance(exc, MetaJsonMissingError):
-        return build_failure_envelope(
-            failure_class="HUMAN_RETRY_REQUIRED", failure_code="META_JSON_MISSING",
-            failure_reason=message, failure_source="runner",
-        )
-    if isinstance(exc, MetaJsonInvalidError):
-        return build_failure_envelope(
-            failure_class="HUMAN_RETRY_REQUIRED", failure_code="META_JSON_INVALID",
-            failure_reason=message, failure_source="runner",
-        )
-    if isinstance(exc, ArtifactMissingError):
-        return build_failure_envelope(
-            failure_class="HUMAN_RETRY_REQUIRED", failure_code="ARTIFACT_MISSING",
-            failure_reason=message, failure_source="validator",
-        )
-    if isinstance(exc, json.JSONDecodeError):
-        return build_failure_envelope(
-            failure_class="FATAL", failure_code="CORRUPTED_JOB_STATE",
-            failure_reason=message, failure_source="runner",
-        )
-    if isinstance(exc, ValueError):
-        if any(t in lowered for t in ("coder executable not found", "is not allowed for step", "no coder specified")):
-            code = "UNKNOWN_CODER" if "coder executable not found" in lowered else "INVALID_RUNNER_CONFIGURATION"
-            return build_failure_envelope(
-                failure_class="HUMAN_RETRY_REQUIRED", failure_code=code,
-                failure_reason=message, failure_source="runner",
-            )
-        if any(t in lowered for t in ("waiting for human approval", "waiting for human intervention",
-                                       "multiple active jobs match", "has reached max rejects",
-                                       "is not defined for template group")):
-            if "waiting for human approval" in lowered:
-                code = "WAITING_FOR_HUMAN_APPROVAL"
-            elif "multiple active jobs match" in lowered:
-                code = "MULTIPLE_ACTIVE_JOBS"
-            elif "has reached max rejects" in lowered:
-                code = "MAX_REJECTS_REACHED"
-            else:
-                code = "PRE_RUN_INTERVENTION_REQUIRED"
-            return build_failure_envelope(
-                failure_class="HUMAN_RETRY_REQUIRED", failure_code=code,
-                failure_reason=message, failure_source="runner",
-            )
-    return build_failure_envelope(
-        failure_class="FATAL", failure_code="PRE_RUN_FAILURE",
-        failure_reason=message, failure_source="runner",
-    )
