@@ -51,6 +51,7 @@ from .job_state import (
     classify_pre_run_failure,
     clear_last_failure,
     create_job,
+    create_step_dir,
     CURRENT_SCHEMA_VERSION,
     default_task_execution_binding,
     default_review_state,
@@ -64,7 +65,6 @@ from .job_state import (
     get_job_status,
     infer_seed_identity,
     load_job,
-    make_step_dir,
     migrate_job_state,
     prepare_state_for_retry,
     recover_exhausted_planning_job,
@@ -75,7 +75,7 @@ from .job_state import (
     task_execution_binding_current_item,
     _update_document_status,
 )
-from .model_config import resolve_coder
+from .model_config import resolve_coder, resolve_coder_role, resolve_role_alias
 from .runner_logger import log_resolver
 from .runtime_context import (
     PROJECT_ROOT, RUNNER_ROOT, JOBS_ROOT, ARTIFACT_ROOT, PACKAGE_ROOT,
@@ -84,7 +84,7 @@ from .runtime_context import (
 )
 from .constants import RUN_AGENT_REQUIRED_DOC_DIRS, codebase_doc_rel, delivery_doc_rel, system_doc_rel
 from .doc_paths import repo_doc_rel
-from .constants import known_artifact_paths
+from .constants import get_master_docs_output_paths, known_artifact_paths, legacy_artifact_paths
 from .step_runner import (
     StepResult,
     build_context,
@@ -106,6 +106,7 @@ from .workflow_packages.loader import bundle_to_template_group_dict, load_workfl
 __version__ = "0.1.0"
 from .execution_request import ExecutionRequest
 from .execution_result import ExecutionFailure, ExecutionResult
+from .execution_core import execute_routed_step, invoke_prepared_step
 from .workflow_router import route_after_failure, route_after_step
 from .workflow_specs import reconcile_step_execution_spec
 from .workflow_specs import build_step_execution_spec, get_template_group_cfg
@@ -807,33 +808,27 @@ def main(argv: list[str] | None = None) -> int:
     _mark_review_started(state, step=step, step_cfg=step_cfg, coder_used=coder_used)
     save_job(args.template_group, state["job_id"], state)
 
-    # --- Core execution ---
-    try:
-        step_result = _execute_prepared_step(
-            prepared=prepared,
-            template_group=args.template_group,
-            group_cfg=group_cfg,
-            state=state,
-            step=step,
-            step_cfg=step_cfg,
-            effective_root=effective_root,
-        )
-    except Exception as exc:
+    routed = execute_routed_step(
+        executor=_execute_prepared_step,
+        failure_router=route_after_failure,
+        step_router=route_after_step,
+        prepared=prepared,
+        group_name=args.template_group,
+        group_cfg=group_cfg,
+        state=state,
+        step=step,
+        step_cfg=step_cfg,
+        coder_used=coder_used,
+        max_rejects=max_rejects,
+        effective_root=effective_root,
+    )
+    if routed.failure is not None:
         actor = f"action={prepared.action_name}" if prepared.action_name else f"coder={coder_used}"
-        print(f"[{_now_iso()}] {actor} step={step} status=FAILED error={type(exc).__name__}", flush=True)
-        state, exit_code = route_after_failure(
-            group_name=args.template_group,
-            state=state,
-            step=step,
-            step_cfg=step_cfg,
-            coder_used=coder_used,
-            exc=exc,
-            max_rejects=max_rejects,
-            usage_data=default_usage_summary(),
-        )
+        print(f"[{_now_iso()}] {actor} step={step} status=FAILED error={type(routed.failure.exception).__name__}", flush=True)
+        state = routed.state
         print(json.dumps({
             "status": "REJECTED",
-            "remark": str(exc),
+            "remark": routed.failure.failure_reason,
             "job_status": get_job_status(state),
             "job_id": state["job_id"],
             "template_group": state["template_group"],
@@ -847,19 +842,12 @@ def main(argv: list[str] | None = None) -> int:
             "max_rejects": max_rejects,
             "step_dir": _safe_relative_to(step_dir, JOBS_ROOT),
         }, indent=2))
-        return exit_code
+        return routed.exit_code
 
-    # --- Route result ---
-    state, exit_code = route_after_step(
-        group_name=args.template_group,
-        group_cfg=group_cfg,
-        state=state,
-        step=step,
-        step_cfg=step_cfg,
-        step_result=step_result,
-        coder_used=coder_used,
-        max_rejects=max_rejects,
-    )
+    assert routed.step_result is not None
+    step_result = routed.step_result
+    state = routed.state
+    exit_code = routed.exit_code
 
     # Save result.json for diagnostics
     _save_json(step_dir / "result.json", {
@@ -1626,12 +1614,12 @@ def _build_execution_state(*, request: ExecutionRequest, group_cfg: dict[str, An
 
 
 DELIVERY_SCAFFOLD_PUBLISH_PATHS: dict[str, str] = {
-    "PROJECT_ANALYSIS": system_doc_rel("PROJECT_ANALYSIS.md"),
-    "DELIVERY_SOP": system_doc_rel("WORKFLOW_SOP_v1.md"),
-    "DELIVERY_STATUS_RULES": system_doc_rel("DELIVERY_STATUS_RULES_v1.md"),
+    "PROJECT_ANALYSIS": codebase_doc_rel("00_analysis/PROJECT_ANALYSIS.md"),
+    "DELIVERY_SOP": delivery_doc_rel("00_standards/WORKFLOW_SOP_v1.md"),
+    "DELIVERY_STATUS_RULES": delivery_doc_rel("00_standards/DELIVERY_STATUS_RULES_v1.md"),
     "CODEBASE_DOC_SOP": codebase_doc_rel("00_standards/CODEBASE_DOC_SOP_v1.md"),
     "CODEBASE_DOC_STATUS_RULES": codebase_doc_rel("00_standards/CODEBASE_DOC_STATUS_RULES_v1.md"),
-    "EXISTING_REPO_WORKFLOW_SOP": system_doc_rel("EXISTING_REPO_WORKFLOW_SOP.md"),
+    "EXISTING_REPO_WORKFLOW_SOP": delivery_doc_rel("00_standards/EXISTING_REPO_WORKFLOW_SOP.md"),
     "DELIVERY_VALIDATION_TEMPLATE": system_doc_rel("templates/delivery/08_delivery_validation_template.md"),
     "DELIVERY_TEMPLATE_REGISTRY": system_doc_rel("templates/delivery/01_delivery_template_registry.md"),
     "DELIVERY_INITIATIVE_TEMPLATE": system_doc_rel("templates/delivery/02_delivery_initiative_template.md"),
@@ -1657,6 +1645,7 @@ class PreparedStepExecution:
     post_action: str = ""  # Action to run after LLM completes (for LLM_Action type)
     coder_used: str = "action"
     coder_alias: str | None = None
+    coder_role: str | None = None
     coder_config: dict[str, Any] | None = None
     context: dict[str, str] = field(default_factory=dict)
     prompt_path: Path | None = None
@@ -1684,8 +1673,7 @@ def _prepare_step_execution(
     ensure_planning_task_queue_integrity(state, step=step)
     ensure_execution_task_binding_integrity(state, step=step)
 
-    step_dir = make_step_dir(group_cfg, state, step)
-    step_dir.mkdir(parents=True, exist_ok=True)
+    step_dir = create_step_dir(group_cfg, state, step)
     # Ensure PROGRESS_FILE resolves to the same step directory as make_step_dir
     state["backend_step_dir_rel"] = str(step_dir)
 
@@ -1716,7 +1704,7 @@ def _prepare_step_execution(
             context=context,
         )
 
-    coder_used, coder_alias, coder_config = _resolve_step_coder(
+    coder_used, coder_alias, coder_role, coder_config = _resolve_step_coder(
         group_cfg=group_cfg,
         state=state,
         step=step,
@@ -1744,6 +1732,7 @@ def _prepare_step_execution(
         step_dir=step_dir,
         coder_used=coder_used,
         coder_alias=coder_alias,
+        coder_role=coder_role,
         coder_config=coder_config,
         context=context,
         prompt_path=prompt_path,
@@ -1766,6 +1755,12 @@ def _augment_generated_doc_prompt(
 
     banner = managed_banner(workflow=template_group, step=step)
     manifest = generated_doc_manifest(template_group=template_group, state=state)
+    frontmatter_contract = _generated_doc_frontmatter_contract(
+        template_group=template_group,
+        step=step,
+        step_cfg=step_cfg,
+        state=state,
+    )
     return (
         template_text
         + "\n\n## Workflow-Generated Document Rule\n\n"
@@ -1773,9 +1768,100 @@ def _augment_generated_doc_prompt(
         + f"- Add this exact banner immediately after the frontmatter of each generated markdown file:\n\n{banner}"
         + "- If the file uses frontmatter, include `managed_by: workflow-generated` in that frontmatter.\n"
         + "- Do not rename the target files.\n"
+        + frontmatter_contract
         + "- Use the generated-doc inventory below as the authoritative protected set for this workflow.\n\n"
         + manifest
     )
+
+
+def _generated_doc_frontmatter_contract(
+    *,
+    template_group: str,
+    step: str,
+    step_cfg: dict[str, Any],
+    state: dict[str, Any],
+) -> str:
+    if template_group not in MASTER_BOOTSTRAP_WORKFLOWS:
+        return ""
+
+    contract_rows = _master_bootstrap_frontmatter_rows(step_cfg=step_cfg, state=state)
+    if not contract_rows:
+        return ""
+
+    lines = [
+        "",
+        "- Every generated markdown file for this step MUST include YAML frontmatter with these exact fields:",
+        "  - `template_id`",
+        "  - `version: \"1.0.0\"`",
+        "  - `doc_type`",
+        "  - `managed_by: \"workflow-generated\"`",
+        "  - `generated_at: <ISO timestamp>`",
+        f"  - `workflow: \"{template_group}\"`",
+        f"  - `step: \"{step}\"`",
+        "  - `change_id: <job id from context>`",
+        "- Do not use `created`, `generated`, or `status` as substitutes for `version`, `doc_type`, or `generated_at`.",
+        "- Use this exact YAML shape at the top of every generated markdown file:",
+        "",
+        "```yaml",
+        "---",
+        "template_id: \"TEMPLATE-ID\"",
+        "version: \"1.0.0\"",
+        "doc_type: \"system-or-codebase\"",
+        "managed_by: \"workflow-generated\"",
+        "generated_at: \"<ISO timestamp>\"",
+        f"workflow: \"{template_group}\"",
+        f"step: \"{step}\"",
+        "change_id: \"<job id>\"",
+        "---",
+        "```",
+        "",
+        "- For this step, use these exact frontmatter identifiers:",
+    ]
+    for rel_path, template_id, doc_type in contract_rows:
+        lines.append(f"  - `{rel_path}` -> `template_id: \"{template_id}\"`, `doc_type: \"{doc_type}\"`")
+    lines.append("")
+    return "\n".join(lines)
+
+
+def _master_bootstrap_frontmatter_rows(
+    *,
+    step_cfg: dict[str, Any],
+    state: dict[str, Any],
+) -> list[tuple[str, str, str]]:
+    metadata_by_artifact = {
+        "PROJECT_ANALYSIS": ("SYS-00-PA", "system"),
+        "SYSTEM_DOCS_INDEX": ("SYS-00-IDX", "system"),
+        "SYSTEM_DOC_STANDARD": ("SYS-00-DS", "system"),
+        "BUNDLE_TAXONOMY": ("SYS-00-BT", "system"),
+        "BUNDLE_MIGRATION_PLAN": ("SYS-00-BMP", "system"),
+        "SYSTEM_OVERVIEW": ("SYS-00-SO", "system"),
+        "BUSINESS_CAPABILITIES": ("SYS-00-BC", "system"),
+        "FUNCTIONAL_SPEC": ("SYS-00-FS", "system"),
+        "NON_FUNCTIONAL_REQUIREMENTS": ("SYS-00-NFR", "system"),
+        "SYSTEM_CONTEXT": ("SYS-03-CTX", "system"),
+        "COMPONENT_ARCHITECTURE": ("SYS-03-CA", "system"),
+        "DECISION_LOG": ("SYS-03-DL", "system"),
+        "SYSTEM_FILE_STRUCTURE": ("SYS-03-SF", "system"),
+        "DEVELOPER_GUIDE": ("ENG-01-DG", "system"),
+        "RUNBOOK": ("OPS-01-RB", "system"),
+        "EXISTING_REPO_WORKFLOW_SOP": ("SYS-00-ERWS", "system"),
+        "SYSTEM_DOCS_CHANGE_LOG": ("SYS-00-CL", "system"),
+        "INTEGRATION_MAP": ("CB-04-IM", "codebase"),
+        "FAILURE_MODES": ("CB-04-FM", "codebase"),
+        "ARCHITECTURE_FLOW": ("CB-04-AF", "codebase"),
+    }
+    job_id = str(state.get("job_id") or "{job_id}")
+    mode = str((step_cfg.get("mode") or state.get("current_mode") or "bootstrap"))
+    output_paths = get_master_docs_output_paths(job_id=job_id, mode=mode)
+    default_paths = known_artifact_paths()
+    rows: list[tuple[str, str, str]] = []
+    for artifact_key in list(step_cfg.get("produces") or []):
+        metadata = metadata_by_artifact.get(str(artifact_key))
+        rel_path = output_paths.get(str(artifact_key)) or default_paths.get(str(artifact_key))
+        if metadata is None or not rel_path or not str(rel_path).endswith(".md"):
+            continue
+        rows.append((str(rel_path), metadata[0], metadata[1]))
+    return rows
 
 
 def _execute_prepared_step(
@@ -1907,15 +1993,6 @@ def _execute_backend_step_request(
             cli_coder=request.coder_override or None,
         )
         coder_used = prepared.coder_used
-        step_result = _execute_prepared_step(
-            prepared=prepared,
-            template_group=request.template_group,
-            group_cfg=group_cfg,
-            state=state,
-            step=step,
-            step_cfg=step_cfg,
-            effective_root=effective_root,
-        )
     except PreflightBlockedError as exc:
         failure = ExecutionFailure(
             failure_class="HUMAN_RETRY_REQUIRED",
@@ -1933,6 +2010,28 @@ def _execute_backend_step_request(
             failure_source=envelope["failure_source"],
         )
         return ExecutionResult(status="failed", outcome="failed", step_name=step, coder_used=coder_used, failure=failure)
+
+    attempt = invoke_prepared_step(
+        executor=_execute_prepared_step,
+        prepared=prepared,
+        template_group=request.template_group,
+        group_cfg=group_cfg,
+        state=state,
+        step=step,
+        step_cfg=step_cfg,
+        effective_root=effective_root,
+    )
+    if attempt.failure is not None:
+        failure = ExecutionFailure(
+            failure_class=attempt.failure.failure_class,
+            failure_code=attempt.failure.failure_code,
+            failure_reason=attempt.failure.failure_reason,
+            failure_source=attempt.failure.failure_source,
+        )
+        return ExecutionResult(status="failed", outcome="failed", step_name=step, coder_used=coder_used, failure=failure)
+
+    assert attempt.step_result is not None
+    step_result = attempt.step_result
 
     review = None
     if step_cfg and step_cfg.get("on_reject_refine"):
@@ -2072,9 +2171,24 @@ def _validate_static_reference_files(workspace_root: Path, group_cfg: dict | Non
     
     # These are repo-based artifacts, NOT part of the global bootstrap bundle
     REPO_BASED_KEYS = {
+        "PROJECT_ANALYSIS",
+        "DELIVERY_AGENTS",
+        "DELIVERY_AGENT_PLANNER",
+        "DELIVERY_AGENT_TASK_DECOMPOSER",
+        "DELIVERY_AGENT_IMPL_PLANNER",
+        "DELIVERY_AGENT_EXECUTOR",
+        "DELIVERY_AGENT_REVIEWER",
+        "DELIVERY_AGENT_MEMORY_MANAGER",
+        "DELIVERY_STATUS_RULES",
+        "WORKFLOW_SOP",
+        "DELIVERY_SOP",
         "CODEBASE_DOC_SOP",
         "CODEBASE_DOC_STATUS_RULES",
         "CODEBASE_INVENTORY",
+        "EXISTING_REPO_WORKFLOW_SOP",
+        "INTEGRATION_MAP",
+        "FAILURE_MODES",
+        "ARCHITECTURE_FLOW",
     }
 
     global_bundle_root = core_bundles_root() / "current"
@@ -2115,6 +2229,7 @@ def _missing_artifacts(keys: list[str], state: dict) -> list[str]:
         state["artifacts"] = {}
     artifacts = state["artifacts"]
     known_paths = known_artifact_paths()
+    legacy_paths = legacy_artifact_paths()
     for key in keys:
         value = artifacts.get(key)
         if value and (ARTIFACT_ROOT / value).exists():
@@ -2125,7 +2240,12 @@ def _missing_artifacts(keys: list[str], state: dict) -> list[str]:
             # Auto-populate the artifact in job state
             artifacts[key] = known_path
             continue
-        missing.append(key)
+        for legacy_path in legacy_paths.get(key, []):
+            if legacy_path and (ARTIFACT_ROOT / legacy_path).exists():
+                artifacts[key] = legacy_path
+                break
+        else:
+            missing.append(key)
     return missing
 
 
@@ -2144,16 +2264,26 @@ def _parse_key_value_pairs(values: list[str]) -> dict[str, str]:
 
 def _resolve_step_coder(
     *, group_cfg: dict, state: dict, step: str, step_cfg: dict, cli_coder: str | None
-) -> tuple[str, str | None, dict | None]:
-    """Returns (resolved_coder, original_alias, resolved_config)."""
+) -> tuple[str, str | None, str | None, dict | None]:
+    """Returns (resolved_coder, original_alias, resolved_role, resolved_config)."""
     coder_cfg = step_cfg.get("coder", {})
+    bundle = step_cfg.get("_workflow_bundle")
+    bundle_root = getattr(bundle, "bundle_root", None)
+    default_role = coder_cfg.get("default_role")
+    allowed_roles = list(coder_cfg.get("allowed_roles") or [])
     default_coder = coder_cfg.get("default")
-    allowed_coders = coder_cfg.get("allowed", [])
-    chosen = cli_coder.strip() if cli_coder else default_coder
+    allowed_coders = list(coder_cfg.get("allowed") or [])
+    chosen = cli_coder.strip() if cli_coder else (default_role or default_coder)
     if not chosen:
         raise ValueError(f"No coder specified and no default coder configured for step {step!r}")
 
     original = chosen
+    resolved_role: str | None = None
+    role_alias = resolve_role_alias(original, bundle_root=bundle_root)
+    if role_alias:
+        resolved_role = original
+        chosen = role_alias
+
     resolved_config = resolve_coder(chosen)
     if resolved_config is not None:
         actual_coder = resolved_config.get("coder", chosen)
@@ -2170,7 +2300,11 @@ def _resolve_step_coder(
     # The allowed list contains alias names (e.g. 'qwen-architect') or direct
     # coder names (e.g. 'claude', 'codex'), NOT resolved backend executables.
     check_name = original if original != chosen else chosen
-    if allowed_coders and check_name not in allowed_coders:
+    if allowed_roles:
+        role_name = resolved_role or check_name
+        if role_name not in allowed_roles:
+            raise ValueError(f"Coder role {role_name!r} is not allowed for step {step!r}. Allowed roles: {allowed_roles}")
+    elif allowed_coders and check_name not in allowed_coders:
         raise ValueError(f"Coder {check_name!r} is not allowed for step {step!r}. Allowed: {allowed_coders}")
     if coder_cfg.get("must_differ_from_previous_step"):
         idx = group_cfg["steps"].index(step)
@@ -2181,7 +2315,7 @@ def _resolve_step_coder(
                 raise ValueError(
                     f"Coder {chosen!r} is not allowed for step {step!r} because it matches previous step {prev_step!r}"
                 )
-    return chosen, original if original != chosen else None, resolved_config
+    return chosen, original if original != chosen else None, resolved_role, resolved_config
 
 
 def _task_execution_binding_identity(binding: dict | None) -> tuple[str | None, str | None]:
@@ -2409,4 +2543,9 @@ if __name__ == "__main__":
     try:
         sys.exit(main())
     except KeyboardInterrupt:
+        try:
+            from .coder_adapters import abort_active_coder_processes
+            abort_active_coder_processes(reason="KeyboardInterrupt")
+        except Exception:
+            pass
         sys.exit(130)
