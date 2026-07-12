@@ -54,6 +54,7 @@ from .constants import (
     SIDECAR_INSTRUCTION_TEMPLATE as CONSTANTS_SIDECAR_INSTRUCTION_TEMPLATE,
     TOOL_INSTRUCTION_TEMPLATE as CONSTANTS_TOOL_INSTRUCTION_TEMPLATE,
 )
+from .bundle_governance import render_prompt_governance_block
 from .runtime_context import (
     ARTIFACT_ROOT,
     JOBS_ROOT,
@@ -311,6 +312,14 @@ def run_step(
         project_root=project_root,
         state=state,
     )
+    _validate_declared_produced_artifacts_exist(
+        artifacts=artifacts,
+        produces=produces,
+        context=context,
+        state=state,
+        project_root=project_root,
+        step=step,
+    )
 
     # Print Doc ID and sidecar file path to console for visibility
     result_key = step_cfg.get("result_meta_key") or step_cfg.get("result_meta_key_from_context", "")
@@ -401,6 +410,7 @@ def run_action(
             "status": result.status,
             "remark": result.remark,
             "artifacts": dict(result.artifacts or {}),
+            **({"reject_code": result.reject_code} if result.reject_code else {}),
             "recorded_at": finished_at,
         },
     })
@@ -662,6 +672,50 @@ def _validate_artifact_files_exist(
         )
 
 
+def _validate_declared_produced_artifacts_exist(
+    *,
+    artifacts: dict[str, str],
+    produces: list[str],
+    context: dict[str, str],
+    state: dict[str, Any],
+    project_root: Path,
+    step: str,
+) -> None:
+    """Require every declared produced artifact to exist on disk for APPROVED LLM steps.
+
+    Unlike `_validate_artifact_files_exist`, this enforces the full `produces`
+    contract, not just the subset of artifact paths explicitly returned by the model.
+    """
+    if not produces:
+        return
+
+    missing: list[str] = []
+    for artifact_key in produces:
+        path_str = str(artifacts.get(artifact_key) or "").strip()
+        if not path_str:
+            path_str = _resolve_contract_path_from_context(
+                artifact_key=artifact_key,
+                context=context,
+                state=state,
+            )
+        if not path_str:
+            missing.append(f"{artifact_key} (no resolved output path)")
+            continue
+        resolved = resolve_repo_or_runtime_path(
+            path_str,
+            project_root=project_root,
+            runtime_root=JOBS_ROOT,
+        )
+        if not resolved.exists():
+            missing.append(f"{artifact_key} -> {path_str}")
+
+    if missing:
+        raise ArtifactMissingError(
+            f"Step '{step}' was approved but declared produced artifacts are missing on disk: {missing}",
+            missing=missing,
+        )
+
+
 def _validate_artifacts_in_produces_list(
     *,
     artifacts: dict[str, str],
@@ -690,6 +744,10 @@ def _validate_artifacts_in_produces_list(
     normalized_artifacts = {}
     for artifact_key, artifact_path in artifacts.items():
         normalized_key = _normalize_artifact_contract_key(artifact_key)
+        if normalized_key == "README" and "SYSTEM_DOCS_INDEX" in allowed:
+            normalized_key = "SYSTEM_DOCS_INDEX"
+        elif normalized_key == "CHANGE_LOG" and "SYSTEM_DOCS_CHANGE_LOG" in allowed:
+            normalized_key = "SYSTEM_DOCS_CHANGE_LOG"
         normalized_artifacts[normalized_key] = artifact_path
     
     # Check each normalized artifact against produces list
@@ -1100,7 +1158,7 @@ def _set_bug_fix_aliases(*, ctx: dict[str, str], state: dict, step: str, artifac
 
 
 def _set_master_docs_aliases(*, ctx: dict[str, str], state: dict, step: str, artifacts: dict[str, Any], produces: list[str]) -> None:
-    if state.get("template_group") != "00_master_docs_bootstrap_v1":
+    if state.get("template_group") not in {"00_master_docs_bootstrap_v1", "00_core_governance_bootstrap_v1"}:
         return
 
     step_names = list(_workflow_module().TEMPLATE_GROUPS.get(state.get("template_group", ""), {}).get("steps", []))
@@ -1719,7 +1777,7 @@ def build_context(
     )
 
     if not (current_queue_item_id or current_task_id or current_task_node_id or current_task_title):
-        from .job_state import task_queue_current_item, task_execution_binding_current_item
+        from .task_runtime import task_queue_current_item, task_execution_binding_current_item
         current_item = task_queue_current_item(state) or task_execution_binding_current_item(state)
         current_queue_item_id = str((current_item or {}).get("queue_item_id") or "")
         current_task_id = str(
@@ -1959,19 +2017,20 @@ def build_context(
     ctx["SITE_LAYOUT_TEMPLATE"] = theme.get("layout_template", "")
     ctx["SITE_THEME_CSS"] = theme.get("theme_css", "")
     ctx["SITE_LAYOUT_INSTRUCTIONS"] = theme.get("layout_instructions", "")
-    ctx["ALLOWED_WRITE_PATHS"] = _prompt_allowed_write_paths(
-        step_cfg=step_cfg or {},
-        state=state,
-        context=ctx,
-    )
 
     # Run workflow package context hooks (from context_extensions.py).
-    # Runs at the very end so extensions can override any value set above.
+    # Must run before _prompt_allowed_write_paths so artifact paths are available.
     _apply_workflow_package_context_hooks(
         ctx=ctx,
         state=state,
         step=step,
         step_cfg=step_cfg,
+    )
+
+    ctx["ALLOWED_WRITE_PATHS"] = _prompt_allowed_write_paths(
+        step_cfg=step_cfg or {},
+        state=state,
+        context=ctx,
     )
 
     return ctx
@@ -2074,6 +2133,19 @@ def render_prompt(template_text: str, context: dict[str, str], step_cfg: dict | 
             block = block.replace(f"{{{key}}}", _stringify_prompt_value(value))
         rendered = rendered + block
         print("[render_prompt] TOOL_INSTRUCTION appended", flush=True)
+    workflow_bundle = (step_cfg or {}).get("_workflow_bundle")
+    governance = getattr(workflow_bundle, "governance", None)
+    if workflow_bundle is not None and governance is not None and governance.include_in_prompts:
+        prompt_targets = set(governance.prompt_targets or ["all"])
+        current_step = str(render_context.get("STEP_NAME", ""))
+        if "all" in prompt_targets or current_step in prompt_targets:
+            rendered += render_prompt_governance_block(
+                governance,
+                bundle_name=workflow_bundle.name,
+                bundle_label=workflow_bundle.label,
+                step_name=current_step,
+            )
+            print("[render_prompt] BUNDLE_GOVERNANCE appended", flush=True)
     if render_context.get("CODER_IMPLEMENTATION_SOP_PATH"):
         sop_block = CODER_SOP_INSTRUCTION_TEMPLATE
         for key, value in render_context.items():
@@ -2177,6 +2249,8 @@ def _review_filename_date_code() -> str:
 
 def _review_step_code(step: str) -> str:
     return {
+        "audit_core_governance_accuracy": "acore",
+        "review_core_governance_docs": "rcore",
         "review_master_system_docs": "rmaster",
         "review_impl": "rimpl",
         "review_pre_init": "rpre",
@@ -2228,6 +2302,13 @@ def _build_review_target_identifier(*, artifact_key: str, artifact_path: str) ->
 
 def _build_new_review_file_path(*, state: dict, step: str, step_cfg: dict) -> str:
     template_group = str(state.get("template_group") or "")
+    if template_group == "00_core_governance_bootstrap_v1" and step == "audit_core_governance_accuracy":
+        job_id = str(state.get("job_id") or "00CORE")
+        return system_doc_rel(f"{job_id}-core-governance-audit.md")
+    if template_group == "00_core_governance_bootstrap_v1" and step == "review_core_governance_docs":
+        job_id = str(state.get("job_id") or "00CORE")
+        return system_doc_rel(f"{job_id}-core-governance-review.md")
+
     if template_group in MASTER_BOOTSTRAP_WORKFLOWS and step == "05_review_master_system_docs":
         job_id = str(state.get("job_id") or "00DOC")
         return system_doc_rel(f"{job_id}-bootstrap-validation.md")
@@ -2414,7 +2495,7 @@ def _build_impl_file_path(*, state: dict) -> str:
     Naming: `delivery_doc_rel("04_implementation_plans")` / IMPL-YYYYMMDD-NN_title-slug.md
     Sequence number is global per date (not per-slug) to avoid ID collisions.
     """
-    from .job_state import task_execution_binding_current_item, task_queue_current_item
+    from .task_runtime import task_execution_binding_current_item, task_queue_current_item
 
     current_item = task_queue_current_item(state) or task_execution_binding_current_item(state)
     title = str((current_item or {}).get("title") or "")
@@ -2450,7 +2531,7 @@ def _build_codebase_change_impact_path(*, state: dict) -> str:
             seq += 1
         return str(PurePath(str(candidate.relative_to(Path(ARTIFACT_ROOT)))))
 
-    from .job_state import task_execution_binding_current_item, task_queue_current_item
+    from .task_runtime import task_execution_binding_current_item, task_queue_current_item
 
     current_item = task_queue_current_item(state) or task_execution_binding_current_item(state)
     task_id = str((current_item or {}).get("task_id") or (current_item or {}).get("task_node_id") or "").strip()
@@ -2617,7 +2698,7 @@ def _task_source_traceability_metadata(state: dict) -> dict[str, str | None]:
             content = tgp.read_text(encoding="utf-8")
             source_task_graph_id = (_extract_metadata_value(content, "Task Graph ID") or "").strip() or None
 
-    from .job_state import task_queue_current_item, task_execution_binding_current_item
+    from .task_runtime import task_queue_current_item, task_execution_binding_current_item
     current_item = task_queue_current_item(state) or task_execution_binding_current_item(state)
     source_task_node_id = str(
         (current_item or {}).get("task_node_id") or (current_item or {}).get("task_id") or ""

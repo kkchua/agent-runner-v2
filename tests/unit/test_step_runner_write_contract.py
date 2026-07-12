@@ -1,18 +1,23 @@
 from __future__ import annotations
 
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
 from agent_runner_v2.exceptions import ArtifactMissingError
+from agent_runner_v2.action_result import ActionResult
 from agent_runner_v2.step_runner import (
+    _set_master_docs_aliases,
     _resolve_meta_json_path,
     _resolve_progress_file_path,
     _resolve_allowed_write_paths,
     _snapshot_allowed_write_roots,
+    _validate_declared_produced_artifacts_exist,
     _validate_artifacts_in_produces_list,
     _validate_step_write_contract_config,
     _verify_only_allowed_paths_changed,
+    run_action,
 )
 
 
@@ -31,6 +36,78 @@ def test_validate_artifacts_in_produces_list_allows_explicit_aliases_only() -> N
             artifacts={"IMPL_FILE_V2": "docs/delivery/05_implementations/impl.md"},
             produces=["IMPL_FILE"],
             step="test_step",
+        )
+
+
+def test_validate_artifacts_in_produces_list_allows_master_docs_legacy_aliases() -> None:
+    _validate_artifacts_in_produces_list(
+        artifacts={
+            "README": "docs/system/00_governance/bootstrap/README.md",
+            "CHANGE_LOG": "docs/system/00_governance/bootstrap/00DOC-test-bootstrap-change-log.md",
+        },
+        produces=["SYSTEM_DOCS_INDEX", "SYSTEM_DOCS_CHANGE_LOG"],
+        step="06_refine_master_system_docs",
+    )
+
+
+def test_set_master_docs_aliases_supports_core_governance_workflow(monkeypatch: pytest.MonkeyPatch) -> None:
+    ctx: dict[str, str] = {}
+    state = {
+        "template_group": "00_core_governance_bootstrap_v1",
+        "job_id": "00CORE-GEN-TEST",
+        "backend_step_dir_rel": r"00_core_governance_bootstrap_v1\00CORE-GEN-TEST\01_generate_core_governance_docs",
+    }
+    monkeypatch.setattr(
+        "agent_runner_v2.step_runner.get_workflow_module",
+        lambda: SimpleNamespace(TEMPLATE_GROUPS={}),
+    )
+
+    _set_master_docs_aliases(
+        ctx=ctx,
+        state=state,
+        step="generate_core_governance_docs",
+        artifacts={"SYSTEM_DOCS_INDEX": ""},
+        produces=[
+            "SYSTEM_DOCS_INDEX",
+            "SYSTEM_DOC_STANDARD",
+            "BUNDLE_TAXONOMY",
+            "BUNDLE_MIGRATION_PLAN",
+        ],
+    )
+
+    assert ctx["SYSTEM_DOCS_INDEX"].replace("\\", "/") == "docs/system/00_governance/bootstrap/README.md"
+    assert ctx["SYSTEM_DOC_STANDARD"].replace("\\", "/") == "docs/system/00_governance/bootstrap/DOCUMENTATION_STANDARD.md"
+    assert ctx["BUNDLE_TAXONOMY"].replace("\\", "/") == "docs/system/00_governance/bootstrap/BUNDLE_TAXONOMY.md"
+    assert ctx["BUNDLE_MIGRATION_PLAN"].replace("\\", "/") == "docs/system/00_governance/bootstrap/BUNDLE_MIGRATION_PLAN.md"
+
+
+def test_validate_declared_produced_artifacts_exist_uses_contract_paths(tmp_path: Path) -> None:
+    readme = tmp_path / "docs/system/00_governance/bootstrap/README.md"
+    readme.parent.mkdir(parents=True, exist_ok=True)
+    readme.write_text("ok\n", encoding="utf-8")
+
+    _validate_declared_produced_artifacts_exist(
+        artifacts={},
+        produces=["SYSTEM_DOCS_INDEX"],
+        context={"SYSTEM_DOCS_INDEX": "docs/system/00_governance/bootstrap/README.md"},
+        state={"artifacts": {}},
+        project_root=tmp_path,
+        step="generate_core_governance_docs",
+    )
+
+
+def test_validate_declared_produced_artifacts_exist_rejects_missing_declared_output(tmp_path: Path) -> None:
+    with pytest.raises(ArtifactMissingError, match="declared produced artifacts are missing on disk"):
+        _validate_declared_produced_artifacts_exist(
+            artifacts={"SYSTEM_DOCS_INDEX": "docs/system/00_governance/bootstrap/README.md"},
+            produces=["SYSTEM_DOCS_INDEX", "SYSTEM_DOC_STANDARD"],
+            context={
+                "SYSTEM_DOCS_INDEX": "docs/system/00_governance/bootstrap/README.md",
+                "SYSTEM_DOC_STANDARD": "docs/system/00_governance/bootstrap/DOCUMENTATION_STANDARD.md",
+            },
+            state={"artifacts": {}},
+            project_root=tmp_path,
+            step="generate_core_governance_docs",
         )
 
 
@@ -56,7 +133,7 @@ def test_resolve_allowed_write_paths_uses_updates_and_meta(tmp_path: Path) -> No
     assert project_root / "docs/delivery/05_implementations/IMPL-1.meta.json" in allowed
 
 
-def test_verify_only_allowed_paths_changed_rejects_unauthorized_files(tmp_path: Path) -> None:
+def test_verify_only_allowed_paths_changed_reports_only_allowed_paths(tmp_path: Path) -> None:
     project_root = tmp_path
     allowed_path = project_root / "docs/allowed.md"
     meta_path = project_root / "docs/allowed.meta.json"
@@ -72,13 +149,14 @@ def test_verify_only_allowed_paths_changed_rejects_unauthorized_files(tmp_path: 
     allowed_path.write_text("after\n", encoding="utf-8")
     rogue_path.write_text("changed\n", encoding="utf-8")
 
-    with pytest.raises(ArtifactMissingError, match="outside the declared write contract"):
-        _verify_only_allowed_paths_changed(
-            before=before,
-            allowed_paths=allowed_paths,
-            project_root=project_root,
-            step="test_step",
-        )
+    changed = _verify_only_allowed_paths_changed(
+        before=before,
+        allowed_paths=allowed_paths,
+        project_root=project_root,
+        step="test_step",
+    )
+
+    assert [path.replace("\\", "/") for path in changed] == ["docs/allowed.md"]
 
 
 def test_resolve_progress_file_path_prefers_global_job_step_dir() -> None:
@@ -145,3 +223,37 @@ def test_resolve_meta_json_path_falls_back_to_step_dir(tmp_path: Path) -> None:
     )
 
     assert result == step_dir / "meta.json"
+
+
+def test_run_action_preserves_reject_code_in_step_result(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    project_root = tmp_path
+    artifact_rel = "docs/system/00_governance/bootstrap/validation.md"
+    artifact_path = project_root / artifact_rel
+    artifact_path.parent.mkdir(parents=True, exist_ok=True)
+    artifact_path.write_text("validation failed\n", encoding="utf-8")
+
+    monkeypatch.setattr(
+        "agent_runner_v2.runner_actions.execute",
+        lambda **kwargs: ActionResult(
+            status="REJECTED",
+            remark="validation failed",
+            artifacts={"SYSTEM_DOCS_VALIDATION": artifact_rel},
+            reject_code="CORE_GOVERNANCE_VALIDATION_FAILED",
+        ),
+    )
+
+    result = run_action(
+        action_name="validate_core_governance_docs",
+        state={},
+        step="validate_core_governance_docs",
+        step_cfg={
+            "produces": ["SYSTEM_DOCS_VALIDATION"],
+            "result_meta_key_from_context": "SYSTEM_DOCS_VALIDATION_METAJSON",
+        },
+        step_dir=project_root / ".ukbe-runner" / "jobs" / "wf" / "JOB-1" / "04_validate_core_governance_docs",
+        project_root=project_root,
+        context={"SYSTEM_DOCS_VALIDATION_METAJSON": "docs/system/00_governance/bootstrap/validation.meta.json"},
+    )
+
+    assert result.status == "REJECTED"
+    assert result.reject_code == "CORE_GOVERNANCE_VALIDATION_FAILED"

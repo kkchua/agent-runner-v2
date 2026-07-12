@@ -6,6 +6,42 @@ from typing import Any
 
 
 @dataclass(frozen=True)
+class GovernanceExtension:
+    """Optional bundle governance extension content."""
+
+    name: str
+    source_path: Path
+    targets: list[str] = field(default_factory=list)
+    enabled: bool = True
+    required: bool = False
+    description: str = ""
+
+
+@dataclass(frozen=True)
+class GovernanceArtifact:
+    """Artifact registry entry owned or referenced by bundle governance."""
+
+    key: str
+    path: str
+    description: str = ""
+    required: bool = True
+
+
+@dataclass(frozen=True)
+class BundleGovernance:
+    """Canonical governance contract carried with a workflow bundle."""
+
+    manifest_path: Path
+    canonical_source_path: Path
+    generated_dir: Path
+    adapter_targets: list[str] = field(default_factory=list)
+    include_in_prompts: bool = False
+    prompt_targets: list[str] = field(default_factory=list)
+    extensions: list[GovernanceExtension] = field(default_factory=list)
+    artifact_registry: list[GovernanceArtifact] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
 class StepConfig:
     """Canonical, validated step configuration from a workflow.toml manifest."""
 
@@ -28,6 +64,8 @@ class StepConfig:
     # Coder configuration
     coder_default: str | None = None
     coder_allowed: list[str] = field(default_factory=list)
+    coder_default_role: str | None = None
+    coder_allowed_roles: list[str] = field(default_factory=list)
     coder_must_differ: bool = False
 
     # Routing
@@ -75,6 +113,9 @@ class WorkflowBundle:
 
     # Optional custom context extension module path (loaded via importlib at runtime)
     context_extensions_path: Path | None = None
+
+    # Optional bundle-level governance contract and generated adapters
+    governance: BundleGovernance | None = None
 
     # Package-local actions registered via @action() decorator
     custom_actions: dict[str, Any] = field(default_factory=dict)

@@ -22,7 +22,7 @@
     },   
     "qwen-architect": {
       "coder": "qwen",
-      "model": "kimi-k2.5"
+      "model": "qwen3.7-plus"
     }, 
 	"qwen-architect1": {
       "coder": "qwen",

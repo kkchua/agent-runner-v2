@@ -13,11 +13,16 @@ from pathlib import Path
 
 import pytest
 
+from agent_runner_v2.bundle_governance import generate_bundle_governance_adapters
 from agent_runner_v2.workflow_packages.base import StepConfig, WorkflowBundle
 from agent_runner_v2.workflow_packages.loader import (
     bundle_to_template_group_dict,
     load_workflow_package,
 )
+
+
+def _read_text(path: Path) -> str:
+    return path.read_text(encoding="utf-8")
 
 
 class TestStepConfig:
@@ -44,6 +49,8 @@ class TestStepConfig:
             result_meta_key="OUTPUT_DOC",
             coder_default="qwen-architect",
             coder_allowed=["claude", "qwen-architect"],
+            coder_default_role="architect_primary",
+            coder_allowed_roles=["architect_primary", "architect_secondary"],
             enable_notifications=True,
             on_reject_refine={"step": "refine", "max_iterations": 2},
         )
@@ -52,6 +59,7 @@ class TestStepConfig:
         assert sc.action == "validate"
         assert sc.produces == ["OUTPUT_DOC"]
         assert sc.coder_default == "qwen-architect"
+        assert sc.coder_default_role == "architect_primary"
         assert sc.on_reject_refine == {"step": "refine", "max_iterations": 2}
 
     def test_extra_fields_preserved(self):
@@ -135,6 +143,106 @@ class TestWorkflowTOMLParsing:
         assert len(bundle.step_order) == 14
         assert bundle.init_step == "00_scan_repo_codebase"
 
+    def test_load_core_governance_package(self, project_root):
+        pkg_dir = project_root / "workflows" / "00_core_governance_bootstrap_v1"
+        if not pkg_dir.is_dir():
+            pytest.skip("workflow package directory not found")
+
+        bundle = load_workflow_package(pkg_dir)
+        assert bundle.name == "00_core_governance_bootstrap_v1"
+        assert bundle.version == "1"
+        assert bundle.job_prefix == "00CORE"
+        assert bundle.step_order == [
+            "generate_core_governance_docs",
+            "review_core_governance_docs",
+            "refine_core_governance_docs",
+            "validate_core_governance_docs",
+            "audit_core_governance_accuracy",
+            "stepCompletion",
+        ]
+        assert bundle.steps["generate_core_governance_docs"].coder_default_role == "architect_primary"
+        assert bundle.steps["review_core_governance_docs"].coder_default_role == "reviewer_primary"
+        assert bundle.steps["validate_core_governance_docs"].on_reject_refine == {
+            "step": "refine_core_governance_docs",
+            "artifact": "SYSTEM_DOCS_INDEX",
+            "max_iterations": 2,
+            "exhausted_failure_code": "CORE_GOVERNANCE_VALIDATION_EXHAUSTED",
+            "exhausted_failure_class": "HUMAN_RETRY_REQUIRED",
+        }
+        assert bundle.governance is not None
+        assert bundle.governance.include_in_prompts is True
+        assert bundle.governance.adapter_targets == ["AGENTS.md", "QWEN.md", "CLAUDE.md"]
+        assert len(bundle.governance.artifact_registry) == 6
+        assert bundle.governance.canonical_source_path.name == "core_governance.md"
+
+    def test_core_governance_prompt_package_copy_matches_source(self, project_root):
+        prompt_names = [
+            "01_generate_core_governance_docs.txt",
+            "02_review_core_governance_docs.txt",
+            "03_refine_core_governance_docs.txt",
+            "04_audit_core_governance_accuracy.txt",
+        ]
+        source_dir = project_root / "workflows" / "00_core_governance_bootstrap_v1" / "prompts"
+        packaged_dir = (
+            project_root
+            / "agent_runner_v2"
+            / "bootstrap"
+            / "workflows"
+            / "default"
+            / "00_core_governance_bootstrap_v1"
+            / "prompts"
+        )
+
+        for prompt_name in prompt_names:
+            assert _read_text(source_dir / prompt_name) == _read_text(packaged_dir / prompt_name)
+
+    def test_core_governance_prompts_do_not_allow_repo_artifact_placeholders_in_layer1_docs(self, project_root):
+        prompt_dir = project_root / "workflows" / "00_core_governance_bootstrap_v1" / "prompts"
+
+        generate_text = _read_text(prompt_dir / "01_generate_core_governance_docs.txt")
+        refine_text = _read_text(prompt_dir / "03_refine_core_governance_docs.txt")
+        audit_text = _read_text(prompt_dir / "04_audit_core_governance_accuracy.txt")
+
+        assert "direct artifact placeholders such as `{PROJECT_ANALYSIS}`" not in generate_text
+        assert "replace it with direct artifact placeholder wording such as `{PROJECT_ANALYSIS}`" not in refine_text
+        assert "uses direct artifact placeholders like `{PROJECT_ANALYSIS}`" not in audit_text
+        assert "repo-derived filenames" in generate_text
+        assert "repo-derived filenames" in refine_text
+        assert "repo-derived filenames" in audit_text
+
+    def test_core_governance_adapter_generation(self, project_root, tmp_path):
+        pkg_dir = project_root / "workflows" / "00_core_governance_bootstrap_v1"
+        if not pkg_dir.is_dir():
+            pytest.skip("workflow package directory not found")
+
+        bundle = load_workflow_package(pkg_dir)
+        assert bundle.governance is not None
+
+        generated_dir = tmp_path / "generated"
+        governance = bundle.governance
+        governance = type(governance)(
+            manifest_path=governance.manifest_path,
+            canonical_source_path=governance.canonical_source_path,
+            generated_dir=generated_dir,
+            adapter_targets=governance.adapter_targets,
+            include_in_prompts=governance.include_in_prompts,
+            prompt_targets=governance.prompt_targets,
+            extensions=governance.extensions,
+            artifact_registry=governance.artifact_registry,
+        )
+
+        written = generate_bundle_governance_adapters(
+            governance,
+            bundle_name=bundle.name,
+            bundle_label=bundle.label,
+        )
+
+        assert sorted(written) == ["AGENTS.md", "CLAUDE.md", "QWEN.md"]
+        agents_text = written["AGENTS.md"].read_text(encoding="utf-8")
+        assert "Core Governance Bundle Contract" in agents_text
+        assert "Artifact Registry" in agents_text
+        assert "SYSTEM_DOCS_INDEX" in agents_text
+
     def test_all_steps_present(self, project_root):
         pkg_dir = project_root / "workflows" / "00_master_docs_bootstrap_v2"
         if not pkg_dir.is_dir():
@@ -174,11 +282,11 @@ class TestWorkflowTOMLParsing:
         assert analysis.prompt_file == "prompts/02_generate_project_analysis.txt"
         assert "CODEBASE_CHANGE_IMPACT" in analysis.required_inputs
         assert analysis.produces == ["PROJECT_ANALYSIS"]
-        assert analysis.coder_default == "qwen-architect"
+        assert analysis.coder_default_role == "architect_primary"
 
         # Review step with routing
         review = bundle.steps["05_review_master_system_docs"]
-        assert review.coder_default == "qwen-reviewer"
+        assert review.coder_default_role == "reviewer_primary"
         assert review.on_reject_refine is not None
         assert review.on_reject_refine["step"] == "06_refine_master_system_docs"
 
@@ -241,7 +349,7 @@ class TestBundleAdapter:
         assert group["job_prefix"] == "00DOC"
         assert group["job_init_step"] == "00_scan_repo_codebase"
         assert group["job_init_inputs"] == []
-        assert group["default_max_rejects"] == 3
+        assert group["default_max_rejects"] == 4
         assert group["steps"] == bundle.step_order
         assert "step_configs" in group
         assert "_workflow_bundle" not in group  # group-level, not stamped here
@@ -263,8 +371,12 @@ class TestBundleAdapter:
         analysis_cfg = group["step_configs"]["02_generate_project_analysis"]
         assert "prompt_file" in analysis_cfg
         assert str(analysis_cfg["prompt_file"]).endswith("02_generate_project_analysis.txt")
-        assert analysis_cfg["coder"]["default"] == "qwen-architect"
-        assert analysis_cfg["coder"]["allowed"] == ["claude", "codex", "qwen-architect"]
+        assert analysis_cfg["coder"]["default_role"] == "architect_primary"
+        assert analysis_cfg["coder"]["allowed_roles"] == [
+            "architect_primary",
+            "architect_secondary",
+            "architect_tertiary",
+        ]
 
         # Review step with routing
         review_cfg = group["step_configs"]["05_review_master_system_docs"]

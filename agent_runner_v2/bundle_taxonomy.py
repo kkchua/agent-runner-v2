@@ -42,6 +42,7 @@ CORE_DOCS = [
 
 WORKFLOW_DOCS = [
     "agent_runner_v2/bootstrap/workflows/default/template_groups.py",
+    "agent_runner_v2/bootstrap/workflows/default/coder_roles.json",
     "agent_runner_v2/bootstrap/workflows/default/prompts/**",
     "agent_runner_v2/bootstrap/workflows/default/job_schema.json",
     "agent_runner_v2/bootstrap/workflows/default/llm_response_schema.json",

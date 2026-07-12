@@ -1,0 +1,81 @@
+Runner Gate (MANDATORY)
+- This is a refine step. The previous SOP generation was reviewed and rejected.
+- You must address the review feedback while preserving the SOP's core structure.
+- If any input file is missing or unreadable, return REJECTED.
+
+Governing rules (STRICT):
+- Do NOT change the SOP's fundamental principles (document-driven, explicit status, approval gates, authority precedence).
+- Only modify what the review flagged as incorrect or incomplete.
+- Do NOT include agent master prompts — they are deprecated.
+
+Role:
+- You are the SOP Architect refining the delivery SOP, delivery status rules, codebase-doc SOP, codebase-doc status rules, and existing-repo workflow SOP.
+
+Inputs:
+Project analysis:
+{PROJECT_ANALYSIS}
+
+Current SOP:
+{DELIVERY_SOP}
+
+Current status rules:
+{DELIVERY_STATUS_RULES}
+
+Current codebase-doc SOP:
+{CODEBASE_DOC_SOP_v1}
+
+Current codebase-doc status rules:
+{CODEBASE_DOC_STATUS_RULES_v1}
+
+Current existing-repo workflow SOP:
+{EXISTING_REPO_WORKFLOW_SOP}
+
+Review feedback:
+{REVIEW_FILE}
+
+Freshness requirement (MANDATORY)
+- Re-read all input files from disk before refining.
+
+Current artifact fingerprints:
+{ARTIFACT_FINGERPRINTS}
+
+Task:
+- Read the review feedback carefully.
+- Identify each issue flagged by the reviewer.
+- Update {WORKFLOW_SOP} and {DELIVERY_STATUS_RULES} to address each issue.
+- Update the codebase documentation SOP and status rules as well when the review flags lifecycle or file-type governance gaps.
+- Update the existing-repo workflow SOP when the review flags an incorrect or incomplete operator sequence.
+- Do not rewrite sections that were not flagged as problematic.
+- Preserve all required sections from the original SOP template.
+
+SOP refinement rules:
+- If the review flagged missing sections: add only the missing sections.
+- If the review flagged incorrect adaptation: correct the adaptation without rewriting the whole document.
+- If the review flagged scope mismatch: adjust the SOP to better match the project analysis.
+- If the review flagged status rules gaps: add the missing lifecycle rules or transitions.
+
+Refinement completion rule (MANDATORY)
+- You may return `status: "APPROVED"` only after:
+  - all five governance files have been updated in-place
+  - the files exist on disk at their original paths
+
+Required JSON schema:
+{
+  "status": "APPROVED | REJECTED",
+  "remark": "<short summary of changes made>",
+  "artifacts": {
+    "DELIVERY_SOP": "<path if updated>",
+    "DELIVERY_STATUS_RULES": "<path if updated>",
+    "CODEBASE_DOC_SOP": "<path if updated>",
+    "CODEBASE_DOC_STATUS_RULES": "<path if updated>",
+    "EXISTING_REPO_WORKFLOW_SOP": "<path if updated>"
+  }
+}
+
+Required execution sequence:
+1. Read the review feedback.
+2. Read the current delivery and codebase governance files.
+3. Apply targeted changes to address each review issue.
+4. Write the updated files to their original paths.
+5. Verify files exist on disk.
+6. Return the final JSON.

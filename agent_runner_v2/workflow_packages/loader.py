@@ -14,6 +14,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from ..bundle_governance import load_bundle_governance
 from .base import StepConfig, WorkflowBundle
 
 # ---------------------------------------------------------------------------
@@ -124,6 +125,8 @@ def _parse_bundle(
             produced_document_status=artifact.get("produced_document_status"),
             coder_default=_opt_str(coder_sec, "default"),
             coder_allowed=list(coder_sec.get("allowed", [])),
+            coder_default_role=_opt_str(coder_sec, "default_role"),
+            coder_allowed_roles=list(coder_sec.get("allowed_roles", [])),
             coder_must_differ=bool(coder_sec.get("must_differ", False)),
             on_approve=_opt_str(routing, "on_approve"),
             on_reject_refine=raw.get("on_reject_refine"),
@@ -148,6 +151,9 @@ def _parse_bundle(
     context_ext_file = bundle_root / "context_extensions.py"
     context_ext_path: Path | None = context_ext_file if context_ext_file.is_file() else None
 
+    # --- Optional bundle-level governance ---------------------------------
+    governance = load_bundle_governance(bundle_root)
+
     # --- Package-local actions ------------------------------------------
     custom_actions = _load_package_actions(bundle_root)
 
@@ -164,6 +170,7 @@ def _parse_bundle(
         init_inputs=init_inputs,
         default_max_rejects=default_max_rejects,
         context_extensions_path=context_ext_path,
+        governance=governance,
         custom_actions=custom_actions,
         description=description,
         visibility=visibility,
@@ -236,10 +243,16 @@ def bundle_to_template_group_dict(bundle: WorkflowBundle) -> dict[str, Any]:
             cfg["produced_document_status"] = dict(sc.produced_document_status)
 
         # --- Coder -------------------------------------------------------
-        if sc.coder_default:
-            coder_cfg: dict[str, Any] = {"default": sc.coder_default}
+        if sc.coder_default or sc.coder_default_role or sc.coder_allowed or sc.coder_allowed_roles or sc.coder_must_differ:
+            coder_cfg: dict[str, Any] = {}
+            if sc.coder_default:
+                coder_cfg["default"] = sc.coder_default
             if sc.coder_allowed:
                 coder_cfg["allowed"] = list(sc.coder_allowed)
+            if sc.coder_default_role:
+                coder_cfg["default_role"] = sc.coder_default_role
+            if sc.coder_allowed_roles:
+                coder_cfg["allowed_roles"] = list(sc.coder_allowed_roles)
             if sc.coder_must_differ:
                 coder_cfg["must_differ_from_previous_step"] = True
             cfg["coder"] = coder_cfg

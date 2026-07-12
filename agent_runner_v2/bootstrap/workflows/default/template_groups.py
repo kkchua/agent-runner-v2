@@ -527,7 +527,7 @@ TEMPLATE_GROUPS: Dict[str, Dict[str, Any]] = {
                     "exhausted_failure_class": "HUMAN_RETRY_REQUIRED",
                 },
                 "requires_human_approval_after": False,
-                "result_meta_key_from_context": "REVIEW_FILE_SUGGESTED_SUGGESTED",
+                "result_meta_key_from_context": "REVIEW_FILE_SUGGESTED",
                 "coder": {
                     "default": "qwen-reviewer",
                     "allowed": ["claude-reviewer", "codex-reviewer", "qwen-reviewer"],
@@ -636,7 +636,7 @@ TEMPLATE_GROUPS: Dict[str, Dict[str, Any]] = {
                     "exhausted_failure_class": "HUMAN_RETRY_REQUIRED",
                 },
                 "requires_human_approval_after": False,
-                "result_meta_key_from_context": "REVIEW_FILE_SUGGESTED_SUGGESTED",
+                "result_meta_key_from_context": "REVIEW_FILE_SUGGESTED",
                 "coder": {
                     "default": "codex-reviewer",
                     "allowed": ["claude-reviewer", "codex-reviewer", "qwen-reviewer"],
@@ -735,7 +735,7 @@ TEMPLATE_GROUPS: Dict[str, Dict[str, Any]] = {
                     "exhausted_failure_class": "HUMAN_RETRY_REQUIRED",
                 },
                 "requires_human_approval_after": False,
-                "result_meta_key_from_context": "REVIEW_FILE_SUGGESTED_SUGGESTED",
+                "result_meta_key_from_context": "REVIEW_FILE_SUGGESTED",
                 "coder": {
                     "default": "qwen-reviewer",
                     "allowed": ["claude-reviewer", "codex-reviewer", "qwen-reviewer"],
@@ -846,7 +846,7 @@ TEMPLATE_GROUPS: Dict[str, Dict[str, Any]] = {
                     "exhausted_failure_class": "HUMAN_RETRY_REQUIRED",
                 },
                 "requires_human_approval_after": True,
-                "result_meta_key_from_context": "REVIEW_FILE_SUGGESTED_SUGGESTED",
+                "result_meta_key_from_context": "REVIEW_FILE_SUGGESTED",
                 "coder": {
                     "default": "qwen-reviewer",
                     "allowed": ["claude", "codex", "qwen-reviewer"],
@@ -855,7 +855,7 @@ TEMPLATE_GROUPS: Dict[str, Dict[str, Any]] = {
             },
             "refine_pre_init": {
                 "prompt_file": _p("prompts", "20_initiative_intake_v1", "03_refine_pre_init.txt"),
-                "required_inputs": ["PRE_INIT_FILE", "REVIEW_FILE_SUGGESTED_SUGGESTED"],
+                "required_inputs": ["PRE_INIT_FILE", "REVIEW_FILE_SUGGESTED"],
                 "preflight_status_check": {"artifact": "PRE_INIT_FILE", "required_status": "changes_requested"},
                 "produces": ["PRE_INIT_FILE"],
                 "target_artifact": "PRE_INIT_FILE",
@@ -1033,7 +1033,7 @@ TEMPLATE_GROUPS: Dict[str, Dict[str, Any]] = {
                     "terminal_failure_code": "PLAN_REPLAN_EXHAUSTED",
                 },
                 "requires_human_approval_after": True,
-                "result_meta_key_from_context": "REVIEW_FILE_SUGGESTED_SUGGESTED",
+                "result_meta_key_from_context": "REVIEW_FILE_SUGGESTED",
                 "coder": {
                     "default": "qwen-reviewer",
                     "allowed": ["claude", "codex", "qwen-reviewer"],
@@ -1149,7 +1149,7 @@ TEMPLATE_GROUPS: Dict[str, Dict[str, Any]] = {
                     "terminal_failure_code": "TASK_GRAPH_REPLAN_EXHAUSTED",
                 },
                 "requires_human_approval_after": True,
-                "result_meta_key_from_context": "REVIEW_FILE_SUGGESTED_SUGGESTED",
+                "result_meta_key_from_context": "REVIEW_FILE_SUGGESTED",
                 "coder": {
                     "default": "qwen-reviewer",
                     "allowed": ["claude", "codex", "qwen-reviewer"],
@@ -1299,7 +1299,7 @@ TEMPLATE_GROUPS: Dict[str, Dict[str, Any]] = {
                     "exhausted_failure_class": "HUMAN_RETRY_REQUIRED",
                 },
                 "requires_human_approval_after": True,
-                "result_meta_key_from_context": "REVIEW_FILE_SUGGESTED_SUGGESTED",
+                "result_meta_key_from_context": "REVIEW_FILE_SUGGESTED",
                 "coder": {
                     "default": "qwen-reviewer",
                     "allowed": ["claude", "codex", "qwen-reviewer"],
@@ -1354,7 +1354,7 @@ TEMPLATE_GROUPS: Dict[str, Dict[str, Any]] = {
                     "exhausted_failure_class": "HUMAN_RETRY_REQUIRED",
                 },
                 "requires_human_approval_after": True,
-                "result_meta_key_from_context": "REVIEW_FILE_SUGGESTED_SUGGESTED",
+                "result_meta_key_from_context": "REVIEW_FILE_SUGGESTED",
                 "coder": {
                     "default": "qwen-reviewer",
                     "allowed": ["claude", "codex", "qwen-reviewer"],
@@ -1412,7 +1412,7 @@ TEMPLATE_GROUPS: Dict[str, Dict[str, Any]] = {
                     "exhausted_failure_code": "DOC_SYNC_REFINEMENT_EXHAUSTED",
                     "exhausted_failure_class": "HUMAN_RETRY_REQUIRED",
                 },
-                "result_meta_key_from_context": "REVIEW_FILE_SUGGESTED_SUGGESTED",
+                "result_meta_key_from_context": "REVIEW_FILE_SUGGESTED",
                 "requires_human_approval_after": True,
                 "coder": {
                     "default": "qwen-reviewer",
@@ -1597,7 +1597,7 @@ TEMPLATE_GROUPS: Dict[str, Dict[str, Any]] = {
                     "exhausted_failure_class": "HUMAN_RETRY_REQUIRED",
                 },
                 "requires_human_approval_after": False,
-                "result_meta_key_from_context": "REVIEW_FILE_SUGGESTED_SUGGESTED",
+                "result_meta_key_from_context": "REVIEW_FILE_SUGGESTED",
                 "coder": {
                     "default": "qwen-reviewer",
                     "allowed": ["claude-reviewer", "codex-reviewer", "qwen-reviewer"],
@@ -1657,7 +1657,7 @@ TEMPLATE_GROUPS: Dict[str, Dict[str, Any]] = {
                     "exhausted_failure_class": "HUMAN_RETRY_REQUIRED",
                 },
                 "requires_human_approval_after": False,
-                "result_meta_key_from_context": "REVIEW_FILE_SUGGESTED_SUGGESTED",
+                "result_meta_key_from_context": "REVIEW_FILE_SUGGESTED",
                 "coder": {
                     "default": "qwen-reviewer",
                     "allowed": ["claude-reviewer", "codex-reviewer", "qwen-reviewer"],
@@ -1717,7 +1717,7 @@ TEMPLATE_GROUPS: Dict[str, Dict[str, Any]] = {
                     "exhausted_failure_class": "HUMAN_RETRY_REQUIRED",
                 },
                 "requires_human_approval_after": False,
-                "result_meta_key_from_context": "REVIEW_FILE_SUGGESTED_SUGGESTED",
+                "result_meta_key_from_context": "REVIEW_FILE_SUGGESTED",
                 "coder": {
                     "default": "qwen-reviewer",
                     "allowed": ["claude-reviewer", "codex-reviewer", "qwen-reviewer"],
@@ -1777,7 +1777,7 @@ TEMPLATE_GROUPS: Dict[str, Dict[str, Any]] = {
                     "exhausted_failure_class": "HUMAN_RETRY_REQUIRED",
                 },
                 "requires_human_approval_after": False,
-                "result_meta_key_from_context": "REVIEW_FILE_SUGGESTED_SUGGESTED",
+                "result_meta_key_from_context": "REVIEW_FILE_SUGGESTED",
                 "coder": {
                     "default": "qwen-reviewer",
                     "allowed": ["claude-reviewer", "codex-reviewer", "qwen-reviewer"],
@@ -1837,7 +1837,7 @@ TEMPLATE_GROUPS: Dict[str, Dict[str, Any]] = {
                     "exhausted_failure_class": "HUMAN_RETRY_REQUIRED",
                 },
                 "requires_human_approval_after": False,
-                "result_meta_key_from_context": "REVIEW_FILE_SUGGESTED_SUGGESTED",
+                "result_meta_key_from_context": "REVIEW_FILE_SUGGESTED",
                 "coder": {
                     "default": "qwen-reviewer",
                     "allowed": ["claude-reviewer", "codex-reviewer", "qwen-reviewer"],
@@ -1941,7 +1941,7 @@ TEMPLATE_GROUPS: Dict[str, Dict[str, Any]] = {
                     "exhausted_failure_class": "HUMAN_RETRY_REQUIRED",
                 },
                 "requires_human_approval_after": False,
-                "result_meta_key_from_context": "REVIEW_FILE_SUGGESTED_SUGGESTED",
+                "result_meta_key_from_context": "REVIEW_FILE_SUGGESTED",
                 "coder": {
                     "default": "qwen-reviewer",
                     "allowed": ["claude-reviewer", "codex-reviewer", "qwen-reviewer"],
@@ -2012,7 +2012,7 @@ TEMPLATE_GROUPS: Dict[str, Dict[str, Any]] = {
                     "exhausted_failure_class": "HUMAN_RETRY_REQUIRED",
                 },
                 "requires_human_approval_after": False,
-                "result_meta_key_from_context": "REVIEW_FILE_SUGGESTED_SUGGESTED",
+                "result_meta_key_from_context": "REVIEW_FILE_SUGGESTED",
                 "coder": {
                     "default": "qwen-reviewer",
                     "allowed": ["claude-reviewer", "codex-reviewer", "qwen-reviewer"],
@@ -2082,7 +2082,7 @@ TEMPLATE_GROUPS: Dict[str, Dict[str, Any]] = {
                     "exhausted_failure_class": "HUMAN_RETRY_REQUIRED",
                 },
                 "requires_human_approval_after": False,
-                "result_meta_key_from_context": "REVIEW_FILE_SUGGESTED_SUGGESTED",
+                "result_meta_key_from_context": "REVIEW_FILE_SUGGESTED",
                 "coder": {
                     "default": "qwen-reviewer",
                     "allowed": ["claude-reviewer", "codex-reviewer", "qwen-reviewer"],
@@ -2151,7 +2151,7 @@ TEMPLATE_GROUPS: Dict[str, Dict[str, Any]] = {
                     "exhausted_failure_class": "HUMAN_RETRY_REQUIRED",
                 },
                 "requires_human_approval_after": False,
-                "result_meta_key_from_context": "REVIEW_FILE_SUGGESTED_SUGGESTED",
+                "result_meta_key_from_context": "REVIEW_FILE_SUGGESTED",
                 "coder": {
                     "default": "qwen-reviewer",
                     "allowed": ["claude-reviewer", "codex-reviewer", "qwen-reviewer"],
@@ -2257,7 +2257,7 @@ TEMPLATE_GROUPS: Dict[str, Dict[str, Any]] = {
                     "exhausted_failure_class": "HUMAN_RETRY_REQUIRED",
                 },
                 "requires_human_approval_after": True,
-                "result_meta_key_from_context": "REVIEW_FILE_SUGGESTED_SUGGESTED",
+                "result_meta_key_from_context": "REVIEW_FILE_SUGGESTED",
                 "coder": {"default": "qwen-reviewer", "allowed": ["claude", "qwen-reviewer"], "must_differ_from_previous_step": False},
             },
             "refine_workflow": {
@@ -2352,7 +2352,7 @@ TEMPLATE_GROUPS: Dict[str, Dict[str, Any]] = {
                     "exhausted_failure_class": "HUMAN_RETRY_REQUIRED",
                 },
                 "requires_human_approval_after": False,
-                "result_meta_key_from_context": "REVIEW_FILE_SUGGESTED_SUGGESTED",
+                "result_meta_key_from_context": "REVIEW_FILE_SUGGESTED",
                 "coder": {
                     "default": "qwen-reviewer",
                     "allowed": ["claude", "qwen-reviewer"],
@@ -2390,7 +2390,7 @@ TEMPLATE_GROUPS: Dict[str, Dict[str, Any]] = {
                     "exhausted_failure_class": "HUMAN_RETRY_REQUIRED",
                 },
                 "requires_human_approval_after": False,
-                "result_meta_key_from_context": "REVIEW_FILE_SUGGESTED_SUGGESTED",
+                "result_meta_key_from_context": "REVIEW_FILE_SUGGESTED",
                 "coder": {
                     "default": "qwen-reviewer",
                     "allowed": ["claude", "qwen-reviewer"],

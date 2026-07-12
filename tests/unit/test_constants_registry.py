@@ -19,15 +19,16 @@ def test_prompt_literal_substitutions_include_aliased_system_docs():
     assert substitutions["docs/system/00_governance/bootstrap/README.md"] == f"{{{ARTIFACT_KEY_SYSTEM_DOCS_INDEX}}}"
     assert substitutions["docs/system/00_governance/bootstrap/DOCUMENTATION_STANDARD.md"] == f"{{{ARTIFACT_KEY_SYSTEM_DOC_STANDARD}}}"
     assert substitutions["docs/codebase/01_inventory/CODEBASE_INVENTORY.md"] == f"{{{ARTIFACT_KEY_CODEBASE_INVENTORY}}}"
+    assert substitutions["docs/repo/codebase/01_inventory/CODEBASE_INVENTORY.md"] == f"{{{ARTIFACT_KEY_CODEBASE_INVENTORY}}}"
 
 
 def test_audience_workflow_registry_is_consistent():
     stakeholder_site = AUDIENCE_SITE_WORKFLOWS["51_stakeholder_docs_v1"]
     stakeholder_markdown = AUDIENCE_MARKDOWN_ARCHIVE_WORKFLOWS["41_stakeholder_doc_v1"]
 
-    assert stakeholder_site["markdown_rel"] == "docs/site/stakeholders/content.md"
-    assert stakeholder_site["html_rel"] == "docs/site/stakeholders/index.html"
-    assert stakeholder_site["manifest_rel"] == "docs/site/stakeholders/manifest.json"
+    assert stakeholder_site["markdown_rel"] == "docs/repo/site/stakeholders/content.md"
+    assert stakeholder_site["html_rel"] == "docs/repo/site/stakeholders/index.html"
+    assert stakeholder_site["manifest_rel"] == "docs/repo/site/stakeholders/manifest.json"
     assert stakeholder_markdown["target_rel"] == stakeholder_site["markdown_rel"]
     assert stakeholder_markdown["archive_dir_rel"] == stakeholder_site["archive_dir_rel"]
 

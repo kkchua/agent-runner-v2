@@ -36,6 +36,9 @@ from .constants import (
     operator_site_rel,
     tester_site_rel,
     user_site_rel,
+    legacy_codebase_doc_rel,
+    legacy_delivery_doc_rel,
+    legacy_docs_site_rel,
     repo_doc_rel,
     docs_root_rel,
     system_template_rel,
@@ -51,4 +54,5 @@ from .constants import (
     operator_site_pages,
     tester_site_pages,
     user_site_pages,
+    legacy_artifact_paths,
 )
