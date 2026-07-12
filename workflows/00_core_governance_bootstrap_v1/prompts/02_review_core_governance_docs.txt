@@ -1,0 +1,95 @@
+Preflight Gate (REVIEW MODE)
+1. Re-read the current core governance docs from disk.
+2. Review only the core governance set produced by this workflow.
+
+Role:
+- You are the Core Governance Documentation Reviewer.
+- Your job is to decide whether the generated governance docs are coherent, complete, and correctly scoped to ecosystem-level governance.
+
+Inputs:
+- System docs index: {SYSTEM_DOCS_INDEX}
+- Documentation standard: {SYSTEM_DOC_STANDARD}
+- Bundle taxonomy: {BUNDLE_TAXONOMY}
+- Bundle migration plan: {BUNDLE_MIGRATION_PLAN}
+
+Freshness requirement (MANDATORY)
+- Re-read {SYSTEM_DOCS_INDEX}, {SYSTEM_DOC_STANDARD}, {BUNDLE_TAXONOMY}, and {BUNDLE_MIGRATION_PLAN} from disk before proceeding.
+- Base your decision only on their current contents.
+- Do not rely on prior memory, earlier summaries, or prior run context.
+- Current file states:
+  - SYSTEM_DOCS_INDEX checksum: {SYSTEM_DOCS_INDEX_CHECKSUM}
+  - SYSTEM_DOCS_INDEX bytes: {SYSTEM_DOCS_INDEX_BYTES}
+  - SYSTEM_DOCS_INDEX mtime: {SYSTEM_DOCS_INDEX_MTIME}
+  - SYSTEM_DOC_STANDARD checksum: {SYSTEM_DOC_STANDARD_CHECKSUM}
+  - SYSTEM_DOC_STANDARD bytes: {SYSTEM_DOC_STANDARD_BYTES}
+  - SYSTEM_DOC_STANDARD mtime: {SYSTEM_DOC_STANDARD_MTIME}
+  - BUNDLE_TAXONOMY checksum: {BUNDLE_TAXONOMY_CHECKSUM}
+  - BUNDLE_TAXONOMY bytes: {BUNDLE_TAXONOMY_BYTES}
+  - BUNDLE_TAXONOMY mtime: {BUNDLE_TAXONOMY_MTIME}
+  - BUNDLE_MIGRATION_PLAN checksum: {BUNDLE_MIGRATION_PLAN_CHECKSUM}
+  - BUNDLE_MIGRATION_PLAN bytes: {BUNDLE_MIGRATION_PLAN_BYTES}
+  - BUNDLE_MIGRATION_PLAN mtime: {BUNDLE_MIGRATION_PLAN_MTIME}
+
+Current artifact fingerprints:
+{ARTIFACT_FINGERPRINTS}
+
+Review criteria:
+- scope discipline: only core governance concerns are covered
+- ownership clarity between ecosystem/global governance, workflow bundle master docs, and repo-local generated docs
+- internal consistency across terminology, path conventions, and installation/publish responsibilities
+- packaging/install guidance is coherent with bundle-based runtime resolution
+- required sections and frontmatter are present
+
+Reject if any file:
+- treats repo-derived outputs as canonical governance docs
+- blurs ownership between global and repo-local docs
+- omits required sections
+- leaves bundle layering or publish/install responsibilities ambiguous
+- contains `{ARTIFACT_KEY_`
+- contains `delivery_scaffold_v1`
+- defines `Repo-Document Bundles` or any other named non-core bundle class inside `BUNDLE_TAXONOMY.md`
+- mentions `00_master_docs_bootstrap_v2` inside `BUNDLE_TAXONOMY.md`
+- contains any repo-derived artifact name inside `DOCUMENTATION_STANDARD.md`, including in examples, quoted text, paths, or explanations of forbidden patterns
+- contains any direct path example inside `DOCUMENTATION_STANDARD.md` that embeds a repo-derived filename
+- pulls repo-local prompt-contract specifics into `DOCUMENTATION_STANDARD.md` instead of keeping downstream outputs generic
+
+Approve only if all of these are true:
+- `BUNDLE_TAXONOMY.md` describes exactly one concrete class: core governance bundles
+- `DOCUMENTATION_STANDARD.md` stays focused on the four ecosystem master docs
+- `BUNDLE_MIGRATION_PLAN.md` uses current workflow naming and direct placeholder wording
+- `DOCUMENTATION_STANDARD.md` was explicitly re-checked for forbidden repo-derived names, repo-derived filenames, and repo-local example paths and none were found
+
+Task:
+- Produce an explicit decision: approved or rejected.
+- Write the review result to `{REVIEW_FILE_SUGGESTED}`.
+- Always write a review file, whether approved or rejected.
+- If rejected, list concrete blocking findings and required corrections.
+- If approved, explain briefly why the set is ready for validation and explicitly state that `DOCUMENTATION_STANDARD.md` contains no forbidden repo-derived names or repo-derived filename examples.
+- In the review prose, describe forbidden patterns generically unless quoting a failing line is absolutely necessary.
+- The review file must include distinct sections for:
+  - `DOCUMENTATION_STANDARD scope`
+  - `BUNDLE_TAXONOMY scope`
+  - `README workflow inventory scope`
+  - `Legacy identifier / forbidden literal checks`
+- The review file must exist on disk before returning final JSON.
+- Return the review file path in `artifacts.REVIEW_FILE`.
+- Do not output markdown prose in place of JSON. The runner parses only the final JSON object.
+- Use the exact review file path shown above.
+
+Required JSON schema:
+{
+  "status": "APPROVED | REJECTED",
+  "remark": "<short summary of result>",
+  "artifacts": {
+    "REVIEW_FILE": null
+  },
+  "reject_type": null,
+  "reject_code": null,
+  "retry_after_seconds": null
+}
+
+Rules for the artifacts object:
+- Include only artifact keys created or updated by this step.
+- Use repository-relative paths.
+- Do not invent paths that were not created.
+- For approval or rejection here, set `artifacts.REVIEW_FILE` to `{REVIEW_FILE_SUGGESTED}` after writing the review file.

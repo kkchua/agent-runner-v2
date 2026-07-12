@@ -5,6 +5,7 @@ import os
 import shutil
 import subprocess
 import tempfile
+import threading
 import time
 import uuid
 from dataclasses import asdict, dataclass
@@ -68,6 +69,8 @@ DEFAULT_CODER_TIMEOUT_SECONDS = 600
 SIDECAR_POLL_INTERVAL_SECONDS = 3.0
 SIDECAR_SETTLE_DELAY_SECONDS = 5.0  # Increased from 0.5s to ensure coder finishes writing meta.json
 DEFAULT_SIDECAR_POST_COMPLETE_GRACE_SECONDS = 12.0  # Allow final progress updates / cleanup before forced termination
+_ACTIVE_CODER_PROCS: set[subprocess.Popen[Any]] = set()
+_ACTIVE_CODER_PROCS_LOCK = threading.Lock()
 
 
 def _load_global_config() -> dict:
@@ -262,6 +265,35 @@ def _terminate_process_tree(proc: subprocess.Popen[Any]) -> None:
             return
         except Exception:
             pass
+
+
+def _register_active_coder_proc(proc: subprocess.Popen[Any]) -> None:
+    with _ACTIVE_CODER_PROCS_LOCK:
+        _ACTIVE_CODER_PROCS.add(proc)
+
+
+def _unregister_active_coder_proc(proc: subprocess.Popen[Any]) -> None:
+    with _ACTIVE_CODER_PROCS_LOCK:
+        _ACTIVE_CODER_PROCS.discard(proc)
+
+
+def abort_active_coder_processes(*, reason: str = "interrupt") -> int:
+    """Terminate all currently tracked coder process trees.
+
+    Returns the number of active processes that were targeted.
+    """
+    with _ACTIVE_CODER_PROCS_LOCK:
+        procs = list(_ACTIVE_CODER_PROCS)
+
+    if procs:
+        print(
+            f"[coder_adapters] abort_active_coder_processes: terminating {len(procs)} active coder process(es) due to {reason}",
+            flush=True,
+        )
+    for proc in procs:
+        _terminate_process_tree(proc)
+        _unregister_active_coder_proc(proc)
+    return len(procs)
     try:
         proc.terminate()
         proc.wait(timeout=5)
@@ -329,6 +361,7 @@ def _run_with_sidecar_poll(
             encoding="utf-8",
             errors="replace",
         )
+        _register_active_coder_proc(proc)
         if input_text is not None:
             proc.stdin.write(input_text)
             proc.stdin.close()
@@ -411,6 +444,13 @@ def _run_with_sidecar_poll(
                                 break
                             else:
                                 print(f"[coder_adapters] poll #{poll_count}: sidecar exists but JSON validation failed", flush=True)
+                        elif poll_count % 20 == 1:
+                            print(
+                                "[coder_adapters] poll "
+                                f"#{poll_count}: sidecar exists but is unchanged since start "
+                                f"(mtime={current_mtime}); waiting... ({time_remaining:.1f}s remaining)",
+                                flush=True,
+                            )
             time.sleep(SIDECAR_POLL_INTERVAL_SECONDS)
 
         t_out.join(timeout=5)
@@ -419,7 +459,18 @@ def _run_with_sidecar_poll(
         exit_reason = "sidecar_detected" if sidecar_triggered else f"process_exited_rc={rc}"
         print(f"[coder_adapters] exiting polling loop: {exit_reason}, total_polls={poll_count}, elapsed={(time.monotonic() - (deadline - timeout_seconds)):.1f}s", flush=True)
         return rc, "".join(chunks_out), "".join(chunks_err)
+    except BaseException:
+        if 'proc' in locals():
+            print("[coder_adapters] interrupt/error during coder polling; terminating active process tree", flush=True)
+            _terminate_process_tree(proc)
+            if 't_out' in locals():
+                t_out.join(timeout=2)
+            if 't_err' in locals():
+                t_err.join(timeout=2)
+        raise
     finally:
+        if 'proc' in locals():
+            _unregister_active_coder_proc(proc)
         _restore_terminal_settings(saved_terminal)
 
 

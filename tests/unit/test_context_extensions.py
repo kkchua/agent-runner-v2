@@ -157,3 +157,25 @@ class TestContextHookIntegration:
         assert "SYSTEM_DOCS_INDEX" in ctx
         assert "BUNDLE_TAXONOMY" in ctx
         assert ctx["PROJECT_ANALYSIS"].endswith("PROJECT_ANALYSIS.md")
+
+
+def test_render_prompt_appends_bundle_governance_for_opted_in_bundle(project_root):
+    from agent_runner_v2.step_runner import render_prompt
+
+    pkg_dir = project_root / "workflows" / "00_core_governance_bootstrap_v1"
+    if not pkg_dir.is_dir():
+        pytest.skip("workflow package directory not found")
+
+    bundle = load_workflow_package(pkg_dir)
+    rendered = render_prompt(
+        "Base prompt.",
+        {
+            "STEP_NAME": "generate_core_governance_docs",
+            "TOOLS_DIR": "",
+        },
+        step_cfg={"_workflow_bundle": bundle},
+    )
+
+    assert "## Bundle Governance" in rendered
+    assert "Core Governance Bundle Contract" in rendered
+    assert "SYSTEM_DOCS_INDEX" in rendered

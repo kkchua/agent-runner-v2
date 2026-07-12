@@ -196,15 +196,15 @@ def system_doc_root(*parts: str) -> Path:
 
 
 def codebase_doc_root(*parts: str) -> Path:
-    return repo_doc_root("codebase", *parts)
+    return repo_doc_root("repo", "codebase", *parts)
 
 
 def delivery_doc_root(*parts: str) -> Path:
-    return repo_doc_root("delivery", *parts)
+    return repo_doc_root("repo", "delivery", *parts)
 
 
 def architecture_site_root(*parts: str) -> Path:
-    return repo_doc_root("site", "architecture", *parts)
+    return repo_doc_root("repo", "site", "architecture", *parts)
 
 
 def artifact_rel_to_meta_rel(artifact_rel: str) -> str:

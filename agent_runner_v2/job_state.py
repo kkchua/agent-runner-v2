@@ -27,6 +27,18 @@ from .execution_support import (
     classify_pre_run_failure,
     default_usage_summary,
 )
+from .failure_runtime import (
+    append_failure_history,
+    clear_last_failure,
+    set_last_failure,
+)
+from .routing_runtime import get_next_step_skipping_refine_replan
+from .transition_runtime import (
+    advance_to_next_step,
+    complete_recovery_step,
+    mark_review_waiting_for_human,
+    mark_task_exec_success,
+)
 from .exceptions import ArtifactMissingError, MetaJsonInvalidError, MetaJsonMissingError, PreflightBlockedError
 from .documentation_guardrails import MASTER_BOOTSTRAP_WORKFLOWS, master_bootstrap_artifact_candidates
 from .runtime_context import JOBS_ROOT, PROJECT_ROOT, get_workflow_module
@@ -234,42 +246,6 @@ def save_json_atomic(path: Path, data: dict[str, Any]) -> None:
 def save_text(path: Path, content: str) -> None:
     ensure_dir(path.parent)
     path.write_text(content, encoding="utf-8")
-
-
-# ---------------------------------------------------------------------------
-# Failure tracking
-# ---------------------------------------------------------------------------
-
-def set_last_failure(
-    *, state: dict[str, Any], failure_class: str, failure_code: str,
-    failure_reason: str, failure_source: str, step: str,
-) -> None:
-    state["last_failure_class"] = failure_class
-    state["last_failure_code"] = failure_code
-    state["last_failure_reason"] = failure_reason
-    state["last_failure_source"] = failure_source
-    state["pending_intervention_for"] = step if failure_class == "HUMAN_RETRY_REQUIRED" else None
-
-
-def clear_last_failure(state: dict[str, Any]) -> None:
-    state["last_failure_class"] = None
-    state["last_failure_code"] = None
-    state["last_failure_reason"] = None
-    state["last_failure_source"] = None
-    state["pending_intervention_for"] = None
-
-
-def append_failure_history(
-    *, state: dict[str, Any], step: str, failure_class: str,
-    failure_code: str, failure_source: str,
-) -> None:
-    state.setdefault("failure_history", []).append({
-        "step": step,
-        "failure_class": failure_class,
-        "failure_code": failure_code,
-        "failure_source": failure_source,
-        "timestamp": now_iso(),
-    })
 
 
 def record_step_usage(state: dict[str, Any], step: str, usage_data: dict[str, Any]) -> None:
@@ -1314,26 +1290,6 @@ def ensure_execution_task_binding_integrity(state: dict[str, Any], *, step: str)
 # Step navigation
 # ---------------------------------------------------------------------------
 
-def get_next_step_skipping_refine_replan(
-    group_cfg: dict[str, Any], state: dict[str, Any],
-) -> str | None:
-    completed = set(state.get("completed_steps", []))
-    skip_steps: set[str] = set()
-    for sc in group_cfg.get("step_configs", {}).values():
-        for key in ("on_reject_refine", "on_exhaust_replan"):
-            s = (sc.get(key) or {}).get("step")
-            if s:
-                skip_steps.add(s)
-    # Also skip any replan/refine steps — these are only triggered via review rejection loops
-    for step in group_cfg["steps"]:
-        if "replan" in step.lower() or "refine" in step.lower():
-            skip_steps.add(step)
-    for step in group_cfg["steps"]:
-        if step not in completed and step not in skip_steps:
-            return step
-    return None
-
-
 def get_next_step(group_cfg: dict[str, Any], state: dict[str, Any]) -> str | None:
     completed = set(state.get("completed_steps", []))
     for step in group_cfg["steps"]:
@@ -1399,47 +1355,26 @@ def _handle_refine_success(
     loop_returns_to = step_cfg["loop_returns_to"]
     ctx = state.get("loop_context", {})
     target_key = ctx.get("loop_target_artifact") or step_cfg.get("target_artifact", "IMPL_FILE")
-
-    if not artifacts.get(target_key):
-        set_last_failure(state=state, failure_class="HUMAN_RETRY_REQUIRED",
-                         failure_code="MISSING_TARGET_ARTIFACT",
-                         failure_reason=f"Refine step returned APPROVED but produced no {target_key}",
-                         failure_source="runner", step=step)
-        append_failure_history(state=state, step=step, failure_class="HUMAN_RETRY_REQUIRED",
-                               failure_code="MISSING_TARGET_ARTIFACT", failure_source="runner")
-        state.setdefault("reject_counts", {})[step] = int(state.get("reject_counts", {}).get(step, 0)) + 1
-        set_job_status(state, "WAITING_FOR_HUMAN_INTERVENTION")
-        state["current_step"] = step
-        return state, 1
-
-    pre_checksum = ctx.get("pre_refine_checksum")
-    if pre_checksum:
-        target_path = PROJECT_ROOT / artifacts[target_key]
-        post_checksum = _md5_file(target_path) if target_path.exists() else None
-        if post_checksum and post_checksum == pre_checksum:
-            set_last_failure(state=state, failure_class="HUMAN_RETRY_REQUIRED",
-                             failure_code="NO_OP_REFINEMENT",
-                             failure_reason="Refine step made no content change to the target artifact",
-                             failure_source="runner", step=step)
-            append_failure_history(state=state, step=step, failure_class="HUMAN_RETRY_REQUIRED",
-                                   failure_code="NO_OP_REFINEMENT", failure_source="runner")
-            state.setdefault("reject_counts", {})[step] = int(state.get("reject_counts", {}).get(step, 0)) + 1
-            set_job_status(state, "WAITING_FOR_HUMAN_INTERVENTION")
-            state["current_step"] = step
-            return state, 1
-
-    history = state.get("loop_history", [])
-    if history:
-        history[-1]["refine_result"] = "APPROVED"
-        history[-1]["refine_at"] = now_iso()
-    state["loop_context"] = {
-        "active": False, "loop_step": None, "refine_step": None,
-        "loop_target_artifact": None, "loop_source_review": None,
-        "loop_iteration": 0, "pre_refine_checksum": None,
-    }
-    state["current_step"] = loop_returns_to
-    set_job_status(state, "IN_PROGRESS")
-    return state, 0
+    return complete_recovery_step(
+        state=state,
+        step=step,
+        target_key=target_key,
+        artifacts=artifacts,
+        pre_checksum=ctx.get("pre_refine_checksum"),
+        no_op_failure_code="NO_OP_REFINEMENT",
+        no_op_failure_reason="Refine step made no content change to the target artifact",
+        history_key="loop_history",
+        history_result_field="refine_result",
+        history_time_field="refine_at",
+        next_step=loop_returns_to,
+        project_root=PROJECT_ROOT,
+        now_iso=now_iso,
+        set_last_failure=set_last_failure,
+        append_failure_history=append_failure_history,
+        set_job_status=set_job_status,
+        checksum_file=_md5_file,
+        reset_replan_context=False,
+    )
 
 
 def _handle_replan_success(
@@ -1448,78 +1383,47 @@ def _handle_replan_success(
     replan_returns_to = step_cfg["replan_returns_to"]
     ctx = state.get("replan_context", {})
     target_key = ctx.get("target_artifact") or step_cfg.get("target_artifact", "PLAN_FILE")
-
-    if not artifacts.get(target_key):
-        set_last_failure(state=state, failure_class="HUMAN_RETRY_REQUIRED",
-                         failure_code="MISSING_TARGET_ARTIFACT",
-                         failure_reason=f"Replan step returned APPROVED but produced no {target_key}",
-                         failure_source="runner", step=step)
-        append_failure_history(state=state, step=step, failure_class="HUMAN_RETRY_REQUIRED",
-                               failure_code="MISSING_TARGET_ARTIFACT", failure_source="runner")
-        state.setdefault("reject_counts", {})[step] = int(state.get("reject_counts", {}).get(step, 0)) + 1
-        set_job_status(state, "WAITING_FOR_HUMAN_INTERVENTION")
-        state["current_step"] = step
-        return state, 1
-
-    pre_checksum = ctx.get("pre_replan_checksum")
-    if pre_checksum:
-        target_path = PROJECT_ROOT / artifacts[target_key]
-        post_checksum = _md5_file(target_path) if target_path.exists() else None
-        if post_checksum and post_checksum == pre_checksum:
-            set_last_failure(state=state, failure_class="HUMAN_RETRY_REQUIRED",
-                             failure_code="NO_OP_REPLAN",
-                             failure_reason="Replan step made no content change to the target artifact",
-                             failure_source="runner", step=step)
-            append_failure_history(state=state, step=step, failure_class="HUMAN_RETRY_REQUIRED",
-                                   failure_code="NO_OP_REPLAN", failure_source="runner")
-            state.setdefault("reject_counts", {})[step] = int(state.get("reject_counts", {}).get(step, 0)) + 1
-            set_job_status(state, "WAITING_FOR_HUMAN_INTERVENTION")
-            state["current_step"] = step
-            return state, 1
-
-    history = state.get("replan_history", [])
-    if history:
-        history[-1]["replan_result"] = "APPROVED"
-        history[-1]["replan_at"] = now_iso()
-    state["replan_context"] = {
-        "active": False, "source_review_step": None, "replan_step": None,
-        "target_artifact": None, "source_review_file": None, "replan_attempt": 0,
-        "pre_replan_checksum": None, "trigger_reason": None, "blocking_issues": [],
-        "previous_blocking_issue_count": 0, "previous_blocking_issue_severity": 0,
-    }
-    state["loop_context"] = {
-        "active": False, "loop_step": None, "refine_step": None,
-        "loop_target_artifact": None, "loop_source_review": None,
-        "loop_iteration": 0, "pre_refine_checksum": None,
-    }
-    state["current_step"] = replan_returns_to
-    set_job_status(state, "IN_PROGRESS")
-    return state, 0
+    return complete_recovery_step(
+        state=state,
+        step=step,
+        target_key=target_key,
+        artifacts=artifacts,
+        pre_checksum=ctx.get("pre_replan_checksum"),
+        no_op_failure_code="NO_OP_REPLAN",
+        no_op_failure_reason="Replan step made no content change to the target artifact",
+        history_key="replan_history",
+        history_result_field="replan_result",
+        history_time_field="replan_at",
+        next_step=replan_returns_to,
+        project_root=PROJECT_ROOT,
+        now_iso=now_iso,
+        set_last_failure=set_last_failure,
+        append_failure_history=append_failure_history,
+        set_job_status=set_job_status,
+        checksum_file=_md5_file,
+        reset_replan_context=True,
+    )
 
 
 def _handle_review_approval(
     state: dict[str, Any], step: str, step_cfg: dict[str, Any], coder_used: str,
 ) -> tuple[dict[str, Any], int]:
-    state["model_approved_steps"] = list(dict.fromkeys(
-        state.setdefault("model_approved_steps", []) + [step]
-    ))
-    review_state = state.setdefault("review_state", default_review_state())
-    review_state["reviewer_step"] = step
-    review_state["coder_used"] = coder_used
-    review_state["review_decision"] = "APPROVED"
-    review_state["review_decided_at"] = now_iso()
-    review_state["human_decision"] = "PENDING"
-    set_job_status(state, "WAITING_FOR_HUMAN_APPROVAL")
-    state["pending_human_approval_for"] = step
-    state["current_step"] = step
-    return state, 0
+    return mark_review_waiting_for_human(
+        state=state,
+        step=step,
+        coder_used=coder_used,
+        default_review_state=default_review_state,
+        now_iso=now_iso,
+        set_job_status=set_job_status,
+    )
 
 
 def _handle_task_exec_success(state: dict[str, Any], step: str) -> tuple[dict[str, Any], int]:
-    state["completed_steps"] = list(dict.fromkeys(state.setdefault("completed_steps", []) + [step]))
-    set_job_status(state, "IN_PROGRESS")
-    state["current_step"] = "review_task"
-    return state, 0
+    return mark_task_exec_success(
+        state=state,
+        step=step,
+        set_job_status=set_job_status,
+    )
 
 
 def _handle_task_queue_success(
@@ -1549,22 +1453,15 @@ def _handle_task_queue_success(
 def _advance_to_next(
     group_cfg: dict[str, Any], state: dict[str, Any], step: str, step_cfg: dict[str, Any] | None = None,
 ) -> tuple[dict[str, Any], int]:
-    state["completed_steps"] = list(dict.fromkeys(state.setdefault("completed_steps", []) + [step]))
-    # Use explicit onsuccess if defined; otherwise fall back to list-order advancement.
-    onsuccess = (step_cfg or {}).get("onsuccess") if step_cfg else None
-    if onsuccess:
-        next_step = onsuccess
-    else:
-        next_step = get_next_step_skipping_refine_replan(group_cfg, state)
-    if next_step is None:
-        set_job_status(state, "COMPLETED")
-        state["current_step"] = None
-        # Send notification for workflow completion
-        send_workflow_notification("COMPLETED", dict(state))
-    else:
-        set_job_status(state, "IN_PROGRESS")
-        state["current_step"] = next_step
-    return state, 0
+    return advance_to_next_step(
+        group_cfg=group_cfg,
+        state=state,
+        step=step,
+        step_cfg=step_cfg,
+        set_job_status=set_job_status,
+        get_next_step_skipping_refine_replan=get_next_step_skipping_refine_replan,
+        on_completed=lambda current_state: send_workflow_notification("COMPLETED", dict(current_state)),
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -1655,7 +1552,7 @@ def approve_step(
         send_workflow_notification("COMPLETED", dict(state))
         return state
 
-    next_step = get_next_step_skipping_refine_replan(group_cfg, state)
+    next_step = get_next_step_skipping_refine_replan(group_cfg, list(state.get("completed_steps", [])))
     if next_step is None:
         set_job_status(state, "COMPLETED")
         state["current_step"] = None
@@ -1724,7 +1621,7 @@ def force_approve_step(
         send_workflow_notification("COMPLETED", dict(state))
         return state
 
-    next_step = get_next_step_skipping_refine_replan(group_cfg, state)
+    next_step = get_next_step_skipping_refine_replan(group_cfg, list(state.get("completed_steps", [])))
     if next_step is None:
         set_job_status(state, "COMPLETED")
         state["current_step"] = None

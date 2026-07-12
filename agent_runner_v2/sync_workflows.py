@@ -51,6 +51,10 @@ def _discover_plugin_workflows() -> dict[str, dict]:
 
         bundle = load_workflow_package(candidate)
         group_dict = bundle_to_template_group_dict(bundle)
+        
+        # Debug: show what we loaded from TOML
+        print(f"  [plugin] Loaded {bundle.name!r}: default_max_rejects={bundle.default_max_rejects}", file=sys.stderr)
+        
         plugin_workflows[bundle.name] = group_dict
 
     return plugin_workflows

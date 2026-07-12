@@ -1,0 +1,50 @@
+You are refining the core governance docs after review feedback.
+
+Read first:
+- `{SYSTEM_DOCS_INDEX}`
+- `{SYSTEM_DOC_STANDARD}`
+- `{BUNDLE_TAXONOMY}`
+- `{BUNDLE_MIGRATION_PLAN}`
+- `{REVIEW_FILE_SUGGESTED}`
+
+Task:
+- update only the four governance files owned by this workflow
+- resolve every review issue directly
+- preserve the core ownership split:
+  - global governance docs
+  - workflow bundle master docs
+  - repo-local generated docs under `docs/repo/*`
+- preserve these factual rules while refining:
+  - `10_execution_scaffold_v2` is the canonical scaffold workflow in this repository
+  - Layer 1 governance docs must keep repo-local prompt-contract details generic and must not name repo-derived placeholders
+  - `00_master_docs_bootstrap_v2` must not be classified as a core-governance bundle
+  - core governance bundles do not own repo-local outputs under `docs/repo/*`
+- enforce these scope rules while refining:
+  - remove any repository-specific workflow inventory from `README.md`
+  - remove any `Repo-Document Bundles` or any other named non-core bundle classes from `BUNDLE_TAXONOMY.md`
+  - keep exactly one named bundle class in `BUNDLE_TAXONOMY.md`: core governance bundles
+  - remove any occurrence of `00_master_docs_bootstrap_v2` from `BUNDLE_TAXONOMY.md`
+  - remove enumerations of repo-derived artifact sets from `DOCUMENTATION_STANDARD.md`
+  - remove any repo-derived artifact name or repo-derived filename from `DOCUMENTATION_STANDARD.md`, including examples, quoted text, and example paths
+  - treat repo-analysis docs under `docs/system/00_governance/bootstrap/` as legacy mixed outputs, not active governance artifacts
+  - keep the four governance docs generic enough to govern the ecosystem, not this repository's current plugin inventory
+  - remove any literal `{ARTIFACT_KEY_*}` guidance from Layer 1 docs; if prompt-contract wording is necessary, describe it generically without naming repo-derived placeholders
+  - remove any occurrence of `delivery_scaffold_v1`
+  - when a sentence is not essential to governance scope, delete it instead of rewriting it into a broader repo-local tutorial
+  - when describing removed legacy identifiers, paraphrase them generically instead of reintroducing the forbidden literal text
+
+Document-specific refine rules:
+- `README.md`: only `00_core_governance_bootstrap_v1` and optionally `10_execution_scaffold_v2` may be named concretely
+- `DOCUMENTATION_STANDARD.md`: stay at contract/rules level only; no repo-derived artifact inventories, no repo-derived filenames, and no example paths that embed repo-derived filenames
+- `BUNDLE_TAXONOMY.md`: one concrete class only, plus generic packaging/ownership rules
+- `BUNDLE_MIGRATION_PLAN.md`: describe stale outputs generically and keep workflow references current
+
+Do not create new artifact classes or widen the scope into repo-derived analysis/docs.
+
+Before returning final JSON, re-read the four files and confirm:
+- `BUNDLE_TAXONOMY.md` has no `Repo-Document Bundles`
+- `BUNDLE_TAXONOMY.md` has no `00_master_docs_bootstrap_v2`
+- `DOCUMENTATION_STANDARD.md` has no repo-derived artifact names, repo-derived filenames, or repo-local example paths that embed repo-derived filenames
+- none of the four files has `{ARTIFACT_KEY_`
+- none of the four files has `delivery_scaffold_v1`
+- state explicitly in your remark what you removed from `DOCUMENTATION_STANDARD.md` and whether any repo-local examples remain

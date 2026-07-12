@@ -154,6 +154,46 @@ def test_master_review_step_has_deterministic_review_filename():
     assert "rmaster" in path
 
 
+def test_core_governance_review_step_has_deterministic_review_filename():
+    from agent_runner_v2.step_runner import _review_step_code, _suggested_review_file_path
+
+    assert _review_step_code("review_core_governance_docs") == "rcore"
+    path = _suggested_review_file_path(
+        state={
+            "template_group": "00_core_governance_bootstrap_v1",
+            "job_id": "00CORE-GEN-TEST",
+            "artifacts": {
+                "SYSTEM_DOCS_INDEX": "docs/system/00_governance/bootstrap/README.md",
+            },
+        },
+        step="review_core_governance_docs",
+        step_cfg={
+            "on_reject_refine": {"artifact": "SYSTEM_DOCS_INDEX"},
+        },
+    )
+    assert path == "docs/system/00_governance/bootstrap/00CORE-GEN-TEST-core-governance-review.md"
+
+
+def test_core_governance_audit_step_has_deterministic_review_filename():
+    from agent_runner_v2.step_runner import _review_step_code, _suggested_review_file_path
+
+    assert _review_step_code("audit_core_governance_accuracy") == "acore"
+    path = _suggested_review_file_path(
+        state={
+            "template_group": "00_core_governance_bootstrap_v1",
+            "job_id": "00CORE-GEN-TEST",
+            "artifacts": {
+                "SYSTEM_DOCS_INDEX": "docs/system/00_governance/bootstrap/README.md",
+            },
+        },
+        step="audit_core_governance_accuracy",
+        step_cfg={
+            "on_reject_refine": {"artifact": "SYSTEM_DOCS_INDEX"},
+        },
+    )
+    assert path == "docs/system/00_governance/bootstrap/00CORE-GEN-TEST-core-governance-audit.md"
+
+
 def test_codebase_inventory_generation_uses_registry_template_id():
     from agent_runner_v2 import codebase_docs
 

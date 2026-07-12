@@ -1,0 +1,126 @@
+You are generating the core governance master docs for the agent-runner ecosystem.
+
+This workflow is intentionally narrow. It owns only the canonical governance docs that define the documentation contract and bundle structure for the ecosystem. It does not own repo-derived analysis, codebase inventory, delivery run state, or audience outputs.
+
+Read first:
+- relevant source files under `agent_runner_v2/`
+- workflow package manifests under `workflows/`
+- any existing docs under `{SYSTEM_DOC_ROOT}/`
+
+Write or refresh only:
+- `{SYSTEM_DOCS_INDEX}`
+- `{SYSTEM_DOC_STANDARD}`
+- `{BUNDLE_TAXONOMY}`
+- `{BUNDLE_MIGRATION_PLAN}`
+
+Hard ownership rules:
+- Do not generate or refresh `PROJECT_ANALYSIS.md`.
+- Do not generate or refresh codebase inventory, module docs, component docs, change-impact docs, audience docs, or delivery runtime artifacts.
+- Do not write outside the four files listed above.
+
+Current factual constraints you must preserve:
+- This repository now uses a three-layer model:
+  1. ecosystem master docs define the universal documentation contract
+  2. workflow bundle master docs are installed with each bundle into the global runner home
+  3. repo-local generated docs are written under `docs/repo/*`
+- `00_core_governance_bootstrap_v1` owns only the four ecosystem master docs in `docs/system/00_governance/bootstrap/`.
+- `00_master_docs_bootstrap_v2` is not a core-governance doc owner. It is a repo-document/bootstrap workflow that scans a repository and generates repo-derived documentation inputs and system-analysis outputs for that repository.
+- The canonical scaffold workflow in this repository is `10_execution_scaffold_v2`, not `delivery_scaffold_v1`.
+- Core governance docs must not document repo-derived placeholder names or repo-derived artifact filenames. If prompt-contract wording is unavoidable in Layer 1 docs, keep it generic and do not name repo-local placeholders.
+- Core governance bundles must not claim they write to `docs/repo/*`. Repo-local outputs belong to repo-document, scaffold, sync, and audience workflows.
+
+Strict scope exclusions:
+- Do not list concrete repo workflow inventory in `README.md`. Describe workflow bundle docs generically.
+- Do not create a `Repo-Document Bundles` class in `BUNDLE_TAXONOMY.md`.
+- Do not create any named non-core bundle class in `BUNDLE_TAXONOMY.md`. No `Repo-Document Bundles`, `Delivery Scaffold Bundles`, `Sync and Audience Bundles`, or `Specialized Workflow Bundles`.
+- Do not enumerate repo-derived artifacts such as `PROJECT_ANALYSIS`, `CODEBASE_INVENTORY`, `SYSTEM_OVERVIEW`, `BUSINESS_CAPABILITIES`, `FUNCTIONAL_SPEC`, `SYSTEM_CONTEXT`, `COMPONENT_ARCHITECTURE`, `DEVELOPER_GUIDE`, or `RUNBOOK` anywhere inside the four core governance docs, including examples, quoted text, paths, or descriptions of forbidden patterns.
+- Do not describe repo-analysis outputs under `docs/system/00_governance/bootstrap/` as active governance artifacts.
+- Do not list "current registered workflows in this repository" inside `README.md`.
+- `DOCUMENTATION_STANDARD.md` must define standards for the four core governance docs only. It may mention repo-local docs only as non-authoritative downstream outputs and must not enumerate their artifact sets.
+- Do not include the literal text `{ARTIFACT_KEY_` anywhere.
+- Do not mention `delivery_scaffold_v1` anywhere.
+- If you need to discuss deprecated workflow IDs or legacy placeholder styles, paraphrase them generically instead of quoting the forbidden literal text.
+
+Required frontmatter:
+- `template_id`
+- `version: "1.0.0"`
+- `doc_type: "system"`
+- `managed_by: "workflow-generated"`
+- `generated_at`
+- `workflow: "00_core_governance_bootstrap_v1"`
+- `step: "generate_core_governance_docs"`
+- `change_id`
+
+Template IDs:
+- `README.md` -> `SYS-00-IDX`
+- `DOCUMENTATION_STANDARD.md` -> `SYS-00-DS`
+- `BUNDLE_TAXONOMY.md` -> `SYS-00-BT`
+- `BUNDLE_MIGRATION_PLAN.md` -> `SYS-00-BMP`
+
+Content requirements:
+- `README.md` must include these exact sections:
+  - `System Documentation Index`
+  - `Audience Views`
+  - `Document Map`
+- `DOCUMENTATION_STANDARD.md` must include these exact sections:
+  - `Purpose`
+  - `Audience Model`
+  - `Document Set`
+  - `Architecture Baseline`
+  - `Repo-Selected Profile`
+  - `Migration Mode`
+  - `Conditional Standards`
+  - `Update Triggers`
+  - `Validation`
+- `BUNDLE_TAXONOMY.md` must include these exact sections:
+  - `Bundle Classes`
+  - `Ownership Rules`
+  - `Packaging Rules`
+- `BUNDLE_MIGRATION_PLAN.md` must include these exact sections:
+  - `Current State`
+  - `Target State`
+  - `Migration Phases`
+
+The docs must make these boundaries explicit:
+- global governance docs are canonical runtime guidance
+- workflow bundles own bundle-local master docs
+- repo-generated docs live under `docs/repo/*`
+- repo-generated docs are not canonical governance authority
+
+Document-specific scope rules:
+- `README.md` may describe the three-layer model and generic workflow-bundle behavior, but must not include a repository-specific workflow list.
+- `BUNDLE_TAXONOMY.md` must describe only one bundle class: core governance bundles. It may describe generic downstream bundle behavior in prose, but it must not name or classify any other bundle family and must not name `00_master_docs_bootstrap_v2`.
+- `BUNDLE_MIGRATION_PLAN.md` must describe migration from legacy mixed docs toward the three-layer model. Refer to stale outputs generically as "repo-derived analysis docs" or "legacy mixed outputs". Do not enumerate long legacy artifact lists unless absolutely necessary.
+- `DOCUMENTATION_STANDARD.md` must remain focused on the required structure, validation, and update triggers for the four ecosystem master docs. If downstream outputs are mentioned, use only generic wording such as "repo-local generated docs under `docs/repo/*`". Do not include repo-derived artifact names, repo-derived filenames, or example paths containing repo-derived filenames.
+
+Output shape requirements:
+- `README.md`:
+  - describe the three-layer model
+  - mention `10_execution_scaffold_v2` at most once as the canonical scaffold workflow
+  - do not name any other concrete workflow except `00_core_governance_bootstrap_v1`
+- `DOCUMENTATION_STANDARD.md`:
+  - define standards only for the four ecosystem master docs
+  - if you mention repo-local outputs, use only generic wording such as "repo-local generated docs under `docs/repo/*`"
+  - do not include any table, bullet list, example path, or quoted sentence containing repo-derived artifact names or repo-derived filenames
+- `BUNDLE_TAXONOMY.md`:
+  - Section `Bundle Classes` must contain exactly one concrete class subsection for core governance bundles
+  - `00_core_governance_bootstrap_v1` may appear as the only named example
+  - `00_master_docs_bootstrap_v2` must not appear anywhere in this file
+- `BUNDLE_MIGRATION_PLAN.md`:
+  - may mention `00_master_docs_bootstrap_v2` only as a repo-document/bootstrap workflow outside core governance ownership
+  - must use `10_execution_scaffold_v2` if the scaffold workflow is mentioned
+  - must not describe prompt contracts using `{ARTIFACT_KEY_*}`
+
+Do not carry forward stale legacy assumptions such as:
+- `delivery_scaffold_v1` being the canonical scaffold workflow
+- prompt placeholders being documented literally in Layer 1 docs
+- `00_master_docs_bootstrap_v2` being classified as a core-governance bundle
+- legacy workflow IDs that do not match the actual current registry
+
+Before returning final JSON, re-read the four files from disk and verify all of these are true:
+- `BUNDLE_TAXONOMY.md` contains no `Repo-Document Bundles`
+- `BUNDLE_TAXONOMY.md` contains no `00_master_docs_bootstrap_v2`
+- `DOCUMENTATION_STANDARD.md` contains no `PROJECT_ANALYSIS`, `CODEBASE_INVENTORY`, `SYSTEM_OVERVIEW`, `BUSINESS_CAPABILITIES`, `FUNCTIONAL_SPEC`, `NON_FUNCTIONAL_REQUIREMENTS`, `SYSTEM_CONTEXT`, `COMPONENT_ARCHITECTURE`, `DECISION_LOG`, `SYSTEM_FILE_STRUCTURE`, `DEVELOPER_GUIDE`, or `RUNBOOK`
+- `DOCUMENTATION_STANDARD.md` contains no example path that embeds a repo-derived filename
+- none of the four files contains `{ARTIFACT_KEY_`
+- none of the four files contains `delivery_scaffold_v1`

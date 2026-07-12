@@ -16,6 +16,10 @@ from .bundle_taxonomy import (
     bundle_manifest,
     bundle_manifest_path,
 )
+from .bundle_governance import (
+    generate_bundle_governance_adapters,
+    load_bundle_governance,
+)
 from .doc_paths import system_doc_rel
 from .runtime_context import DEFAULT_RUNNER_HOME, PACKAGE_ROOT
 
@@ -24,6 +28,12 @@ GLOBAL_RUNNER_HOME = Path.home() / DEFAULT_RUNNER_HOME
 BOOTSTRAP_ROOT = PACKAGE_ROOT / "bootstrap" / "workflows" / "default"
 BOOTSTRAP_SOURCE_ROOT = Path(system_doc_rel())
 PACKAGE_BOOTSTRAP_ROOT = PACKAGE_ROOT / "bootstrap" / "bundles" / CORE_BUNDLE_NAME / "current"
+PACKAGED_BOOTSTRAP_EXCLUDE_PATTERNS = (
+    "*-bootstrap-change-log.md",
+    "*-bootstrap-validation.md",
+    "*-bootstrap-summary.md",
+    "*.meta.json",
+)
 
 
 def bundles_root() -> Path:
@@ -89,6 +99,13 @@ def _tree_has_files(root: Path) -> bool:
     return any(path.is_file() for path in root.rglob("*"))
 
 
+def _cleanup_packaged_bootstrap(root: Path) -> None:
+    for pattern in PACKAGED_BOOTSTRAP_EXCLUDE_PATTERNS:
+        for candidate in root.rglob(pattern):
+            if candidate.is_file():
+                candidate.unlink()
+
+
 def _copy_plugin_workflows_to_bootstrap(
     plugin_root: Path,
     bootstrap_wf_root: Path,
@@ -113,11 +130,25 @@ def _copy_plugin_workflows_to_bootstrap(
             continue
 
         pkg_name = candidate.name
+        _generate_bundle_governance_docs(candidate)
         dest = bootstrap_wf_root / pkg_name
         _replace_tree(candidate, dest)
+        _generate_bundle_governance_docs(dest)
         copied.append(dest)
 
     return copied
+
+
+def _generate_bundle_governance_docs(bundle_root: Path) -> dict[str, str]:
+    governance = load_bundle_governance(bundle_root)
+    if governance is None:
+        return {}
+    rendered = generate_bundle_governance_adapters(
+        governance,
+        bundle_name=bundle_root.name,
+        bundle_label=bundle_root.name,
+    )
+    return {name: str(path) for name, path in rendered.items()}
 
 
 def publish_bootstrap_bundle(
@@ -134,6 +165,7 @@ def publish_bootstrap_bundle(
 
     # 1. Copy governance docs (existing behavior)
     _replace_tree(source_root, package_root)
+    _cleanup_packaged_bootstrap(package_root)
 
     # 2. Copy plugin workflow packages as-is into bootstrap workflows/default/
     bootstrap_wf_root = BOOTSTRAP_ROOT
@@ -145,6 +177,9 @@ def publish_bootstrap_bundle(
         "package_bootstrap_root": str(package_root),
         "bundle_name": CORE_BUNDLE_NAME,
         "plugin_workflows_copied": [p.name for p in copied],
+        "plugin_governance_docs_generated": {
+            p.name: _generate_bundle_governance_docs(p) for p in copied
+        },
     }
 
 
@@ -278,6 +313,7 @@ def seed_workflow_packages(workspace_root: Path, workflow_name: str = "default")
         pkg_name = candidate.name
         dest = bundle_root / pkg_name
         _replace_tree(candidate, dest)
+        _generate_bundle_governance_docs(dest)
         seeded.append(dest)
 
     return seeded

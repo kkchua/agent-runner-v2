@@ -242,39 +242,47 @@ ARTIFACT_KEY_USER_SITE_MANIFEST = "USER_SITE_MANIFEST"
 
 # Base directory folders (correspond to doc_paths.py constants)
 FOLDER_KEY_DOCS = "docs"
+FOLDER_KEY_REPO_DOC_ROOT = "docs/repo"
 FOLDER_KEY_SYSTEM_DOC_ROOT = "docs/system/00_governance/bootstrap"
 FOLDER_KEY_SYSTEM_TEMPLATE_ROOT = "docs/system/00_governance/bootstrap/templates"
 FOLDER_KEY_SYSTEM_DELIVERY_TEMPLATE_ROOT = "docs/system/00_governance/bootstrap/templates/delivery"
 FOLDER_KEY_SYSTEM_CODEBASE_TEMPLATE_ROOT = "docs/system/00_governance/bootstrap/templates/codebase"
-FOLDER_KEY_CODEBASE_DOC_ROOT = "docs/codebase"
-FOLDER_KEY_DELIVERY_DOC_ROOT = "docs/delivery"
-FOLDER_KEY_DOCS_SITE_ROOT = "docs/site"
-FOLDER_KEY_ARCHITECTURE_SITE_ROOT = "docs/site"  # Legacy alias
-FOLDER_KEY_STAKEHOLDER_SITE_ROOT = "docs/site/stakeholders"
-FOLDER_KEY_DEVELOPER_SITE_ROOT = "docs/site/developers"
-FOLDER_KEY_OPERATOR_SITE_ROOT = "docs/site/operators"
-FOLDER_KEY_TESTER_SITE_ROOT = "docs/site/testers"
-FOLDER_KEY_USER_SITE_ROOT = "docs/site/users"
+FOLDER_KEY_CODEBASE_DOC_ROOT = "docs/repo/codebase"
+FOLDER_KEY_DELIVERY_DOC_ROOT = "docs/repo/delivery"
+FOLDER_KEY_AUDIENCE_DOC_ROOT = "docs/repo/audience"
+FOLDER_KEY_DOCS_SITE_ROOT = "docs/repo/site"
+FOLDER_KEY_ARCHITECTURE_SITE_ROOT = "docs/repo/site"  # Legacy alias
+FOLDER_KEY_STAKEHOLDER_SITE_ROOT = "docs/repo/site/stakeholders"
+FOLDER_KEY_DEVELOPER_SITE_ROOT = "docs/repo/site/developers"
+FOLDER_KEY_OPERATOR_SITE_ROOT = "docs/repo/site/operators"
+FOLDER_KEY_TESTER_SITE_ROOT = "docs/repo/site/testers"
+FOLDER_KEY_USER_SITE_ROOT = "docs/repo/site/users"
+
+# Legacy repo-generated roots (read-only compatibility during migration)
+FOLDER_KEY_LEGACY_CODEBASE_DOC_ROOT = "docs/codebase"
+FOLDER_KEY_LEGACY_DELIVERY_DOC_ROOT = "docs/delivery"
+FOLDER_KEY_LEGACY_DOCS_SITE_ROOT = "docs/site"
 
 # Bootstrap folders (where 00_master_docs_bootstrap_v1 writes during development)
 FOLDER_KEY_SYSTEM_BOOTSTRAP = "docs/system/00_governance/bootstrap"
-FOLDER_KEY_CODEBASE_INVENTORY = "docs/codebase/01_inventory"
-FOLDER_KEY_CODEBASE_CHANGES = "docs/codebase/04_changes"
-FOLDER_KEY_CODEBASE_MODULES = "docs/codebase/02_modules"
-FOLDER_KEY_CODEBASE_COMPONENTS = "docs/codebase/03_components"
-FOLDER_KEY_CODEBASE_STANDARDS = "docs/codebase/00_standards"
+FOLDER_KEY_CODEBASE_ANALYSIS = "docs/repo/codebase/00_analysis"
+FOLDER_KEY_CODEBASE_STANDARDS = "docs/repo/codebase/00_standards"
+FOLDER_KEY_CODEBASE_INVENTORY = "docs/repo/codebase/01_inventory"
+FOLDER_KEY_CODEBASE_MODULES = "docs/repo/codebase/02_modules"
+FOLDER_KEY_CODEBASE_COMPONENTS = "docs/repo/codebase/03_components"
+FOLDER_KEY_CODEBASE_CHANGES = "docs/repo/codebase/04_changes"
 
 # Delivery folders (where 10_execution_scaffold_v1 writes)
-FOLDER_KEY_DELIVERY_DOC_ROOT = "docs/delivery"
-FOLDER_KEY_DELIVERY_STANDARDS = "docs/delivery/00_standards"
-FOLDER_KEY_DELIVERY_INITIATIVES = "docs/delivery/01_initiatives"
-FOLDER_KEY_DELIVERY_PLANS = "docs/delivery/02_plans"
-FOLDER_KEY_DELIVERY_TASKS = "docs/delivery/03_tasks"
-FOLDER_KEY_DELIVERY_IMPLEMENTATIONS = "docs/delivery/04_implementation_plans"
-FOLDER_KEY_DELIVERY_REVIEWS = "docs/delivery/05_reviews"
-FOLDER_KEY_DELIVERY_VALIDATIONS = "docs/delivery/06_validations"
-FOLDER_KEY_DELIVERY_MEMORY = "docs/delivery/07_memory"
-FOLDER_KEY_DELIVERY_AGENTS = "docs/delivery/08_agents"
+FOLDER_KEY_DELIVERY_DOC_ROOT = "docs/repo/delivery"
+FOLDER_KEY_DELIVERY_STANDARDS = "docs/repo/delivery/00_standards"
+FOLDER_KEY_DELIVERY_INITIATIVES = "docs/repo/delivery/01_initiatives"
+FOLDER_KEY_DELIVERY_PLANS = "docs/repo/delivery/02_plans"
+FOLDER_KEY_DELIVERY_TASKS = "docs/repo/delivery/03_tasks"
+FOLDER_KEY_DELIVERY_IMPLEMENTATIONS = "docs/repo/delivery/04_implementation_plans"
+FOLDER_KEY_DELIVERY_REVIEWS = "docs/repo/delivery/05_reviews"
+FOLDER_KEY_DELIVERY_VALIDATIONS = "docs/repo/delivery/06_validations"
+FOLDER_KEY_DELIVERY_MEMORY = "docs/repo/delivery/07_memory"
+FOLDER_KEY_DELIVERY_AGENTS = "docs/repo/delivery/08_agents"
 FOLDER_KEY_DELIVERY_TEMPLATES = "docs/system/00_governance/bootstrap/templates/delivery"
 FOLDER_KEY_CODEBASE_TEMPLATES = "docs/system/00_governance/bootstrap/templates/codebase"
 
@@ -283,12 +291,12 @@ FOLDER_KEY_CODEBASE_TEMPLATES = "docs/system/00_governance/bootstrap/templates/c
 FOLDER_KEY_GLOBAL_BUNDLES = "~/.ukbe-runner/bundles/core/current"
 
 # Architecture site folders
-FOLDER_KEY_DOCS_SITE = "docs/site"
-FOLDER_KEY_STAKEHOLDER_SITE = "docs/site/stakeholders"
-FOLDER_KEY_DEVELOPER_SITE = "docs/site/developers"
-FOLDER_KEY_OPERATOR_SITE = "docs/site/operators"
-FOLDER_KEY_TESTER_SITE = "docs/site/testers"
-FOLDER_KEY_USER_SITE = "docs/site/users"
+FOLDER_KEY_DOCS_SITE = "docs/repo/site"
+FOLDER_KEY_STAKEHOLDER_SITE = "docs/repo/site/stakeholders"
+FOLDER_KEY_DEVELOPER_SITE = "docs/repo/site/developers"
+FOLDER_KEY_OPERATOR_SITE = "docs/repo/site/operators"
+FOLDER_KEY_TESTER_SITE = "docs/repo/site/testers"
+FOLDER_KEY_USER_SITE = "docs/repo/site/users"
 
 # ============================================================================
 # Path Generation Function
@@ -357,7 +365,7 @@ def artifact_meta_path(artifact_rel: str) -> str:
 # No hardcoded strings - all paths derived from constants.
 
 # System documentation paths (bootstrap)
-ARTIFACT_PATH_PROJECT_ANALYSIS = artifact_path(ARTIFACT_KEY_PROJECT_ANALYSIS, FOLDER_KEY_SYSTEM_BOOTSTRAP)
+ARTIFACT_PATH_PROJECT_ANALYSIS = artifact_path(ARTIFACT_KEY_PROJECT_ANALYSIS, FOLDER_KEY_CODEBASE_ANALYSIS)
 ARTIFACT_PATH_README = artifact_path(ARTIFACT_KEY_README, FOLDER_KEY_SYSTEM_BOOTSTRAP)
 ARTIFACT_PATH_DOCUMENTATION_STANDARD = artifact_path(ARTIFACT_KEY_DOCUMENTATION_STANDARD, FOLDER_KEY_SYSTEM_BOOTSTRAP)
 ARTIFACT_PATH_BUNDLE_TAXONOMY = artifact_path(ARTIFACT_KEY_BUNDLE_TAXONOMY, FOLDER_KEY_SYSTEM_BOOTSTRAP)
@@ -372,11 +380,11 @@ ARTIFACT_PATH_DECISION_LOG = artifact_path(ARTIFACT_KEY_DECISION_LOG, FOLDER_KEY
 ARTIFACT_PATH_SYSTEM_FILE_STRUCTURE = artifact_path(ARTIFACT_KEY_SYSTEM_FILE_STRUCTURE, FOLDER_KEY_SYSTEM_BOOTSTRAP)
 ARTIFACT_PATH_DEVELOPER_GUIDE = artifact_path(ARTIFACT_KEY_DEVELOPER_GUIDE, FOLDER_KEY_SYSTEM_BOOTSTRAP)
 ARTIFACT_PATH_RUNBOOK = artifact_path(ARTIFACT_KEY_RUNBOOK, FOLDER_KEY_SYSTEM_BOOTSTRAP)
-ARTIFACT_PATH_EXISTING_REPO_WORKFLOW_SOP = artifact_path(ARTIFACT_KEY_EXISTING_REPO_WORKFLOW_SOP, FOLDER_KEY_SYSTEM_BOOTSTRAP)
+ARTIFACT_PATH_EXISTING_REPO_WORKFLOW_SOP = artifact_path(ARTIFACT_KEY_EXISTING_REPO_WORKFLOW_SOP, FOLDER_KEY_DELIVERY_STANDARDS)
 
 # System governance paths (additional)
-ARTIFACT_PATH_DELIVERY_STATUS_RULES = artifact_path(ARTIFACT_KEY_DELIVERY_STATUS_RULES, FOLDER_KEY_SYSTEM_BOOTSTRAP)
-ARTIFACT_PATH_WORKFLOW_SOP = artifact_path(ARTIFACT_KEY_WORKFLOW_SOP, FOLDER_KEY_SYSTEM_BOOTSTRAP)
+ARTIFACT_PATH_DELIVERY_STATUS_RULES = artifact_path(ARTIFACT_KEY_DELIVERY_STATUS_RULES, FOLDER_KEY_DELIVERY_STANDARDS)
+ARTIFACT_PATH_WORKFLOW_SOP = artifact_path(ARTIFACT_KEY_WORKFLOW_SOP, FOLDER_KEY_DELIVERY_STANDARDS)
 
 # Codebase documentation paths
 ARTIFACT_PATH_CODEBASE_INVENTORY = artifact_path(FILENAME_CODEBASE_INVENTORY, FOLDER_KEY_CODEBASE_INVENTORY)
@@ -387,13 +395,13 @@ ARTIFACT_PATH_CODEBASE_DOC_SOP = artifact_path(ARTIFACT_KEY_CODEBASE_DOC_SOP, FO
 ARTIFACT_PATH_CODEBASE_DOC_STATUS_RULES = artifact_path(ARTIFACT_KEY_CODEBASE_DOC_STATUS_RULES, FOLDER_KEY_CODEBASE_STANDARDS)
 
 # Delivery documentation paths
-ARTIFACT_PATH_DELIVERY_AGENTS = artifact_path(ARTIFACT_KEY_DELIVERY_AGENTS, FOLDER_KEY_SYSTEM_BOOTSTRAP)
-ARTIFACT_PATH_DELIVERY_AGENT_PLANNER = artifact_path(ARTIFACT_KEY_DELIVERY_AGENT_PLANNER, FOLDER_KEY_SYSTEM_BOOTSTRAP)
-ARTIFACT_PATH_DELIVERY_AGENT_TASK_DECOMPOSER = artifact_path(ARTIFACT_KEY_DELIVERY_AGENT_TASK_DECOMPOSER, FOLDER_KEY_SYSTEM_BOOTSTRAP)
-ARTIFACT_PATH_DELIVERY_AGENT_IMPL_PLANNER = artifact_path(ARTIFACT_KEY_DELIVERY_AGENT_IMPL_PLANNER, FOLDER_KEY_SYSTEM_BOOTSTRAP)
-ARTIFACT_PATH_DELIVERY_AGENT_EXECUTOR = artifact_path(ARTIFACT_KEY_DELIVERY_AGENT_EXECUTOR, FOLDER_KEY_SYSTEM_BOOTSTRAP)
-ARTIFACT_PATH_DELIVERY_AGENT_REVIEWER = artifact_path(ARTIFACT_KEY_DELIVERY_AGENT_REVIEWER, FOLDER_KEY_SYSTEM_BOOTSTRAP)
-ARTIFACT_PATH_DELIVERY_AGENT_MEMORY_MANAGER = artifact_path(ARTIFACT_KEY_DELIVERY_AGENT_MEMORY_MANAGER, FOLDER_KEY_SYSTEM_BOOTSTRAP)
+ARTIFACT_PATH_DELIVERY_AGENTS = artifact_path(ARTIFACT_KEY_DELIVERY_AGENTS, FOLDER_KEY_DELIVERY_AGENTS)
+ARTIFACT_PATH_DELIVERY_AGENT_PLANNER = artifact_path(ARTIFACT_KEY_DELIVERY_AGENT_PLANNER, FOLDER_KEY_DELIVERY_AGENTS)
+ARTIFACT_PATH_DELIVERY_AGENT_TASK_DECOMPOSER = artifact_path(ARTIFACT_KEY_DELIVERY_AGENT_TASK_DECOMPOSER, FOLDER_KEY_DELIVERY_AGENTS)
+ARTIFACT_PATH_DELIVERY_AGENT_IMPL_PLANNER = artifact_path(ARTIFACT_KEY_DELIVERY_AGENT_IMPL_PLANNER, FOLDER_KEY_DELIVERY_AGENTS)
+ARTIFACT_PATH_DELIVERY_AGENT_EXECUTOR = artifact_path(ARTIFACT_KEY_DELIVERY_AGENT_EXECUTOR, FOLDER_KEY_DELIVERY_AGENTS)
+ARTIFACT_PATH_DELIVERY_AGENT_REVIEWER = artifact_path(ARTIFACT_KEY_DELIVERY_AGENT_REVIEWER, FOLDER_KEY_DELIVERY_AGENTS)
+ARTIFACT_PATH_DELIVERY_AGENT_MEMORY_MANAGER = artifact_path(ARTIFACT_KEY_DELIVERY_AGENT_MEMORY_MANAGER, FOLDER_KEY_DELIVERY_AGENTS)
 ARTIFACT_PATH_DELIVERY_FOLDER_MAP = artifact_path(ARTIFACT_KEY_DELIVERY_FOLDER_MAP, FOLDER_KEY_DELIVERY_DOC_ROOT, EXT_JSON)
 
 # Template paths
@@ -807,6 +815,21 @@ def user_site_rel(*parts: str) -> str:
     return _rel(*(PurePosixPath(FOLDER_KEY_USER_SITE_ROOT).parts + parts))
 
 
+def legacy_codebase_doc_rel(*parts: str) -> str:
+    """Get path relative to the legacy CODEBASE_DOC_ROOT."""
+    return _rel(*(PurePosixPath(FOLDER_KEY_LEGACY_CODEBASE_DOC_ROOT).parts + parts))
+
+
+def legacy_delivery_doc_rel(*parts: str) -> str:
+    """Get path relative to the legacy DELIVERY_DOC_ROOT."""
+    return _rel(*(PurePosixPath(FOLDER_KEY_LEGACY_DELIVERY_DOC_ROOT).parts + parts))
+
+
+def legacy_docs_site_rel(*parts: str) -> str:
+    """Get path relative to the legacy site root."""
+    return _rel(*(PurePosixPath(FOLDER_KEY_LEGACY_DOCS_SITE_ROOT).parts + parts))
+
+
 def repo_doc_rel(*parts: str) -> str:
     """Get path relative to DOCS_ROOT (docs/ folder)."""
     return _rel(*(PurePosixPath(FOLDER_KEY_DOCS).parts + parts))
@@ -916,6 +939,29 @@ def known_artifact_paths() -> dict[str, str]:
     return paths
 
 
+def legacy_artifact_paths() -> dict[str, list[str]]:
+    """Map artifact keys to legacy repository-relative paths."""
+    return {
+        ARTIFACT_KEY_PROJECT_ANALYSIS: [relpath("docs/system/00_governance/bootstrap", f"{ARTIFACT_KEY_PROJECT_ANALYSIS}{EXT_MD}")],
+        ARTIFACT_KEY_DELIVERY_SOP: [relpath("docs/system/00_governance/bootstrap", f"{ARTIFACT_KEY_WORKFLOW_SOP}{EXT_MD}")],
+        ARTIFACT_KEY_DELIVERY_STATUS_RULES: [relpath("docs/system/00_governance/bootstrap", f"{ARTIFACT_KEY_DELIVERY_STATUS_RULES}{EXT_MD}")],
+        ARTIFACT_KEY_EXISTING_REPO_WORKFLOW_SOP: [relpath("docs/system/00_governance/bootstrap", f"{ARTIFACT_KEY_EXISTING_REPO_WORKFLOW_SOP}{EXT_MD}")],
+        ARTIFACT_KEY_CODEBASE_DOC_SOP: [legacy_codebase_doc_rel("00_standards", f"{ARTIFACT_KEY_CODEBASE_DOC_SOP}{EXT_MD}")],
+        ARTIFACT_KEY_CODEBASE_DOC_STATUS_RULES: [legacy_codebase_doc_rel("00_standards", f"{ARTIFACT_KEY_CODEBASE_DOC_STATUS_RULES}{EXT_MD}")],
+        ARTIFACT_KEY_CODEBASE_INVENTORY: [legacy_codebase_doc_rel("01_inventory", f"{FILENAME_CODEBASE_INVENTORY}{EXT_MD}")],
+        ARTIFACT_KEY_INTEGRATION_MAP: [legacy_codebase_doc_rel("01_inventory", f"{ARTIFACT_KEY_INTEGRATION_MAP}{EXT_MD}")],
+        ARTIFACT_KEY_FAILURE_MODES: [legacy_codebase_doc_rel("01_inventory", f"{ARTIFACT_KEY_FAILURE_MODES}{EXT_MD}")],
+        ARTIFACT_KEY_ARCHITECTURE_FLOW: [legacy_codebase_doc_rel("01_inventory", f"{ARTIFACT_KEY_ARCHITECTURE_FLOW}{EXT_MD}")],
+        ARTIFACT_KEY_DELIVERY_AGENTS: [legacy_delivery_doc_rel("08_agents", f"{ARTIFACT_KEY_DELIVERY_AGENTS}{EXT_MD}")],
+        ARTIFACT_KEY_DELIVERY_AGENT_PLANNER: [legacy_delivery_doc_rel("08_agents", f"{ARTIFACT_KEY_DELIVERY_AGENT_PLANNER}{EXT_MD}")],
+        ARTIFACT_KEY_DELIVERY_AGENT_TASK_DECOMPOSER: [legacy_delivery_doc_rel("08_agents", f"{ARTIFACT_KEY_DELIVERY_AGENT_TASK_DECOMPOSER}{EXT_MD}")],
+        ARTIFACT_KEY_DELIVERY_AGENT_IMPL_PLANNER: [legacy_delivery_doc_rel("08_agents", f"{ARTIFACT_KEY_DELIVERY_AGENT_IMPL_PLANNER}{EXT_MD}")],
+        ARTIFACT_KEY_DELIVERY_AGENT_EXECUTOR: [legacy_delivery_doc_rel("08_agents", f"{ARTIFACT_KEY_DELIVERY_AGENT_EXECUTOR}{EXT_MD}")],
+        ARTIFACT_KEY_DELIVERY_AGENT_REVIEWER: [legacy_delivery_doc_rel("08_agents", f"{ARTIFACT_KEY_DELIVERY_AGENT_REVIEWER}{EXT_MD}")],
+        ARTIFACT_KEY_DELIVERY_AGENT_MEMORY_MANAGER: [legacy_delivery_doc_rel("08_agents", f"{ARTIFACT_KEY_DELIVERY_AGENT_MEMORY_MANAGER}{EXT_MD}")],
+    }
+
+
 PROMPT_LITERAL_ALIASES: dict[str, str] = {
     ARTIFACT_PATH_README: ARTIFACT_KEY_SYSTEM_DOCS_INDEX,
     ARTIFACT_PATH_DOCUMENTATION_STANDARD: ARTIFACT_KEY_SYSTEM_DOC_STANDARD,
@@ -932,6 +978,13 @@ def prompt_literal_substitutions() -> dict[str, str]:
         {
             literal_path: placeholder(artifact_key)
             for artifact_key, literal_path in known_artifact_paths().items()
+        }
+    )
+    substitutions.update(
+        {
+            legacy_path: placeholder(artifact_key)
+            for artifact_key, legacy_paths in legacy_artifact_paths().items()
+            for legacy_path in legacy_paths
         }
     )
     return substitutions

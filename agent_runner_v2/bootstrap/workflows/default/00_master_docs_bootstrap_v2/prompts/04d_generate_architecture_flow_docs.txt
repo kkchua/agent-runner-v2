@@ -1,0 +1,42 @@
+You are generating the Architecture Flow document for the current repository.
+
+This step produces comprehensive documentation of end-to-end execution flows for different usage modes.
+
+Inputs you must read first:
+- `{PROJECT_ANALYSIS}`
+- `{CODEBASE_DOC_ROOT}/01_inventory/codebase_inventory.md`
+- `{CODEBASE_DOC_ROOT}/04_changes/` latest change impact document
+- `{CODEBASE_DOC_ROOT}/02_modules/`
+- Source files under `agent_runner_v2/` — especially `run_agent.py`, `step_runner.py`, `workflow_router.py`, `daemon.py`, `backend_client.py`
+
+Write or refresh this doc:
+- `{CODEBASE_DOC_ROOT}/01_inventory/ARCHITECTURE_FLOW.md`
+
+Workflow-owned artifact contract:
+- `ARCHITECTURE_FLOW` -> `{CODEBASE_DOC_ROOT}/01_inventory/ARCHITECTURE_FLOW.md`
+
+Primary objectives:
+1. Document the three main execution modes: local run, backend worker, daemon.
+2. Provide step-by-step flow for each mode with ASCII diagrams.
+3. Document the workflow step execution flow in detail.
+4. Document the review loop flow (review → refine → loop back).
+5. Document the failure routing flow (exception → classification → retry/escalate).
+6. Document the documentation sync flow.
+
+Required content:
+- Execution modes overview
+- Local execution flow (with ASCII diagram)
+- Backend worker flow (with ASCII diagram)
+- Daemon supervision flow
+- Workflow step execution detail
+- Review loop mechanics
+- Failure routing flow
+- Documentation sync flow
+
+Frontmatter contract:
+- Use `template_id: "CB-04-AF"` in YAML frontmatter
+- Include standard workflow metadata (workflow, step, generated, managed_by)
+
+Hard ownership rule:
+- This step only writes `ARCHITECTURE_FLOW.md`.
+- Do not modify any other documentation files.

@@ -1,10 +1,4 @@
-"""Model alias resolver for the agent runner.
-
-Loads ``model_mapping.json`` from the runner root and resolves coder
-aliases (e.g. ``"qwen-deepseek"``) into full invocation configs.
-Plain coder names (``"claude"``, ``"codex"``, ``"qwen"``) pass
-through unchanged.
-"""
+"""Model alias and coder-role resolver for the agent runner."""
 from __future__ import annotations
 
 import json
@@ -14,11 +8,9 @@ from typing import Any
 
 from .runtime_context import RUNNER_ROOT
 
-# ---------------------------------------------------------------------------
-# Module-level cache
-# ---------------------------------------------------------------------------
-_MAPPING: dict[str, dict[str, Any]] | None = None
-_MAPPING_PATH: Path | None = None
+
+_MAPPING_CACHE: dict[Path, dict[str, Any]] = {}
+_ROLE_CACHE: dict[Path, dict[str, dict[str, Any]]] = {}
 
 
 def _runner_root() -> Path:
@@ -29,41 +21,78 @@ def _mapping_path() -> Path:
     return _runner_root() / "model_mapping.json"
 
 
-# ---------------------------------------------------------------------------
-# Public API
-# ---------------------------------------------------------------------------
+def _normalize_path(path: Path | str | None) -> Path:
+    return Path(path) if path else _mapping_path()
+
+
+def _load_json(path: Path) -> dict[str, Any]:
+    if path in _MAPPING_CACHE:
+        return _MAPPING_CACHE[path]
+    if not path.exists():
+        payload: dict[str, Any] = {}
+    else:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    _MAPPING_CACHE[path] = payload
+    return payload
+
 
 def load_model_mapping(path: Path | str | None = None) -> dict[str, dict[str, Any]]:
-    """Load the model mapping file.
-
-    If *path* is not given, reads ``model_mapping.json`` from the runner root.
-    Results are cached for the lifetime of the process.
-    """
-    global _MAPPING, _MAPPING_PATH
-
-    if _MAPPING is not None and _MAPPING_PATH is not None:
-        return _MAPPING
-
-    resolved = Path(path) if path else _mapping_path()
-    _MAPPING_PATH = resolved
-
-    if not resolved.exists():
-        _MAPPING = {}
-        return _MAPPING
-
-    _MAPPING = json.loads(resolved.read_text(encoding="utf-8")).get("coder_aliases", {})
-    return _MAPPING
+    """Load coder aliases from the configured model mapping file."""
+    payload = _load_json(_normalize_path(path))
+    return dict(payload.get("coder_aliases", {}))
 
 
 def resolve_coder(name: str, *, mapping_path: Path | str | None = None) -> dict[str, Any] | None:
-    """Resolve a coder name into a full invocation config.
-
-    If *name* matches a key in ``coder_aliases``, returns the config dict.
-    Otherwise returns ``None`` — the caller should treat *name* as a
-    plain coder identifier (``"claude"``, ``"codex"``, ``"qwen"``).
-    """
+    """Resolve a coder alias into a full invocation config."""
     aliases = load_model_mapping(path=mapping_path)
     return aliases.get(name)
+
+
+def coder_roles_path(bundle_root: Path | str | None = None) -> Path | None:
+    """Return the highest-precedence coder role registry path."""
+    candidates: list[Path] = []
+    if bundle_root:
+        root = Path(bundle_root)
+        candidates.extend([root / "coder_roles.json", root / "config" / "coder_roles.json"])
+    candidates.append(_runner_root() / "coder_roles.json")
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
+    return candidates[0] if candidates else None
+
+
+def load_coder_roles(bundle_root: Path | str | None = None) -> dict[str, dict[str, Any]]:
+    """Load effective coder roles, overlaying bundle-local roles on global roles."""
+    global_path = _runner_root() / "coder_roles.json"
+    cache_key = coder_roles_path(bundle_root) or global_path
+    if cache_key in _ROLE_CACHE:
+        return dict(_ROLE_CACHE[cache_key])
+
+    roles: dict[str, dict[str, Any]] = {}
+    if global_path.exists():
+        roles.update(_load_json(global_path).get("roles", {}))
+
+    if bundle_root:
+        local_path = Path(bundle_root) / "coder_roles.json"
+        if local_path.exists():
+            roles.update(_load_json(local_path).get("roles", {}))
+
+    _ROLE_CACHE[cache_key] = roles
+    return dict(roles)
+
+
+def resolve_coder_role(role_name: str, *, bundle_root: Path | str | None = None) -> dict[str, Any] | None:
+    """Resolve a semantic coder role into its alias/config wrapper."""
+    return load_coder_roles(bundle_root=bundle_root).get(role_name)
+
+
+def resolve_role_alias(role_name: str, *, bundle_root: Path | str | None = None) -> str | None:
+    """Resolve a role name into the underlying coder alias name."""
+    role = resolve_coder_role(role_name, bundle_root=bundle_root)
+    if role is None:
+        return None
+    alias = str(role.get("alias") or "").strip()
+    return alias or None
 
 
 def get_api_key(coder_config: dict[str, Any]) -> str | None:

@@ -23,7 +23,7 @@ def test_resolve_repo_or_runtime_path_uses_global_runner_home_for_ukbe_runner_pa
 
 
 def test_artifact_rel_to_meta_rel():
-    assert runtime_context.artifact_rel_to_meta_rel("docs/delivery/01_initiatives/INIT-1.md") == "docs/delivery/01_initiatives/INIT-1.meta.json"
+    assert runtime_context.artifact_rel_to_meta_rel("docs/repo/delivery/01_initiatives/INIT-1.md") == "docs/repo/delivery/01_initiatives/INIT-1.meta.json"
     assert runtime_context.artifact_rel_to_meta_rel("") == ""
 
 
@@ -37,14 +37,14 @@ def test_write_meta_sidecar_resolves_repo_relative_paths(monkeypatch, tmp_path):
     runtime_context.set_context(workspace_root=workspace)
 
     meta_path = runtime_context.write_meta_sidecar(
-        "docs/delivery/01_initiatives/meta.json",
+        "docs/repo/delivery/01_initiatives/meta.json",
         project_root=workspace,
         status="APPROVED",
         remark="ok",
         artifacts={"A": "b"},
     )
 
-    assert meta_path == workspace / "docs" / "delivery" / "01_initiatives" / "meta.json"
+    assert meta_path == workspace / "docs" / "repo" / "delivery" / "01_initiatives" / "meta.json"
     payload = json.loads(meta_path.read_text(encoding="utf-8"))
     assert payload["coder_result"]["status"] == "APPROVED"
     assert payload["coder_result"]["artifacts"] == {"A": "b"}

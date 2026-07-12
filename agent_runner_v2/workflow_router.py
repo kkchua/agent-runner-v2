@@ -22,6 +22,12 @@ from typing import Any
 
 from .coder_adapters import CoderInvocationError
 from .exceptions import ArtifactMissingError, MetaJsonInvalidError, MetaJsonMissingError
+from .failure_runtime import append_failure_history, clear_last_failure, set_last_failure
+from .recovery_runtime import (
+    activate_refine_loop,
+    activate_replan,
+    handle_recovery_budget_exceeded,
+)
 from .job_state import (
     CONTROL_CLASSES,
     REVIEW_DECISIONS,
@@ -29,13 +35,10 @@ from .job_state import (
     FINAL_DECISION_SOURCES,
     REVIEW_ARTIFACT_TYPES,
     advance_step,
-    append_failure_history,
-    clear_last_failure,
     default_review_state,
     record_step_usage,
     save_job,
     set_job_status,
-    set_last_failure,
 )
 from .notifications import send_notification
 from .notification_manager import send_workflow_notification, send_step_notification
@@ -478,50 +481,28 @@ def _trigger_loop(
     # Budget check
     allowed, _ = _consume_planning_attempt_budget(state=state, group_cfg=group_cfg)
     if not allowed:
-        reject_counts[step] = int(reject_counts.get(step, 0)) + 1
-        set_last_failure(
-            state=state,
-            failure_class="HUMAN_RETRY_REQUIRED",
-            failure_code="PLANNING_ATTEMPT_BUDGET_EXCEEDED",
-            failure_reason="Planning recovery attempt budget exceeded",
-            failure_source="runner",
-            step=step,
-        )
-        append_failure_history(
+        state, exit_code = handle_recovery_budget_exceeded(
             state=state,
             step=step,
-            failure_class="HUMAN_RETRY_REQUIRED",
-            failure_code="PLANNING_ATTEMPT_BUDGET_EXCEEDED",
-            failure_source="runner",
+            reject_counts=reject_counts,
+            set_last_failure=set_last_failure,
+            append_failure_history=append_failure_history,
+            set_job_status=set_job_status,
         )
-        set_job_status(state, "WAITING_FOR_HUMAN_INTERVENTION")
-        state["current_step"] = step
         save_job(group_name, state["job_id"], state)
-        return state, 1
+        return state, exit_code
 
-    state["loop_context"] = {
-        "active": True,
-        "loop_step": step,
-        "refine_step": on_reject_refine["step"],
-        "loop_target_artifact": on_reject_refine["artifact"],
-        "loop_source_review": review_file,
-        "loop_iteration": iteration,
-        "pre_refine_checksum": None,
-    }
-    state.setdefault("loop_history", []).append({
-        "iteration": iteration,
-        "loop_step": step,
-        "refine_step": on_reject_refine["step"],
-        "review_result": "REJECTED",
-        "review_file": review_file,
-        "review_at": _now_iso(),
-        "refine_result": None,
-        "refine_at": None,
-        "started_at": _now_iso(),
-        "resolved_at": None,
-    })
-    clear_last_failure(state)
-    state["current_step"] = on_reject_refine["step"]
+    state, exit_code = activate_refine_loop(
+        state=state,
+        step=step,
+        refine_step=on_reject_refine["step"],
+        target_artifact=on_reject_refine["artifact"],
+        review_file=review_file,
+        iteration=iteration,
+        now_iso=_now_iso,
+        clear_last_failure=clear_last_failure,
+        set_job_status=set_job_status,
+    )
     _update_review_state(
         state,
         step=step,
@@ -533,9 +514,8 @@ def _trigger_loop(
         final_decision_source="MODEL",
     )
     # v2: no sync_review_metadata — runner does NOT write to markdown
-    set_job_status(state, "IN_PROGRESS")
     save_job(group_name, state["job_id"], state)
-    return state, 0
+    return state, exit_code
 
 
 def _trigger_replan(
@@ -558,80 +538,35 @@ def _trigger_replan(
     # Budget check
     allowed, _ = _consume_planning_attempt_budget(state=state, group_cfg=group_cfg)
     if not allowed:
-        reject_counts[step] = int(reject_counts.get(step, 0)) + 1
-        set_last_failure(
-            state=state,
-            failure_class="HUMAN_RETRY_REQUIRED",
-            failure_code="PLANNING_ATTEMPT_BUDGET_EXCEEDED",
-            failure_reason="Planning recovery attempt budget exceeded",
-            failure_source="runner",
-            step=step,
-        )
-        append_failure_history(
+        state, exit_code = handle_recovery_budget_exceeded(
             state=state,
             step=step,
-            failure_class="HUMAN_RETRY_REQUIRED",
-            failure_code="PLANNING_ATTEMPT_BUDGET_EXCEEDED",
-            failure_source="runner",
+            reject_counts=reject_counts,
+            set_last_failure=set_last_failure,
+            append_failure_history=append_failure_history,
+            set_job_status=set_job_status,
         )
-        set_job_status(state, "WAITING_FOR_HUMAN_INTERVENTION")
-        state["current_step"] = step
         save_job(group_name, state["job_id"], state)
-        return state, 1
+        return state, exit_code
 
     trigger_reason = str(
         on_reject_refine.get("exhausted_failure_code") or "REFINEMENT_EXHAUSTED"
     )
-
-    # v2: blocking_issues is always [] — content analysis is coder's job
-    state["replan_context"] = {
-        "active": True,
-        "source_review_step": step,
-        "replan_step": replan_cfg["step"],
-        "target_artifact": replan_cfg["artifact"],
-        "source_review_file": review_file,
-        "replan_attempt": current_replan_attempt + 1,
-        "pre_replan_checksum": None,
-        "trigger_reason": trigger_reason,
-        "blocking_issues": [],         # v2: always empty — coder owns analysis
-        "previous_blocking_issue_count": 0,
-        "previous_blocking_issue_severity": 0,
-    }
-
-    # Capture pre-replan checksum of target artifact
-    target_path_value = artifacts.get(replan_cfg["artifact"])
-    if target_path_value:
-        target_path = PROJECT_ROOT / target_path_value
-        if target_path.exists():
-            import hashlib
-            state["replan_context"]["pre_replan_checksum"] = hashlib.md5(
-                target_path.read_bytes()
-            ).hexdigest()
-
-    state.setdefault("replan_history", []).append({
-        "source_review_step": step,
-        "trigger_reason": trigger_reason,
-        "source_review_file": review_file,
-        "blocking_issues": [],
-        "replan_step": replan_cfg["step"],
-        "replan_attempt": state["replan_context"]["replan_attempt"],
-        "triggered_at": _now_iso(),
-        "replan_result": None,
-        "review_result": None,
-        "resolved_at": None,
-    })
-    # Reset loop context for the new replan cycle
-    state["loop_context"] = {
-        "active": False,
-        "loop_step": None,
-        "refine_step": None,
-        "loop_target_artifact": None,
-        "loop_source_review": None,
-        "loop_iteration": 0,
-        "pre_refine_checksum": None,
-    }
-    clear_last_failure(state)
-    state["current_step"] = replan_cfg["step"]
+    state, exit_code = activate_replan(
+        state=state,
+        step=step,
+        replan_step=replan_cfg["step"],
+        target_artifact=replan_cfg["artifact"],
+        review_file=review_file,
+        replan_attempt=current_replan_attempt + 1,
+        trigger_reason=trigger_reason,
+        artifacts=artifacts,
+        project_root=PROJECT_ROOT,
+        checksum_file=lambda path: __import__("hashlib").md5(path.read_bytes()).hexdigest(),
+        now_iso=_now_iso,
+        clear_last_failure=clear_last_failure,
+        set_job_status=set_job_status,
+    )
     _update_review_state(
         state,
         step=step,
@@ -643,9 +578,8 @@ def _trigger_replan(
         final_decision_source="MODEL",
     )
     # v2: no sync_review_metadata
-    set_job_status(state, "IN_PROGRESS")
     save_job(group_name, state["job_id"], state)
-    return state, 0
+    return state, exit_code
 
 
 # ---------------------------------------------------------------------------
@@ -771,11 +705,23 @@ def _update_review_state(
 
 
 def _sync_review_feedback_artifact(*, step: str, artifacts: dict) -> None:
-    """Alias VALIDATION_FILE → REVIEW_FILE for validator step."""
+    """Alias validator outputs to REVIEW_FILE for refine-loop prompts."""
+    if artifacts.get("REVIEW_FILE"):
+        return
+
+    candidate_keys = []
     if step == "validator":
-        validation_file = str(artifacts.get("VALIDATION_FILE") or "").strip()
-        if validation_file and not artifacts.get("REVIEW_FILE"):
+        candidate_keys.append("VALIDATION_FILE")
+    if step == "07_validate_codebase_baseline":
+        candidate_keys.append("VALIDATION_FILE")
+    if step == "08_validate_master_system_docs":
+        candidate_keys.append("SYSTEM_DOCS_VALIDATION")
+
+    for key in candidate_keys:
+        validation_file = str(artifacts.get(key) or "").strip()
+        if validation_file:
             artifacts["REVIEW_FILE"] = validation_file
+            return
 
 
 # ---------------------------------------------------------------------------

@@ -36,3 +36,51 @@ def test_run_with_sidecar_poll_allows_post_sidecar_grace(monkeypatch, tmp_path: 
     assert "SIDEcar_WRITTEN" in stdout
     assert "AFTER_SIDECAR" in stdout
     assert stderr == ""
+
+
+def test_run_with_sidecar_poll_interrupt_terminates_process_tree(monkeypatch, tmp_path: Path):
+    class EmptyPipe:
+        def __iter__(self):
+            return iter(())
+
+    class FakeProc:
+        def __init__(self):
+            self.pid = 4321
+            self.stdout = EmptyPipe()
+            self.stderr = EmptyPipe()
+            self.stdin = None
+            self.returncode = None
+
+        def poll(self):
+            return None
+
+    proc = FakeProc()
+    terminated: list[int] = []
+
+    monkeypatch.setattr(coder_adapters.subprocess, "Popen", lambda *args, **kwargs: proc)
+    monkeypatch.setattr(coder_adapters, "_terminate_process_tree", lambda p: terminated.append(p.pid))
+    monkeypatch.setattr(coder_adapters, "_save_terminal_settings", lambda: None)
+    monkeypatch.setattr(coder_adapters, "_restore_terminal_settings", lambda saved: None)
+    monkeypatch.setattr(coder_adapters.time, "monotonic", lambda: 0.0)
+
+    def interrupting_sleep(_seconds: float) -> None:
+        raise KeyboardInterrupt()
+
+    monkeypatch.setattr(coder_adapters.time, "sleep", interrupting_sleep)
+
+    try:
+        coder_adapters._run_with_sidecar_poll(
+            [sys.executable, "-c", "print('x')"],
+            cwd=tmp_path,
+            env=os.environ.copy(),
+            timeout_seconds=5,
+            sidecar_path=None,
+            step="interrupt_test",
+        )
+    except KeyboardInterrupt:
+        pass
+    else:
+        raise AssertionError("Expected KeyboardInterrupt to be re-raised")
+
+    assert terminated == [4321]
+    assert proc not in coder_adapters._ACTIVE_CODER_PROCS

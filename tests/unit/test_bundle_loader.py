@@ -29,6 +29,74 @@ def test_publish_bootstrap_bundle_copies_repo_bootstrap_docs_into_package_bundle
     assert result["bundle_name"] == "core"
 
 
+def test_publish_bootstrap_bundle_generates_bundle_governance_adapters(tmp_path, monkeypatch):
+    workspace_root = tmp_path / "workspace"
+    source_root = workspace_root / "docs" / "system" / "00_governance" / "bootstrap"
+    source_root.mkdir(parents=True, exist_ok=True)
+    (source_root / "README.md").write_text("# Bootstrap\n", encoding="utf-8")
+
+    plugin_root = workspace_root / "workflows" / "sample_bundle"
+    (plugin_root / "prompts").mkdir(parents=True, exist_ok=True)
+    (plugin_root / "workflow.toml").write_text(
+        "\n".join(
+            [
+                "[workflow]",
+                'name = "sample_bundle"',
+                'version = "1"',
+                'label = "Sample Bundle"',
+                'job_prefix = "SAMPLE"',
+                "",
+                "[workflow.init]",
+                'step = "one"',
+                'inputs = []',
+                "",
+                "[[step]]",
+                'name = "one"',
+                'action = "step_completion"',
+            ]
+        ),
+        encoding="utf-8",
+    )
+    (plugin_root / "bundle_governance.toml").write_text(
+        "\n".join(
+            [
+                "[governance]",
+                'canonical_source = "bundle_governance/core.md"',
+                'generated_dir = "bundle_governance/generated"',
+                'adapter_targets = ["AGENTS.md", "QWEN.md"]',
+                'include_in_prompts = true',
+            ]
+        ),
+        encoding="utf-8",
+    )
+    (plugin_root / "bundle_governance").mkdir(parents=True, exist_ok=True)
+    (plugin_root / "bundle_governance" / "core.md").write_text(
+        "# Sample Governance\n\nCanonical bundle guidance.\n",
+        encoding="utf-8",
+    )
+
+    package_root = tmp_path / "package"
+    expected_root = package_root / "bootstrap" / "bundles" / "core" / "current"
+    bootstrap_workflows_root = package_root / "bootstrap" / "workflows" / "default"
+
+    monkeypatch.setattr(bundle_loader, "bootstrap_source_root", lambda ws: source_root)
+    monkeypatch.setattr(bundle_loader, "package_bootstrap_root", lambda: expected_root)
+    monkeypatch.setattr(bundle_loader, "BOOTSTRAP_ROOT", bootstrap_workflows_root)
+
+    result = bundle_loader.publish_bootstrap_bundle(
+        workspace_root,
+        plugin_workflows_root=workspace_root / "workflows",
+    )
+
+    agents_path = bootstrap_workflows_root / "sample_bundle" / "bundle_governance" / "generated" / "AGENTS.md"
+    qwen_path = bootstrap_workflows_root / "sample_bundle" / "bundle_governance" / "generated" / "QWEN.md"
+    assert agents_path.exists()
+    assert qwen_path.exists()
+    assert "Canonical bundle guidance." in agents_path.read_text(encoding="utf-8")
+    assert "sample_bundle" in result["plugin_governance_docs_generated"]
+    assert "AGENTS.md" in result["plugin_governance_docs_generated"]["sample_bundle"]
+
+
 def test_init_workspace_installs_packaged_bootstrap_bundle_and_seeds_global_example(tmp_path, monkeypatch):
     fake_home = tmp_path / "home"
     fake_package_root = tmp_path / "package"
@@ -156,8 +224,8 @@ def test_ensure_delivery_folders_omits_master_prompts_and_adds_codebase_docs(tmp
     run_agent_module._ensure_delivery_folders(target_root)
 
     assert not (target_root / "docs" / "delivery" / "07_master_prompts").exists()
-    assert (target_root / "docs" / "codebase" / "00_standards").exists()
-    assert (target_root / "docs" / "codebase" / "04_changes").exists()
+    assert (target_root / "docs" / "repo" / "codebase" / "00_standards").exists()
+    assert (target_root / "docs" / "repo" / "codebase" / "04_changes").exists()
     assert (target_root / "docs" / "system" / "00_governance").exists()
     assert (target_root / "docs" / "engineering").exists()
     assert (target_root / "docs" / "operations").exists()
@@ -219,5 +287,3 @@ def test_bug_fix_prompt_bundle_exists():
     assert (bug_fix_prompts / "03_isolate_root_cause.txt").exists()
     assert (bug_fix_prompts / "04_patch_bug.txt").exists()
     assert (bug_fix_prompts / "05_regression_validate.txt").exists()
-
-

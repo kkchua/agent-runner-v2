@@ -10,7 +10,7 @@ from datetime import datetime
 from pathlib import Path
 
 from ..action_result import ActionResult
-from ..doc_paths import system_doc_rel
+from ..doc_paths import codebase_doc_rel, system_doc_rel
 from ..codebase_docs import build_snapshot
 from ..runtime_context import resolve_step_meta_rel, write_meta_sidecar
 from ..system_docs import render_system_docs_validation
@@ -23,7 +23,7 @@ from .documentation_validation_core import (
 
 
 SYSTEM_DOC_REQUIRED_SECTIONS: dict[str, list[str]] = {
-    system_doc_rel("PROJECT_ANALYSIS.md"): [
+    codebase_doc_rel("00_analysis/PROJECT_ANALYSIS.md"): [
         "Repo Overview",
         "Codebase Structure",
         "Operational Risks",
@@ -106,7 +106,7 @@ def validate_system_docs(*, context: dict[str, str], state: dict, step_cfg: dict
     )
 
     required_files = (
-        system_doc_rel("PROJECT_ANALYSIS.md"),
+        codebase_doc_rel("00_analysis/PROJECT_ANALYSIS.md"),
         system_doc_rel("README.md"),
         system_doc_rel("DOCUMENTATION_STANDARD.md"),
         system_doc_rel("BUNDLE_TAXONOMY.md"),

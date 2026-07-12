@@ -1,8 +1,14 @@
 @echo off
-REM run-bootstrap-publish.bat - Publish repo-local bootstrap docs into the packaged core bundle
+REM run-bootstrap-publish.bat - Build the packaged bootstrap bundle from repo-local docs and workflow packages
 REM
 REM Usage:
 REM   %~nx0 [--project-root <path>] [--source-root <path>] [--bundle-root <path>]
+REM
+REM Sequence:
+REM   1. Run this script after changing:
+REM      - docs/system/00_governance/bootstrap
+REM      - workflows/<name>/workflow.toml packages
+REM   2. Run run-init.bat to install the packaged bundle into %USERPROFILE%\.ukbe-runner\
 REM
 REM Defaults:
 REM   --project-root defaults to the current directory
@@ -91,12 +97,15 @@ if not "%BUNDLE_ROOT%"=="" (
     set "CMD=!CMD! --bundle-root "%BUNDLE_ROOT%""
 )
 
-echo =========================================================================== 
+echo ===========================================================================
 echo  Bootstrap Bundle Publish
 echo ===========================================================================
 echo  Project root:     %PROJECT_ROOT%
 if not "%SOURCE_ROOT%"=="" echo  Source root:      %SOURCE_ROOT%
 if not "%BUNDLE_ROOT%"=="" echo  Bundle root:      %BUNDLE_ROOT%
+echo(
+echo  Next step after publish:
+echo    run-init.bat
 echo(
 echo  Command: !CMD!
 echo ===========================================================================
@@ -112,6 +121,7 @@ exit /b %EXIT_CODE%
 
 :success
 echo Bootstrap publish completed successfully.
+echo Next step: run-init.bat
 exit /b 0
 
 :usage
