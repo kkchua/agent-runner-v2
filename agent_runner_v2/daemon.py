@@ -215,8 +215,9 @@ def _spawn_child(*, claim: dict[str, Any], runtime_root: Path, cli_pythonpath: s
     log_handle = combined_log_path.open('ab')
     
     # Set working directory to project_root so subprocess can find .env file
-    project_root = request_payload.get("project_root") or request_payload.get("workspace_root")
-    subprocess_cwd = Path(project_root).resolve() if project_root else Path.cwd()
+    project_root = request_payload.get("project_root")
+    workspace_root = request_payload.get("workspace_root")
+    subprocess_cwd = _resolve_subprocess_cwd(project_root=project_root, workspace_root=workspace_root)
     
     logger.log('info', 'subprocess_cwd', message=f'Setting subprocess cwd to {subprocess_cwd}', details={'project_root': project_root, 'subprocess_cwd': str(subprocess_cwd)})
     
@@ -248,6 +249,20 @@ def _spawn_child(*, claim: dict[str, Any], runtime_root: Path, cli_pythonpath: s
     )
     logger.log('info', 'child_spawned', message='spawned execute-step child', child=child, details={'request_path': str(request_path), 'result_path': str(result_path), 'log_file': str(combined_log_path), 'step_spec_source': step_spec_source, 'coder_override': request_payload.get('coder_override')})
     return child
+
+
+def _resolve_subprocess_cwd(*, project_root: str | None, workspace_root: str | None) -> Path:
+    candidates = [project_root, workspace_root]
+    for candidate in candidates:
+        if not candidate:
+            continue
+        try:
+            path = Path(candidate).resolve()
+        except Exception:
+            continue
+        if path.exists() and path.is_dir():
+            return path
+    return Path.cwd()
 
 
 def _child_result(child: ChildExecution) -> dict[str, Any]:
@@ -352,6 +367,7 @@ def _run_supervisor(*, worker_id: str, worker_label: str, backend_url: str, poll
                             run=child.run_payload,
                             step_run=child.step_run_payload,
                             completion=completion,
+                            step_execution_spec=child.request_payload.get('step_execution_spec'),
                         )
                         logger.log(
                             'info',

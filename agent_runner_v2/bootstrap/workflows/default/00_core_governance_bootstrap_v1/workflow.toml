@@ -34,6 +34,8 @@ allowed_roles = ["architect_primary", "architect_secondary", "architect_tertiary
 name = "review_core_governance_docs"
 prompt = "prompts/02_review_core_governance_docs.txt"
 enable_notifications = true
+requires_human_approval_after = false
+onsuccess = "validate_core_governance_docs"
 
 [step.artifacts]
 required_inputs = [
@@ -56,9 +58,6 @@ artifact = "SYSTEM_DOCS_INDEX"
 max_iterations = 2
 exhausted_failure_code = "CORE_GOVERNANCE_REFINEMENT_EXHAUSTED"
 exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
-
-requires_human_approval_after = false
-onsuccess = "validate_core_governance_docs"
 
 [[step]]
 name = "refine_core_governance_docs"
@@ -115,6 +114,7 @@ name = "audit_core_governance_accuracy"
 prompt = "prompts/04_audit_core_governance_accuracy.txt"
 enable_notifications = true
 onsuccess = "stepCompletion"
+requires_human_approval_after = false
 
 [step.artifacts]
 required_inputs = [
@@ -138,8 +138,6 @@ artifact = "SYSTEM_DOCS_INDEX"
 max_iterations = 2
 exhausted_failure_code = "CORE_GOVERNANCE_AUDIT_EXHAUSTED"
 exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
-
-requires_human_approval_after = false
 
 [[step]]
 name = "stepCompletion"

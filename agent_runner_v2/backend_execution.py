@@ -12,7 +12,9 @@ from typing import Any
 from .config_loader import load_runner_config
 from .execution_request import ExecutionRequest
 from .execution_result import ExecutionFailure, ExecutionResult
+from .runtime_context import PACKAGE_ROOT
 from .state_defaults import default_loop_context, default_replan_context
+from .workflow_packages.loader import load_workflow_package
 
 
 def build_group_cfg_from_execution_spec(spec: dict[str, Any], template_group: str, step_name: str) -> tuple[dict[str, Any], dict[str, Any]]:
@@ -45,8 +47,13 @@ def build_group_cfg_from_execution_spec(spec: dict[str, Any], template_group: st
         step_cfg["coder"] = {
             "default": coder_policy.get("default_coder"),
             "allowed": list(coder_policy.get("allowed_coders") or []),
+            "default_role": coder_policy.get("default_role"),
+            "allowed_roles": list(coder_policy.get("allowed_roles") or []),
             "must_differ_from_previous_step": bool(coder_policy.get("must_differ_from_previous_step")),
         }
+    bundle = _bundle_from_spec_prompt_file(spec, template_group=template_group)
+    if bundle is not None:
+        step_cfg["_workflow_bundle"] = bundle
     group_cfg = {
         "job_prefix": spec.get("job_prefix") or template_group,
         "job_init_step": spec.get("job_init_step") or step_name,
@@ -56,7 +63,53 @@ def build_group_cfg_from_execution_spec(spec: dict[str, Any], template_group: st
         "steps": [step_name],
         "step_configs": {step_name: step_cfg},
     }
+    if bundle is not None:
+        group_cfg["_workflow_bundle"] = bundle
     return group_cfg, step_cfg
+
+
+def _bundle_from_spec_prompt_file(spec: dict[str, Any], *, template_group: str):
+    prompt_file = spec.get("prompt_file")
+    if not isinstance(prompt_file, str) or not prompt_file:
+        return _bundle_from_template_group(template_group)
+    prompt_path = Path(prompt_file)
+    candidate_roots: list[Path] = []
+    if prompt_path.is_absolute():
+        candidate_roots.append(prompt_path.parent.parent)
+    else:
+        candidate_roots.extend(_relative_prompt_bundle_candidates(prompt_path, template_group=template_group))
+        candidate_roots.append(PACKAGE_ROOT / "bootstrap" / "workflows" / "default" / template_group)
+    for bundle_root in candidate_roots:
+        manifest = bundle_root / "workflow.toml"
+        if not manifest.is_file():
+            continue
+        try:
+            return load_workflow_package(bundle_root)
+        except Exception:
+            continue
+    return _bundle_from_template_group(template_group)
+
+
+def _relative_prompt_bundle_candidates(prompt_path: Path, *, template_group: str) -> list[Path]:
+    parts = prompt_path.parts
+    roots: list[Path] = []
+    default_root = PACKAGE_ROOT / "bootstrap" / "workflows" / "default"
+    if parts and parts[0] == template_group:
+        roots.append(default_root / template_group)
+    elif "prompts" in parts:
+        roots.append(default_root / template_group)
+    return roots
+
+
+def _bundle_from_template_group(template_group: str):
+    bundle_root = PACKAGE_ROOT / "bootstrap" / "workflows" / "default" / template_group
+    manifest = bundle_root / "workflow.toml"
+    if not manifest.is_file():
+        return None
+    try:
+        return load_workflow_package(bundle_root)
+    except Exception:
+        return None
 
 
 def execute_step_command(request_path: Path, result_path: Path | None = None, *, hooks: Any) -> int:
@@ -323,7 +376,7 @@ def build_worker_request_payload(
         except Exception:
             spec = dict(step_execution_spec or {})
 
-    if mode in {"backend", "hybrid"}:
+    if mode == "hybrid":
         try:
             group_cfg = hooks.get_template_group_cfg(
                 template_group=template_group,
@@ -362,19 +415,22 @@ def build_worker_request_payload(
             input_artifacts[artifact_key] = value
 
     job_id = str(run.get("run_code") or run.get("id") or "backend-job")
-    try:
-        group_cfg = hooks.get_template_group_cfg(
-            template_group=template_group,
-            workspace_root=workspace_path,
-            workflow_name=workflow_name or "default",
-        )
-        steps = list(group_cfg.get("steps") or [])
-        if step_name in steps:
-            step_sequence_no = steps.index(step_name) + 1
-        else:
-            step_sequence_no = 1
-    except Exception:
+    if mode == "backend":
         step_sequence_no = spec.get("step_sequence_no") or step_run.get("sequence_no") or 1
+    else:
+        try:
+            group_cfg = hooks.get_template_group_cfg(
+                template_group=template_group,
+                workspace_root=workspace_path,
+                workflow_name=workflow_name or "default",
+            )
+            steps = list(group_cfg.get("steps") or [])
+            if step_name in steps:
+                step_sequence_no = steps.index(step_name) + 1
+            else:
+                step_sequence_no = 1
+        except Exception:
+            step_sequence_no = spec.get("step_sequence_no") or step_run.get("sequence_no") or 1
 
     backend_step_dir_rel = str(
         hooks.JOBS_ROOT / template_group / job_id / f"{int(step_sequence_no):02d}_{step_name}"
@@ -448,9 +504,13 @@ def write_backend_job_json(
 
     payload: dict[str, Any] = {
         "run_id": run.get("id"),
+        "job_id": run_code,
         "run_code": run_code,
+        "template_group": workflow_name,
         "workflow_name": workflow_name,
+        "job_status": run.get("status"),
         "status": run.get("status"),
+        "current_step": run.get("current_step_name"),
         "current_step_name": run.get("current_step_name"),
         "current_step_run_id": run.get("current_step_run_id"),
         "awaiting_human_step": run.get("awaiting_human_step"),
@@ -533,11 +593,21 @@ def submit_worker_result(*, client: Any, run: dict[str, Any], step_run: dict[str
     return completion
 
 
-def finalize_worker_completion(*, client: Any, run: dict[str, Any], step_run: dict[str, Any], completion: dict[str, Any] | None, hooks: Any) -> dict[str, Any]:
+def finalize_worker_completion(
+    *,
+    client: Any,
+    run: dict[str, Any],
+    step_run: dict[str, Any],
+    completion: dict[str, Any] | None,
+    step_execution_spec: dict[str, Any] | None = None,
+    hooks: Any,
+) -> dict[str, Any]:
     completion_run = dict((completion or {}).get("run") or run)
     completion_step_run = dict((completion or {}).get("step_run") or step_run)
     next_step_run = (completion or {}).get("next_step_run")
     last_event = "STEP_COMPLETED"
+    raw_step_cfg = dict((step_execution_spec or {}).get("raw_config") or {})
+    step_name = str(completion_step_run.get("step_name") or step_run.get("step_name") or "")
 
     terminal_statuses = {"awaiting_human", "failed", "completed"}
     run_id = str(run.get("id") or "")
@@ -549,27 +619,41 @@ def finalize_worker_completion(*, client: Any, run: dict[str, Any], step_run: di
         except Exception as exc:
             print(f"[worker] WARNING: Failed to refresh run state for notification handling: {exc}", flush=True)
 
+    def _send_optional_step_notification(status_value: str) -> None:
+        if not raw_step_cfg:
+            return
+        try:
+            from .notification_manager import send_step_notification
+            notify_result = send_step_notification(status_value, completion_run, step_name, raw_step_cfg)
+            print(f"[worker] Step notification result: {notify_result}", flush=True)
+        except Exception as exc:
+            print(f"[worker] WARNING: Failed to send step notification: {exc}", flush=True)
+
     is_last_step = next_step_run is None
     if completion_run.get("status") == "awaiting_human":
         last_event = "HUMAN_APPROVAL_REQUIRED"
+        _send_optional_step_notification("STEP_COMPLETED")
         print(f"[worker] Attempting to send WAITING_FOR_HUMAN_INTERVENTION notification for run {completion_run.get('id', 'unknown')}", flush=True)
         from .notification_manager import send_workflow_notification
         notify_result = send_workflow_notification("WAITING_FOR_HUMAN_INTERVENTION", completion_run)
         print(f"[worker] Notification result: {notify_result}", flush=True)
     elif completion_run.get("status") == "failed":
         last_event = "RUN_FAILED"
+        _send_optional_step_notification("STEP_FAILED")
         print(f"[worker] Attempting to send FAILED notification for run {completion_run.get('id', 'unknown')}", flush=True)
         from .notification_manager import send_workflow_notification
         notify_result = send_workflow_notification("FAILED", completion_run)
         print(f"[worker] Notification result: {notify_result}", flush=True)
     elif completion_run.get("status") == "completed" and is_last_step:
         last_event = "RUN_COMPLETED"
+        _send_optional_step_notification("STEP_COMPLETED")
         print(f"[worker] Workflow completed (last step). Sending COMPLETED notification for run {completion_run.get('id', 'unknown')}", flush=True)
         from .notification_manager import send_workflow_notification
         notify_result = send_workflow_notification("COMPLETED", completion_run)
         print(f"[worker] Notification result: {notify_result}", flush=True)
     elif next_step_run:
         last_event = "STEP_ENQUEUED"
+        _send_optional_step_notification("STEP_COMPLETED")
         print(f"[worker] Step completed, next step enqueued: {next_step_run.get('step_name', 'unknown')}", flush=True)
     else:
         print(

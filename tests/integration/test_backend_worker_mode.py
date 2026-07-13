@@ -156,6 +156,65 @@ def test_build_worker_request_payload_merges_required_artifacts_from_context():
     assert payload['input_artifacts']['PROJECT_ANALYSIS'] == 'docs/system/00_governance/bootstrap/project_analysis.md'
 
 
+def test_build_worker_request_payload_backend_mode_uses_transport_spec_without_local_lookup(monkeypatch):
+    run = {
+        'id': 'run-1',
+        'workflow_name': '00_core_governance_bootstrap_v1',
+        'run_code': '00CORE-001',
+        'project_root': '/workspace/project',
+        'input_payload': {},
+        'context_payload': {
+            'SYSTEM_DOC_STANDARD': 'docs/system/00_governance/bootstrap/DOCUMENTATION_STANDARD.md',
+        },
+    }
+    step_run = {
+        'id': 'step-4',
+        'step_name': 'validate_core_governance_docs',
+        'sequence_no': 4,
+        'coder': 'action',
+    }
+
+    def fail_lookup(**_kwargs):
+        raise AssertionError('backend mode should not require local workflow lookup')
+
+    monkeypatch.setattr(shared_runtime_deps, 'get_template_group_cfg', fail_lookup)
+
+    payload = _build_worker_request_payload(
+        run=run,
+        step_run=step_run,
+        step_execution_spec={
+            'template_group': '00_core_governance_bootstrap_v1',
+            'step_sequence_no': 4,
+            'required_inputs': [{'artifact_key': 'SYSTEM_DOC_STANDARD'}],
+            'produces': [{'artifact_key': 'SYSTEM_DOCS_VALIDATION'}],
+        },
+        step_spec_source='backend',
+    )
+
+    assert payload['input_artifacts']['SYSTEM_DOC_STANDARD'] == 'docs/system/00_governance/bootstrap/DOCUMENTATION_STANDARD.md'
+    assert payload['step_execution_spec']['step_sequence_no'] == 4
+    assert str(payload['state_overrides']['backend_step_dir_rel']).replace('\\', '/').endswith(
+        '00_core_governance_bootstrap_v1/00CORE-001/04_validate_core_governance_docs'
+    )
+
+
+def test_build_context_action_step_without_result_meta_key_does_not_crash():
+    state = {
+        'template_group': '00_core_governance_bootstrap_v1',
+        'job_id': '00CORE-001',
+        'backend_step_dir_rel': '.ukbe-runner/jobs/00_core_governance_bootstrap_v1/00CORE-001/06_stepCompletion',
+        'artifacts': {},
+    }
+
+    ctx = build_context(
+        state=state,
+        step='stepCompletion',
+        step_cfg={'action': 'step_completion'},
+    )
+
+    assert 'SYSTEM_DOC_ROOT' in ctx
+
+
 def test_build_execution_state_overrides_ids_and_step():
     request = ExecutionRequest.from_dict(
         {
@@ -412,11 +471,16 @@ def test_finalize_worker_completion_refreshes_terminal_run_and_sends_completed(m
         'run_code': 'RUN-1',
     }
     notifications: list[tuple[str, dict]] = []
+    step_notifications: list[tuple[str, dict, str, dict]] = []
     writes: list[dict] = []
 
     monkeypatch.setattr(
         'agent_runner_v2.notification_manager.send_workflow_notification',
         lambda status, context: notifications.append((status, context)) or True,
+    )
+    monkeypatch.setattr(
+        'agent_runner_v2.notification_manager.send_step_notification',
+        lambda status, context, step, step_cfg: step_notifications.append((status, context, step, step_cfg)) or True,
     )
     monkeypatch.setattr(
         shared_runtime_deps,
@@ -430,15 +494,166 @@ def test_finalize_worker_completion_refreshes_terminal_run_and_sends_completed(m
         step_run={'id': 'step-1', 'step_name': 'finalize_bootstrap'},
         completion={
             'run': {'id': 'run-1', 'status': 'pending', 'workflow_name': 'initiative_intake_v1', 'run_code': 'RUN-1'},
-            'step_run': {'id': 'step-1', 'status': 'completed'},
+            'step_run': {'id': 'step-1', 'status': 'completed', 'step_name': 'finalize_bootstrap'},
             'next_step_run': None,
         },
+        step_execution_spec={'raw_config': {'enable_notifications': True}},
     )
 
     client.get_run.assert_called_once_with(run_id='run-1')
     assert info['run']['status'] == 'completed'
     assert notifications == [('COMPLETED', info['run'])]
+    assert step_notifications == [('STEP_COMPLETED', info['run'], 'finalize_bootstrap', {'enable_notifications': True})]
     assert writes[0]['last_event'] == 'RUN_COMPLETED'
+
+
+def test_finalize_worker_completion_enqueued_next_step_sends_only_step_notification(monkeypatch):
+    client = MagicMock()
+    notifications: list[tuple[str, dict]] = []
+    step_notifications: list[tuple[str, dict, str, dict]] = []
+    writes: list[dict] = []
+
+    monkeypatch.setattr(
+        'agent_runner_v2.notification_manager.send_workflow_notification',
+        lambda status, context: notifications.append((status, context)) or True,
+    )
+    monkeypatch.setattr(
+        'agent_runner_v2.notification_manager.send_step_notification',
+        lambda status, context, step, step_cfg: step_notifications.append((status, context, step, step_cfg)) or True,
+    )
+    monkeypatch.setattr(
+        shared_runtime_deps,
+        '_write_backend_job_json',
+        lambda **kwargs: writes.append(kwargs),
+    )
+
+    info = _finalize_worker_completion(
+        client=client,
+        run={'id': 'run-1', 'run_code': 'RUN-1', 'workflow_name': '00_core_governance_bootstrap_v1'},
+        step_run={'id': 'step-4', 'step_name': 'validate_core_governance_docs'},
+        completion={
+            'run': {'id': 'run-1', 'status': 'pending', 'workflow_name': '00_core_governance_bootstrap_v1', 'run_code': 'RUN-1'},
+            'step_run': {'id': 'step-4', 'status': 'completed', 'step_name': 'validate_core_governance_docs'},
+            'next_step_run': {'id': 'step-5', 'step_name': 'refine_core_governance_docs'},
+        },
+        step_execution_spec={'raw_config': {'enable_notifications': True, 'on_reject_refine': {'step': 'refine_core_governance_docs'}}},
+    )
+
+    client.get_run.assert_not_called()
+    assert info['last_event'] == 'STEP_ENQUEUED'
+    assert notifications == []
+    assert step_notifications == [
+        (
+            'STEP_COMPLETED',
+            info['run'],
+            'validate_core_governance_docs',
+            {'enable_notifications': True, 'on_reject_refine': {'step': 'refine_core_governance_docs'}},
+        )
+    ]
+    assert writes[0]['last_event'] == 'STEP_ENQUEUED'
+
+
+def test_finalize_worker_completion_awaiting_human_sends_step_and_workflow_notification(monkeypatch):
+    client = MagicMock()
+    notifications: list[tuple[str, dict]] = []
+    step_notifications: list[tuple[str, dict, str, dict]] = []
+    writes: list[dict] = []
+
+    monkeypatch.setattr(
+        'agent_runner_v2.notification_manager.send_workflow_notification',
+        lambda status, context: notifications.append((status, context)) or True,
+    )
+    monkeypatch.setattr(
+        'agent_runner_v2.notification_manager.send_step_notification',
+        lambda status, context, step, step_cfg: step_notifications.append((status, context, step, step_cfg)) or True,
+    )
+    monkeypatch.setattr(
+        shared_runtime_deps,
+        '_write_backend_job_json',
+        lambda **kwargs: writes.append(kwargs),
+    )
+
+    info = _finalize_worker_completion(
+        client=client,
+        run={'id': 'run-1', 'run_code': 'RUN-1', 'workflow_name': '00_core_governance_bootstrap_v1'},
+        step_run={'id': 'step-4', 'step_name': 'validate_core_governance_docs'},
+        completion={
+            'run': {
+                'id': 'run-1',
+                'status': 'awaiting_human',
+                'workflow_name': '00_core_governance_bootstrap_v1',
+                'run_code': 'RUN-1',
+                'awaiting_human_step': 'validate_core_governance_docs',
+            },
+            'step_run': {'id': 'step-4', 'status': 'completed', 'step_name': 'validate_core_governance_docs'},
+            'next_step_run': None,
+        },
+        step_execution_spec={'raw_config': {'enable_notifications': True, 'requires_human_approval_after': True}},
+    )
+
+    client.get_run.assert_not_called()
+    assert info['last_event'] == 'HUMAN_APPROVAL_REQUIRED'
+    assert notifications == [('WAITING_FOR_HUMAN_INTERVENTION', info['run'])]
+    assert step_notifications == [
+        (
+            'STEP_COMPLETED',
+            info['run'],
+            'validate_core_governance_docs',
+            {'enable_notifications': True, 'requires_human_approval_after': True},
+        )
+    ]
+    assert writes[0]['last_event'] == 'HUMAN_APPROVAL_REQUIRED'
+
+
+def test_finalize_worker_completion_failed_sends_failed_notifications(monkeypatch):
+    client = MagicMock()
+    notifications: list[tuple[str, dict]] = []
+    step_notifications: list[tuple[str, dict, str, dict]] = []
+    writes: list[dict] = []
+
+    monkeypatch.setattr(
+        'agent_runner_v2.notification_manager.send_workflow_notification',
+        lambda status, context: notifications.append((status, context)) or True,
+    )
+    monkeypatch.setattr(
+        'agent_runner_v2.notification_manager.send_step_notification',
+        lambda status, context, step, step_cfg: step_notifications.append((status, context, step, step_cfg)) or True,
+    )
+    monkeypatch.setattr(
+        shared_runtime_deps,
+        '_write_backend_job_json',
+        lambda **kwargs: writes.append(kwargs),
+    )
+
+    info = _finalize_worker_completion(
+        client=client,
+        run={'id': 'run-1', 'run_code': 'RUN-1', 'workflow_name': '00_core_governance_bootstrap_v1'},
+        step_run={'id': 'step-4', 'step_name': 'validate_core_governance_docs'},
+        completion={
+            'run': {
+                'id': 'run-1',
+                'status': 'failed',
+                'workflow_name': '00_core_governance_bootstrap_v1',
+                'run_code': 'RUN-1',
+            },
+            'step_run': {'id': 'step-4', 'status': 'failed', 'step_name': 'validate_core_governance_docs'},
+            'next_step_run': None,
+        },
+        step_execution_spec={'raw_config': {'enable_notifications': True}},
+    )
+
+    client.get_run.assert_not_called()
+    assert info['last_event'] == 'RUN_FAILED'
+    assert notifications == [('FAILED', info['run'])]
+    assert step_notifications == [
+        (
+            'STEP_FAILED',
+            info['run'],
+            'validate_core_governance_docs',
+            {'enable_notifications': True},
+        )
+    ]
+    assert writes[0]['last_event'] == 'RUN_FAILED'
 
 
 def test_write_backend_job_json_mirrors_run_state(tmp_path, monkeypatch):
@@ -472,7 +687,11 @@ def test_write_backend_job_json_mirrors_run_state(tmp_path, monkeypatch):
     job_json = tmp_path / '.ukbe-runner/jobs/delivery_planning_v1/PLAN-20260611-38055dbf/job.json'
     assert job_json.exists()
     payload = json.loads(job_json.read_text(encoding='utf-8'))
+    assert payload['job_id'] == 'PLAN-20260611-38055dbf'
+    assert payload['template_group'] == 'delivery_planning_v1'
+    assert payload['job_status'] == 'awaiting_human'
     assert payload['status'] == 'awaiting_human'
+    assert payload['current_step'] == 'review_planner'
     assert payload['awaiting_human_step'] == 'review_planner'
     assert payload['context_payload']['PLAN_FILE'] == 'docs/delivery/02_plans/PLAN-20260611-01_backend-lineage-metadata-test.md'
     assert payload['current_step_status'] == 'completed'
@@ -873,11 +1092,12 @@ def test_execute_backend_step_request_returns_failed_result_for_missing_meta_jso
 
 def test_resolve_worker_engine_root_uses_global_only(monkeypatch, tmp_path):
     home = tmp_path / "home"
-    global_cfg = home / ".ukbe-runner" / "engine" / "config.json"
+    global_cfg = home / ".ukbe-runner" / "config.json"
     global_ver = home / ".ukbe-runner" / "engine" / "versions" / "1.2.3"
     global_ver.mkdir(parents=True)
     global_cfg.parent.mkdir(parents=True, exist_ok=True)
     global_cfg.write_text('{"engine_version": "1.2.3"}', encoding='utf-8')
+    monkeypatch.setattr(run_agent_module.Path, 'home', staticmethod(lambda: home))
     monkeypatch.setattr(shared_runtime_deps.Path, 'home', staticmethod(lambda: home))
 
     engine_root, version = run_agent_module._resolve_worker_engine_root(None)

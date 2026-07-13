@@ -3,176 +3,152 @@ template_id: "SYS-00-BMP"
 version: "1.0.0"
 doc_type: "system"
 managed_by: "workflow-generated"
-generated_at: "2026-07-13T08:00:00+08:00"
+generated_at: "2026-07-13T23:04:55+08:00"
 workflow: "00_core_governance_bootstrap_v1"
 step: "generate_core_governance_docs"
-change_id: "INITIAL-BOOTSTRAP"
+change_id: "00CORE-20260713-7d31e8d4"
 ---
 
 # Bundle Migration Plan
 
-This document describes the migration from legacy mixed-doc models toward the three-layer documentation model for the agent-runner ecosystem.
+This document defines the canonical migration strategy for transitioning the agent-runner ecosystem from legacy mixed-doc models to the three-layer documentation architecture. It specifies current state, target state, and phased migration approach that maintains operational continuity throughout the transition.
 
 ## Current State
 
-Many repositories using the agent-runner framework currently operate with a mixed-doc model characterized by:
+The ecosystem currently operates in a transitional mode where legacy mixed-doc outputs coexist with emerging three-layer model artifacts. Key characteristics of the current state include:
 
-- Historical root markdown files (QWEN.md, CLAUDE.md, README.md) serving as both governance guidance and repo-specific documentation
-- Stale repo-derived analysis docs scattered across `docs/system/` or project root directories
-- Workflow prompts that reference outdated artifact placeholder syntax or legacy workflow IDs
-- No clear separation between ecosystem-level governance and repository-local generated outputs
-- Core runner code and active workflow bundles coexisting with outdated markdown that creates conflicting guidance
+### Legacy Mixed-Doc Presence
 
-In this state, documentation authority is ambiguous. Contributors may follow stale root guidance instead of current workflow behavior, leading to inconsistent implementations and maintenance overhead.
+Repositories contain repo-derived analysis docs produced by repository-scanning workflows. These outputs historically served dual purposes: both as local development references and as de facto governance guidance. This mixing of concerns created authority confusion and documentation drift.
 
-Some repositories may have already begun partial migration by archiving historical root guidance under `docs/archive/root-guidance/` but still retain stale mixed outputs under `docs/system/00_governance/bootstrap/` from previous bootstrap workflows that did not enforce strict ownership boundaries.
+Legacy outputs remain readable but are progressively marked as deprecated as repositories adopt the three-layer model. They do not define ecosystem-wide rules and must not be treated as canonical governance authority.
+
+### Emerging Three-Layer Adoption
+
+Core governance bundles now own the universal documentation contract through four canonical files under `docs/system/00_governance/bootstrap/`. Workflow bundles carry their own master docs into the global runner home during publish and install operations. Repo-local generated docs live under `docs/repo/*` as downstream outputs.
+
+The scaffold workflow `10_execution_scaffold_v2` orchestrates repo-local doc generation within boundaries defined by ecosystem master docs. It does not claim ownership of governance rules or attempt to modify Layer 1 artifacts.
+
+### Operational Gaps
+
+Current gaps that migration addresses:
+
+- Inconsistent validation criteria across repositories
+- Unclear ownership boundaries between ecosystem, bundle, and repo-local layers
+- Stale assumptions propagating from deprecated workflow IDs and legacy placeholder styles
+- Missing deterministic review gates allowing non-conforming docs into production
 
 ## Target State
 
-The target state is a clean three-layer documentation model with unambiguous ownership:
+The target state achieves complete separation of concerns with clear ownership boundaries and deterministic validation at every layer:
 
-### Layer 1: Ecosystem Master Docs
+### Fully Separated Layers
 
-Four canonical governance documents under `docs/system/00_governance/bootstrap/` owned exclusively by `00_core_governance_bootstrap_v1`:
-- README.md — defines the three-layer model
-- DOCUMENTATION_STANDARD.md — specifies structure and validation requirements
-- BUNDLE_TAXONOMY.md — defines bundle classes and ownership rules
-- BUNDLE_MIGRATION_PLAN.md — this document
+**Layer 1 (Ecosystem)**: Four canonical master docs under `docs/system/00_governance/bootstrap/` define universal rules. Owned exclusively by `00_core_governance_bootstrap_v1`. Changes require deterministic review, validation, and audit approval. No repo-derived content appears in Layer 1.
 
-These docs define universal rules and do not contain repo-derived analysis or enumerate repository-specific artifacts.
+**Layer 2 (Workflow Bundles)**: Each workflow bundle carries its own master docs into the global runner home. Bundle-local docs govern their specific workflow's domain but must not contradict Layer 1 rules. The plugin-based workflow bundle system uses dual-path discovery (global first, local fallback) for runtime deployment.
 
-### Layer 2: Workflow Bundle Master Docs
+**Layer 3 (Repo-Local)**: Generated outputs under `docs/repo/*` serve as downstream derived artifacts. They conform to ecosystem and bundle standards but hold no governance authority. Repository operators consume Layer 1 and Layer 2 rules to produce Layer 3 outputs within defined constraints.
 
-Each workflow package (`workflows/<name>/`) contains its own governance manifest:
-- `workflow.toml` — declarative step definition and artifact registry
-- `prompts/` — prompt templates for each step
-- `context_extensions.py` — optional workflow-specific context hooks
-- `bundle_governance/` — bundle-local governance manifests including generated adapter files
+### Deterministic Validation
 
-Bundle-local docs travel with the workflow into the global runner home during publish or install.
+All four ecosystem master docs pass through deterministic review, validation, and audit gates before reaching production. Validation checks:
 
-### Layer 3: Repo-Local Generated Docs
+- Frontmatter completeness with correct template IDs and version strings
+- Required section presence matching each file's specification
+- Ownership boundary integrity preventing authority drift
+- Forbidden pattern absence (hardcoded artifact keys, legacy workflow IDs, repo-derived placeholder names)
+- Cross-reference consistency across all four files
 
-Repository-specific outputs live cleanly under `docs/repo/*` and are owned by repo-document, scaffold, sync, and audience workflows:
-- Repository analysis and codebase inventory
-- System overviews and component architecture docs
-- Audience-facing documentation and delivery run state
+Workflow bundles undergo similar validation within their own governance manifests. Repo-local outputs validate against their respective bundle rules but are not subject to the core governance validation contract.
 
-These docs are non-authoritative downstream outputs that reflect repository state at generation time. They are not canonical governance authority.
+### Zero Legacy Artifacts
 
-### Authority Chain
-
-The canonical source of truth follows this order:
-1. CODER_IMPLEMENTATION_SOP.md (execution discipline)
-2. Active workflow bundle under `workflows/<name>/`
-3. Current runner code under `agent_runner_v2/`
-4. Generated ecosystem master docs under `docs/system/00_governance/bootstrap/`
-5. Generated repo-local docs under `docs/repo/*`
-
-Historical root guidance is moved to `docs/archive/root-guidance/` and treated as non-authoritative.
+Legacy mixed-doc outputs are fully deprecated and removed from active governance consideration. Repositories operate exclusively within the three-layer model. Migration markers are removed once transition completes.
 
 ## Migration Phases
 
-Migration occurs in four phases, each with specific deliverables and validation criteria.
+Migration proceeds through four sequential phases, each building on the previous phase's foundation. Repositories may enter migration at different times but must complete all phases to reach target state.
 
-### Phase 1: Inventory and Archive
+### Phase 1: Ecosystem Master Doc Establishment
 
-**Goal**: Identify all existing documentation artifacts and archive historical root guidance.
+**Objective**: Establish the four canonical ecosystem master docs as the universal documentation contract.
 
-**Actions**:
-- Scan project root for historical markdown files (QWEN.md, CLAUDE.md, README.md, TODO_LIST.md, etc.)
-- Move historical root guidance to `docs/archive/root-guidance/`
-- Identify stale repo-derived analysis docs under `docs/system/` that belong to Layer 3
-- Catalog existing workflow bundles and their current governance manifests
+**Activities**:
+- Generate README.md, DOCUMENTATION_STANDARD.md, BUNDLE_TAXONOMY.md, and BUNDLE_MIGRATION_PLAN.md via `00_core_governance_bootstrap_v1`
+- Pass deterministic review, validation, and audit gates for initial approval
+- Publish ecosystem master docs to `docs/system/00_governance/bootstrap/`
+- Declare core governance bundle as supreme authority over documentation contracts
 
-**Deliverables**:
-- Archived root guidance under `docs/archive/root-guidance/`
-- Inventory of stale system-level docs requiring migration or removal
-- Updated CLAUDE.md and QWEN.md pointing to new authority chain
+**Success Criteria**:
+- All four files exist with correct frontmatter and required sections
+- No forbidden patterns appear in file content
+- Ownership boundaries explicitly documented
+- Validation gate passes without refinement loops
 
-**Validation**:
-- No historical root markdown files remain at project root except minimal pointer files
-- CODER_IMPLEMENTATION_SOP.md exists and defines execution discipline
-- Root markdown files explicitly defer to active workflow bundles and current runner code
+**Exit Condition**: Ecosystem master docs approved and published to production.
 
-### Phase 2: Core Governance Bootstrap
+### Phase 2: Workflow Bundle Alignment
 
-**Goal**: Generate the four ecosystem master docs and establish Layer 1 ownership.
+**Objective**: Align existing workflow bundles with the three-layer model and establish dual-path discovery.
 
-**Actions**:
-- Run `00_core_governance_bootstrap_v1` to generate the four ecosystem master docs
-- Verify all four files exist under `docs/system/00_governance/bootstrap/` with correct frontmatter
-- Validate structural and content requirements per DOCUMENTATION_STANDARD.md
-- Ensure no scope violations (no repo-derived artifact names, no forbidden workflow IDs, no artifact placeholder syntax)
+**Activities**:
+- Convert monolithic template configurations to plugin-based workflow packages
+- Each bundle creates `bundle_governance/` directory with canonical governance docs
+- Generated adapter files (AGENTS.md, CLAUDE.md, QWEN.md) travel with bundle during publish/install
+- Validate bundle manifests declare artifact registries excluding paths owned by other bundles
 
-**Deliverables**:
-- README.md with three-layer model description
-- DOCUMENTATION_STANDARD.md with required sections
-- BUNDLE_TAXONOMY.md with single core governance bundle class
-- BUNDLE_MIGRATION_PLAN.md (this document)
+**Success Criteria**:
+- All active workflows use plugin-based package structure
+- Bundle governance docs explicitly declare ownership boundaries
+- Dual-path discovery functional (global runner home primary, local repo fallback secondary)
+- No bundle claims ownership of another bundle's artifact paths
 
-**Validation**:
-- All four files pass structural validation (required frontmatter, required sections)
-- No file contains artifact placeholder syntax using curly-brace token patterns
-- No file mentions deprecated workflow identifiers from legacy implementations
-- BUNDLE_TAXONOMY.md contains no non-core bundle classifications
-- DOCUMENTATION_STANDARD.md contains no repo-derived artifact names
+**Exit Condition**: All workflow bundles conform to three-layer model without ownership conflicts.
 
-### Phase 3: Workflow Bundle Alignment
+### Phase 3: Repo-Local Output Segregation
 
-**Goal**: Ensure all workflow bundles comply with the three-layer model and use dual-path discovery.
+**Objective**: Separate repo-derived analysis docs from governance authority and mark them as downstream outputs.
 
-**Actions**:
-- Review each workflow bundle under `workflows/<name>/` for compliance with BUNDLE_TAXONOMY.md
-- Ensure each bundle contains `workflow.toml`, `prompts/`, `context_extensions.py`, and `bundle_governance/`
-- Migrate hardcoded functions from `step_runner.py` into workflow-specific `context_extensions.py` files
-- Update workflow prompts to remove references to stale artifact placeholder syntax
-- Verify dual-path discovery works correctly (global path takes precedence over local fallback)
+**Activities**:
+- Identify all repo-local generated docs under `docs/repo/*` in each repository
+- Mark legacy mixed-doc outputs as deprecated (not deleted, but flagged as non-authoritative)
+- Configure scaffold workflow `10_execution_scaffold_v2` to generate new repo-local outputs within three-layer boundaries
+- Update repository operators' understanding of Layer 3's subordinate role
 
-**Deliverables**:
-- All workflow bundles structured according to packaging rules
-- Context extensions separated from core runner code
-- Prompt templates using centralized artifact key constants
-- Dual-path discovery validated for global and local workflow copies
+**Success Criteria**:
+- All repo-local docs clearly labeled as downstream derived outputs
+- No repo-local doc claims governance authority over ecosystem or bundle rules
+- Scaffold workflow generates compliant outputs without violating ownership boundaries
+- Repository operators understand Layer 3's limited scope
 
-**Validation**:
-- No hardcoded path strings in `step_runner.py` or `documentation_guardrails.py`
-- All workflow prompts reference artifact keys via centralized constants
-- Bundle governance files exist and are consistent with workflow.toml declarations
-- Publish/install correctly seeds bundles to global runner home
+**Exit Condition**: All repositories segregate repo-local outputs from governance authority.
 
-### Phase 4: Repo-Local Doc Separation
+### Phase 4: Legacy Artifact Decommission
 
-**Goal**: Move all repo-derived analysis outputs to `docs/repo/*` and clarify non-authoritative status.
+**Objective**: Remove deprecated legacy outputs and achieve zero legacy artifact presence.
 
-**Actions**:
-- Identify repo-document, scaffold, sync, and audience workflows (including the canonical scaffold workflow and other repo-bootstrap workflows)
-- Configure these workflows to write outputs under `docs/repo/*` instead of `docs/system/`
-- Remove any remaining stale repo-derived analysis docs from `docs/system/00_governance/bootstrap/`
-- Update ecosystem master docs to reference the canonical scaffold workflow if needed
-- Clarify in README.md that repo-local docs are non-authoritative downstream outputs
+**Activities**:
+- Archive legacy repo-derived analysis docs that served dual governance/development purposes
+- Remove stale workflow IDs and legacy placeholder styles from active configurations
+- Clean up hardcoded artifact keys and mixed assumption prompts
+- Verify all repositories operate exclusively within three-layer model
 
-**Deliverables**:
-- Clean separation: `docs/system/` contains only four ecosystem master docs
-- Repo-local outputs under `docs/repo/*` owned by appropriate workflows
-- Updated migration plan reflecting completion status
-- Final audit confirming no scope violations remain
+**Success Criteria**:
+- Zero legacy mixed-doc outputs remain in active governance consideration
+- All workflow IDs match current registry without deprecated identifiers
+- Prompt templates use centralized REFERENCE_FILES dict keys instead of hardcoded paths
+- Validation gates consistently reject ownership drift and stale assumptions
 
-**Validation**:
-- `docs/system/00_governance/bootstrap/` contains exactly four files (README.md, DOCUMENTATION_STANDARD.md, BUNDLE_TAXONOMY.md, BUNDLE_MIGRATION_PLAN.md) plus optional review/validation outputs
-- No repo-derived artifact names appear in ecosystem master docs
-- No ecosystem master doc claims ownership of `docs/repo/*` outputs
-- Canonical scaffold workflow ID is correct (`10_execution_scaffold_v2`, not deprecated alternatives)
-- Final workflow audit passes all scope violation checks
+**Exit Condition**: Ecosystem reaches target state with fully separated layers, deterministic validation, and zero legacy artifacts. Migration markers removed from all repositories.
 
-### Phase Completion Criteria
+### Post-Migration Governance
 
-Migration is complete when:
-- All four ecosystem master docs exist and pass validation
-- Legacy root guidance has been archived under `docs/archive/root-guidance/`
-- All workflow bundles comply with packaging rules and use dual-path discovery
-- Repo-local docs are cleanly separated under `docs/repo/*`
-- No stale mixed-doc assumptions remain in workflow prompts or bundle governance
-- Final audit step in `00_core_governance_bootstrap_v1` approves accuracy
+After completing all four phases, the ecosystem operates under standard three-layer rules without migration mode overhead. Ongoing governance follows these principles:
 
-Repositories may remain in any phase indefinitely if business constraints prevent immediate migration, but should prioritize reaching Phase 4 to eliminate ambiguous documentation authority.
+- Core governance bundles update only through deterministic workflow execution
+- Workflow bundles evolve within their declared ownership boundaries
+- Repo-local outputs conform to ecosystem and bundle standards without claiming authority
+- System auditors verify conformance across all layers and detect drift before it propagates
+
+New repositories bootstrap directly into the three-layer model without passing through migration phases. Legacy repositories that completed migration maintain target state indefinitely unless ecosystem contract changes trigger a new migration cycle.

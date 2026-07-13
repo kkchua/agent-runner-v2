@@ -3,104 +3,120 @@ template_id: "SYS-00-BT"
 version: "1.0.0"
 doc_type: "system"
 managed_by: "workflow-generated"
-generated_at: "2026-07-13T08:00:00+08:00"
+generated_at: "2026-07-13T23:04:55+08:00"
 workflow: "00_core_governance_bootstrap_v1"
 step: "generate_core_governance_docs"
-change_id: "INITIAL-BOOTSTRAP"
+change_id: "00CORE-20260713-7d31e8d4"
 ---
 
 # Bundle Taxonomy
 
-This document defines the bundle classes, ownership rules, and packaging requirements for workflow bundles in the agent-runner ecosystem.
+This document defines the canonical bundle classification system for the agent-runner ecosystem. It specifies bundle classes, ownership rules, and packaging requirements that maintain clear authority boundaries across all workflow packages.
 
 ## Bundle Classes
 
-The agent-runner ecosystem recognizes one canonical bundle class at the ecosystem governance layer:
+The ecosystem recognizes exactly one concrete bundle class with canonical governance authority:
 
 ### Core Governance Bundles
 
-Core governance bundles own ecosystem master docs that define the universal documentation contract for the entire agent-runner ecosystem. These bundles operate at Layer 1 of the three-layer documentation model.
+**Purpose**: Define universal documentation contracts and three-layer model rules applicable across all repositories and workflow bundles.
 
-**Characteristics**:
-- Own only the four ecosystem master docs under `docs/system/00_governance/bootstrap/`
-- Define universal rules that apply to all repositories using the framework
-- Do not generate repo-derived analysis or claim ownership of `docs/repo/*` outputs
-- Travel with the core runner code and take precedence over conflicting local guidance
+**Scope**:
+- Govern ecosystem master docs under `docs/system/00_governance/bootstrap/`
+- Establish documentation standards, validation criteria, and update triggers
+- Define bundle taxonomy and migration strategies
+- Enforce ownership boundaries between ecosystem, bundle, and repo-local layers
 
-**Example**: `00_core_governance_bootstrap_v1` is the sole core governance bundle in this ecosystem. It owns README.md, DOCUMENTATION_STANDARD.md, BUNDLE_TAXONOMY.md, and BUNDLE_MIGRATION_PLAN.md.
+**Canonical Example**: `00_core_governance_bootstrap_v1`
 
-**Authority**: Highest — core governance bundles define the rules all other layers must follow.
+**Ownership Rules**:
+- Owned exclusively by the `00_core_governance_bootstrap_v1` workflow bundle
+- No other workflow may modify core governance bundle contents
+- Changes require deterministic review, validation, and audit approval
+- Must not claim ownership of repo-derived analysis or delivery outputs
 
-Other workflow bundles exist in the ecosystem but are not classified as core governance bundles. They operate at Layer 2 (workflow bundle master docs) or Layer 3 (repo-local generated docs) and follow the contract defined by core governance bundles without modifying ecosystem master docs.
+**Artifact Set**: Limited to four canonical files plus transient review/validation outputs:
+- README.md (SYS-00-IDX)
+- DOCUMENTATION_STANDARD.md (SYS-00-DS)
+- BUNDLE_TAXONOMY.md (SYS-00-BT)
+- BUNDLE_MIGRATION_PLAN.md (SYS-00-BMP)
+
+Other bundle classes exist in the ecosystem but are subordinate to core governance bundles. They operate within Layer 2 (workflow bundle master docs) or Layer 3 (repo-local generated docs) and must conform to the rules defined by core governance bundles. When conflicts arise between bundle-local docs and core governance docs, the core governance docs win.
 
 ## Ownership Rules
 
-Ownership rules determine which bundle class may modify which documentation layer:
+Bundle ownership follows strict hierarchical rules that prevent authority confusion and documentation drift:
 
-### Core Governance Bundle Ownership
+### Hierarchical Authority
 
-- Core governance bundles own only the four ecosystem master docs
-- They do not own repo-local generated docs under `docs/repo/*`
-- They do not classify or enumerate non-core bundle families
-- They do not list concrete repository workflow inventory
-- They do not describe prompt contracts using artifact placeholder syntax
+1. **Core governance bundles** hold supreme authority over ecosystem-wide documentation contracts. Their rules apply universally and cannot be overridden by subordinate bundles.
 
-### Workflow Bundle Ownership
+2. **Workflow bundle master docs** (Layer 2) own their specific workflow's domain but must not contradict core governance rules. Each bundle carries its master docs into the global runner home during publish and install operations.
 
-- Individual workflow bundles own their bundle-local governance manifests under `workflows/<name>/bundle_governance/`
-- They define how their specific workflow operates within the three-layer model
-- They follow the contract defined by core governance bundles
-- During publish or install, bundle-local governance files are copied into the global runner home
+3. **Repo-local generated docs** (Layer 3) are downstream outputs produced by repository-scanning workflows. They have no governance authority and must conform to both Layer 1 and Layer 2 rules.
 
-### Repo-Document Workflow Ownership
+### Non-Overlap Principle
 
-- Repo-document, scaffold, sync, and audience workflows own repo-local generated docs under `docs/repo/*`
-- These docs are non-authoritative downstream outputs
-- They reflect repository state at generation time and may become stale
-- They are not canonical governance authority
+No two bundles may claim ownership of the same artifact path or documentation domain. Explicit separation prevents:
 
-### Boundary Enforcement
+- Conflicting instructions across multiple governance sources
+- Stale assumptions propagating from deprecated bundles
+- Validation gaps where no bundle claims responsibility
 
-- No workflow or document outside `00_core_governance_bootstrap_v1` may modify the four ecosystem master docs
-- No ecosystem master doc may claim ownership of repo-local outputs under `docs/repo/*`
-- When prompt instructions conflict with repo-local stale docs, the core governance bundle contract wins
+When a new bundle is created, its `bundle_governance.toml` manifest must declare its artifact registry and explicitly exclude paths owned by existing bundles. The core governance bundle validates this declaration during bundle installation.
+
+### Conflict Resolution
+
+When prompt instructions, stale repo docs, or bundle-local guidance conflict with core governance docs:
+
+1. Core governance docs win unconditionally
+2. Conflicting content in subordinate layers must be marked as deprecated
+3. Bundle refinement loops update only the affected core governance files
+4. Validation gates reject updates that violate ownership boundaries
 
 ## Packaging Rules
 
-Packaging rules determine how workflow bundles are structured and deployed:
+Bundle packaging enforces consistent structure, discoverability, and runtime deployment across all workflow packages.
 
-### Bundle Structure
+### Package Structure
 
-Each workflow package (`workflows/<name>/`) must contain:
-- `workflow.toml` — declarative manifest defining steps, routing, artifact keys, and coder policies
-- `prompts/` — directory containing prompt template files for each step
-- `context_extensions.py` — optional workflow-specific context hooks (replaces hardcoded functions in step_runner.py)
-- `bundle_governance/` — directory containing bundle-local governance manifests
+Each workflow bundle resides under `workflows/<name>/` and contains:
+
+```
+workflows/<name>/
+├── workflow.toml          # Declarative manifest (steps, routing, artifact keys)
+├── prompts/               # Prompt template files for each step
+├── actions.py             # Optional Python action implementations
+├── bundle_governance/     # Bundle-local master docs and extensions
+│   ├── <governance>.md    # Canonical bundle-specific governance docs
+│   ├── extensions/        # Governance extension rules
+│   └── generated/         # Auto-generated adapter files (AGENTS.md, CLAUDE.md, QWEN.md)
+└── context_extensions.py  # Optional workflow-specific context hooks
+```
 
 ### Dual-Path Discovery
 
 Plugin workflow packages use dual-path discovery for runtime deployment:
-1. **Global path**: `%USERPROFILE%\.ukbe-runner\workflows\<workflow_name>\<package_files>` — seeded during init or publish
-2. **Local path**: `workflows\<workflow_name>\<package_files>` — fallback if global path is not available
 
-The global path takes precedence. If both paths exist, the global copy is used.
+1. **Global runner home** (`%USERPROFILE%\.ukbe-runner\workflows\<workflow_name>\`): Primary location where installed bundles reside. Bundle-local master docs travel here during publish/install operations.
 
-### Generated Adapter Files
+2. **Local repository fallback** (`workflows/<name>/` within individual repos): Secondary location used during development or when global installation is unavailable.
 
-Bundle-local agent adapter files under `bundle_governance/generated/` (e.g., AGENTS.md, CLAUDE.md, QWEN.md) are generated from the canonical bundle governance source. They must not drift independently and must travel with the bundle into the global runner home during publish or install.
+The adapter pattern converts `WorkflowBundle` objects into the same dict format that legacy monolithic configurations produced, ensuring zero changes to the existing execution pipeline (`step_runner.py`, `workflow_router.py`, `coder_adapters.py`, `job_state.py`).
 
-### Artifact Registry
+### Manifest Requirements
 
-Each workflow bundle declares its owned artifact set in `workflow.toml` under `[step.artifacts].produces`. The artifact registry is authoritative for:
-- Bundle scope checks during validation
-- Publish/install packaging decisions
-- Prompt-time instruction alignment
+Every `workflow.toml` must include:
 
-Core governance bundles have a limited artifact set restricted to the four core governance documents plus deterministic review and validation outputs used by their own refinement loop.
+- `[workflow]` section with name, version, label, description, and visibility
+- `[[step]]` entries defining each execution step with prompt/action references
+- `[step.artifacts]` sections declaring produces, required_inputs, and result_meta_key
+- `[step.coder]` sections specifying allowed roles and default_role
 
-### Versioning
+Bundle governance manifests under `bundle_governance/` must declare their artifact registry and ownership boundaries explicitly. The `core_governance.md` file within each bundle's governance directory serves as the canonical source of truth for that bundle's scope.
 
-Workflow bundles use semantic versioning in their `workflow.toml` manifest:
-- `version = "1"` — major version (breaking changes to step structure or artifact keys)
-- Changes to prompt templates or context extensions without structural changes do not require version bumps
-- Core governance bundle version is independent of ecosystem master doc versions
+### Versioning and Migration
+
+Bundle versions follow semantic versioning (MAJOR.MINOR.PATCH). Major version increments indicate breaking changes to the documentation contract or ownership boundaries. Minor increments add new capabilities without modifying existing rules. Patch increments fix errors or clarify ambiguous language.
+
+Migration from legacy bundle models to the current three-layer architecture proceeds through defined phases documented in BUNDLE_MIGRATION_PLAN.md. During migration, legacy bundles remain operational but are marked as deprecated. New bundles must conform to the three-layer model from inception.

@@ -12,7 +12,10 @@ def safe_relative_to(path: Path, base: Path) -> str:
     try:
         return str(path.relative_to(base))
     except ValueError:
-        return os.path.relpath(path, base)
+        try:
+            return os.path.relpath(path, base)
+        except ValueError:
+            return str(path)
 
 
 def save_text(path: Path, content: str) -> None:
