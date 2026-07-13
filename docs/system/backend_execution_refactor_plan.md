@@ -181,9 +181,37 @@ Incomplete:
     - backend-safe terminal `step_completion` action
   - daemon notifications are now optional at backend finalization time; missing notification modules no longer break worker completion
   - targeted backend worker regression reached full end-to-end step progression for the migrated workflow before the notification import gap was fixed
-  - current blocker is backend integration test environment stability:
-    - repeated reruns are presently hitting PostgreSQL deadlocks during test fixture workflow sync in `workflow_registry.py`
-    - this appears separate from the worker bridge changes and must be cleared before broader backend regression reruns can be trusted
+- current blocker is backend integration test environment stability:
+    - resolved: the deadlocks were caused by parallel backend `pytest` runs against the same shared `agentrunner` database
+    - serial reruns of the backend migrated-workflow regressions passed
+- Phase 4 slice 4.6 is now completed:
+  - backend unit contract coverage was added for the vendored runtime boundary:
+    - `ExecutionRequest.from_dict(...)`
+    - `ExecutionResult.to_dict(...)`
+    - backend worker request payload building
+    - execute-step subprocess wiring
+    - worker result submission normalization
+    - worker finalization envelope behavior when notification modules are absent
+  - new test file:
+    - `tests/unit/test_vendored_runtime_contract.py`
+  - contract test result:
+    - `10 passed`
+  - serial backend daemon regressions remain green:
+    - worker-loop subset: `2 passed`
+    - migrated-workflow API subset: `6 passed`
+- Phase 4 slice 4.7 is now completed:
+  - daemon-mode migrated workflow acceptance is now covered by backend worker integration tests for `00_core_governance_bootstrap_v1`
+  - acceptance coverage now includes:
+    - straight-through worker completion path
+    - worker-driven `review -> refine` loop re-entry
+    - worker-driven `validation -> refine` loop re-entry
+    - artifact registration through the worker completion flow
+    - final workflow completion through the backend worker bridge
+  - acceptance tests:
+    - existing worker happy-path integration: `2 passed` subset includes `test_core_governance_worker_loop_via_backend_worker`
+    - new refine-cycle daemon acceptance:
+      - `test_core_governance_worker_loop_handles_refine_cycles_via_backend_worker`
+      - result: `1 passed`
 - Backend worker config resolution was aligned with the single global config path:
   - `C:\Users\kengk\.ukbe-runner\config.json`
   - the old backend worker assumption about `~/.ukbe-runner/engine/config.json` was removed
