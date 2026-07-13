@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 
+from agent_runner_v2 import manual_runtime_deps, shared_runtime_deps
 from agent_runner_v2 import run_agent as run_agent_module
 
 
@@ -61,17 +62,21 @@ def test_main_returns_success_for_completed_matching_seed(monkeypatch, tmp_path,
     monkeypatch.setattr(run_agent_module, "_validate_static_reference_files", lambda *args, **kwargs: None)
     monkeypatch.setattr(run_agent_module, "set_context", lambda **kwargs: None)
     monkeypatch.setattr(run_agent_module, "set_workflow_module", lambda module: None)
-    monkeypatch.setattr(run_agent_module, "find_matching_active_job", lambda **kwargs: "")
-    monkeypatch.setattr(run_agent_module, "find_matching_completed_job", lambda **kwargs: "SCAFFOLD-GEN-001")
+    monkeypatch.setattr(manual_runtime_deps, "find_matching_active_job", lambda **kwargs: "")
+    monkeypatch.setattr(manual_runtime_deps, "find_matching_completed_job", lambda **kwargs: "SCAFFOLD-GEN-001")
     monkeypatch.setattr(
-        run_agent_module,
+        manual_runtime_deps,
         "infer_seed_identity",
         lambda template_group, seed_artifacts: ("TARGET_PROJECT_ROOT", str(workspace).replace("\\", "/")),
     )
-    monkeypatch.setattr(run_agent_module, "load_job", lambda *args, **kwargs: completed_state)
-    monkeypatch.setattr(run_agent_module, "ensure_backward_compatible_state", lambda state: state)
-    monkeypatch.setattr(run_agent_module, "migrate_job_state", lambda state: state)
-    monkeypatch.setattr(run_agent_module, "reconcile_job_state", lambda state, group_cfg: state)
+    monkeypatch.setattr(manual_runtime_deps, "load_job", lambda *args, **kwargs: completed_state)
+    monkeypatch.setattr(manual_runtime_deps, "ensure_backward_compatible_state", lambda state: state)
+    monkeypatch.setattr(manual_runtime_deps, "migrate_job_state", lambda state: state)
+    monkeypatch.setattr(manual_runtime_deps, "reconcile_job_state", lambda state, group_cfg: state)
+    monkeypatch.setattr(shared_runtime_deps, "load_project_config", lambda root: {})
+    monkeypatch.setattr(shared_runtime_deps, "load_workflow_module", lambda *args, **kwargs: None)
+    monkeypatch.setattr(shared_runtime_deps, "_load_group", lambda template_group, **kwargs: group_cfg)
+    monkeypatch.setattr(shared_runtime_deps, "_validate_static_reference_files", lambda *args, **kwargs: None)
 
     rc = run_agent_module.main(
         [

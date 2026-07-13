@@ -3,6 +3,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Callable
 
+from .state_defaults import default_loop_context, default_replan_context
+
 
 def mark_review_started(
     *,
@@ -168,29 +170,9 @@ def complete_recovery_step(
         history[-1][history_result_field] = "APPROVED"
         history[-1][history_time_field] = now_iso()
 
-    state["loop_context"] = {
-        "active": False,
-        "loop_step": None,
-        "refine_step": None,
-        "loop_target_artifact": None,
-        "loop_source_review": None,
-        "loop_iteration": 0,
-        "pre_refine_checksum": None,
-    }
+    state["loop_context"] = default_loop_context()
     if reset_replan_context:
-        state["replan_context"] = {
-            "active": False,
-            "source_review_step": None,
-            "replan_step": None,
-            "target_artifact": None,
-            "source_review_file": None,
-            "replan_attempt": 0,
-            "pre_replan_checksum": None,
-            "trigger_reason": None,
-            "blocking_issues": [],
-            "previous_blocking_issue_count": 0,
-            "previous_blocking_issue_severity": 0,
-        }
+        state["replan_context"] = default_replan_context()
 
     state["current_step"] = next_step
     set_job_status(state, "IN_PROGRESS")

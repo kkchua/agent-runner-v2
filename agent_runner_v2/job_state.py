@@ -44,6 +44,12 @@ from .documentation_guardrails import MASTER_BOOTSTRAP_WORKFLOWS, master_bootstr
 from .runtime_context import JOBS_ROOT, PROJECT_ROOT, get_workflow_module
 from .notifications import send_notification
 from .notification_manager import send_workflow_notification, send_step_notification
+from .state_defaults import (
+    default_loop_context,
+    default_replan_context,
+    default_review_state,
+    default_task_execution_binding,
+)
 
 CURRENT_SCHEMA_VERSION = 6  # v2 bumps to 6 (adds runner_version)
 
@@ -274,28 +280,6 @@ def _recompute_usage_summary(step_usage: dict[str, Any]) -> dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
-# Default state constructors
-# ---------------------------------------------------------------------------
-
-def default_review_state() -> dict[str, Any]:
-    return {
-        "artifact_type": None, "artifact_key": None, "artifact_path": None,
-        "reviewer_step": None, "review_iteration": 0, "review_decision": "PENDING",
-        "review_decided_at": None, "coder_used": None, "human_decision": "PENDING",
-        "human_decided_at": None, "human_actor": None,
-        "final_decision": None, "final_decision_source": None,
-    }
-
-
-def default_task_execution_binding() -> dict[str, Any]:
-    return {
-        "task_graph_id": None, "task_graph_file": None, "task_graph_checksum": None,
-        "plan_id": None, "plan_file": None, "task_node_id": None,
-        "task_title": None, "task_node_snapshot": None, "bound_at": None,
-    }
-
-
-# ---------------------------------------------------------------------------
 # Job ID generation
 # ---------------------------------------------------------------------------
 
@@ -397,18 +381,9 @@ def create_job(group_name: str, group_cfg: dict[str, Any], seed_artifacts: dict[
         "created_at": now_iso(),
         "updated_at": now_iso(),
         "artifacts": artifacts,
-        "loop_context": {
-            "active": False, "loop_step": None, "refine_step": None,
-            "loop_target_artifact": None, "loop_source_review": None,
-            "loop_iteration": 0, "pre_refine_checksum": None,
-        },
+        "loop_context": default_loop_context(),
         "loop_history": [],
-        "replan_context": {
-            "active": False, "source_review_step": None, "replan_step": None,
-            "target_artifact": None, "source_review_file": None, "replan_attempt": 0,
-            "pre_replan_checksum": None, "trigger_reason": None, "blocking_issues": [],
-            "previous_blocking_issue_count": 0, "previous_blocking_issue_severity": 0,
-        },
+        "replan_context": default_replan_context(),
         "replan_history": [],
         "planning_attempt_count": 0,
         "recovered_from_invalid_result": False,
@@ -518,11 +493,7 @@ def migrate_job_state(state: dict[str, Any]) -> dict[str, Any]:
     version = int(state.get("state_schema_version", 1))
 
     if version < 2:
-        state.setdefault("loop_context", {
-            "active": False, "loop_step": None, "refine_step": None,
-            "loop_target_artifact": None, "loop_source_review": None,
-            "loop_iteration": 0, "pre_refine_checksum": None,
-        })
+        state.setdefault("loop_context", default_loop_context())
         state["loop_context"].setdefault("pre_refine_checksum", None)
         state.setdefault("loop_history", [])
         version = 2
@@ -607,19 +578,10 @@ def ensure_backward_compatible_state(state: dict[str, Any]) -> dict[str, Any]:
     state.setdefault("reconciled_from_failure", None)
     state.setdefault("seed_artifact_type", None)
     state.setdefault("seed_artifact_path", None)
-    state.setdefault("loop_context", {
-        "active": False, "loop_step": None, "refine_step": None,
-        "loop_target_artifact": None, "loop_source_review": None,
-        "loop_iteration": 0, "pre_refine_checksum": None,
-    })
+    state.setdefault("loop_context", default_loop_context())
     state["loop_context"].setdefault("pre_refine_checksum", None)
     state.setdefault("loop_history", [])
-    state.setdefault("replan_context", {
-        "active": False, "source_review_step": None, "replan_step": None,
-        "target_artifact": None, "source_review_file": None, "replan_attempt": 0,
-        "pre_replan_checksum": None, "trigger_reason": None, "blocking_issues": [],
-        "previous_blocking_issue_count": 0, "previous_blocking_issue_severity": 0,
-    })
+    state.setdefault("replan_context", default_replan_context())
     state.setdefault("replan_history", [])
     state.setdefault("planning_attempt_count", 0)
     state.setdefault("recovered_from_invalid_result", False)
@@ -754,15 +716,14 @@ def _apply_loop_routing(
         "source": state.get("last_failure_source"),
     }
     existing_iter = state.get("loop_context", {}).get("loop_iteration", 0)
-    state["loop_context"] = {
-        "active": True,
-        "loop_step": step,
-        "refine_step": on_reject_refine["step"],
-        "loop_target_artifact": on_reject_refine["artifact"],
-        "loop_source_review": review_file,
-        "loop_iteration": max(existing_iter, 1),
-        "pre_refine_checksum": None,
-    }
+    state["loop_context"] = default_loop_context(
+        active=True,
+        loop_step=step,
+        refine_step=on_reject_refine["step"],
+        target_artifact=on_reject_refine["artifact"],
+        review_file=review_file,
+        iteration=max(existing_iter, 1),
+    )
     state["current_step"] = on_reject_refine["step"]
     set_job_status(state, "IN_PROGRESS")
     clear_last_failure(state)
@@ -783,19 +744,15 @@ def _apply_replan_routing(
         "source": state.get("last_failure_source"),
     }
     # In v2, blocking_issues is always [] — content analysis is the coder's job
-    state["replan_context"] = {
-        "active": True,
-        "source_review_step": step,
-        "replan_step": on_exhaust_replan["step"],
-        "target_artifact": on_exhaust_replan["artifact"],
-        "source_review_file": review_file,
-        "replan_attempt": current_replan_attempt + 1,
-        "pre_replan_checksum": None,
-        "trigger_reason": str((step_cfg.get("on_reject_refine") or {}).get("exhausted_failure_code") or "REFINEMENT_EXHAUSTED"),
-        "blocking_issues": [],  # v2: coder decides adequacy, not runner
-        "previous_blocking_issue_count": 0,
-        "previous_blocking_issue_severity": 0,
-    }
+    state["replan_context"] = default_replan_context(
+        active=True,
+        source_review_step=step,
+        replan_step=on_exhaust_replan["step"],
+        target_artifact=on_exhaust_replan["artifact"],
+        review_file=review_file,
+        replan_attempt=current_replan_attempt + 1,
+        trigger_reason=str((step_cfg.get("on_reject_refine") or {}).get("exhausted_failure_code") or "REFINEMENT_EXHAUSTED"),
+    )
     target_path_value = state.get("artifacts", {}).get(on_exhaust_replan["artifact"])
     if target_path_value:
         target_path = PROJECT_ROOT / target_path_value
@@ -811,11 +768,7 @@ def _apply_replan_routing(
         "triggered_at": now_iso(),
         "replan_result": None, "review_result": None, "resolved_at": None,
     })
-    state["loop_context"] = {
-        "active": False, "loop_step": None, "refine_step": None,
-        "loop_target_artifact": None, "loop_source_review": None,
-        "loop_iteration": 0, "pre_refine_checksum": None,
-    }
+    state["loop_context"] = default_loop_context()
     clear_last_failure(state)
     state["current_step"] = on_exhaust_replan["step"]
     set_job_status(state, "IN_PROGRESS")

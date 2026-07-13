@@ -7,6 +7,7 @@ import pytest
 from agent_runner_v2.execution_request import ExecutionRequest
 from agent_runner_v2.execution_result import ExecutionFailure, ExecutionResult
 from agent_runner_v2 import run_agent as run_agent_module
+from agent_runner_v2 import shared_runtime_deps
 from agent_runner_v2.actions.promote_artifact import promote_artifact
 from agent_runner_v2.step_runner import build_context
 from agent_runner_v2 import runtime_context as runtime_context_module
@@ -418,7 +419,7 @@ def test_finalize_worker_completion_refreshes_terminal_run_and_sends_completed(m
         lambda status, context: notifications.append((status, context)) or True,
     )
     monkeypatch.setattr(
-        run_agent_module,
+        shared_runtime_deps,
         '_write_backend_job_json',
         lambda **kwargs: writes.append(kwargs),
     )
@@ -441,7 +442,7 @@ def test_finalize_worker_completion_refreshes_terminal_run_and_sends_completed(m
 
 
 def test_write_backend_job_json_mirrors_run_state(tmp_path, monkeypatch):
-    monkeypatch.setattr(run_agent_module, 'JOBS_ROOT', tmp_path / '.ukbe-runner/jobs')
+    monkeypatch.setattr(shared_runtime_deps, 'JOBS_ROOT', tmp_path / '.ukbe-runner/jobs')
 
     run = {
         'id': 'run-1',
@@ -518,15 +519,15 @@ def test_execute_step_command_uses_step_execution_spec_without_load_group(monkey
         encoding='utf-8',
     )
 
-    monkeypatch.setattr(run_agent_module, 'load_project_config', lambda workspace_root: {'default_workflow': 'default', 'workflows': {'initiative_intake_v1': {'path': '.'}}})
-    monkeypatch.setattr(run_agent_module, 'resolve_workflow_root', lambda workspace_root, workflow_name, config=None: runtime_context_module.PACKAGE_ROOT / 'bootstrap' / 'workflows' / 'default')
-    monkeypatch.setattr(run_agent_module, 'load_workflow_module', lambda workspace_root, workflow_name, config=None: _BOOTSTRAP_WORKFLOW_MODULE)
-    monkeypatch.setattr(run_agent_module, 'set_context', runtime_context_module.set_context)
-    monkeypatch.setattr(run_agent_module, 'set_workflow_module', runtime_context_module.set_workflow_module)
-    monkeypatch.setattr(run_agent_module, '_load_group', lambda group_name: (_ for _ in ()).throw(AssertionError('_load_group should not be used when step_execution_spec is provided')))
-    monkeypatch.setattr(run_agent_module, '_validate_static_reference_files', lambda *args, **kwargs: None)
+    monkeypatch.setattr(shared_runtime_deps, 'load_project_config', lambda workspace_root: {'default_workflow': 'default', 'workflows': {'initiative_intake_v1': {'path': '.'}}})
+    monkeypatch.setattr(shared_runtime_deps, 'resolve_workflow_root', lambda workspace_root, workflow_name, config=None: runtime_context_module.PACKAGE_ROOT / 'bootstrap' / 'workflows' / 'default')
+    monkeypatch.setattr(shared_runtime_deps, 'load_workflow_module', lambda workspace_root, workflow_name, config=None: _BOOTSTRAP_WORKFLOW_MODULE)
+    monkeypatch.setattr(shared_runtime_deps, 'set_context', runtime_context_module.set_context)
+    monkeypatch.setattr(shared_runtime_deps, 'set_workflow_module', runtime_context_module.set_workflow_module)
+    monkeypatch.setattr(shared_runtime_deps, '_load_group', lambda group_name: (_ for _ in ()).throw(AssertionError('_load_group should not be used when step_execution_spec is provided')))
+    monkeypatch.setattr(shared_runtime_deps, '_validate_static_reference_files', lambda *args, **kwargs: None)
     monkeypatch.setattr(
-        run_agent_module,
+        shared_runtime_deps,
         '_execute_backend_step_request',
         lambda **kwargs: ExecutionResult(
             status='completed',
@@ -572,12 +573,12 @@ def test_execute_step_command_writes_result_file(monkeypatch, tmp_path):
         encoding='utf-8',
     )
 
-    monkeypatch.setattr(run_agent_module, 'load_project_config', lambda workspace_root: {'default_workflow': 'default', 'workflows': {'initiative_intake_v1': {'path': '.'}}})
-    monkeypatch.setattr(run_agent_module, 'resolve_workflow_root', lambda workspace_root, workflow_name, config=None: runtime_context_module.PACKAGE_ROOT / 'bootstrap' / 'workflows' / 'default')
-    monkeypatch.setattr(run_agent_module, 'load_workflow_module', lambda workspace_root, workflow_name, config=None: _BOOTSTRAP_WORKFLOW_MODULE)
-    monkeypatch.setattr(run_agent_module, 'set_context', runtime_context_module.set_context)
-    monkeypatch.setattr(run_agent_module, 'set_workflow_module', runtime_context_module.set_workflow_module)
-    monkeypatch.setattr(run_agent_module, '_load_group', lambda group_name: {
+    monkeypatch.setattr(shared_runtime_deps, 'load_project_config', lambda workspace_root: {'default_workflow': 'default', 'workflows': {'initiative_intake_v1': {'path': '.'}}})
+    monkeypatch.setattr(shared_runtime_deps, 'resolve_workflow_root', lambda workspace_root, workflow_name, config=None: runtime_context_module.PACKAGE_ROOT / 'bootstrap' / 'workflows' / 'default')
+    monkeypatch.setattr(shared_runtime_deps, 'load_workflow_module', lambda workspace_root, workflow_name, config=None: _BOOTSTRAP_WORKFLOW_MODULE)
+    monkeypatch.setattr(shared_runtime_deps, 'set_context', runtime_context_module.set_context)
+    monkeypatch.setattr(shared_runtime_deps, 'set_workflow_module', runtime_context_module.set_workflow_module)
+    monkeypatch.setattr(shared_runtime_deps, '_load_group', lambda group_name: {
         'job_prefix': 'PREINIT',
         'job_init_step': 'pre_init',
         'job_init_inputs': ['DRAFT_INIT_FILE'],
@@ -585,9 +586,9 @@ def test_execute_step_command_writes_result_file(monkeypatch, tmp_path):
         'steps': ['pre_init'],
         'step_configs': {'pre_init': {'prompt_file': 'dummy.txt'}},
     })
-    monkeypatch.setattr(run_agent_module, '_validate_static_reference_files', lambda *args, **kwargs: None)
+    monkeypatch.setattr(shared_runtime_deps, '_validate_static_reference_files', lambda *args, **kwargs: None)
     monkeypatch.setattr(
-        run_agent_module,
+        shared_runtime_deps,
         '_execute_backend_step_request',
         lambda **kwargs: ExecutionResult(
             status='completed',
@@ -631,12 +632,12 @@ def test_execute_step_command_returns_nonzero_on_failed_result(monkeypatch, tmp_
         encoding='utf-8',
     )
 
-    monkeypatch.setattr(run_agent_module, 'load_project_config', lambda workspace_root: {'default_workflow': 'default', 'workflows': {'initiative_intake_v1': {'path': '.'}}})
-    monkeypatch.setattr(run_agent_module, 'resolve_workflow_root', lambda workspace_root, workflow_name, config=None: runtime_context_module.PACKAGE_ROOT / 'bootstrap' / 'workflows' / 'default')
-    monkeypatch.setattr(run_agent_module, 'load_workflow_module', lambda workspace_root, workflow_name, config=None: _BOOTSTRAP_WORKFLOW_MODULE)
-    monkeypatch.setattr(run_agent_module, 'set_context', runtime_context_module.set_context)
-    monkeypatch.setattr(run_agent_module, 'set_workflow_module', runtime_context_module.set_workflow_module)
-    monkeypatch.setattr(run_agent_module, '_load_group', lambda group_name: {
+    monkeypatch.setattr(shared_runtime_deps, 'load_project_config', lambda workspace_root: {'default_workflow': 'default', 'workflows': {'initiative_intake_v1': {'path': '.'}}})
+    monkeypatch.setattr(shared_runtime_deps, 'resolve_workflow_root', lambda workspace_root, workflow_name, config=None: runtime_context_module.PACKAGE_ROOT / 'bootstrap' / 'workflows' / 'default')
+    monkeypatch.setattr(shared_runtime_deps, 'load_workflow_module', lambda workspace_root, workflow_name, config=None: _BOOTSTRAP_WORKFLOW_MODULE)
+    monkeypatch.setattr(shared_runtime_deps, 'set_context', runtime_context_module.set_context)
+    monkeypatch.setattr(shared_runtime_deps, 'set_workflow_module', runtime_context_module.set_workflow_module)
+    monkeypatch.setattr(shared_runtime_deps, '_load_group', lambda group_name: {
         'job_prefix': 'PREINIT',
         'job_init_step': 'pre_init',
         'job_init_inputs': [],
@@ -644,9 +645,9 @@ def test_execute_step_command_returns_nonzero_on_failed_result(monkeypatch, tmp_
         'steps': ['pre_init'],
         'step_configs': {'pre_init': {'prompt_file': 'dummy.txt'}},
     })
-    monkeypatch.setattr(run_agent_module, '_validate_static_reference_files', lambda *args, **kwargs: None)
+    monkeypatch.setattr(shared_runtime_deps, '_validate_static_reference_files', lambda *args, **kwargs: None)
     monkeypatch.setattr(
-        run_agent_module,
+        shared_runtime_deps,
         '_execute_backend_step_request',
         lambda **kwargs: ExecutionResult(
             status='failed',
@@ -685,9 +686,9 @@ def test_worker_command_once_processes_one_claim(monkeypatch, tmp_path):
             'coder': 'claude',
         },
     }
-    monkeypatch.setattr(run_agent_module, 'BackendClient', lambda backend_url: client)
+    monkeypatch.setattr(shared_runtime_deps, 'BackendClient', lambda backend_url: client)
     monkeypatch.setattr(
-        run_agent_module,
+        shared_runtime_deps,
         '_invoke_execute_step_subprocess',
         lambda request_payload, engine_root=None: {
             'status': 'completed',
@@ -704,12 +705,12 @@ def test_worker_command_once_processes_one_claim(monkeypatch, tmp_path):
     )
     submit_calls: list[dict] = []
     monkeypatch.setattr(
-        run_agent_module,
+        shared_runtime_deps,
         '_submit_worker_result',
         lambda **kwargs: submit_calls.append(kwargs),
     )
 
-    monkeypatch.setattr(run_agent_module, '_resolve_worker_engine_root', lambda engine_root: (None, None))
+    monkeypatch.setattr(shared_runtime_deps, '_resolve_worker_engine_root', lambda engine_root: (None, None))
 
     exit_code = _worker_command(
         backend_url='http://127.0.0.1:8100',
@@ -732,8 +733,8 @@ def test_worker_command_once_exits_cleanly_when_no_claim(monkeypatch, tmp_path):
     _use_tmp_runner_home(monkeypatch, tmp_path)
     client = MagicMock()
     client.claim_step.return_value = {'step_run': None}
-    monkeypatch.setattr(run_agent_module, 'BackendClient', lambda backend_url: client)
-    monkeypatch.setattr(run_agent_module, '_resolve_worker_engine_root', lambda engine_root: (None, None))
+    monkeypatch.setattr(shared_runtime_deps, 'BackendClient', lambda backend_url: client)
+    monkeypatch.setattr(shared_runtime_deps, '_resolve_worker_engine_root', lambda engine_root: (None, None))
 
     exit_code = _worker_command(
         backend_url='http://127.0.0.1:8100',
@@ -839,21 +840,21 @@ def test_execute_backend_step_request_returns_failed_result_for_missing_meta_jso
     draft_path.parent.mkdir(parents=True, exist_ok=True)
     draft_path.write_text('draft', encoding='utf-8')
 
-    monkeypatch.setattr(run_agent_module, '_resolve_step_coder', lambda **kwargs: ('qwen', None))
-    monkeypatch.setattr(run_agent_module, 'resolve_prompt_path', lambda **kwargs: prompt_path)
-    monkeypatch.setattr(run_agent_module, 'build_context', lambda state, step, step_cfg: {})
-    monkeypatch.setattr(run_agent_module, 'render_prompt', lambda template_text, context: template_text)
-    monkeypatch.setattr(run_agent_module, 'prompt_checksum', lambda prompt_text: 'checksum')
-    monkeypatch.setattr(run_agent_module, 'make_step_dir', lambda group_cfg, state, step: step_dir)
-    monkeypatch.setattr(run_agent_module, 'check_preflight_artifact_status', lambda **kwargs: None)
-    monkeypatch.setattr(run_agent_module, 'ensure_planning_task_queue_integrity', lambda state, step: None)
-    monkeypatch.setattr(run_agent_module, 'ensure_execution_task_binding_integrity', lambda state, step: None)
-    monkeypatch.setattr(run_agent_module, '_missing_artifacts', lambda keys, state: [])
+    monkeypatch.setattr(shared_runtime_deps, '_resolve_step_coder', lambda **kwargs: ('qwen', None))
+    monkeypatch.setattr(shared_runtime_deps, 'resolve_prompt_path', lambda **kwargs: prompt_path)
+    monkeypatch.setattr(shared_runtime_deps, 'build_context', lambda state, step, step_cfg: {})
+    monkeypatch.setattr(shared_runtime_deps, 'render_prompt', lambda template_text, context: template_text)
+    monkeypatch.setattr(shared_runtime_deps, 'prompt_checksum', lambda prompt_text: 'checksum')
+    monkeypatch.setattr(shared_runtime_deps, 'make_step_dir', lambda group_cfg, state, step: step_dir)
+    monkeypatch.setattr(shared_runtime_deps, 'check_preflight_artifact_status', lambda **kwargs: None)
+    monkeypatch.setattr(shared_runtime_deps, 'ensure_planning_task_queue_integrity', lambda state, step: None)
+    monkeypatch.setattr(shared_runtime_deps, 'ensure_execution_task_binding_integrity', lambda state, step: None)
+    monkeypatch.setattr(shared_runtime_deps, '_missing_artifacts', lambda keys, state: [])
 
     def raise_missing_sidecar(**kwargs):
         raise run_agent_module.MetaJsonMissingError('Coder did not write meta.json to expected path: tmp/meta.json')
 
-    monkeypatch.setattr(run_agent_module, 'run_step', raise_missing_sidecar)
+    monkeypatch.setattr(shared_runtime_deps, 'run_step', raise_missing_sidecar)
 
     result = run_agent_module._execute_backend_step_request(
         request=request,
@@ -877,7 +878,7 @@ def test_resolve_worker_engine_root_uses_global_only(monkeypatch, tmp_path):
     global_ver.mkdir(parents=True)
     global_cfg.parent.mkdir(parents=True, exist_ok=True)
     global_cfg.write_text('{"engine_version": "1.2.3"}', encoding='utf-8')
-    monkeypatch.setattr(run_agent_module.Path, 'home', staticmethod(lambda: home))
+    monkeypatch.setattr(shared_runtime_deps.Path, 'home', staticmethod(lambda: home))
 
     engine_root, version = run_agent_module._resolve_worker_engine_root(None)
 

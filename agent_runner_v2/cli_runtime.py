@@ -4,6 +4,8 @@ import json
 from dataclasses import dataclass
 from typing import Any
 
+from .state_defaults import default_loop_context, default_replan_context
+
 
 @dataclass
 class AdminCommandResolution:
@@ -27,17 +29,8 @@ def handle_admin_command(*, args: Any, group_cfg: dict[str, Any], hooks: Any) ->
         step_cfg = group_cfg["step_configs"].get(step)
         if not step_cfg:
             raise ValueError(f"Step {step!r} is not defined for template group {args.template_group!r}")
-        state["loop_context"] = {
-            "active": False, "loop_step": None, "refine_step": None,
-            "loop_target_artifact": None, "loop_source_review": None,
-            "loop_iteration": 0, "pre_refine_checksum": None,
-        }
-        state["replan_context"] = {
-            "active": False, "source_review_step": None, "replan_step": None,
-            "target_artifact": None, "source_review_file": None, "replan_attempt": 0,
-            "pre_replan_checksum": None, "trigger_reason": None, "blocking_issues": [],
-            "previous_blocking_issue_count": 0, "previous_blocking_issue_severity": 0,
-        }
+        state["loop_context"] = default_loop_context()
+        state["replan_context"] = default_replan_context()
         state["current_step"] = step
         state.setdefault("reject_counts", {})[step] = state.get("reject_counts", {}).get(step, 0)
         hooks.save_job(args.template_group, state["job_id"], state)
@@ -128,17 +121,8 @@ def handle_admin_command(*, args: Any, group_cfg: dict[str, Any], hooks: Any) ->
         target_step = args.override_step.strip()
         if target_step not in group_cfg["step_configs"]:
             raise ValueError(f"Step {target_step!r} is not defined for template group {args.template_group!r}")
-        state["loop_context"] = {
-            "active": False, "loop_step": None, "refine_step": None,
-            "loop_target_artifact": None, "loop_source_review": None,
-            "loop_iteration": 0, "pre_refine_checksum": None,
-        }
-        state["replan_context"] = {
-            "active": False, "source_review_step": None, "replan_step": None,
-            "target_artifact": None, "source_review_file": None, "replan_attempt": 0,
-            "pre_replan_checksum": None, "trigger_reason": None, "blocking_issues": [],
-            "previous_blocking_issue_count": 0, "previous_blocking_issue_severity": 0,
-        }
+        state["loop_context"] = default_loop_context()
+        state["replan_context"] = default_replan_context()
         state["current_step"] = target_step
         hooks.set_job_status(state, "IN_PROGRESS")
         state["pending_human_approval_for"] = None

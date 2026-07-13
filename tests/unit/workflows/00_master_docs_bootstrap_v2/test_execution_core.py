@@ -11,6 +11,7 @@ from agent_runner_v2.job_state import get_job_status
 from agent_runner_v2.step_runner import StepResult
 from agent_runner_v2 import run_agent as run_agent_module
 from agent_runner_v2 import runtime_context as runtime_context_module
+from agent_runner_v2.workflow_router import route_after_failure, route_after_step
 from conftest import load_bootstrap_workflow_module
 
 
@@ -89,6 +90,33 @@ def _prepared_stub(tmp_path: Path, step_name: str) -> SimpleNamespace:
     )
 
 
+def _execute_with_workflow_routing(
+    *,
+    executor,
+    prepared,
+    group_cfg: dict,
+    state: dict,
+    step: str,
+    step_cfg: dict,
+    coder_used: str,
+    effective_root: Path,
+):
+    return execute_routed_step(
+        executor=executor,
+        failure_router=route_after_failure,
+        step_router=route_after_step,
+        prepared=prepared,
+        group_name=_WORKFLOW_NAME,
+        group_cfg=group_cfg,
+        state=state,
+        step=step,
+        step_cfg=step_cfg,
+        coder_used=coder_used,
+        max_rejects=int(group_cfg["default_max_rejects"]),
+        effective_root=effective_root,
+    )
+
+
 def _artifact_payload(step_name: str, step_cfg: dict) -> dict[str, str]:
     produces = list(step_cfg.get("produces") or [])
     if not produces:
@@ -138,16 +166,14 @@ def test_master_docs_action_steps_approved_route_to_expected_next_step(
             if prior_step != "stepCompletion"
         ]
 
-    routed = execute_routed_step(
+    routed = _execute_with_workflow_routing(
         executor=lambda **kwargs: _success_result(step_name, step_cfg),
         prepared=_prepared_stub(tmp_path, step_name),
-        group_name=_WORKFLOW_NAME,
         group_cfg=bootstrap_group_cfg,
         state=state,
         step=step_name,
         step_cfg=step_cfg,
         coder_used="action",
-        max_rejects=int(bootstrap_group_cfg["default_max_rejects"]),
         effective_root=tmp_path,
     )
 
@@ -170,16 +196,14 @@ def test_master_docs_action_steps_exception_fail_terminally(
     step_cfg = bootstrap_group_cfg["step_configs"][step_name]
     state = _build_state(tmp_path=tmp_path, group_cfg=bootstrap_group_cfg, step_name=step_name)
 
-    routed = execute_routed_step(
+    routed = _execute_with_workflow_routing(
         executor=lambda **kwargs: (_ for _ in ()).throw(RuntimeError(f"{step_name} boom")),
         prepared=_prepared_stub(tmp_path, step_name),
-        group_name=_WORKFLOW_NAME,
         group_cfg=bootstrap_group_cfg,
         state=state,
         step=step_name,
         step_cfg=step_cfg,
         coder_used="action",
-        max_rejects=int(bootstrap_group_cfg["default_max_rejects"]),
         effective_root=tmp_path,
     )
 
@@ -200,16 +224,14 @@ def test_master_docs_llm_steps_approved_route_to_expected_next_step(
     step_cfg = bootstrap_group_cfg["step_configs"][step_name]
     state = _build_state(tmp_path=tmp_path, group_cfg=bootstrap_group_cfg, step_name=step_name)
 
-    routed = execute_routed_step(
+    routed = _execute_with_workflow_routing(
         executor=lambda **kwargs: _success_result(step_name, step_cfg),
         prepared=_prepared_stub(tmp_path, step_name),
-        group_name=_WORKFLOW_NAME,
         group_cfg=bootstrap_group_cfg,
         state=state,
         step=step_name,
         step_cfg=step_cfg,
         coder_used="qwen-architect",
-        max_rejects=int(bootstrap_group_cfg["default_max_rejects"]),
         effective_root=tmp_path,
     )
 
@@ -228,16 +250,14 @@ def test_master_docs_llm_steps_rejected_require_human_intervention(
     step_cfg = bootstrap_group_cfg["step_configs"][step_name]
     state = _build_state(tmp_path=tmp_path, group_cfg=bootstrap_group_cfg, step_name=step_name)
 
-    routed = execute_routed_step(
+    routed = _execute_with_workflow_routing(
         executor=lambda **kwargs: _rejected_result(step_name, step_cfg),
         prepared=_prepared_stub(tmp_path, step_name),
-        group_name=_WORKFLOW_NAME,
         group_cfg=bootstrap_group_cfg,
         state=state,
         step=step_name,
         step_cfg=step_cfg,
         coder_used="qwen-architect",
-        max_rejects=int(bootstrap_group_cfg["default_max_rejects"]),
         effective_root=tmp_path,
     )
 
@@ -258,16 +278,14 @@ def test_master_docs_llm_steps_exception_fail_terminally(
     step_cfg = bootstrap_group_cfg["step_configs"][step_name]
     state = _build_state(tmp_path=tmp_path, group_cfg=bootstrap_group_cfg, step_name=step_name)
 
-    routed = execute_routed_step(
+    routed = _execute_with_workflow_routing(
         executor=lambda **kwargs: (_ for _ in ()).throw(RuntimeError(f"{step_name} boom")),
         prepared=_prepared_stub(tmp_path, step_name),
-        group_name=_WORKFLOW_NAME,
         group_cfg=bootstrap_group_cfg,
         state=state,
         step=step_name,
         step_cfg=step_cfg,
         coder_used="qwen-architect",
-        max_rejects=int(bootstrap_group_cfg["default_max_rejects"]),
         effective_root=tmp_path,
     )
 
@@ -287,16 +305,14 @@ def test_master_docs_review_step_approved_advances_to_validation(
     step_cfg = bootstrap_group_cfg["step_configs"][step_name]
     state = _build_state(tmp_path=tmp_path, group_cfg=bootstrap_group_cfg, step_name=step_name)
 
-    routed = execute_routed_step(
+    routed = _execute_with_workflow_routing(
         executor=lambda **kwargs: _success_result(step_name, step_cfg),
         prepared=_prepared_stub(tmp_path, step_name),
-        group_name=_WORKFLOW_NAME,
         group_cfg=bootstrap_group_cfg,
         state=state,
         step=step_name,
         step_cfg=step_cfg,
         coder_used="qwen-reviewer",
-        max_rejects=int(bootstrap_group_cfg["default_max_rejects"]),
         effective_root=tmp_path,
     )
 
@@ -313,16 +329,14 @@ def test_master_docs_review_step_rejected_enters_refine_loop(
     step_cfg = bootstrap_group_cfg["step_configs"][step_name]
     state = _build_state(tmp_path=tmp_path, group_cfg=bootstrap_group_cfg, step_name=step_name)
 
-    routed = execute_routed_step(
+    routed = _execute_with_workflow_routing(
         executor=lambda **kwargs: _rejected_result(step_name, step_cfg),
         prepared=_prepared_stub(tmp_path, step_name),
-        group_name=_WORKFLOW_NAME,
         group_cfg=bootstrap_group_cfg,
         state=state,
         step=step_name,
         step_cfg=step_cfg,
         coder_used="qwen-reviewer",
-        max_rejects=int(bootstrap_group_cfg["default_max_rejects"]),
         effective_root=tmp_path,
     )
 
@@ -351,16 +365,14 @@ def test_master_docs_review_step_rejected_after_max_iterations_waits_for_human(
         "pre_refine_checksum": None,
     }
 
-    routed = execute_routed_step(
+    routed = _execute_with_workflow_routing(
         executor=lambda **kwargs: _rejected_result(step_name, step_cfg),
         prepared=_prepared_stub(tmp_path, step_name),
-        group_name=_WORKFLOW_NAME,
         group_cfg=bootstrap_group_cfg,
         state=state,
         step=step_name,
         step_cfg=step_cfg,
         coder_used="qwen-reviewer",
-        max_rejects=int(bootstrap_group_cfg["default_max_rejects"]),
         effective_root=tmp_path,
     )
 
@@ -379,16 +391,14 @@ def test_master_docs_review_step_exception_fail_terminally(
     step_cfg = bootstrap_group_cfg["step_configs"][step_name]
     state = _build_state(tmp_path=tmp_path, group_cfg=bootstrap_group_cfg, step_name=step_name)
 
-    routed = execute_routed_step(
+    routed = _execute_with_workflow_routing(
         executor=lambda **kwargs: (_ for _ in ()).throw(RuntimeError("review boom")),
         prepared=_prepared_stub(tmp_path, step_name),
-        group_name=_WORKFLOW_NAME,
         group_cfg=bootstrap_group_cfg,
         state=state,
         step=step_name,
         step_cfg=step_cfg,
         coder_used="qwen-reviewer",
-        max_rejects=int(bootstrap_group_cfg["default_max_rejects"]),
         effective_root=tmp_path,
     )
 
@@ -406,16 +416,14 @@ def test_master_docs_system_validation_rejected_enters_refine_loop(
     step_cfg = bootstrap_group_cfg["step_configs"][step_name]
     state = _build_state(tmp_path=tmp_path, group_cfg=bootstrap_group_cfg, step_name=step_name)
 
-    routed = execute_routed_step(
+    routed = _execute_with_workflow_routing(
         executor=lambda **kwargs: _rejected_result(step_name, step_cfg),
         prepared=_prepared_stub(tmp_path, step_name),
-        group_name=_WORKFLOW_NAME,
         group_cfg=bootstrap_group_cfg,
         state=state,
         step=step_name,
         step_cfg=step_cfg,
         coder_used="action",
-        max_rejects=int(bootstrap_group_cfg["default_max_rejects"]),
         effective_root=tmp_path,
     )
 
@@ -447,16 +455,14 @@ def test_master_docs_refine_step_routes_expected_outcomes(
     state = _build_state(tmp_path=tmp_path, group_cfg=bootstrap_group_cfg, step_name=step_name)
 
     result = _success_result(step_name, step_cfg) if status == "APPROVED" else _rejected_result(step_name, step_cfg)
-    routed = execute_routed_step(
+    routed = _execute_with_workflow_routing(
         executor=lambda **kwargs: result,
         prepared=_prepared_stub(tmp_path, step_name),
-        group_name=_WORKFLOW_NAME,
         group_cfg=bootstrap_group_cfg,
         state=state,
         step=step_name,
         step_cfg=step_cfg,
         coder_used="qwen-architect",
-        max_rejects=int(bootstrap_group_cfg["default_max_rejects"]),
         effective_root=tmp_path,
     )
 
@@ -474,16 +480,14 @@ def test_master_docs_refine_step_exception_fail_terminally(
     step_cfg = bootstrap_group_cfg["step_configs"][step_name]
     state = _build_state(tmp_path=tmp_path, group_cfg=bootstrap_group_cfg, step_name=step_name)
 
-    routed = execute_routed_step(
+    routed = _execute_with_workflow_routing(
         executor=lambda **kwargs: (_ for _ in ()).throw(RuntimeError("refine boom")),
         prepared=_prepared_stub(tmp_path, step_name),
-        group_name=_WORKFLOW_NAME,
         group_cfg=bootstrap_group_cfg,
         state=state,
         step=step_name,
         step_cfg=step_cfg,
         coder_used="qwen-architect",
-        max_rejects=int(bootstrap_group_cfg["default_max_rejects"]),
         effective_root=tmp_path,
     )
 
