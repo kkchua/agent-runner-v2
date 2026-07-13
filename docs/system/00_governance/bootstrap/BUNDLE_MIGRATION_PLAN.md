@@ -1,297 +1,178 @@
 ---
 template_id: "SYS-00-BMP"
-title: "Bundle Migration Plan - agent-runner-v2"
-status: "active"
-managed_by: workflow-generated
-generated: "2026-07-10T19:47:28+08:00"
-workflow: "00_master_docs_bootstrap_v2"
-step: "03_generate_system_overview_docs"
-change_id: "00DOC-20260710-0098bf53"
+version: "1.0.0"
+doc_type: "system"
+managed_by: "workflow-generated"
+generated_at: "2026-07-13T08:00:00+08:00"
+workflow: "00_core_governance_bootstrap_v1"
+step: "generate_core_governance_docs"
+change_id: "INITIAL-BOOTSTRAP"
 ---
 
-> Managed by workflow: `00_master_docs_bootstrap_v2` / step: `03_generate_system_overview_docs`
-> This file is workflow-generated and protected from manual edits.
+# Bundle Migration Plan
 
-# Bundle Migration Plan: agent-runner-v2
-
-## Purpose
-
-This document outlines the migration path from the monolithic workflow bundle system to the plugin-based workflow system. It defines current state, target state, migration phases, and rollback procedures.
-
-## Scope
-
-This plan covers:
-- Migration from `TEMPLATE_GROUPS` monolith to plugin packages
-- Bootstrap-to-runtime synchronization
-- Backward compatibility maintenance
-- Risk mitigation and rollback
+This document describes the migration from legacy mixed-doc models toward the three-layer documentation model for the agent-runner ecosystem.
 
 ## Current State
 
-### Monolithic System
+Many repositories using the agent-runner framework currently operate with a mixed-doc model characterized by:
 
-**Location**: `agent_runner_v2/bootstrap/workflows/default/template_groups.py`
+- Historical root markdown files (QWEN.md, CLAUDE.md, README.md) serving as both governance guidance and repo-specific documentation
+- Stale repo-derived analysis docs scattered across `docs/system/` or project root directories
+- Workflow prompts that reference outdated artifact placeholder syntax or legacy workflow IDs
+- No clear separation between ecosystem-level governance and repository-local generated outputs
+- Core runner code and active workflow bundles coexisting with outdated markdown that creates conflicting guidance
 
-**Characteristics**:
-- Single 2453+ line Python file
-- 21+ workflow definitions
-- Hardcoded step configurations
-- Mixed concerns (workflows, prompts, routing logic)
+In this state, documentation authority is ambiguous. Contributors may follow stale root guidance instead of current workflow behavior, leading to inconsistent implementations and maintenance overhead.
 
-**Pain Points**:
-- Unmaintainable at scale
-- No independent versioning
-- Difficult to test in isolation
-- Adding workflow = editing massive file
-- Code review complexity
-
-### Active Migration Branch
-
-**Branch**: `feat/plugin-workflow-system`
-
-**Status**: In progress
-
-**Git Status**:
-- Modified `template_groups.py`
-- New `workflow_packages/` module
-- Modified core execution modules
+Some repositories may have already begun partial migration by archiving historical root guidance under `docs/archive/root-guidance/` but still retain stale mixed outputs under `docs/system/00_governance/bootstrap/` from previous bootstrap workflows that did not enforce strict ownership boundaries.
 
 ## Target State
 
-### Plugin-Based System
+The target state is a clean three-layer documentation model with unambiguous ownership:
 
-**Location**: `<repo>/workflows/<workflow_name>/`
+### Layer 1: Ecosystem Master Docs
 
-**Characteristics**:
-- Self-contained workflow packages
-- Declarative `workflow.toml` manifests
-- Versioned independently
-- Testable in isolation
-- Clear separation of concerns
+Four canonical governance documents under `docs/system/00_governance/bootstrap/` owned exclusively by `00_core_governance_bootstrap_v1`:
+- README.md — defines the three-layer model
+- DOCUMENTATION_STANDARD.md — specifies structure and validation requirements
+- BUNDLE_TAXONOMY.md — defines bundle classes and ownership rules
+- BUNDLE_MIGRATION_PLAN.md — this document
 
-**Structure**:
-```
-workflows/<workflow_name>/
-├── workflow.toml          # Manifest, steps, routing, policies
-├── prompts/               # Prompt template files
-│   └── <step>.txt
-└── context_extensions.py  # Optional context hooks
-```
+These docs define universal rules and do not contain repo-derived analysis or enumerate repository-specific artifacts.
+
+### Layer 2: Workflow Bundle Master Docs
+
+Each workflow package (`workflows/<name>/`) contains its own governance manifest:
+- `workflow.toml` — declarative step definition and artifact registry
+- `prompts/` — prompt templates for each step
+- `context_extensions.py` — optional workflow-specific context hooks
+- `bundle_governance/` — bundle-local governance manifests including generated adapter files
+
+Bundle-local docs travel with the workflow into the global runner home during publish or install.
+
+### Layer 3: Repo-Local Generated Docs
+
+Repository-specific outputs live cleanly under `docs/repo/*` and are owned by repo-document, scaffold, sync, and audience workflows:
+- Repository analysis and codebase inventory
+- System overviews and component architecture docs
+- Audience-facing documentation and delivery run state
+
+These docs are non-authoritative downstream outputs that reflect repository state at generation time. They are not canonical governance authority.
+
+### Authority Chain
+
+The canonical source of truth follows this order:
+1. CODER_IMPLEMENTATION_SOP.md (execution discipline)
+2. Active workflow bundle under `workflows/<name>/`
+3. Current runner code under `agent_runner_v2/`
+4. Generated ecosystem master docs under `docs/system/00_governance/bootstrap/`
+5. Generated repo-local docs under `docs/repo/*`
+
+Historical root guidance is moved to `docs/archive/root-guidance/` and treated as non-authoritative.
 
 ## Migration Phases
 
-### Phase 1: Infrastructure (COMPLETE)
+Migration occurs in four phases, each with specific deliverables and validation criteria.
 
-**Goal**: Establish plugin infrastructure without breaking existing system.
+### Phase 1: Inventory and Archive
 
-**Deliverables**:
-- [x] `workflow_packages/base.py` — WorkflowBundle dataclass
-- [x] `workflow_packages/loader.py` — TOML parsing and validation
-- [x] `workflow_packages/registry.py` — Bundle discovery
-- [x] `workflow_packages/actions/` — Plugin action handlers
+**Goal**: Identify all existing documentation artifacts and archive historical root guidance.
 
-**Risk Level**: Low (additive only)
-
-### Phase 2: Adapter Implementation (IN PROGRESS)
-
-**Goal**: Bridge plugin format to existing execution pipeline.
+**Actions**:
+- Scan project root for historical markdown files (QWEN.md, CLAUDE.md, README.md, TODO_LIST.md, etc.)
+- Move historical root guidance to `docs/archive/root-guidance/`
+- Identify stale repo-derived analysis docs under `docs/system/` that belong to Layer 3
+- Catalog existing workflow bundles and their current governance manifests
 
 **Deliverables**:
-- [x] Dual-path discovery (TEMPLATE_GROUPS + plugin)
-- [x] Adapter converts WorkflowBundle → TEMPLATE_GROUPS dict format
-- [x] Context extension hooks for workflow-specific logic
-- [ ] Remove hardcoded `_set_*_aliases()` from step_runner.py
+- Archived root guidance under `docs/archive/root-guidance/`
+- Inventory of stale system-level docs requiring migration or removal
+- Updated CLAUDE.md and QWEN.md pointing to new authority chain
 
-**Risk Level**: Medium (changes discovery path)
+**Validation**:
+- No historical root markdown files remain at project root except minimal pointer files
+- CODER_IMPLEMENTATION_SOP.md exists and defines execution discipline
+- Root markdown files explicitly defer to active workflow bundles and current runner code
 
-**Rollback**: Revert to TEMPLATE_GROUPS-only discovery
+### Phase 2: Core Governance Bootstrap
 
-### Phase 3: Workflow Migration (PENDING)
+**Goal**: Generate the four ecosystem master docs and establish Layer 1 ownership.
 
-**Goal**: Migrate existing workflows to plugin format.
+**Actions**:
+- Run `00_core_governance_bootstrap_v1` to generate the four ecosystem master docs
+- Verify all four files exist under `docs/system/00_governance/bootstrap/` with correct frontmatter
+- Validate structural and content requirements per DOCUMENTATION_STANDARD.md
+- Ensure no scope violations (no repo-derived artifact names, no forbidden workflow IDs, no artifact placeholder syntax)
 
-**Approach**: Incremental migration per workflow family:
+**Deliverables**:
+- README.md with three-layer model description
+- DOCUMENTATION_STANDARD.md with required sections
+- BUNDLE_TAXONOMY.md with single core governance bundle class
+- BUNDLE_MIGRATION_PLAN.md (this document)
 
-1. Create `workflows/<name>/workflow.toml`
-2. Copy prompts to `workflows/<name>/prompts/`
-3. Extract context hooks to `context_extensions.py`
-4. Test plugin version alongside TEMPLATE_GROUPS
-5. Remove from TEMPLATE_GROUPS once stable
+**Validation**:
+- All four files pass structural validation (required frontmatter, required sections)
+- No file contains artifact placeholder syntax using curly-brace token patterns
+- No file mentions deprecated workflow identifiers from legacy implementations
+- BUNDLE_TAXONOMY.md contains no non-core bundle classifications
+- DOCUMENTATION_STANDARD.md contains no repo-derived artifact names
 
-**Priority Order**:
-1. Documentation workflows (`40_documentation_sync_v1`)
-2. Delivery workflows (`30_delivery_planning_v1`, `31_task_execution_v1`)
-3. Scaffold workflows (`10_execution_scaffold_v1`)
-4. Intake workflows (`20_initiative_intake_v1`, `21_bug_fix_intake_v1`)
-5. Bootstrap workflows (`00_master_docs_bootstrap_v1`)
+### Phase 3: Workflow Bundle Alignment
 
-**Risk Level**: Medium (per-workflow validation required)
+**Goal**: Ensure all workflow bundles comply with the three-layer model and use dual-path discovery.
 
-**Rollback**: Keep TEMPLATE_GROUPS entry until plugin verified
+**Actions**:
+- Review each workflow bundle under `workflows/<name>/` for compliance with BUNDLE_TAXONOMY.md
+- Ensure each bundle contains `workflow.toml`, `prompts/`, `context_extensions.py`, and `bundle_governance/`
+- Migrate hardcoded functions from `step_runner.py` into workflow-specific `context_extensions.py` files
+- Update workflow prompts to remove references to stale artifact placeholder syntax
+- Verify dual-path discovery works correctly (global path takes precedence over local fallback)
 
-### Phase 4: Legacy Deprecation (FUTURE)
+**Deliverables**:
+- All workflow bundles structured according to packaging rules
+- Context extensions separated from core runner code
+- Prompt templates using centralized artifact key constants
+- Dual-path discovery validated for global and local workflow copies
 
-**Goal**: Remove monolithic TEMPLATE_GROUPS support.
+**Validation**:
+- No hardcoded path strings in `step_runner.py` or `documentation_guardrails.py`
+- All workflow prompts reference artifact keys via centralized constants
+- Bundle governance files exist and are consistent with workflow.toml declarations
+- Publish/install correctly seeds bundles to global runner home
 
-**Prerequisites**:
-- All workflows migrated to plugins
-- Plugin system stable for N releases
-- Documentation updated
-- Migration guide published
+### Phase 4: Repo-Local Doc Separation
 
-**Risk Level**: Low (cleanup only)
+**Goal**: Move all repo-derived analysis outputs to `docs/repo/*` and clarify non-authoritative status.
 
-## Backward Compatibility
+**Actions**:
+- Identify repo-document, scaffold, sync, and audience workflows (including the canonical scaffold workflow and other repo-bootstrap workflows)
+- Configure these workflows to write outputs under `docs/repo/*` instead of `docs/system/`
+- Remove any remaining stale repo-derived analysis docs from `docs/system/00_governance/bootstrap/`
+- Update ecosystem master docs to reference the canonical scaffold workflow if needed
+- Clarify in README.md that repo-local docs are non-authoritative downstream outputs
 
-### Adapter Pattern
+**Deliverables**:
+- Clean separation: `docs/system/` contains only four ecosystem master docs
+- Repo-local outputs under `docs/repo/*` owned by appropriate workflows
+- Updated migration plan reflecting completion status
+- Final audit confirming no scope violations remain
 
-The plugin system is a **configuration source adapter**, not a runtime replacement:
+**Validation**:
+- `docs/system/00_governance/bootstrap/` contains exactly four files (README.md, DOCUMENTATION_STANDARD.md, BUNDLE_TAXONOMY.md, BUNDLE_MIGRATION_PLAN.md) plus optional review/validation outputs
+- No repo-derived artifact names appear in ecosystem master docs
+- No ecosystem master doc claims ownership of `docs/repo/*` outputs
+- Canonical scaffold workflow ID is correct (`10_execution_scaffold_v2`, not deprecated alternatives)
+- Final workflow audit passes all scope violation checks
 
-```
-WorkflowBundle (workflow.toml + prompts/)
-    ↓
-Adapter (workflow_packages/loader.py)
-    ↓
-Dict format (same as TEMPLATE_GROUPS produces)
-    ↓
-Existing execution pipeline
-```
+### Phase Completion Criteria
 
-This ensures:
-- Zero changes to `step_runner.py`, `workflow_router.py`, `coder_adapters.py`
-- Existing workflows continue to work
-- Gradual migration possible
+Migration is complete when:
+- All four ecosystem master docs exist and pass validation
+- Legacy root guidance has been archived under `docs/archive/root-guidance/`
+- All workflow bundles comply with packaging rules and use dual-path discovery
+- Repo-local docs are cleanly separated under `docs/repo/*`
+- No stale mixed-doc assumptions remain in workflow prompts or bundle governance
+- Final audit step in `00_core_governance_bootstrap_v1` approves accuracy
 
-### Dual-Path Discovery
-
-```python
-# Pseudo-code
-def load_workflow(workflow_name):
-    # Global runtime first
-    if exists(global_runtime_path / workflow_name):
-        return load_from_global(workflow_name)
-    
-    # Project-local plugin fallback
-    if exists(repo_path / "workflows" / workflow_name / "workflow.toml"):
-        return load_plugin(workflow_name)
-    
-    # TEMPLATE_GROUPS fallback
-    return TEMPLATE_GROUPS[workflow_name]
-```
-
-## Migration Risks
-
-### Risk 1: Runtime/Plugin Drift
-
-**Risk**: Plugin and TEMPLATE_GROUPS versions diverge.
-
-**Mitigation**:
-- Validation workflow compares outputs
-- CI checks for drift
-- Single source of truth for prompts
-
-### Risk 2: Context Hook Complexity
-
-**Risk**: `_set_*_aliases()` functions scattered in step_runner.py.
-
-**Mitigation**:
-- Move to `context_extensions.py` in each plugin
-- Document hook interface
-- Test hooks in isolation
-
-### Risk 3: Path Resolution Changes
-
-**Risk**: Plugin paths different from TEMPLATE_GROUPS paths.
-
-**Mitigation**:
-- Centralized path constants
-- Validation at load time
-- Clear error messages
-
-### Risk 4: Sync Issues
-
-**Risk**: Bootstrap changes don't propagate to runtime.
-
-**Mitigation**:
-- `sync_workflows.py` two-tier discovery
-- Automated sync in CI
-- Clear documentation
-
-## Rollback Procedures
-
-### Rollback Adapter Changes
-
-```bash
-# Revert to TEMPLATE_GROUPS-only discovery
-git checkout HEAD -- agent_runner_v2/bundle_loader.py
-```
-
-### Rollback Plugin Migration
-
-For individual workflow:
-1. Keep TEMPLATE_GROUPS entry (don't delete)
-2. Remove plugin directory
-3. Restore TEMPLATE_GROUPS version
-
-### Emergency Rollback
-
-If critical issue detected:
-1. Revert to last known good commit
-2. Disable plugin discovery in config
-3. Fall back to TEMPLATE_GROUPS exclusively
-
-## Validation Checkpoints
-
-### Per-Phase Validation
-
-| Phase | Validation | Success Criteria |
-|-------|------------|------------------|
-| 1 | Unit tests pass | All 45 unit tests pass |
-| 2 | Dual discovery | Both paths resolve same workflow |
-| 3 | Workflow parity | Plugin output matches TEMPLATE_GROUPS |
-| 4 | Cleanup | No TEMPLATE_GROUPS references remain |
-
-### Continuous Validation
-
-- CI runs full test suite
-- Integration tests verify end-to-end
-- Documentation sync validates bundles
-
-## Documentation Updates
-
-### Required Updates
-
-- [ ] `GUIDE_CREATE_WORKFLOW_PACKAGE.md` — Create new workflow
-- [ ] `GUIDE_MIGRATE_WORKFLOW_PACKAGE.md` — Migrate existing workflow
-- [ ] `QWEN.md` — Runtime source of truth explanation
-- [ ] `CODER_IMPLEMENTATION_SOP.md` — Plugin conventions
-
-### Developer Communication
-
-- Migration status in README
-- Branch documentation
-- Team announcement
-
-## Timeline
-
-| Phase | Target | Status |
-|-------|--------|--------|
-| 1. Infrastructure | 2026-07-01 | COMPLETE |
-| 2. Adapter | 2026-07-15 | IN PROGRESS |
-| 3. Workflow Migration | 2026-08-01 | PENDING |
-| 4. Legacy Deprecation | 2026-09-01 | FUTURE |
-
-## Success Criteria
-
-Migration complete when:
-
-- [ ] All workflows migrated to plugins
-- [ ] TEMPLATE_GROUPS file removed
-- [ ] Plugin system documentation complete
-- [ ] All tests pass (unit + integration)
-- [ ] No regression in workflow execution
-- [ ] Developer guide published
-
----
-
-*Last updated: 2026-07-10T19:47:28+08:00 via workflow `00_master_docs_bootstrap_v2`*
+Repositories may remain in any phase indefinitely if business constraints prevent immediate migration, but should prioritize reaching Phase 4 to eliminate ambiguous documentation authority.

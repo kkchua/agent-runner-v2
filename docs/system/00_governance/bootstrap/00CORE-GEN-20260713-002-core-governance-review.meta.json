@@ -1,0 +1,28 @@
+{
+  "schema_version": "v2",
+  "coder_result": {
+    "status": "APPROVED",
+    "remark": "All four ecosystem master docs reviewed and approved. Scope discipline verified, ownership clarity confirmed, internal consistency validated, required sections present, and all forbidden pattern checks passed. DOCUMENTATION_STANDARD.md contains no repo-derived artifact names or filename examples.",
+    "artifacts": {
+      "REVIEW_FILE_SUGGESTED": "docs/system/00_governance/bootstrap/00CORE-GEN-20260713-002-core-governance-review.md"
+    },
+    "recorded_at": "2026-07-13T15:37:01+08:00"
+  },
+  "runner_data": {
+    "step": "review_core_governance_docs",
+    "coder_used": "qwen",
+    "invoked_at": "2026-07-13T15:37:01",
+    "finished_at": "2026-07-13T15:39:46",
+    "prompt_checksum": "sha256:4574eba0fe86c94c55edac1d2da0e0f25b4a15a6cb8f99476ce5324b44a583c9",
+    "allowed_write_paths": [
+      "docs\\system\\00_governance\\bootstrap\\00CORE-GEN-20260713-002-core-governance-review.md",
+      "docs\\system\\00_governance\\bootstrap\\00CORE-GEN-20260713-002-core-governance-review.meta.json"
+    ],
+    "changed_paths": [
+      "docs\\system\\00_governance\\bootstrap\\00CORE-GEN-20260713-002-core-governance-review.md",
+      "docs\\system\\00_governance\\bootstrap\\00CORE-GEN-20260713-002-core-governance-review.meta.json"
+    ],
+    "enriched_at": "2026-07-13T15:39:46",
+    "runner_version": "v2"
+  }
+}
