@@ -655,6 +655,12 @@ Phase 4 is complete only when all of the following are true:
 
 ### Phase 5: Refactor backend into `API -> Services -> DB`
 
+Phase 5 starts only after Phase 4 is functionally complete:
+
+- backend daemon mode is already working for the migrated governance workflow
+- this phase is about code ownership and maintainability, not changing runtime semantics
+- preserve the daemon-only role of backend established in earlier phases
+
 API layer:
 
 - split route modules by concern
@@ -668,6 +674,396 @@ DB layer:
 
 - repositories own ORM queries only
 - services own transaction boundaries and orchestration
+
+#### Phase 5 Guardrails
+
+- do not change daemon-mode behavior while moving code between layers
+- do not move workflow semantics out of the vendored runtime into backend services
+- API routes must become thinner, but response shapes must remain stable
+- service extraction must preserve current backend tests as the regression gate
+- do not reintroduce backend-owned workflow logic that duplicates `agent-runner-v2`
+- migrated-workflow-only scope remains in effect during this phase
+
+#### Phase 5 Current Baseline
+
+- backend API aggregation entrypoint remains:
+  - `agent_runner_backend/api/routes.py`
+- the behavioral route surface is now split by concern into:
+  - `agent_runner_backend/api/workflow_routes.py`
+  - `agent_runner_backend/api/run_routes.py`
+  - `agent_runner_backend/api/worker_routes.py`
+  - `agent_runner_backend/api/admin_routes.py`
+- shared API-only helpers now live in:
+  - `agent_runner_backend/api/schemas.py`
+  - `agent_runner_backend/api/serializers.py`
+- service-layer extraction now exists beyond workflow sync:
+  - `agent_runner_backend/services/execution_service.py`
+  - `agent_runner_backend/services/workflow_service.py`
+  - `agent_runner_backend/services/admin_service.py`
+- repository/query helpers now exist under the existing database package:
+  - `agent_runner_backend/database/run_repository.py`
+  - `agent_runner_backend/database/worker_repository.py`
+  - `agent_runner_backend/database/workflow_repository.py`
+- Phase 4 tests already provide the safety net for the active daemon path:
+  - worker integration flow
+  - refine/review/validate daemon acceptance
+  - vendored-runtime contract tests
+- Phase 5 slice 5.2 is now started and partially completed:
+- Phase 5 slice 5.2 is now substantially completed:
+  - daemon execution orchestration has begun moving out of `api/routes.py` into:
+    - `agent_runner_backend/services/execution_service.py`
+  - the first extracted service surface now owns:
+    - run creation
+    - worker registration
+    - worker heartbeat
+    - worker claim
+    - step completion / transition enqueue / terminal completion
+    - artifact creation
+    - run event creation
+  - `api/routes.py` now delegates the active daemon execution endpoints to the new service module while preserving response shapes
+  - workflow/read query extraction has also begun through:
+    - `agent_runner_backend/services/workflow_service.py`
+  - the workflow/read service surface now owns:
+    - workflow listing
+    - workflow detail retrieval
+    - workflow sync orchestration wrapper
+    - run listing
+    - run detail query assembly
+  - `api/routes.py` now delegates the workflow/read endpoints to service modules while preserving response shapes
+  - current regression state after the extraction:
+    - backend unit subset after the workflow/read extraction:
+      - `57 passed`
+    - backend integration subset covering workflow/read plus execution seams:
+      - `8 passed`
+- Phase 5 slice 5.6 is now completed:
+  - `agent_runner_backend/api/routes.py` was reduced to an aggregation entrypoint
+  - route handlers are now split by concern into:
+    - `workflow_routes.py`
+    - `run_routes.py`
+    - `worker_routes.py`
+    - `admin_routes.py`
+  - shared request models and response serializers were extracted into:
+    - `schemas.py`
+    - `serializers.py`
+  - backward compatibility was preserved for the existing `get_db` import surface from `api.routes`
+  - current regression state after the route split:
+    - backend unit subset:
+      - `57 passed`
+    - backend integration subset:
+      - `10 passed`
+- Phase 5 slice 5.7 is now started and substantially completed:
+  - direct service-layer regression coverage was added in:
+    - `tests/unit/test_services.py`
+  - current direct service coverage includes:
+    - run creation with coder override propagation
+    - worker claim state mutation
+    - rejected review transition into refine
+    - awaiting-human approval advancement
+    - cleanup dry-run counting
+    - run-detail query assembly
+  - current regression state after the service tests:
+    - backend unit subset:
+      - `66 passed`
+    - backend integration subset:
+      - `10 passed`
+- Phase 5 slice 5.8 is now substantially completed:
+  - the remaining API-layer persistence/query leaks were removed:
+    - `/api/health` now delegates through `admin_service`
+    - `/api/step-runs/{step_run_id}/progress` now delegates through `execution_service`
+  - supporting repository helpers were extended for:
+    - workflow-definition count
+    - run count
+    - pending-step-run count
+    - step-progress item lookup
+  - direct service regression coverage was extended for:
+    - health summary counts
+    - step-progress create/update behavior
+  - current regression state after the Phase 5.8 cleanup:
+    - backend unit subset:
+      - `66 passed`
+    - backend integration subset:
+      - `10 passed`
+
+#### Phase 5 Detailed Slices
+
+##### Slice 5.1: Freeze the backend layering contract
+
+- define what code is allowed in each layer before extracting modules
+- establish three categories:
+  - API layer
+  - Services layer
+  - DB/repository layer
+- document the allowed responsibilities of each category and hold subsequent slices to that boundary
+
+Layer contract for this phase:
+
+- API layer:
+  - FastAPI route registration
+  - request parsing / validation
+  - response mapping
+  - HTTP error translation
+- Services layer:
+  - daemon orchestration use cases
+  - run creation
+  - worker registration / claim / heartbeat / completion
+  - approval and transition handling
+  - artifact/event/review persistence coordination
+  - cleanup orchestration
+- DB layer:
+  - ORM query helpers / repositories only
+  - no orchestration branching
+  - no HTTP concerns
+
+Exit criteria:
+
+- every extracted backend module can be assigned cleanly to one layer
+- no new mixed-layer helper modules are introduced
+
+##### Slice 5.2: Extract execution orchestration services from `routes.py`
+
+- create service modules for the active daemon path first
+- prioritize the highest-value orchestration seams:
+  - run creation
+  - worker registration
+  - worker heartbeat
+  - worker claim
+  - step completion / next-step enqueue / terminal completion
+- route handlers should delegate to services and stop owning orchestration branching inline
+
+Suggested initial service modules:
+
+- `services/execution_service.py`
+- `services/worker_service.py`
+- optionally `services/serialization_service.py` only if it remains thin and purely response-facing
+
+Important constraint:
+
+- keep the current route URLs, request bodies, and response shapes stable during this slice
+
+Exit criteria:
+
+- the core daemon execution endpoints no longer own orchestration-heavy inline logic
+- service functions become the primary home of run/worker orchestration behavior
+
+##### Slice 5.3: Extract workflow-definition sync and read services cleanly
+
+- keep workflow-definition registration and retrieval logic out of API handlers
+- preserve `workflow_registry.py` as a service-layer module, but narrow its responsibilities where needed
+- add service-level helpers for:
+  - workflow listing
+  - workflow detail retrieval
+  - workflow sync response assembly
+
+Important constraint:
+
+- do not let read-model serialization stay scattered between route handlers and sync logic
+
+Exit criteria:
+
+- workflow definition endpoints become thin delegators
+- sync behavior remains in services, not routes
+
+##### Slice 5.4: Introduce the first DB/repository layer for active execution queries
+
+- extract repeated ORM query logic used by daemon-mode orchestration into repository modules
+- focus on execution-path repositories first:
+  - runs
+  - step runs
+  - workers
+  - artifacts/events/reviews where repeated
+- repository modules should return ORM objects or simple data selections only
+- services keep transaction boundaries, orchestration decisions, and routing logic
+
+Suggested repository modules:
+
+- `db/run_repository.py`
+- `db/step_run_repository.py`
+- `db/worker_repository.py`
+- `db/event_repository.py`
+- `db/artifact_repository.py`
+
+Exit criteria:
+
+- repeated execution-path ORM queries are no longer embedded directly in route handlers
+- repository helpers do not contain orchestration logic
+
+Status:
+
+- started and partially completed
+- the first repository/query extraction now lives under the existing backend database package:
+  - `agent_runner_backend/database/run_repository.py`
+  - `agent_runner_backend/database/worker_repository.py`
+  - `agent_runner_backend/database/workflow_repository.py`
+- the temporary parallel `agent_runner_backend/db` namespace was removed to avoid layering drift
+- current repository coverage includes:
+  - workflow lookup/list queries
+  - run lookup/list queries
+  - claimable step-run lookup
+  - step-run lookup
+  - processed-run lookup for draft protection
+  - run progress/artifact/event detail queries
+- services now use the aligned repository helpers while retaining transaction and orchestration ownership
+
+##### Slice 5.5: Move cleanup and approval flows into services
+
+- extract the lower-frequency but still orchestration-heavy admin flows:
+  - cleanup
+  - approval actions
+  - draft resubmission checks
+  - run-status branching that is still embedded in routes
+- preserve existing response behavior and event creation semantics
+
+Exit criteria:
+
+- admin and approval endpoints are thin API handlers
+- cleanup orchestration is no longer implemented inline in `routes.py`
+
+Status:
+
+- started and substantially completed
+- cleanup and approval orchestration now live in:
+  - `agent_runner_backend/services/admin_service.py`
+- extracted service responsibilities now include:
+  - cleanup scope normalization
+  - cleanup run-id resolution via repository-backed queries
+  - cleanup count/report generation
+  - execution-state deletion orchestration
+  - awaiting-human approval / rejection routing
+- the API layer now delegates:
+  - `/api/admin/execution/cleanup`
+  - `/api/runs/{run_id}/approve`
+- approval regression coverage was added through integration test:
+  - `test_approve_run_advances_awaiting_human_step`
+- current regression state after the extraction:
+  - backend integration subset covering cleanup, approval, workflow/read, and daemon execution seams:
+    - `10 passed`
+  - backend unit subset:
+    - `57 passed`
+
+##### Slice 5.6: Split the API module by concern
+
+- once the services are in place, break the monolithic route file into focused modules
+- suggested split:
+  - `api/workflow_routes.py`
+  - `api/run_routes.py`
+  - `api/worker_routes.py`
+  - `api/admin_routes.py`
+- shared request/response models may stay local initially or be grouped into `api/schemas.py` if that reduces duplication without adding indirection noise
+
+Important constraint:
+
+- this split should happen after the service extractions, not before
+- avoid creating multiple thin route files that still duplicate shared inline business logic
+
+Exit criteria:
+
+- no single route module owns the entire backend behavior surface
+- route files are organized by concern and remain thin
+
+Status:
+
+- completed
+- `agent_runner_backend/api/routes.py` is now only the aggregation entrypoint
+- concern-based route modules now exist for:
+  - workflows
+  - runs / step execution
+  - workers
+  - admin / health
+- shared API-only schemas and serializers were extracted so route modules stay thin
+- compatibility export for `get_db` was preserved from `api.routes`
+- regression state after completion:
+  - backend unit subset:
+    - `57 passed`
+  - backend integration subset:
+    - `10 passed`
+
+##### Slice 5.7: Add service-layer regression coverage
+
+- after service extraction, add unit tests for the new service modules
+- prioritize tests for:
+  - run creation
+  - worker claim
+  - step completion transitions
+  - refine/replan loop enqueue behavior
+  - cleanup scope resolution
+- keep existing integration tests as the end-to-end daemon regression gate
+
+Exit criteria:
+
+- new service modules have direct unit coverage
+- integration tests remain green without expanding backend-owned workflow semantics
+
+Status:
+
+- started and substantially completed
+- new direct service tests were added in:
+  - `tests/unit/test_services.py`
+- direct service regression coverage now includes:
+  - execution-service run creation
+  - execution-service worker claim
+  - execution-service rejected review -> refine routing
+  - admin-service awaiting-human approval progression
+  - admin-service cleanup dry-run counting
+  - workflow-service run-detail assembly
+- current regression state:
+  - backend unit subset:
+    - `63 passed`
+  - backend integration subset:
+    - `10 passed`
+
+##### Slice 5.8: Final Phase 5 cleanup and audit
+
+- remove dead helpers left behind in `routes.py`
+- consolidate duplicated serializers if they are still split across layers
+- ensure transaction ownership is coherent:
+  - services own commit/rollback boundaries
+  - repositories do not commit
+- verify the backend role is still daemon persistence/orchestration only
+
+Exit criteria:
+
+- the backend layering split is explicit in code structure
+- API handlers are thin
+- services own orchestration
+- repository modules own queries only
+
+Status:
+
+- substantially completed
+- `api/routes.py` is now an aggregation entrypoint only
+- the remaining route-level persistence/query logic was removed from:
+  - `/api/health`
+  - `/api/step-runs/{step_run_id}/progress`
+- direct service regression coverage now protects the final cleanup seams
+- current regression state:
+  - backend unit subset:
+    - `66 passed`
+  - backend integration subset:
+    - `10 passed`
+
+#### Phase 5 Execution Order
+
+Work the slices in this order:
+
+1. Slice 5.1
+2. Slice 5.2
+3. Slice 5.3
+4. Slice 5.4
+5. Slice 5.5
+6. Slice 5.6
+7. Slice 5.7
+8. Slice 5.8
+
+#### Phase 5 Done Definition
+
+Phase 5 is complete only when all of the following are true:
+
+- backend API handlers are thin and mostly delegate to services
+- daemon orchestration logic primarily lives in service modules
+- repeated ORM query logic is extracted into repository/DB modules
+- `routes.py` is no longer the behavioral center of the backend
+- existing daemon-mode integration regressions remain green
+- backend still does not own coder/runtime semantics beyond orchestration persistence
 
 Exit criteria:
 
