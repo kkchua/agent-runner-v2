@@ -1,246 +1,183 @@
 ---
 template_id: "SYS-00-DS"
-title: "Documentation Standard - agent-runner-v2"
-status: "active"
-managed_by: workflow-generated
-generated: "2026-07-10T19:47:28+08:00"
-workflow: "00_master_docs_bootstrap_v2"
-step: "03_generate_system_overview_docs"
-change_id: "00DOC-20260710-0098bf53"
+version: "1.0.0"
+doc_type: "system"
+managed_by: "workflow-generated"
+generated_at: "2026-07-13T08:00:00+08:00"
+workflow: "00_core_governance_bootstrap_v1"
+step: "generate_core_governance_docs"
+change_id: "INITIAL-BOOTSTRAP"
 ---
 
-> Managed by workflow: `00_master_docs_bootstrap_v2` / step: `03_generate_system_overview_docs`
-> This file is workflow-generated and protected from manual edits.
+# Documentation Standard
 
-# Documentation Standard: agent-runner-v2
+This document defines the structure, validation requirements, and update triggers for the four ecosystem master docs under `docs/system/00_governance/bootstrap/`.
 
 ## Purpose
 
-This document defines the baseline documentation rules that apply to every repository in the ecosystem, explains how repo-specific profiles and migration modes are selected, and establishes the conventions for document structure, cross-referencing, and validation.
+The purpose of this standard is to ensure consistency, clarity, and maintainability across all ecosystem master documentation. These four documents define the universal documentation contract for the agent-runner ecosystem and must adhere to strict structural and content requirements.
+
+This standard applies only to the four ecosystem master docs:
+- README.md (System Documentation Index)
+- DOCUMENTATION_STANDARD.md (this file)
+- BUNDLE_TAXONOMY.md (Bundle Taxonomy)
+- BUNDLE_MIGRATION_PLAN.md (Bundle Migration Plan)
+
+Repo-local generated docs under `docs/repo/*` follow different standards defined by their owning workflows and are not governed by this document.
 
 ## Audience Model
 
-Documentation serves multiple audiences with different information needs:
+Ecosystem master docs serve two primary audiences:
 
-| Audience | Primary Need | Typical Background |
-|----------|--------------|-------------------|
-| **Stakeholders** | Business value, capabilities, governance | Business, product, executive |
-| **Developers** | Architecture, APIs, integration patterns | Engineering, implementation |
-| **Operators** | Runtime behavior, deployment, procedures | DevOps, SRE, platform |
-| **Testers** | Validation criteria, test procedures | QA, validation engineering |
-| **End Users** | Usage guidance, features | Application users |
+### Ecosystem Maintainers
+
+Ecosystem maintainers author and review changes to these four documents. They ensure compliance with this standard and resolve conflicts between workflow bundles and repo-local outputs.
+
+### Workflow Authors and Repository Contributors
+
+Workflow authors and repository contributors consume these docs as reference material. They use the three-layer model defined in README.md to understand documentation ownership and authority boundaries.
+
+Downstream audiences (end users, repository-specific stakeholders) interact primarily with repo-local generated docs and workflow bundle docs, not with ecosystem master docs.
 
 ## Document Set
 
-### System Governance Documents (00_governance/bootstrap/)
+The ecosystem master doc set consists of exactly four files, each with a fixed template ID and required section structure:
 
-These documents establish the governance baseline for the repository:
+| File | Template ID | Required Sections |
+|---|---|---|
+| README.md | SYS-00-IDX | System Documentation Index, Audience Views, Document Map |
+| DOCUMENTATION_STANDARD.md | SYS-00-DS | Purpose, Audience Model, Document Set, Architecture Baseline, Repo-Selected Profile, Migration Mode, Conditional Standards, Update Triggers, Validation |
+| BUNDLE_TAXONOMY.md | SYS-00-BT | Bundle Classes, Ownership Rules, Packaging Rules |
+| BUNDLE_MIGRATION_PLAN.md | SYS-00-BMP | Current State, Target State, Migration Phases |
 
-| Document | Template ID | Purpose |
-|----------|-------------|---------|
-| README.md | SYS-00-IDX | Documentation index and navigation |
-| DOCUMENTATION_STANDARD.md | SYS-00-DS | This document — standards and conventions |
-| BUNDLE_TAXONOMY.md | SYS-00-BT | Workflow bundle organization |
-| BUNDLE_MIGRATION_PLAN.md | SYS-00-BMP | Migration roadmap and posture |
-| SYSTEM_OVERVIEW.md | SYS-00-SO | Platform explanation and value flow |
-| BUSINESS_CAPABILITIES.md | SYS-00-BC | Operational capabilities |
-| FUNCTIONAL_SPEC.md | SYS-00-FS | Core behaviors and capabilities |
-| NON_FUNCTIONAL_REQUIREMENTS.md | SYS-00-NFR | Quality and operational requirements |
-
-### Architecture Documents (00_governance/bootstrap/)
-
-| Document | Template ID | Purpose |
-|----------|-------------|---------|
-| SYSTEM_CONTEXT.md | SYS-00-SC | System boundaries and interfaces |
-| COMPONENT_ARCHITECTURE.md | SYS-00-CA | Component structure |
-| DECISION_LOG.md | SYS-00-DL | Architectural decisions |
-| SYSTEM_FILE_STRUCTURE.md | SYS-00-SFS | Repository organization |
-| DEVELOPER_GUIDE.md | SYS-00-DG | Implementation guidance |
-| RUNBOOK.md | SYS-00-RB | Operational procedures |
-| EXISTING_REPO_WORKFLOW_SOP.md | SYS-00-SOP | Repo workflow SOP |
-
-### Delivery Documents (delivery/)
-
-| Artifact Type | Template | Purpose |
-|---------------|----------|---------|
-| INIT_FILE | 02_delivery_initiative_template | Initiative definition |
-| PLAN_FILE | 03_delivery_plan_template | Delivery plan |
-| TASK_GRAPH_FILE | 04_delivery_task_graph_template | Task decomposition |
-| TASK_FILE | 05_delivery_task_template | Individual task |
-| IMPL_FILE | 06_delivery_impl_template | Implementation plan |
-| REVIEW_FILE | 07_delivery_review_template | Review results |
-| VALIDATION_FILE | 08_delivery_validation_template | Validation results |
-
-### Codebase Documents (codebase/)
-
-| Document | Purpose |
-|----------|---------|
-| CODEBASE_INVENTORY.md | Module and component inventory |
-| CODEBASE_DOC_SOP.md | Codebase documentation SOP |
-| CHANGE_IMPACT.md | Change impact analysis |
+All four files must include the following frontmatter fields:
+- `template_id`: Unique identifier matching the table above
+- `version: "1.0.0"`: Semantic version string
+- `doc_type: "system"`: Fixed value indicating ecosystem-level scope
+- `managed_by: "workflow-generated"`: Indicates automated generation
+- `generated_at`: ISO 8601 timestamp of generation
+- `workflow: "00_core_governance_bootstrap_v1"`: Owning workflow ID
+- `step: "generate_core_governance_docs"`: Owning step ID
+- `change_id`: Identifier for the change event (e.g., job ID or manual edit tag)
 
 ## Architecture Baseline
 
-### Universal Documentation Rules
+The architecture baseline for ecosystem master docs is the three-layer documentation model defined in README.md:
 
-These rules apply to every repository regardless of profile:
+1. **Layer 1 (Ecosystem Master Docs)**: Canonical runtime guidance owned by `00_core_governance_bootstrap_v1`
+2. **Layer 2 (Workflow Bundle Master Docs)**: Bundle-local governance traveling with each installed workflow
+3. **Layer 3 (Repo-Local Generated Docs)**: Non-authoritative downstream outputs under `docs/repo/*`
 
-1. **Frontmatter Required**: All markdown documents MUST include YAML frontmatter with:
-   - `template_id`: Stable identifier for validation
-   - `title`: Human-readable document title
-   - `status`: Document lifecycle state
-
-2. **Workflow-Generated Banner**: Generated documents MUST include the standard banner immediately after frontmatter.
-
-3. **Cross-Reference Convention**: Internal links use relative paths from the document's location.
-
-4. **Template ID Stability**: Once assigned, template IDs are immutable across document versions.
-
-5. **Status Lifecycle**: Documents progress through: `draft` → `active` → `archived`
-
-### Path Constants
-
-All documentation paths MUST use centralized constants from `agent_runner_v2/constants.py`:
-
-```python
-from agent_runner_v2.constants import (
-    ARTIFACT_PATH_PROJECT_ANALYSIS,
-    FOLDER_KEY_SYSTEM_BOOTSTRAP,
-    artifact_path
-)
-```
-
-**Prohibited**: Hardcoded path strings anywhere in the codebase.
+All four ecosystem master docs must reinforce this model and must not blur the boundaries between layers. Specifically:
+- Layer 1 docs must not enumerate repo-derived artifacts or claim ownership of `docs/repo/*` outputs
+- Layer 1 docs must not list concrete repository workflow inventory
+- Layer 1 docs must describe workflow bundle behavior generically, not per-repository
 
 ## Repo-Selected Profile
 
-### Profile Definitions
+Each repository using the agent-runner framework may select a profile that determines which workflows generate repo-local docs and where those docs are written. The ecosystem master docs do not prescribe a specific profile but define the contract that all profiles must follow:
 
-| Profile | Characteristics | Documentation Depth |
-|---------|-----------------|---------------------|
-| **minimal** | Prototype, exploratory | Essential docs only |
-| **provisional** | Active development, migration in progress | Core set, may have gaps |
-| **explicit** | Stable, fully documented | Complete documented system |
-| **canonical** | Reference implementation | Complete + exemplary |
+- Repo-local docs live under `docs/repo/*`
+- Repo-local docs are generated by repo-document, scaffold, sync, or audience workflows
+- Repo-local docs are not canonical governance authority
+- Repo-local docs may be regenerated or discarded as needed
 
-### Current Profile: `provisional`
-
-The `agent-runner-v2` repository operates under the `provisional` profile:
-
-- Active plugin system migration in progress
-- Documentation being established by bootstrap workflows
-- Some gaps exist and are being addressed
-- Test coverage exists but comprehensive verification ongoing
-
-### Target Profile: `explicit`
-
-Intended end-state:
-
-- All modules documented
-- Architecture decisions recorded
-- Operational procedures defined
-- Validation automated
+The specific profile (e.g., minimal, standard, comprehensive) is determined by repository maintainers and configured in their local workflow manifests.
 
 ## Migration Mode
 
-### Migration Posture
+Repositories transitioning from legacy mixed-doc models toward the three-layer model operate in migration mode. During migration:
 
-The repository is currently in `in_progress` migration mode:
+- Legacy root markdown files (e.g., historical QWEN.md, CLAUDE.md, README.md at project root) are treated as non-authoritative
+- Stale repo-derived analysis docs under `docs/system/00_governance/bootstrap/` from previous workflows are archived or removed
+- The canonical source of truth becomes the active workflow bundle and current runner code
+- Ecosystem master docs take precedence over any conflicting local guidance
 
-- Legacy `TEMPLATE_GROUPS` monolith being replaced by plugin workflow system
-- Documentation being bootstrapped by automated workflows
-- Constants and path logic being centralized
-- No stable baseline yet established
-
-### Migration Path
-
-1. **Current**: Bootstrap documentation via `00_master_docs_bootstrap_v2`
-2. **Next**: Establish stable SOP and templates via `10_execution_scaffold_v1`
-3. **Target**: Explicit profile with full documentation coverage
+Migration mode ends when:
+- All four ecosystem master docs exist and pass validation
+- Legacy root guidance has been moved to `docs/archive/root-guidance/`
+- Repo-local docs are cleanly separated under `docs/repo/*`
+- No stale mixed-doc assumptions remain in workflow prompts or bundle governance
 
 ## Conditional Standards
 
-### When Profile = `provisional`
+The following conditional standards apply to ecosystem master docs:
 
-- Generated docs may have incomplete sections
-- Architecture decisions may be in flux
-- Documentation drift expected; reconciliation workflows required
-- Validation may have exceptions
+### When Referencing Downstream Outputs
 
-### When Profile = `explicit`
+If an ecosystem master doc mentions repo-local generated docs, it must use only generic wording such as "repo-local generated docs under `docs/repo/*`". It must not:
+- Enumerate specific artifact names or filenames derived from repository scanning
+- Include example paths containing repo-derived filenames
+- List concrete artifact sets produced by repo-document workflows
 
-- All documents must pass validation
-- No undocumented public APIs
-- Architecture decisions must have ADRs
-- Drift detection must pass
+### When Describing Workflow Bundles
+
+Ecosystem master docs may describe workflow bundle behavior generically but must not:
+- List concrete workflow inventory for a specific repository
+- Name workflows outside the core governance bundle (`00_core_governance_bootstrap_v1`) except where explicitly required (e.g., the canonical scaffold workflow)
+- Classify non-core bundles into named families or groupings
+
+### When Discussing Legacy Artifacts
+
+If migration from legacy structures is discussed, refer to stale outputs generically as "repo-derived analysis docs" or "legacy mixed outputs". Do not enumerate long legacy artifact lists unless absolutely necessary for migration clarity.
 
 ## Update Triggers
 
-Documentation MUST be refreshed when:
+Ecosystem master docs must be regenerated or updated when any of the following triggers occur:
 
-1. **Code changes** affect documented behavior
-2. **Architecture decisions** are made or changed
-3. **New modules** are added to the codebase
-4. **Workflow changes** affect operational procedures
-5. **Migration milestones** are reached
+### Automatic Triggers
+
+- Changes to the three-layer documentation model
+- Addition or removal of required sections in any of the four docs
+- Changes to bundle taxonomy or ownership rules
+- Updates to the canonical scaffold workflow ID
+- Migration plan phase completion or adjustment
+
+### Manual Triggers
+
+- Ecosystem maintainer requests a refresh
+- Discovery of stale assumptions or conflicting guidance
+- New workflow bundle classes require taxonomy updates (only if they are core-governance bundles)
+- Audit or review steps identify structural violations
+
+### Suppressed Triggers
+
+The following events do **not** trigger ecosystem master doc updates:
+- Changes to repo-local generated docs under `docs/repo/*`
+- Addition of new non-core workflow bundles
+- Repository-specific analysis or inventory updates
+- Changes to workflow prompt templates or context extensions
 
 ## Validation
 
-### Automated Validation
+Validation of ecosystem master docs occurs during the `00_core_governance_bootstrap_v1` workflow execution and includes the following checks:
 
-Documentation validation checks:
+### Structural Validation
 
-- Frontmatter presence and format
-- Template ID correctness
-- Cross-reference validity
-- Required section presence
-- Section content completeness
+- All four files exist under `docs/system/00_governance/bootstrap/`
+- Each file contains required frontmatter fields with correct values
+- Each file contains all required sections as defined in the Document Set table
+- Template IDs match the mapping defined in this standard
 
-### Validation Commands
+### Content Validation
 
-```bash
-# Validate system documents
-ukbe-run-agent run --template-group documentation_sync_v1 --step validate
+- README.md describes the three-layer model without listing repository-specific workflow inventory
+- DOCUMENTATION_STANDARD.md defines standards only for the four ecosystem master docs
+- BUNDLE_TAXONOMY.md contains exactly one concrete bundle class subsection (core governance bundles)
+- BUNDLE_MIGRATION_PLAN.md describes migration toward the three-layer model without enumerating legacy artifact lists
 
-# Validate delivery documents
-ukbe-run-agent run --template-group 10_execution_scaffold_v1 --step validate
-```
+### Scope Violation Checks
 
-### Validation Artifacts
+- No file contains artifact placeholder syntax using curly-brace token patterns
+- No file mentions deprecated workflow identifiers from legacy scaffold implementations
+- BUNDLE_TAXONOMY.md does not contain non-core bundle class classifications or repo-document bootstrap workflow references
+- DOCUMENTATION_STANDARD.md does not contain repo-derived artifact names or enumeration of repository analysis outputs
+- DOCUMENTATION_STANDARD.md contains no example path embedding a repo-derived filename
 
-Validation produces:
-- `VALIDATION_FILE` with pass/fail status
-- `SYSTEM_DOCS_VALIDATION` with detailed results
+### Authority Boundary Checks
 
-## Document Conventions
+- No ecosystem master doc claims ownership of `docs/repo/*` outputs
+- No ecosystem master doc treats repo-derived analysis as canonical governance
+- Core governance bundles do not claim they write to `docs/repo/*`
 
-### Section Headings
-
-Use these exact section headings where applicable:
-
-- `Purpose` — Why this document exists
-- `Scope` — What is and isn't covered
-- `Audience` — Who should read this
-- `Prerequisites` — What to know first
-- `Primary Flows` — Main execution paths
-- `Key Risks` — Known issues and mitigations
-
-### Cross-References
-
-```markdown
-[SYSTEM_OVERVIEW.md](SYSTEM_OVERVIEW.md)
-[Codebase Inventory](../../codebase/01_inventory/codebase_inventory.md)
-```
-
-### Code Blocks
-
-Use fenced code blocks with language identifiers:
-
-```python
-# Python example
-from agent_runner_v2.constants import ARTIFACT_KEY_PROJECT_ANALYSIS
-```
-
----
-
-*Last updated: 2026-07-10T19:47:28+08:00 via workflow `00_master_docs_bootstrap_v2`*
+Validation failures trigger refinement loops with a maximum of two iterations before requiring human intervention.

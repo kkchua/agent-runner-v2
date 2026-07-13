@@ -1,258 +1,106 @@
 ---
 template_id: "SYS-00-BT"
-title: "Bundle Taxonomy - agent-runner-v2"
-status: "active"
-managed_by: workflow-generated
-generated: "2026-07-10T19:47:28+08:00"
-workflow: "00_master_docs_bootstrap_v2"
-step: "03_generate_system_overview_docs"
-change_id: "00DOC-20260710-0098bf53"
+version: "1.0.0"
+doc_type: "system"
+managed_by: "workflow-generated"
+generated_at: "2026-07-13T08:00:00+08:00"
+workflow: "00_core_governance_bootstrap_v1"
+step: "generate_core_governance_docs"
+change_id: "INITIAL-BOOTSTRAP"
 ---
 
-> Managed by workflow: `00_master_docs_bootstrap_v2` / step: `03_generate_system_overview_docs`
-> This file is workflow-generated and protected from manual edits.
+# Bundle Taxonomy
 
-# Bundle Taxonomy: agent-runner-v2
+This document defines the bundle classes, ownership rules, and packaging requirements for workflow bundles in the agent-runner ecosystem.
 
-## Purpose
+## Bundle Classes
 
-This document defines the organization and structure of workflow bundles in the agent-runner-v2 ecosystem. It establishes naming conventions, bundle types, and the relationship between bootstrap source and runtime bundles.
+The agent-runner ecosystem recognizes one canonical bundle class at the ecosystem governance layer:
 
-## Scope
+### Core Governance Bundles
 
-This taxonomy covers:
-- Workflow bundle types and their purposes
-- Bundle directory structure and organization
-- Naming conventions for bundles and their contents
-- Bootstrap-to-runtime bundle relationships
-- Migration path from monolithic to plugin-based bundles
+Core governance bundles own ecosystem master docs that define the universal documentation contract for the entire agent-runner ecosystem. These bundles operate at Layer 1 of the three-layer documentation model.
 
-## Bundle Types
+**Characteristics**:
+- Own only the four ecosystem master docs under `docs/system/00_governance/bootstrap/`
+- Define universal rules that apply to all repositories using the framework
+- Do not generate repo-derived analysis or claim ownership of `docs/repo/*` outputs
+- Travel with the core runner code and take precedence over conflicting local guidance
 
-### 1. Bootstrap Bundles (Packaged)
+**Example**: `00_core_governance_bootstrap_v1` is the sole core governance bundle in this ecosystem. It owns README.md, DOCUMENTATION_STANDARD.md, BUNDLE_TAXONOMY.md, and BUNDLE_MIGRATION_PLAN.md.
 
-Located in: `agent_runner_v2/bootstrap/`
+**Authority**: Highest — core governance bundles define the rules all other layers must follow.
 
-**Purpose**: Seed the global runner home with default workflows, templates, and themes.
+Other workflow bundles exist in the ecosystem but are not classified as core governance bundles. They operate at Layer 2 (workflow bundle master docs) or Layer 3 (repo-local generated docs) and follow the contract defined by core governance bundles without modifying ecosystem master docs.
 
-| Bundle | Location | Contents |
-|--------|----------|----------|
-| Core System Docs | `bootstrap/bundles/core/current/` | Master documentation templates |
-| Default Workflows | `bootstrap/workflows/default/` | Built-in workflow definitions |
-| Default Themes | `bootstrap/themes/default/` | HTML site themes |
+## Ownership Rules
 
-**Key characteristic**: Bootstrap bundles are **source only** — they are not loaded directly at runtime. They exist to seed the global runner home via `ukbe-run-agent init`.
+Ownership rules determine which bundle class may modify which documentation layer:
 
-### 2. Runtime Bundles (Global)
+### Core Governance Bundle Ownership
 
-Located in: `%USERPROFILE%\.ukbe-runner\`
+- Core governance bundles own only the four ecosystem master docs
+- They do not own repo-local generated docs under `docs/repo/*`
+- They do not classify or enumerate non-core bundle families
+- They do not list concrete repository workflow inventory
+- They do not describe prompt contracts using artifact placeholder syntax
 
-**Purpose**: Active execution environment for workflows.
+### Workflow Bundle Ownership
 
-| Directory | Contents |
-|-----------|----------|
-| `workflows/<workflow>/` | Workflow definitions and prompts |
-| `bundles/core/current/` | System documentation templates |
-| `jobs/` | Job state and execution artifacts |
-| `logs/` | Execution logs |
-| `config.json` | Runner configuration |
+- Individual workflow bundles own their bundle-local governance manifests under `workflows/<name>/bundle_governance/`
+- They define how their specific workflow operates within the three-layer model
+- They follow the contract defined by core governance bundles
+- During publish or install, bundle-local governance files are copied into the global runner home
 
-**Key characteristic**: Runtime bundles are the **source of truth** for execution. The runner loads workflows from here, not from the repo.
+### Repo-Document Workflow Ownership
 
-### 3. Plugin Workflow Bundles (Project-Local)
+- Repo-document, scaffold, sync, and audience workflows own repo-local generated docs under `docs/repo/*`
+- These docs are non-authoritative downstream outputs
+- They reflect repository state at generation time and may become stale
+- They are not canonical governance authority
 
-Located in: `<repo>/workflows/<workflow>/`
+### Boundary Enforcement
 
-**Purpose**: Self-contained workflow packages that can be developed and versioned independently.
+- No workflow or document outside `00_core_governance_bootstrap_v1` may modify the four ecosystem master docs
+- No ecosystem master doc may claim ownership of repo-local outputs under `docs/repo/*`
+- When prompt instructions conflict with repo-local stale docs, the core governance bundle contract wins
 
-**Structure**:
-```
-workflows/<workflow_name>/
-├── workflow.toml          # Manifest and step definitions
-├── prompts/               # Prompt template files
-│   ├── 01_step_name.txt
-│   └── 02_another_step.txt
-└── context_extensions.py  # Optional context hooks
-```
+## Packaging Rules
 
-**Key characteristic**: Plugin bundles are converted to the same dict format as legacy `TEMPLATE_GROUPS`, enabling backward compatibility.
+Packaging rules determine how workflow bundles are structured and deployed:
 
-## Bundle Directory Structure
+### Bundle Structure
 
-### Bootstrap Workflows
-
-```
-agent_runner_v2/bootstrap/workflows/default/
-├── template_groups.py          # Legacy monolithic workflow definitions
-├── job_schema.json             # Job validation schema
-├── llm_response_schema.json    # LLM response validation
-├── model_mapping.json          # Model alias mappings
-└── prompts/
-    ├── 00_master_docs_bootstrap_v1/
-    │   ├── 02_generate_project_analysis.txt
-    │   ├── 03_generate_system_overview_docs.txt
-    │   └── ...
-    ├── 10_execution_scaffold_v1/
-    ├── 20_initiative_intake_v1/
-    ├── 21_bug_fix_intake_v1/
-    ├── 30_delivery_planning_v1/
-    ├── 31_task_execution_v1/
-    ├── 40_documentation_sync_v1/
-    ├── 41_audience_doc_v1/
-    ├── 51_stakeholder_docs_v1/
-    ├── 52_developer_docs_v1/
-    ├── 53_operator_docs_v1/
-    ├── 54_tester_docs_v1/
-    ├── 55_user_docs_v1/
-    └── ...
-```
-
-### Runtime Workflows
-
-```
-%USERPROFILE%\.ukbe-runner\workflows\<workflow>\
-├── template_groups.py          # Copied from bootstrap or plugin
-└── prompts/                    # Copied from bootstrap or plugin
-    └── ...
-```
-
-### Plugin Workflows
-
-```
-<repo>/workflows/<workflow_name>/
-├── workflow.toml               # Declarative manifest
-├── prompts/                    # Prompt templates
-│   └── <step_name>.txt
-└── context_extensions.py       # Optional hooks
-```
-
-## Naming Conventions
-
-### Workflow Names
-
-Pattern: `<number>_<purpose>_<version>`
-
-| Workflow | Purpose | Version |
-|----------|---------|---------|
-| `00_master_docs_bootstrap_v1` | Master documentation generation | v1 |
-| `10_execution_scaffold_v1` | Delivery scaffold establishment | v1 |
-| `20_initiative_intake_v1` | Initiative intake | v1 |
-| `21_bug_fix_intake_v1` | Bug fix workflow | v1 |
-| `30_delivery_planning_v1` | Delivery planning | v1 |
-| `31_task_execution_v1` | Task execution | v1 |
-| `40_documentation_sync_v1` | Documentation synchronization | v1 |
-| `50_architecture_site_v1` | Architecture site generation | v1 |
-
-### Prompt Files
-
-Pattern: `<step_number>_<step_name>.txt`
-
-Examples:
-- `02_generate_project_analysis.txt`
-- `03_generate_system_overview_docs.txt`
-- `08_impl_task.txt`
-
-### Artifact Keys
-
-Pattern: `ARTIFACT_KEY_<DESCRIPTION>`
-
-Examples:
-- `ARTIFACT_KEY_PROJECT_ANALYSIS`
-- `ARTIFACT_KEY_DELIVERY_SOP`
-- `ARTIFACT_KEY_CODEBASE_INVENTORY`
-
-## Bundle Relationships
-
-### Bootstrap → Runtime Flow
-
-```
-Bootstrap Source (repo)
-    ↓
-ukbe-run-agent init
-    ↓
-Runtime Global (%USERPROFILE%\.ukbe-runner\)
-    ↓
-Runtime Execution (ukbe-run-agent run)
-```
-
-### Plugin → Runtime Flow
-
-```
-Plugin Package (repo/workflows/<name>/)
-    ↓
-Adapter (workflow_packages/loader.py)
-    ↓
-Dict Format (same as TEMPLATE_GROUPS)
-    ↓
-Runtime Execution
-```
+Each workflow package (`workflows/<name>/`) must contain:
+- `workflow.toml` — declarative manifest defining steps, routing, artifact keys, and coder policies
+- `prompts/` — directory containing prompt template files for each step
+- `context_extensions.py` — optional workflow-specific context hooks (replaces hardcoded functions in step_runner.py)
+- `bundle_governance/` — directory containing bundle-local governance manifests
 
 ### Dual-Path Discovery
 
-At runtime, workflow discovery uses global-first, local-fallback:
+Plugin workflow packages use dual-path discovery for runtime deployment:
+1. **Global path**: `%USERPROFILE%\.ukbe-runner\workflows\<workflow_name>\<package_files>` — seeded during init or publish
+2. **Local path**: `workflows\<workflow_name>\<package_files>` — fallback if global path is not available
 
-1. Check `%USERPROFILE%\.ukbe-runner\workflows\<workflow>\`
-2. Fallback to repo `workflows/<workflow>/`
+The global path takes precedence. If both paths exist, the global copy is used.
 
-This supports both packaged workflows and project-specific overrides.
+### Generated Adapter Files
 
-## Migration: Monolith to Plugin
+Bundle-local agent adapter files under `bundle_governance/generated/` (e.g., AGENTS.md, CLAUDE.md, QWEN.md) are generated from the canonical bundle governance source. They must not drift independently and must travel with the bundle into the global runner home during publish or install.
 
-### Current State
+### Artifact Registry
 
-- Legacy `TEMPLATE_GROUPS` dict in `template_groups.py` (2453+ lines)
-- 21+ workflows defined in single file
-- Active migration to plugin system on `feat/plugin-workflow-system` branch
+Each workflow bundle declares its owned artifact set in `workflow.toml` under `[step.artifacts].produces`. The artifact registry is authoritative for:
+- Bundle scope checks during validation
+- Publish/install packaging decisions
+- Prompt-time instruction alignment
 
-### Target State
+Core governance bundles have a limited artifact set restricted to the four core governance documents plus deterministic review and validation outputs used by their own refinement loop.
 
-- Each workflow as self-contained plugin package
-- `workflow.toml` declarative manifests
-- Independent versioning and testing
-- Same execution pipeline via adapter pattern
+### Versioning
 
-### Migration Path
-
-1. **Phase 1**: Establish plugin infrastructure (`workflow_packages/`)
-2. **Phase 2**: Migrate workflows incrementally
-3. **Phase 3**: Deprecate monolithic `TEMPLATE_GROUPS`
-4. **Phase 4**: Remove legacy support
-
-## Bundle Validation
-
-### Validation Checks
-
-- Workflow manifest schema compliance
-- Prompt file existence
-- Artifact key uniqueness
-- Cross-reference validity
-- Template placeholder correctness
-
-### Validation Artifacts
-
-- `VALIDATION_FILE` — validation results
-- `SYSTEM_DOCS_VALIDATION` — system doc validation
-
-## Key Risks
-
-### Bootstrap/Runtime Sync Risk
-
-**Risk**: Changes to bootstrap files may not propagate to runtime bundles.
-
-**Mitigation**: Use `sync_workflows.py` for two-tier discovery; document sync requirements.
-
-### Path Resolution Complexity
-
-**Risk**: Multiple path layers may drift or conflict.
-
-**Mitigation**: Centralized constants in `constants.py`; zero hardcoded paths.
-
-### Plugin Compatibility
-
-**Risk**: Plugin bundles may not match expected schema.
-
-**Mitigation**: Adapter validation; schema enforcement at load time.
-
----
-
-*Last updated: 2026-07-10T19:47:28+08:00 via workflow `00_master_docs_bootstrap_v2`*
+Workflow bundles use semantic versioning in their `workflow.toml` manifest:
+- `version = "1"` — major version (breaking changes to step structure or artifact keys)
+- Changes to prompt templates or context extensions without structural changes do not require version bumps
+- Core governance bundle version is independent of ecosystem master doc versions

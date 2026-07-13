@@ -1,0 +1,28 @@
+{
+  "schema_version": "v2",
+  "coder_result": {
+    "status": "APPROVED",
+    "remark": "Semantic audit passed. All four ecosystem master docs are factually aligned with repository state and prompt requirements. No forbidden patterns, no repo-derived placeholders, correct workflow names, proper authority boundaries.",
+    "artifacts": {
+      "REVIEW_FILE_SUGGESTED": "docs/system/00_governance/bootstrap/00CORE-GEN-20260713-002-core-governance-audit.md"
+    },
+    "recorded_at": "2026-07-13T08:00:00+08:00"
+  },
+  "runner_data": {
+    "step": "audit_core_governance_accuracy",
+    "coder_used": "qwen",
+    "invoked_at": "2026-07-13T15:39:57",
+    "finished_at": "2026-07-13T15:42:25",
+    "prompt_checksum": "sha256:d9799ed6bfeacf93389e1a1cb8a7a968653c7011908194da4fa5dc030636d7b5",
+    "allowed_write_paths": [
+      "docs\\system\\00_governance\\bootstrap\\00CORE-GEN-20260713-002-core-governance-audit.md",
+      "docs\\system\\00_governance\\bootstrap\\00CORE-GEN-20260713-002-core-governance-audit.meta.json"
+    ],
+    "changed_paths": [
+      "docs\\system\\00_governance\\bootstrap\\00CORE-GEN-20260713-002-core-governance-audit.md",
+      "docs\\system\\00_governance\\bootstrap\\00CORE-GEN-20260713-002-core-governance-audit.meta.json"
+    ],
+    "enriched_at": "2026-07-13T15:42:25",
+    "runner_version": "v2"
+  }
+}

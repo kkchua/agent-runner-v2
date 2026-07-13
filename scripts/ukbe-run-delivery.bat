@@ -156,16 +156,17 @@ if not "%JOB_ID%"=="" (
     del "!STATUS_FILE!" >nul 2>nul
 )
 
-REM Build the command
-set "CMD=%UKBE_CLI% run --project-root "%PROJECT_ROOT%" --template-group %TEMPLATE_GROUP% --target-project-root "%TARGET_ROOT%"" 
+REM Build display-only command text. Execute directly below to avoid cmd.exe
+REM re-parsing a quoted command string incorrectly.
+set "CMD_DISPLAY=%UKBE_CLI% run --project-root ""%PROJECT_ROOT%"" --template-group %TEMPLATE_GROUP% --target-project-root ""%TARGET_ROOT%"""
 if "%DRY_RUN%"=="1" (
-    set "CMD=!CMD! --dry-run"
+    set "CMD_DISPLAY=!CMD_DISPLAY! --dry-run"
 )
 if "%NEW_JOB%"=="1" (
-    set "CMD=!CMD! --new-job"
+    set "CMD_DISPLAY=!CMD_DISPLAY! --new-job"
 )
 if not "%JOB_ID%"=="" (
-    set "CMD=!CMD! --job-id %JOB_ID%"
+    set "CMD_DISPLAY=!CMD_DISPLAY! --job-id %JOB_ID%"
 )
 
 REM Show what we're about to run
@@ -179,12 +180,41 @@ if not "%JOB_ID%"==""   echo  Job ID:            %JOB_ID%
 if "%DRY_RUN%"=="1"     echo  Mode:              DRY RUN
 if "%NEW_JOB%"=="1"     echo  New job:           Force new
 echo(
-echo  Command: !CMD!
+echo  Command: !CMD_DISPLAY!
 echo ===========================================================================
 echo(
 
 REM Run the workflow
-%CMD%
+set "CLI_EXIT=0"
+if "%DRY_RUN%"=="1" (
+    if "%NEW_JOB%"=="1" (
+        if not "%JOB_ID%"=="" (
+            %UKBE_CLI% run --project-root "%PROJECT_ROOT%" --template-group %TEMPLATE_GROUP% --target-project-root "%TARGET_ROOT%" --dry-run --new-job --job-id %JOB_ID%
+        ) else (
+            %UKBE_CLI% run --project-root "%PROJECT_ROOT%" --template-group %TEMPLATE_GROUP% --target-project-root "%TARGET_ROOT%" --dry-run --new-job
+        )
+    ) else (
+        if not "%JOB_ID%"=="" (
+            %UKBE_CLI% run --project-root "%PROJECT_ROOT%" --template-group %TEMPLATE_GROUP% --target-project-root "%TARGET_ROOT%" --dry-run --job-id %JOB_ID%
+        ) else (
+            %UKBE_CLI% run --project-root "%PROJECT_ROOT%" --template-group %TEMPLATE_GROUP% --target-project-root "%TARGET_ROOT%" --dry-run
+        )
+    )
+) else (
+    if "%NEW_JOB%"=="1" (
+        if not "%JOB_ID%"=="" (
+            %UKBE_CLI% run --project-root "%PROJECT_ROOT%" --template-group %TEMPLATE_GROUP% --target-project-root "%TARGET_ROOT%" --new-job --job-id %JOB_ID%
+        ) else (
+            %UKBE_CLI% run --project-root "%PROJECT_ROOT%" --template-group %TEMPLATE_GROUP% --target-project-root "%TARGET_ROOT%" --new-job
+        )
+    ) else (
+        if not "%JOB_ID%"=="" (
+            %UKBE_CLI% run --project-root "%PROJECT_ROOT%" --template-group %TEMPLATE_GROUP% --target-project-root "%TARGET_ROOT%" --job-id %JOB_ID%
+        ) else (
+            %UKBE_CLI% run --project-root "%PROJECT_ROOT%" --template-group %TEMPLATE_GROUP% --target-project-root "%TARGET_ROOT%"
+        )
+    )
+)
 set "EXIT_CODE=%ERRORLEVEL%"
 
 echo(
@@ -198,7 +228,27 @@ if not "%JOB_ID%"=="" (
 exit /b %EXIT_CODE%
 
 :success
-echo Delivery scaffold completed successfully.
+if not "%JOB_ID%"=="" (
+    set "STATUS_FILE=%TEMP_ROOT%\ukbe-run-delivery-status-%RANDOM%.txt"
+    %UKBE_CLI% run --project-root "%PROJECT_ROOT%" --template-group %TEMPLATE_GROUP% --job-id %JOB_ID% --check-job-status > "!STATUS_FILE!"
+    set "STATUS_EXIT=%ERRORLEVEL%"
+    if "!STATUS_EXIT!"=="0" (
+        set "JOB_STATUS="
+        for /f "tokens=1,* delims=:" %%A in ('findstr /B /C:"Status:" "!STATUS_FILE!"') do set "JOB_STATUS=%%B"
+        set "JOB_STATUS=!JOB_STATUS: =!"
+        if /I "!JOB_STATUS!"=="COMPLETED" (
+            echo Delivery scaffold completed successfully.
+        ) else (
+            echo Delivery scaffold step completed. Job status: !JOB_STATUS!
+            echo(
+            type "!STATUS_FILE!"
+        )
+        del "!STATUS_FILE!" >nul 2>nul
+        exit /b 0
+    )
+    del "!STATUS_FILE!" >nul 2>nul
+)
+echo Delivery scaffold command completed successfully.
 exit /b 0
 
 :usage
