@@ -1,0 +1,260 @@
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+from typing import Any
+
+from .backend_client import BackendClient
+from .bundle_loader import core_bundles_root, load_project_config, load_workflow_module, resolve_workflow_root
+from .constants import RUN_AGENT_REQUIRED_DOC_DIRS, get_master_docs_output_paths, known_artifact_paths, legacy_artifact_paths
+from .constants import known_artifact_paths as _known_artifact_paths
+from .documentation_guardrails import (
+    EXECUTION_SCAFFOLD_WORKFLOWS,
+    MASTER_BOOTSTRAP_WORKFLOWS,
+    generated_doc_manifest,
+    managed_banner,
+)
+from .exceptions import PreflightBlockedError
+from .execution_core import invoke_prepared_step
+from .job_state import (
+    CURRENT_SCHEMA_VERSION,
+    check_preflight_artifact_status,
+    classify_pre_run_failure,
+    create_step_dir as make_step_dir,
+    default_usage_summary,
+    default_review_state,
+    default_task_execution_binding,
+    get_job_status,
+    load_job,
+    save_job,
+    _update_document_status,
+)
+from .model_config import resolve_coder, resolve_role_alias
+from .runner_logger import log_resolver
+from .runtime_context import ARTIFACT_ROOT, JOBS_ROOT, PACKAGE_ROOT, get_workflow_module, set_context, set_workflow_module
+from .runtime_utils import now_iso as _now_iso, safe_relative_to as _safe_relative_to, save_json as _save_json, save_text as _save_text
+from .step_runner import build_context, prompt_checksum, render_prompt, resolve_prompt_path, run_action, run_step
+from .task_runtime import ensure_execution_task_binding_integrity, ensure_planning_task_queue_integrity
+from .transition_runtime import mark_review_started
+from .workflow_packages.loader import bundle_to_template_group_dict, load_workflow_package
+from .workflow_specs import build_step_execution_spec, get_template_group_cfg, reconcile_step_execution_spec
+from .routing_runtime import predict_next_step_after_approved
+
+from . import backend_execution as _backend_execution
+from . import step_execution_runtime as _step_execution_runtime
+from . import workflow_runtime as _workflow_runtime
+
+
+DELIVERY_SCAFFOLD_PUBLISH_PATHS = _known_artifact_paths()
+
+
+def _ensure_delivery_folders(target_root: Path) -> None:
+    _workflow_runtime.ensure_delivery_folders(target_root, hooks=sys.modules[__name__])
+
+
+def _load_group(
+    group_name: str,
+    workspace_root: Path | None = None,
+    workflow_root: Path | None = None,
+) -> dict[str, Any]:
+    return _workflow_runtime.load_group(
+        group_name,
+        workspace_root=workspace_root,
+        workflow_root=workflow_root,
+        hooks=sys.modules[__name__],
+    )
+
+
+def _validate_static_reference_files(
+    workspace_root: Path,
+    group_cfg: dict[str, Any] | None = None,
+    template_group: str = "",
+) -> None:
+    _workflow_runtime.validate_static_reference_files(
+        workspace_root,
+        group_cfg=group_cfg,
+        template_group=template_group,
+        hooks=sys.modules[__name__],
+    )
+
+
+def _missing_artifacts(keys: list[str], state: dict[str, Any]) -> list[str]:
+    return _workflow_runtime.missing_artifacts(keys, state, hooks=sys.modules[__name__])
+
+
+def _prepare_step_execution(
+    *,
+    template_group: str,
+    group_cfg: dict[str, Any],
+    state: dict[str, Any],
+    step: str,
+    step_cfg: dict[str, Any],
+    workflow_key_override: str = "",
+    cli_coder: str | None = None,
+):
+    return _step_execution_runtime.prepare_step_execution(
+        template_group=template_group,
+        group_cfg=group_cfg,
+        state=state,
+        step=step,
+        step_cfg=step_cfg,
+        workflow_key_override=workflow_key_override,
+        cli_coder=cli_coder,
+        hooks=sys.modules[__name__],
+    )
+
+
+def _execute_prepared_step(
+    *,
+    prepared: Any,
+    template_group: str,
+    group_cfg: dict[str, Any],
+    state: dict[str, Any],
+    step: str,
+    step_cfg: dict[str, Any],
+    effective_root: Path,
+):
+    return _step_execution_runtime.execute_prepared_step(
+        prepared=prepared,
+        template_group=template_group,
+        group_cfg=group_cfg,
+        state=state,
+        step=step,
+        step_cfg=step_cfg,
+        effective_root=effective_root,
+        hooks=sys.modules[__name__],
+    )
+
+
+def _resolve_step_coder(
+    *,
+    group_cfg: dict[str, Any],
+    state: dict[str, Any],
+    step: str,
+    step_cfg: dict[str, Any],
+    cli_coder: str | None,
+):
+    return _step_execution_runtime.resolve_step_coder(
+        group_cfg=group_cfg,
+        state=state,
+        step=step,
+        step_cfg=step_cfg,
+        cli_coder=cli_coder,
+        hooks=sys.modules[__name__],
+    )
+
+
+def _resolve_worker_engine_root(engine_root: str | None) -> tuple[str | None, str | None]:
+    return _backend_execution.resolve_worker_engine_root(engine_root, hooks=sys.modules[__name__])
+
+
+def _build_group_cfg_from_execution_spec(
+    spec: dict[str, Any],
+    template_group: str,
+    step_name: str,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    return _backend_execution.build_group_cfg_from_execution_spec(spec, template_group, step_name)
+
+
+def _build_execution_state(*, request: Any, group_cfg: dict[str, Any]) -> dict[str, Any]:
+    return _backend_execution.build_execution_state(request=request, group_cfg=group_cfg, hooks=sys.modules[__name__])
+
+
+def _publish_backend_artifacts(
+    *,
+    state: dict[str, Any],
+    step: str,
+    artifacts: dict[str, str],
+    project_root: Path,
+) -> dict[str, str]:
+    return _backend_execution.publish_backend_artifacts(
+        state=state,
+        step=step,
+        artifacts=artifacts,
+        project_root=project_root,
+        hooks=sys.modules[__name__],
+    )
+
+
+def _execute_backend_step_request(
+    *,
+    request: Any,
+    group_cfg: dict[str, Any],
+    step_cfg: dict[str, Any],
+    state: dict[str, Any],
+    effective_root: Path,
+):
+    return _backend_execution.execute_backend_step_request(
+        request=request,
+        group_cfg=group_cfg,
+        step_cfg=step_cfg,
+        state=state,
+        effective_root=effective_root,
+        hooks=sys.modules[__name__],
+    )
+
+
+def _build_worker_crash_result(*, run: dict[str, Any], step_run: dict[str, Any], error: Exception) -> dict[str, Any]:
+    return _backend_execution.build_worker_crash_result(run=run, step_run=step_run, error=error, hooks=sys.modules[__name__])
+
+
+def _job_json_path(*, workflow_name: str, run_code: str) -> Path:
+    return _backend_execution.job_json_path(workflow_name=workflow_name, run_code=run_code, hooks=sys.modules[__name__])
+
+
+def _write_backend_job_json(
+    *,
+    run: dict[str, Any],
+    step_run: dict[str, Any] | None = None,
+    next_step_run: dict[str, Any] | None = None,
+    last_event: str | None = None,
+) -> None:
+    _backend_execution.write_backend_job_json(
+        run=run,
+        step_run=step_run,
+        next_step_run=next_step_run,
+        last_event=last_event,
+        hooks=sys.modules[__name__],
+    )
+
+
+def _submit_worker_result(*, client: Any, run: dict[str, Any], step_run: dict[str, Any], result: dict[str, Any]) -> dict[str, Any]:
+    return _backend_execution.submit_worker_result(client=client, run=run, step_run=step_run, result=result, hooks=sys.modules[__name__])
+
+
+def _finalize_worker_completion(
+    *,
+    client: Any,
+    run: dict[str, Any],
+    step_run: dict[str, Any],
+    completion: dict[str, Any] | None,
+) -> dict[str, Any]:
+    return _backend_execution.finalize_worker_completion(
+        client=client,
+        run=run,
+        step_run=step_run,
+        completion=completion,
+        hooks=sys.modules[__name__],
+    )
+
+
+def _invoke_execute_step_subprocess(request_payload: dict[str, Any], engine_root: str | None = None) -> dict[str, Any]:
+    return _backend_execution.invoke_execute_step_subprocess(request_payload, engine_root, hooks=sys.modules[__name__])
+
+
+def _build_worker_request_payload(
+    *,
+    run: dict[str, Any],
+    step_run: dict[str, Any],
+    step_execution_spec: dict[str, Any] | None = None,
+    backend_url: str = "",
+    step_spec_source: str = "backend",
+) -> dict[str, Any]:
+    return _backend_execution.build_worker_request_payload(
+        run=run,
+        step_run=step_run,
+        step_execution_spec=step_execution_spec,
+        backend_url=backend_url,
+        step_spec_source=step_spec_source,
+        hooks=sys.modules[__name__],
+    )

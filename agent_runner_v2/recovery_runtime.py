@@ -3,6 +3,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Callable
 
+from .state_defaults import default_loop_context, default_replan_context
+
 
 def handle_recovery_budget_exceeded(
     *,
@@ -46,15 +48,14 @@ def activate_refine_loop(
     clear_last_failure: Callable[[dict[str, Any]], None],
     set_job_status: Callable[[dict[str, Any], str], None],
 ) -> tuple[dict[str, Any], int]:
-    state["loop_context"] = {
-        "active": True,
-        "loop_step": step,
-        "refine_step": refine_step,
-        "loop_target_artifact": target_artifact,
-        "loop_source_review": review_file,
-        "loop_iteration": iteration,
-        "pre_refine_checksum": None,
-    }
+    state["loop_context"] = default_loop_context(
+        active=True,
+        loop_step=step,
+        refine_step=refine_step,
+        target_artifact=target_artifact,
+        review_file=review_file,
+        iteration=iteration,
+    )
     timestamp = now_iso()
     state.setdefault("loop_history", []).append(
         {
@@ -92,19 +93,15 @@ def activate_replan(
     clear_last_failure: Callable[[dict[str, Any]], None],
     set_job_status: Callable[[dict[str, Any], str], None],
 ) -> tuple[dict[str, Any], int]:
-    state["replan_context"] = {
-        "active": True,
-        "source_review_step": step,
-        "replan_step": replan_step,
-        "target_artifact": target_artifact,
-        "source_review_file": review_file,
-        "replan_attempt": replan_attempt,
-        "pre_replan_checksum": None,
-        "trigger_reason": trigger_reason,
-        "blocking_issues": [],
-        "previous_blocking_issue_count": 0,
-        "previous_blocking_issue_severity": 0,
-    }
+    state["replan_context"] = default_replan_context(
+        active=True,
+        source_review_step=step,
+        replan_step=replan_step,
+        target_artifact=target_artifact,
+        review_file=review_file,
+        replan_attempt=replan_attempt,
+        trigger_reason=trigger_reason,
+    )
     target_path_value = artifacts.get(target_artifact)
     if target_path_value:
         target_path = project_root / str(target_path_value)
@@ -124,15 +121,7 @@ def activate_replan(
             "resolved_at": None,
         }
     )
-    state["loop_context"] = {
-        "active": False,
-        "loop_step": None,
-        "refine_step": None,
-        "loop_target_artifact": None,
-        "loop_source_review": None,
-        "loop_iteration": 0,
-        "pre_refine_checksum": None,
-    }
+    state["loop_context"] = default_loop_context()
     clear_last_failure(state)
     state["current_step"] = replan_step
     set_job_status(state, "IN_PROGRESS")

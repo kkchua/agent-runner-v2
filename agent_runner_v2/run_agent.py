@@ -105,7 +105,9 @@ from .execution_result import ExecutionFailure, ExecutionResult
 from . import backend_execution as _backend_execution
 from . import cli_runtime as _cli_runtime
 from . import manual_runtime as _manual_runtime
+from . import manual_runtime_deps as _manual_runtime_deps
 from . import runtime_utils as _runtime_utils
+from . import shared_runtime_deps as _shared_runtime_deps
 from . import step_execution_runtime as _step_execution_runtime
 from . import transition_runtime as _transition_runtime
 from . import workflow_runtime as _workflow_runtime
@@ -148,7 +150,7 @@ def _print_failure(
     failure_code: str,
     failure_source: str,
 ) -> None:
-    _cli_runtime.print_failure(
+        _cli_runtime.print_failure(
         remark=remark,
         state=state,
         template_group=template_group,
@@ -157,7 +159,7 @@ def _print_failure(
         failure_class=failure_class,
         failure_code=failure_code,
         failure_source=failure_source,
-        hooks=sys.modules[__name__],
+        hooks=_manual_runtime_deps,
     )
 
 
@@ -170,7 +172,7 @@ def _step_progress_label(group_cfg: dict[str, Any], step: str | None) -> str:
 
 
 def _format_job_status_summary(state: dict[str, Any], group_cfg: dict) -> str:
-    return _cli_runtime.format_job_status_summary(state, group_cfg, hooks=sys.modules[__name__])
+    return _cli_runtime.format_job_status_summary(state, group_cfg, hooks=_manual_runtime_deps)
 
 
 def _mark_review_started(state: dict[str, Any], *, step: str, step_cfg: dict, coder_used: str) -> None:
@@ -463,7 +465,7 @@ def main(argv: list[str] | None = None) -> int:
         admin_resolution = _cli_runtime.handle_admin_command(
             args=args,
             group_cfg=group_cfg,
-            hooks=sys.modules[__name__],
+            hooks=_manual_runtime_deps,
         )
         if admin_resolution.handled and not admin_resolution.continue_execution:
             return admin_resolution.exit_code
@@ -476,7 +478,7 @@ def main(argv: list[str] | None = None) -> int:
             resolution = _manual_runtime.resolve_manual_run(
                 args=args,
                 group_cfg=group_cfg,
-                hooks=sys.modules[__name__],
+                hooks=_manual_runtime_deps,
             )
             state = resolution.state
             step = resolution.step
@@ -681,7 +683,7 @@ def main(argv: list[str] | None = None) -> int:
 
 
 def _execute_step_command(request_path: Path, result_path: Path | None = None) -> int:
-    return _backend_execution.execute_step_command(request_path, result_path, hooks=sys.modules[__name__])
+    return _backend_execution.execute_step_command(request_path, result_path, hooks=_shared_runtime_deps)
 
 
 def _build_group_cfg_from_execution_spec(spec: dict[str, Any], template_group: str, step_name: str) -> tuple[dict[str, Any], dict[str, Any]]:
@@ -689,7 +691,7 @@ def _build_group_cfg_from_execution_spec(spec: dict[str, Any], template_group: s
 
 
 def _resolve_worker_engine_root(engine_root: str | None) -> tuple[str | None, str | None]:
-    return _backend_execution.resolve_worker_engine_root(engine_root, hooks=sys.modules[__name__])
+    return _backend_execution.resolve_worker_engine_root(engine_root, hooks=_shared_runtime_deps)
 
 
 def _worker_command(*, backend_url: str, worker_id: str, host_name: str | None, poll_seconds: int, once: bool, engine_root: str | None = None, worker_label: str = "live") -> int:
@@ -701,7 +703,7 @@ def _worker_command(*, backend_url: str, worker_id: str, host_name: str | None, 
         once=once,
         engine_root=engine_root,
         worker_label=worker_label,
-        hooks=sys.modules[__name__],
+        hooks=_shared_runtime_deps,
     )
 
 
@@ -719,7 +721,7 @@ def _build_worker_request_payload(
         step_execution_spec=step_execution_spec,
         backend_url=backend_url,
         step_spec_source=step_spec_source,
-        hooks=sys.modules[__name__],
+        hooks=_shared_runtime_deps,
     )
 
 
@@ -727,11 +729,11 @@ def _build_worker_request_payload(
 # continue targeting run_agent.py while the implementation lives in a dedicated
 # module for backend/daemon mode.
 def _invoke_execute_step_subprocess(request_payload: dict[str, Any], engine_root: str | None = None) -> dict[str, Any]:
-    return _backend_execution.invoke_execute_step_subprocess(request_payload, engine_root, hooks=sys.modules[__name__])
+    return _backend_execution.invoke_execute_step_subprocess(request_payload, engine_root, hooks=_shared_runtime_deps)
 
 
 def _job_json_path(*, workflow_name: str, run_code: str) -> Path:
-    return _backend_execution.job_json_path(workflow_name=workflow_name, run_code=run_code, hooks=sys.modules[__name__])
+    return _backend_execution.job_json_path(workflow_name=workflow_name, run_code=run_code, hooks=_shared_runtime_deps)
 
 
 def _write_backend_job_json(
@@ -746,12 +748,12 @@ def _write_backend_job_json(
         step_run=step_run,
         next_step_run=next_step_run,
         last_event=last_event,
-        hooks=sys.modules[__name__],
+        hooks=_shared_runtime_deps,
     )
 
 
 def _submit_worker_result(*, client: BackendClient, run: dict[str, Any], step_run: dict[str, Any], result: dict[str, Any]) -> dict[str, Any]:
-    return _backend_execution.submit_worker_result(client=client, run=run, step_run=step_run, result=result, hooks=sys.modules[__name__])
+    return _backend_execution.submit_worker_result(client=client, run=run, step_run=step_run, result=result, hooks=_shared_runtime_deps)
 
 
 def _finalize_worker_completion(
@@ -766,12 +768,12 @@ def _finalize_worker_completion(
         run=run,
         step_run=step_run,
         completion=completion,
-        hooks=sys.modules[__name__],
+        hooks=_shared_runtime_deps,
     )
 
 
 def _build_execution_state(*, request: ExecutionRequest, group_cfg: dict[str, Any]) -> dict[str, Any]:
-    return _backend_execution.build_execution_state(request=request, group_cfg=group_cfg, hooks=sys.modules[__name__])
+    return _backend_execution.build_execution_state(request=request, group_cfg=group_cfg, hooks=_shared_runtime_deps)
 
 
 def _publish_backend_artifacts(*, state: dict[str, Any], step: str, artifacts: dict[str, str], project_root: Path) -> dict[str, str]:
@@ -780,7 +782,7 @@ def _publish_backend_artifacts(*, state: dict[str, Any], step: str, artifacts: d
         step=step,
         artifacts=artifacts,
         project_root=project_root,
-        hooks=sys.modules[__name__],
+        hooks=_shared_runtime_deps,
     )
 
 
@@ -798,12 +800,12 @@ def _execute_backend_step_request(
         step_cfg=step_cfg,
         state=state,
         effective_root=effective_root,
-        hooks=sys.modules[__name__],
+        hooks=_shared_runtime_deps,
     )
 
 
 def _build_worker_crash_result(*, run: dict[str, Any], step_run: dict[str, Any], error: Exception) -> dict[str, Any]:
-    return _backend_execution.build_worker_crash_result(run=run, step_run=step_run, error=error, hooks=sys.modules[__name__])
+    return _backend_execution.build_worker_crash_result(run=run, step_run=step_run, error=error, hooks=_shared_runtime_deps)
 
 
 PreparedStepExecution = _step_execution_runtime.PreparedStepExecution
@@ -827,7 +829,7 @@ def _prepare_step_execution(
         step_cfg=step_cfg,
         workflow_key_override=workflow_key_override,
         cli_coder=cli_coder,
-        hooks=sys.modules[__name__],
+        hooks=_shared_runtime_deps,
     )
 
 
@@ -845,7 +847,7 @@ def _augment_generated_doc_prompt(
         step=step,
         step_cfg=step_cfg,
         state=state,
-        hooks=sys.modules[__name__],
+        hooks=_shared_runtime_deps,
     )
 
 
@@ -861,7 +863,7 @@ def _generated_doc_frontmatter_contract(
         step=step,
         step_cfg=step_cfg,
         state=state,
-        hooks=sys.modules[__name__],
+        hooks=_shared_runtime_deps,
     )
 
 
@@ -873,7 +875,7 @@ def _master_bootstrap_frontmatter_rows(
     return _step_execution_runtime.master_bootstrap_frontmatter_rows(
         step_cfg=step_cfg,
         state=state,
-        hooks=sys.modules[__name__],
+        hooks=_shared_runtime_deps,
     )
 
 
@@ -895,7 +897,7 @@ def _execute_prepared_step(
         step=step,
         step_cfg=step_cfg,
         effective_root=effective_root,
-        hooks=sys.modules[__name__],
+        hooks=_shared_runtime_deps,
     )
 
 
@@ -913,12 +915,12 @@ def _resolve_step_coder(
         step=step,
         step_cfg=step_cfg,
         cli_coder=cli_coder,
-        hooks=sys.modules[__name__],
+        hooks=_shared_runtime_deps,
     )
 
 
 def _ensure_delivery_folders(target_root: Path) -> None:
-    _workflow_runtime.ensure_delivery_folders(target_root, hooks=sys.modules[__name__])
+    _workflow_runtime.ensure_delivery_folders(target_root, hooks=_shared_runtime_deps)
 
 
 def _load_group(
@@ -930,7 +932,7 @@ def _load_group(
         group_name,
         workspace_root=workspace_root,
         workflow_root=workflow_root,
-        hooks=sys.modules[__name__],
+        hooks=_shared_runtime_deps,
     )
 
 
@@ -939,12 +941,12 @@ def _validate_static_reference_files(workspace_root: Path, group_cfg: dict | Non
         workspace_root,
         group_cfg=group_cfg,
         template_group=template_group,
-        hooks=sys.modules[__name__],
+        hooks=_shared_runtime_deps,
     )
 
 
 def _missing_artifacts(keys: list[str], state: dict) -> list[str]:
-    return _workflow_runtime.missing_artifacts(keys, state, hooks=sys.modules[__name__])
+    return _workflow_runtime.missing_artifacts(keys, state, hooks=_shared_runtime_deps)
 
 
 def _parse_key_value_pairs(values: list[str]) -> dict[str, str]:

@@ -11,6 +11,7 @@ from typing import Any
 
 from .execution_request import ExecutionRequest
 from .execution_result import ExecutionFailure, ExecutionResult
+from .state_defaults import default_loop_context, default_replan_context
 
 
 def build_group_cfg_from_execution_spec(spec: dict[str, Any], template_group: str, step_name: str) -> tuple[dict[str, Any], dict[str, Any]]:
@@ -668,18 +669,9 @@ def build_execution_state(*, request: ExecutionRequest, group_cfg: dict[str, Any
         "created_at": hooks._now_iso(),
         "updated_at": hooks._now_iso(),
         "artifacts": artifacts,
-        "loop_context": {
-            "active": False, "loop_step": None, "refine_step": None,
-            "loop_target_artifact": None, "loop_source_review": None,
-            "loop_iteration": 0, "pre_refine_checksum": None,
-        },
+        "loop_context": default_loop_context(),
         "loop_history": [],
-        "replan_context": {
-            "active": False, "source_review_step": None, "replan_step": None,
-            "target_artifact": None, "source_review_file": None, "replan_attempt": 0,
-            "pre_replan_checksum": None, "trigger_reason": None, "blocking_issues": [],
-            "previous_blocking_issue_count": 0, "previous_blocking_issue_severity": 0,
-        },
+        "replan_context": default_replan_context(),
         "replan_history": [],
         "planning_attempt_count": 0,
         "recovered_from_invalid_result": False,
