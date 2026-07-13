@@ -9,6 +9,7 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
+from .config_loader import load_runner_config
 from .execution_request import ExecutionRequest
 from .execution_result import ExecutionFailure, ExecutionResult
 from .state_defaults import default_loop_context, default_replan_context
@@ -210,14 +211,7 @@ def resolve_worker_engine_root(engine_root: str | None, *, hooks: Any) -> tuple[
                 pass
         return engine_root, version
 
-    config_path = Path.home() / ".ukbe-runner" / "engine" / "config.json"
-    if not config_path.exists():
-        return None, None
-
-    try:
-        cfg = json.loads(config_path.read_text(encoding="utf-8"))
-    except Exception as exc:
-        raise RuntimeError(f"[worker] failed to read engine config {config_path}: {exc}") from exc
+    cfg = load_runner_config()
 
     engine_version = (cfg.get("engine_version") or "").strip()
     if not engine_version:

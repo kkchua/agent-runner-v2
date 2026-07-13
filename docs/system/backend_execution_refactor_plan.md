@@ -151,6 +151,42 @@ Incomplete:
   - `run_agent.py`
 - Backend has `api`, `services`, and `database` folders, but the behavioral split is still weak
 - Backend route handlers still contain too much query and orchestration logic
+- Phase 4 slice 4.2 is now started:
+- Phase 4 slice 4.2 is now completed:
+  - backend vendored runtime package was created at `agent_runner_backend/vendored_runtime/`
+  - the first dependency-light shared-core files were copied mechanically from `agent-runner-v2`
+  - the initial copy baseline now exists inside backend without runtime imports from `agent_runner_v2`
+- Phase 4 slice 4.3 is now started and partially completed:
+  - `agent_runner_backend/workers/agent_worker.py` no longer owns a parallel worker loop implementation
+  - the backend worker now delegates through vendored `backend_execution.worker_command(...)`
+  - backend-specific wrappers remain in `agent_worker.py` so the backend adapter surface stays outside the vendored package
+- Phase 4 slice 4.4 is now started and partially completed:
+  - `arb-agent` is now a real backend worker CLI entrypoint
+  - backend worker CLI reads the single global config file
+  - backend worker supports:
+    - worker id
+    - worker label
+    - backend url
+    - poll seconds
+    - host name
+    - engine root override
+    - `--once`
+  - backend-local execute-step entry wiring now exists:
+    - `agent_runner_backend.workers.execute_step_entry`
+    - `agent_runner_backend.workers.execute_step_runtime_deps`
+  - backend worker adapter now delegates its live hook surface through the backend execute-step runtime deps instead of keeping placeholder subprocess/finalization bodies
+  - backend vendored runtime now includes the minimal additional shared-runtime bridge pieces needed by daemon mode:
+    - `execution_core.py`
+    - minimal `runner_actions.py`
+    - backend-safe terminal `step_completion` action
+  - daemon notifications are now optional at backend finalization time; missing notification modules no longer break worker completion
+  - targeted backend worker regression reached full end-to-end step progression for the migrated workflow before the notification import gap was fixed
+  - current blocker is backend integration test environment stability:
+    - repeated reruns are presently hitting PostgreSQL deadlocks during test fixture workflow sync in `workflow_registry.py`
+    - this appears separate from the worker bridge changes and must be cleared before broader backend regression reruns can be trusted
+- Backend worker config resolution was aligned with the single global config path:
+  - `C:\Users\kengk\.ukbe-runner\config.json`
+  - the old backend worker assumption about `~/.ukbe-runner/engine/config.json` was removed
 
 Phase 3 audit status after revert and baseline verification:
 
@@ -399,14 +435,195 @@ Exit criteria:
 
 ### Phase 4: Vendor-copy the finalized common execution module into backend
 
-- Copy the shared module from `agent-runner-v2` into backend
+- Copy the finalized shared execution module from `agent-runner-v2` into backend
 - Preserve logic and structure
 - Only adjust package/import roots
 - Add backend adapters outside the vendored module
+- Keep backend migration scope limited to migrated plugin workflows only
+- Do not reintroduce backend seeding or non-migrated workflow fixtures
 
 Exit criteria:
 
 - backend uses the same execution logic as `agent-runner-v2`
+
+#### Phase 4 Guardrails
+
+- `agent-runner-v2` remains the source of truth for shared execution logic
+- Backend receives vendor-copied modules; it does not become the design source
+- Only migrated plugin workflows are in daemon/backend execution scope during this phase
+- `00_core_governance_bootstrap_v1` is the only mandatory workflow regression target for this phase
+- Manual local mode must remain unchanged while Phase 4 work proceeds
+- Backend API remains daemon-mode only
+- Backend must not restore `seed_workflow_definitions()`
+- Non-migrated workflows must not be changed as collateral during Phase 4
+
+#### Phase 4 Current Baseline
+
+- Phase 3 is complete enough to begin vendor-copy work
+- Backend already has a first backend-local worker adapter shell under:
+  - `agent_runner_backend/workers/backend_client.py`
+  - `agent_runner_backend/workers/agent_worker.py`
+- That worker shell is incomplete by design:
+  - CLI wiring is still placeholder
+  - execute-step subprocess wiring is still placeholder
+  - it is not yet using the full shared execution core
+- Backend integration tests have already been narrowed to migrated-workflow scope:
+  - the test fixture syncs `00_core_governance_bootstrap_v1`
+  - legacy backend seeding assumptions were removed from the active integration path
+
+#### Phase 4 Detailed Slices
+
+##### Slice 4.1: Freeze the vendor-copy boundary
+
+- Define the exact modules copied from `agent-runner-v2` into backend as the shared execution core
+- Keep the copied surface limited to shared execution logic, not manual-mode orchestration
+- Preserve code shape as closely as possible so future diff-sync stays mechanical
+- Record the owning source modules in this plan before further backend edits
+
+Modules intended for vendor-copy in this phase:
+
+- `execution_request.py`
+- `execution_result.py`
+- `execution_core.py`
+- `failure_runtime.py`
+- `routing_runtime.py`
+- `transition_runtime.py`
+- `recovery_runtime.py`
+- `task_runtime.py`
+- `runtime_utils.py`
+- `state_defaults.py`
+- the shared-runtime portions of:
+  - `backend_execution.py`
+  - `workflow_runtime.py`
+  - `step_execution_runtime.py`
+
+Exit criteria:
+
+- the vendor-copy scope is explicit
+- backend-only adapters are clearly excluded from the copied core
+
+##### Slice 4.2: Create the backend vendored execution package
+
+- Add a dedicated backend package for the vendor-copied execution core
+- Copy files from `agent-runner-v2` with import-root changes only
+- Do not opportunistically redesign file structure during the copy
+- Keep backend-specific wrappers outside the vendored package
+
+Required outcome:
+
+- backend has a stable internal execution package that can be refreshed from `agent-runner-v2`
+
+Exit criteria:
+
+- copied modules import cleanly under backend package roots
+- no copied module imports `agent_runner_v2` directly at runtime
+
+##### Slice 4.3: Add backend runtime adapters around the vendored core
+
+- Build backend-local adapters equivalent to `shared_runtime_deps.py`
+- Backend adapters should provide:
+  - backend client access
+  - workflow job-json helpers if still required
+  - backend worker result submission/finalization hooks
+  - config loading
+  - execution subprocess bridging
+- Keep these adapters thin; they are not allowed to become a second execution implementation
+
+Exit criteria:
+
+- backend worker path can call the vendored execution core through backend-owned adapters
+- adapter functions remain thin wrappers, not reimplementations
+
+##### Slice 4.4: Finish backend worker CLI and engine-resolution path
+
+- Replace placeholder `arb-agent` worker entrypoint behavior with a real CLI
+- Read the single global config:
+  - `C:\Users\kengk\.ukbe-runner\config.json`
+- Support:
+  - worker id
+  - worker label
+  - backend url
+  - poll interval
+  - optional engine root override
+  - single-shot / once mode if still useful for tests
+- Wire execute-step subprocess invocation through the vendored shared execution path
+
+Important constraint:
+
+- backend worker may resolve an installed engine version from the global engine store
+- backend worker must not require the `agent-runner-v2` source repo on `PYTHONPATH`
+
+Exit criteria:
+
+- `arb-agent` is a real backend worker command
+- worker configuration uses the single global config path
+- engine resolution and execute-step invocation work end-to-end
+
+##### Slice 4.5: Narrow backend sync/test scope to migrated workflows only
+
+- Keep backend sync behavior focused on plugin workflows that are already migrated
+- Keep backend integration fixtures limited to `00_core_governance_bootstrap_v1` until further workflow migrations are explicitly approved
+- Remove or quarantine stale tests that assume backend-owned legacy workflows
+
+Exit criteria:
+
+- backend tests do not rely on non-migrated workflow fixtures
+- backend daemon-mode regression coverage is aligned with the current migration scope
+
+##### Slice 4.6: Validate the copied-core contract
+
+- Add contract tests proving backend vendored modules still match `agent-runner-v2` expectations
+- Focus on stable payload boundaries:
+  - `ExecutionRequest`
+  - `ExecutionResult`
+  - failure envelope shape
+  - backend `step_execution_spec`
+- Add smoke coverage for:
+  - worker request payload building
+  - execute-step subprocess wiring
+  - worker result submission/finalization
+
+Exit criteria:
+
+- future drift between copied backend logic and `agent-runner-v2` is detectable by tests
+
+##### Slice 4.7: Run the first daemon-mode migrated workflow through backend
+
+- Use `00_core_governance_bootstrap_v1` as the only mandatory daemon-mode proof workflow
+- Verify:
+  - workflow sync to backend
+  - worker claim / heartbeat / completion
+  - review/refine/validate transitions
+  - artifact registration
+  - final completion path
+- Keep this as the Phase 4 acceptance gate before broader backend-layer refactoring
+
+Exit criteria:
+
+- `00_core_governance_bootstrap_v1` runs successfully through backend daemon mode using backend-owned worker/runtime code
+
+#### Phase 4 Execution Order
+
+Work the slices in this order:
+
+1. Slice 4.1
+2. Slice 4.2
+3. Slice 4.3
+4. Slice 4.4
+5. Slice 4.5
+6. Slice 4.6
+7. Slice 4.7
+
+#### Phase 4 Done Definition
+
+Phase 4 is complete only when all of the following are true:
+
+- backend contains a vendor-copied shared execution core from `agent-runner-v2`
+- backend worker CLI is real, not placeholder
+- backend uses the single global config path
+- backend daemon-mode tests are migrated-workflow only
+- `00_core_governance_bootstrap_v1` succeeds through backend daemon mode
+- manual local mode remains green in `agent-runner-v2`
 
 ### Phase 5: Refactor backend into `API -> Services -> DB`
 

@@ -6,7 +6,7 @@ Invoked via: ukbe-run-agent engine <subcommand>
   install <tag> --local            -- install to repo-local .ukbe-runner/engine/versions/
   install <tag> --from-path <dir>  -- copy from a local source directory (useful for private repos)
   snapshot                         -- snapshot live source into repo-local SNAPSHOT version
-  use <version>                    -- set active version in .ukbe-runner/engine/config.json
+  use <version>                    -- set active version in ~/.ukbe-runner/config.json
   list                             -- list installed versions (global + repo-local)
 """
 from __future__ import annotations
@@ -44,10 +44,6 @@ def _local_versions_dir(project_root: Path) -> Path:
 
 def _local_version_dir(project_root: Path, version: str) -> Path:
     return _local_versions_dir(project_root) / version
-
-
-def _local_config_path(project_root: Path) -> Path:
-    return project_root / ".ukbe-runner" / "engine" / "config.json"
 
 
 # ---------------------------------------------------------------------------
@@ -233,14 +229,13 @@ def cmd_install(
 
 
 def _global_config_path() -> Path:
-    return Path.home() / ".ukbe-runner" / "engine" / "config.json"
+    return Path.home() / ".ukbe-runner" / "config.json"
 
 
 def cmd_use(project_root: Path, version: str, local: bool = False) -> None:
     """Set the active engine version in config.json.
 
-    Defaults to global (~/.ukbe-runner/engine/config.json).
-    Pass local=True to write to the repo-local .ukbe-runner/engine/config.json instead.
+    Writes to the single global config at ~/.ukbe-runner/config.json.
     """
     global_dir = _global_version_dir(version)
     local_dir = _local_version_dir(project_root, version)
@@ -253,7 +248,9 @@ def cmd_use(project_root: Path, version: str, local: bool = False) -> None:
         print("Run: ukbe-run-agent engine list", file=sys.stderr)
         sys.exit(1)
 
-    config_path = _local_config_path(project_root) if local else _global_config_path()
+    if local:
+        print("WARNING: --local config is deprecated; writing to ~/.ukbe-runner/config.json instead.")
+    config_path = _global_config_path()
     config_path.parent.mkdir(parents=True, exist_ok=True)
 
     # Preserve existing config fields; only set defaults for keys not already present
@@ -280,28 +277,21 @@ def cmd_use(project_root: Path, version: str, local: bool = False) -> None:
         store_location = "global"
     else:
         store_location = "local"
-    scope_label = "repo-local" if local else "global"
     print(f"Active engine version set to {version!r} (resolved from {store_location})")
-    print(f"Config ({scope_label}): {config_path}")
+    print(f"Config: {config_path}")
     print(f"Edit {config_path} to set worker_id, backend_url, worker_label, etc.")
     print("Restart the worker to apply.")
 
 
 def cmd_list(project_root: Path) -> None:
     """List all installed engine versions (global + repo-local)."""
-    # Prefer repo-local config; fall back to global config
-    local_cfg = _local_config_path(project_root)
     global_cfg = _global_config_path()
     active = None
-    active_scope = ""
-    for cfg_path, scope in [(local_cfg, "repo-local"), (global_cfg, "global")]:
-        if cfg_path.exists():
-            try:
-                active = json.loads(cfg_path.read_text(encoding="utf-8")).get("engine_version")
-                active_scope = scope
-                break
-            except Exception:
-                pass
+    if global_cfg.exists():
+        try:
+            active = json.loads(global_cfg.read_text(encoding="utf-8")).get("engine_version")
+        except Exception:
+            pass
 
     global_dir = _global_engines_dir()
     local_dir = _local_versions_dir(project_root)
@@ -332,8 +322,7 @@ def cmd_list(project_root: Path) -> None:
         return
 
     if active:
-        cfg_shown = local_cfg if active_scope == "repo-local" else global_cfg
-        print(f"\nActive: {active!r}  [{active_scope} config: {cfg_shown}]")
+        print(f"\nActive: {active!r}  [global config: {global_cfg}]")
     else:
         print(f"\nNo active version set (live source / dev mode).")
         print(f"Set one: ukbe-run-agent engine use <version>")
@@ -365,7 +354,7 @@ def main(argv: list[str] | None = None) -> int:
     p_use = sub.add_parser("use", help="Set the active engine version.")
     p_use.add_argument("version", help="Version name or SNAPSHOT.")
     p_use.add_argument("--local", action="store_true", default=False,
-                       help="Write config to repo-local .ukbe-runner/engine/config.json instead of ~/.ukbe-runner/engine/config.json")
+                       help="Deprecated. Config is now always written to ~/.ukbe-runner/config.json.")
 
     sub.add_parser("list", help="List installed versions (global + repo-local).")
 

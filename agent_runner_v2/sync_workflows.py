@@ -19,6 +19,7 @@ from pathlib import Path
 from urllib import error, request
 
 from .bootstrap.workflows.default.template_groups import TEMPLATE_GROUPS
+from .config_loader import load_runner_config
 from .runtime_context import PACKAGE_ROOT
 from .workflow_packages.loader import (
     bundle_to_template_group_dict,
@@ -124,6 +125,7 @@ def _post_sync(
 
 
 def main() -> int:
+    cfg = load_runner_config()
     parser = argparse.ArgumentParser(
         description="Sync workflow definitions into the backend registry."
     )
@@ -137,10 +139,10 @@ def main() -> int:
     )
     parser.add_argument(
         "--backend-url",
-        default=os.environ.get(
-            "AGENT_RUNNER_BACKEND_URL", "http://127.0.0.1:8100"
-        ),
-        help="Backend base URL (default: http://127.0.0.1:8100)",
+        default=os.environ.get("AGENT_RUNNER_BACKEND_URL")
+        or str(cfg.get("backend_url") or "")
+        or "http://127.0.0.1:8100",
+        help="Backend base URL (default: ~/.ukbe-runner/config.json backend_url, else http://127.0.0.1:8100)",
     )
     parser.add_argument(
         "--preserve-history",

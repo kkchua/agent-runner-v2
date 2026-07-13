@@ -249,11 +249,13 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         # Convenience single-shot variant: reads AGENT_RUNNER_BACKEND_URL and AGENT_RUNNER_WORKER_ID
         # from the environment. Equivalent to: worker --once --backend-url URL --worker-id ID
         import os as _os
+        from .config_loader import load_runner_config as _load_runner_config
+        _cfg = _load_runner_config()
         p = argparse.ArgumentParser(description="Single-shot backend poll (claim one step and exit).")
-        p.add_argument("--backend-url", default=_os.environ.get("AGENT_RUNNER_BACKEND_URL", "http://127.0.0.1:8100"))
+        p.add_argument("--backend-url", default=_os.environ.get("AGENT_RUNNER_BACKEND_URL") or str(_cfg.get("backend_url") or "") or "http://127.0.0.1:8100")
         p.add_argument("--worker-id", default=_os.environ.get("AGENT_RUNNER_WORKER_ID", ""))
         p.add_argument("--host-name", default="")
-        p.add_argument("--engine-root", default="")
+        p.add_argument("--engine-root", default=str(_cfg.get("engine_root") or ""))
         p.add_argument("--worker-label", default=_os.environ.get("WORKER_LABEL", "live"))
         ns = p.parse_args(raw[1:])
         ns.command = "poll"
