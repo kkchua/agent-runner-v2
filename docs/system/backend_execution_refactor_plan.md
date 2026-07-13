@@ -102,6 +102,46 @@ Completed:
 - Phase 3 slice 10 completed:
   - generic path/time/file helpers were extracted from `run_agent.py` into `agent_runner_v2/runtime_utils.py`
   - `run_agent.py` retains the same compatibility hook names while delegating to the shared utility module, reducing direct ownership of non-orchestration concerns
+- Phase 3 Slice B completed:
+  - `agent_runner_v2/workflow_runtime.py` now uses a direct-import shared-runtime contract for:
+    - delivery-folder setup
+    - workflow loading
+    - static-reference validation
+    - artifact discovery
+  - wrapper callers in `manual_runtime_deps.py`, `shared_runtime_deps.py`, and `run_agent.py` were updated together
+  - wrapper-boundary tests were added so future signature drift is caught before runtime
+- Phase 3 Slice C completed:
+  - pure helper logic in `agent_runner_v2/step_execution_runtime.py` now uses a direct-import shared-runtime contract for:
+    - generated-doc prompt augmentation
+    - master bootstrap frontmatter contract generation
+    - master bootstrap frontmatter row resolution
+    - coder resolution
+  - adapter-driven orchestration entrypoints remain hook-based:
+    - `prepare_step_execution()`
+    - `execute_prepared_step()`
+  - wrapper callers in `shared_runtime_deps.py` and `run_agent.py` were updated together
+  - wrapper-boundary tests were added for the new direct helper signatures
+- Phase 3 Slice D completed:
+  - `manual_runtime_deps.py` was reduced to a thinner manual-only adapter:
+    - direct shared-runtime calls remain for artifact discovery and key-value parsing
+    - CLI status-summary formatting no longer requires module-self hook injection
+  - `shared_runtime_deps.py` was reduced to a thinner daemon-only adapter:
+    - stale prompt-governance, workflow-loader, and coder-resolution symbol ownership was removed where those responsibilities now live in direct-import shared modules
+    - only the live daemon adapter surface remains for backend execution and hook-based orchestration entrypoints
+  - hook-surface tests were updated to match the actual adapter contract instead of the older broader compatibility surface
+- Phase 3 Slice E completed:
+  - wrapper-boundary regression coverage now includes:
+    - `manual_runtime_deps.py -> workflow_runtime.py`
+    - `manual_runtime_deps.py -> cli_runtime.py`
+    - `shared_runtime_deps.py -> workflow_runtime.py`
+    - `shared_runtime_deps.py -> step_execution_runtime.py`
+    - `run_agent.py -> workflow_runtime.py`
+    - `run_agent.py -> step_execution_runtime.py`
+  - hook-based adapter seams are now explicitly tested for:
+    - shared runtime direct-call wrappers
+    - pure helper direct-call wrappers
+    - hook-preserving prepare/execute wrappers
+  - the reverted mixed-signature regression pattern is now covered by tests before runtime
 
 Incomplete:
 
@@ -111,6 +151,166 @@ Incomplete:
   - `run_agent.py`
 - Backend has `api`, `services`, and `database` folders, but the behavioral split is still weak
 - Backend route handlers still contain too much query and orchestration logic
+
+Phase 3 audit status after revert and baseline verification:
+
+- Manual local regression baseline is green again on `00_core_governance_bootstrap_v1`
+  - verified with job `00CORE-GEN-20260713-008`
+- The latest post-commit decoupling attempt was reverted because it introduced mixed hook-contract regressions in manual mode
+- The remaining Phase 3 work is not "extract more files"
+  - it is "stabilize dependency contracts across already-extracted modules"
+- `Slice B` is now complete
+- `Slice C` is now complete
+- `Slice D` is now complete
+- `Slice E` is now complete
+- Phase 3 is now complete enough to proceed to Phase 4 vendor-copy work, with `00_core_governance_bootstrap_v1` remaining the manual regression gate
+
+## Phase 3 Boundary Audit
+
+This audit defines which extracted modules are intended to become pure shared runtime modules, which are intended to remain manual-only or daemon-only adapters, and which are currently mixed and must be cleaned up before Phase 4 vendor-copy.
+
+### Category A: Pure shared-runtime modules
+
+These modules are good candidates to be vendored into backend with minimal import-root adjustment:
+
+- `execution_request.py`
+- `execution_result.py`
+- `execution_core.py`
+- `failure_runtime.py`
+- `routing_runtime.py`
+- `transition_runtime.py`
+- `recovery_runtime.py`
+- `task_runtime.py`
+- `runtime_utils.py`
+- `state_defaults.py`
+
+Rules for this category:
+
+- no dependency on `run_agent.py`
+- no dependency on CLI/manual argument parsing
+- no backend API/persistence logic
+- avoid `sys.modules[__name__]` hook indirection unless there is a deliberate adapter boundary
+
+### Category B: Manual-only orchestration modules
+
+These modules are not part of the vendored shared execution core. They should remain local to `agent-runner-v2`:
+
+- `manual_runtime.py`
+- `cli_runtime.py`
+- `manual_runtime_deps.py`
+
+Rules for this category:
+
+- may depend on `job_state.py`
+- may own CLI/admin/manual resume semantics
+- must not become a dependency of daemon/backend execution paths
+
+### Category C: Daemon-only orchestration modules
+
+These modules are daemon/backend adapters. They are not part of the manual-mode source of truth:
+
+- `backend_execution.py`
+- `shared_runtime_deps.py`
+
+Rules for this category:
+
+- may depend on backend worker payloads, job-json persistence, worker claim/completion flow, and backend client behavior
+- must not become required for local manual execution
+
+### Category D: Mixed-contract modules with intentional split boundaries
+
+These modules are extracted and intentionally split between pure helpers and hook-based orchestration entrypoints:
+
+- `workflow_runtime.py`
+- `step_execution_runtime.py`
+
+Current status:
+
+- `workflow_runtime.py` shared helper surface is now normalized to direct-import runtime helpers
+- `step_execution_runtime.py` mixes:
+  - generic one-step preparation/execution logic
+  - prompt-governance augmentation logic
+  - coder-resolution logic
+  - hook-based access to manual/daemon shims
+- in `step_execution_runtime.py`, the split is now explicit:
+  - pure helpers use direct imports
+  - orchestration entrypoints remain adapter-driven by design
+- wrapper-boundary tests now guard both halves of the split contract
+
+## Remaining Phase 3 Checklist
+
+The goal is to make the boundaries explicit and stable, not to maximize extraction count.
+
+### Slice A: Freeze module intent before further edits
+
+- Treat Category A modules as shared-core candidates
+- Treat Category B modules as manual-only
+- Treat Category C modules as daemon-only
+- Do not move Category B or C modules into the vendored shared core
+
+Exit criteria:
+
+- every extracted module is explicitly assigned to one boundary category in this document
+
+### Slice B: Normalize `workflow_runtime.py` contract
+
+- Decide one contract and apply it consistently:
+  - either keep it as a hook-based adapter module
+  - or convert it fully to direct-import shared-runtime helpers
+- Do not partially convert individual functions while leaving sibling wrappers/callers on the old contract
+- If converted to direct imports, update both:
+  - `manual_runtime_deps.py`
+  - `shared_runtime_deps.py`
+- Add targeted tests that call the wrapper modules through the real function signatures they expose
+
+Exit criteria:
+
+- no `workflow_runtime.py` helper has ambiguous "sometimes hooks, sometimes direct import" calling expectations
+
+### Slice C: Normalize `step_execution_runtime.py` contract
+
+- Split the work by responsibility instead of editing opportunistically:
+  - one-step prepare/execute flow
+  - coder resolution
+  - generated-doc prompt augmentation/frontmatter rules
+- Decide which pieces are pure shared-core helpers and which pieces remain adapter-driven
+- Update wrapper call sites in both:
+  - `run_agent.py`
+  - `shared_runtime_deps.py`
+- Keep manual workflow behavior unchanged while tightening the signature boundary
+
+Exit criteria:
+
+- `step_execution_runtime.py` no longer mixes changed function signatures with stale wrappers
+
+### Slice D: Keep CLI/manual and daemon shims thin
+
+- `manual_runtime_deps.py` should only expose the minimum hook surface required by `manual_runtime.py` and manual CLI helpers
+- `shared_runtime_deps.py` should only expose the minimum hook surface required by daemon/backend execution
+- Remove duplicated helper ownership where a stable shared module already exists
+- Do not let `shared_runtime_deps.py` become a second source of truth for generic runtime behavior
+
+Exit criteria:
+
+- both shim modules are narrow adapters, not partial implementations
+
+### Slice E: Add boundary-regression tests before Phase 4
+
+- keep the existing governance workflow manual rerun as the main regression gate
+- add wrapper-smoke tests for:
+  - `manual_runtime_deps.py -> workflow_runtime.py`
+  - `shared_runtime_deps.py -> workflow_runtime.py`
+  - `run_agent.py -> step_execution_runtime.py`
+  - `shared_runtime_deps.py -> step_execution_runtime.py`
+- ensure tests fail if a function signature is changed without synchronizing wrappers
+
+Exit criteria:
+
+- the specific regression pattern from the reverted decoupling slice is covered by tests
+
+Status:
+
+- completed
 
 ## Target Architecture
 

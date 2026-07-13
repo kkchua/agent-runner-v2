@@ -5,15 +5,8 @@ from pathlib import Path
 from typing import Any
 
 from .backend_client import BackendClient
-from .bundle_loader import core_bundles_root, load_project_config, load_workflow_module, resolve_workflow_root
-from .constants import RUN_AGENT_REQUIRED_DOC_DIRS, get_master_docs_output_paths, known_artifact_paths, legacy_artifact_paths
+from .bundle_loader import load_project_config, load_workflow_module, resolve_workflow_root
 from .constants import known_artifact_paths as _known_artifact_paths
-from .documentation_guardrails import (
-    EXECUTION_SCAFFOLD_WORKFLOWS,
-    MASTER_BOOTSTRAP_WORKFLOWS,
-    generated_doc_manifest,
-    managed_banner,
-)
 from .exceptions import PreflightBlockedError
 from .execution_core import invoke_prepared_step
 from .job_state import (
@@ -29,14 +22,11 @@ from .job_state import (
     save_job,
     _update_document_status,
 )
-from .model_config import resolve_coder, resolve_role_alias
-from .runner_logger import log_resolver
 from .runtime_context import ARTIFACT_ROOT, JOBS_ROOT, PACKAGE_ROOT, get_workflow_module, set_context, set_workflow_module
 from .runtime_utils import now_iso as _now_iso, safe_relative_to as _safe_relative_to, save_json as _save_json, save_text as _save_text
 from .step_runner import build_context, prompt_checksum, render_prompt, resolve_prompt_path, run_action, run_step
 from .task_runtime import ensure_execution_task_binding_integrity, ensure_planning_task_queue_integrity
 from .transition_runtime import mark_review_started
-from .workflow_packages.loader import bundle_to_template_group_dict, load_workflow_package
 from .workflow_specs import build_step_execution_spec, get_template_group_cfg, reconcile_step_execution_spec
 from .routing_runtime import predict_next_step_after_approved
 
@@ -49,7 +39,7 @@ DELIVERY_SCAFFOLD_PUBLISH_PATHS = _known_artifact_paths()
 
 
 def _ensure_delivery_folders(target_root: Path) -> None:
-    _workflow_runtime.ensure_delivery_folders(target_root, hooks=sys.modules[__name__])
+    _workflow_runtime.ensure_delivery_folders(target_root)
 
 
 def _load_group(
@@ -61,7 +51,6 @@ def _load_group(
         group_name,
         workspace_root=workspace_root,
         workflow_root=workflow_root,
-        hooks=sys.modules[__name__],
     )
 
 
@@ -74,12 +63,11 @@ def _validate_static_reference_files(
         workspace_root,
         group_cfg=group_cfg,
         template_group=template_group,
-        hooks=sys.modules[__name__],
     )
 
 
 def _missing_artifacts(keys: list[str], state: dict[str, Any]) -> list[str]:
-    return _workflow_runtime.missing_artifacts(keys, state, hooks=sys.modules[__name__])
+    return _workflow_runtime.missing_artifacts(keys, state)
 
 
 def _prepare_step_execution(
@@ -140,7 +128,6 @@ def _resolve_step_coder(
         step=step,
         step_cfg=step_cfg,
         cli_coder=cli_coder,
-        hooks=sys.modules[__name__],
     )
 
 

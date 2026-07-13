@@ -3,6 +3,11 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from .bundle_loader import core_bundles_root
+from .constants import RUN_AGENT_REQUIRED_DOC_DIRS, known_artifact_paths, legacy_artifact_paths
+from .runtime_context import ARTIFACT_ROOT
+from .workflow_packages.loader import bundle_to_template_group_dict, load_workflow_package
+
 
 _REPO_BASED_REFERENCE_KEYS = {
     "PROJECT_ANALYSIS",
@@ -26,8 +31,8 @@ _REPO_BASED_REFERENCE_KEYS = {
 }
 
 
-def ensure_delivery_folders(target_root: Path, *, hooks: Any) -> None:
-    for folder in hooks.RUN_AGENT_REQUIRED_DOC_DIRS:
+def ensure_delivery_folders(target_root: Path) -> None:
+    for folder in RUN_AGENT_REQUIRED_DOC_DIRS:
         (target_root / folder).mkdir(parents=True, exist_ok=True)
 
 
@@ -36,14 +41,13 @@ def load_group(
     *,
     workspace_root: Path | None = None,
     workflow_root: Path | None = None,
-    hooks: Any,
 ) -> dict[str, Any]:
     if workflow_root is not None:
         pkg_dir = workflow_root / group_name
         manifest = pkg_dir / "workflow.toml"
         if manifest.is_file():
-            bundle = hooks.load_workflow_package(pkg_dir)
-            group_dict = hooks.bundle_to_template_group_dict(bundle)
+            bundle = load_workflow_package(pkg_dir)
+            group_dict = bundle_to_template_group_dict(bundle)
             group_dict["_workflow_bundle"] = bundle
             return group_dict
         if pkg_dir.is_dir():
@@ -52,7 +56,9 @@ def load_group(
                 f"but no workflow.toml found."
             )
 
-    bundle = hooks.get_workflow_module()
+    from .runtime_context import get_workflow_module
+
+    bundle = get_workflow_module()
     if bundle is None:
         raise RuntimeError("Workflow module is not loaded. Runtime must use the global workflow bundle.")
     template_groups = bundle.TEMPLATE_GROUPS
@@ -67,7 +73,6 @@ def validate_static_reference_files(
     *,
     group_cfg: dict[str, Any] | None = None,
     template_group: str = "",
-    hooks: Any,
 ) -> None:
     if template_group in ("00_master_docs_bootstrap_v1", "00_master_docs_bootstrap_v2", "10_execution_scaffold_v1", "10_execution_scaffold_v2", "delivery_scaffold_v1") or template_group.startswith("delivery_scaffold"):
         return
@@ -78,7 +83,7 @@ def validate_static_reference_files(
     if not reference_files:
         return
 
-    global_bundle_root = hooks.core_bundles_root() / "current"
+    global_bundle_root = core_bundles_root() / "current"
     missing: list[str] = []
 
     for key, rel_path in reference_files.items():
@@ -101,23 +106,23 @@ def validate_static_reference_files(
         raise FileNotFoundError("Missing static reference file(s):\n" + "\n".join(missing))
 
 
-def missing_artifacts(keys: list[str], state: dict[str, Any], *, hooks: Any) -> list[str]:
+def missing_artifacts(keys: list[str], state: dict[str, Any]) -> list[str]:
     missing: list[str] = []
     if "artifacts" not in state or state["artifacts"] is None:
         state["artifacts"] = {}
     artifacts = state["artifacts"]
-    known_paths = hooks.known_artifact_paths()
-    legacy_paths = hooks.legacy_artifact_paths()
+    known_paths = known_artifact_paths()
+    legacy_paths = legacy_artifact_paths()
     for key in keys:
         value = artifacts.get(key)
-        if value and (hooks.ARTIFACT_ROOT / value).exists():
+        if value and (ARTIFACT_ROOT / value).exists():
             continue
         known_path = known_paths.get(key)
-        if known_path and (hooks.ARTIFACT_ROOT / known_path).exists():
+        if known_path and (ARTIFACT_ROOT / known_path).exists():
             artifacts[key] = known_path
             continue
         for legacy_path in legacy_paths.get(key, []):
-            if legacy_path and (hooks.ARTIFACT_ROOT / legacy_path).exists():
+            if legacy_path and (ARTIFACT_ROOT / legacy_path).exists():
                 artifacts[key] = legacy_path
                 break
         else:
