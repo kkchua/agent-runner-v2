@@ -1,9 +1,6 @@
 from __future__ import annotations
 
-import sys
-
 from .cli_runtime import format_job_status_summary, step_progress_label
-from .constants import known_artifact_paths, legacy_artifact_paths
 from .failure_runtime import clear_last_failure
 from .job_state import (
     approve_step,
@@ -32,7 +29,7 @@ from . import workflow_runtime as _workflow_runtime
 
 
 def _missing_artifacts(keys: list[str], state: dict) -> list[str]:
-    return _workflow_runtime.missing_artifacts(keys, state, hooks=sys.modules[__name__])
+    return _workflow_runtime.missing_artifacts(keys, state)
 
 
 def _parse_key_value_pairs(values: list[str]) -> dict[str, str]:
@@ -44,7 +41,7 @@ def _step_progress_label(group_cfg: dict, step: str | None) -> str:
 
 
 def _format_job_status_summary(state: dict, group_cfg: dict) -> str:
-    return format_job_status_summary(state, group_cfg, hooks=sys.modules[__name__])
+    return format_job_status_summary(state, group_cfg, get_job_status=get_job_status)
 
 
 def _build_task_execution_binding_from_task_file(task_file: str) -> dict:

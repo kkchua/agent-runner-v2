@@ -198,7 +198,12 @@ def step_progress_label(group_cfg: dict[str, Any], step: str | None) -> str:
     return f"step {index} of {total}"
 
 
-def format_job_status_summary(state: dict[str, Any], group_cfg: dict[str, Any], *, hooks: Any) -> str:
+def format_job_status_summary(
+    state: dict[str, Any],
+    group_cfg: dict[str, Any],
+    *,
+    get_job_status: Any,
+) -> str:
     current_step = state.get("current_step")
     current_progress = step_progress_label(group_cfg, current_step)
     completed_steps = list(state.get("completed_steps", []))
@@ -206,7 +211,7 @@ def format_job_status_summary(state: dict[str, Any], group_cfg: dict[str, Any], 
     lines = [
         f"Job ID:        {state.get('job_id')}",
         f"Template:      {state.get('template_group')}",
-        f"Status:        {hooks.get_job_status(state)}",
+        f"Status:        {get_job_status(state)}",
         f"Current Step:  {current_step}",
         f"Progress:      {current_progress}",
         f"Completed:     {len(completed_steps)} of {total_steps}",

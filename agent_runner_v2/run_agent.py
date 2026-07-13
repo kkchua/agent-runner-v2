@@ -172,7 +172,7 @@ def _step_progress_label(group_cfg: dict[str, Any], step: str | None) -> str:
 
 
 def _format_job_status_summary(state: dict[str, Any], group_cfg: dict) -> str:
-    return _cli_runtime.format_job_status_summary(state, group_cfg, hooks=_manual_runtime_deps)
+    return _cli_runtime.format_job_status_summary(state, group_cfg, get_job_status=get_job_status)
 
 
 def _mark_review_started(state: dict[str, Any], *, step: str, step_cfg: dict, coder_used: str) -> None:
@@ -847,7 +847,6 @@ def _augment_generated_doc_prompt(
         step=step,
         step_cfg=step_cfg,
         state=state,
-        hooks=_shared_runtime_deps,
     )
 
 
@@ -863,7 +862,6 @@ def _generated_doc_frontmatter_contract(
         step=step,
         step_cfg=step_cfg,
         state=state,
-        hooks=_shared_runtime_deps,
     )
 
 
@@ -875,7 +873,6 @@ def _master_bootstrap_frontmatter_rows(
     return _step_execution_runtime.master_bootstrap_frontmatter_rows(
         step_cfg=step_cfg,
         state=state,
-        hooks=_shared_runtime_deps,
     )
 
 
@@ -915,12 +912,11 @@ def _resolve_step_coder(
         step=step,
         step_cfg=step_cfg,
         cli_coder=cli_coder,
-        hooks=_shared_runtime_deps,
     )
 
 
 def _ensure_delivery_folders(target_root: Path) -> None:
-    _workflow_runtime.ensure_delivery_folders(target_root, hooks=_shared_runtime_deps)
+    _workflow_runtime.ensure_delivery_folders(target_root)
 
 
 def _load_group(
@@ -932,7 +928,6 @@ def _load_group(
         group_name,
         workspace_root=workspace_root,
         workflow_root=workflow_root,
-        hooks=_shared_runtime_deps,
     )
 
 
@@ -941,12 +936,11 @@ def _validate_static_reference_files(workspace_root: Path, group_cfg: dict | Non
         workspace_root,
         group_cfg=group_cfg,
         template_group=template_group,
-        hooks=_shared_runtime_deps,
     )
 
 
 def _missing_artifacts(keys: list[str], state: dict) -> list[str]:
-    return _workflow_runtime.missing_artifacts(keys, state, hooks=_shared_runtime_deps)
+    return _workflow_runtime.missing_artifacts(keys, state)
 
 
 def _parse_key_value_pairs(values: list[str]) -> dict[str, str]:

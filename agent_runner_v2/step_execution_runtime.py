@@ -5,6 +5,15 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from .constants import get_master_docs_output_paths, known_artifact_paths
+from .documentation_guardrails import (
+    EXECUTION_SCAFFOLD_WORKFLOWS,
+    MASTER_BOOTSTRAP_WORKFLOWS,
+    generated_doc_manifest,
+    managed_banner,
+)
+from .model_config import resolve_coder, resolve_role_alias
+from .runner_logger import log_resolver
 from .step_runner import StepResult
 
 
@@ -91,7 +100,6 @@ def prepare_step_execution(
         step=step,
         step_cfg=step_cfg,
         state=state,
-        hooks=hooks,
     )
     prompt_text = hooks.render_prompt(template_text, context, step_cfg=step_cfg)
     checksum = hooks.prompt_checksum(prompt_text)
@@ -130,19 +138,17 @@ def augment_generated_doc_prompt(
     step: str,
     step_cfg: dict[str, Any],
     state: dict[str, Any],
-    hooks: Any,
 ) -> str:
-    if template_group not in hooks.MASTER_BOOTSTRAP_WORKFLOWS and template_group not in hooks.EXECUTION_SCAFFOLD_WORKFLOWS:
+    if template_group not in MASTER_BOOTSTRAP_WORKFLOWS and template_group not in EXECUTION_SCAFFOLD_WORKFLOWS:
         return template_text
 
-    banner = hooks.managed_banner(workflow=template_group, step=step)
-    manifest = hooks.generated_doc_manifest(template_group=template_group, state=state)
+    banner = managed_banner(workflow=template_group, step=step)
+    manifest = generated_doc_manifest(template_group=template_group, state=state)
     frontmatter_contract = generated_doc_frontmatter_contract(
         template_group=template_group,
         step=step,
         step_cfg=step_cfg,
         state=state,
-        hooks=hooks,
     )
     return (
         template_text
@@ -163,12 +169,11 @@ def generated_doc_frontmatter_contract(
     step: str,
     step_cfg: dict[str, Any],
     state: dict[str, Any],
-    hooks: Any,
 ) -> str:
-    if template_group not in hooks.MASTER_BOOTSTRAP_WORKFLOWS:
+    if template_group not in MASTER_BOOTSTRAP_WORKFLOWS:
         return ""
 
-    contract_rows = master_bootstrap_frontmatter_rows(step_cfg=step_cfg, state=state, hooks=hooks)
+    contract_rows = master_bootstrap_frontmatter_rows(step_cfg=step_cfg, state=state)
     if not contract_rows:
         return ""
 
@@ -211,7 +216,6 @@ def master_bootstrap_frontmatter_rows(
     *,
     step_cfg: dict[str, Any],
     state: dict[str, Any],
-    hooks: Any,
 ) -> list[tuple[str, str, str]]:
     metadata_by_artifact = {
         "PROJECT_ANALYSIS": ("SYS-00-PA", "system"),
@@ -237,8 +241,8 @@ def master_bootstrap_frontmatter_rows(
     }
     job_id = str(state.get("job_id") or "{job_id}")
     mode = str((step_cfg.get("mode") or state.get("current_mode") or "bootstrap"))
-    output_paths = hooks.get_master_docs_output_paths(job_id=job_id, mode=mode)
-    default_paths = hooks.known_artifact_paths()
+    output_paths = get_master_docs_output_paths(job_id=job_id, mode=mode)
+    default_paths = known_artifact_paths()
     rows: list[tuple[str, str, str]] = []
     for artifact_key in list(step_cfg.get("produces") or []):
         metadata = metadata_by_artifact.get(str(artifact_key))
@@ -315,7 +319,6 @@ def resolve_step_coder(
     step: str,
     step_cfg: dict[str, Any],
     cli_coder: str | None,
-    hooks: Any,
 ) -> tuple[str, str | None, str | None, dict[str, Any] | None]:
     coder_cfg = step_cfg.get("coder", {})
     bundle = step_cfg.get("_workflow_bundle")
@@ -330,20 +333,20 @@ def resolve_step_coder(
 
     original = chosen
     resolved_role: str | None = None
-    role_alias = hooks.resolve_role_alias(original, bundle_root=bundle_root)
+    role_alias = resolve_role_alias(original, bundle_root=bundle_root)
     if role_alias:
         resolved_role = original
         chosen = role_alias
 
-    resolved_config = hooks.resolve_coder(chosen)
+    resolved_config = resolve_coder(chosen)
     if resolved_config is not None:
         actual_coder = resolved_config.get("coder", chosen)
-        hooks.log_resolver(original, f"{actual_coder} (model={resolved_config.get('model', '')})", is_alias=True)
+        log_resolver(original, f"{actual_coder} (model={resolved_config.get('model', '')})", is_alias=True)
         if shutil.which(actual_coder) is None:
             raise FileNotFoundError(f"Coder executable not found: {actual_coder!r} (alias {original!r})")
         chosen = actual_coder
     else:
-        hooks.log_resolver(original, original, is_alias=False)
+        log_resolver(original, original, is_alias=False)
         if shutil.which(chosen) is None:
             raise FileNotFoundError(f"Coder executable not found in PATH: {chosen!r}")
 
