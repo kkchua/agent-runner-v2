@@ -19,6 +19,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from .config_loader import load_runner_config
 from .runtime_context import GLOBAL_RUNNER_HOME
 
 
@@ -43,13 +44,7 @@ def _utcnow_iso() -> str:
 
 
 def _load_config() -> dict:
-    path = Path.home() / '.ukbe-runner' / 'engine' / 'config.json'
-    if path.exists():
-        try:
-            return json.loads(path.read_text(encoding='utf-8'))
-        except Exception:
-            pass
-    return {}
+    return load_runner_config()
 
 
 def _setting(cfg: dict, env_key: str, config_key: str, default: str) -> str:

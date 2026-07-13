@@ -22,7 +22,7 @@ set "TARGET_PROJECT_ROOT=D:\MyProjectSpace\01_Workflows\agent-runner-v2"
 set "INITIATIVE_ID="
 set "WORKER_LABEL=live"
 set "WORKER_ID="
-set "BACKEND_URL=http://127.0.0.1:8100"
+set "BACKEND_URL="
 set "CODER="
 
 REM ==================================================================
@@ -81,7 +81,7 @@ echo  Worker ID:       ^<not pinned^>
 if not "!BACKEND_URL!"=="" (
 echo  Backend URL:     !BACKEND_URL!
 ) else (
-echo  Backend URL:     ^<from config.json / CLI default^>
+echo  Backend URL:     ^<from C:\Users\kengk\.ukbe-runner\config.json / CLI default^>
 )
 echo ===========================================================================
 echo(

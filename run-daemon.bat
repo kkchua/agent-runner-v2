@@ -26,7 +26,7 @@ set "AGENT_RUNNER_ROOT=D:\MyProjectSpace\01_Workflows\agent-runner-v2"
 REM Optional daemon identity and routing
 REM set "WORKER_ID=kode-worker-01"
 set "WORKER_LABEL=live"
-set "BACKEND_URL=http://127.0.0.1:8100"
+set "BACKEND_URL="
 
 REM Optional daemon tuning (leave blank to use config.json / CLI defaults)
 set "STEP_SPEC_SOURCE=global"
@@ -84,7 +84,7 @@ echo  Worker Label:    ^<from config.json / CLI default^>
 if not "!BACKEND_URL!"=="" (
 echo  Backend URL:     !BACKEND_URL!
 ) else (
-echo  Backend URL:     ^<from config.json / CLI default^>
+echo  Backend URL:     ^<from C:\Users\kengk\.ukbe-runner\config.json / CLI default^>
 )
 if not "!STEP_SPEC_SOURCE!"=="" (
 echo  Step Spec:       !STEP_SPEC_SOURCE!

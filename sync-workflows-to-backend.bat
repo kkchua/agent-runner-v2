@@ -22,7 +22,7 @@ REM EDIT THESE VARIABLES to match your setup:
 REM ==================================================================
 
 set "AGENT_RUNNER_ROOT=D:\MyProjectSpace\01_Workflows\agent-runner-v2"
-set "BACKEND_URL=http://127.0.0.1:8100"
+set "BACKEND_URL="
 
 REM ==================================================================
 REM No changes needed below this line.
@@ -37,12 +37,20 @@ if not exist "%AGENT_RUNNER_ROOT%" (
 echo ===========================================================================
 echo  Workflow Sync Publish
 echo ===========================================================================
+if not "%BACKEND_URL%"=="" (
 echo  Backend URL:  %BACKEND_URL%
+) else (
+echo  Backend URL:  ^<from C:\Users\kengk\.ukbe-runner\config.json / CLI default^>
+)
 echo ===========================================================================
 echo(
 
 REM Use .venv Python to call the runner-side sync script
-"%~dp0.venv\Scripts\python.exe" -m agent_runner_v2.sync_workflows --backend-url "%BACKEND_URL%" %*
+if not "%BACKEND_URL%"=="" (
+    "%~dp0.venv\Scripts\python.exe" -m agent_runner_v2.sync_workflows --backend-url "%BACKEND_URL%" %*
+) else (
+    "%~dp0.venv\Scripts\python.exe" -m agent_runner_v2.sync_workflows %*
+)
 set "EXIT_CODE=!ERRORLEVEL!"
 
 if "!EXIT_CODE!"=="0" goto :success

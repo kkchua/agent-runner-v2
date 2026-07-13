@@ -2,7 +2,7 @@
 
 Invoked via: ukbe-run-agent approve <run-id> [--reject] [--feedback "notes"]
 
-Reads backend_url from ~/.ukbe-runner/engine/config.json by default.
+Reads backend_url from ~/.ukbe-runner/config.json by default.
 """
 from __future__ import annotations
 
@@ -10,21 +10,13 @@ import argparse
 import json
 import os
 import sys
-from pathlib import Path
 
 from .backend_client import BackendClient
+from .config_loader import load_runner_config
 
 
 def _load_config() -> dict:
-    local_cfg = Path(".ukbe-runner") / "engine" / "config.json"
-    global_cfg = Path.home() / ".ukbe-runner" / "engine" / "config.json"
-    path = local_cfg if local_cfg.exists() else global_cfg
-    if path.exists():
-        try:
-            return json.loads(path.read_text(encoding="utf-8"))
-        except Exception:
-            pass
-    return {}
+    return load_runner_config()
 
 
 def main(argv: list[str] | None = None) -> int:

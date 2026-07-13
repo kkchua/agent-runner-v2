@@ -2,30 +2,21 @@
 
 Invoked via: ukbe-run-agent submit --workflow-name <name> [options]
 
-Reads backend_url, worker_id, and worker_label from ~/.ukbe-runner/engine/config.json
+Reads backend_url, worker_id, and worker_label from ~/.ukbe-runner/config.json
 by default. All options can be overridden via flags or env vars.
 """
 from __future__ import annotations
 
 import argparse
-import json
 import os
 import sys
-from pathlib import Path
 
 from .backend_client import BackendClient
+from .config_loader import load_runner_config
 
 
 def _load_config() -> dict:
-    local_cfg = Path(".ukbe-runner") / "engine" / "config.json"
-    global_cfg = Path.home() / ".ukbe-runner" / "engine" / "config.json"
-    path = local_cfg if local_cfg.exists() else global_cfg
-    if path.exists():
-        try:
-            return json.loads(path.read_text(encoding="utf-8"))
-        except Exception:
-            pass
-    return {}
+    return load_runner_config()
 
 
 def _parse_kv(pairs: list[str], flag: str) -> dict[str, str] | None:

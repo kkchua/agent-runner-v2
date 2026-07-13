@@ -32,7 +32,7 @@ set "INITIATIVE_ID="
 REM Optional backend routing and overrides
 set "WORKER_LABEL=live"
 set "WORKER_ID="
-set "BACKEND_URL=http://127.0.0.1:8100"
+set "BACKEND_URL="
 set "CODER="
 
 REM ==================================================================
@@ -94,7 +94,7 @@ echo  Worker ID:       ^<not pinned^>
 if not "!BACKEND_URL!"=="" (
 echo  Backend URL:     !BACKEND_URL!
 ) else (
-echo  Backend URL:     ^<from config.json / CLI default^>
+echo  Backend URL:     ^<from C:\Users\kengk\.ukbe-runner\config.json / CLI default^>
 )
 echo ===========================================================================
 echo(
