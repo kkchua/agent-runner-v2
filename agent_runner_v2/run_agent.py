@@ -764,12 +764,14 @@ def _finalize_worker_completion(
     run: dict[str, Any],
     step_run: dict[str, Any],
     completion: dict[str, Any] | None,
+    step_execution_spec: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     return _backend_execution.finalize_worker_completion(
         client=client,
         run=run,
         step_run=step_run,
         completion=completion,
+        step_execution_spec=step_execution_spec,
         hooks=_shared_runtime_deps,
     )
 

@@ -32,6 +32,30 @@ AUTHORITATIVE_STEP_SPEC_KEYS = {
 }
 
 
+TRANSPORT_RAW_CONFIG_KEYS = {
+    "prompt_file",
+    "action",
+    "edit_mode",
+    "result_meta_key",
+    "result_meta_key_from_context",
+    "template_ref",
+    "target_artifact",
+    "required_inputs",
+    "optional_inputs",
+    "immutable_inputs",
+    "produces",
+    "updates",
+    "coder",
+    "enable_notifications",
+    "on_reject_refine",
+    "requires_human_approval_after",
+    "loop_returns_to",
+    "replan_returns_to",
+    "produced_document_status",
+    "post_action",
+}
+
+
 def load_workflow_definition(
     *,
     workspace_root: Path,
@@ -57,6 +81,14 @@ def get_template_group_cfg(
         valid = ", ".join(sorted(template_groups))
         raise ValueError(f"Unknown template group {template_group!r}. Valid groups: {valid}")
     return copy.deepcopy(template_groups[template_group])
+
+
+def build_transport_raw_config(step_cfg: dict[str, Any]) -> dict[str, Any]:
+    transport_cfg: dict[str, Any] = {}
+    for key in TRANSPORT_RAW_CONFIG_KEYS:
+        if key in step_cfg:
+            transport_cfg[key] = copy.deepcopy(step_cfg[key])
+    return transport_cfg
 
 
 def build_step_execution_spec(
@@ -91,7 +123,7 @@ def build_step_execution_spec(
         "immutable_inputs": [{"artifact_key": key} for key in list(step_cfg.get("immutable_inputs") or [])],
         "produces": [{"artifact_key": key} for key in list(step_cfg.get("produces") or [])],
         "updates": [{"artifact_key": key} for key in list(step_cfg.get("updates") or [])],
-        "raw_config": step_cfg,
+        "raw_config": build_transport_raw_config(step_cfg),
         "job_prefix": group_cfg.get("job_prefix"),
         "job_init_step": group_cfg.get("job_init_step"),
         "job_init_inputs": list(group_cfg.get("job_init_inputs") or []),

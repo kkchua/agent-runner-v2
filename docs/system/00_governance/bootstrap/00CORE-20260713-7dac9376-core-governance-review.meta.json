@@ -1,0 +1,28 @@
+{
+  "schema_version": "v2",
+  "coder_result": {
+    "status": "APPROVED",
+    "remark": "Core governance docs approved - all four files pass scope, ownership, consistency, and forbidden pattern checks. DOCUMENTATION_STANDARD.md contains no repo-derived artifact names or filename examples.",
+    "artifacts": {
+      "REVIEW_FILE_SUGGESTED": "docs/system/00_governance/bootstrap/00CORE-20260713-7dac9376-core-governance-review.md"
+    },
+    "recorded_at": "2026-07-13T21:52:11+08:00"
+  },
+  "runner_data": {
+    "step": "review_core_governance_docs",
+    "coder_used": "qwen",
+    "invoked_at": "2026-07-13T21:52:11",
+    "finished_at": "2026-07-13T21:56:12",
+    "prompt_checksum": "sha256:1f683c22cda91a1680306dbefcd8ef5fdfc019b86c81c6577f8e547a50f554a6",
+    "allowed_write_paths": [
+      "docs\\system\\00_governance\\bootstrap\\00CORE-20260713-7dac9376-core-governance-review.md",
+      "docs\\system\\00_governance\\bootstrap\\00CORE-20260713-7dac9376-core-governance-review.meta.json"
+    ],
+    "changed_paths": [
+      "docs\\system\\00_governance\\bootstrap\\00CORE-20260713-7dac9376-core-governance-review.md",
+      "docs\\system\\00_governance\\bootstrap\\00CORE-20260713-7dac9376-core-governance-review.meta.json"
+    ],
+    "enriched_at": "2026-07-13T21:56:12",
+    "runner_version": "v2"
+  }
+}

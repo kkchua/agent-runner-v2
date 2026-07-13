@@ -8,7 +8,9 @@ by default. All options can be overridden via flags or env vars.
 from __future__ import annotations
 
 import argparse
+import json
 import os
+import re
 import sys
 
 from .backend_client import BackendClient
@@ -28,6 +30,22 @@ def _parse_kv(pairs: list[str], flag: str) -> dict[str, str] | None:
         k, v = kv.split("=", 1)
         result[k] = v
     return result or None
+
+
+def _build_error_payload(exc: RuntimeError) -> dict[str, str]:
+    message = str(exc)
+    workflow_not_found = re.search(r"Workflow '([^']+)' not found", message)
+    if workflow_not_found:
+        workflow_name = workflow_not_found.group(1)
+        return {
+            "status": "error",
+            "code": "workflow_not_found",
+            "message": (
+                f"Workflow '{workflow_name}' is not registered in the backend. "
+                "Sync workflow definitions first or submit a migrated backend-supported workflow."
+            ),
+        }
+    return {"status": "error", "message": message}
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -89,5 +107,5 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps(result, indent=2, ensure_ascii=False))
         return 0
     except RuntimeError as e:
-        print(json.dumps({"status": "error", "message": str(e)}), file=sys.stderr)
+        print(json.dumps(_build_error_payload(e), ensure_ascii=False), file=sys.stderr)
         return 1

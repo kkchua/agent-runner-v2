@@ -23,6 +23,18 @@ class DummyProc:
         self._poll_values = [0]
 
 
+def test_resolve_subprocess_cwd_falls_back_when_project_root_missing(tmp_path):
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+
+    resolved = daemon_module._resolve_subprocess_cwd(
+        project_root=str(tmp_path / "missing-project"),
+        workspace_root=str(workspace),
+    )
+
+    assert resolved == workspace.resolve()
+
+
 def test_run_supervisor_spawns_child_and_emits_child_heartbeat(monkeypatch, tmp_path):
     heartbeats: list[dict] = []
     submissions: list[dict] = []

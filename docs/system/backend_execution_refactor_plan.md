@@ -4,6 +4,37 @@
 
 This document is the single source of truth for the backend execution refactor.
 
+## Architecture Correction
+
+The current implementation drifted away from the intended design during the daemon-mode bring-up. This section supersedes any earlier assumption that backend should carry workflow execution knowledge.
+
+The intended steady-state architecture is:
+
+1. `agent-runner-v2` owns all workflow execution knowledge
+   - workflow loading
+   - step preparation
+   - coder resolution
+   - prompt rendering
+   - action dispatch
+   - refine/review/validation/audit execution behavior
+   - notification behavior
+
+2. Manual mode and daemon mode must use the same shared workflow execution logic
+   - manual trigger is one entrypoint into the shared execution runtime
+   - daemon worker is another entrypoint into the same shared execution runtime
+   - mode-specific differences must be limited to transport, persistence, and supervision
+
+3. Backend must not own workflow execution knowledge
+   - backend stores workflow definitions, runs, step-runs, artifacts, reviews, and events
+   - backend claims work to workers
+   - backend accepts completion payloads from workers
+   - backend persists state transitions produced by worker execution results
+   - backend must not become a second workflow execution engine
+
+4. Vendored backend runtime is transitional only
+   - any backend vendored execution code exists only to keep current daemon mode working while refactor is in progress
+   - the target is to shrink and eventually remove backend-owned execution behavior, not expand it
+
 There are two operation modes:
 
 1. Manual local mode
@@ -142,6 +173,24 @@ Completed:
     - pure helper direct-call wrappers
     - hook-preserving prepare/execute wrappers
   - the reverted mixed-signature regression pattern is now covered by tests before runtime
+- Phase D2 slice 1 completed:
+  - backend worker entrypoints now delegate to `agent_runner_v2` shared runtime instead of owning an independent execution loop
+  - `agent_runner_backend/workers/agent_worker.py` is now a compatibility shim over:
+    - `agent_runner_v2.backend_execution.worker_command()`
+    - `agent_runner_v2.backend_execution.build_worker_request_payload()`
+    - `agent_runner_v2.backend_execution.invoke_execute_step_subprocess()`
+  - `agent_runner_backend/workers/execute_step_entry.py` now delegates directly to:
+    - `agent_runner_v2.backend_execution.execute_step_command()`
+  - backend-side regression coverage was added to protect the compatibility wrapper boundary
+- Phase D2 slice 2 completed:
+  - backend worker completion/reporting helpers now delegate to `agent_runner_v2.backend_execution` for:
+    - worker crash result shaping
+    - worker result submission
+    - worker completion finalization
+    - local `job.json` projection updates
+  - backend worker wrapper coverage now protects both:
+    - worker-loop delegation
+    - completion/reporting delegation
 
 Incomplete:
 
@@ -151,6 +200,214 @@ Incomplete:
   - `run_agent.py`
 - Backend has `api`, `services`, and `database` folders, but the behavioral split is still weak
 - Backend route handlers still contain too much query and orchestration logic
+- Daemon mode still has execution-path drift from manual mode in several adapter seams
+- Backend still contains vendored runtime code that duplicates shared workflow execution behavior
+- Some daemon-mode fixes have required mirrored changes in vendored backend code, which is a symptom of the current transitional state rather than the intended final architecture
+- Backend vendored runtime is still present for compatibility and has not yet been reduced to a minimal or removable surface
+
+## Daemon Refactor Phases
+
+This phase plan corrects the architecture so daemon mode uses the `agent-runner-v2` shared execution logic directly, while backend is reduced to DB/API orchestration only.
+
+### Phase D1: Freeze the execution source of truth
+
+Objective:
+
+- Declare `agent-runner-v2` as the only source of truth for workflow execution behavior
+
+Required outcomes:
+
+- New execution-behavior fixes must land in `agent-runner-v2` first
+- Backend changes must be limited to:
+  - DB schema / persistence
+  - API serialization
+  - worker claim / complete endpoints
+  - orchestration-safe transport payloads
+- Vendored backend runtime must not gain new workflow semantics unless required as a temporary compatibility bridge
+
+Exit criteria:
+
+- This document is updated and treated as the governing architecture statement
+- Future daemon parity work is evaluated against this rule before implementation
+
+### Phase D2: Reduce daemon-mode adapter responsibility
+
+Objective:
+
+- Ensure daemon supervision only coordinates child execution and backend transport, without re-owning workflow behavior
+
+Required outcomes:
+
+- `agent_runner_v2/daemon.py` remains responsible only for:
+  - polling backend for claimed work
+  - spawning child execution
+  - heartbeats
+  - timeout / stall supervision
+  - result submission
+- daemon supervisor must not make workflow routing decisions beyond passing the child result to backend completion handling
+- child execution must continue to run through the same shared execution modules used by manual mode
+
+Exit criteria:
+
+- daemon-specific bugs are localized to supervision, path handling, or transport, not step semantics
+
+### Phase D3: Make backend step specs transport-only
+
+Objective:
+
+- Keep backend step-execution payloads as transport envelopes, not a second execution definition system
+
+Required outcomes:
+
+- backend step payloads may include the data needed to execute a claimed step, but must not reinterpret workflow rules
+- step payload reconstruction in daemon mode must preserve:
+  - prompt path
+  - result-meta keys
+  - coder role config
+  - package-local action availability
+  - step notification flags
+- backend serialization logic must serve the shared runtime rather than competing with it
+
+Exit criteria:
+
+- daemon child requests can execute a step entirely through the shared runtime without backend-owned fallback logic
+
+Status:
+
+- Phase D3 slice 1 completed:
+  - backend-emitted `step_execution_spec.raw_config` was reduced to an execution-only transport subset
+  - routing-only fields such as `onsuccess` are no longer shipped inside the backend transport config
+  - execution-critical fields are still preserved for shared runtime parity, including:
+    - prompt path
+    - coder policy inputs
+    - review/refine execution metadata
+    - notification flags
+    - produced-document status rules
+    - post-action hooks
+  - `agent_runner_v2.workflow_specs.build_step_execution_spec()` was aligned to the same transport-only raw-config contract
+  - focused backend and `agent-runner-v2` regression coverage was added for this spec-shape boundary
+- Phase D3 slice 2 completed:
+  - backend-mode worker request building no longer requires local workflow-definition lookup to backfill artifact bindings or derive step sequence
+  - in `step_spec_source=backend` mode, the shared runtime now trusts:
+    - backend transport bindings
+    - backend step sequence / DB sequence
+  - local workflow lookup remains only for:
+    - `step_spec_source=global`
+    - `step_spec_source=hybrid`
+  - focused regression coverage was added to prevent backend-mode payload construction from silently reintroducing local workflow-definition coupling
+
+### Phase D4: Collapse daemon/manual parity gaps
+
+Objective:
+
+- Eliminate behavior differences between manual mode and daemon mode for migrated workflows
+
+Status:
+
+- Phase D4 slice 1 completed:
+  - parity regression coverage now explicitly protects the migrated review/refine/validation loop semantics across daemon/shared-runtime and backend completion boundaries
+  - shared daemon completion coverage now asserts:
+    - enqueued next-step paths send step notifications only
+    - reject-to-refine progression does not emit terminal workflow notifications
+  - backend service coverage now asserts:
+    - rejected review routes enqueue refine
+    - rejected validation routes enqueue refine
+    - rejected validation does not incorrectly enter the human-approval gate
+- Phase D4 slice 2 completed:
+  - daemon-mode local `job.json` projection now includes manual-style compatibility aliases:
+    - `job_id`
+    - `template_group`
+    - `job_status`
+    - `current_step`
+  - shared daemon completion coverage now explicitly protects notification behavior for:
+    - `awaiting_human`
+    - `failed`
+    - `completed`
+    - enqueued-next-step paths
+  - the local daemon job-state mirror is now closer to manual-mode operator expectations without changing backend persistence semantics
+- Phase D4 slice 3 completed:
+  - daemon live-run regressions uncovered and fixed two shared-runtime parity gaps in the migrated bootstrap workflow:
+    - package-local action recovery for backend step specs with relative `prompt_file` paths
+    - terminal action-step context building for steps that do not declare `result_meta_key` or `result_meta_key_from_context`
+  - shared runtime now restores `_workflow_bundle` for backend-executed package actions such as:
+    - `validate_core_governance_docs`
+  - shared runtime no longer assumes every action/coder step produces a result-meta contract, which unblocks terminal actions such as:
+    - `stepCompletion`
+  - focused regression coverage was added for:
+    - relative prompt-path bundle restoration
+    - terminal action-step context building without result-meta keys
+
+Current daemon live-test status:
+
+- The migrated workflow `00_core_governance_bootstrap_v1` has now progressed through real daemon execution far enough to flush out:
+  - backend transport/action binding issues
+  - review/refine/validation routing parity issues
+  - notification parity issues
+  - local daemon `job.json` projection gaps
+  - terminal action-step runtime assumptions
+- The remaining recommended validation is a fresh clean end-to-end daemon rerun after the latest fixes, to confirm the full workflow completes without requiring recovery from a prior failed run
+
+Required outcomes:
+
+- same routing semantics after approve / reject / refine / validate / audit
+- same package-local action availability
+- same notification behavior
+- same artifact registration expectations
+- same path handling behavior on Windows
+- same review/refine loop behavior
+
+Regression baseline:
+
+- `00_core_governance_bootstrap_v1`
+
+Exit criteria:
+
+- manual and daemon runs of `00_core_governance_bootstrap_v1` follow the same execution semantics
+- remaining differences are limited to:
+  - backend run IDs / step-run IDs
+  - DB persistence side effects
+  - worker supervision logs
+
+### Phase D5: Shrink backend vendored execution knowledge
+
+Objective:
+
+- Reduce backend vendored runtime to the minimum compatibility surface required during transition
+
+Required outcomes:
+
+- remove backend-owned copies of execution behavior where v2 shared runtime can be called directly
+- keep only backend-local adapters for:
+  - request/response translation
+  - DB-facing orchestration
+  - worker CLI compatibility if still needed
+- do not add new workflow semantics into vendored backend execution modules
+
+Exit criteria:
+
+- vendored backend runtime surface is clearly smaller than the current transitional copy set
+- execution behavior changes are no longer routinely duplicated into backend-owned runtime modules
+
+### Phase D6: Final daemon architecture validation
+
+Objective:
+
+- Prove the corrected architecture works for the migrated workflow under normal operator usage
+
+Validation scope:
+
+1. Manual local execution of `00_core_governance_bootstrap_v1`
+2. Daemon execution of `00_core_governance_bootstrap_v1`
+3. Review -> refine loop
+4. Validation -> refine loop
+5. Audit completion path
+6. Step-level and workflow-level notifications
+7. Resume / rerun behavior after rejection or failure
+
+Exit criteria:
+
+- migrated workflow is stable in both modes without backend-specific execution workarounds
+- backend functions as persistence/orchestration infrastructure, not as a separate workflow engine
 - Phase 4 slice 4.2 is now started:
 - Phase 4 slice 4.2 is now completed:
   - backend vendored runtime package was created at `agent_runner_backend/vendored_runtime/`

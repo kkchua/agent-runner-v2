@@ -29,7 +29,7 @@ set "WORKER_LABEL=live"
 set "BACKEND_URL="
 
 REM Optional daemon tuning (leave blank to use config.json / CLI defaults)
-set "STEP_SPEC_SOURCE=global"
+set "STEP_SPEC_SOURCE=backend"
 set "POLL_SECONDS="
 set "MAX_PARALLEL="
 set "RUNTIME_DIR="

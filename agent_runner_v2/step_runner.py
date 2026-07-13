@@ -1658,7 +1658,11 @@ def build_context(
     # For producing steps where the artifact doesn't exist yet, compute the step
     # directory meta.json path so the prompt can tell the coder where to write it.
     if step and step_cfg:
-        result_key = step_cfg.get("result_meta_key") or step_cfg.get("result_meta_key_from_context", "")
+        result_key = str(
+            step_cfg.get("result_meta_key")
+            or step_cfg.get("result_meta_key_from_context")
+            or ""
+        ).strip()
         # If result_key already ends with _METAJSON, use it directly;
         # otherwise append _METAJSON to form the context key.
         if result_key.endswith("_METAJSON"):
@@ -2201,8 +2205,11 @@ def resolve_prompt_path(*, step_cfg: dict, coder: str, model_id: str | None = No
         try:
             return str(path.relative_to(base))
         except ValueError:
-            # Windows pathlib.relative_to() can fail even for valid subpaths
-            return os.path.relpath(path, base)
+            # Cross-drive paths on Windows cannot be relativized.
+            try:
+                return os.path.relpath(path, base)
+            except ValueError:
+                return str(path)
     
     default_path = RUNNER_ROOT / step_cfg["prompt_file"]
     path_obj = Path(step_cfg["prompt_file"])

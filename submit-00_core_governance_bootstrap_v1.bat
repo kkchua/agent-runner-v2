@@ -1,8 +1,8 @@
 @echo off
-REM submit-00_master_docs_bootstrap_v1.bat - Edit the variables below, then run.
+REM submit-00_core_governance_bootstrap_v1.bat - Edit the variables below, then run.
 REM
-REM Submits a new backend job for the 00_master_docs_bootstrap_v1 workflow:
-REM   ukbe-run-agent submit --workflow-name 00_master_docs_bootstrap_v2 ...
+REM Submits a new backend job for the 00_core_governance_bootstrap_v1 workflow:
+REM   ukbe-run-agent submit --workflow-name 00_core_governance_bootstrap_v1 ...
 
 setlocal enabledelayedexpansion
 
@@ -16,7 +16,7 @@ REM EDIT THESE VARIABLES to match your setup:
 REM ==================================================================
 
 set "AGENT_RUNNER_ROOT=D:\MyProjectSpace\01_Workflows\agent-runner-v2"
-set "WORKFLOW_NAME=00_master_docs_bootstrap_v2"
+set "WORKFLOW_NAME=00_core_governance_bootstrap_v1"
 set "PROJECT_ROOT=D:\MyProjectSpace\01_Workflows\agent-runner-v2"
 set "TARGET_PROJECT_ROOT=D:\MyProjectSpace\01_Workflows\agent-runner-v2"
 set "INITIATIVE_ID="
