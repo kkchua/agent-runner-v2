@@ -11,11 +11,11 @@
 #   ukbe-runner.sh backend logs               -- tail backend log
 #   ukbe-runner.sh submit [args...]           -- submit a run to the backend
 #
-# Worker ID defaults to the value in ~/.ukbe-runner/engine/config.json → worker_id,
+# Worker ID defaults to the value in ~/.ukbe-runner/config.json → worker_id,
 # falling back to "kode-worker-01".
 #
 # Backend dir defaults to BACKEND_DIR env var, falling back to
-# ~/.ukbe-runner/engine/config.json → backend_dir, then to the script's grandparent
+# ~/.ukbe-runner/config.json → backend_dir, then to the script's grandparent
 # directory (works if ukbe-runner.sh lives inside the backend repo).
 
 set -euo pipefail
@@ -32,7 +32,7 @@ WORKER_LOG_DIR="${HOME}/.ukbe-runner/logs"
 
 _read_config() {
     local key="$1" default="$2"
-    local cfg="${HOME}/.ukbe-runner/engine/config.json"
+    local cfg="${HOME}/.ukbe-runner/config.json"
     if [[ -f "$cfg" ]]; then
         python3 -c "import json; d=json.load(open('${cfg}')); print(d.get('${key}','${default}'))" 2>/dev/null || echo "$default"
     else
@@ -193,7 +193,7 @@ cmd_backend_start() {
 
     if [[ ! -f "${backend_dir}/start-backend.sh" ]]; then
         echo "ERROR: start-backend.sh not found in ${backend_dir}" >&2
-        echo "Set BACKEND_DIR or add backend_dir to ~/.ukbe-runner/engine/config.json" >&2
+        echo "Set BACKEND_DIR or add backend_dir to ~/.ukbe-runner/config.json" >&2
         exit 1
     fi
 
@@ -260,7 +260,7 @@ Usage:
   $(basename "$0") backend logs
   $(basename "$0") submit [--workflow-name NAME] [args...]
 
-Worker ID defaults to worker_id in ~/.ukbe-runner/engine/config.json.
+Worker ID defaults to worker_id in ~/.ukbe-runner/config.json.
 Backend dir defaults to BACKEND_DIR env var, or backend_dir in config.json.
 Run 'ukbe-run-agent daemon --help' or 'ukbe-run-agent submit --help' for full options.
 EOF
@@ -310,3 +310,4 @@ case "$COMMAND" in
         usage; exit 1
         ;;
 esac
+

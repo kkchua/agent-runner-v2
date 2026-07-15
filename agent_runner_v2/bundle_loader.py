@@ -2,7 +2,6 @@ from __future__ import annotations
 
 """Workflow bundle loading and bootstrap helpers."""
 
-import importlib.util
 import json
 import shutil
 import sys
@@ -20,8 +19,13 @@ from .bundle_governance import (
     generate_bundle_governance_adapters,
     load_bundle_governance,
 )
+from .constants import all_artifact_keys
 from .doc_paths import system_doc_rel
 from .runtime_context import DEFAULT_RUNNER_HOME, PACKAGE_ROOT
+from .workflow_packages.loader import (
+    bundle_to_template_group_dict,
+    load_workflow_package,
+)
 
 
 GLOBAL_RUNNER_HOME = Path.home() / DEFAULT_RUNNER_HOME
@@ -34,6 +38,9 @@ PACKAGED_BOOTSTRAP_EXCLUDE_PATTERNS = (
     "*-bootstrap-summary.md",
     "*.meta.json",
 )
+PACKAGED_BOOTSTRAP_EXCLUDED_WORKFLOWS = {
+    "00_core_governance_bootstrap_v1",
+}
 
 
 def bundles_root() -> Path:
@@ -93,6 +100,12 @@ def _replace_tree(source_root: Path, target_root: Path) -> None:
     shutil.copytree(source_root, target_root)
 
 
+def _reset_tree(target_root: Path) -> None:
+    if target_root.exists():
+        shutil.rmtree(target_root)
+    target_root.mkdir(parents=True, exist_ok=True)
+
+
 def _tree_has_files(root: Path) -> bool:
     if not root.exists():
         return False
@@ -130,6 +143,11 @@ def _copy_plugin_workflows_to_bootstrap(
             continue
 
         pkg_name = candidate.name
+        if pkg_name in PACKAGED_BOOTSTRAP_EXCLUDED_WORKFLOWS:
+            stale_dest = bootstrap_wf_root / pkg_name
+            if stale_dest.exists():
+                shutil.rmtree(stale_dest)
+            continue
         _generate_bundle_governance_docs(candidate)
         dest = bootstrap_wf_root / pkg_name
         _replace_tree(candidate, dest)
@@ -137,6 +155,51 @@ def _copy_plugin_workflows_to_bootstrap(
         copied.append(dest)
 
     return copied
+
+
+def _copy_shared_registry(
+    registry_root: Path,
+    target_workflow_root: Path,
+) -> Path | None:
+    """Copy shared workflow registry folder into the target workflow root."""
+    if not registry_root.is_dir():
+        return None
+    dest = target_workflow_root / "_registry"
+    _replace_tree(registry_root, dest)
+    return dest
+
+
+def _discover_template_groups_from_packages(workflow_root: Path) -> dict[str, dict]:
+    template_groups: dict[str, dict] = {}
+    if not workflow_root.is_dir():
+        return template_groups
+
+    for candidate in sorted(workflow_root.iterdir()):
+        if not candidate.is_dir():
+            continue
+        manifest = candidate / "workflow.toml"
+        if not manifest.is_file():
+            continue
+
+        bundle = load_workflow_package(candidate)
+        template_groups[bundle.name] = bundle_to_template_group_dict(bundle)
+
+    return template_groups
+
+
+def _build_workflow_module_from_packages(workflow_root: Path, workflow_name: str) -> ModuleType:
+    template_groups = _discover_template_groups_from_packages(workflow_root)
+    if not template_groups:
+        raise FileNotFoundError(
+            f"No workflow packages found under {workflow_root}. Expected one or more "
+            "subdirectories containing workflow.toml."
+        )
+
+    module = ModuleType(f"agent_runner_v2.workflow.{workflow_name}")
+    module.__file__ = str(workflow_root)
+    module.TEMPLATE_GROUPS = template_groups
+    module.ARTIFACT_KEYS = all_artifact_keys()
+    return module
 
 
 def _generate_bundle_governance_docs(bundle_root: Path) -> dict[str, str]:
@@ -162,20 +225,42 @@ def publish_bootstrap_bundle(
     source_root = (source_root or bootstrap_source_root(workspace_root)).resolve()
     package_root = (package_root or package_bootstrap_root()).resolve()
     plugin_workflows_root = (plugin_workflows_root or workspace_root / "workflows").resolve()
+    shared_registry_root = (workspace_root / "workflows" / "_registry").resolve()
 
-    # 1. Copy governance docs (existing behavior)
-    _replace_tree(source_root, package_root)
-    _cleanup_packaged_bootstrap(package_root)
+    # 1. Copy governance docs when present; otherwise create an empty packaged
+    # bootstrap root so workflow package publishing can still proceed.
+    source_docs_included = source_root.exists()
+    if source_docs_included:
+        _replace_tree(source_root, package_root)
+        _cleanup_packaged_bootstrap(package_root)
+    else:
+        _reset_tree(package_root)
 
-    # 2. Copy plugin workflow packages as-is into bootstrap workflows/default/
+    # 2. Rebuild bootstrap workflows/default/ from repo-root workflows/
     bootstrap_wf_root = BOOTSTRAP_ROOT
+    _reset_tree(bootstrap_wf_root)
+    copied_registry = _copy_shared_registry(shared_registry_root, bootstrap_wf_root)
     copied = _copy_plugin_workflows_to_bootstrap(plugin_workflows_root, bootstrap_wf_root)
+
+    publish_manifest = {
+        "workspace_root": str(workspace_root),
+        "source_root": str(source_root),
+        "source_docs_included": source_docs_included,
+        "shared_registry_copied": bool(copied_registry),
+        "plugin_workflows_copied": [p.name for p in copied],
+    }
+    (package_root / "bootstrap_publish_manifest.json").write_text(
+        json.dumps(publish_manifest, indent=2, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
 
     return {
         "workspace_root": str(workspace_root),
         "source_root": str(source_root),
         "package_bootstrap_root": str(package_root),
         "bundle_name": CORE_BUNDLE_NAME,
+        "source_docs_included": source_docs_included,
+        "shared_registry_copied": bool(copied_registry),
         "plugin_workflows_copied": [p.name for p in copied],
         "plugin_governance_docs_generated": {
             p.name: _generate_bundle_governance_docs(p) for p in copied
@@ -251,23 +336,8 @@ def load_workflow_module(
     *,
     config: dict | None = None,
 ) -> ModuleType:
-    workflow_cfg_map = (config or {}).get("workflows") or {}
-    workflow_cfg = workflow_cfg_map.get(workflow_name) or {}
     wf_root = resolve_workflow_root(workspace_root, workflow_name, config=config)
-    module_path = wf_root / "template_groups.py"
-    if not module_path.exists():
-        raise FileNotFoundError(
-            f"Workflow bundle not found at {module_path}. Run init first or create the bundle manually."
-        )
-    spec = importlib.util.spec_from_file_location(
-        f"agent_runner_v2.workflow.{workflow_name}",
-        module_path,
-    )
-    if spec is None or spec.loader is None:
-        raise ImportError(f"Unable to load workflow bundle from {module_path}")
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    return _build_workflow_module_from_packages(wf_root, workflow_name)
 
 
 def seed_workflow_bundle(target_root: Path, workflow_name: str = "example") -> Path:
@@ -301,6 +371,7 @@ def seed_workflow_packages(workspace_root: Path, workflow_name: str = "default")
     # alongside template_groups.py — e.g. workflows/default/<pkg_name>/
     bundle_root = global_workflow_root(workflow_name)
     bundle_root.mkdir(parents=True, exist_ok=True)
+    _copy_shared_registry((workspace_root / "workflows" / "_registry").resolve(), bundle_root)
     seeded: list[Path] = []
 
     for candidate in sorted(repo_packages_dir.iterdir()):

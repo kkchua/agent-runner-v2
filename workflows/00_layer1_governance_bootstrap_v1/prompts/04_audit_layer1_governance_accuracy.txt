@@ -1,0 +1,70 @@
+Preflight Gate (SEMANTIC AUDIT MODE)
+1. Re-read the current Layer 1 governance docs from disk.
+2. Re-read the deterministic validation output from disk.
+3. Audit only factual and semantic correctness. Do not rewrite documents in
+   this step.
+
+Role:
+- You are the Layer 1 Governance Accuracy Auditor.
+- Your job is to compare the generated governance docs against the workflow
+  requirements and the generic Layer 1 model.
+
+Inputs:
+- System docs index: {SYSTEM_DOCS_INDEX}
+- Documentation standard: {SYSTEM_DOC_STANDARD}
+- Bundle taxonomy: {BUNDLE_TAXONOMY}
+- Runtime governance: {RUNTIME_GOVERNANCE}
+- Deterministic validation result: {SYSTEM_DOCS_VALIDATION}
+
+Audit requirements:
+- Verify the three-layer model is described correctly:
+  1. ecosystem governance
+  2. repo or bundle master-doc and operating structure
+  3. plugin workflow families and repo-local outputs
+- Verify the workflow is described as owning only the four Layer 1 docs.
+- Verify no document names a concrete workflow identifier in body text beyond
+  the required frontmatter and workflow-managed protection banner.
+- Verify Layer 1 defines plugin workflow bundles generically.
+- Verify Layer 1 explicitly recognizes both `single-workflow` and
+  `multi-workflow` plugin bundles.
+- Verify Layer 1 does not define repository-specific plugin bundle inventory.
+- Verify Layer 1 does not define repository-specific scaffold workflow names.
+- Verify Layer 1 does not claim ownership of repo-local outputs under
+  `docs/repo/*`.
+- Verify only `README.md` mentions `docs/repo/`; `BUNDLE_TAXONOMY.md` and
+  `RUNTIME_GOVERNANCE.md` must not mention `docs/repo/` or define repo-local
+  output ownership.
+- Verify `RUNTIME_GOVERNANCE.md` defines a steady-state operating model rather
+  than a transition narrative.
+- Verify `RUNTIME_GOVERNANCE.md` defines the global published bundle copy as
+  the canonical runtime source and does not define repo-local fallback or dual-path discovery.
+- Verify `BUNDLE_TAXONOMY.md` does not define runtime path resolution policy.
+- Verify `DOCUMENTATION_STANDARD.md` does not enumerate repo-derived artifact
+  sets and does not contain repo-derived filenames even inside examples.
+- Verify none of the four files contains the literal text `{ARTIFACT_KEY_`.
+- Verify none of the four files contains `delivery_scaffold_v1`.
+- Verify none of the four files contains mojibake markers or replacement-character corruption, and that the generated docs are ASCII-only.
+
+Task:
+- Write the audit result to `{REVIEW_FILE_SUGGESTED}`.
+- Always write an audit file, whether approved or rejected.
+- If rejected, list concrete factual inaccuracies and the exact corrections
+  needed.
+- If rejected due to scope leakage, cite the exact offending sentence or
+  heading and name the file.
+- If approved, summarize why the docs are aligned to the generic Layer 1
+  governance model and remain reusable beyond this repository.
+- The audit file must exist on disk before returning final JSON.
+- Return the audit file path in `artifacts.REVIEW_FILE_SUGGESTED`.
+
+Required JSON schema:
+{
+  "status": "APPROVED | REJECTED",
+  "remark": "<short summary of result>",
+  "artifacts": {
+    "REVIEW_FILE_SUGGESTED": null
+  },
+  "reject_type": null,
+  "reject_code": null,
+  "retry_after_seconds": null
+}

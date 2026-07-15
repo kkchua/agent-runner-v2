@@ -28,10 +28,8 @@ agent_runner_v2 = [
     "*.md",
     "bootstrap/bundles/core/current/*",
     "bootstrap/bundles/core/current/**/*",
-    "bootstrap/workflows/default/*.json",
-    "bootstrap/workflows/default/*.py",
-    "bootstrap/workflows/default/prompts/*/*.txt",
-    "bootstrap/workflows/default/prompts/*/*.md",
+    "bootstrap/workflows/default/*",
+    "bootstrap/workflows/default/**/*",
 ]
 
 [tool.pytest.ini_options]

@@ -23,6 +23,7 @@ if exist "%~dp0.venv\Scripts\activate.bat" (
 )
 
 set "UKBE_CLI=ukbe-run-agent"
+set "RUNNER_CMD="
 set "PROJECT_ROOT="
 set "SOURCE_ROOT="
 set "BUNDLE_ROOT="
@@ -71,11 +72,16 @@ if "%PROJECT_ROOT%"=="" (
     set "PROJECT_ROOT=%CD%"
 )
 
-where "%UKBE_CLI%" >nul 2>nul
-if errorlevel 1 (
-    echo ERROR: '%UKBE_CLI%' not found on PATH.
-    echo Install agent-runner-v2 first: pip install -e .
-    exit /b 1
+if exist "%~dp0.venv\Scripts\python.exe" (
+    set "RUNNER_CMD=%~dp0.venv\Scripts\python.exe -m agent_runner_v2.run_agent"
+) else (
+    where "%UKBE_CLI%" >nul 2>nul
+    if errorlevel 1 (
+        echo ERROR: '%UKBE_CLI%' not found on PATH.
+        echo Install agent-runner-v2 first: pip install -e .
+        exit /b 1
+    )
+    set "RUNNER_CMD=%UKBE_CLI%"
 )
 
 if not exist "%PROJECT_ROOT%" (
@@ -89,7 +95,7 @@ set "TEMP=%TEMP_ROOT%"
 set "TMP=%TEMP_ROOT%"
 set "TMPDIR=%TEMP_ROOT%"
 
-set "CMD=%UKBE_CLI% bootstrap-publish --project-root "%PROJECT_ROOT%"" 
+set "CMD=%RUNNER_CMD% bootstrap-publish --project-root "%PROJECT_ROOT%"" 
 if not "%SOURCE_ROOT%"=="" (
     set "CMD=!CMD! --source-root "%SOURCE_ROOT%""
 )

@@ -1,0 +1,9 @@
+{
+  "workspace_root": "D:\\MyProjectSpace\\01_Workflows\\agent-runner-v2",
+  "source_root": "D:\\MyProjectSpace\\01_Workflows\\agent-runner-v2\\docs\\system\\00_governance\\bootstrap",
+  "source_docs_included": true,
+  "shared_registry_copied": true,
+  "plugin_workflows_copied": [
+    "00_layer1_governance_bootstrap_v1"
+  ]
+}

@@ -198,6 +198,70 @@ def test_build_worker_request_payload_backend_mode_uses_transport_spec_without_l
     )
 
 
+def test_build_worker_request_payload_includes_resolved_coder_summary(monkeypatch):
+    run = {
+        'id': 'run-1',
+        'workflow_name': '00_core_governance_bootstrap_v1',
+        'run_code': '00CORE-001',
+        'project_root': '/workspace/project',
+        'input_payload': {},
+        'context_payload': {},
+    }
+    step_run = {
+        'id': 'step-1',
+        'step_name': 'generate_core_governance_docs',
+        'coder': 'opencode',
+    }
+
+    monkeypatch.setattr(
+        shared_runtime_deps,
+        '_resolve_step_coder',
+        lambda **kwargs: (
+            'opencode',
+            'architect_primary',
+            'architect_primary',
+            {
+                'connection': 'opencode_go',
+                'model_id': 'deepseek-v4-flash',
+                'model': 'opencode-go/deepseek-v4-flash',
+            },
+        ),
+    )
+
+    payload = _build_worker_request_payload(
+        run=run,
+        step_run=step_run,
+        step_execution_spec={
+            'template_group': '00_core_governance_bootstrap_v1',
+            'step_name': 'generate_core_governance_docs',
+            'step_sequence_no': 1,
+            'prompt_file': 'prompts/01_generate_core_governance_docs.txt',
+            'required_inputs': [],
+            'produces': [{'artifact_key': 'SYSTEM_DOCS_INDEX'}],
+            'coder_policy': {
+                'default_role': 'architect_primary',
+                'allowed_roles': ['architect_primary'],
+            },
+            'raw_config': {
+                'prompt_file': 'prompts/01_generate_core_governance_docs.txt',
+                'coder': {'default_role': 'architect_primary'},
+            },
+        },
+        step_spec_source='backend',
+    )
+
+    assert payload['resolved_coder'] == {
+        'coder_used': 'opencode',
+        'coder_alias': 'architect_primary',
+        'coder_role': 'architect_primary',
+        'connection': 'opencode_go',
+        'model_id': 'deepseek-v4-flash',
+        'model': 'opencode-go/deepseek-v4-flash',
+        'provider_key': None,
+        'source': 'resolved',
+    }
+
+
 def test_build_context_action_step_without_result_meta_key_does_not_crash():
     state = {
         'template_group': '00_core_governance_bootstrap_v1',
@@ -764,7 +828,7 @@ def test_execute_step_command_uses_step_execution_spec_without_load_group(monkey
     assert exit_code == 0
     payload = json.loads(result_path.read_text(encoding='utf-8'))
     assert payload['status'] == 'completed'
-    assert payload['artifacts']['PRE_INIT_FILE'] == 'docs/pre_init.md'
+    assert payload['artifacts']['PRE_INIT_FILE'] == str((tmp_path / 'docs' / 'pre_init.md').resolve())
 
 
 def test_execute_step_command_writes_result_file(monkeypatch, tmp_path):
@@ -825,7 +889,7 @@ def test_execute_step_command_writes_result_file(monkeypatch, tmp_path):
     assert exit_code == 0
     payload = json.loads(result_path.read_text(encoding='utf-8'))
     assert payload['status'] == 'completed'
-    assert payload['artifacts']['PRE_INIT_FILE'] == 'docs/pre_init.md'
+    assert payload['artifacts']['PRE_INIT_FILE'] == str((tmp_path / 'docs' / 'pre_init.md').resolve())
 
 
 def test_execute_step_command_returns_nonzero_on_failed_result(monkeypatch, tmp_path):

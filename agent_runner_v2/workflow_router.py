@@ -236,6 +236,8 @@ def route_after_failure(
     )
     state["current_step"] = step
     save_job(group_name, state["job_id"], state)
+    if failure_class != "AUTO_RETRYABLE":
+        send_workflow_notification("WAITING_FOR_HUMAN_INTERVENTION", dict(state))
     return state, 1
 
 
@@ -293,6 +295,8 @@ def _route_rejected(
     auto_retry_counts: dict,
     human_retry_counts: dict,
 ) -> tuple[dict, int]:
+    send_step_notification("STEP_REJECTED", state, step, step_cfg)
+
     on_reject_refine = _resolve_reject_route(step_cfg=step_cfg, reject_code=step_result.reject_code)
     if on_reject_refine:
         return _route_loop_or_replan(
@@ -354,6 +358,8 @@ def _route_rejected(
     )
     state["current_step"] = step
     save_job(group_name, state["job_id"], state)
+    if failure_class != "AUTO_RETRYABLE":
+        send_workflow_notification("WAITING_FOR_HUMAN_INTERVENTION", dict(state))
     return state, 1
 
 
@@ -390,8 +396,9 @@ def _route_loop_or_replan(
     _sync_review_feedback_artifact(step=step, artifacts=artifacts)
 
     review_file = artifacts.get("REVIEW_FILE")
-    ctx = state.setdefault("loop_context", {})
-    iteration = int(ctx.get("loop_iteration", 0)) + 1
+    current_count = int(reject_counts.get(step, 0)) + 1
+    reject_counts[step] = current_count
+    iteration = current_count
     max_iter = int(on_reject_refine.get("max_iterations", 2))
 
     if iteration <= max_iter:
@@ -439,7 +446,6 @@ def _route_loop_or_replan(
         or on_reject_refine.get("exhausted_failure_code")
         or "REFINEMENT_EXHAUSTED"
     )
-    reject_counts[step] = int(reject_counts.get(step, 0)) + 1
     state.setdefault("human_retry_count_by_step", {})[step] = (
         int(state.get("human_retry_count_by_step", {}).get(step, 0)) + 1
     )
@@ -461,6 +467,7 @@ def _route_loop_or_replan(
     set_job_status(state, "WAITING_FOR_HUMAN_INTERVENTION")
     state["current_step"] = step
     save_job(group_name, state["job_id"], state)
+    send_workflow_notification("WAITING_FOR_HUMAN_INTERVENTION", dict(state))
     return state, 1
 
 
@@ -615,6 +622,9 @@ def _classify_exception_v2(exc: Exception) -> tuple[str, str, str]:
     if isinstance(exc, MetaJsonInvalidError):
         return "HUMAN_RETRY_REQUIRED", "META_JSON_INVALID", "validator"
     if isinstance(exc, ArtifactMissingError):
+        message = str(exc)
+        if _looks_like_step_contract_mismatch(message):
+            return "HUMAN_RETRY_REQUIRED", "STEP_CONTRACT_MISMATCH", "validator"
         return "HUMAN_RETRY_REQUIRED", "ARTIFACT_FILES_MISSING", "validator"
     # Unknown exception — treat as fatal
     return "FATAL", "UNEXPECTED_RUNNER_ERROR", "runner"
@@ -631,10 +641,25 @@ def _looks_like_transient_error(message: str) -> bool:
 
 def _is_non_progressing(*, failure_class: str, failure_code: str, failure_source: str) -> bool:
     return (
-        failure_source == "runner"
+        failure_source in {"runner", "validator"}
         and failure_class == "HUMAN_RETRY_REQUIRED"
-        and failure_code in {"INVALID_RUNNER_CONFIGURATION", "UNKNOWN_CODER"}
+        and failure_code in {
+            "INVALID_RUNNER_CONFIGURATION",
+            "UNKNOWN_CODER",
+            "STEP_CONTRACT_MISMATCH",
+        }
     )
+
+
+def _looks_like_step_contract_mismatch(message: str) -> bool:
+    lowered = str(message or "").lower()
+    hints = (
+        "reported artifacts not declared in 'produces' list",
+        "no resolved output path",
+        "step config has neither 'result_meta_key' nor 'result_meta_key_from_context'",
+        "write-capable but declares no write contract",
+    )
+    return any(hint in lowered for hint in hints)
 
 
 # ---------------------------------------------------------------------------

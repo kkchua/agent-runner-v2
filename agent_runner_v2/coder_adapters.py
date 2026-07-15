@@ -484,9 +484,11 @@ def _mask_api_key(key: str) -> str:
     return key[:4] + "****" + key[-4:]
 
 
-def _log_command_for_step(step: str, command: list[str], cc: dict[str, Any]) -> None:
+def _log_command_for_step(step: str, command: list[str], cc: dict[str, Any], *, coder_name: str = "qwen") -> None:
     """Print invocation summary to console (not the full command)."""
     model = cc.get("model", "")
+    model_id = cc.get("model_id", "")
+    connection = cc.get("connection", "")
     auth = cc.get("auth_type", "")
     api_key_env = cc.get("openai_api_key_env", "")
     base_url = cc.get("openai_base_url", "")
@@ -496,7 +498,11 @@ def _log_command_for_step(step: str, command: list[str], cc: dict[str, Any]) -> 
         raw = os.environ.get(api_key_env, "")
         api_key_val = f"key={_mask_api_key(raw)}" if raw else f"key=({api_key_env} not set)"
 
-    parts = [f"coder=qwen"]
+    parts = [f"coder={coder_name}"]
+    if connection:
+        parts.append(f"connection={connection}")
+    if model_id:
+        parts.append(f"model_id={model_id}")
     if model:
         parts.append(f"model={model}")
     if auth:
@@ -551,9 +557,18 @@ def invoke_coder(
     _ensure_env_loaded()
     cc = coder_config or {}
     model_name = cc.get("model", "")
+    model_id = cc.get("model_id", "")
+    connection = cc.get("connection", "")
     auth_type = cc.get("auth_type", "")
 
-    log_invocation_start(step, coder, model=model_name, auth_type=auth_type)
+    log_invocation_start(
+        step,
+        coder,
+        model=model_name,
+        model_id=model_id,
+        connection=connection,
+        auth_type=auth_type,
+    )
 
     started_at = now_iso_fn()
     started_monotonic = time.monotonic()
@@ -563,6 +578,8 @@ def invoke_coder(
         result = _invoke_claude(step=step, prompt_text=prompt_text, cwd=cwd, schema_path=schema_path, sidecar_path=sidecar_path, coder_config=cc, timeout_seconds_override=timeout_seconds_override)
     elif coder == "qwen":
         result = _invoke_qwen(step=step, prompt_text=prompt_text, cwd=cwd, coder_config=cc, sidecar_path=sidecar_path, timeout_seconds_override=timeout_seconds_override)
+    elif coder == "opencode":
+        result = _invoke_opencode(step=step, prompt_text=prompt_text, cwd=cwd, coder_config=cc, sidecar_path=sidecar_path, timeout_seconds_override=timeout_seconds_override)
     else:
         result = _invoke_plain(coder=coder, step=step, prompt_text=prompt_text, cwd=cwd, sidecar_path=sidecar_path, timeout_seconds_override=timeout_seconds_override)
     finished_at = now_iso_fn()
@@ -572,7 +589,7 @@ def invoke_coder(
     status = "OK" if return_code == 0 else "FAILED"
 
     log_invocation_result(
-        step, coder, model=model_name, auth_type=auth_type,
+        step, coder, model=model_name, model_id=model_id, connection=connection, auth_type=auth_type,
         return_code=return_code, duration_ms=duration_ms, status=status,
     )
 
@@ -748,8 +765,9 @@ def _invoke_claude(*, step: str, prompt_text: str, cwd: Path, schema_path: Path,
     cc = coder_config or {}
     command = ["claude"]
     # Inject model flag when provided via model_mapping or step config
-    if cc.get("model"):
-        command.extend(["--model", cc["model"]])
+    claude_model = str(cc.get("model_id") or cc.get("model") or "").strip()
+    if claude_model:
+        command.extend(["--model", claude_model])
     command.extend(["--dangerously-skip-permissions"])
     command.extend(["--print", "--output-format", "json"])
     timeout_seconds = _coder_timeout_seconds(timeout_seconds_override)
@@ -792,8 +810,9 @@ def _invoke_qwen(*, step: str, prompt_text: str, cwd: Path, coder_config: dict[s
     command = ["qwen", "-y"]
 
     # Inject model-specific CLI flags when a coder_config is provided
-    if cc.get("model"):
-        command.extend(["-m", cc["model"]])
+    qwen_model = str(cc.get("model_id") or cc.get("model") or "").strip()
+    if qwen_model:
+        command.extend(["-m", qwen_model])
     if cc.get("auth_type"):
         command.extend(["--auth-type", cc["auth_type"]])
     if cc.get("openai_api_key_env"):
@@ -808,7 +827,7 @@ def _invoke_qwen(*, step: str, prompt_text: str, cwd: Path, coder_config: dict[s
     command.append("--prompt")
 
     # Log the actual command for debugging (mask API key)
-    _log_command_for_step(step, command, cc)
+    _log_command_for_step(step, command, cc, coder_name="qwen")
 
     timeout_seconds = _coder_timeout_seconds(timeout_seconds_override)
     try:
@@ -872,6 +891,109 @@ def _invoke_qwen(*, step: str, prompt_text: str, cwd: Path, coder_config: dict[s
             raw_events=raw_events,
         ) from exc
     usage = _usage_from_payload(payload, step=step, coder="qwen")
+    return {
+        "command": command,
+        "return_code": return_code,
+        "stdout": stdout,
+        "stderr": stderr,
+        "parsed_result": parsed_result,
+        "usage": usage,
+        "raw_events": raw_events,
+    }
+
+
+def _validate_opencode_model(model_name: str) -> str:
+    model_value = str(model_name or "").strip()
+    if not model_value:
+        raise ValueError("OpenCode requires a model in the form '{provider}/{model-id}'.")
+
+    provider, separator, model_id = model_value.partition("/")
+    if not separator or not provider.strip() or not model_id.strip():
+        raise ValueError(
+            f"Invalid OpenCode model {model_value!r}. Expected format '{{provider}}/{{model-id}}'."
+        )
+    return model_value
+
+
+def _opencode_model_from_config(coder_config: dict[str, Any]) -> str:
+    model_name = str(coder_config.get("model") or "").strip()
+    if model_name:
+        return _validate_opencode_model(model_name)
+
+    connection_profile = coder_config.get("connection_profile") or {}
+    provider_prefix = str(connection_profile.get("provider_prefix") or "").strip()
+    model_id = str(coder_config.get("model_id") or "").strip()
+    if not provider_prefix or not model_id:
+        raise ValueError("OpenCode requires connection_profile.provider_prefix and model_id.")
+    return _validate_opencode_model(f"{provider_prefix}/{model_id}")
+
+
+def _invoke_opencode(*, step: str, prompt_text: str, cwd: Path, coder_config: dict[str, Any] | None = None, sidecar_path: Path | None = None, timeout_seconds_override: int | None = None) -> dict[str, Any]:
+    cc = coder_config or {}
+    model_name = _opencode_model_from_config(cc)
+    command = ["opencode", "run", "--model", model_name]
+
+    _log_command_for_step(step, command, cc, coder_name="opencode")
+
+    timeout_seconds = _coder_timeout_seconds(timeout_seconds_override)
+    try:
+        return_code, stdout, stderr = _run_with_sidecar_poll(
+            command,
+            cwd=cwd,
+            input_text=prompt_text,
+            timeout_seconds=timeout_seconds,
+            sidecar_path=sidecar_path,
+            step=step,
+        )
+    except subprocess.TimeoutExpired as exc:
+        raise CoderInvocationError(
+            message=f"OpenCode subprocess timed out after {timeout_seconds} seconds.",
+            command=command,
+            return_code=124,
+            stdout=_coerce_timeout_output(exc.stdout),
+            stderr=_coerce_timeout_output(exc.stderr),
+            raw_events=[],
+        ) from exc
+
+    sidecar_valid = bool(
+        sidecar_path is not None and sidecar_path.exists() and _is_valid_sidecar_json(sidecar_path)
+    )
+    payload = _parse_json_payload(stdout)
+    raw_events = _payload_to_raw_events(payload, stdout)
+
+    if sidecar_valid:
+        parsed_result = {}
+    elif payload is not None:
+        parsed_result = _extract_result_from_qwen_payload(payload)
+    elif stdout.strip():
+        try:
+            parsed_result = _extract_json_object(stdout)
+        except ValueError as exc:
+            raise CoderInvocationError(
+                message=(
+                    "OpenCode completed but produced no structured JSON result. "
+                    "Ensure it writes the required meta.json sidecar or emits a JSON object."
+                ),
+                command=command,
+                return_code=return_code,
+                stdout=stdout,
+                stderr=stderr,
+                raw_events=raw_events,
+            ) from exc
+    else:
+        raise CoderInvocationError(
+            message=(
+                "OpenCode completed but produced no output (empty stdout). "
+                "Ensure it writes the required meta.json sidecar or emits a JSON object."
+            ),
+            command=command,
+            return_code=return_code,
+            stdout="",
+            stderr=stderr,
+            raw_events=raw_events,
+        )
+
+    usage = _usage_from_payload(payload if isinstance(payload, dict) else None, step=step, coder="opencode")
     return {
         "command": command,
         "return_code": return_code,

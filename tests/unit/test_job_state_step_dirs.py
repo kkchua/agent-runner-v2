@@ -32,7 +32,7 @@ def test_make_step_dir_appends_run_suffix_when_folder_exists(monkeypatch, tmp_pa
         "review_docs",
     )
 
-    assert result == jobs_root / "demo" / "JOB-1" / "01_review_docs_run3"
+    assert result == jobs_root / "demo" / "JOB-1" / "02_review_docs"
 
 
 def test_make_step_dir_appends_run_suffix_for_loop_iteration_collisions(monkeypatch, tmp_path: Path) -> None:
@@ -57,7 +57,7 @@ def test_make_step_dir_appends_run_suffix_for_loop_iteration_collisions(monkeypa
         "refine_docs",
     )
 
-    assert result == jobs_root / "demo" / "JOB-1" / "06_refine_docs_iter1_run2"
+    assert result == jobs_root / "demo" / "JOB-1" / "07_refine_docs_iter1"
 
 
 def test_create_step_dir_skips_existing_locked_directory(monkeypatch, tmp_path: Path) -> None:
@@ -83,8 +83,24 @@ def test_create_step_dir_skips_existing_locked_directory(monkeypatch, tmp_path: 
         "review_docs",
     )
 
-    assert result == jobs_root / "demo" / "JOB-1" / "01_review_docs_run2"
+    assert result == jobs_root / "demo" / "JOB-1" / "02_review_docs"
     assert result.exists()
+
+
+def test_next_step_sequence_uses_highest_existing_prefix_not_folder_count(monkeypatch, tmp_path: Path) -> None:
+    jobs_root = tmp_path / ".ukbe-runner" / "jobs"
+    monkeypatch.setattr(job_state, "JOBS_ROOT", jobs_root)
+    job_root = jobs_root / "demo" / "JOB-1"
+    for name in ["01_generate_docs", "02_review_docs", "04_validate_docs"]:
+        (job_root / name).mkdir(parents=True, exist_ok=True)
+
+    result = job_state.make_step_dir(
+        {"steps": ["refine_docs"]},
+        {"template_group": "demo", "job_id": "JOB-1"},
+        "refine_docs",
+    )
+
+    assert result == jobs_root / "demo" / "JOB-1" / "05_refine_docs"
 
 
 def test_save_json_retries_permission_error(monkeypatch, tmp_path: Path) -> None:

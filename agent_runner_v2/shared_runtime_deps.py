@@ -31,6 +31,7 @@ from .workflow_specs import build_step_execution_spec, get_template_group_cfg, r
 from .routing_runtime import predict_next_step_after_approved
 
 from . import backend_execution as _backend_execution
+from . import daemon_runtime as _daemon_runtime
 from . import step_execution_runtime as _step_execution_runtime
 from . import workflow_runtime as _workflow_runtime
 
@@ -77,6 +78,7 @@ def _prepare_step_execution(
     state: dict[str, Any],
     step: str,
     step_cfg: dict[str, Any],
+    project_root: Path,
     workflow_key_override: str = "",
     cli_coder: str | None = None,
 ):
@@ -86,6 +88,7 @@ def _prepare_step_execution(
         state=state,
         step=step,
         step_cfg=step_cfg,
+        project_root=project_root,
         workflow_key_override=workflow_key_override,
         cli_coder=cli_coder,
         hooks=sys.modules[__name__],
@@ -132,7 +135,7 @@ def _resolve_step_coder(
 
 
 def _resolve_worker_engine_root(engine_root: str | None) -> tuple[str | None, str | None]:
-    return _backend_execution.resolve_worker_engine_root(engine_root, hooks=sys.modules[__name__])
+    return _daemon_runtime.resolve_worker_engine_root(engine_root, hooks=sys.modules[__name__])
 
 
 def _build_group_cfg_from_execution_spec(
@@ -143,92 +146,8 @@ def _build_group_cfg_from_execution_spec(
     return _backend_execution.build_group_cfg_from_execution_spec(spec, template_group, step_name)
 
 
-def _build_execution_state(*, request: Any, group_cfg: dict[str, Any]) -> dict[str, Any]:
-    return _backend_execution.build_execution_state(request=request, group_cfg=group_cfg, hooks=sys.modules[__name__])
-
-
-def _publish_backend_artifacts(
-    *,
-    state: dict[str, Any],
-    step: str,
-    artifacts: dict[str, str],
-    project_root: Path,
-) -> dict[str, str]:
-    return _backend_execution.publish_backend_artifacts(
-        state=state,
-        step=step,
-        artifacts=artifacts,
-        project_root=project_root,
-        hooks=sys.modules[__name__],
-    )
-
-
-def _execute_backend_step_request(
-    *,
-    request: Any,
-    group_cfg: dict[str, Any],
-    step_cfg: dict[str, Any],
-    state: dict[str, Any],
-    effective_root: Path,
-):
-    return _backend_execution.execute_backend_step_request(
-        request=request,
-        group_cfg=group_cfg,
-        step_cfg=step_cfg,
-        state=state,
-        effective_root=effective_root,
-        hooks=sys.modules[__name__],
-    )
-
-
 def _build_worker_crash_result(*, run: dict[str, Any], step_run: dict[str, Any], error: Exception) -> dict[str, Any]:
-    return _backend_execution.build_worker_crash_result(run=run, step_run=step_run, error=error, hooks=sys.modules[__name__])
-
-
-def _job_json_path(*, workflow_name: str, run_code: str) -> Path:
-    return _backend_execution.job_json_path(workflow_name=workflow_name, run_code=run_code, hooks=sys.modules[__name__])
-
-
-def _write_backend_job_json(
-    *,
-    run: dict[str, Any],
-    step_run: dict[str, Any] | None = None,
-    next_step_run: dict[str, Any] | None = None,
-    last_event: str | None = None,
-) -> None:
-    _backend_execution.write_backend_job_json(
-        run=run,
-        step_run=step_run,
-        next_step_run=next_step_run,
-        last_event=last_event,
-        hooks=sys.modules[__name__],
-    )
-
-
-def _submit_worker_result(*, client: Any, run: dict[str, Any], step_run: dict[str, Any], result: dict[str, Any]) -> dict[str, Any]:
-    return _backend_execution.submit_worker_result(client=client, run=run, step_run=step_run, result=result, hooks=sys.modules[__name__])
-
-
-def _finalize_worker_completion(
-    *,
-    client: Any,
-    run: dict[str, Any],
-    step_run: dict[str, Any],
-    completion: dict[str, Any] | None,
-    step_execution_spec: dict[str, Any] | None = None,
-) -> dict[str, Any]:
-    return _backend_execution.finalize_worker_completion(
-        client=client,
-        run=run,
-        step_run=step_run,
-        completion=completion,
-        step_execution_spec=step_execution_spec,
-        hooks=sys.modules[__name__],
-    )
-
-
-def _invoke_execute_step_subprocess(request_payload: dict[str, Any], engine_root: str | None = None) -> dict[str, Any]:
-    return _backend_execution.invoke_execute_step_subprocess(request_payload, engine_root, hooks=sys.modules[__name__])
+    return _daemon_runtime.build_worker_crash_result(run=run, step_run=step_run, error=error, hooks=sys.modules[__name__])
 
 
 def _build_worker_request_payload(
@@ -239,7 +158,7 @@ def _build_worker_request_payload(
     backend_url: str = "",
     step_spec_source: str = "backend",
 ) -> dict[str, Any]:
-    return _backend_execution.build_worker_request_payload(
+    return _daemon_runtime.build_worker_request_payload(
         run=run,
         step_run=step_run,
         step_execution_spec=step_execution_spec,

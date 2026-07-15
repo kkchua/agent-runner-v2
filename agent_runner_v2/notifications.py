@@ -121,6 +121,7 @@ def _load_notification_config() -> dict[str, Any]:
             "COMPLETED": 0,
             "FAILED": 1,
             "WAITING_FOR_HUMAN_INTERVENTION": 0,
+            "STEP_REJECTED": 0,
         }
     }
     
@@ -199,7 +200,7 @@ def _format_default_message(status: str, context: dict[str, Any], msg_cfg: dict[
     if status in ("COMPLETED", "STEP_COMPLETED"):
         status_emoji = "✅"
         status_type = "Workflow" if status == "COMPLETED" else "Step"
-    elif status in ("FAILED", "STEP_FAILED"):
+    elif status in ("FAILED", "STEP_FAILED", "STEP_REJECTED"):
         status_emoji = "❌"
         status_type = "Workflow" if status == "FAILED" else "Step"
     elif status == "WAITING_FOR_HUMAN_INTERVENTION":
@@ -224,26 +225,18 @@ def _format_default_message(status: str, context: dict[str, Any], msg_cfg: dict[
 
     # Add step name for step-level notifications
     step_name = context.get("step_name") or context.get("current_step")
-    if step_name and status in ("STEP_COMPLETED", "STEP_FAILED"):
+    if step_name and status in ("STEP_COMPLETED", "STEP_FAILED", "STEP_REJECTED"):
         lines.append(f"**Step:** {step_name}")
 
     # Add duration if available
     if msg_cfg.get("include_duration"):
-        created_at = context.get("created_at")
-        updated_at = context.get("updated_at")
-        if created_at and updated_at:
-            try:
-                from datetime import datetime
-                start = datetime.fromisoformat(created_at)
-                end = datetime.fromisoformat(updated_at)
-                duration = end - start
-                minutes, seconds = divmod(duration.total_seconds(), 60)
-                if minutes > 0:
-                    lines.append(f"**Duration:** {int(minutes)}m {int(seconds)}s")
-                else:
-                    lines.append(f"**Duration:** {int(seconds)}s")
-            except Exception:
-                pass
+        duration_seconds = _extract_duration_seconds(status, context)
+        if duration_seconds is not None:
+            minutes, seconds = divmod(duration_seconds, 60)
+            if minutes > 0:
+                lines.append(f"**Duration:** {int(minutes)}m {int(seconds)}s")
+            else:
+                lines.append(f"**Duration:** {int(seconds)}s")
     
     # Add failure details
     if status == "FAILED" and msg_cfg.get("include_failed_step"):
@@ -278,6 +271,39 @@ def _format_default_message(status: str, context: dict[str, Any], msg_cfg: dict[
     
     message = "\n".join(lines)
     return title, message
+
+
+def _extract_duration_seconds(status: str, context: dict[str, Any]) -> float | None:
+    """Resolve the most accurate duration for the notification payload.
+
+    Step notifications should prefer per-step timing, not workflow lifetime.
+    Workflow notifications can use explicit duration_seconds or timestamp deltas.
+    """
+    if status in ("STEP_COMPLETED", "STEP_FAILED", "STEP_REJECTED"):
+        step_duration = context.get("step_duration_seconds")
+        if isinstance(step_duration, (int, float)) and step_duration >= 0:
+            return float(step_duration)
+
+    explicit_duration = context.get("duration_seconds")
+    if isinstance(explicit_duration, (int, float)) and explicit_duration >= 0:
+        return float(explicit_duration)
+
+    for start_key, end_key in (("started_at", "completed_at"), ("created_at", "updated_at")):
+        start_value = context.get(start_key)
+        end_value = context.get(end_key)
+        if start_value and end_value:
+            try:
+                from datetime import datetime
+
+                start = datetime.fromisoformat(str(start_value))
+                end = datetime.fromisoformat(str(end_value))
+                duration = (end - start).total_seconds()
+                if duration >= 0:
+                    return duration
+            except Exception:
+                continue
+
+    return None
 
 
 def _format_custom_template(template: str, status: str, context: dict[str, Any]) -> tuple[str, str]:

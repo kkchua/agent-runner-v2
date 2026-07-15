@@ -1,0 +1,27 @@
+{
+  "role_policies": {
+    "architect_standard": {
+      "default_role": "architect_primary",
+      "allowed_roles": [
+        "architect_primary",
+        "architect_secondary",
+        "architect_tertiary"
+      ]
+    },
+    "reviewer_standard": {
+      "default_role": "reviewer_primary",
+      "allowed_roles": [
+        "reviewer_primary",
+        "reviewer_secondary",
+        "reviewer_tertiary"
+      ]
+    },
+    "developer_standard": {
+      "default_role": "developer_primary",
+      "allowed_roles": [
+        "developer_primary",
+        "developer_secondary"
+      ]
+    }
+  }
+}

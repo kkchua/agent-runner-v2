@@ -202,9 +202,31 @@ def create_step_dir(
     )
 
 
+def next_step_sequence_for_job(*, group_name: str, job_id: str) -> int:
+    job_root = job_dir(group_name, job_id)
+    if not job_root.exists():
+        return 1
+
+    max_prefix = 0
+    for child in job_root.iterdir():
+        if not child.is_dir():
+            continue
+        match = re.match(r"^(\d+)_", child.name)
+        if not match:
+            continue
+        try:
+            max_prefix = max(max_prefix, int(match.group(1)))
+        except ValueError:
+            continue
+    return max_prefix + 1 if max_prefix > 0 else 1
+
+
 def make_step_dir(group_cfg: dict[str, Any], state: dict[str, Any], step: str) -> Path:
-    # Use backend runtime step sequence for working dirs when available, fall back to definition order/index.
-    idx = state.get("backend_step_sequence", state.get("backend_step_order", get_step_index(group_cfg, step)))
+    # Use a monotonic execution sequence based on existing step folders.
+    idx = next_step_sequence_for_job(
+        group_name=state["template_group"],
+        job_id=state["job_id"],
+    )
     ctx = state.get("loop_context", {})
     if ctx.get("active") and step in (ctx.get("refine_step"), ctx.get("loop_step")):
         suffix = f"_iter{ctx['loop_iteration']}"
@@ -259,21 +281,28 @@ def record_step_usage(state: dict[str, Any], step: str, usage_data: dict[str, An
     state["usage_summary"] = _recompute_usage_summary(state["step_usage"])
 
 
+def _has_usage_metrics(usage: dict[str, Any]) -> bool:
+    for field in ("input_tokens", "output_tokens", "total_tokens", "cost", "duration_ms"):
+        if usage.get(field) is not None:
+            return True
+    return False
+
+
 def _recompute_usage_summary(step_usage: dict[str, Any]) -> dict[str, Any]:
     summary = default_usage_summary()
     totals: dict[str, float] = {}
     for usage in step_usage.values():
         if not isinstance(usage, dict):
             continue
-        if usage.get("usage_source") == "cli_reported":
-            summary["steps_with_usage"] += 1
-            for field in ("input_tokens", "output_tokens", "total_tokens", "cost", "duration_ms"):
-                value = usage.get(field)
-                if value is None:
-                    continue
-                totals[field] = totals.get(field, 0) + value
-        else:
+        if not _has_usage_metrics(usage):
             summary["steps_without_usage"] += 1
+            continue
+        summary["steps_with_usage"] += 1
+        for field in ("input_tokens", "output_tokens", "total_tokens", "cost", "duration_ms"):
+            value = usage.get(field)
+            if value is None:
+                continue
+            totals[field] = totals.get(field, 0) + value
     for field, value in totals.items():
         summary[field] = value if field == "cost" else int(value)
     return summary
@@ -338,8 +367,12 @@ def infer_seed_identity(group_name: str, seed_artifacts: dict[str, str]) -> tupl
     return None, None
 
 
-def create_job(group_name: str, group_cfg: dict[str, Any], seed_artifacts: dict[str, str]) -> dict[str, Any]:
-    job_id = make_job_id(group_name, group_cfg, seed_artifacts)
+def create_job(group_name: str, group_cfg: dict[str, Any], seed_artifacts: dict[str, str],
+               mode: str = "manual", job_no: str = "") -> dict[str, Any]:
+    if mode == "daemon" and job_no:
+        job_id = job_no
+    else:
+        job_id = make_job_id(group_name, group_cfg, seed_artifacts)
     ensure_dir(job_dir(group_name, job_id))
     artifact_keys = _artifact_keys()
     artifacts: dict[str, Any] = {k: None for k in artifact_keys}
@@ -1282,6 +1315,16 @@ def advance_step(
 
     # Check for step-level notification configuration
     send_step_notification("STEP_COMPLETED", state, step, step_cfg)
+
+    review_state = state.setdefault("review_state", default_review_state())
+    if review_state.get("reviewer_step") == step and not step_cfg.get("requires_human_approval_after"):
+        review_state["review_decision"] = "APPROVED"
+        review_state["review_decided_at"] = now_iso()
+        review_state["human_decision"] = "NOT_REQUIRED"
+        review_state["human_decided_at"] = None
+        review_state["human_actor"] = None
+        review_state["final_decision"] = "APPROVED"
+        review_state["final_decision_source"] = "MODEL"
 
     if step_cfg.get("loop_returns_to"):
         return _handle_refine_success(state, step, step_cfg, artifacts)

@@ -30,6 +30,8 @@ The intended steady-state architecture is:
    - backend accepts completion payloads from workers
    - backend persists state transitions produced by worker execution results
    - backend must not become a second workflow execution engine
+   - backend workflow-definition sync must be persistence-oriented; semantic
+     workflow bundle validation belongs to `agent-runner-v2`
 
 4. Vendored backend runtime is transitional only
    - any backend vendored execution code exists only to keep current daemon mode working while refactor is in progress
@@ -176,14 +178,14 @@ Completed:
 - Phase D2 slice 1 completed:
   - backend worker entrypoints now delegate to `agent_runner_v2` shared runtime instead of owning an independent execution loop
   - `agent_runner_backend/workers/agent_worker.py` is now a compatibility shim over:
-    - `agent_runner_v2.backend_execution.worker_command()`
-    - `agent_runner_v2.backend_execution.build_worker_request_payload()`
-    - `agent_runner_v2.backend_execution.invoke_execute_step_subprocess()`
+    - `agent_runner_v2.daemon_runtime.worker_command()`
+    - `agent_runner_v2.daemon_runtime.build_worker_request_payload()`
+    - `agent_runner_v2.daemon_runtime.invoke_execute_step_subprocess()`
   - `agent_runner_backend/workers/execute_step_entry.py` now delegates directly to:
     - `agent_runner_v2.backend_execution.execute_step_command()`
   - backend-side regression coverage was added to protect the compatibility wrapper boundary
 - Phase D2 slice 2 completed:
-  - backend worker completion/reporting helpers now delegate to `agent_runner_v2.backend_execution` for:
+  - backend worker completion/reporting helpers now delegate to `agent_runner_v2.daemon_runtime` for:
     - worker crash result shaping
     - worker result submission
     - worker completion finalization
@@ -191,6 +193,25 @@ Completed:
   - backend worker wrapper coverage now protects both:
     - worker-loop delegation
     - completion/reporting delegation
+- Phase D5 slice 1 completed:
+  - daemon-only worker transport/orchestration helpers were split out of `agent_runner_v2/backend_execution.py` into `agent_runner_v2/daemon_runtime.py`
+  - `backend_execution.py` now retains shared execute-step behavior, while daemon-mode adapters own:
+    - worker loop orchestration
+    - worker request/response translation
+    - subprocess execution wiring
+    - local daemon `job.json` mirroring
+    - worker crash/result/finalization handling
+  - wrapper-boundary regression coverage now asserts daemon wrappers delegate to `daemon_runtime.py` instead of re-expanding `backend_execution.py`
+- Phase D5 slice 2 completed:
+  - backend vendored runtime now mirrors the daemon/shared split:
+    - daemon-only worker transport/orchestration helpers moved from `agent_runner_backend/vendored_runtime/backend_execution.py` into `agent_runner_backend/vendored_runtime/daemon_runtime.py`
+    - vendored `backend_execution.py` now retains execute-step/shared-core responsibilities only
+  - backend wrapper/adapters were repointed to the daemon surface:
+    - `agent_runner_backend/workers/agent_worker.py` now delegates shared worker behavior through `agent_runner_v2.daemon_runtime`
+    - `agent_runner_backend/workers/execute_step_runtime_deps.py` now resolves daemon-only helpers through vendored `daemon_runtime.py`
+  - backend contract coverage now enforces the split:
+    - worker wrapper tests cover agent-worker delegation through daemon runtime
+    - vendored runtime contract tests cover worker payload/subprocess/result/finalization through `daemon_runtime.py`
 
 Incomplete:
 
@@ -204,6 +225,85 @@ Incomplete:
 - Backend still contains vendored runtime code that duplicates shared workflow execution behavior
 - Some daemon-mode fixes have required mirrored changes in vendored backend code, which is a symptom of the current transitional state rather than the intended final architecture
 - Backend vendored runtime is still present for compatibility and has not yet been reduced to a minimal or removable surface
+
+## New Refactor Todo: Model Mapping Normalization
+
+Companion plan:
+
+- See `docs/system/model_registry_role_policy_refactor_plan.md` for the full target design, registry layout, resolver contract, adapter translation rules, migration phases, and acceptance criteria.
+
+Objective:
+
+- Replace the current flat `model_mapping.json` shape with a normalized resolver model that can represent:
+  - semantic role aliases
+  - logical model identities
+  - multiple provider variants for the same logical model
+  - backend-specific invocation/auth configuration
+
+Why this is needed:
+
+- The current mapping mixes too many concerns in one record:
+  - alias selection
+  - coder/backend selection
+  - provider identity
+  - provider-specific model strings
+  - auth details
+- One logical model may exist behind multiple providers, so `model` cannot be treated as a single globally unique identifier
+- Current flat alias records are prone to:
+  - copy/paste drift
+  - duplicate alias keys
+  - inconsistent provider/model formatting
+  - repeated auth/base-url settings across multiple aliases
+
+Required target shape:
+
+- Separate these layers explicitly:
+  - role -> alias
+  - alias -> backend + logical model reference + preferred provider
+  - logical model reference -> provider variants
+  - provider variant -> backend/runtime/auth details
+- Model identity must support:
+  - one logical model with many providers
+  - provider-specific `model_id`
+  - provider-specific auth/base-url/runtime flags
+  - provider preference / fallback ordering where appropriate
+- OpenCode-style model strings should be composed at invocation time from normalized parts such as:
+  - `provider`
+  - `model_id`
+  rather than stored only as a single pre-concatenated string everywhere
+
+Todo list:
+
+- Add a new normalized mapping schema for:
+  - aliases
+  - logical models
+  - provider variants
+  - provider preference ordering
+- Refactor `model_config.py` so resolution becomes:
+  - resolve role alias
+  - resolve alias
+  - resolve logical model
+  - resolve provider variant
+  - emit final backend invocation config
+- Preserve backward compatibility during transition:
+  - continue reading the old flat format first or via a compatibility adapter
+  - add a clear migration path for existing workflow-local mapping files
+- Add schema validation and resolver tests for:
+  - duplicate alias detection
+  - malformed provider/model records
+  - missing provider variants
+  - invalid OpenCode `{provider}/{model-id}` composition
+  - provider fallback selection
+- Add a diagnostics command or test helper to print resolved config for a given alias, for example:
+  - `ukbe-run-agent models resolve qwen-architect`
+- Reduce workflow-local duplication by making bundle-local mapping files override the global registry intentionally instead of re-declaring full repeated entries
+
+Exit criteria:
+
+- A single logical model can be selected through multiple providers without alias duplication
+- Backend adapters receive a normalized final invocation config instead of ad hoc alias payloads
+- Mapping drift is caught by tests before runtime
+- Existing workflows continue to resolve during the migration window
 
 ## Daemon Refactor Phases
 
@@ -408,6 +508,48 @@ Exit criteria:
 
 - migrated workflow is stable in both modes without backend-specific execution workarounds
 - backend functions as persistence/orchestration infrastructure, not as a separate workflow engine
+- Phase D6 slice 1 completed:
+  - `agent-runner-v2` governance workflow regression remains green through workflow-owned local tests:
+    - `tests/run_workflow_unit_tests.py 00_core_governance_bootstrap_v1`
+    - result: `2 passed`
+  - backend daemon acceptance remains green for the migrated workflow through integration coverage:
+    - straight-through worker completion path
+    - worker-driven `review -> refine` loop re-entry
+    - worker-driven `validation -> refine` loop re-entry
+    - final completion through the backend worker bridge
+    - result: backend `test_api_routes.py -k "core_governance_worker_loop"` subset `2 passed`
+  - backend integration tests were aligned to the new D5 `_shared_daemon_runtime()` seam so acceptance no longer depends on an installed editable `agent_runner_v2` package in the backend test environment
+- Phase D6 slice 2 completed:
+  - backend lifecycle acceptance now covers the remaining backend-controlled operator transitions:
+    - human approval advancing an `awaiting_human` step
+    - human rejection re-entering the configured refine step from `awaiting_human`
+    - failed step completion marking the run failed and emitting `RUN_FAILED`
+  - notification behavior remains covered at the shared-runtime layer in `agent-runner-v2` integration tests for:
+    - `RUN_COMPLETED`
+    - `STEP_ENQUEUED`
+    - `HUMAN_APPROVAL_REQUIRED`
+    - `RUN_FAILED`
+  - required D6 validation is now green through automated regression coverage across both repos
+  - the only remaining validation is optional higher-confidence operator proof:
+    - a fresh live manual rerun
+    - a fresh live daemon rerun
+    - both outside the mocked/unit/integration harnesses
+- Phase D6 live operator proof update:
+  - fresh live manual rerun has now been re-proven in local operator usage with:
+    - workflow: `00_core_governance_bootstrap_v1`
+    - job: `00CORE-GEN-20260714-003`
+    - coder resolution: `architect_primary -> opencode (model=opencode-go/deepseek-v4-flash)`
+  - step `generate_core_governance_docs` completed successfully through the live adapter path:
+    - sidecar detected and validated during polling
+    - process exited naturally with `return_code=0`
+    - runner accepted the step as `APPROVED`
+    - declared artifacts were registered correctly
+  - this closes the earlier local invoker/runtime concerns for:
+    - OpenCode command-shape compatibility
+    - Windows command-length handling
+    - job-side `meta.json` permission routing once the external jobs folder is allowed in OpenCode config
+  - remaining optional operator proof is now:
+    - fresh live daemon rerun
 - Phase 4 slice 4.2 is now started:
 - Phase 4 slice 4.2 is now completed:
   - backend vendored runtime package was created at `agent_runner_backend/vendored_runtime/`
@@ -1076,6 +1218,21 @@ Exit criteria:
 - every extracted backend module can be assigned cleanly to one layer
 - no new mixed-layer helper modules are introduced
 
+Status:
+
+- completed
+- the backend layering contract is now explicitly documented in this plan under:
+  - API layer
+  - Services layer
+  - DB layer
+- subsequent Phase 5 slices were executed against that contract:
+  - service extraction
+  - repository extraction
+  - route splitting
+  - service-layer regression coverage
+- the remaining work in Phase 5 is no longer to define the layer boundary
+  - it is to finish auditing and tightening completion status on the already-started slices
+
 ##### Slice 5.2: Extract execution orchestration services from `routes.py`
 
 - create service modules for the active daemon path first
@@ -1120,6 +1277,24 @@ Exit criteria:
 - workflow definition endpoints become thin delegators
 - sync behavior remains in services, not routes
 
+Status:
+
+- completed
+- workflow definition and run-read handlers now delegate through:
+  - `agent_runner_backend/services/workflow_service.py`
+- the API layer no longer owns inline workflow/read orchestration for:
+  - workflow listing
+  - workflow detail retrieval
+  - workflow sync entry orchestration
+  - run listing
+  - run detail query assembly
+- concern-based route modules now use service delegation rather than embedding read/sync branching directly:
+  - `agent_runner_backend/api/workflow_routes.py`
+  - `agent_runner_backend/api/run_routes.py`
+- the remaining workflow-definition complexity is now concentrated in service-layer sync implementation:
+  - `workflow_registry.py`
+  - this is acceptable for this slice because the behavior is no longer owned by route handlers
+
 ##### Slice 5.4: Introduce the first DB/repository layer for active execution queries
 
 - extract repeated ORM query logic used by daemon-mode orchestration into repository modules
@@ -1146,7 +1321,7 @@ Exit criteria:
 
 Status:
 
-- started and partially completed
+- completed
 - the first repository/query extraction now lives under the existing backend database package:
   - `agent_runner_backend/database/run_repository.py`
   - `agent_runner_backend/database/worker_repository.py`
@@ -1160,6 +1335,15 @@ Status:
   - processed-run lookup for draft protection
   - run progress/artifact/event detail queries
 - services now use the aligned repository helpers while retaining transaction and orchestration ownership
+- route modules no longer perform direct ORM querying
+- workflow sync internals now resolve their remaining lookup/history queries through repository helpers instead of direct ORM queries:
+  - artifact-type lookup
+  - workflow-by-name lookup
+  - step-run-history existence checks
+- focused backend regression coverage was updated and remains green for the repository-boundary move:
+  - `tests/unit/test_workflow_registry.py`
+  - `tests/unit/test_workflow_registry_persistence.py`
+  - `tests/unit/test_services.py`
 
 ##### Slice 5.5: Move cleanup and approval flows into services
 
@@ -1177,7 +1361,7 @@ Exit criteria:
 
 Status:
 
-- started and substantially completed
+- completed
 - cleanup and approval orchestration now live in:
   - `agent_runner_backend/services/admin_service.py`
 - extracted service responsibilities now include:
@@ -1196,6 +1380,9 @@ Status:
     - `10 passed`
   - backend unit subset:
     - `57 passed`
+- API handlers for the targeted admin/approval flows are now thin delegators:
+  - `/api/admin/execution/cleanup`
+  - `/api/runs/{run_id}/approve`
 
 ##### Slice 5.6: Split the API module by concern
 
@@ -1267,6 +1454,9 @@ Status:
     - `63 passed`
   - backend integration subset:
     - `10 passed`
+- remaining gap before calling this fully complete:
+  - direct unit coverage is still stronger for the primary happy-path orchestration seams than for every lower-frequency branch
+  - keep integration tests as the authoritative daemon regression gate until service coverage is broadened further
 
 ##### Slice 5.8: Final Phase 5 cleanup and audit
 
@@ -1297,6 +1487,9 @@ Status:
     - `66 passed`
   - backend integration subset:
     - `10 passed`
+- remaining audit items before calling this fully complete:
+  - verify no additional route-level serialization/query leaks remain outside the already-cleaned endpoints
+  - verify workflow-sync internals do not need an explicit repository extraction follow-up for consistency with the documented layer boundary
 
 #### Phase 5 Execution Order
 

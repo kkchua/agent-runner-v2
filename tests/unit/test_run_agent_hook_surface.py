@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import re
 
 from agent_runner_v2 import manual_runtime_deps, run_agent, shared_runtime_deps
 
@@ -18,14 +19,6 @@ def test_runtime_dependency_modules_expose_required_symbols() -> None:
             "_build_group_cfg_from_execution_spec",
             "_resolve_worker_engine_root",
             "_build_worker_request_payload",
-            "_invoke_execute_step_subprocess",
-            "_job_json_path",
-            "_write_backend_job_json",
-            "_submit_worker_result",
-            "_finalize_worker_completion",
-            "_build_execution_state",
-            "_publish_backend_artifacts",
-            "_execute_backend_step_request",
             "_build_worker_crash_result",
         },
         "manual_runtime_deps": {
@@ -56,6 +49,14 @@ def test_run_agent_no_longer_uses_module_self_hook_injection() -> None:
     source = Path("agent_runner_v2/run_agent.py").read_text(encoding="utf-8")
 
     assert "sys.modules[__name__]" not in source
+
+
+def test_run_agent_manual_prepare_uses_effective_root_not_undefined_project_root() -> None:
+    source = Path("agent_runner_v2/run_agent.py").read_text(encoding="utf-8")
+
+    match = re.search(r"prepared = _prepare_step_execution\((.*?)\n        \)", source, re.DOTALL)
+    assert match is not None
+    assert "project_root=effective_root" in match.group(1)
 
 
 def test_manual_runtime_deps_missing_artifacts_matches_direct_workflow_runtime_contract(monkeypatch) -> None:
@@ -138,6 +139,23 @@ def test_shared_runtime_deps_workflow_runtime_wrappers_match_direct_contract(mon
     ]
 
 
+def test_shared_runtime_deps_daemon_wrappers_delegate_to_daemon_runtime(monkeypatch) -> None:
+    calls: list[tuple[str, tuple[object, ...], dict[str, object]]] = []
+
+    monkeypatch.setattr(
+        shared_runtime_deps._daemon_runtime,
+        "resolve_worker_engine_root",
+        lambda engine_root, *, hooks: calls.append(("resolve_worker_engine_root", (engine_root,), {"hooks": hooks})) or ("root", "1.2.3"),
+    )
+
+    resolved = shared_runtime_deps._resolve_worker_engine_root("engine-root")
+
+    assert resolved == ("root", "1.2.3")
+    assert calls == [
+        ("resolve_worker_engine_root", ("engine-root",), {"hooks": shared_runtime_deps}),
+    ]
+
+
 def test_run_agent_workflow_runtime_wrappers_match_direct_contract(monkeypatch, tmp_path) -> None:
     calls: list[tuple[str, tuple[object, ...], dict[str, object]]] = []
 
@@ -180,6 +198,54 @@ def test_run_agent_workflow_runtime_wrappers_match_direct_contract(monkeypatch, 
     ]
 
 
+def test_run_agent_daemon_wrappers_delegate_to_daemon_runtime(monkeypatch) -> None:
+    calls: list[tuple[str, tuple[object, ...], dict[str, object]]] = []
+
+    monkeypatch.setattr(
+        run_agent._daemon_runtime,
+        "build_worker_request_payload",
+        lambda *, run, step_run, step_execution_spec=None, backend_url="", step_spec_source="backend", hooks: calls.append((
+            "build_worker_request_payload",
+            (),
+            {
+                "run": run,
+                "step_run": step_run,
+                "step_execution_spec": step_execution_spec,
+                "backend_url": backend_url,
+                "step_spec_source": step_spec_source,
+                "hooks": hooks,
+            },
+        )) or {"job_id": "RUN-1"},
+    )
+
+    run_payload = {"id": "run-1"}
+    step_run_payload = {"id": "step-1"}
+
+    request = run_agent._build_worker_request_payload(
+        run=run_payload,
+        step_run=step_run_payload,
+        step_execution_spec={"template_group": "wf"},
+        backend_url="http://backend",
+        step_spec_source="backend",
+    )
+
+    assert request == {"job_id": "RUN-1"}
+    assert calls == [
+        (
+            "build_worker_request_payload",
+            (),
+            {
+                "run": run_payload,
+                "step_run": step_run_payload,
+                "step_execution_spec": {"template_group": "wf"},
+                "backend_url": "http://backend",
+                "step_spec_source": "backend",
+                "hooks": run_agent._shared_runtime_deps,
+            },
+        ),
+    ]
+
+
 def test_shared_runtime_deps_resolve_step_coder_matches_direct_contract(monkeypatch) -> None:
     captured: dict[str, object] = {}
 
@@ -219,13 +285,14 @@ def test_shared_runtime_deps_resolve_step_coder_matches_direct_contract(monkeypa
 def test_shared_runtime_deps_prepare_and_execute_step_wrappers_keep_adapter_contract(monkeypatch, tmp_path) -> None:
     calls: list[tuple[str, dict[str, object]]] = []
 
-    def fake_prepare_step_execution(*, template_group, group_cfg, state, step, step_cfg, workflow_key_override="", cli_coder=None, hooks):
+    def fake_prepare_step_execution(*, template_group, group_cfg, state, step, step_cfg, project_root, workflow_key_override="", cli_coder=None, hooks):
         calls.append(("prepare", {
             "template_group": template_group,
             "group_cfg": group_cfg,
             "state": state,
             "step": step,
             "step_cfg": step_cfg,
+            "project_root": project_root,
             "workflow_key_override": workflow_key_override,
             "cli_coder": cli_coder,
             "hooks": hooks,
@@ -259,6 +326,7 @@ def test_shared_runtime_deps_prepare_and_execute_step_wrappers_keep_adapter_cont
         state=state,
         step="a",
         step_cfg=step_cfg,
+        project_root=effective_root,
         workflow_key_override="override",
         cli_coder="claude",
     )
@@ -281,6 +349,7 @@ def test_shared_runtime_deps_prepare_and_execute_step_wrappers_keep_adapter_cont
             "state": state,
             "step": "a",
             "step_cfg": step_cfg,
+            "project_root": effective_root,
             "workflow_key_override": "override",
             "cli_coder": "claude",
             "hooks": shared_runtime_deps,
@@ -382,13 +451,14 @@ def test_run_agent_step_execution_runtime_wrappers_match_direct_contract(monkeyp
 def test_run_agent_prepare_and_execute_step_wrappers_keep_adapter_contract(monkeypatch, tmp_path) -> None:
     calls: list[tuple[str, dict[str, object]]] = []
 
-    def fake_prepare_step_execution(*, template_group, group_cfg, state, step, step_cfg, workflow_key_override="", cli_coder=None, hooks):
+    def fake_prepare_step_execution(*, template_group, group_cfg, state, step, step_cfg, project_root, workflow_key_override="", cli_coder=None, hooks):
         calls.append(("prepare", {
             "template_group": template_group,
             "group_cfg": group_cfg,
             "state": state,
             "step": step,
             "step_cfg": step_cfg,
+            "project_root": project_root,
             "workflow_key_override": workflow_key_override,
             "cli_coder": cli_coder,
             "hooks": hooks,
@@ -422,6 +492,7 @@ def test_run_agent_prepare_and_execute_step_wrappers_keep_adapter_contract(monke
         state=state,
         step="a",
         step_cfg=step_cfg,
+        project_root=effective_root,
         workflow_key_override="override",
         cli_coder="claude",
     )
@@ -444,6 +515,7 @@ def test_run_agent_prepare_and_execute_step_wrappers_keep_adapter_contract(monke
             "state": state,
             "step": "a",
             "step_cfg": step_cfg,
+            "project_root": effective_root,
             "workflow_key_override": "override",
             "cli_coder": "claude",
             "hooks": run_agent._shared_runtime_deps,

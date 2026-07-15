@@ -1,0 +1,52 @@
+{
+  "roles": {
+    "architect_primary": {
+      "coder": "qwen",
+      "connection": "bailian",
+      "model_id": "qwen3.7-plus",
+      "role_type": "architect"
+    },
+    "architect_secondary": {
+      "coder": "qwen",
+      "connection": "opencode_ai_zen_go",
+      "model_id": "deepseek-v4-flash",
+      "role_type": "architect"
+    },
+    "architect_tertiary": {
+      "coder": "opencode",
+	  "connection": "opencode_go",
+      "model_id": "deepseek-v4-flash",
+      "role_type": "architect"
+    },
+    "reviewer_primary": {
+      "coder": "qwen",
+      "connection": "bailian",
+      "model_id": "qwen3.7-plus",
+      "role_type": "reviewer"
+    },
+    "reviewer_secondary": {
+      "coder": "qwen",
+	  "connection": "bailian",
+      "model_id": "kimi-k2.5",
+      "role_type": "reviewer"
+    },
+    "reviewer_tertiary": {
+      "coder": "qwen",
+      "connection": "bailian",
+      "model_id": "deepseek-v4-flash",
+      "role_type": "reviewer"
+    },
+    "developer_primary": {
+      "coder": "qwen",
+      "connection": "bailian",
+      "model_id": "qwen3.5-plus",
+      "role_type": "developer"
+    },
+    "developer_secondary": {
+      "coder": "opencode",
+      "connection": "opencode_go",
+      "model_id": "deepseek-v4-flash",
+      "role_type": "developer"
+    }
+  }
+}

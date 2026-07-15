@@ -64,6 +64,7 @@ class StepConfig:
     # Coder configuration
     coder_default: str | None = None
     coder_allowed: list[str] = field(default_factory=list)
+    coder_role_policy: str | None = None
     coder_default_role: str | None = None
     coder_allowed_roles: list[str] = field(default_factory=list)
     coder_must_differ: bool = False

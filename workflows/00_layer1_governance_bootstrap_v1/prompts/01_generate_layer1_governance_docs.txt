@@ -1,0 +1,157 @@
+You are generating the reusable Layer 1 ecosystem governance master docs.
+
+This workflow is intentionally narrow. It owns only the permanent Layer 1
+governance docs. It must remain reusable across ecosystems and repositories.
+
+Read first:
+- relevant source files under `agent_runner_v2/`
+- shared registry files under `workflows/_registry/`
+- any existing docs under `{SYSTEM_DOC_ROOT}/`
+
+Write or refresh only:
+- `{SYSTEM_DOCS_INDEX}`
+- `{SYSTEM_DOC_STANDARD}`
+- `{BUNDLE_TAXONOMY}`
+- `{RUNTIME_GOVERNANCE}`
+
+Hard ownership rules:
+- Do not write outside the four files listed above.
+- Do not generate repo-local analysis, SDLC docs, bundle-local SOP docs,
+  audience docs, or delivery runtime artifacts.
+- Do not define a repository's concrete workflow inventory.
+- Do not define a repository's concrete scaffold workflow name.
+- Do not define provider authentication flows.
+- Use ASCII characters only in generated markdown body text. Do not emit
+  smart quotes, em dashes, en dashes, replacement characters, or other
+  non-ASCII punctuation.
+
+Layering model to preserve:
+1. Layer 1 = ecosystem governance
+2. Layer 2 = repo or bundle master-doc and operating structure
+3. Layer 3 = plugin workflow families and repo-local outputs
+
+Layer 1 must define:
+- documentation authority
+- documentation structure rules
+- bundle class and ownership boundaries
+- runtime publish/install/control-plane expectations
+- validation gates
+- the generic contract for plugin workflow bundles
+
+Layer 1 must not define:
+- concrete workflow IDs
+- concrete plugin bundle names
+- repo-derived artifact names
+- repo-derived filenames
+- repo-specific output examples
+- any repo-local fallback resolution policy for loading workflow bundles
+
+Strict scope exclusions:
+- Do not include any concrete workflow identifier matching a pattern like
+  `00_example_workflow_v1` anywhere in document body text.
+- Concrete workflow identifiers are allowed only inside the required YAML
+  frontmatter and the workflow-managed protection banner immediately after
+  frontmatter.
+- Do not include the literal text `{ARTIFACT_KEY_` anywhere.
+- Do not mention `delivery_scaffold_v1` anywhere.
+- Do not enumerate repo-derived artifacts such as `PROJECT_ANALYSIS`,
+  `CODEBASE_INVENTORY`, `SYSTEM_OVERVIEW`, `FUNCTIONAL_SPEC`,
+  `SYSTEM_CONTEXT`, `COMPONENT_ARCHITECTURE`, `DEVELOPER_GUIDE`, or
+  `RUNBOOK`.
+
+Required frontmatter:
+- `template_id`
+- `version: "1.0.0"`
+- `doc_type: "system"`
+- `managed_by: "workflow-generated"`
+- `generated_at`
+- `workflow: "00_layer1_governance_bootstrap_v1"`
+- `step: "generate_layer1_governance_docs"`
+- `change_id`
+
+Template IDs:
+- `README.md` -> `SYS-00-IDX`
+- `DOCUMENTATION_STANDARD.md` -> `SYS-00-DS`
+- `BUNDLE_TAXONOMY.md` -> `SYS-00-BT`
+- `RUNTIME_GOVERNANCE.md` -> `SYS-00-RG`
+
+Required sections:
+- `README.md`
+  - `System Documentation Index`
+  - `Audience Views`
+  - `Document Map`
+- `DOCUMENTATION_STANDARD.md`
+  - `Purpose`
+  - `Audience Model`
+  - `Document Set`
+  - `Architecture Baseline`
+  - `Conditional Standards`
+  - `Update Triggers`
+  - `Validation`
+- `BUNDLE_TAXONOMY.md`
+  - `Bundle Classes`
+  - `Ownership Rules`
+  - `Packaging Rules`
+- `RUNTIME_GOVERNANCE.md`
+  - `Purpose`
+  - `Runtime Scope Model`
+  - `Bundle Publish And Install Model`
+  - `Registry Control Plane`
+  - `Plugin Bundle Control Model`
+  - `Role And Connection Resolution`
+  - `Artifact Ownership Enforcement`
+  - `Execution Mode Parity`
+  - `Validation Gates`
+  - `Change Control`
+
+Document-specific rules:
+- `README.md` must explain the Layer 1 / Layer 2 / Layer 3 model without
+  naming any concrete workflow inventory.
+- `README.md` must explicitly state that repo-local outputs live under
+  `docs/repo/` and are outside Layer 1 ownership.
+- `DOCUMENTATION_STANDARD.md` must define rules only for the four Layer 1
+  docs.
+- `BUNDLE_TAXONOMY.md` must define bundle classes generically, including the
+  distinction between core governance bundles and plugin workflow bundles.
+- `BUNDLE_TAXONOMY.md` must not define global-first, local-fallback, dual-path,
+  or any other runtime resolution behavior. Keep it at taxonomy and ownership.
+- `BUNDLE_TAXONOMY.md` must not discuss concrete repo-local output paths,
+  `docs/repo/`, or ownership of repository-specific outputs. Keep it at
+  bundle-class and bundle-ownership policy level only.
+- `RUNTIME_GOVERNANCE.md` must define the steady-state runtime model and must
+  explicitly state that plugin workflow bundles may be either
+  `single-workflow` bundles or `multi-workflow` bundles.
+- `RUNTIME_GOVERNANCE.md` must define the global published bundle copy under
+  the global runtime home as the canonical runtime source.
+- `RUNTIME_GOVERNANCE.md` must not define repo-local workflow fallback,
+  dual-path discovery, or local repository fallback when a global bundle is
+  missing.
+- `RUNTIME_GOVERNANCE.md` must not discuss concrete repo-local output paths,
+  `docs/repo/`, or ownership of repository-specific outputs. Keep it at
+  runtime control-plane, registry, publish/install, validation, and parity
+  rules level only.
+
+Before returning final JSON:
+- complete all four files
+- re-read all four files from disk
+- verify every required section exists
+- verify no file contains a concrete workflow identifier in body text beyond
+  the required frontmatter and workflow-managed protection banner
+- verify no file contains `{ARTIFACT_KEY_`
+- verify no file contains `delivery_scaffold_v1`
+- verify `README.md` explicitly mentions `docs/repo/` as the repo-local
+  output boundary outside Layer 1 ownership
+- verify `DOCUMENTATION_STANDARD.md` contains no repo-derived artifact names
+- verify `BUNDLE_TAXONOMY.md` contains no `docs/repo/` reference and no
+  repository-output ownership discussion
+- verify `RUNTIME_GOVERNANCE.md` contains no `docs/repo/` reference and no
+  repository-output ownership discussion
+- verify no file contains mojibake markers or replacement-character corruption
+- verify all four files are ASCII-only
+- verify `RUNTIME_GOVERNANCE.md` explicitly uses the phrases
+  `single-workflow` and `multi-workflow`
+- verify `RUNTIME_GOVERNANCE.md` does not mention dual-path discovery, local
+  repository fallback, or fallback loading from the repo workflows directory
+- verify `BUNDLE_TAXONOMY.md` does not define runtime path resolution policy
+- verify the task is incomplete until `{RUNTIME_GOVERNANCE}` exists on disk
+  and the required meta.json sidecar has been written

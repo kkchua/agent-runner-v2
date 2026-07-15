@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import json
 import os
-import shutil
 import signal
 import subprocess
 import sys
@@ -21,22 +20,6 @@ from typing import Any
 
 from .config_loader import load_runner_config
 from .runtime_context import GLOBAL_RUNNER_HOME
-
-
-def _get_job_step_dir(template_group: str, job_id: str, step_name: str, step_sequence_no: int) -> Path:
-    """Compute the job step directory path matching manual mode's structure.
-    
-    Args:
-        template_group: Workflow template group name (e.g., 'delivery_scaffold_v1')
-        job_id: Job identifier (run_code from backend)
-        step_name: Step name (e.g., 'project_analysis')
-        step_sequence_no: Sequential step number for contiguous working dirs
-    
-    Returns:
-        Path to job step directory (e.g., ~/.ukbe-runner/jobs/<template_group>/<job_id>/01_project_analysis)
-    """
-    from .job_state import job_dir
-    return job_dir(template_group, job_id) / f"{step_sequence_no:02d}_{step_name}"
 
 
 def _utcnow_iso() -> str:
@@ -140,6 +123,7 @@ class ChildExecution:
     term_sent_at: float | None = None
     last_heartbeat_at: float = 0.0
     submission_done: bool = False
+    job_step_result_path: Path | None = None
 
 
 class _DaemonLogger:
@@ -189,6 +173,7 @@ def _send_child_heartbeat(client, worker_id: str, child: ChildExecution, *, stat
 
 def _spawn_child(*, claim: dict[str, Any], runtime_root: Path, cli_pythonpath: str | None, logger: _DaemonLogger, backend_url: str, step_spec_source: str) -> ChildExecution:
     from .run_agent import _build_worker_request_payload
+    from .job_state import job_dir
 
     run = dict(claim['run'])
     step_run = dict(claim['step_run'])
@@ -220,9 +205,40 @@ def _spawn_child(*, claim: dict[str, Any], runtime_root: Path, cli_pythonpath: s
     subprocess_cwd = _resolve_subprocess_cwd(project_root=project_root, workspace_root=workspace_root)
     
     logger.log('info', 'subprocess_cwd', message=f'Setting subprocess cwd to {subprocess_cwd}', details={'project_root': project_root, 'subprocess_cwd': str(subprocess_cwd)})
-    
+
+    # Check if job folder already exists (for multi-step workflows)
+    backend_run_code = request_payload.get("job_id", "")
+    template_group = request_payload.get("template_group", "")
+    job_id_to_pass = ""  # Default: empty, will create new job
+
+    if backend_run_code and template_group:
+        potential_job_dir = job_dir(template_group, backend_run_code)
+        if potential_job_dir.exists():
+            job_id_to_pass = backend_run_code
+
+    # Compute job step directory path (where manual mode writes result.json)
+    step_sequence_no = int(claim.get('step_execution_spec', {}).get("step_sequence_no") or 
+                          claim.get('step_execution_spec', {}).get("step_order") or 1)
+    step_name = str(step_run.get('step_name') or '')
+    job_step_dir = job_dir(template_group, backend_run_code) / f"{step_sequence_no:02d}_{step_name}"
+    job_step_result_path = job_step_dir / "result.json"
+
+    # Build CLI args same as manual mode (like run-*.bat files)
+    cli_args = [
+        sys.executable, '-m', 'agent_runner_v2.run_agent', 'run',
+        '--project-root', request_payload.get("project_root", "."),
+        '--template-group', template_group,
+        '--mode', 'daemon',
+        '--job-id', job_id_to_pass,  # Empty for new job, or run_code to load existing
+        '--job-no', backend_run_code,  # Backend's run_code for folder name
+        '--job', step_name,
+    ]
+
+    if request_payload.get("target_project_root"):
+        cli_args.extend(['--target-project-root', request_payload["target_project_root"]])
+
     proc = subprocess.Popen(
-        [sys.executable, '-m', 'agent_runner_v2.run_agent', 'execute-step', '--request-file', str(request_path), '--result-file', str(result_path)],
+        cli_args,
         stdout=log_handle,
         stderr=subprocess.STDOUT,
         env=env,
@@ -246,6 +262,7 @@ def _spawn_child(*, claim: dict[str, Any], runtime_root: Path, cli_pythonpath: s
         started_at_iso=_utcnow_iso(),
         state='running',
         last_heartbeat_at=0.0,
+        job_step_result_path=job_step_result_path,
     )
     logger.log('info', 'child_spawned', message='spawned execute-step child', child=child, details={'request_path': str(request_path), 'result_path': str(result_path), 'log_file': str(combined_log_path), 'step_spec_source': step_spec_source, 'coder_override': request_payload.get('coder_override')})
     return child
@@ -266,13 +283,29 @@ def _resolve_subprocess_cwd(*, project_root: str | None, workspace_root: str | N
 
 
 def _child_result(child: ChildExecution) -> dict[str, Any]:
-    diagnostics = {'log_file': str(child.combined_log_path), 'request_path': str(child.request_path), 'result_path': str(child.result_path)}
+    diagnostics = {
+        'log_file': str(child.combined_log_path), 
+        'request_path': str(child.request_path), 
+        'result_path': str(child.result_path),
+        'job_step_result_path': str(child.job_step_result_path) if child.job_step_result_path else None,
+    }
+    
+    # Check job step directory first (manual mode writes here)
+    if child.job_step_result_path and child.job_step_result_path.exists():
+        payload = json.loads(child.job_step_result_path.read_text(encoding='utf-8'))
+        payload.setdefault('diagnostics', {}).update(diagnostics)
+        if child.exit_code is not None:
+            payload['diagnostics']['subprocess_return_code'] = child.exit_code
+        return payload
+    
+    # Fall back to worker runtime directory (legacy)
     if child.result_path.exists():
         payload = json.loads(child.result_path.read_text(encoding='utf-8'))
         payload.setdefault('diagnostics', {}).update(diagnostics)
         if child.exit_code is not None:
             payload['diagnostics']['subprocess_return_code'] = child.exit_code
         return payload
+        
     reason = f'child process exited without result file for step {child.step_name}'
     return _failure_result(step_name=child.step_name, code='CHILD_RESULT_MISSING', reason=reason, diagnostics=diagnostics | {'subprocess_return_code': child.exit_code})
 
@@ -297,7 +330,8 @@ def _terminate_child(child: ChildExecution, logger: _DaemonLogger, sigkill: bool
 
 def _run_supervisor(*, worker_id: str, worker_label: str, backend_url: str, poll_seconds: int, max_parallel: int, stalled_seconds: int, step_timeout_seconds: int, kill_grace_seconds: int, runtime_dir: Path, log_file: Path, cli_pythonpath: str | None, step_spec_source: str, once: bool = False) -> int:
     from .backend_client import BackendClient
-    from .run_agent import _finalize_worker_completion, _submit_worker_result
+    from .daemon_runtime import build_job_sync_payload
+    from .job_state import job_dir
 
     logger = _DaemonLogger(log_file, worker_id)
     client = BackendClient(backend_url)
@@ -352,59 +386,53 @@ def _run_supervisor(*, worker_id: str, worker_label: str, backend_url: str, poll
             if not child.submission_done:
                 result = _child_result(child)
                 try:
-                    completion = _submit_worker_result(
-                        client=client,
-                        run=child.run_payload,
-                        step_run=child.step_run_payload,
-                        result=result,
-                    )
-                    child.submission_done = True
-                    child.state = 'completed' if result.get('status') == 'completed' else 'failed'
-                    logger.log('info', 'result_submitted', message='submitted child result', child=child, details={'status': result.get('status'), 'outcome': result.get('outcome'), 'exit_code': proc_rc})
-                    try:
-                        completion_info = _finalize_worker_completion(
-                            client=client,
-                            run=child.run_payload,
-                            step_run=child.step_run_payload,
-                            completion=completion,
-                            step_execution_spec=child.request_payload.get('step_execution_spec'),
+                    # Read job.json for authoritative state (next_step, status, artifacts)
+                    job_state: dict[str, Any] | None = None
+                    template_group = child.request_payload.get("template_group", "")
+                    backend_run_code = child.request_payload.get("job_id", "")
+                    if template_group and backend_run_code:
+                        jpath = job_dir(template_group, backend_run_code) / "job.json"
+                        if jpath.exists():
+                            job_state = json.loads(jpath.read_text(encoding="utf-8"))
+                    if job_state is not None:
+                        sync_payload = build_job_sync_payload(
+                            job=job_state,
+                            step_result=result,
+                            step_run_id=child.step_run_id,
                         )
+                        client.sync_job_state(step_run_id=child.step_run_id, payload=sync_payload)
+                        child.state = 'completed' if sync_payload.get('run_status') in ('completed', 'pending') else 'failed'
+                        child.submission_done = True
                         logger.log(
-                            'info',
-                            'completion_finalized',
-                            message='finalized backend completion state',
+                            'info', 'job_state_synced',
+                            message='synced job state from job.json',
                             child=child,
                             details={
-                                'run_status': (completion_info.get('run') or {}).get('status'),
-                                'last_event': completion_info.get('last_event'),
-                                'next_step_name': ((completion_info.get('next_step_run') or {}).get('step_name')),
+                                'run_status': sync_payload.get('run_status'),
+                                'next_step': sync_payload.get('next_step_name'),
+                                'artifact_count': len(sync_payload.get('artifacts', [])),
                             },
                         )
-                    except Exception as finalize_exc:
-                        logger.log('warning', 'completion_finalize_failed', message='failed to finalize backend completion state', child=child, details={'error': str(finalize_exc)})
-                    
-                    # After successful submission, also write result.json to job step directory (matching manual mode)
-                    try:
-                        template_group = child.request_payload.get("template_group", "")
-                        job_id = child.run_code  # run_code is the job_id
-                        step_sequence_no = int(child.request_payload.get("step_execution_spec", {}).get("step_sequence_no") or 
-                                              child.request_payload.get("step_execution_spec", {}).get("step_order") or 1)
-                        
-                        step_dir = _get_job_step_dir(
-                            template_group=template_group,
-                            job_id=job_id,
-                            step_name=child.step_name,
-                            step_sequence_no=step_sequence_no,
+                    else:
+                        # Fallback: no job.json found, submit as-is via result
+                        logger.log(
+                            'warning', 'job_json_missing',
+                            message='job.json not found, using fallback result submission',
+                            child=child,
+                            details={'template_group': template_group, 'run_code': backend_run_code},
                         )
-                        step_dir.mkdir(parents=True, exist_ok=True)
-                        
-                        # Write result.json with same structure as manual mode
-                        result_json_path = step_dir / "result.json"
-                        result_json_path.write_text(json.dumps(result, indent=2, ensure_ascii=False), encoding="utf-8")
-                        
-                        logger.log('info', 'result_json_written', message='wrote result.json to job step directory', child=child, details={'path': str(result_json_path)})
-                    except Exception as write_exc:
-                        logger.log('warning', 'result_json_write_failed', message='failed to write result.json to job step directory', child=child, details={'error': str(write_exc)})
+                        client.complete_step_run(
+                            step_run_id=child.step_run_id,
+                            payload={
+                                "status": result.get("status", "failed"),
+                                "outcome": result.get("outcome"),
+                                "output_payload": dict(result.get("artifacts") or {}),
+                                "error_message": (result.get("failure") or {}).get("failure_reason"),
+                            },
+                        )
+                        child.state = 'completed' if result.get('status') in ('completed', 'APPROVED') else 'failed'
+                        child.submission_done = True
+                        logger.log('info', 'result_submitted_fallback', message='submitted child result via fallback', child=child, details={'status': result.get('status')})
                 except Exception as exc:
                     child.state = 'submit_failed'
                     child.watchdog_reason = str(exc)
@@ -468,6 +496,8 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument('--step-timeout-seconds', type=int, default=0, help='Hard timeout for a child execution.')
     p.add_argument('--kill-grace-seconds', type=int, default=0, help='Grace period between SIGTERM and SIGKILL.')
     p.add_argument('--step-spec-source', default='', help='Workflow step spec source: global, backend, or hybrid.')
+    p.add_argument('--engine-root', default='', help='Explicit engine root to prepend to PYTHONPATH for child runs.')
+    p.add_argument('--once', action='store_true', help='Claim and process at most one step, then exit.')
     args = p.parse_args(argv)
 
     cfg = _load_config()
@@ -486,7 +516,7 @@ def main(argv: list[str] | None = None) -> int:
     runtime_dir = Path(args.runtime_dir or _setting(cfg, 'WORKER_RUNTIME_DIR', 'runtime_dir', default_runtime_dir)).resolve()
 
     bootstrap_logger = _DaemonLogger(log_file, worker_id)
-    cli_pythonpath = _resolve_engine_pythonpath(cfg, bootstrap_logger.log)
+    cli_pythonpath = args.engine_root or _resolve_engine_pythonpath(cfg, bootstrap_logger.log)
     runtime_dir.mkdir(parents=True, exist_ok=True)
 
     return _run_supervisor(
@@ -502,4 +532,5 @@ def main(argv: list[str] | None = None) -> int:
         log_file=log_file,
         cli_pythonpath=cli_pythonpath,
         step_spec_source=step_spec_source,
+        once=args.once,
     )

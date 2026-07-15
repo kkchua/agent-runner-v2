@@ -3,120 +3,125 @@ template_id: "SYS-00-BT"
 version: "1.0.0"
 doc_type: "system"
 managed_by: "workflow-generated"
-generated_at: "2026-07-13T23:04:55+08:00"
-workflow: "00_core_governance_bootstrap_v1"
-step: "generate_core_governance_docs"
-change_id: "00CORE-20260713-7d31e8d4"
+generated_at: "2026-07-15T22:38:14+08:00"
+workflow: "00_layer1_governance_bootstrap_v1"
+step: "generate_layer1_governance_docs"
+change_id: "00L1-20260715-74497d6b"
 ---
+
+> Managed by workflow: `00_layer1_governance_bootstrap_v1` / step: `generate_layer1_governance_docs`
+> This file is workflow-generated and protected from manual edits.
 
 # Bundle Taxonomy
 
-This document defines the canonical bundle classification system for the agent-runner ecosystem. It specifies bundle classes, ownership rules, and packaging requirements that maintain clear authority boundaries across all workflow packages.
-
 ## Bundle Classes
 
-The ecosystem recognizes exactly one concrete bundle class with canonical governance authority:
+The governance framework recognizes two primary bundle classes:
 
 ### Core Governance Bundles
 
-**Purpose**: Define universal documentation contracts and three-layer model rules applicable across all repositories and workflow bundles.
+Core governance bundles produce permanent ecosystem-level governance
+documents. They are owned by the governance bootstrap workflow and are
+canonical in visibility — meaning they represent the authoritative source of
+truth for their document set.
 
-**Scope**:
-- Govern ecosystem master docs under `docs/system/00_governance/bootstrap/`
-- Establish documentation standards, validation criteria, and update triggers
-- Define bundle taxonomy and migration strategies
-- Enforce ownership boundaries between ecosystem, bundle, and repo-local layers
+Characteristics:
 
-**Canonical Example**: `00_core_governance_bootstrap_v1`
+- Owned by the governance bootstrap workflow.
+- Produce permanent, protected governance documents.
+- Must not contain repository-specific content, concrete workflow
+  identifiers, or repository-derived artifact names.
+- Subject to the full generate, review, refine, validate, and audit cycle.
+- Changes require a governance bootstrap run with a new change ID.
 
-**Ownership Rules**:
-- Owned exclusively by the `00_core_governance_bootstrap_v1` workflow bundle
-- No other workflow may modify core governance bundle contents
-- Changes require deterministic review, validation, and audit approval
-- Must not claim ownership of repo-derived analysis or delivery outputs
+### Plugin Workflow Bundles
 
-**Artifact Set**: Limited to four canonical files plus transient review/validation outputs:
-- README.md (SYS-00-IDX)
-- DOCUMENTATION_STANDARD.md (SYS-00-DS)
-- BUNDLE_TAXONOMY.md (SYS-00-BT)
-- BUNDLE_MIGRATION_PLAN.md (SYS-00-BMP)
+Plugin workflow bundles are self-contained, reusable workflow packages that
+define steps, prompts, artifact keys, and coder policies. They are the primary
+unit of extensibility for the agent-runner framework.
 
-Other bundle classes exist in the ecosystem but are subordinate to core governance bundles. They operate within Layer 2 (workflow bundle master docs) or Layer 3 (repo-local generated docs) and must conform to the rules defined by core governance bundles. When conflicts arise between bundle-local docs and core governance docs, the core governance docs win.
+Characteristics:
+
+- May be single-workflow or multi-workflow bundles.
+- Each bundle contains a declarative manifest, prompt templates, optional
+  context extensions, and optional bundle governance.
+- Discovered through a dual-path model: global runtime home first, local
+  repository fallback second.
+- Plugin workflow bundles may produce artifacts governed by Layer 1 policy
+  but do not own Layer 1 governance documents.
+- Plugin workflow bundles must not modify, rename, or delete Layer 1
+  governance documents.
 
 ## Ownership Rules
 
-Bundle ownership follows strict hierarchical rules that prevent authority confusion and documentation drift:
+Ownership boundaries between bundle classes are strict and enforced:
 
-### Hierarchical Authority
+1. **Core governance bundles own Layer 1 documents.** Only the governance
+   bootstrap workflow may create, update, or delete the four Layer 1
+   governance documents. Plugin workflow bundles must not write to Layer 1
+   paths.
 
-1. **Core governance bundles** hold supreme authority over ecosystem-wide documentation contracts. Their rules apply universally and cannot be overridden by subordinate bundles.
+2. **Plugin workflow bundles own their own artifacts.** Each plugin workflow
+   bundle owns the artifacts it declares in its manifest. Artifact keys must
+   not collide with Layer 1 artifact keys.
 
-2. **Workflow bundle master docs** (Layer 2) own their specific workflow's domain but must not contradict core governance rules. Each bundle carries its master docs into the global runner home during publish and install operations.
+3. **No cross-bundle writes.** A bundle may not write artifacts owned by
+   another bundle. Artifact ownership is determined by the bundle that
+   declares the artifact key in its manifest.
 
-3. **Repo-local generated docs** (Layer 3) are downstream outputs produced by repository-scanning workflows. They have no governance authority and must conform to both Layer 1 and Layer 2 rules.
+4. **Governance contract precedence.** When a plugin workflow bundle's local
+   prompt text conflicts with Layer 1 governance policy, the Layer 1
+   governance contract takes precedence.
 
-### Non-Overlap Principle
-
-No two bundles may claim ownership of the same artifact path or documentation domain. Explicit separation prevents:
-
-- Conflicting instructions across multiple governance sources
-- Stale assumptions propagating from deprecated bundles
-- Validation gaps where no bundle claims responsibility
-
-When a new bundle is created, its `bundle_governance.toml` manifest must declare its artifact registry and explicitly exclude paths owned by existing bundles. The core governance bundle validates this declaration during bundle installation.
-
-### Conflict Resolution
-
-When prompt instructions, stale repo docs, or bundle-local guidance conflict with core governance docs:
-
-1. Core governance docs win unconditionally
-2. Conflicting content in subordinate layers must be marked as deprecated
-3. Bundle refinement loops update only the affected core governance files
-4. Validation gates reject updates that violate ownership boundaries
+5. **Review and validation artifacts are transient.** Artifacts produced by
+   review, validation, or audit steps are supporting evidence only. They are
+   not permanent governance documents and must not become part of the Layer 1
+   document set.
 
 ## Packaging Rules
 
-Bundle packaging enforces consistent structure, discoverability, and runtime deployment across all workflow packages.
+Plugin workflow bundles must conform to the following packaging rules:
 
-### Package Structure
+### Manifest
 
-Each workflow bundle resides under `workflows/<name>/` and contains:
+Every plugin workflow bundle must include a declarative manifest file that
+declares:
 
-```
-workflows/<name>/
-├── workflow.toml          # Declarative manifest (steps, routing, artifact keys)
-├── prompts/               # Prompt template files for each step
-├── actions.py             # Optional Python action implementations
-├── bundle_governance/     # Bundle-local master docs and extensions
-│   ├── <governance>.md    # Canonical bundle-specific governance docs
-│   ├── extensions/        # Governance extension rules
-│   └── generated/         # Auto-generated adapter files (AGENTS.md, CLAUDE.md, QWEN.md)
-└── context_extensions.py  # Optional workflow-specific context hooks
-```
+- Workflow name, version, label, and job prefix.
+- Step definitions with routing rules (success, reject-refine).
+- Artifact keys for produces and required inputs.
+- Coder role policies per step.
+- Optional human approval gates.
+- Optional notification flags.
 
-### Dual-Path Discovery
+### Prompt Templates
 
-Plugin workflow packages use dual-path discovery for runtime deployment:
+Each step that requires LLM interaction must have a corresponding prompt
+template file. Prompt templates may use placeholder tokens that are resolved
+at runtime by the context builder.
 
-1. **Global runner home** (`%USERPROFILE%\.ukbe-runner\workflows\<workflow_name>\`): Primary location where installed bundles reside. Bundle-local master docs travel here during publish/install operations.
+### Context Extensions
 
-2. **Local repository fallback** (`workflows/<name>/` within individual repos): Secondary location used during development or when global installation is unavailable.
+Bundles may include optional context extension modules that inject
+workflow-specific paths and variables into the prompt rendering context.
+Context extensions must not introduce repository-specific logic into Layer 1
+governance documents.
 
-The adapter pattern converts `WorkflowBundle` objects into the same dict format that legacy monolithic configurations produced, ensuring zero changes to the existing execution pipeline (`step_runner.py`, `workflow_router.py`, `coder_adapters.py`, `job_state.py`).
+### Bundle Governance
 
-### Manifest Requirements
+Bundles may include optional bundle governance files that define
+canonical source documents, generated adapter targets, and governance
+inclusion rules. Bundle governance is advisory to the workflow itself and
+does not override Layer 1 policy.
 
-Every `workflow.toml` must include:
+### Directory Structure
 
-- `[workflow]` section with name, version, label, description, and visibility
-- `[[step]]` entries defining each execution step with prompt/action references
-- `[step.artifacts]` sections declaring produces, required_inputs, and result_meta_key
-- `[step.coder]` sections specifying allowed roles and default_role
+A plugin workflow bundle is a self-contained directory containing:
 
-Bundle governance manifests under `bundle_governance/` must declare their artifact registry and ownership boundaries explicitly. The `core_governance.md` file within each bundle's governance directory serves as the canonical source of truth for that bundle's scope.
+- The declarative manifest file.
+- A prompts subdirectory for prompt templates.
+- Optional context extension module.
+- Optional bundle governance files and subdirectory.
 
-### Versioning and Migration
-
-Bundle versions follow semantic versioning (MAJOR.MINOR.PATCH). Major version increments indicate breaking changes to the documentation contract or ownership boundaries. Minor increments add new capabilities without modifying existing rules. Patch increments fix errors or clarify ambiguous language.
-
-Migration from legacy bundle models to the current three-layer architecture proceeds through defined phases documented in BUNDLE_MIGRATION_PLAN.md. During migration, legacy bundles remain operational but are marked as deprecated. New bundles must conform to the three-layer model from inception.
+The bundle directory name serves as the unique identifier for the workflow
+within the framework's discovery and registry systems.

@@ -12,7 +12,7 @@ from .documentation_guardrails import (
     generated_doc_manifest,
     managed_banner,
 )
-from .model_config import resolve_coder, resolve_role_alias
+from .model_config import resolve_effective_coder, resolve_role_policy
 from .runner_logger import log_resolver
 from .step_runner import StepResult
 
@@ -39,6 +39,7 @@ def prepare_step_execution(
     state: dict[str, Any],
     step: str,
     step_cfg: dict[str, Any],
+    project_root: Path,
     workflow_key_override: str = "",
     cli_coder: str | None = None,
     hooks: Any,
@@ -56,7 +57,7 @@ def prepare_step_execution(
     step_dir = hooks.make_step_dir(group_cfg, state, step)
     state["backend_step_dir_rel"] = str(step_dir)
 
-    context = hooks.build_context(state, step=step, step_cfg=step_cfg)
+    context = hooks.build_context(state, step=step, step_cfg=step_cfg, project_root=project_root)
     context["WORKFLOW_KEY_OVERRIDE"] = workflow_key_override or ""
 
     meta_from_ctx = step_cfg.get("result_meta_key_from_context")
@@ -88,7 +89,7 @@ def prepare_step_execution(
     )
     coder_used, coder_alias, coder_role, coder_config = _normalize_resolved_coder(resolved)
 
-    model_id = (coder_config or {}).get("model") or None
+    model_id = (coder_config or {}).get("model_id") or (coder_config or {}).get("model") or None
     prompt_path = hooks.resolve_prompt_path(step_cfg=step_cfg, coder=coder_used, model_id=model_id)
     if not prompt_path.exists():
         raise FileNotFoundError(f"Prompt file not found: {prompt_path}")
@@ -222,6 +223,7 @@ def master_bootstrap_frontmatter_rows(
         "SYSTEM_DOCS_INDEX": ("SYS-00-IDX", "system"),
         "SYSTEM_DOC_STANDARD": ("SYS-00-DS", "system"),
         "BUNDLE_TAXONOMY": ("SYS-00-BT", "system"),
+        "RUNTIME_GOVERNANCE": ("SYS-00-RG", "system"),
         "BUNDLE_MIGRATION_PLAN": ("SYS-00-BMP", "system"),
         "SYSTEM_OVERVIEW": ("SYS-00-SO", "system"),
         "BUSINESS_CAPABILITIES": ("SYS-00-BC", "system"),
@@ -323,8 +325,12 @@ def resolve_step_coder(
     coder_cfg = step_cfg.get("coder", {})
     bundle = step_cfg.get("_workflow_bundle")
     bundle_root = getattr(bundle, "bundle_root", None)
-    default_role = coder_cfg.get("default_role")
-    allowed_roles = list(coder_cfg.get("allowed_roles") or [])
+    role_policy_name = str(coder_cfg.get("role_policy") or "").strip()
+    policy = resolve_role_policy(role_policy_name, bundle_root=bundle_root) if role_policy_name else None
+    if role_policy_name and policy is None:
+        raise ValueError(f"Unknown role policy {role_policy_name!r} configured for step {step!r}")
+    default_role = (policy or {}).get("default_role") or coder_cfg.get("default_role")
+    allowed_roles = list((policy or {}).get("allowed_roles") or coder_cfg.get("allowed_roles") or [])
     default_coder = coder_cfg.get("default")
     allowed_coders = list(coder_cfg.get("allowed") or [])
     chosen = cli_coder.strip() if cli_coder else (default_role or default_coder)
@@ -332,16 +338,20 @@ def resolve_step_coder(
         raise ValueError(f"No coder specified and no default coder configured for step {step!r}")
 
     original = chosen
-    resolved_role: str | None = None
-    role_alias = resolve_role_alias(original, bundle_root=bundle_root)
-    if role_alias:
-        resolved_role = original
-        chosen = role_alias
+    resolved_role: str | None = original
+    resolved_config = resolve_effective_coder(role_name=original, bundle_root=bundle_root)
+    chosen = str(resolved_config.get("coder") or "").strip() or original
 
-    resolved_config = resolve_coder(chosen)
     if resolved_config is not None:
         actual_coder = resolved_config.get("coder", chosen)
-        log_resolver(original, f"{actual_coder} (model={resolved_config.get('model', '')})", is_alias=True)
+        resolved_bits = [str(actual_coder)]
+        connection_name = str(resolved_config.get("connection") or "").strip()
+        if connection_name:
+            resolved_bits.append(f"connection={connection_name}")
+        model_name = str(resolved_config.get("model") or "").strip()
+        if model_name:
+            resolved_bits.append(f"model={model_name}")
+        log_resolver(original, f"{' '.join(resolved_bits)}", is_alias=True)
         if shutil.which(actual_coder) is None:
             raise FileNotFoundError(f"Coder executable not found: {actual_coder!r} (alias {original!r})")
         chosen = actual_coder
@@ -350,13 +360,12 @@ def resolve_step_coder(
         if shutil.which(chosen) is None:
             raise FileNotFoundError(f"Coder executable not found in PATH: {chosen!r}")
 
-    check_name = original if original != chosen else chosen
     if allowed_roles:
-        role_name = resolved_role or check_name
+        role_name = resolved_role or chosen
         if role_name not in allowed_roles:
             raise ValueError(f"Coder role {role_name!r} is not allowed for step {step!r}. Allowed roles: {allowed_roles}")
-    elif allowed_coders and check_name not in allowed_coders:
-        raise ValueError(f"Coder {check_name!r} is not allowed for step {step!r}. Allowed: {allowed_coders}")
+    elif allowed_coders and chosen not in allowed_coders:
+        raise ValueError(f"Coder {chosen!r} is not allowed for step {step!r}. Allowed: {allowed_coders}")
     if coder_cfg.get("must_differ_from_previous_step"):
         idx = group_cfg["steps"].index(step)
         if idx > 0:
