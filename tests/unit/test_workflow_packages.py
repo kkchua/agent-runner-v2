@@ -49,6 +49,7 @@ class TestStepConfig:
             result_meta_key="OUTPUT_DOC",
             coder_default="qwen-architect",
             coder_allowed=["claude", "qwen-architect"],
+            coder_role_policy="architect_standard",
             coder_default_role="architect_primary",
             coder_allowed_roles=["architect_primary", "architect_secondary"],
             enable_notifications=True,
@@ -59,6 +60,7 @@ class TestStepConfig:
         assert sc.action == "validate"
         assert sc.produces == ["OUTPUT_DOC"]
         assert sc.coder_default == "qwen-architect"
+        assert sc.coder_role_policy == "architect_standard"
         assert sc.coder_default_role == "architect_primary"
         assert sc.on_reject_refine == {"step": "refine", "max_iterations": 2}
 
@@ -160,8 +162,8 @@ class TestWorkflowTOMLParsing:
             "audit_core_governance_accuracy",
             "stepCompletion",
         ]
-        assert bundle.steps["generate_core_governance_docs"].coder_default_role == "architect_primary"
-        assert bundle.steps["review_core_governance_docs"].coder_default_role == "reviewer_primary"
+        assert bundle.steps["generate_core_governance_docs"].coder_role_policy == "architect_standard"
+        assert bundle.steps["review_core_governance_docs"].coder_role_policy == "reviewer_standard"
         assert bundle.steps["validate_core_governance_docs"].on_reject_refine == {
             "step": "refine_core_governance_docs",
             "artifact": "SYSTEM_DOCS_INDEX",
@@ -377,6 +379,10 @@ class TestBundleAdapter:
             "architect_secondary",
             "architect_tertiary",
         ]
+
+        governance_cfg = group["step_configs"]["generate_core_governance_docs"] if "generate_core_governance_docs" in group["step_configs"] else None
+        if governance_cfg:
+            assert governance_cfg["coder"]["role_policy"] == "architect_standard"
 
         # Review step with routing
         review_cfg = group["step_configs"]["05_review_master_system_docs"]

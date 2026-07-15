@@ -1,10 +1,19 @@
 @echo off
-REM ukbe-daemon.bat - Simple Windows wrapper for ukbe-run-agent daemon
+REM ukbe-daemon.bat - Simple Windows wrapper for the repo-local daemon entrypoint
 
-set "UKBE_CLI=ukbe-run-agent"
+set "SCRIPT_DIR=%~dp0"
+for %%I in ("%SCRIPT_DIR%..") do set "REPO_ROOT=%%~fI"
+set "UKBE_PYTHON=%REPO_ROOT%\.venv\Scripts\python.exe"
 set "CONFIG_DIR=%USERPROFILE%\.ukbe-runner"
 set "PID_DIR=%CONFIG_DIR%\workers"
 set "LOG_DIR=%CONFIG_DIR%\logs"
+
+if not exist "%UKBE_PYTHON%" (
+    echo Repo venv Python not found: %UKBE_PYTHON%
+    echo Create the repo venv and install editable first:
+    echo   .\.venv\Scripts\python.exe -m pip install -e ".[dev]"
+    exit /b 1
+)
 
 if "%~1"=="" goto :usage
 
@@ -31,7 +40,9 @@ if exist "%PID_FILE%" (
 del /f /q "%PID_FILE%" 2>nul
 echo Starting worker '%WORKER_ID%'...
 echo   Log: %LOG_FILE%
-start /b "" %UKBE_CLI% daemon %WORKER_ID% >"%LOG_FILE%" 2>&1
+pushd "%REPO_ROOT%"
+start /b "" "%UKBE_PYTHON%" -m agent_runner_v2.run_agent daemon %WORKER_ID% >"%LOG_FILE%" 2>&1
+popd
 timeout /t 2 /nobreak >nul
 echo Worker '%WORKER_ID%' started.
 echo   Log: %LOG_FILE%

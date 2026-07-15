@@ -25,12 +25,44 @@ def should_send_notifications() -> bool:
         return False
 
 
+def _load_notification_settings() -> dict[str, Any]:
+    try:
+        config_path = Path.home() / ".ukbe-runner" / "config.json"
+        if not config_path.exists():
+            return {}
+        config = json.loads(config_path.read_text(encoding="utf-8"))
+        notification_cfg = config.get("notification", {})
+        return notification_cfg if isinstance(notification_cfg, dict) else {}
+    except Exception:
+        return {}
+
+
+def _is_step_event_enabled(status: str) -> bool:
+    settings = _load_notification_settings()
+    step_events = settings.get("step_events")
+    if not isinstance(step_events, dict):
+        return True
+
+    event_map = {
+        "STEP_COMPLETED": "completed",
+        "STEP_REJECTED": "rejected",
+        "STEP_FAILED": "failed",
+    }
+    key = event_map.get(status)
+    if not key:
+        return True
+
+    value = step_events.get(key)
+    return True if value is None else bool(value)
+
+
 def _enrich_context(context: dict[str, Any]) -> dict[str, Any]:
     """Ensure context has all required fields for notifications.
     
     Adds missing fields with sensible defaults:
     - workflow_name: Falls back to template_group if not present
-    - job_id: Defaults to "unknown" if missing
+    - template_group: Falls back to workflow_name if not present
+    - job_id: Falls back to run_code, workflow_run_id, or id before "unknown"
     - current_step: Ensures step name is available for step notifications
     """
     enriched = dict(context)
@@ -38,10 +70,25 @@ def _enrich_context(context: dict[str, Any]) -> dict[str, Any]:
     # Ensure workflow_name is set (fallback to template_group)
     if not enriched.get("workflow_name"):
         enriched["workflow_name"] = enriched.get("template_group", "unknown")
+
+    # Ensure template_group is set for backend/daemon payloads that only carry workflow_name
+    if not enriched.get("template_group"):
+        enriched["template_group"] = enriched.get("workflow_name", "unknown")
     
-    # Ensure job_id is set
+    # Ensure job_id is set across manual and backend/daemon payload variants
     if not enriched.get("job_id"):
-        enriched["job_id"] = "unknown"
+        enriched["job_id"] = (
+            enriched.get("run_code")
+            or enriched.get("workflow_run_id")
+            or enriched.get("id")
+            or "unknown"
+        )
+
+    # Backfill backend aliases so downstream formatters can rely on both names
+    if not enriched.get("workflow_run_id") and enriched.get("id"):
+        enriched["workflow_run_id"] = enriched["id"]
+    if not enriched.get("run_code") and enriched.get("job_id") and enriched.get("job_id") != "unknown":
+        enriched["run_code"] = enriched["job_id"]
     
     return enriched
 
@@ -69,12 +116,12 @@ def send_workflow_notification(status: str, context: dict[str, Any]) -> bool:
 
 
 def send_step_notification(status: str, context: dict[str, Any], step: str, step_cfg: dict[str, Any]) -> bool:
-    """Send step-level notification (STEP_COMPLETED, STEP_FAILED).
+    """Send step-level notification (STEP_COMPLETED, STEP_FAILED, STEP_REJECTED).
     
-    Checks both global config AND step-level enable_notifications flag.
+    Checks global config, per-event config, and step-level enable_notifications.
     
     Args:
-        status: One of STEP_COMPLETED, STEP_FAILED
+        status: One of STEP_COMPLETED, STEP_FAILED, STEP_REJECTED
         context: Job state dict
         step: Step name
         step_cfg: Step configuration dict (to check enable_notifications)
@@ -89,10 +136,18 @@ def send_step_notification(status: str, context: dict[str, Any], step: str, step
     # Check global config
     if not should_send_notifications():
         return False
+
+    if not _is_step_event_enabled(status):
+        return False
     
     enriched = _enrich_context(context)
     enriched["current_step"] = step
     enriched["step_name"] = step
+    step_usage = ((context or {}).get("step_usage") or {}).get(step) if isinstance((context or {}).get("step_usage"), dict) else None
+    if isinstance(step_usage, dict):
+        duration_ms = step_usage.get("duration_ms")
+        if isinstance(duration_ms, (int, float)) and duration_ms >= 0:
+            enriched["step_duration_seconds"] = float(duration_ms) / 1000.0
     
     print(f"[notification_manager] Sending STEP notification: {status} for step {step}", flush=True)
     

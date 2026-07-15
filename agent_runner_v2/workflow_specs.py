@@ -135,6 +135,7 @@ def build_step_execution_spec(
         spec["coder_policy"] = {
             "default_coder": coder_cfg.get("default"),
             "allowed_coders": list(coder_cfg.get("allowed") or []),
+            "role_policy": coder_cfg.get("role_policy"),
             "default_role": coder_cfg.get("default_role"),
             "allowed_roles": list(coder_cfg.get("allowed_roles") or []),
             "must_differ_from_previous_step": bool(coder_cfg.get("must_differ_from_previous_step")),

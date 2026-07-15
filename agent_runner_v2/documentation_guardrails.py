@@ -29,14 +29,10 @@ from .constants import (
 
 
 MASTER_BOOTSTRAP_WORKFLOWS: set[str] = {
-    "00_master_docs_bootstrap_v1",
-    "00_master_docs_bootstrap_v2",
+    "00_layer1_governance_bootstrap_v1",
 }
-EXECUTION_SCAFFOLD_WORKFLOWS: set[str] = {
-    "10_execution_scaffold_v1",
-    "10_execution_scaffold_v2",
-}
-ARCHITECTURE_SITE_WORKFLOW = "50_architecture_site_v1"
+EXECUTION_SCAFFOLD_WORKFLOWS: set[str] = set()
+ARCHITECTURE_SITE_WORKFLOW = ""
 
 WORKFLOW_GENERATED_MARKER = "workflow-generated"
 DEFAULT_LEGACY_QUARANTINE_DIR = "docs/_workflow_legacy"

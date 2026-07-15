@@ -69,10 +69,11 @@ from .job_state import (
     set_job_status,
     _update_document_status,
 )
-from .model_config import resolve_coder, resolve_coder_role, resolve_role_alias
+from .model_config import resolve_coder_role, resolve_role_policy
 from .runner_logger import log_resolver
 from .runtime_context import (
     PROJECT_ROOT, RUNNER_ROOT, JOBS_ROOT, ARTIFACT_ROOT, PACKAGE_ROOT,
+    format_report_artifacts, format_report_path,
     get_workflow_module,
     set_context, set_workflow_module, set_delivery_root,
 )
@@ -102,7 +103,7 @@ from .workflow_packages.loader import bundle_to_template_group_dict, load_workfl
 __version__ = "0.1.0"
 from .execution_request import ExecutionRequest
 from .execution_result import ExecutionFailure, ExecutionResult
-from . import backend_execution as _backend_execution
+from . import daemon_runtime as _daemon_runtime
 from . import cli_runtime as _cli_runtime
 from . import manual_runtime as _manual_runtime
 from . import manual_runtime_deps as _manual_runtime_deps
@@ -183,6 +184,58 @@ def _mark_review_started(state: dict[str, Any], *, step: str, step_cfg: dict, co
         coder_used=coder_used,
         default_review_state=default_review_state,
     )
+
+
+def _worker_command(
+    *,
+    backend_url: str,
+    worker_id: str,
+    host_name: str | None,
+    poll_seconds: int,
+    once: bool,
+    engine_root: str | None = None,
+    worker_label: str = "live",
+) -> int:
+    from .daemon import main as _daemon_main
+
+    daemon_argv = [worker_id]
+    if worker_label:
+        daemon_argv.extend(["--worker-label", worker_label])
+    if backend_url:
+        daemon_argv.extend(["--backend-url", backend_url])
+    if poll_seconds:
+        daemon_argv.extend(["--poll-seconds", str(poll_seconds)])
+    if once:
+        daemon_argv.append("--once")
+    if engine_root:
+        daemon_argv.extend(["--engine-root", engine_root])
+    return _daemon_main(daemon_argv)
+
+
+def _execute_step_command(request_path: Path, result_path: Path | None = None) -> int:
+    payload = {
+        "status": "failed",
+        "outcome": "failed",
+        "remark": (
+            "The legacy 'execute-step' command is no longer supported. "
+            "Use 'ukbe-run-agent daemon' so claimed backend work executes through "
+            "the standard 'ukbe-run-agent run' path."
+        ),
+        "failure": {
+            "failure_class": "FATAL",
+            "failure_code": "LEGACY_EXECUTE_STEP_UNSUPPORTED",
+            "failure_reason": "execute-step command has been retired in favor of daemon -> run delegation",
+            "failure_source": "runner",
+        },
+        "diagnostics": {
+            "request_file": str(request_path),
+            "result_file": str(result_path) if result_path else None,
+        },
+    }
+    if result_path is not None:
+        result_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    print(json.dumps(payload, indent=2))
+    return 2
 
 
 # ---------------------------------------------------------------------------
@@ -307,6 +360,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument("--template-group", required=True, help="Workflow template group name.")
     p.add_argument("--coder", default="", help="Optional coder override for the current step.")
     p.add_argument("--job-id", default="", help="Existing job id to continue.")
+    p.add_argument("--job-no", default="", help="Backend job number/run_code (used as job_id in daemon mode)")
+    p.add_argument("--mode", choices=["manual", "daemon"], default="manual",
+                   help="Execution mode: manual (auto-generate job ID) or daemon (use provided --job-no)")
     p.add_argument("--job", default="", help="Explicit step to run. If omitted, auto-resolve.")
     p.add_argument("--set", action="append", default=[], help="Seed artifact for new job: KEY=PATH")
     p.add_argument("--task-graph-id", default="", help="Approved task graph id for execution binding startup.")
@@ -361,9 +417,9 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps(result, indent=2, ensure_ascii=False))
         return 0
 
-    if args.command == "execute-step":
-        result_path = Path(args.result_file).resolve() if args.result_file else None
-        return _execute_step_command(Path(args.request_file).resolve(), result_path)
+    if args.command == "daemon":
+        from .daemon import main as _daemon_main
+        return _daemon_main(args.daemon_argv)
 
     if args.command == "worker":
         return _worker_command(
@@ -377,28 +433,19 @@ def main(argv: list[str] | None = None) -> int:
         )
 
     if args.command == "poll":
-        import os as _os
-        worker_id = args.worker_id or _os.environ.get("AGENT_RUNNER_WORKER_ID", "")
-        if not worker_id:
-            print("[poll] ERROR: --worker-id or AGENT_RUNNER_WORKER_ID env var required", flush=True)
-            return 1
         return _worker_command(
             backend_url=args.backend_url,
-            worker_id=worker_id,
+            worker_id=args.worker_id,
             host_name=args.host_name or None,
-            poll_seconds=5,
+            poll_seconds=1,
             once=True,
             engine_root=args.engine_root or None,
             worker_label=args.worker_label,
         )
 
-    if args.command == "engine":
-        from .engine_commands import main as _engine_main
-        return _engine_main(args.engine_argv)
-
-    if args.command == "daemon":
-        from .daemon import main as _daemon_main
-        return _daemon_main(args.daemon_argv)
+    if args.command == "execute-step":
+        result_path = Path(args.result_file).resolve() if args.result_file else None
+        return _execute_step_command(Path(args.request_file).resolve(), result_path)
 
     if args.command == "submit":
         from .submit_commands import main as _submit_main
@@ -481,6 +528,7 @@ def main(argv: list[str] | None = None) -> int:
                 args=args,
                 group_cfg=group_cfg,
                 hooks=_manual_runtime_deps,
+                mode=args.mode,
             )
             state = resolution.state
             step = resolution.step
@@ -516,6 +564,7 @@ def main(argv: list[str] | None = None) -> int:
             state=state,
             step=step,
             step_cfg=step_cfg,
+            project_root=effective_root,
             workflow_key_override=args.workflow_key or "",
             cli_coder=args.coder or None,
         )
@@ -653,14 +702,24 @@ def main(argv: list[str] | None = None) -> int:
     step_result = routed.step_result
     state = routed.state
     exit_code = routed.exit_code
+    report_artifacts = format_report_artifacts(
+        step_result.artifacts,
+        project_root=effective_root,
+        runtime_root=JOBS_ROOT,
+    )
+    report_meta_json_path = format_report_path(
+        step_result.meta_json_path,
+        project_root=effective_root,
+        runtime_root=JOBS_ROOT,
+    )
 
     # Save result.json for diagnostics
     _save_json(step_dir / "result.json", {
         "status": step_result.status,
         "remark": step_result.remark,
-        "artifacts": step_result.artifacts,
+        "artifacts": report_artifacts,
         "reject_code": step_result.reject_code,
-        "meta_json_path": step_result.meta_json_path,
+        "meta_json_path": report_meta_json_path,
     })
 
     print(json.dumps({
@@ -677,36 +736,11 @@ def main(argv: list[str] | None = None) -> int:
         "last_failure_class": state.get("last_failure_class"),
         "last_failure_code": state.get("last_failure_code"),
         "last_failure_source": state.get("last_failure_source"),
-        "artifacts": step_result.artifacts,
-        "meta_json_path": step_result.meta_json_path,
+        "artifacts": report_artifacts,
+        "meta_json_path": report_meta_json_path,
         "step_dir": _safe_relative_to(step_dir, JOBS_ROOT),
     }, indent=2))
     return exit_code
-
-
-def _execute_step_command(request_path: Path, result_path: Path | None = None) -> int:
-    return _backend_execution.execute_step_command(request_path, result_path, hooks=_shared_runtime_deps)
-
-
-def _build_group_cfg_from_execution_spec(spec: dict[str, Any], template_group: str, step_name: str) -> tuple[dict[str, Any], dict[str, Any]]:
-    return _backend_execution.build_group_cfg_from_execution_spec(spec, template_group, step_name)
-
-
-def _resolve_worker_engine_root(engine_root: str | None) -> tuple[str | None, str | None]:
-    return _backend_execution.resolve_worker_engine_root(engine_root, hooks=_shared_runtime_deps)
-
-
-def _worker_command(*, backend_url: str, worker_id: str, host_name: str | None, poll_seconds: int, once: bool, engine_root: str | None = None, worker_label: str = "live") -> int:
-    return _backend_execution.worker_command(
-        backend_url=backend_url,
-        worker_id=worker_id,
-        host_name=host_name,
-        poll_seconds=poll_seconds,
-        once=once,
-        engine_root=engine_root,
-        worker_label=worker_label,
-        hooks=_shared_runtime_deps,
-    )
 
 
 def _build_worker_request_payload(
@@ -717,7 +751,7 @@ def _build_worker_request_payload(
     backend_url: str = "",
     step_spec_source: str = "backend",
 ) -> dict[str, Any]:
-    return _backend_execution.build_worker_request_payload(
+    return _daemon_runtime.build_worker_request_payload(
         run=run,
         step_run=step_run,
         step_execution_spec=step_execution_spec,
@@ -725,91 +759,6 @@ def _build_worker_request_payload(
         step_spec_source=step_spec_source,
         hooks=_shared_runtime_deps,
     )
-
-
-# Backend adapter wrappers are defined here so existing tests and imports can
-# continue targeting run_agent.py while the implementation lives in a dedicated
-# module for backend/daemon mode.
-def _invoke_execute_step_subprocess(request_payload: dict[str, Any], engine_root: str | None = None) -> dict[str, Any]:
-    return _backend_execution.invoke_execute_step_subprocess(request_payload, engine_root, hooks=_shared_runtime_deps)
-
-
-def _job_json_path(*, workflow_name: str, run_code: str) -> Path:
-    return _backend_execution.job_json_path(workflow_name=workflow_name, run_code=run_code, hooks=_shared_runtime_deps)
-
-
-def _write_backend_job_json(
-    *,
-    run: dict[str, Any],
-    step_run: dict[str, Any] | None = None,
-    next_step_run: dict[str, Any] | None = None,
-    last_event: str | None = None,
-) -> None:
-    _backend_execution.write_backend_job_json(
-        run=run,
-        step_run=step_run,
-        next_step_run=next_step_run,
-        last_event=last_event,
-        hooks=_shared_runtime_deps,
-    )
-
-
-def _submit_worker_result(*, client: BackendClient, run: dict[str, Any], step_run: dict[str, Any], result: dict[str, Any]) -> dict[str, Any]:
-    return _backend_execution.submit_worker_result(client=client, run=run, step_run=step_run, result=result, hooks=_shared_runtime_deps)
-
-
-def _finalize_worker_completion(
-    *,
-    client: BackendClient,
-    run: dict[str, Any],
-    step_run: dict[str, Any],
-    completion: dict[str, Any] | None,
-    step_execution_spec: dict[str, Any] | None = None,
-) -> dict[str, Any]:
-    return _backend_execution.finalize_worker_completion(
-        client=client,
-        run=run,
-        step_run=step_run,
-        completion=completion,
-        step_execution_spec=step_execution_spec,
-        hooks=_shared_runtime_deps,
-    )
-
-
-def _build_execution_state(*, request: ExecutionRequest, group_cfg: dict[str, Any]) -> dict[str, Any]:
-    return _backend_execution.build_execution_state(request=request, group_cfg=group_cfg, hooks=_shared_runtime_deps)
-
-
-def _publish_backend_artifacts(*, state: dict[str, Any], step: str, artifacts: dict[str, str], project_root: Path) -> dict[str, str]:
-    return _backend_execution.publish_backend_artifacts(
-        state=state,
-        step=step,
-        artifacts=artifacts,
-        project_root=project_root,
-        hooks=_shared_runtime_deps,
-    )
-
-
-def _execute_backend_step_request(
-    *,
-    request: ExecutionRequest,
-    group_cfg: dict[str, Any],
-    step_cfg: dict[str, Any],
-    state: dict[str, Any],
-    effective_root: Path,
-) -> ExecutionResult:
-    return _backend_execution.execute_backend_step_request(
-        request=request,
-        group_cfg=group_cfg,
-        step_cfg=step_cfg,
-        state=state,
-        effective_root=effective_root,
-        hooks=_shared_runtime_deps,
-    )
-
-
-def _build_worker_crash_result(*, run: dict[str, Any], step_run: dict[str, Any], error: Exception) -> dict[str, Any]:
-    return _backend_execution.build_worker_crash_result(run=run, step_run=step_run, error=error, hooks=_shared_runtime_deps)
 
 
 PreparedStepExecution = _step_execution_runtime.PreparedStepExecution
@@ -822,6 +771,7 @@ def _prepare_step_execution(
     state: dict[str, Any],
     step: str,
     step_cfg: dict[str, Any],
+    project_root: Path,
     workflow_key_override: str = "",
     cli_coder: str | None = None,
 ) -> PreparedStepExecution:
@@ -831,6 +781,7 @@ def _prepare_step_execution(
         state=state,
         step=step,
         step_cfg=step_cfg,
+        project_root=project_root,
         workflow_key_override=workflow_key_override,
         cli_coder=cli_coder,
         hooks=_shared_runtime_deps,

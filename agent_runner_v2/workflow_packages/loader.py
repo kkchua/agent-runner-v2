@@ -125,6 +125,7 @@ def _parse_bundle(
             produced_document_status=artifact.get("produced_document_status"),
             coder_default=_opt_str(coder_sec, "default"),
             coder_allowed=list(coder_sec.get("allowed", [])),
+            coder_role_policy=_opt_str(coder_sec, "role_policy"),
             coder_default_role=_opt_str(coder_sec, "default_role"),
             coder_allowed_roles=list(coder_sec.get("allowed_roles", [])),
             coder_must_differ=bool(coder_sec.get("must_differ", False)),
@@ -243,12 +244,14 @@ def bundle_to_template_group_dict(bundle: WorkflowBundle) -> dict[str, Any]:
             cfg["produced_document_status"] = dict(sc.produced_document_status)
 
         # --- Coder -------------------------------------------------------
-        if sc.coder_default or sc.coder_default_role or sc.coder_allowed or sc.coder_allowed_roles or sc.coder_must_differ:
+        if sc.coder_default or sc.coder_role_policy or sc.coder_default_role or sc.coder_allowed or sc.coder_allowed_roles or sc.coder_must_differ:
             coder_cfg: dict[str, Any] = {}
             if sc.coder_default:
                 coder_cfg["default"] = sc.coder_default
             if sc.coder_allowed:
                 coder_cfg["allowed"] = list(sc.coder_allowed)
+            if sc.coder_role_policy:
+                coder_cfg["role_policy"] = sc.coder_role_policy
             if sc.coder_default_role:
                 coder_cfg["default_role"] = sc.coder_default_role
             if sc.coder_allowed_roles:
@@ -342,7 +345,7 @@ def _load_package_actions(bundle_root: Path) -> dict[str, Any]:
         from .actions import REGISTERED_ACTIONS  # noqa: PLC0415
 
         # Snapshot before import
-        before = set(REGISTERED_ACTIONS.keys())
+        before = dict(REGISTERED_ACTIONS)
 
         spec = importlib.util.spec_from_file_location(
             f"{bundle_root.name}_actions", actions_file
@@ -354,8 +357,11 @@ def _load_package_actions(bundle_root: Path) -> dict[str, Any]:
         spec.loader.exec_module(mod)
 
         # Snapshot after import — collect newly registered actions
-        after = set(REGISTERED_ACTIONS.keys())
-        new_actions = {name: REGISTERED_ACTIONS[name] for name in (after - before)}
+        new_actions = {
+            name: func
+            for name, func in REGISTERED_ACTIONS.items()
+            if name not in before or before.get(name) is not func
+        }
 
         _ACTION_CACHE[cache_key] = dict(new_actions)
         return new_actions

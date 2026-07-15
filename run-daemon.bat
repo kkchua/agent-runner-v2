@@ -2,7 +2,7 @@
 REM run-daemon.bat - Edit the variables below, then run in a console window.
 REM
 REM Starts the backend-connected workstation daemon in the foreground:
-REM   ukbe-run-agent daemon [worker_id]
+REM   .venv\Scripts\python.exe -m agent_runner_v2.run_agent daemon [worker_id]
 REM
 REM Typical workflow:
 REM   1. Edit the variables below
@@ -10,11 +10,6 @@ REM   2. Run this batch file and keep the console open
 REM   3. Submit jobs with submit-10_execution_scaffold_v1.bat
 
 setlocal enabledelayedexpansion
-
-REM --- Activate .venv if it exists ---
-if exist "%~dp0.venv\Scripts\activate.bat" (
-    call "%~dp0.venv\Scripts\activate.bat"
-)
 
 REM ==================================================================
 REM EDIT THESE VARIABLES to match your setup:
@@ -48,10 +43,11 @@ if not exist "%AGENT_RUNNER_ROOT%" (
     exit /b 1
 )
 
-where ukbe-run-agent >nul 2>&1
-if errorlevel 1 (
-    echo ERROR: Cannot find ukbe-run-agent on PATH.
-    echo Install the package first, for example: pip install -e .
+set "VENV_PYTHON=%AGENT_RUNNER_ROOT%\.venv\Scripts\python.exe"
+if not exist "%VENV_PYTHON%" (
+    echo ERROR: Repo venv Python not found: %VENV_PYTHON%
+    echo Create the repo venv and install editable first:
+    echo   .\.venv\Scripts\python.exe -m pip install -e ".[dev]"
     pause
     exit /b 1
 )
@@ -71,6 +67,7 @@ if not "!KILL_GRACE_SECONDS!"=="" set "FLAGS=!FLAGS! --kill-grace-seconds !KILL_
 echo ===========================================================================
 echo  Mode:            Daemon Supervisor
 echo  Agent-runner:    !AGENT_RUNNER_ROOT!
+echo  Python:          !VENV_PYTHON!
 if not "!WORKER_ID!"=="" (
 echo  Worker ID:       !WORKER_ID!
 ) else (
@@ -96,9 +93,9 @@ echo(
 
 pushd "%AGENT_RUNNER_ROOT%"
 if not "!WORKER_ID!"=="" (
-    call ukbe-run-agent daemon "!WORKER_ID!" !FLAGS!
+    call "!VENV_PYTHON!" -m agent_runner_v2.run_agent daemon "!WORKER_ID!" !FLAGS!
 ) else (
-    call ukbe-run-agent daemon !FLAGS!
+    call "!VENV_PYTHON!" -m agent_runner_v2.run_agent daemon !FLAGS!
 )
 set "EXIT_CODE=!ERRORLEVEL!"
 popd

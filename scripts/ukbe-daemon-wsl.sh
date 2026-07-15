@@ -8,7 +8,7 @@
 #   ukbe-daemon-wsl.sh logs   [worker-id]  -- tail worker log
 #   ukbe-daemon-wsl.sh restart [worker-id] -- restart worker
 #
-# Worker ID defaults to the value in ~/.ukbe-runner/engine/config.json → worker_id,
+# Worker ID defaults to the value in ~/.ukbe-runner/config.json → worker_id,
 # falling back to "kode-worker-01".
 
 set -euo pipefail
@@ -25,7 +25,7 @@ DEFAULT_WORKER_ID="kode-worker-01"
 
 _read_config() {
     local key="$1" default="$2"
-    local cfg="${CONFIG_DIR}/engine/config.json"
+    local cfg="${CONFIG_DIR}/config.json"
     if [[ -f "$cfg" ]]; then
         python3 -c "import json; d=json.load(open('${cfg}')); print(d.get('${key}','${default}'))" 2>/dev/null || echo "$default"
     else
@@ -195,7 +195,7 @@ Usage:
   $(basename "$0") logs   [worker-id]  -- tail worker log (Ctrl+C to exit)
   $(basename "$0") restart [worker-id] -- restart worker daemon
 
-Worker ID defaults to worker_id in ~/.ukbe-runner/engine/config.json
+Worker ID defaults to worker_id in ~/.ukbe-runner/config.json
 EOF
 }
 
@@ -219,3 +219,4 @@ case "$COMMAND" in
         exit 1
         ;;
 esac
+

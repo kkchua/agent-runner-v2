@@ -179,6 +179,7 @@ ARTIFACT_KEY_SYSTEM_DOCS_CHANGE_LOG = "SYSTEM_DOCS_CHANGE_LOG"
 ARTIFACT_KEY_SYSTEM_DOCS_VALIDATION = "SYSTEM_DOCS_VALIDATION"
 ARTIFACT_KEY_SYSTEM_DOC_STANDARD = "SYSTEM_DOC_STANDARD"
 ARTIFACT_KEY_BUNDLE_TAXONOMY = "BUNDLE_TAXONOMY"
+ARTIFACT_KEY_RUNTIME_GOVERNANCE = "RUNTIME_GOVERNANCE"
 ARTIFACT_KEY_BUNDLE_MIGRATION_PLAN = "BUNDLE_MIGRATION_PLAN"
 ARTIFACT_KEY_SYSTEM_OVERVIEW = "SYSTEM_OVERVIEW"
 ARTIFACT_KEY_BUSINESS_CAPABILITIES = "BUSINESS_CAPABILITIES"
@@ -369,6 +370,7 @@ ARTIFACT_PATH_PROJECT_ANALYSIS = artifact_path(ARTIFACT_KEY_PROJECT_ANALYSIS, FO
 ARTIFACT_PATH_README = artifact_path(ARTIFACT_KEY_README, FOLDER_KEY_SYSTEM_BOOTSTRAP)
 ARTIFACT_PATH_DOCUMENTATION_STANDARD = artifact_path(ARTIFACT_KEY_DOCUMENTATION_STANDARD, FOLDER_KEY_SYSTEM_BOOTSTRAP)
 ARTIFACT_PATH_BUNDLE_TAXONOMY = artifact_path(ARTIFACT_KEY_BUNDLE_TAXONOMY, FOLDER_KEY_SYSTEM_BOOTSTRAP)
+ARTIFACT_PATH_RUNTIME_GOVERNANCE = artifact_path(ARTIFACT_KEY_RUNTIME_GOVERNANCE, FOLDER_KEY_SYSTEM_BOOTSTRAP)
 ARTIFACT_PATH_BUNDLE_MIGRATION_PLAN = artifact_path(ARTIFACT_KEY_BUNDLE_MIGRATION_PLAN, FOLDER_KEY_SYSTEM_BOOTSTRAP)
 ARTIFACT_PATH_SYSTEM_OVERVIEW = artifact_path(ARTIFACT_KEY_SYSTEM_OVERVIEW, FOLDER_KEY_SYSTEM_BOOTSTRAP)
 ARTIFACT_PATH_BUSINESS_CAPABILITIES = artifact_path(ARTIFACT_KEY_BUSINESS_CAPABILITIES, FOLDER_KEY_SYSTEM_BOOTSTRAP)
@@ -733,6 +735,7 @@ def get_master_docs_output_paths(job_id: str = "{job_id}", mode: str = "{mode}")
         ARTIFACT_KEY_SYSTEM_DOCS_VALIDATION: f"{FOLDER_KEY_SYSTEM_BOOTSTRAP}/{FILENAME_VALIDATION_PATTERN.format(job_id=job_id, mode=mode)}{EXT_MD}",
         ARTIFACT_KEY_SYSTEM_DOC_STANDARD: artifact_path(ARTIFACT_KEY_DOCUMENTATION_STANDARD, FOLDER_KEY_SYSTEM_BOOTSTRAP),
         ARTIFACT_KEY_BUNDLE_TAXONOMY: artifact_path(ARTIFACT_KEY_BUNDLE_TAXONOMY, FOLDER_KEY_SYSTEM_BOOTSTRAP),
+        ARTIFACT_KEY_RUNTIME_GOVERNANCE: artifact_path(ARTIFACT_KEY_RUNTIME_GOVERNANCE, FOLDER_KEY_SYSTEM_BOOTSTRAP),
         ARTIFACT_KEY_BUNDLE_MIGRATION_PLAN: artifact_path(ARTIFACT_KEY_BUNDLE_MIGRATION_PLAN, FOLDER_KEY_SYSTEM_BOOTSTRAP),
         ARTIFACT_KEY_SYSTEM_OVERVIEW: artifact_path(ARTIFACT_KEY_SYSTEM_OVERVIEW, FOLDER_KEY_SYSTEM_BOOTSTRAP),
         ARTIFACT_KEY_BUSINESS_CAPABILITIES: artifact_path(ARTIFACT_KEY_BUSINESS_CAPABILITIES, FOLDER_KEY_SYSTEM_BOOTSTRAP),
@@ -939,6 +942,22 @@ def known_artifact_paths() -> dict[str, str]:
     return paths
 
 
+def all_artifact_keys() -> list[str]:
+    """Return all canonical artifact key literals declared in this module."""
+    keys: list[str] = []
+    seen: set[str] = set()
+    for name, value in globals().items():
+        if not name.startswith("ARTIFACT_KEY_"):
+            continue
+        if not isinstance(value, str) or not value:
+            continue
+        if value in seen:
+            continue
+        seen.add(value)
+        keys.append(value)
+    return keys
+
+
 def legacy_artifact_paths() -> dict[str, list[str]]:
     """Map artifact keys to legacy repository-relative paths."""
     return {
@@ -1032,6 +1051,17 @@ After completing your work, you MUST report results via meta.json sidecar.
   }}
 - Do NOT return markdown, explanations, or conversational text
 - The runner reads results ONLY from meta.json and your JSON output
+- If a path is absolute on Windows, use forward slashes in JSON strings
+  Example: `D:/repo/docs/system/file.md`
+
+**Valid example**:
+{{
+  "status": "APPROVED",
+  "remark": "Wrote the required artifact and meta.json successfully.",
+  "artifacts": {{
+    {ARTIFACT_ENTRIES}
+  }}
+}}
 
 **Verification requirement**:
 - You MUST verify files exist on disk before returning APPROVED

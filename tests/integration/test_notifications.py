@@ -13,6 +13,7 @@ from agent_runner_v2.notifications import (
     _resolve_credentials,
     _load_notification_config,
     _build_message,
+    _extract_duration_seconds,
     send_notification,
 )
 
@@ -119,8 +120,40 @@ def test_build_message_failed():
     print(f"✓ FAILED message built: title='{title}', priority={priority}")
 
 
-def test_send_notification_disabled():
+def test_extract_duration_seconds_prefers_step_duration_for_step_notifications():
+    context = {
+        "created_at": "2026-07-06T10:00:00",
+        "updated_at": "2026-07-06T10:05:30",
+        "step_duration_seconds": 8.5,
+    }
+
+    duration = _extract_duration_seconds("STEP_FAILED", context)
+
+    assert duration == 8.5
+
+
+def test_extract_duration_seconds_uses_workflow_timestamps_for_workflow_notifications():
+    context = {
+        "created_at": "2026-07-06T10:00:00",
+        "updated_at": "2026-07-06T10:05:30",
+    }
+
+    duration = _extract_duration_seconds("COMPLETED", context)
+
+    assert duration == 330
+
+
+def test_send_notification_disabled(monkeypatch):
     """Test that disabled notifications don't send."""
+    monkeypatch.setattr(
+        "agent_runner_v2.notifications._load_notification_config",
+        lambda: {
+            "enabled": False,
+            "notify_api_url": "https://api.pushover.net/1/messages.json",
+            "message_config": {},
+            "priority_by_status": {},
+        },
+    )
     result = send_notification("COMPLETED", {"job_id": "TEST"})
     assert result is False
     print("✓ Disabled notification correctly returned False")

@@ -1,0 +1,71 @@
+You are refining the reusable Layer 1 governance docs after review or
+validation feedback.
+
+Read first:
+- `{SYSTEM_DOCS_INDEX}`
+- `{SYSTEM_DOC_STANDARD}`
+- `{BUNDLE_TAXONOMY}`
+- `{RUNTIME_GOVERNANCE}`
+- `{REVIEW_FILE_SUGGESTED}`
+- `{SYSTEM_DOCS_VALIDATION}` when present
+
+Task:
+- update only the four Layer 1 governance files owned by this workflow
+- resolve every review issue directly
+- resolve every deterministic validation failure directly when a validation
+  report is present
+- preserve the Layer 1 / Layer 2 / Layer 3 ownership split
+- keep the docs reusable across ecosystems and repositories
+
+Preserve these rules while refining:
+- Layer 1 is universal ecosystem governance only
+- Layer 1 must not name concrete workflow identifiers in body text beyond
+  required frontmatter and the workflow-managed protection banner
+- Layer 1 must not define a repository-specific scaffold workflow
+- Layer 1 must keep repo-local prompt-contract details generic
+- plugin workflow bundles are first-class runtime objects and may contain one
+  workflow or many workflows
+- `README.md` must explicitly say repo-local outputs live under `docs/repo/`
+  and are outside Layer 1 ownership
+- `RUNTIME_GOVERNANCE.md` must explicitly use the phrases
+  `single-workflow` and `multi-workflow` when describing plugin bundles
+- only `README.md` may mention `docs/repo/` or repo-local outputs
+- `BUNDLE_TAXONOMY.md` must not describe repo-local output ownership or name
+  `docs/repo/`
+- `RUNTIME_GOVERNANCE.md` must not describe repo-local output ownership or
+  name `docs/repo/`
+
+Enforce these scope rules while refining:
+- remove any concrete workflow identifier from body text while preserving the
+  required frontmatter and workflow-managed protection banner
+- remove any repository-specific workflow inventory
+- keep `DOCUMENTATION_STANDARD.md` at contract/rules level only
+- keep `BUNDLE_TAXONOMY.md` at bundle-class and ownership-boundary level
+- keep `RUNTIME_GOVERNANCE.md` as a steady-state operating model
+- delete any repo-local output boundary language from `BUNDLE_TAXONOMY.md`
+- delete any repo-local output boundary language from `RUNTIME_GOVERNANCE.md`
+- remove any occurrence of `delivery_scaffold_v1`
+- remove any literal `{ARTIFACT_KEY_*}` guidance
+- remove any repo-derived artifact name, repo-derived filename, or repo-local
+  example path from `DOCUMENTATION_STANDARD.md`
+- when a sentence is not essential to universal Layer 1 governance, delete it
+  instead of broadening it into a repository tutorial
+
+Before returning final JSON, re-read the four files and confirm:
+- no body text contains a concrete workflow identifier beyond required
+  frontmatter and the workflow-managed protection banner
+- `DOCUMENTATION_STANDARD.md` has no repo-derived artifact names
+- `BUNDLE_TAXONOMY.md` defines plugin workflow bundles generically
+- `BUNDLE_TAXONOMY.md` does not mention `docs/repo/` and does not discuss
+  ownership of repository-specific outputs
+- `RUNTIME_GOVERNANCE.md` explicitly recognizes `single-workflow` and
+  `multi-workflow`
+  plugin bundles
+- `RUNTIME_GOVERNANCE.md` does not mention `docs/repo/` and does not discuss
+  ownership of repository-specific outputs
+- `README.md` explicitly mentions `docs/repo/` as the repo-local output
+  boundary outside Layer 1 ownership
+- none of the four files has `{ARTIFACT_KEY_`
+- none of the four files has `delivery_scaffold_v1`
+- state explicitly in your remark what you changed and whether any
+  repository-specific coupling remains

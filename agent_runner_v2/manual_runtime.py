@@ -12,7 +12,24 @@ class ManualRunResolution:
     terminal_payload: dict[str, Any] | None = None
 
 
-def resolve_manual_run(*, args: Any, group_cfg: dict[str, Any], hooks: Any) -> ManualRunResolution:
+def _validate_daemon_claimed_step(*, mode: str, args: Any, state: dict[str, Any], step: str | None) -> None:
+    if mode != "daemon":
+        return
+    claimed_step = str(getattr(args, "job", "") or "").strip()
+    if not claimed_step:
+        return
+    current_step = str(state.get("current_step") or "").strip()
+    if not current_step:
+        raise ValueError(
+            f"Daemon claimed step {claimed_step!r} but job {state['job_id']} has no current_step."
+        )
+    if claimed_step != current_step:
+        raise ValueError(
+            f"Daemon claimed step {claimed_step!r} but job {state['job_id']} is currently at {current_step!r}."
+        )
+
+
+def resolve_manual_run(*, args: Any, group_cfg: dict[str, Any], hooks: Any, mode: str = "manual") -> ManualRunResolution:
     if not args.job_id:
         seed_artifacts = hooks._parse_key_value_pairs(args.set)
         execution_binding = None
@@ -61,6 +78,7 @@ def resolve_manual_run(*, args: Any, group_cfg: dict[str, Any], hooks: Any) -> M
                     f"step {state['pending_human_approval_for']!r}."
                 )
             step = args.job.strip() or state.get("current_step")
+            _validate_daemon_claimed_step(mode=mode, args=args, state=state, step=step)
             if not step:
                 return ManualRunResolution(
                     state=state,
@@ -101,7 +119,7 @@ def resolve_manual_run(*, args: Any, group_cfg: dict[str, Any], hooks: Any) -> M
                 },
             )
 
-        state = hooks.create_job(args.template_group, group_cfg, seed_artifacts)
+        state = hooks.create_job(args.template_group, group_cfg, seed_artifacts, mode=mode, job_no=args.job_no)
         if execution_binding is not None:
             hooks.apply_task_execution_binding(state, execution_binding)
             if not seed_artifacts.get("TASK_FILE"):
@@ -131,6 +149,7 @@ def resolve_manual_run(*, args: Any, group_cfg: dict[str, Any], hooks: Any) -> M
             f"step {state['pending_human_approval_for']!r}."
         )
     step = args.job.strip() or state.get("current_step")
+    _validate_daemon_claimed_step(mode=mode, args=args, state=state, step=step)
     if not step:
         return ManualRunResolution(
             state=state,

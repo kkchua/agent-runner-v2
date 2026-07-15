@@ -1,0 +1,164 @@
+You are generating the Layer 1 core governance master docs for the
+agent-runner ecosystem.
+
+This workflow is intentionally narrow. It owns only the permanent
+ecosystem-level governance docs. It does not own repo-derived analysis,
+codebase inventory, delivery run state, or audience outputs.
+
+Read first:
+- relevant source files under `agent_runner_v2/`
+- workflow package manifests under `workflows/`
+- any existing docs under `{SYSTEM_DOC_ROOT}/`
+
+Write or refresh only:
+- `{SYSTEM_DOCS_INDEX}`
+- `{SYSTEM_DOC_STANDARD}`
+- `{BUNDLE_TAXONOMY}`
+- `{RUNTIME_GOVERNANCE}`
+
+Hard ownership rules:
+- Do not generate or refresh `PROJECT_ANALYSIS.md`.
+- Do not generate or refresh codebase inventory, module docs, component docs,
+  change-impact docs, audience docs, or delivery runtime artifacts.
+- Do not write outside the four files listed above.
+
+Current factual constraints you must preserve:
+- This repository uses a three-layer model:
+  1. ecosystem master docs define the universal governance contract
+  2. workflow bundle master docs travel with each installed bundle into the global runner home
+  3. repo-local generated docs are written under `docs/repo/*`
+- `00_core_governance_bootstrap_v1` owns only the four ecosystem master docs
+  in `docs/system/00_governance/bootstrap/`.
+- `00_master_docs_bootstrap_v2` is not a core-governance doc owner. It is a
+  repo-document/bootstrap workflow that scans a repository and generates
+  repo-derived documentation inputs and system-analysis outputs for that
+  repository.
+- The canonical scaffold workflow in this repository is
+  `10_execution_scaffold_v2`, not `delivery_scaffold_v1`.
+- Layer 1 docs must not document repo-derived placeholder names or
+  repo-derived artifact filenames.
+- Core governance bundles must not claim they write to `docs/repo/*`.
+- Layer 1 must recognize plugin workflow bundles generically, including the
+  fact that a bundle may contain one or many workflows.
+- Layer 1 must not hardcode a concrete SDLC workflow inventory.
+
+Strict scope exclusions:
+- Do not list concrete repo workflow inventory in `README.md`.
+- Do not create a `Repo-Document Bundles` class in `BUNDLE_TAXONOMY.md`.
+- Do not enumerate repo-derived artifacts such as `PROJECT_ANALYSIS`,
+  `CODEBASE_INVENTORY`, `SYSTEM_OVERVIEW`, `BUSINESS_CAPABILITIES`,
+  `FUNCTIONAL_SPEC`, `SYSTEM_CONTEXT`, `COMPONENT_ARCHITECTURE`,
+  `DEVELOPER_GUIDE`, or `RUNBOOK` anywhere inside the four core governance
+  docs, including examples, quoted text, or path examples.
+- Do not describe repo-analysis outputs under
+  `docs/system/00_governance/bootstrap/` as active governance artifacts.
+- Do not include the literal text `{ARTIFACT_KEY_` anywhere.
+- Do not mention `delivery_scaffold_v1` anywhere.
+
+Required frontmatter:
+- `template_id`
+- `version: "1.0.0"`
+- `doc_type: "system"`
+- `managed_by: "workflow-generated"`
+- `generated_at`
+- `workflow: "00_core_governance_bootstrap_v1"`
+- `step: "generate_core_governance_docs"`
+- `change_id`
+
+Template IDs:
+- `README.md` -> `SYS-00-IDX`
+- `DOCUMENTATION_STANDARD.md` -> `SYS-00-DS`
+- `BUNDLE_TAXONOMY.md` -> `SYS-00-BT`
+- `RUNTIME_GOVERNANCE.md` -> `SYS-00-RG`
+
+Content requirements:
+- `README.md` must include these exact sections:
+  - `System Documentation Index`
+  - `Audience Views`
+  - `Document Map`
+- `DOCUMENTATION_STANDARD.md` must include these exact sections:
+  - `Purpose`
+  - `Audience Model`
+  - `Document Set`
+  - `Architecture Baseline`
+  - `Repo-Selected Profile`
+  - `Migration Mode`
+  - `Conditional Standards`
+  - `Update Triggers`
+  - `Validation`
+- `BUNDLE_TAXONOMY.md` must include these exact sections:
+  - `Bundle Classes`
+  - `Ownership Rules`
+  - `Packaging Rules`
+- `RUNTIME_GOVERNANCE.md` must include these exact sections:
+  - `Purpose`
+  - `Runtime Scope Model`
+  - `Bundle Publish And Install Model`
+  - `Registry Control Plane`
+  - `Plugin Bundle Control Model`
+  - `Role And Connection Resolution`
+  - `Artifact Ownership Enforcement`
+  - `Execution Mode Parity`
+  - `Validation Gates`
+  - `Change Control`
+
+The docs must make these boundaries explicit:
+- global governance docs are canonical runtime guidance
+- workflow bundles own bundle-local master docs
+- repo-generated docs live under `docs/repo/*`
+- repo-generated docs are not canonical governance authority
+- plugin workflow bundles are first-class runtime objects
+- plugin bundles may contain one or many workflows
+- Layer 1 defines the generic contract for bundle-local SOP and guardrails
+
+Document-specific scope rules:
+- `README.md` may describe the three-layer model and generic workflow-bundle
+  behavior, but must not include a repository-specific workflow list.
+- `BUNDLE_TAXONOMY.md` must distinguish core governance bundles from plugin
+  workflow bundles generically, without listing this repository's current
+  workflow inventory.
+- `RUNTIME_GOVERNANCE.md` must define the steady-state runtime model:
+  publish/install boundaries, `_registry` responsibilities, role/connection
+  resolution, artifact ownership enforcement, manual/daemon parity, and the
+  generic contract for multi-workflow plugin bundles.
+- `DOCUMENTATION_STANDARD.md` must remain focused on the required structure,
+  validation, and update triggers for the four ecosystem master docs. If
+  downstream outputs are mentioned, use only generic wording such as
+  "repo-local generated docs under `docs/repo/*`".
+
+Output shape requirements:
+- `README.md`:
+  - describe the three-layer model
+  - list all four Layer 1 docs explicitly in the document map, including
+    `README.md` itself
+  - mention `10_execution_scaffold_v2` at most once as the canonical scaffold
+    workflow
+  - do not name any other concrete workflow except
+    `00_core_governance_bootstrap_v1`
+- `BUNDLE_TAXONOMY.md`:
+  - must define bundle classes at a governance level, not a repo inventory
+    level
+  - may mention core governance bundles and plugin workflow bundles
+  - must distinguish governance ownership from runtime-produced repo-local
+    outputs; it must not imply that plugin bundles cannot produce repo-local
+    outputs at runtime
+  - must not classify `00_master_docs_bootstrap_v2` as a core governance
+    bundle
+- `RUNTIME_GOVERNANCE.md`:
+  - must be a steady-state governance document, not a migration narrative
+  - must describe plugin workflow bundles generically, including
+    multi-workflow bundles
+  - must not hardcode the SDLC workflow list
+  - must not describe provider authentication flows
+
+Before returning final JSON:
+- complete all four files
+- re-read all four files from disk
+- verify each required section exists
+- verify no file contains `{ARTIFACT_KEY_`
+- verify no file contains `delivery_scaffold_v1`
+- verify `DOCUMENTATION_STANDARD.md` contains no repo-derived artifact names,
+  repo-derived filenames, or repo-local example paths that embed repo-derived
+  filenames
+- verify the task is incomplete until `{RUNTIME_GOVERNANCE}` exists on disk
+  and the required meta.json sidecar has been written

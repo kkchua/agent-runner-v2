@@ -16,13 +16,13 @@ from agent_runner_v2.workflow_packages.loader import load_workflow_package
 
 
 class TestContextExtensionsLoader:
-    """Verify that the context_extensions module can be dynamically loaded."""
+    """Verify that the remaining workflow context_extensions module loads."""
 
-    def test_module_exists_and_imports(self, project_root):
+    def test_layer1_module_exists_and_imports(self, project_root):
         ext_path = (
             project_root
             / "workflows"
-            / "00_master_docs_bootstrap_v2"
+            / "00_layer1_governance_bootstrap_v1"
             / "context_extensions.py"
         )
         assert ext_path.is_file(), f"context_extensions.py not found at {ext_path}"
@@ -37,11 +37,11 @@ class TestContextExtensionsLoader:
         assert hasattr(mod, "build_context_extensions")
         assert callable(mod.build_context_extensions)
 
-    def test_build_context_extensions_returns_dict(self, project_root):
+    def test_layer1_build_context_extensions_returns_dict(self, project_root):
         ext_path = (
             project_root
             / "workflows"
-            / "00_master_docs_bootstrap_v2"
+            / "00_layer1_governance_bootstrap_v1"
             / "context_extensions.py"
         )
         import importlib.util
@@ -51,38 +51,17 @@ class TestContextExtensionsLoader:
         spec.loader.exec_module(mod)
 
         result = mod.build_context_extensions(
-            state={"job_id": "00DOC-TEST-001", "template_group": "00_master_docs_bootstrap_v2"},
-            step="02_generate_project_analysis",
+            state={"job_id": "00L1-TEST-001", "template_group": "00_layer1_governance_bootstrap_v1"},
+            step="review_layer1_governance_docs",
             step_cfg={"mode": "bootstrap"},
             ctx={},
+            project_root=project_root,
         )
         assert isinstance(result, dict)
-        # Should at least have PROJECT_ANALYSIS and PROJECT_ANALYSIS_METAJSON
-        assert "PROJECT_ANALYSIS" in result
-        assert "PROJECT_ANALYSIS_PATH" in result
-        assert "PROJECT_ANALYSIS_METAJSON" in result
-
-    def test_output_paths_match_expected_pattern(self, project_root):
-        ext_path = (
-            project_root
-            / "workflows"
-            / "00_master_docs_bootstrap_v2"
-            / "context_extensions.py"
-        )
-        import importlib.util
-
-        spec = importlib.util.spec_from_file_location("test_ctx_ext3", ext_path)
-        mod = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(mod)
-
-        result = mod.build_context_extensions(
-            state={"job_id": "00DOC-TEST-001", "template_group": "00_master_docs_bootstrap_v2"},
-            step="04_generate_architecture_docs",
-            step_cfg={"mode": "bootstrap"},
-            ctx={},
-        )
-        # Static paths should resolve to docs/system/00_governance/bootstrap/
-        assert "docs/system/00_governance/bootstrap/" in result.get("PROJECT_ANALYSIS", "")
+        assert "SYSTEM_DOCS_INDEX" in result
+        assert "SYSTEM_DOCS_INDEX_PATH" in result
+        assert "SYSTEM_DOCS_INDEX_METAJSON" in result
+        assert "REVIEW_FILE_SUGGESTED" in result
 
 
 class TestContextHookIntegration:
@@ -126,37 +105,72 @@ class TestContextHookIntegration:
         )
         assert ctx == {"EXISTING": "value"}  # unchanged
 
-    def test_hook_injects_master_docs_paths(self, project_root):
+    def test_hook_injects_layer1_absolute_paths(self, project_root):
         from agent_runner_v2.step_runner import _apply_workflow_package_context_hooks
 
-        # Load the real _v2 package
-        pkg_dir = project_root / "workflows" / "00_master_docs_bootstrap_v2"
+        pkg_dir = project_root / "workflows" / "00_layer1_governance_bootstrap_v1"
         if not pkg_dir.is_dir():
             pytest.skip("workflow package directory not found")
         bundle = load_workflow_package(pkg_dir)
         assert bundle.context_extensions_path is not None
 
         step_cfg = {"_workflow_bundle": bundle}
-        ctx = {
-            "SYSTEM_DOC_ROOT": "docs/system/00_governance/bootstrap",
-            "DOCS_ROOT": "docs",
-        }
+        ctx: dict[str, str] = {}
         _apply_workflow_package_context_hooks(
             ctx=ctx,
             state={
-                "job_id": "00DOC-TEST-002",
-                "template_group": "00_master_docs_bootstrap_v2",
+                "job_id": "00L1-TEST-001",
+                "template_group": "00_layer1_governance_bootstrap_v1",
             },
-            step="02_generate_project_analysis",
+            step="review_layer1_governance_docs",
             step_cfg=step_cfg,
+            project_root=project_root,
         )
 
-        # Should have master docs path aliases injected
-        assert "PROJECT_ANALYSIS" in ctx
-        assert "PROJECT_ANALYSIS_PATH" in ctx
-        assert "SYSTEM_DOCS_INDEX" in ctx
-        assert "BUNDLE_TAXONOMY" in ctx
-        assert ctx["PROJECT_ANALYSIS"].endswith("PROJECT_ANALYSIS.md")
+        assert ctx["SYSTEM_DOCS_INDEX"] == str(
+            project_root / "docs" / "system" / "00_governance" / "bootstrap" / "README.md"
+        )
+        assert ctx["SYSTEM_DOC_STANDARD"].endswith("DOCUMENTATION_STANDARD.md")
+        assert ctx["BUNDLE_TAXONOMY"].endswith("BUNDLE_TAXONOMY.md")
+        assert ctx["RUNTIME_GOVERNANCE"].endswith("RUNTIME_GOVERNANCE.md")
+        assert ctx["REVIEW_FILE_SUGGESTED"] == str(
+            project_root / "docs" / "system" / "00_governance" / "bootstrap" / "00L1-TEST-001-layer1-governance-review.md"
+        )
+
+    def test_hook_injects_layer1_review_and_audit_paths(self, project_root):
+        from agent_runner_v2.step_runner import _apply_workflow_package_context_hooks
+
+        pkg_dir = project_root / "workflows" / "00_layer1_governance_bootstrap_v1"
+        if not pkg_dir.is_dir():
+            pytest.skip("workflow package directory not found")
+        bundle = load_workflow_package(pkg_dir)
+
+        review_ctx: dict[str, str] = {}
+        _apply_workflow_package_context_hooks(
+            ctx=review_ctx,
+            state={
+                "job_id": "00L1-TEST-002",
+                "template_group": "00_layer1_governance_bootstrap_v1",
+            },
+            step="review_layer1_governance_docs",
+            step_cfg={"_workflow_bundle": bundle},
+            project_root=project_root,
+        )
+        assert review_ctx["REVIEW_FILE_SUGGESTED"].endswith("00L1-TEST-002-layer1-governance-review.md")
+        assert review_ctx["SYSTEM_DOCS_VALIDATION"].endswith("00L1-TEST-002-layer1-governance-validation.md")
+
+        audit_ctx: dict[str, str] = {}
+        _apply_workflow_package_context_hooks(
+            ctx=audit_ctx,
+            state={
+                "job_id": "00L1-TEST-003",
+                "template_group": "00_layer1_governance_bootstrap_v1",
+            },
+            step="audit_layer1_governance_accuracy",
+            step_cfg={"_workflow_bundle": bundle},
+            project_root=project_root,
+        )
+        assert audit_ctx["REVIEW_FILE_SUGGESTED"].endswith("00L1-TEST-003-layer1-governance-audit.md")
 
 
 def test_render_prompt_appends_bundle_governance_for_opted_in_bundle(project_root):
@@ -179,3 +193,25 @@ def test_render_prompt_appends_bundle_governance_for_opted_in_bundle(project_roo
     assert "## Bundle Governance" in rendered
     assert "Core Governance Bundle Contract" in rendered
     assert "SYSTEM_DOCS_INDEX" in rendered
+
+
+def test_render_prompt_normalizes_windows_paths_for_coder_output_contract() -> None:
+    from agent_runner_v2.step_runner import render_prompt
+
+    rendered = render_prompt(
+        "Write review to {REVIEW_FILE_SUGGESTED}",
+        {
+            "STEP_NAME": "audit_layer1_governance_accuracy",
+            "TOOLS_DIR": r"D:\tools",
+            "REVIEW_FILE_SUGGESTED": r"D:\MyProjectSpace\01_Workflows\agent-runner-v2\docs\system\00_governance\bootstrap\JOB-audit.md",
+            "REVIEW_FILE_SUGGESTED_METAJSON": r"D:\MyProjectSpace\01_Workflows\agent-runner-v2\docs\system\00_governance\bootstrap\JOB-audit.meta.json",
+        },
+        step_cfg={"result_meta_key_from_context": "REVIEW_FILE_SUGGESTED_METAJSON"},
+    )
+
+    assert r"D:\MyProjectSpace\01_Workflows\agent-runner-v2\docs\system\00_governance\bootstrap\JOB-audit.md" not in rendered
+    assert r"D:\MyProjectSpace\01_Workflows\agent-runner-v2\docs\system\00_governance\bootstrap\JOB-audit.meta.json" not in rendered
+    assert "D:/MyProjectSpace/01_Workflows/agent-runner-v2/docs/system/00_governance/bootstrap/JOB-audit.md" in rendered
+    assert "D:/MyProjectSpace/01_Workflows/agent-runner-v2/docs/system/00_governance/bootstrap/JOB-audit.meta.json" in rendered
+    assert "use forward slashes in JSON strings" in rendered
+    assert '"status": "APPROVED"' in rendered

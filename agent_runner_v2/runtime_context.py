@@ -187,6 +187,60 @@ def resolve_repo_or_runtime_path(
     return runtime_root / path
 
 
+def format_report_path(
+    path_str: str,
+    *,
+    project_root: Path | None = None,
+    runtime_root: Path | None = None,
+) -> str:
+    """Resolve repo/runtime paths for outward-facing result payloads."""
+    raw = str(path_str or "").strip()
+    if not raw:
+        return raw
+
+    path = Path(raw)
+    if path.is_absolute():
+        return str(path.resolve())
+
+    normalized = raw.replace("\\", "/")
+    if normalized.startswith(("docs/", "archive/", "scripts/", "temp/", ".ukbe-runner/")):
+        return str(
+            resolve_repo_or_runtime_path(
+                raw,
+                project_root=project_root,
+                runtime_root=runtime_root,
+            ).resolve()
+        )
+    return raw
+
+
+def format_report_artifacts(
+    artifacts: dict[str, Any],
+    *,
+    project_root: Path | None = None,
+    runtime_root: Path | None = None,
+) -> dict[str, Any]:
+    normalized: dict[str, Any] = {}
+    for key, value in dict(artifacts or {}).items():
+        if value is None:
+            normalized[str(key)] = None
+            continue
+        if isinstance(value, str):
+            stripped = value.strip()
+            normalized[str(key)] = (
+                format_report_path(
+                    stripped,
+                    project_root=project_root,
+                    runtime_root=runtime_root,
+                )
+                if stripped
+                else ""
+            )
+            continue
+        normalized[str(key)] = value
+    return normalized
+
+
 def repo_doc_root(*parts: str) -> Path:
     return get_workspace_root() / Path("docs").joinpath(*parts)
 

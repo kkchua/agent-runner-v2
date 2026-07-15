@@ -145,6 +145,9 @@ class BackendClient:
     def complete_step_run(self, *, step_run_id: str, payload: dict[str, Any]) -> dict[str, Any]:
         return self._request('POST', f'/api/step-runs/{step_run_id}/complete', payload)
 
+    def sync_job_state(self, *, step_run_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+        return self._request('POST', f'/api/step-runs/{step_run_id}/job-sync', payload)
+
     def create_artifact(self, *, run_id: str, payload: dict[str, Any]) -> dict[str, Any]:
         return self._request('POST', f'/api/runs/{run_id}/artifacts', payload)
 

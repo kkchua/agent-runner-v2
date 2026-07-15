@@ -1,11 +1,12 @@
 """Sync workflow definitions to the backend registry.
 
-Discovers workflows from two sources:
-1. ``TEMPLATE_GROUPS`` in the bootstrap module (legacy Python dict format)
-2. ``workflows/<name>/workflow.toml`` directories (plugin package format)
+Discovers workflows from packaged ``workflow.toml`` workflow directories.
 
-Plugin packages override legacy entries on name collision.
-Each definition is POSTed to the backend API at ``/api/admin/workflows/sync``.
+Each definition is validated locally first, then POSTed to the backend API at
+``/api/admin/workflows/sync`` only if local validation passes.
+
+The backend sync endpoint is treated as persistence-oriented transport. Bundle
+semantics and workflow-definition validation are owned by ``agent-runner-v2``.
 """
 
 from __future__ import annotations
@@ -18,13 +19,13 @@ import sys
 from pathlib import Path
 from urllib import error, request
 
-from .bootstrap.workflows.default.template_groups import TEMPLATE_GROUPS
 from .config_loader import load_runner_config
 from .runtime_context import PACKAGE_ROOT
 from .workflow_packages.loader import (
     bundle_to_template_group_dict,
     load_workflow_package,
 )
+from .workflow_bundle_validator import validate_workflow_bundle_dir
 
 # Root of the ``workflows/`` directory containing plugin packages IN BOOTSTRAP.
 # Plugin workflows are first developed in repo root workflows/, then published
@@ -34,11 +35,7 @@ _WORKFLOWS_DIR = PACKAGE_ROOT / "bootstrap" / "workflows" / "default"
 
 
 def _discover_plugin_workflows() -> dict[str, dict]:
-    """Scan ``workflows/`` for ``workflow.toml`` packages.
-
-    Returns a ``name -> definition dict`` map, where each definition has
-    the same shape as a ``TEMPLATE_GROUPS`` entry.
-    """
+    """Scan bootstrap workflow root for ``workflow.toml`` packages."""
     plugin_workflows: dict[str, dict] = {}
     if not _WORKFLOWS_DIR.is_dir():
         return plugin_workflows
@@ -60,30 +57,11 @@ def _discover_plugin_workflows() -> dict[str, dict]:
 
     return plugin_workflows
 
-
 def _load_all_workflows() -> dict[str, dict]:
-    """Combine legacy ``TEMPLATE_GROUPS`` and plugin packages.
-
-    Plugin packages take priority when a name exists in both sources.
-    Plugin packages are loaded from bootstrap/workflows/default/ (source of truth),
-    not from repo root workflows/ (development location).
-    """
-    workflows = dict(TEMPLATE_GROUPS)
+    """Load packaged workflow definitions from bootstrap workflow packages."""
     plugin = _discover_plugin_workflows()
-    
-    # Debug: show what we're loading
-    print(f"[sync] Loaded {len(TEMPLATE_GROUPS)} workflows from TEMPLATE_GROUPS", file=sys.stderr)
-    print(f"[sync] Discovered {len(plugin)} plugin workflows from bootstrap", file=sys.stderr)
-    
-    for name, definition in plugin.items():
-        if name in workflows:
-            print(
-                f"[sync] Bootstrap plugin {name!r} overrides legacy TEMPLATE_GROUPS entry.",
-                file=sys.stderr,
-            )
-        workflows[name] = definition
-
-    return workflows
+    print(f"[sync] Discovered {len(plugin)} workflow packages from bootstrap", file=sys.stderr)
+    return plugin
 
 
 def _strip_bundle_refs(definition: dict) -> dict:
@@ -124,17 +102,40 @@ def _post_sync(
         return json.loads(resp.read().decode("utf-8"))
 
 
+def _print_validation_failure(workflow_name: str, validation) -> None:
+    print(f"\n[{workflow_name}] local validation failed:", file=sys.stderr)
+    for finding in validation.findings:
+        print(
+            f"  - [{finding.code}] step={finding.step or '-'} path={finding.path or '-'} {finding.message}",
+            file=sys.stderr,
+        )
+
+
+def _print_sync_summary(*, synced: list[str], validation_failed: list[str], transport_failed: list[str]) -> None:
+    print("\nSync summary:", file=sys.stderr)
+    print(f"  synced: {len(synced)}", file=sys.stderr)
+    print(f"  local_validation_failed: {len(validation_failed)}", file=sys.stderr)
+    print(f"  backend_transport_failed: {len(transport_failed)}", file=sys.stderr)
+    if validation_failed:
+        print(f"  validation_failed_workflows: {', '.join(validation_failed)}", file=sys.stderr)
+    if transport_failed:
+        print(f"  backend_failed_workflows: {', '.join(transport_failed)}", file=sys.stderr)
+
+
 def main() -> int:
     cfg = load_runner_config()
     parser = argparse.ArgumentParser(
-        description="Sync workflow definitions into the backend registry."
+        description=(
+            "Validate workflow bundles locally, then sync validated workflow "
+            "definitions into the backend registry."
+        )
     )
     parser.add_argument(
         "workflow_names",
         nargs="*",
         help=(
-            "Workflow names to sync. If omitted, syncs every workflow "
-            "from both TEMPLATE_GROUPS and plugin workflow.toml packages."
+            "Workflow names to sync. If omitted, syncs every packaged workflow "
+            "from bootstrap workflow.toml packages."
         ),
     )
     parser.add_argument(
@@ -165,9 +166,22 @@ def main() -> int:
 
     print(f"Backend URL: {args.backend_url}")
     print(f"Workflows: {', '.join(workflow_names)}")
+    print("Validation owner: agent-runner-v2 (local preflight)")
+    print("Backend role: persistence-oriented workflow registry")
 
     failed = False
+    synced: list[str] = []
+    validation_failed: list[str] = []
+    transport_failed: list[str] = []
     for workflow_name in workflow_names:
+        bundle_dir = _WORKFLOWS_DIR / workflow_name
+        validation = validate_workflow_bundle_dir(bundle_dir)
+        if not validation.valid:
+            _print_validation_failure(workflow_name, validation)
+            failed = True
+            validation_failed.append(workflow_name)
+            continue
+
         definition = _strip_bundle_refs(workflows[workflow_name])
         
         # Debug: calculate hash locally to match backend calculation
@@ -195,6 +209,7 @@ def main() -> int:
                 file=sys.stderr,
             )
             failed = True
+            transport_failed.append(workflow_name)
             continue
         except Exception as exc:
             print(
@@ -202,6 +217,7 @@ def main() -> int:
                 file=sys.stderr,
             )
             failed = True
+            transport_failed.append(workflow_name)
             continue
 
         status = response.get("status", "unknown")
@@ -210,7 +226,13 @@ def main() -> int:
             f"[{workflow_name}] {status} -> "
             f"id={workflow.get('id')} name={workflow.get('name')}"
         )
+        synced.append(workflow_name)
 
+    _print_sync_summary(
+        synced=synced,
+        validation_failed=validation_failed,
+        transport_failed=transport_failed,
+    )
     return 1 if failed else 0
 
 

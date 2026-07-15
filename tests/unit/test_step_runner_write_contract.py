@@ -50,7 +50,7 @@ def test_validate_artifacts_in_produces_list_allows_master_docs_legacy_aliases()
     )
 
 
-def test_set_master_docs_aliases_supports_core_governance_workflow(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_set_master_docs_aliases_supports_core_governance_workflow(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     ctx: dict[str, str] = {}
     state = {
         "template_group": "00_core_governance_bootstrap_v1",
@@ -71,14 +71,15 @@ def test_set_master_docs_aliases_supports_core_governance_workflow(monkeypatch: 
             "SYSTEM_DOCS_INDEX",
             "SYSTEM_DOC_STANDARD",
             "BUNDLE_TAXONOMY",
-            "BUNDLE_MIGRATION_PLAN",
+            "RUNTIME_GOVERNANCE",
         ],
+        project_root=tmp_path,
     )
 
-    assert ctx["SYSTEM_DOCS_INDEX"].replace("\\", "/") == "docs/system/00_governance/bootstrap/README.md"
-    assert ctx["SYSTEM_DOC_STANDARD"].replace("\\", "/") == "docs/system/00_governance/bootstrap/DOCUMENTATION_STANDARD.md"
-    assert ctx["BUNDLE_TAXONOMY"].replace("\\", "/") == "docs/system/00_governance/bootstrap/BUNDLE_TAXONOMY.md"
-    assert ctx["BUNDLE_MIGRATION_PLAN"].replace("\\", "/") == "docs/system/00_governance/bootstrap/BUNDLE_MIGRATION_PLAN.md"
+    assert ctx["SYSTEM_DOCS_INDEX"].replace("\\", "/") == str((tmp_path / "docs/system/00_governance/bootstrap/README.md").resolve()).replace("\\", "/")
+    assert ctx["SYSTEM_DOC_STANDARD"].replace("\\", "/") == str((tmp_path / "docs/system/00_governance/bootstrap/DOCUMENTATION_STANDARD.md").resolve()).replace("\\", "/")
+    assert ctx["BUNDLE_TAXONOMY"].replace("\\", "/") == str((tmp_path / "docs/system/00_governance/bootstrap/BUNDLE_TAXONOMY.md").resolve()).replace("\\", "/")
+    assert ctx["RUNTIME_GOVERNANCE"].replace("\\", "/") == str((tmp_path / "docs/system/00_governance/bootstrap/RUNTIME_GOVERNANCE.md").resolve()).replace("\\", "/")
 
 
 def test_validate_declared_produced_artifacts_exist_uses_contract_paths(tmp_path: Path) -> None:
@@ -156,7 +157,7 @@ def test_verify_only_allowed_paths_changed_reports_only_allowed_paths(tmp_path: 
         step="test_step",
     )
 
-    assert [path.replace("\\", "/") for path in changed] == ["docs/allowed.md"]
+    assert [path.replace("\\", "/") for path in changed] == [str(allowed_path.resolve()).replace("\\", "/")]
 
 
 def test_resolve_progress_file_path_prefers_global_job_step_dir() -> None:

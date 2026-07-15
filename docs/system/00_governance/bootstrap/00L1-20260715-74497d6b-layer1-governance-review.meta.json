@@ -1,0 +1,28 @@
+{
+  "schema_version": "v2",
+  "coder_result": {
+    "status": "APPROVED",
+    "remark": "Layer 1 governance document set reviewed and approved. All four documents maintain scope purity with no repository-specific content leakage. README.md correctly defines three-layer model and repo-local boundary. BUNDLE_TAXONOMY.md and RUNTIME_GOVERNANCE.md stay generic. Both single-workflow and multi-workflow bundle forms recognized. No forbidden tokens found.",
+    "artifacts": {
+      "REVIEW_FILE_SUGGESTED": "D:/MyProjectSpace/01_Workflows/agent-runner-v2/docs/system/00_governance/bootstrap/00L1-20260715-74497d6b-layer1-governance-review.md"
+    },
+    "recorded_at": "2026-07-15T22:46:19+08:00"
+  },
+  "runner_data": {
+    "step": "review_layer1_governance_docs",
+    "coder_used": "qwen",
+    "invoked_at": "2026-07-15T22:46:19",
+    "finished_at": "2026-07-15T22:49:36",
+    "prompt_checksum": "sha256:fecd3ea5562cbf8e98100f5aaf15d78f8bd4b78785661a805e42f558d2c31600",
+    "allowed_write_paths": [
+      "D:/MyProjectSpace/01_Workflows/agent-runner-v2/docs/system/00_governance/bootstrap/00L1-20260715-74497d6b-layer1-governance-review.md",
+      "D:/MyProjectSpace/01_Workflows/agent-runner-v2/docs/system/00_governance/bootstrap/00L1-20260715-74497d6b-layer1-governance-review.meta.json"
+    ],
+    "changed_paths": [
+      "D:/MyProjectSpace/01_Workflows/agent-runner-v2/docs/system/00_governance/bootstrap/00L1-20260715-74497d6b-layer1-governance-review.md",
+      "D:/MyProjectSpace/01_Workflows/agent-runner-v2/docs/system/00_governance/bootstrap/00L1-20260715-74497d6b-layer1-governance-review.meta.json"
+    ],
+    "enriched_at": "2026-07-15T22:49:36",
+    "runner_version": "v2"
+  }
+}

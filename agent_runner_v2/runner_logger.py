@@ -78,6 +78,8 @@ def log_event(
     coder: str,
     *,
     model: str = "",
+    model_id: str = "",
+    connection: str = "",
     auth_type: str = "",
     event: str = "info",
     duration_ms: int | None = None,
@@ -91,6 +93,8 @@ def log_event(
         "step": step,
         "coder": coder,
         "model": model or "",
+        "model_id": model_id or "",
+        "connection": connection or "",
         "auth_type": auth_type or "",
         "event": event,
     }
@@ -112,18 +116,29 @@ def log_invocation_start(
     coder: str,
     *,
     model: str = "",
+    model_id: str = "",
+    connection: str = "",
     auth_type: str = "",
     command: list[str] | None = None,
 ) -> None:
     """Log that a coder invocation is about to start."""
     model_name = model or "n/a"
+    parts = [f"[{step}] invoking coder={coder}"]
+    if connection:
+        parts.append(f"connection={connection}")
+    if model_id:
+        parts.append(f"model_id={model_id}")
+    parts.append(f"model={model_name}")
+    parts.append(f"auth={auth_type or 'default'}")
     log_event(
         step,
         coder,
         model=model,
+        model_id=model_id,
+        connection=connection,
         auth_type=auth_type,
         event="invocation_start",
-        message=f"[{step}] invoking coder={coder} model={model_name} auth={auth_type or 'default'}",
+        message=" ".join(parts),
     )
 
 
@@ -132,6 +147,8 @@ def log_invocation_result(
     coder: str,
     *,
     model: str = "",
+    model_id: str = "",
+    connection: str = "",
     auth_type: str = "",
     return_code: int,
     duration_ms: int,
@@ -144,25 +161,48 @@ def log_invocation_result(
         step,
         coder,
         model=model,
+        model_id=model_id,
+        connection=connection,
         auth_type=auth_type,
         event="invocation_result",
         return_code=return_code,
         duration_ms=duration_ms,
         status=status,
-        message=message or f"[{step}] result coder={coder} model={model or 'n/a'} {status_label} ({duration_ms}ms)",
+        message=message or (
+            f"[{step}] result coder={coder}"
+            f"{f' connection={connection}' if connection else ''}"
+            f"{f' model_id={model_id}' if model_id else ''}"
+            f" model={model or 'n/a'} {status_label} ({duration_ms}ms)"
+        ),
     )
 
 
-def log_error(step: str, coder: str, *, model: str = "", auth_type: str = "", error: str = "") -> None:
+def log_error(
+    step: str,
+    coder: str,
+    *,
+    model: str = "",
+    model_id: str = "",
+    connection: str = "",
+    auth_type: str = "",
+    error: str = "",
+) -> None:
     """Log a coder invocation error."""
     log_event(
         step,
         coder,
         model=model,
+        model_id=model_id,
+        connection=connection,
         auth_type=auth_type,
         event="error",
         status="ERROR",
-        message=error or f"[{step}] error coder={coder} model={model or 'n/a'}",
+        message=error or (
+            f"[{step}] error coder={coder}"
+            f"{f' connection={connection}' if connection else ''}"
+            f"{f' model_id={model_id}' if model_id else ''}"
+            f" model={model or 'n/a'}"
+        ),
     )
 
 

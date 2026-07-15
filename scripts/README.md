@@ -57,14 +57,14 @@ chmod +x scripts/ukbe-daemon-wsl.sh
 ## Worker ID
 
 The worker ID defaults to:
-1. The value from `~/.ukbe-runner/engine/config.json` → `worker_id`
+1. The value from `~/.ukbe-runner/config.json` -> `worker_id`
 2. Falls back to `"kode-worker-01"`
 
 ## File Locations
 
 | File | Windows | WSL/Linux |
 |------|---------|-----------|
-| Config | `%USERPROFILE%\.ukbe-runner\engine\config.json` | `~/.ukbe-runner/engine/config.json` |
+| Config | `%USERPROFILE%\.ukbe-runner\config.json` | `~/.ukbe-runner/config.json` |
 | PID files | `%USERPROFILE%\.ukbe-runner\workers\` | `~/.ukbe-runner/workers/` |
 | Logs | `%USERPROFILE%\.ukbe-runner\logs\worker-{id}.log` | `~/.ukbe-runner/logs/worker-{id}.log` |
 

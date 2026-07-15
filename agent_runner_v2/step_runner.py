@@ -120,6 +120,17 @@ After completing your work, you MUST report results via meta.json sidecar.
   }}
 - Do NOT return markdown, explanations, or conversational text
 - The runner reads results ONLY from meta.json and your JSON output
+- If a path is absolute on Windows, use forward slashes in JSON strings
+  Example: `D:/repo/docs/system/file.md`
+
+**Valid example**:
+{{
+  "status": "APPROVED",
+  "remark": "Wrote the required artifact and meta.json successfully.",
+  "artifacts": {{
+    {ARTIFACT_ENTRIES}
+  }}
+}}
 
 **Verification requirement**:
 - You MUST verify files exist on disk before returning APPROVED
@@ -151,17 +162,26 @@ This SOP is repository-wide and applies to all coder backends for this step.
 
 
 def _workflow_module():
-    module = get_workflow_module()
-    if module is None:
-        raise RuntimeError("Workflow module is not loaded. Runtime must use the global workflow bundle.")
-    return module
+    """Get workflow module, returning None for plugin workflows."""
+    return get_workflow_module()
+
+
+def _get_step_names_from_state(state: dict) -> list[str]:
+    """Get workflow step names from state (backend provides this).
+    
+    For plugin workflows, steps come from backend_step_order in state.
+    Falls back to empty list if not available.
+    """
+    # Try to get from backend context first
+    template_group = state.get("template_group", "")
+    
+    # Backend should provide step order via step_execution_spec
+    # For now, return empty - the calling code should handle this gracefully
+    return []
 
 
 def _path_for_report(path: Path, base: Path) -> str:
-    try:
-        return str(path.relative_to(base))
-    except ValueError:
-        return str(path)
+    return str(path.resolve()).replace("\\", "/")
 
 
 # ---------------------------------------------------------------------------
@@ -1157,8 +1177,19 @@ def _set_bug_fix_aliases(*, ctx: dict[str, str], state: dict, step: str, artifac
             ctx[f"{artifact_key}_METAJSON"] = step_dir_meta or str(PurePath(output_path).parent / f"{PurePath(output_path).stem}.meta.json")
 
 
-def _set_master_docs_aliases(*, ctx: dict[str, str], state: dict, step: str, artifacts: dict[str, Any], produces: list[str]) -> None:
-    if state.get("template_group") not in {"00_master_docs_bootstrap_v1", "00_core_governance_bootstrap_v1"}:
+def _set_master_docs_aliases(
+    *,
+    ctx: dict[str, str],
+    state: dict,
+    step: str,
+    artifacts: dict[str, Any],
+    produces: list[str],
+    project_root: Path,
+) -> None:
+    if state.get("template_group") not in {
+        "00_master_docs_bootstrap_v1",
+        "00_core_governance_bootstrap_v1",
+    }:
         return
 
     step_names = list(_workflow_module().TEMPLATE_GROUPS.get(state.get("template_group", ""), {}).get("steps", []))
@@ -1184,10 +1215,16 @@ def _set_master_docs_aliases(*, ctx: dict[str, str], state: dict, step: str, art
 
     for artifact_key, rel_path in MASTER_DOCS_OUTPUT_PATHS.items():
         artifact_value = artifacts.get(artifact_key) or rel_path.format(job_id=job_id, mode=mode)
-        ctx[artifact_key] = str(artifact_value)
-        ctx[f"{artifact_key}_PATH"] = str(artifact_value)
+        resolved = resolve_repo_or_runtime_path(
+            str(artifact_value),
+            project_root=project_root,
+            runtime_root=JOBS_ROOT,
+        )
+        resolved_str = str(resolved)
+        ctx[artifact_key] = resolved_str
+        ctx[f"{artifact_key}_PATH"] = resolved_str
         if artifact_value:
-            p = PurePath(str(artifact_value))
+            p = PurePath(resolved_str)
             ctx[f"{artifact_key}_METAJSON"] = step_dir_meta or str(p.parent / f"{p.stem}.meta.json")
 
 
@@ -1557,6 +1594,7 @@ def _apply_workflow_package_context_hooks(
     state: dict,
     step: str,
     step_cfg: dict | None,
+    project_root: Path | None = None,
 ) -> None:
     """Load and run context_extensions.py from the active workflow package.
 
@@ -1586,7 +1624,13 @@ def _apply_workflow_package_context_hooks(
 
     if hooks_fn is not None:
         try:
-            extensions = hooks_fn(state=state, step=step, step_cfg=step_cfg, ctx=ctx)
+            extensions = hooks_fn(
+                state=state,
+                step=step,
+                step_cfg=step_cfg,
+                ctx=ctx,
+                project_root=project_root,
+            )
             if isinstance(extensions, dict):
                 ctx.update(extensions)
         except Exception:
@@ -1632,10 +1676,13 @@ def build_context(
     *,
     step: str = "",
     step_cfg: dict | None = None,
+    project_root: Path | None = None,
 ) -> dict[str, str]:
     """Build the full context dict for prompt rendering."""
-    bundle = _workflow_module()
-    ctx: dict[str, str] = dict(bundle.REFERENCE_FILES)
+    # Use centralized constants instead of workflow module
+    from .constants import REFERENCE_FILES
+    
+    ctx: dict[str, str] = dict(REFERENCE_FILES)
     ctx["SYSTEM_DOC_ROOT"] = system_doc_rel()
     ctx["DOCS_ROOT"] = docs_root_rel()
     ctx["SYSTEM_TEMPLATE_ROOT"] = FOLDER_KEY_SYSTEM_TEMPLATE_ROOT
@@ -1673,11 +1720,33 @@ def build_context(
         if result_key and (prefer_step_meta or not ctx.get(meta_ctx_key)):
             step_dir_rel = str(state.get("backend_step_dir_rel") or "").strip()
             if not step_dir_rel:
-                steps = _workflow_module().TEMPLATE_GROUPS.get(state.get("template_group", ""), {}).get("steps", [])
-                try:
-                    idx = steps.index(step) + 1
-                except ValueError:
-                    idx = 1
+                # Try to get step order from group_cfg or state
+                template_group = state.get("template_group", "")
+                steps = []
+                
+                # Try to get from backend context first
+                backend_step_order = state.get("backend_step_order")
+                if backend_step_order is not None:
+                    idx = int(backend_step_order)
+                else:
+                    # Fallback: try to find step in workflow package
+                    try:
+                        from .runtime_context import GLOBAL_RUNNER_HOME
+                        from .workflow_packages.loader import load_workflow_package
+                        
+                        wf_root = GLOBAL_RUNNER_HOME / "workflows" / "default" / template_group
+                        if wf_root.exists():
+                            bundle = load_workflow_package(wf_root)
+                            steps = list(bundle.steps.keys()) if hasattr(bundle, 'steps') else []
+                        else:
+                            steps = []
+                    except Exception:
+                        steps = []
+                    
+                    try:
+                        idx = steps.index(step) + 1
+                    except ValueError:
+                        idx = 1
                 template_group = state.get("template_group", "")
                 job_id = state.get("job_id", "")
                 step_dir_rel = f"{template_group}/{job_id}/{idx:02d}_{step}"
@@ -1831,6 +1900,7 @@ def build_context(
         step=step,
         artifacts=artifacts,
         produces=produces,
+        project_root=(project_root or Path.cwd()),
     )
     _set_bug_fix_aliases(
         ctx=ctx,
@@ -2029,6 +2099,7 @@ def build_context(
         state=state,
         step=step,
         step_cfg=step_cfg,
+        project_root=project_root,
     )
 
     ctx["ALLOWED_WRITE_PATHS"] = _prompt_allowed_write_paths(
@@ -2076,7 +2147,7 @@ def render_prompt(template_text: str, context: dict[str, str], step_cfg: dict | 
     import os as _os
     from datetime import datetime as _datetime
     _src = _os.path.abspath(__file__)
-    render_context = dict(context)
+    render_context = _normalize_prompt_context_paths(context)
     render_context.setdefault("PYTHON_CMD", sys.executable or "python3")
     render_context.setdefault("TOOLS_DIR_PY", _python_string_literal(render_context.get("TOOLS_DIR", "")))
     render_context.setdefault("PROGRESS_FILE_PY", _python_string_literal(render_context.get("PROGRESS_FILE", "")))
@@ -2094,20 +2165,20 @@ def render_prompt(template_text: str, context: dict[str, str], step_cfg: dict | 
         if result_key:
             # If result_meta_key_from_context already ends with _METAJSON, use it directly
             if result_key.endswith("_METAJSON"):
-                meta_json_path = context.get(result_key, "")
+                meta_json_path = render_context.get(result_key, "")
                 artifact_key = result_key.replace("_METAJSON", "")
             else:
-                meta_json_path = context.get(f"{result_key}_METAJSON", "")
+                meta_json_path = render_context.get(f"{result_key}_METAJSON", "")
                 artifact_key = result_key
             
-            artifact_path = context.get(artifact_key, "")
+            artifact_path = render_context.get(artifact_key, "")
             
             if meta_json_path:  # Only inject if we have the path
                 # Build artifact entries for JSON template
                 if artifact_path:
-                    artifact_entries = f'        "{result_key}": "{artifact_path}"'
+                    artifact_entries = f'        "{artifact_key}": "{artifact_path}"'
                 else:
-                    artifact_entries = f'        "{result_key}": null'
+                    artifact_entries = f'        "{artifact_key}": null'
                 
                 # Generate timestamp
                 current_timestamp = _datetime.now().astimezone().isoformat(timespec="seconds")
@@ -2179,6 +2250,54 @@ def _stringify_prompt_value(value: Any) -> str:
     if isinstance(value, str):
         return value
     return str(value)
+
+
+def _normalize_prompt_context_paths(context: dict[str, Any]) -> dict[str, Any]:
+    """Convert coder-facing path values to forward-slash form.
+
+    This is prompt-only normalization. Internal runtime state remains unchanged.
+    """
+    normalized: dict[str, Any] = {}
+    for key, value in context.items():
+        if not isinstance(value, str):
+            normalized[key] = value
+            continue
+        normalized[key] = _prompt_safe_path_value(key, value)
+    return normalized
+
+
+def _prompt_safe_path_value(key: str, value: str) -> str:
+    raw = str(value or "")
+    if not raw or "\n" in raw or "\r" in raw:
+        return raw
+    if not _looks_like_prompt_path(key, raw):
+        return raw
+    return raw.replace("\\", "/")
+
+
+def _looks_like_prompt_path(key: str, value: str) -> bool:
+    upper_key = str(key or "").upper()
+    if upper_key.endswith(("_PATH", "_METAJSON")):
+        return True
+    if upper_key in {
+        "REVIEW_FILE_SUGGESTED",
+        "REVIEW_FILE",
+        "VALIDATION_FILE",
+        "PROGRESS_FILE",
+        "TOOLS_DIR",
+        "PYTHON_CMD",
+    }:
+        return True
+    raw = str(value or "").strip()
+    if not raw:
+        return False
+    if raw.startswith(("docs/", "archive/", "scripts/", "temp/", ".ukbe-runner/", "/", "./", "../")):
+        return True
+    if re.match(r"^[A-Za-z]:[\\/]", raw):
+        return True
+    if "\\" in raw and re.search(r"\.(md|json|jsonl|txt|html|pdf|csv|toml|yaml|yml|py|bat)$", raw, re.IGNORECASE):
+        return True
+    return False
 
 
 def _python_string_literal(value: Any) -> str:
@@ -2308,18 +2427,6 @@ def _build_review_target_identifier(*, artifact_key: str, artifact_path: str) ->
 
 
 def _build_new_review_file_path(*, state: dict, step: str, step_cfg: dict) -> str:
-    template_group = str(state.get("template_group") or "")
-    if template_group == "00_core_governance_bootstrap_v1" and step == "audit_core_governance_accuracy":
-        job_id = str(state.get("job_id") or "00CORE")
-        return system_doc_rel(f"{job_id}-core-governance-audit.md")
-    if template_group == "00_core_governance_bootstrap_v1" and step == "review_core_governance_docs":
-        job_id = str(state.get("job_id") or "00CORE")
-        return system_doc_rel(f"{job_id}-core-governance-review.md")
-
-    if template_group in MASTER_BOOTSTRAP_WORKFLOWS and step == "05_review_master_system_docs":
-        job_id = str(state.get("job_id") or "00DOC")
-        return system_doc_rel(f"{job_id}-bootstrap-validation.md")
-
     artifact_key = _review_target_artifact_key(step_cfg)
     if not artifact_key:
         return ""
@@ -2620,10 +2727,13 @@ def _build_file_fingerprint(path_value: str | None) -> dict:
 
 
 def _format_artifact_fingerprint_block(artifacts: dict) -> str:
+    """Format artifact fingerprints for prompt context.
+    
+    Uses artifact keys from state instead of workflow module.
+    """
     lines = []
-    bundle = _workflow_module()
-    for key in bundle.ARTIFACT_KEYS:
-        value = artifacts.get(key)
+    # Use artifact keys from state (which come from step_execution_spec produces/required_inputs)
+    for key, value in artifacts.items():
         if not value:
             continue
         fp = _build_file_fingerprint(value)
@@ -2678,7 +2788,10 @@ def _resolve_progress_file_path(*, state: dict[str, Any], step: str) -> str:
     seq = int((state or {}).get("backend_step_sequence") or (state or {}).get("backend_step_order") or 0)
     if not seq and template_group and step:
         try:
-            steps = _workflow_module().TEMPLATE_GROUPS.get(template_group, {}).get("steps", [])
+            workflow_module = _workflow_module()
+            steps = []
+            if workflow_module is not None:
+                steps = workflow_module.TEMPLATE_GROUPS.get(template_group, {}).get("steps", [])
             try:
                 seq = steps.index(step) + 1
             except ValueError:

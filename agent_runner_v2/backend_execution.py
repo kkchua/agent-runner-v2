@@ -3,113 +3,24 @@ from __future__ import annotations
 import json
 import os
 import shutil
-import subprocess
-import sys
-import tempfile
 from pathlib import Path
 from typing import Any
 
-from .config_loader import load_runner_config
 from .execution_request import ExecutionRequest
 from .execution_result import ExecutionFailure, ExecutionResult
-from .runtime_context import PACKAGE_ROOT
+from .runtime_context import JOBS_ROOT, format_report_artifacts, format_report_path
 from .state_defaults import default_loop_context, default_replan_context
-from .workflow_packages.loader import load_workflow_package
 
 
 def build_group_cfg_from_execution_spec(spec: dict[str, Any], template_group: str, step_name: str) -> tuple[dict[str, Any], dict[str, Any]]:
-    raw_config = dict(spec.get("raw_config") or {})
-    required_inputs = [item.get("artifact_key") for item in spec.get("required_inputs") or [] if item.get("artifact_key")]
-    optional_inputs = [item.get("artifact_key") for item in spec.get("optional_inputs") or [] if item.get("artifact_key")]
-    immutable_inputs = [item.get("artifact_key") for item in spec.get("immutable_inputs") or [] if item.get("artifact_key")]
-    produces = [item.get("artifact_key") for item in spec.get("produces") or [] if item.get("artifact_key")]
-    updates = [item.get("artifact_key") for item in spec.get("updates") or [] if item.get("artifact_key")]
-    step_cfg = dict(raw_config)
-    step_cfg["prompt_file"] = spec.get("prompt_file")
-    step_cfg["action"] = spec.get("action_name") or raw_config.get("action")
-    step_cfg["edit_mode"] = spec.get("edit_mode")
-    step_cfg["result_meta_key"] = spec.get("result_meta_key")
-    step_cfg["result_meta_key_from_context"] = spec.get("result_meta_key_from_context")
-    step_cfg["template_ref"] = spec.get("template_ref")
-    step_cfg["required_inputs"] = required_inputs
-    if optional_inputs:
-        step_cfg["optional_inputs"] = optional_inputs
-    if immutable_inputs:
-        step_cfg["immutable_inputs"] = immutable_inputs
-    step_cfg["produces"] = produces
-    if updates:
-        step_cfg["updates"] = updates
-    target_artifact = spec.get("target_artifact")
-    if target_artifact:
-        step_cfg["target_artifact"] = target_artifact
-    coder_policy = spec.get("coder_policy")
-    if coder_policy:
-        step_cfg["coder"] = {
-            "default": coder_policy.get("default_coder"),
-            "allowed": list(coder_policy.get("allowed_coders") or []),
-            "default_role": coder_policy.get("default_role"),
-            "allowed_roles": list(coder_policy.get("allowed_roles") or []),
-            "must_differ_from_previous_step": bool(coder_policy.get("must_differ_from_previous_step")),
-        }
-    bundle = _bundle_from_spec_prompt_file(spec, template_group=template_group)
-    if bundle is not None:
-        step_cfg["_workflow_bundle"] = bundle
-    group_cfg = {
-        "job_prefix": spec.get("job_prefix") or template_group,
-        "job_init_step": spec.get("job_init_step") or step_name,
-        "job_init_inputs": list(spec.get("job_init_inputs") or []),
-        "default_max_rejects": int(spec.get("default_max_rejects") or 0),
-        "reference_files": dict(spec.get("reference_files") or {}),
-        "steps": [step_name],
-        "step_configs": {step_name: step_cfg},
-    }
-    if bundle is not None:
-        group_cfg["_workflow_bundle"] = bundle
-    return group_cfg, step_cfg
-
-
-def _bundle_from_spec_prompt_file(spec: dict[str, Any], *, template_group: str):
-    prompt_file = spec.get("prompt_file")
-    if not isinstance(prompt_file, str) or not prompt_file:
-        return _bundle_from_template_group(template_group)
-    prompt_path = Path(prompt_file)
-    candidate_roots: list[Path] = []
-    if prompt_path.is_absolute():
-        candidate_roots.append(prompt_path.parent.parent)
-    else:
-        candidate_roots.extend(_relative_prompt_bundle_candidates(prompt_path, template_group=template_group))
-        candidate_roots.append(PACKAGE_ROOT / "bootstrap" / "workflows" / "default" / template_group)
-    for bundle_root in candidate_roots:
-        manifest = bundle_root / "workflow.toml"
-        if not manifest.is_file():
-            continue
-        try:
-            return load_workflow_package(bundle_root)
-        except Exception:
-            continue
-    return _bundle_from_template_group(template_group)
-
-
-def _relative_prompt_bundle_candidates(prompt_path: Path, *, template_group: str) -> list[Path]:
-    parts = prompt_path.parts
-    roots: list[Path] = []
-    default_root = PACKAGE_ROOT / "bootstrap" / "workflows" / "default"
-    if parts and parts[0] == template_group:
-        roots.append(default_root / template_group)
-    elif "prompts" in parts:
-        roots.append(default_root / template_group)
-    return roots
-
-
-def _bundle_from_template_group(template_group: str):
-    bundle_root = PACKAGE_ROOT / "bootstrap" / "workflows" / "default" / template_group
-    manifest = bundle_root / "workflow.toml"
-    if not manifest.is_file():
-        return None
-    try:
-        return load_workflow_package(bundle_root)
-    except Exception:
-        return None
+    """Build group and step config from execution spec.
+    
+    This is a compatibility wrapper that delegates to workflow_runtime module.
+    The actual bundle resolution logic lives in workflow_runtime to ensure parity
+    between manual and daemon execution modes.
+    """
+    from .workflow_runtime import _build_group_cfg_from_spec
+    return _build_group_cfg_from_spec(spec, template_group, step_name)
 
 
 def execute_step_command(request_path: Path, result_path: Path | None = None, *, hooks: Any) -> int:
@@ -125,17 +36,16 @@ def execute_step_command(request_path: Path, result_path: Path | None = None, *,
 
         workflow_module = None
         global_default_root = hooks.resolve_workflow_root(workspace_root, "default", config=config)
-        global_default_module = global_default_root / "template_groups.py"
-        if global_default_module.exists():
-            workflow_bundle_root = global_default_root
+        try:
             workflow_module = hooks.load_workflow_module(workspace_root, "default", config=config)
-        elif request.step_execution_spec:
+            workflow_bundle_root = global_default_root
+        except FileNotFoundError:
+            if not request.step_execution_spec:
+                raise FileNotFoundError(
+                    f"Workflow bundle not found under {global_default_root}. "
+                    "Provide backend step_execution_spec or create %USERPROFILE%\\.ukbe-runner\\workflows\\default."
+                )
             workflow_bundle_root = hooks.PACKAGE_ROOT.resolve()
-        else:
-            raise FileNotFoundError(
-                f"Workflow bundle not found at {global_default_module}. "
-                "Provide backend step_execution_spec or create %USERPROFILE%\\.ukbe-runner\\workflows\\default."
-            )
 
         delivery_root = Path(request.target_project_root).resolve() if request.target_project_root else None
         if delivery_root is not None and (
@@ -251,429 +161,6 @@ def execute_step_command(request_path: Path, result_path: Path | None = None, *,
             result_path.write_text(json.dumps(crash_result, indent=2), encoding="utf-8")
         print(json.dumps(crash_result, indent=2))
         return 1
-
-
-def resolve_worker_engine_root(engine_root: str | None, *, hooks: Any) -> tuple[str | None, str | None]:
-    if engine_root:
-        vfile = Path(engine_root) / "version.json"
-        version = None
-        if vfile.exists():
-            try:
-                version = json.loads(vfile.read_text(encoding="utf-8")).get("version")
-            except Exception:
-                pass
-        return engine_root, version
-
-    cfg = load_runner_config()
-
-    engine_version = (cfg.get("engine_version") or "").strip()
-    if not engine_version:
-        return None, None
-    if engine_version == "SNAPSHOT":
-        return None, engine_version
-
-    global_store = Path.home() / ".ukbe-runner" / "engine" / "versions" / engine_version
-    if global_store.exists():
-        print(f"[worker] engine {engine_version!r} resolved from global store (~/.ukbe-runner/engine/versions/)", flush=True)
-        return str(global_store), engine_version
-
-    raise RuntimeError(
-        f"[worker] engine version {engine_version!r} not found in global store ({global_store}). "
-        "Run: ukbe-run-agent engine install <version>"
-    )
-
-
-def worker_command(
-    *,
-    backend_url: str,
-    worker_id: str,
-    host_name: str | None,
-    poll_seconds: int,
-    once: bool,
-    engine_root: str | None = None,
-    worker_label: str = "live",
-    hooks: Any,
-) -> int:
-    effective_engine_root, engine_version = hooks._resolve_worker_engine_root(engine_root)
-    if effective_engine_root:
-        print(f"[worker] engine version: {engine_version!r}  root: {effective_engine_root}", flush=True)
-    else:
-        print("[worker] engine version: live source (no config.json or PYTHONPATH override)", flush=True)
-
-    client = hooks.BackendClient(backend_url)
-    client.register_worker(worker_id=worker_id, host_name=host_name, capabilities={"mode": ["execute-step"], "engine_version": engine_version}, worker_label=worker_label)
-
-    while True:
-        client.heartbeat(worker_id=worker_id, status="idle")
-        claim = client.claim_step(worker_id=worker_id)
-        step_run = claim.get("step_run")
-        run = claim.get("run")
-        if not step_run or not run:
-            if once:
-                return 0
-            import time
-            time.sleep(max(poll_seconds, 1))
-            continue
-
-        client.heartbeat(worker_id=worker_id, status="busy", current_step_run_id=step_run.get("id"))
-        hooks._write_backend_job_json(run=run, step_run=step_run, last_event="STEP_CLAIMED")
-        request_payload = hooks._build_worker_request_payload(run=run, step_run=step_run, step_execution_spec=claim.get("step_execution_spec"), backend_url=backend_url)
-        try:
-            result = hooks._invoke_execute_step_subprocess(request_payload, engine_root=effective_engine_root)
-        except Exception as exc:
-            result = hooks._build_worker_crash_result(run=run, step_run=step_run, error=exc)
-        completion = hooks._submit_worker_result(client=client, run=run, step_run=step_run, result=result)
-        hooks._finalize_worker_completion(client=client, run=run, step_run=step_run, completion=completion)
-        client.heartbeat(worker_id=worker_id, status="idle", current_step_run_id=None)
-        if once:
-            return 0
-
-
-def build_worker_request_payload(
-    *,
-    run: dict[str, Any],
-    step_run: dict[str, Any],
-    step_execution_spec: dict[str, Any] | None = None,
-    backend_url: str = "",
-    step_spec_source: str = "backend",
-    hooks: Any,
-) -> dict[str, Any]:
-    workflow_name = str(run.get("workflow_name") or "")
-    project_root = str(run.get("project_root") or run.get("workspace_path") or ".")
-    template_group = str((step_execution_spec or {}).get("template_group") or workflow_name)
-    step_name = str(step_run.get("step_name") or "")
-    mode = (step_spec_source or "backend").strip().lower()
-    if mode not in {"global", "backend", "hybrid"}:
-        mode = "backend"
-    spec = dict(step_execution_spec or {})
-    coder_override = step_run.get("coder")
-    workspace_path = Path(project_root).resolve()
-
-    if mode == "global":
-        try:
-            group_cfg = hooks.get_template_group_cfg(
-                template_group=template_group,
-                workspace_root=workspace_path,
-                workflow_name=workflow_name or "default",
-            )
-            spec = hooks.build_step_execution_spec(
-                template_group=template_group,
-                step_name=step_name,
-                group_cfg=group_cfg,
-            )
-            coder_override = None
-        except Exception:
-            spec = dict(step_execution_spec or {})
-    elif mode == "hybrid":
-        try:
-            spec = hooks.reconcile_step_execution_spec(
-                template_group=template_group,
-                step_name=step_name,
-                workspace_root=workspace_path,
-                workflow_name=workflow_name or "default",
-                backend_spec=spec,
-            )
-        except Exception:
-            spec = dict(step_execution_spec or {})
-
-    if mode == "hybrid":
-        try:
-            group_cfg = hooks.get_template_group_cfg(
-                template_group=template_group,
-                workspace_root=workspace_path,
-                workflow_name=workflow_name or "default",
-            )
-            local_spec = hooks.build_step_execution_spec(
-                template_group=template_group,
-                step_name=step_name,
-                group_cfg=group_cfg,
-            )
-            if "required_inputs" not in spec and "required_inputs" in local_spec:
-                spec["required_inputs"] = local_spec["required_inputs"]
-            if "optional_inputs" not in spec and "optional_inputs" in local_spec:
-                spec["optional_inputs"] = local_spec["optional_inputs"]
-            if "produces" not in spec and "produces" in local_spec:
-                spec["produces"] = local_spec["produces"]
-        except Exception:
-            pass
-
-    input_artifacts = dict(run.get("input_payload") or {})
-    required_artifact_keys = {
-        item.get("artifact_key")
-        for item in (spec.get("required_inputs") or [])
-        if isinstance(item, dict) and item.get("artifact_key")
-    }
-    optional_artifact_keys = {
-        item.get("artifact_key")
-        for item in (spec.get("optional_inputs") or [])
-        if isinstance(item, dict) and item.get("artifact_key")
-    }
-    context_payload = dict(run.get("context_payload") or {})
-    for artifact_key in required_artifact_keys | optional_artifact_keys:
-        value = context_payload.get(artifact_key)
-        if isinstance(value, str) and value:
-            input_artifacts[artifact_key] = value
-
-    job_id = str(run.get("run_code") or run.get("id") or "backend-job")
-    if mode == "backend":
-        step_sequence_no = spec.get("step_sequence_no") or step_run.get("sequence_no") or 1
-    else:
-        try:
-            group_cfg = hooks.get_template_group_cfg(
-                template_group=template_group,
-                workspace_root=workspace_path,
-                workflow_name=workflow_name or "default",
-            )
-            steps = list(group_cfg.get("steps") or [])
-            if step_name in steps:
-                step_sequence_no = steps.index(step_name) + 1
-            else:
-                step_sequence_no = 1
-        except Exception:
-            step_sequence_no = spec.get("step_sequence_no") or step_run.get("sequence_no") or 1
-
-    backend_step_dir_rel = str(
-        hooks.JOBS_ROOT / template_group / job_id / f"{int(step_sequence_no):02d}_{step_name}"
-    )
-    return {
-        "workflow_name": workflow_name,
-        "template_group": spec.get("template_group") or workflow_name,
-        "workflow_run_id": run.get("id"),
-        "workflow_step_run_id": step_run.get("id"),
-        "job_id": job_id,
-        "step_name": step_name,
-        "step_spec_source": mode,
-        "project_root": project_root,
-        "workspace_root": project_root,
-        "target_project_root": run.get("project_root"),
-        "coder_override": coder_override,
-        "workflow_key_override": "",
-        "env_overrides": {
-            **(run.get("env_overrides") or {}),
-            "BACKEND_URL": backend_url,
-            "WORKFLOW_STEP_RUN_ID": str(step_run.get("id") or ""),
-        },
-        "input_artifacts": input_artifacts,
-        "context_payload": context_payload,
-        "state_overrides": {"backend_step_dir_rel": backend_step_dir_rel},
-        "step_execution_spec": spec,
-    }
-
-
-def invoke_execute_step_subprocess(request_payload: dict[str, Any], engine_root: str | None = None, *, hooks: Any) -> dict[str, Any]:
-    with tempfile.TemporaryDirectory(prefix="agent-runner-v2-") as temp_dir:
-        req_path = Path(temp_dir) / "request.json"
-        res_path = Path(temp_dir) / "result.json"
-        req_path.write_text(json.dumps(request_payload, indent=2), encoding="utf-8")
-        module = "agent_runner_v2.run_agent"
-        cmd = [sys.executable, "-m", module, "execute-step", "--request-file", str(req_path), "--result-file", str(res_path)]
-        env = os.environ.copy()
-
-        project_root = request_payload.get("project_root") or request_payload.get("workspace_root")
-        cwd = Path(project_root).resolve() if project_root else None
-
-        if engine_root:
-            env["PYTHONPATH"] = str(Path(engine_root) / "agent_runner_v2") + os.pathsep + env.get("PYTHONPATH", "")
-        proc = subprocess.run(cmd, capture_output=True, text=True, env=env, cwd=cwd)
-        if not res_path.exists():
-            print(f"[invoke_execute_step_subprocess] FULL STDERR:\n{proc.stderr}", flush=True)
-            raise RuntimeError(f"execute-step did not write result file; rc={proc.returncode}\nFull stderr:\n{proc.stderr[-2000:]}")
-        payload = json.loads(res_path.read_text(encoding="utf-8"))
-        payload.setdefault("diagnostics", {})["subprocess_return_code"] = proc.returncode
-        payload["diagnostics"]["stdout"] = proc.stdout[-2000:]
-        payload["diagnostics"]["stderr"] = proc.stderr[-2000:]
-        return payload
-
-
-def job_json_path(*, workflow_name: str, run_code: str, hooks: Any) -> Path:
-    return hooks.JOBS_ROOT / workflow_name / run_code / "job.json"
-
-
-def write_backend_job_json(
-    *,
-    run: dict[str, Any],
-    step_run: dict[str, Any] | None = None,
-    next_step_run: dict[str, Any] | None = None,
-    last_event: str | None = None,
-    hooks: Any,
-) -> None:
-    workflow_name = str(run.get("workflow_name") or "")
-    run_code = str(run.get("run_code") or "")
-    if not workflow_name or not run_code:
-        return
-
-    payload: dict[str, Any] = {
-        "run_id": run.get("id"),
-        "job_id": run_code,
-        "run_code": run_code,
-        "template_group": workflow_name,
-        "workflow_name": workflow_name,
-        "job_status": run.get("status"),
-        "status": run.get("status"),
-        "current_step": run.get("current_step_name"),
-        "current_step_name": run.get("current_step_name"),
-        "current_step_run_id": run.get("current_step_run_id"),
-        "awaiting_human_step": run.get("awaiting_human_step"),
-        "target_worker_id": run.get("target_worker_id"),
-        "claimed_by_worker": run.get("claimed_by_worker"),
-        "project_root": run.get("project_root"),
-        "context_payload": dict(run.get("context_payload") or {}),
-        "submitted_at": run.get("submitted_at"),
-        "started_at": run.get("started_at"),
-        "completed_at": run.get("completed_at"),
-        "error_message": run.get("error_message"),
-        "updated_at": hooks._now_iso(),
-    }
-    if step_run:
-        payload["current_step_status"] = step_run.get("status")
-        payload["current_step_outcome"] = step_run.get("outcome")
-        payload["current_step_coder"] = step_run.get("coder")
-    if next_step_run:
-        payload["next_step_name"] = next_step_run.get("step_name")
-        payload["next_step_run_id"] = next_step_run.get("id")
-    if last_event:
-        payload["last_event"] = last_event
-
-    path = hooks._job_json_path(workflow_name=workflow_name, run_code=run_code)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    hooks._save_json(path, payload)
-
-
-def submit_worker_result(*, client: Any, run: dict[str, Any], step_run: dict[str, Any], result: dict[str, Any], hooks: Any) -> dict[str, Any]:
-    normalized_artifacts: dict[str, str] = {}
-    for artifact_key, file_path in (result.get("artifacts") or {}).items():
-        normalized_artifacts[artifact_key] = str(file_path).replace("\\", "/")
-
-    diagnostics = dict(result.get("diagnostics") or {})
-    artifact_errors: list[dict[str, str]] = []
-    for artifact_key, file_path in normalized_artifacts.items():
-        try:
-            client.create_artifact(
-                run_id=str(run["id"]),
-                payload={
-                    "artifact_key": artifact_key,
-                    "file_path": file_path,
-                    "role": "output",
-                    "workflow_step_run_id": str(step_run["id"]),
-                    "details": {},
-                },
-            )
-        except Exception as exc:
-            artifact_errors.append({"artifact_key": artifact_key, "file_path": file_path, "error": str(exc)})
-
-    review = result.get("review")
-    next_step = result.get("next_step")
-    complete_payload: dict[str, Any] = {
-        "status": result.get("status", "failed"),
-        "outcome": result.get("outcome"),
-        "coder": result.get("coder_used"),
-        "output_payload": normalized_artifacts,
-        "error_message": (result.get("failure") or {}).get("failure_reason"),
-    }
-    if review:
-        complete_payload["review"] = review
-    if next_step:
-        complete_payload["next_step"] = next_step
-    completion = client.complete_step_run(step_run_id=str(step_run["id"]), payload=complete_payload)
-
-    event_payload = {
-        "event_type": "WORKER_RESULT",
-        "message": result.get("remark") or result.get("outcome") or result.get("status"),
-        "workflow_step_run_id": str(step_run["id"]),
-        "payload": {
-            "failure": result.get("failure"),
-            "diagnostics": diagnostics,
-            "meta_json_path": result.get("meta_json_path"),
-            "usage": result.get("usage"),
-        },
-    }
-    if artifact_errors:
-        event_payload["payload"]["artifact_registration_errors"] = artifact_errors
-    client.create_event(run_id=str(run["id"]), payload=event_payload)
-    return completion
-
-
-def finalize_worker_completion(
-    *,
-    client: Any,
-    run: dict[str, Any],
-    step_run: dict[str, Any],
-    completion: dict[str, Any] | None,
-    step_execution_spec: dict[str, Any] | None = None,
-    hooks: Any,
-) -> dict[str, Any]:
-    completion_run = dict((completion or {}).get("run") or run)
-    completion_step_run = dict((completion or {}).get("step_run") or step_run)
-    next_step_run = (completion or {}).get("next_step_run")
-    last_event = "STEP_COMPLETED"
-    raw_step_cfg = dict((step_execution_spec or {}).get("raw_config") or {})
-    step_name = str(completion_step_run.get("step_name") or step_run.get("step_name") or "")
-
-    terminal_statuses = {"awaiting_human", "failed", "completed"}
-    run_id = str(run.get("id") or "")
-    if completion_run.get("status") not in terminal_statuses and next_step_run is None and run_id:
-        try:
-            refreshed_run = client.get_run(run_id=run_id)
-            if isinstance(refreshed_run, dict) and refreshed_run:
-                completion_run = refreshed_run
-        except Exception as exc:
-            print(f"[worker] WARNING: Failed to refresh run state for notification handling: {exc}", flush=True)
-
-    def _send_optional_step_notification(status_value: str) -> None:
-        if not raw_step_cfg:
-            return
-        try:
-            from .notification_manager import send_step_notification
-            notify_result = send_step_notification(status_value, completion_run, step_name, raw_step_cfg)
-            print(f"[worker] Step notification result: {notify_result}", flush=True)
-        except Exception as exc:
-            print(f"[worker] WARNING: Failed to send step notification: {exc}", flush=True)
-
-    is_last_step = next_step_run is None
-    if completion_run.get("status") == "awaiting_human":
-        last_event = "HUMAN_APPROVAL_REQUIRED"
-        _send_optional_step_notification("STEP_COMPLETED")
-        print(f"[worker] Attempting to send WAITING_FOR_HUMAN_INTERVENTION notification for run {completion_run.get('id', 'unknown')}", flush=True)
-        from .notification_manager import send_workflow_notification
-        notify_result = send_workflow_notification("WAITING_FOR_HUMAN_INTERVENTION", completion_run)
-        print(f"[worker] Notification result: {notify_result}", flush=True)
-    elif completion_run.get("status") == "failed":
-        last_event = "RUN_FAILED"
-        _send_optional_step_notification("STEP_FAILED")
-        print(f"[worker] Attempting to send FAILED notification for run {completion_run.get('id', 'unknown')}", flush=True)
-        from .notification_manager import send_workflow_notification
-        notify_result = send_workflow_notification("FAILED", completion_run)
-        print(f"[worker] Notification result: {notify_result}", flush=True)
-    elif completion_run.get("status") == "completed" and is_last_step:
-        last_event = "RUN_COMPLETED"
-        _send_optional_step_notification("STEP_COMPLETED")
-        print(f"[worker] Workflow completed (last step). Sending COMPLETED notification for run {completion_run.get('id', 'unknown')}", flush=True)
-        from .notification_manager import send_workflow_notification
-        notify_result = send_workflow_notification("COMPLETED", completion_run)
-        print(f"[worker] Notification result: {notify_result}", flush=True)
-    elif next_step_run:
-        last_event = "STEP_ENQUEUED"
-        _send_optional_step_notification("STEP_COMPLETED")
-        print(f"[worker] Step completed, next step enqueued: {next_step_run.get('step_name', 'unknown')}", flush=True)
-    else:
-        print(
-            f"[worker] WARNING: Run completion state is non-terminal after final step. "
-            f"status={completion_run.get('status')!r}, next_step_run={next_step_run!r}",
-            flush=True,
-        )
-
-    hooks._write_backend_job_json(
-        run=completion_run,
-        step_run=completion_step_run,
-        next_step_run=next_step_run if isinstance(next_step_run, dict) else None,
-        last_event=last_event,
-    )
-    return {
-        "run": completion_run,
-        "step_run": completion_step_run,
-        "next_step_run": next_step_run,
-        "last_event": last_event,
-    }
 
 
 def build_execution_state(*, request: ExecutionRequest, group_cfg: dict[str, Any], hooks: Any) -> dict[str, Any]:
@@ -842,6 +329,7 @@ def execute_backend_step_request(
             state=state,
             step=step,
             step_cfg=step_cfg,
+            project_root=effective_root,
             workflow_key_override=request.workflow_key_override or "",
             cli_coder=request.coder_override or None,
         )
@@ -928,8 +416,16 @@ def execute_backend_step_request(
         step_name=step,
         coder_used=coder_used,
         remark=step_result.remark,
-        artifacts=published_artifacts,
-        meta_json_path=step_result.meta_json_path,
+        artifacts=format_report_artifacts(
+            published_artifacts,
+            project_root=effective_root,
+            runtime_root=JOBS_ROOT,
+        ),
+        meta_json_path=format_report_path(
+            step_result.meta_json_path,
+            project_root=effective_root,
+            runtime_root=JOBS_ROOT,
+        ),
         review=review,
         usage=step_result.usage_data,
         diagnostics={
@@ -940,43 +436,3 @@ def execute_backend_step_request(
         },
         next_step=next_step,
     )
-
-
-def build_worker_crash_result(*, run: dict[str, Any], step_run: dict[str, Any], error: Exception, hooks: Any) -> dict[str, Any]:
-    step_name = str(step_run.get("step_name") or "unknown_step")
-    step_dir = hooks.JOBS_ROOT / str(run.get("workflow_name") or "") / str(run.get("run_code") or run.get("id") or "backend-run") / f"{int(step_run.get('sequence_no') or 1):02d}_{step_name}"
-    diagnostics = {
-        "workflow_run_id": str(run.get("id") or ""),
-        "workflow_step_run_id": str(step_run.get("id") or ""),
-        "job_id": str(run.get("run_code") or ""),
-        "step_dir": hooks._safe_relative_to(step_dir, hooks.JOBS_ROOT),
-        "worker_error": repr(error),
-    }
-    step_dir.mkdir(parents=True, exist_ok=True)
-    hooks._save_json(
-        step_dir / "worker_error.json",
-        {
-            "step_name": step_name,
-            "worker_error": repr(error),
-            "diagnostics": diagnostics,
-            "failed_at": hooks._now_iso(),
-        },
-    )
-    return {
-        "status": "failed",
-        "outcome": "failed",
-        "step_name": step_name,
-        "coder_used": str(step_run.get("coder") or ""),
-        "remark": f"Worker failed before execute-step completed: {error}",
-        "artifacts": {},
-        "meta_json_path": None,
-        "review": None,
-        "usage": None,
-        "failure": {
-            "failure_class": "SYSTEM_ERROR",
-            "failure_code": "WORKER_EXECUTE_STEP_FAILED",
-            "failure_reason": str(error),
-            "failure_source": "worker",
-        },
-        "diagnostics": diagnostics,
-    }

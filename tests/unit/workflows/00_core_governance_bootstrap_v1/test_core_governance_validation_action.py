@@ -47,7 +47,7 @@ def test_validate_core_governance_docs_rejects_stale_references(tmp_path, monkey
     readme = tmp_path / "docs/system/00_governance/bootstrap/README.md"
     standard = tmp_path / "docs/system/00_governance/bootstrap/DOCUMENTATION_STANDARD.md"
     taxonomy = tmp_path / "docs/system/00_governance/bootstrap/BUNDLE_TAXONOMY.md"
-    migration = tmp_path / "docs/system/00_governance/bootstrap/BUNDLE_MIGRATION_PLAN.md"
+    runtime = tmp_path / "docs/system/00_governance/bootstrap/RUNTIME_GOVERNANCE.md"
 
     _write_doc(
         readme,
@@ -79,10 +79,10 @@ def test_validate_core_governance_docs_rejects_stale_references(tmp_path, monkey
         ),
     )
     _write_doc(
-        migration,
-        '"SYS-00-BMP"',
-        "Bundle Migration Plan",
-        workflow_actions.CORE_GOVERNANCE_REQUIRED_SECTIONS["docs/system/00_governance/bootstrap/BUNDLE_MIGRATION_PLAN.md"],
+        runtime,
+        '"SYS-00-RG"',
+        "Runtime Governance",
+        workflow_actions.CORE_GOVERNANCE_REQUIRED_SECTIONS["docs/system/00_governance/bootstrap/RUNTIME_GOVERNANCE.md"],
         extra=(
             "Current inventory includes 20_initiative_intake_v1, 40_task_execution_v1, and 41_bug_fix_intake_v1.\n\n"
             "Active target-state docs include docs/system/00_governance/bootstrap/SYSTEM_OVERVIEW.md."
@@ -108,7 +108,7 @@ def test_validate_core_governance_docs_rejects_stale_references(tmp_path, monkey
     assert "canonical_scaffold_reference" in rendered
     assert "repo_bundle_taxonomy_scope" in rendered
     assert "documentation_standard_scope" in rendered
-    assert "migration_plan_scope" in rendered
+    assert "runtime_governance_scope" in rendered
 
 
 def test_validate_core_governance_docs_rejects_repo_artifact_path_example_in_standard(tmp_path, monkeypatch) -> None:
@@ -117,7 +117,7 @@ def test_validate_core_governance_docs_rejects_repo_artifact_path_example_in_sta
     readme = tmp_path / "docs/system/00_governance/bootstrap/README.md"
     standard = tmp_path / "docs/system/00_governance/bootstrap/DOCUMENTATION_STANDARD.md"
     taxonomy = tmp_path / "docs/system/00_governance/bootstrap/BUNDLE_TAXONOMY.md"
-    migration = tmp_path / "docs/system/00_governance/bootstrap/BUNDLE_MIGRATION_PLAN.md"
+    runtime = tmp_path / "docs/system/00_governance/bootstrap/RUNTIME_GOVERNANCE.md"
 
     _write_doc(
         readme,
@@ -144,11 +144,11 @@ def test_validate_core_governance_docs_rejects_repo_artifact_path_example_in_sta
         extra="### Class 1: Core Governance Bundles\n- `00_core_governance_bootstrap_v1`\n",
     )
     _write_doc(
-        migration,
-        '"SYS-00-BMP"',
-        "Bundle Migration Plan",
-        workflow_actions.CORE_GOVERNANCE_REQUIRED_SECTIONS["docs/system/00_governance/bootstrap/BUNDLE_MIGRATION_PLAN.md"],
-        extra="Legacy mixed outputs are tracked generically during migration.",
+        runtime,
+        '"SYS-00-RG"',
+        "Runtime Governance",
+        workflow_actions.CORE_GOVERNANCE_REQUIRED_SECTIONS["docs/system/00_governance/bootstrap/RUNTIME_GOVERNANCE.md"],
+        extra="Plugin workflow bundles may contain one or many workflows.",
     )
 
     result = workflow_actions.validate_core_governance_docs(
