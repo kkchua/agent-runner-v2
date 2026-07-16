@@ -287,12 +287,18 @@ def write_meta_sidecar(
         runtime_root=runtime_root,
     )
     meta_path.parent.mkdir(parents=True, exist_ok=True)
+    # Format artifact paths to absolute paths for consistency with result.json
+    formatted_artifacts = format_report_artifacts(
+        artifacts,
+        project_root=project_root,
+        runtime_root=runtime_root,
+    )
     payload: dict[str, Any] = {
         "schema_version": "v2",
         "coder_result": {
             "status": status,
             "remark": remark,
-            "artifacts": artifacts,
+            "artifacts": formatted_artifacts,
             "recorded_at": dt.datetime.now().astimezone().isoformat(timespec="seconds"),
         },
     }

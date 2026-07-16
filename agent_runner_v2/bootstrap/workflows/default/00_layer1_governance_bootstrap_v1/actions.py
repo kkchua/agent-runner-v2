@@ -52,6 +52,16 @@ FORBIDDEN_LITERALS: tuple[str, ...] = (
     "{ARTIFACT_KEY_",
 )
 
+FORBIDDEN_ENCODING_TOKENS: tuple[str, ...] = (
+    "â€”",
+    "â€“",
+    "â€˜",
+    "â€™",
+    "â€œ",
+    "â€\x9d",
+    "�",
+)
+
 REPO_ARTIFACT_NEEDLES: tuple[str, ...] = (
     "PROJECT_ANALYSIS",
     "CODEBASE_INVENTORY",
@@ -72,6 +82,15 @@ REPO_ANALYSIS_PATHS: tuple[str, ...] = (
     "docs/system/00_governance/bootstrap/SYSTEM_CONTEXT.md",
     "docs/system/00_governance/bootstrap/DEVELOPER_GUIDE.md",
     "docs/repo/",
+)
+
+FORBIDDEN_RUNTIME_POLICY_NEEDLES: tuple[str, ...] = (
+    "dual-path",
+    "dual path",
+    "fallback second",
+    "local repository fallback",
+    "local path (fallback)",
+    "if not found, the runner falls back to the local repository",
 )
 
 WORKFLOW_ID_RE = re.compile(r"\b\d{2}_[a-z0-9]+(?:_[a-z0-9]+)*_v\d+\b", re.IGNORECASE)
@@ -130,6 +149,14 @@ def _extra_layer1_checks(*, project_root: Path) -> list[dict[str, str | bool]]:
         bodies[name] = _strip_workflow_managed_banner(_strip_frontmatter(text))
         for literal in FORBIDDEN_LITERALS:
             add(literal not in text, "forbidden_literal", path, f"forbidden=`{literal}`")
+        for token in FORBIDDEN_ENCODING_TOKENS:
+            add(token not in text, "encoding_hygiene", path, f"forbidden_encoding_token=`{token}`")
+        add(
+            text.isascii(),
+            "ascii_only_output",
+            path,
+            "Layer 1 docs must be ASCII-only to avoid mojibake and encoding drift.",
+        )
 
     readme_text = texts.get("README.md", "")
     std_text = texts.get("DOCUMENTATION_STANDARD.md", "")
@@ -181,6 +208,30 @@ def _extra_layer1_checks(*, project_root: Path) -> list[dict[str, str | bool]]:
         "multi_workflow_bundle_support",
         docs["RUNTIME_GOVERNANCE.md"],
         "RUNTIME_GOVERNANCE must recognize both single-workflow and multi-workflow plugin bundles.",
+    )
+    runtime_lower = runtime_text.lower()
+    bundle_lower = tax_text.lower()
+    add(
+        all(needle not in runtime_lower for needle in FORBIDDEN_RUNTIME_POLICY_NEEDLES),
+        "runtime_policy_no_local_fallback",
+        docs["RUNTIME_GOVERNANCE.md"],
+        "RUNTIME_GOVERNANCE must describe global published bundle resolution only and must not define repo-local workflow fallback.",
+    )
+    add(
+        "global runtime home" not in bundle_lower and "fallback" not in bundle_lower,
+        "bundle_taxonomy_no_runtime_resolution_policy",
+        docs["BUNDLE_TAXONOMY.md"],
+        "BUNDLE_TAXONOMY must not define runtime path resolution policy such as global-first or local fallback.",
+    )
+    add(
+        (
+            "published bundle" in runtime_lower
+            or "published bundles" in runtime_lower
+            or "published workflow bundle" in runtime_lower
+        ) and "global runtime home" in runtime_lower,
+        "runtime_policy_global_publish_model",
+        docs["RUNTIME_GOVERNANCE.md"],
+        "RUNTIME_GOVERNANCE must describe the published global runtime home as the canonical workflow source.",
     )
     add(
         "plugin workflow bundle" in tax_text.lower() or "plugin bundle" in tax_text.lower(),

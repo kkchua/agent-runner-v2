@@ -1,7 +1,7 @@
 {
   "role_policies": {
     "architect_standard": {
-      "default_role": "architect_secondary",
+      "default_role": "architect_primary",
       "allowed_roles": [
         "architect_primary",
         "architect_secondary",
@@ -9,18 +9,83 @@
       ]
     },
     "reviewer_standard": {
-      "default_role": "reviewer_secondary",
+      "default_role": "review_primary",
       "allowed_roles": [
-        "reviewer_primary",
-        "reviewer_secondary",
-        "reviewer_tertiary"
+        "review_primary",
+        "review_secondary",
+        "review_tertiary"
       ]
     },
-    "developer_standard": {
-      "default_role": "developer_secondary",
+    "architect_policy": {
+      "default_role": "architect_primary",
       "allowed_roles": [
-        "developer_primary",
-        "developer_secondary"
+        "architect_primary",
+        "architect_secondary",
+        "architect_tertiary"
+      ]
+    },
+    "review_policy": {
+      "default_role": "review_primary",
+      "allowed_roles": [
+        "review_primary",
+        "review_secondary",
+        "review_tertiary"
+      ]
+    },
+    "refine_policy": {
+      "default_role": "refine_primary",
+      "allowed_roles": [
+        "refine_primary",
+        "refine_secondary",
+        "refine_tertiary"
+      ]
+    },
+    "plan_policy": {
+      "default_role": "plan_primary",
+      "allowed_roles": [
+        "plan_primary",
+        "plan_secondary",
+        "plan_tertiary"
+      ]
+    },
+    "implement_policy": {
+      "default_role": "implement_primary",
+      "allowed_roles": [
+        "implement_primary",
+        "implement_secondary",
+        "implement_tertiary"
+      ]
+    },
+    "execution_policy": {
+      "default_role": "execution_primary",
+      "allowed_roles": [
+        "execution_primary",
+        "execution_secondary",
+        "execution_tertiary"
+      ]
+    },
+    "validation_policy": {
+      "default_role": "validation_primary",
+      "allowed_roles": [
+        "validation_primary",
+        "validation_secondary",
+        "validation_tertiary"
+      ]
+    },
+    "code_fix_policy": {
+      "default_role": "code_fix_primary",
+      "allowed_roles": [
+        "code_fix_primary",
+        "code_fix_secondary",
+        "code_fix_tertiary"
+      ]
+    },
+    "documentation_policy": {
+      "default_role": "documentation_primary",
+      "allowed_roles": [
+        "documentation_primary",
+        "documentation_secondary",
+        "documentation_tertiary"
       ]
     }
   }

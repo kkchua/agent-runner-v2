@@ -1,0 +1,79 @@
+You are generating the system overview and governance-facing master docs for the current repository.
+
+This step builds on the approved bootstrap project analysis. Keep the scope limited to overview and functional documentation.
+
+Inputs you must read first:
+- `{PROJECT_ANALYSIS}`
+- `{CODEBASE_DOC_ROOT}/01_inventory/codebase_inventory.md`
+- `{CODEBASE_DOC_ROOT}/04_changes/` latest change impact document
+- relevant source files under `agent_runner_v2/`
+
+Write or refresh these docs:
+- `{SYSTEM_DOCS_INDEX}`
+- `{SYSTEM_DOC_STANDARD}`
+- `{BUNDLE_TAXONOMY}`
+- `{BUNDLE_MIGRATION_PLAN}`
+- `{SYSTEM_OVERVIEW}`
+- `{BUSINESS_CAPABILITIES}`
+- `{FUNCTIONAL_SPEC}`
+- `{NON_FUNCTIONAL_REQUIREMENTS}`
+
+Primary objectives:
+1. Explain the platform at a level useful to users, developers, and stakeholders.
+2. Define the documentation standard and repo documentation expectations.
+3. Describe the system capabilities and functional scope without drifting into low-level architecture detail.
+4. Keep the written docs aligned with the actual repository and the approved project analysis.
+5. Make the universal ecosystem baseline and repo-selected architecture posture explicit, especially when the repository has no clear prior standard.
+
+Hard ownership rule:
+- `{PROJECT_ANALYSIS}` is read-only in this step.
+- Do not create, modify, or refresh any architecture or operations docs in this step.
+- The only writable outputs are the eight files listed in "Write or refresh these docs".
+- In particular, do not touch `SYSTEM_CONTEXT.md`, `COMPONENT_ARCHITECTURE.md`, `DECISION_LOG.md`, `SYSTEM_FILE_STRUCTURE.md`, `DEVELOPER_GUIDE.md`, `RUNBOOK.md`, or `EXISTING_REPO_WORKFLOW_SOP.md`.
+
+Frontmatter contract:
+- EVERY file MUST include these YAML frontmatter fields:
+  - `template_id`: Use exact values below (REQUIRED)
+  - `version`: Set to `"1.0.0"` (REQUIRED)
+  - `doc_type`: Set to `"system"` for governance docs (REQUIRED)
+  - `managed_by`: Set to `"workflow-generated"` (REQUIRED)
+  - `generated_at`: Current ISO timestamp (REQUIRED)
+  - `workflow`: `"00_repo_master_docs_bootstrap_v1"` (REQUIRED)
+  - `step`: Current step name (REQUIRED)
+  - `change_id`: Job ID from context (REQUIRED)
+- Use these exact `template_id` values in YAML frontmatter:
+  - `README.md` -> `SYS-00-IDX`
+  - `DOCUMENTATION_STANDARD.md` -> `SYS-00-DS`
+  - `BUNDLE_TAXONOMY.md` -> `SYS-00-BT`
+  - `BUNDLE_MIGRATION_PLAN.md` -> `SYS-00-BMP`
+  - `SYSTEM_OVERVIEW.md` -> `SYS-00-SO`
+  - `BUSINESS_CAPABILITIES.md` -> `SYS-00-BC`
+  - `FUNCTIONAL_SPEC.md` -> `SYS-00-FS`
+  - `NON_FUNCTIONAL_REQUIREMENTS.md` -> `SYS-00-NFR`
+
+Required content rules:
+- `{SYSTEM_DOCS_INDEX}` should index the master doc set and describe the audience views.
+- `{SYSTEM_OVERVIEW}` should explain the platform, workflow model, and value flow, not just list files.
+- `{SYSTEM_OVERVIEW}` should separate the universal baseline from any repo-selected profile and note the migration posture when the repo standard is provisional.
+- `{SYSTEM_DOC_STANDARD}` should define the baseline rules that apply to every repo, then explain how repo-specific profiles and migration modes are selected.
+- `{BUSINESS_CAPABILITIES}` should describe what the runner enables operationally.
+- `{FUNCTIONAL_SPEC}` should describe major behaviors and workflow capabilities grounded in the repo.
+- `{NON_FUNCTIONAL_REQUIREMENTS}` should capture runtime, quality, and operational expectations already implied by the repo.
+- Each file must include complete YAML frontmatter with ALL required fields listed above.
+- Use these section headings exactly in the generated docs:
+  - `README.md`: `System Documentation Index`, `Audience Views`, `Document Map`
+  - `DOCUMENTATION_STANDARD.md`: `Purpose`, `Audience Model`, `Document Set`, `Architecture Baseline`, `Repository-Selected Profile`, `Migration Mode`, `Conditional Standards`, `Update Triggers`, `Validation`
+  - `SYSTEM_OVERVIEW.md`: `Purpose`, `Scope`, `Primary Flows`, `Architecture Profile`, `Key Risks`
+  - `BUSINESS_CAPABILITIES.md`: capability map plus operational interpretation
+  - `FUNCTIONAL_SPEC.md`: system purpose, functional capabilities, actors, core behaviors
+  - `NON_FUNCTIONAL_REQUIREMENTS.md`: quality and operational requirements
+
+Workflow-owned artifact contract:
+- `SYSTEM_DOCS_INDEX` -> `{SYSTEM_DOC_ROOT}/README.md`
+- `SYSTEM_DOC_STANDARD` -> `{SYSTEM_DOC_ROOT}/DOCUMENTATION_STANDARD.md`
+- `BUNDLE_TAXONOMY` -> `{SYSTEM_DOC_ROOT}/BUNDLE_TAXONOMY.md`
+- `BUNDLE_MIGRATION_PLAN` -> `{SYSTEM_DOC_ROOT}/BUNDLE_MIGRATION_PLAN.md`
+- `SYSTEM_OVERVIEW` -> `{SYSTEM_DOC_ROOT}/SYSTEM_OVERVIEW.md`
+- `BUSINESS_CAPABILITIES` -> `{SYSTEM_DOC_ROOT}/BUSINESS_CAPABILITIES.md`
+- `FUNCTIONAL_SPEC` -> `{SYSTEM_DOC_ROOT}/FUNCTIONAL_SPEC.md`
+- `NON_FUNCTIONAL_REQUIREMENTS` -> `{SYSTEM_DOC_ROOT}/NON_FUNCTIONAL_REQUIREMENTS.md`

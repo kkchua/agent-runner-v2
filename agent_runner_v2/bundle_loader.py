@@ -2,6 +2,7 @@ from __future__ import annotations
 
 """Workflow bundle loading and bootstrap helpers."""
 
+import datetime as dt
 import json
 import shutil
 import sys
@@ -26,6 +27,7 @@ from .workflow_packages.loader import (
     bundle_to_template_group_dict,
     load_workflow_package,
 )
+from .workflow_bundle_validator import WorkflowBundleValidationReport, validate_workflow_bundle_dir
 
 
 GLOBAL_RUNNER_HOME = Path.home() / DEFAULT_RUNNER_HOME
@@ -41,6 +43,15 @@ PACKAGED_BOOTSTRAP_EXCLUDE_PATTERNS = (
 PACKAGED_BOOTSTRAP_EXCLUDED_WORKFLOWS = {
     "00_core_governance_bootstrap_v1",
 }
+
+
+class WorkflowBundlePublishValidationError(RuntimeError):
+    """Raised when repo-root workflow bundles fail preflight validation."""
+
+    def __init__(self, reports: list[WorkflowBundleValidationReport]) -> None:
+        self.reports = reports
+        names = ", ".join(report.workflow_name for report in reports)
+        super().__init__(f"Workflow bundle validation failed for: {names}")
 
 
 def bundles_root() -> Path:
@@ -157,6 +168,33 @@ def _copy_plugin_workflows_to_bootstrap(
     return copied
 
 
+def _discover_repo_workflow_bundle_dirs(plugin_root: Path) -> list[Path]:
+    if not plugin_root.is_dir():
+        return []
+    return [
+        candidate
+        for candidate in sorted(plugin_root.iterdir())
+        if candidate.is_dir() and (candidate / "workflow.toml").is_file()
+    ]
+
+
+def _validate_repo_workflow_bundles(plugin_root: Path) -> list[WorkflowBundleValidationReport]:
+    reports: list[WorkflowBundleValidationReport] = []
+    for bundle_dir in _discover_repo_workflow_bundle_dirs(plugin_root):
+        if bundle_dir.name in PACKAGED_BOOTSTRAP_EXCLUDED_WORKFLOWS:
+            continue
+        reports.append(validate_workflow_bundle_dir(bundle_dir))
+    return reports
+
+
+def _ensure_repo_workflow_bundles_valid(plugin_root: Path) -> list[WorkflowBundleValidationReport]:
+    reports = _validate_repo_workflow_bundles(plugin_root)
+    invalid = [report for report in reports if not report.valid]
+    if invalid:
+        raise WorkflowBundlePublishValidationError(invalid)
+    return reports
+
+
 def _copy_shared_registry(
     registry_root: Path,
     target_workflow_root: Path,
@@ -226,6 +264,7 @@ def publish_bootstrap_bundle(
     package_root = (package_root or package_bootstrap_root()).resolve()
     plugin_workflows_root = (plugin_workflows_root or workspace_root / "workflows").resolve()
     shared_registry_root = (workspace_root / "workflows" / "_registry").resolve()
+    validation_reports = _ensure_repo_workflow_bundles_valid(plugin_workflows_root)
 
     # 1. Copy governance docs when present; otherwise create an empty packaged
     # bootstrap root so workflow package publishing can still proceed.
@@ -262,6 +301,7 @@ def publish_bootstrap_bundle(
         "source_docs_included": source_docs_included,
         "shared_registry_copied": bool(copied_registry),
         "plugin_workflows_copied": [p.name for p in copied],
+        "validated_workflows": [report.workflow_name for report in validation_reports],
         "plugin_governance_docs_generated": {
             p.name: _generate_bundle_governance_docs(p) for p in copied
         },
@@ -340,7 +380,21 @@ def load_workflow_module(
     return _build_workflow_module_from_packages(wf_root, workflow_name)
 
 
-def seed_workflow_bundle(target_root: Path, workflow_name: str = "example") -> Path:
+def _backup_workflow_folder(wf_root: Path) -> None:
+    """Rename existing workflow folder to backup with format YYMMDDNN."""
+    date_prefix = dt.datetime.now().strftime("%y%m%d")
+
+    for seq in range(1, 100):
+        backup_name = f"{wf_root.name}_{date_prefix}{seq:02d}"
+        backup_path = wf_root.parent / backup_name
+        if not backup_path.exists():
+            wf_root.rename(backup_path)
+            return
+
+    raise RuntimeError(f"Cannot backup {wf_root}: sequence numbers 01-99 exhausted")
+
+
+def seed_workflow_bundle(target_root: Path, workflow_name: str = "default") -> Path:
     """Copy the entire bootstrap workflows/default/ tree into the target global workflow location.
 
     This is a wholesale copy — ``bootstrap/workflows/default/`` already contains
@@ -349,7 +403,7 @@ def seed_workflow_bundle(target_root: Path, workflow_name: str = "example") -> P
     """
     wf_root = target_root / workflow_name
     if wf_root.exists():
-        shutil.rmtree(wf_root)
+        _backup_workflow_folder(wf_root)
     shutil.copytree(BOOTSTRAP_ROOT, wf_root)
     return wf_root
 
@@ -366,6 +420,7 @@ def seed_workflow_packages(workspace_root: Path, workflow_name: str = "default")
     repo_packages_dir = (workspace_root / "workflows").resolve()
     if not repo_packages_dir.is_dir():
         return []
+    _ensure_repo_workflow_bundles_valid(repo_packages_dir)
 
     # Plugin packages live inside the active workflow bundle directory,
     # alongside template_groups.py — e.g. workflows/default/<pkg_name>/
@@ -420,11 +475,11 @@ def init_workspace(
     workflows_dir = global_workflows_root()
     workflows_dir.mkdir(parents=True, exist_ok=True)
 
-    # Seed the example workflow bundle (copied from bootstrap/workflows/default/)
-    wf_root = seed_workflow_bundle(workflows_dir, workflow_name="example")
+    # Seed the default workflow bundle (copied from bootstrap/workflows/default/)
+    wf_root = seed_workflow_bundle(workflows_dir, workflow_name="default")
 
-    # Also seed plugin workflow packages from repo into the example bundle
-    seeded_plugins = seed_workflow_packages(workspace_root, workflow_name="example")
+    # Also seed plugin workflow packages from repo into the default bundle
+    seeded_plugins = seed_workflow_packages(workspace_root, workflow_name="default")
 
     (core_dir / "current").mkdir(parents=True, exist_ok=True)
     (domain_dir / domain / "current").mkdir(parents=True, exist_ok=True)

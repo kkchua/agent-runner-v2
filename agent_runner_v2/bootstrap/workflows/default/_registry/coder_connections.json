@@ -5,21 +5,33 @@
       "supported_coders": ["qwen", "claude", "opencode"],
       "model_format": "model_id",
       "auth_type": "openai",
-      "openai_base_url": "https://coding-intl.dashscope.aliyuncs.com/v1"
+      "openai_base_url": "https://coding-intl.dashscope.aliyuncs.com/v1",
+      "available_models": [
+        "glm-5",
+        "qwen3.5-plus",
+        "qwen3.6-plus",
+        "qwen3.7-plus",
+        "qwen3-coder-plus",
+        "qwen3-coder-next",
+        "MiniMax-M2.5",
+        "kimi-k2.5"
+      ]
     },
     "deepseek": {
       "provider": "deepseek",
       "supported_coders": ["qwen", "claude", "opencode"],
       "model_format": "model_id",
       "auth_type": "openai",
-      "openai_base_url": "https://api.deepseek.com"
+      "openai_base_url": "https://api.deepseek.com",
+      "available_models": ["deepseek-v4-flash"]
     },
     "opencode_ai_zen_go": {
       "provider": "opencode_ai_zen_go",
       "supported_coders": ["qwen"],
       "model_format": "model_id",
       "auth_type": "openai",
-      "openai_base_url": "https://opencode.ai/zen/go/v1"
+      "openai_base_url": "https://opencode.ai/zen/go/v1",
+      "available_models": ["deepseek-v4-flash"]
     },
     "opencode_go": {
       "provider": "opencode_go",

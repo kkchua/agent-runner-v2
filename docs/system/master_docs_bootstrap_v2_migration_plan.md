@@ -1,5 +1,15 @@
 # 00 Master Docs Bootstrap v2 Migration Plan
 
+## Status: COMPLETED (2026-07-16)
+
+Migration completed:
+- Workflow migrated to `workflows/00_repo_master_docs_bootstrap_v1/`
+- Output path changed to `docs/repo/governance/`
+- Legacy coder_roles.json deleted
+- Batch file created: `run-00_repo_master_docs_bootstrap_v1.bat`
+
+---
+
 ## Summary
 
 This document tracks the completion of the partial migration for

@@ -32,7 +32,7 @@ REM Path to the project to bootstrap docs into
 set "TARGET_PROJECT_ROOT=D:\MyProjectSpace\01_Workflows\agent-runner-v2"
 
 REM Job ID to resume (leave blank to auto-create a new job)
-set "JOB_ID=00L1-GEN-20260715-010"
+set "JOB_ID="
 
 REM Set DRY_RUN=true to render prompts only (no coder invocation)
 set "DRY_RUN=false"

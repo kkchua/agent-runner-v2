@@ -3,10 +3,10 @@ template_id: "SYS-00-DS"
 version: "1.0.0"
 doc_type: "system"
 managed_by: "workflow-generated"
-generated_at: "2026-07-15T22:38:14+08:00"
+generated_at: "2026-07-16T10:05:56+08:00"
 workflow: "00_layer1_governance_bootstrap_v1"
 step: "generate_layer1_governance_docs"
-change_id: "00L1-20260715-74497d6b"
+change_id: "00L1-20260716-e4c16ad4"
 ---
 
 > Managed by workflow: `00_layer1_governance_bootstrap_v1` / step: `generate_layer1_governance_docs`
@@ -16,136 +16,157 @@ change_id: "00L1-20260715-74497d6b"
 
 ## Purpose
 
-This document defines the documentation authority, structure rules, and
-validation criteria for the four Layer 1 ecosystem governance documents. It
-governs only the Layer 1 document set and does not prescribe rules for
-repository-level or workflow-level documentation.
-
-Layer 1 governance documents are the permanent, reusable policy foundation for
-plugin workflow ecosystems. They must remain free of repository-specific
-content, concrete workflow identifiers, and repository-derived artifact names.
+This document defines the documentation authority and structure rules for the
+Layer 1 ecosystem governance master documents. It establishes the standards
+that govern how the four Layer 1 documents are organized, maintained, and
+validated.
 
 ## Audience Model
 
-The Layer 1 documentation standard addresses three audience profiles:
+Layer 1 governance documents serve multiple audiences:
 
-1. **Ecosystem architects** — responsible for maintaining governance policy
-   across repositories. They need clear ownership boundaries and structure
-   rules to ensure consistency.
+| Audience | Role | Document Focus |
+|----------|------|----------------|
+| System Architects | Define ecosystem governance | DOCUMENTATION_STANDARD.md, BUNDLE_TAXONOMY.md |
+| Runtime Operators | Manage workflow execution | RUNTIME_GOVERNANCE.md |
+| Workflow Developers | Create plugin workflow bundles | BUNDLE_TAXONOMY.md, RUNTIME_GOVERNANCE.md |
+| Repository Owners | Adopt governance for repositories | All four documents |
 
-2. **Repository maintainers** — responsible for adapting Layer 1 policy to a
-   specific repository. They need to understand which rules are fixed at
-   Layer 1 and which are open to repository-level adaptation at Layer 2.
-
-3. **Plugin workflow authors** — responsible for creating workflow bundles
-   that conform to governance expectations. They need to understand the
-   documentation set's scope and validation gates.
+Each audience should be able to understand the governance model from their
+primary documents without needing to read the full document set.
 
 ## Document Set
 
-The Layer 1 document set consists of exactly four permanent documents:
+The Layer 1 document set consists of exactly four files:
 
-| Document | Template ID | Scope |
-|----------|-------------|-------|
-| README.md | SYS-00-IDX | Documentation index, three-layer model, audience views, and document map. |
-| DOCUMENTATION_STANDARD.md | SYS-00-DS | This document. Documentation authority, structure rules, and validation criteria. |
-| BUNDLE_TAXONOMY.md | SYS-00-BT | Bundle class definitions, ownership boundaries, and packaging rules. |
-| RUNTIME_GOVERNANCE.md | SYS-00-RG | Steady-state runtime model, publish/install, registry, validation, and parity rules. |
+### README.md (SYS-00-IDX)
 
-No additional documents may be added to the Layer 1 set without governance
-workflow approval. Review, validation, and audit artifacts are supporting
-evidence only and are not part of the permanent Layer 1 document set.
+- **Purpose**: Index and layering model explanation
+- **Audience**: All audiences
+- **Content**: Document map, audience views, layering model overview
+- **Ownership**: Layer 1 governance workflow
+
+### DOCUMENTATION_STANDARD.md (SYS-00-DS)
+
+- **Purpose**: Documentation authority and structure rules
+- **Audience**: System architects, repository owners
+- **Content**: Audience model, document set, architecture baseline, validation
+- **Ownership**: Layer 1 governance workflow
+
+### BUNDLE_TAXONOMY.md (SYS-00-BT)
+
+- **Purpose**: Bundle classes and ownership rules
+- **Audience**: System architects, workflow developers
+- **Content**: Bundle class definitions, ownership rules, packaging rules
+- **Ownership**: Layer 1 governance workflow
+
+### RUNTIME_GOVERNANCE.md (SYS-00-RG)
+
+- **Purpose**: Runtime operating model
+- **Audience**: Runtime operators, workflow developers
+- **Content**: Publish/install model, registry control, validation gates
+- **Ownership**: Layer 1 governance workflow
 
 ## Architecture Baseline
 
-Every Layer 1 document must conform to the following baseline:
+### Layer Separation
 
-- **Frontmatter.** Each document must include YAML frontmatter with the
-  fields: `template_id`, `version`, `doc_type`, `managed_by`,
-  `generated_at`, `workflow`, `step`, and `change_id`. The `doc_type` field
-  must be `system` for all Layer 1 documents.
+Layer 1 documents must remain strictly separated from Layer 2 and Layer 3
+concerns:
 
-- **Protection banner.** Immediately after frontmatter, each document must
-  include the workflow-managed protection banner stating the owning workflow
-  and step, and that the file is protected from manual edits.
+- **Layer 1**: Ecosystem governance (this directory)
+- **Layer 2**: Repository master docs (repository-specific)
+- **Layer 3**: Plugin workflow outputs (execution-generated)
 
-- **Scope purity.** Layer 1 documents must not contain concrete workflow
-  identifiers, repository-specific artifact names, repository-specific
-  output paths, or provider authentication flows. The documents must remain
-  generic enough to govern plugin workflow ecosystems across repositories.
+Layer 1 documents must not reference concrete workflow identifiers,
+repository-specific artifact names, or repository-specific output paths.
 
-- **Layering respect.** Layer 1 documents must not define repository-level
-  workflow inventories, repository-specific scaffold names, or
-  SDLC-specific outputs. Those concerns belong to Layer 2.
+### Template Identification
+
+Each Layer 1 document has a unique template ID:
+
+| Document | Template ID |
+|----------|-------------|
+| README.md | SYS-00-IDX |
+| DOCUMENTATION_STANDARD.md | SYS-00-DS |
+| BUNDLE_TAXONOMY.md | SYS-00-BT |
+| RUNTIME_GOVERNANCE.md | SYS-00-RG |
+
+Template IDs are used in YAML frontmatter for document identification and
+validation.
+
+### Ownership Boundaries
+
+Each Layer 1 document is owned by the Layer 1 governance workflow that
+generates it. Ownership means:
+
+- The workflow is responsible for document creation and updates
+- Manual edits are not permitted (workflow-managed protection)
+- Document changes require workflow execution
 
 ## Conditional Standards
 
-The following conditional rules apply to the Layer 1 document set:
+### Scope Purity
 
-- **Versioning.** All Layer 1 documents share version `1.0.0`. A version bump
-  across all four documents requires a new governance bootstrap run with a
-  new change ID.
+Layer 1 documents must maintain scope purity:
 
-- **Cross-references.** Layer 1 documents may cross-reference each other by
-  filename and template ID. They must not reference Layer 2 or Layer 3
-  documents by concrete path, as those paths are repository-specific.
+- No concrete workflow identifiers in body text (frontmatter/banner only)
+- No repository-specific artifact names
+- No repository-specific scaffold names
+- No repository-specific output examples
 
-- **Section requirements.** Each document has a fixed set of required
-  sections. These sections must exist and be populated. Optional subsections
-  may be added within required sections but must not introduce
-  repository-specific content.
+### Format Requirements
 
-- **No repo-derived artifacts.** Layer 1 documents must not enumerate or
-  reference repository-derived artifact names. The document set is
-  ecosystem-level policy only.
+All Layer 1 documents must:
+
+- Use YAML frontmatter with required fields
+- Include the workflow-managed protection banner
+- Use ASCII characters only in body text
+- Follow markdown formatting standards
+
+### Content Exclusions
+
+Layer 1 documents must not contain:
+
+- Concrete workflow identifier patterns in body text
+- Placeholder syntax for artifact keys
+- References to specific delivery scaffold workflows
+- Enumeration of repo-derived artifacts
 
 ## Update Triggers
 
-Layer 1 documents may be updated only through the governance bootstrap
-workflow. The following triggers warrant a re-generation cycle:
+Layer 1 documents should be updated when:
 
-1. **Runtime model changes.** When the publish/install, registry, or
-   execution mode parity model changes at the framework level.
+1. Bundle taxonomy changes (new bundle classes, ownership changes)
+2. Runtime model changes (publish/install procedures, validation gates)
+3. Documentation structure changes (new Layer 1 documents, format changes)
+4. Governance rules change (ownership boundaries, validation requirements)
 
-2. **Bundle taxonomy changes.** When a new bundle class is introduced or
-   ownership boundaries shift.
-
-3. **Documentation structure changes.** When required sections, frontmatter
-   fields, or protection banner rules change.
-
-4. **Validation gate changes.** When validation criteria or gates are added,
-   removed, or modified.
-
-Manual edits to Layer 1 documents are prohibited. All changes must flow
-through the governance bootstrap workflow's generate, review, refine,
-validate, and audit cycle.
+Updates must be made through the Layer 1 governance workflow, not through
+direct file editing.
 
 ## Validation
 
-The governance bootstrap workflow enforces the following validation checks on
-the Layer 1 document set:
+Layer 1 documents are validated by the workflow that generates them. Validation
+checks include:
 
-- **File existence.** All four required documents must exist on disk at the
-  canonical paths under `docs/system/00_governance/bootstrap/`.
+### Scope Purity Checks
 
-- **Frontmatter integrity.** Each document must include all required
-  frontmatter fields with correct values for `template_id`, `version`,
-  `doc_type`, `managed_by`, `generated_at`, `workflow`, `step`, and
-  `change_id`.
+- No concrete workflow identifiers in body text
+- No repository-specific artifact names
+- No repository-specific output paths
 
-- **Protection banner.** Each document must include the workflow-managed
-  protection banner immediately after frontmatter.
+### Ownership Checks
 
-- **Required sections.** Each document must contain all required sections as
-  specified in the governance contract.
+- Correct template IDs in frontmatter
+- Workflow-managed banner present
+- Generated timestamp recorded
 
-- **Scope purity.** No document body text may contain concrete workflow
-  identifiers, repository-derived artifact names, or provider authentication
-  flows.
+### Consistency Checks
 
-- **No forbidden tokens.** No document may contain placeholder artifact key
-  tokens or references to repository-specific scaffold workflow names.
+- Cross-references between documents are valid
+- Layering model is correctly described
+- Bundle taxonomy aligns with runtime governance
 
-Validation failures trigger the refinement loop. If refinement is exhausted,
-the workflow reports a human-retry-required failure and does not accept the
-changes.
+Validation failures result in workflow rejection and require prompt refinement
+to correct issues.

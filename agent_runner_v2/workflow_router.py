@@ -21,6 +21,7 @@ from pathlib import Path
 from typing import Any
 
 from .coder_adapters import CoderInvocationError
+from .constants import ARTIFACT_KEY_REVIEW
 from .exceptions import ArtifactMissingError, MetaJsonInvalidError, MetaJsonMissingError
 from .failure_runtime import append_failure_history, clear_last_failure, set_last_failure
 from .recovery_runtime import (
@@ -392,10 +393,16 @@ def _route_loop_or_replan(
     for key, value in step_result.artifacts.items():
         if value:
             artifacts[key] = value
-    # Alias VALIDATION_FILE → REVIEW_FILE for validator step
+    # Alias VALIDATION_FILE → REVIEW_FILE_SUGGESTED for validator step
     _sync_review_feedback_artifact(step=step, artifacts=artifacts)
+    _cleanup_rejected_feedback_docs(
+        group_name=group_name,
+        state=state,
+        step=step,
+        artifacts=artifacts,
+    )
 
-    review_file = artifacts.get("REVIEW_FILE")
+    review_file = artifacts.get(ARTIFACT_KEY_REVIEW)
     current_count = int(reject_counts.get(step, 0)) + 1
     reject_counts[step] = current_count
     iteration = current_count
@@ -730,8 +737,8 @@ def _update_review_state(
 
 
 def _sync_review_feedback_artifact(*, step: str, artifacts: dict) -> None:
-    """Alias validator outputs to REVIEW_FILE for refine-loop prompts."""
-    if artifacts.get("REVIEW_FILE"):
+    """Alias validator outputs to REVIEW_FILE_SUGGESTED for refine-loop prompts."""
+    if artifacts.get(ARTIFACT_KEY_REVIEW):
         return
 
     candidate_keys = []
@@ -745,8 +752,62 @@ def _sync_review_feedback_artifact(*, step: str, artifacts: dict) -> None:
     for key in candidate_keys:
         validation_file = str(artifacts.get(key) or "").strip()
         if validation_file:
-            artifacts["REVIEW_FILE"] = validation_file
+            artifacts[ARTIFACT_KEY_REVIEW] = validation_file
             return
+
+
+def _cleanup_rejected_feedback_docs(
+    *,
+    group_name: str,
+    state: dict,
+    step: str,
+    artifacts: dict,
+) -> None:
+    """Remove stale downstream feedback docs before a refine reroute."""
+    template_group = str(state.get("template_group") or group_name or "").strip()
+    if template_group != "00_layer1_governance_bootstrap_v1":
+        return
+
+    job_id = str(state.get("job_id") or "").strip()
+    if not job_id:
+        return
+
+    stale_rel_paths = _layer1_rejected_stale_feedback_paths(job_id=job_id, step=step)
+    if not stale_rel_paths:
+        return
+
+    project_root = Path(str(PROJECT_ROOT)).resolve()
+    for rel_path in stale_rel_paths:
+        file_path = project_root / rel_path
+        try:
+            file_path.unlink(missing_ok=True)
+        except OSError:
+            pass
+        try:
+            file_path.with_suffix(".meta.json").unlink(missing_ok=True)
+        except OSError:
+            pass
+
+        normalized_rel = rel_path.replace("\\", "/")
+        for artifact_key in list(artifacts.keys()):
+            artifact_value = str(artifacts.get(artifact_key) or "").strip().replace("\\", "/")
+            if artifact_value == normalized_rel:
+                artifacts.pop(artifact_key, None)
+
+
+def _layer1_rejected_stale_feedback_paths(*, job_id: str, step: str) -> list[str]:
+    base = "docs/system/00_governance/bootstrap"
+    validation_paths = [
+        f"{base}/{job_id}-layer1-governance-validation.md",
+        f"{base}/{job_id}-bootstrap-validation.md",
+    ]
+    audit_path = f"{base}/{job_id}-layer1-governance-audit.md"
+
+    if step == "review_layer1_governance_docs":
+        return [*validation_paths, audit_path]
+    if step == "validate_layer1_governance_docs":
+        return [audit_path]
+    return []
 
 
 # ---------------------------------------------------------------------------

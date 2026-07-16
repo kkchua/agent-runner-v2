@@ -34,8 +34,13 @@ Reject if any file:
 - leaves bundle layering or publish/install responsibilities ambiguous
 - contains `{ARTIFACT_KEY_`
 - contains `delivery_scaffold_v1`
+- contains mojibake markers or replacement-character corruption
 - makes `RUNTIME_GOVERNANCE.md` read like a migration note instead of a
   steady-state operating governance doc
+- makes `RUNTIME_GOVERNANCE.md` describe dual-path discovery, repo-local
+  fallback, or local workflow loading fallback
+- makes `BUNDLE_TAXONOMY.md` define runtime resolution behavior such as
+  global-first loading or local fallback
 - makes `BUNDLE_TAXONOMY.md` describe `docs/repo/`, repo-local outputs, or
   repository-owned artifact boundaries
 - makes `RUNTIME_GOVERNANCE.md` describe `docs/repo/`, repo-local outputs, or
@@ -48,6 +53,8 @@ Approve only if all of these are true:
   repository inventory level
 - `RUNTIME_GOVERNANCE.md` clearly defines `_registry`, publish/install,
   artifact ownership, execution parity, and generic plugin-bundle governance
+- `RUNTIME_GOVERNANCE.md` defines the global published bundle copy as the
+  canonical runtime source and does not define repo-local fallback
 - `RUNTIME_GOVERNANCE.md` explicitly recognizes both `single-workflow` and
   `multi-workflow` plugin bundles
 - `README.md` explicitly states that repo-local outputs live under
@@ -81,6 +88,9 @@ Task:
   - `RUNTIME_GOVERNANCE.md` does not contain `docs/repo/`
   - `BUNDLE_TAXONOMY.md` does not define repo-local output ownership
   - `RUNTIME_GOVERNANCE.md` does not define repo-local output ownership
+  - no reviewed file contains mojibake or non-ASCII punctuation corruption
+  - `RUNTIME_GOVERNANCE.md` does not define dual-path discovery or local fallback
+  - `BUNDLE_TAXONOMY.md` does not define runtime path resolution policy
 
 Required JSON schema:
 {
