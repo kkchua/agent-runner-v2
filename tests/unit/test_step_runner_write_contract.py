@@ -8,6 +8,7 @@ import pytest
 from agent_runner_v2.exceptions import ArtifactMissingError
 from agent_runner_v2.action_result import ActionResult
 from agent_runner_v2.step_runner import (
+    _backfill_declared_produced_artifacts,
     _set_master_docs_aliases,
     _resolve_meta_json_path,
     _resolve_progress_file_path,
@@ -110,6 +111,25 @@ def test_validate_declared_produced_artifacts_exist_rejects_missing_declared_out
             project_root=tmp_path,
             step="generate_core_governance_docs",
         )
+
+
+def test_backfill_declared_produced_artifacts_binds_existing_contract_files(tmp_path: Path) -> None:
+    sop = tmp_path / "docs/repo/governance/EXISTING_REPO_WORKFLOW_SOP.md"
+    sop.parent.mkdir(parents=True, exist_ok=True)
+    sop.write_text("ok\n", encoding="utf-8")
+
+    artifacts = _backfill_declared_produced_artifacts(
+        artifacts={"SYSTEM_DOCS_CHANGE_LOG": "docs/repo/governance/00RMD-bootstrap-change-log.md"},
+        produces=["SYSTEM_DOCS_CHANGE_LOG", "EXISTING_REPO_WORKFLOW_SOP"],
+        context={"EXISTING_REPO_WORKFLOW_SOP": "docs/repo/governance/EXISTING_REPO_WORKFLOW_SOP.md"},
+        state={"artifacts": {}},
+        project_root=tmp_path,
+    )
+
+    assert "EXISTING_REPO_WORKFLOW_SOP" in artifacts
+    assert artifacts["EXISTING_REPO_WORKFLOW_SOP"].replace("\\", "/").endswith(
+        "/docs/repo/governance/EXISTING_REPO_WORKFLOW_SOP.md"
+    )
 
 
 def test_validate_step_write_contract_config_requires_declared_writes() -> None:

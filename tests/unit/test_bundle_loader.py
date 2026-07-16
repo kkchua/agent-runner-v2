@@ -5,6 +5,7 @@ from pathlib import Path
 from agent_runner_v2 import bundle_loader
 from agent_runner_v2 import run_agent as run_agent_module
 from conftest import load_bootstrap_workflow_module
+from agent_runner_v2.workflow_bundle_validator import WorkflowBundleValidationReport
 
 
 def test_publish_bootstrap_bundle_copies_repo_bootstrap_docs_into_package_bundle(tmp_path, monkeypatch):
@@ -173,6 +174,50 @@ def test_publish_bootstrap_bundle_resets_bootstrap_workflow_root_before_copy(tmp
     assert (bootstrap_workflows_root / "sample_bundle" / "workflow.toml").exists()
 
 
+def test_publish_bootstrap_bundle_aborts_on_invalid_repo_workflow_bundle(tmp_path, monkeypatch):
+    workspace_root = tmp_path / "workspace"
+    source_root = workspace_root / "docs" / "system" / "00_governance" / "bootstrap"
+    source_root.mkdir(parents=True, exist_ok=True)
+    (source_root / "README.md").write_text("# Bootstrap\n", encoding="utf-8")
+
+    invalid_bundle = workspace_root / "workflows" / "bad_bundle"
+    invalid_bundle.mkdir(parents=True, exist_ok=True)
+    (invalid_bundle / "workflow.toml").write_text(
+        "\n".join(
+            [
+                "[workflow]",
+                'name = "bad_bundle"',
+                'version = "1"',
+                'job_prefix = "BAD"',
+                "",
+                "[workflow.init]",
+                'step = "missing"',
+                'inputs = []',
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    package_root = tmp_path / "package"
+    expected_root = package_root / "bootstrap" / "bundles" / "core" / "current"
+    bootstrap_workflows_root = package_root / "bootstrap" / "workflows" / "default"
+    bootstrap_workflows_root.mkdir(parents=True, exist_ok=True)
+    (bootstrap_workflows_root / "stale.txt").write_text("stale", encoding="utf-8")
+
+    monkeypatch.setattr(bundle_loader, "bootstrap_source_root", lambda ws: source_root)
+    monkeypatch.setattr(bundle_loader, "package_bootstrap_root", lambda: expected_root)
+    monkeypatch.setattr(bundle_loader, "BOOTSTRAP_ROOT", bootstrap_workflows_root)
+
+    try:
+        bundle_loader.publish_bootstrap_bundle(workspace_root)
+        raise AssertionError("Expected WorkflowBundlePublishValidationError")
+    except bundle_loader.WorkflowBundlePublishValidationError as exc:
+        assert exc.reports
+        assert exc.reports[0].workflow_name == "bad_bundle"
+
+    assert (bootstrap_workflows_root / "stale.txt").exists()
+
+
 def test_init_workspace_installs_packaged_bootstrap_bundle_and_seeds_global_example(tmp_path, monkeypatch):
     fake_home = tmp_path / "home"
     fake_package_root = tmp_path / "package"
@@ -183,9 +228,9 @@ def test_init_workspace_installs_packaged_bootstrap_bundle_and_seeds_global_exam
     monkeypatch.setattr(bundle_loader, "PACKAGE_ROOT", fake_package_root)
     monkeypatch.setattr(bundle_loader, "package_bootstrap_root", lambda: package_bootstrap_root)
 
-    seeded_workflow_root = fake_home / ".ukbe-runner" / "workflows" / "example"
+    seeded_workflow_root = fake_home / ".ukbe-runner" / "workflows" / "default"
 
-    def _fake_seed_workflow_bundle(target_root: Path, workflow_name: str = "example") -> Path:
+    def _fake_seed_workflow_bundle(target_root: Path, workflow_name: str = "default") -> Path:
         wf_root = target_root / workflow_name
         wf_root.mkdir(parents=True, exist_ok=True)
         (wf_root / "sample_bundle").mkdir(parents=True, exist_ok=True)
@@ -202,7 +247,7 @@ def test_init_workspace_installs_packaged_bootstrap_bundle_and_seeds_global_exam
     assert (fake_home / ".ukbe-runner" / "bundles" / "core" / "current" / "README.md").exists()
     assert (fake_home / ".ukbe-runner" / "bundles" / "domains" / "general" / "current").exists()
     assert not (tmp_path / "workspace" / ".ukbe-runner" / "workflows").exists()
-    assert (fake_home / ".ukbe-runner" / "workflows" / "example").exists()
+    assert (fake_home / ".ukbe-runner" / "workflows" / "default").exists()
     assert result["workflow_root"] == str(seeded_workflow_root)
     assert result["runner_home"] == str(fake_home / ".ukbe-runner")
     assert result["bundle_domain"] == "general"
@@ -228,7 +273,7 @@ def test_init_workspace_auto_publishes_bootstrap_bundle_when_package_bundle_miss
     monkeypatch.setattr(bundle_loader, "package_bootstrap_root", lambda: expected_package_root)
     monkeypatch.setattr(bundle_loader, "BOOTSTRAP_ROOT", bootstrap_workflows_root)
 
-    def _fake_seed_workflow_bundle(target_root: Path, workflow_name: str = "example") -> Path:
+    def _fake_seed_workflow_bundle(target_root: Path, workflow_name: str = "default") -> Path:
         wf_root = target_root / workflow_name
         wf_root.mkdir(parents=True, exist_ok=True)
         (wf_root / "sample_bundle").mkdir(parents=True, exist_ok=True)
@@ -339,4 +384,8 @@ def test_layer1_governance_bootstrap_workflow_definition_exists():
 
 def test_bootstrap_root_contains_only_active_workflow_and_registry():
     names = {path.name for path in bundle_loader.BOOTSTRAP_ROOT.iterdir()}
-    assert names == {"00_layer1_governance_bootstrap_v1", "_registry"}
+    assert names == {
+        "00_layer1_governance_bootstrap_v1",
+        "00_bootstrap_lifecycle_admin_v1",
+        "_registry",
+    }

@@ -29,11 +29,14 @@ Preserve these rules while refining:
   and are outside Layer 1 ownership
 - `RUNTIME_GOVERNANCE.md` must explicitly use the phrases
   `single-workflow` and `multi-workflow` when describing plugin bundles
+- `RUNTIME_GOVERNANCE.md` must define the global published bundle copy as the
+  canonical runtime source and must not describe repo-local fallback
 - only `README.md` may mention `docs/repo/` or repo-local outputs
 - `BUNDLE_TAXONOMY.md` must not describe repo-local output ownership or name
   `docs/repo/`
 - `RUNTIME_GOVERNANCE.md` must not describe repo-local output ownership or
   name `docs/repo/`
+- all four files must remain ASCII-only and free of mojibake
 
 Enforce these scope rules while refining:
 - remove any concrete workflow identifier from body text while preserving the
@@ -42,10 +45,13 @@ Enforce these scope rules while refining:
 - keep `DOCUMENTATION_STANDARD.md` at contract/rules level only
 - keep `BUNDLE_TAXONOMY.md` at bundle-class and ownership-boundary level
 - keep `RUNTIME_GOVERNANCE.md` as a steady-state operating model
+- delete any dual-path discovery, global-first/local-fallback, or repo-local
+  workflow loading language
 - delete any repo-local output boundary language from `BUNDLE_TAXONOMY.md`
 - delete any repo-local output boundary language from `RUNTIME_GOVERNANCE.md`
 - remove any occurrence of `delivery_scaffold_v1`
 - remove any literal `{ARTIFACT_KEY_*}` guidance
+- replace any smart punctuation or mojibake with plain ASCII punctuation
 - remove any repo-derived artifact name, repo-derived filename, or repo-local
   example path from `DOCUMENTATION_STANDARD.md`
 - when a sentence is not essential to universal Layer 1 governance, delete it
@@ -61,11 +67,14 @@ Before returning final JSON, re-read the four files and confirm:
 - `RUNTIME_GOVERNANCE.md` explicitly recognizes `single-workflow` and
   `multi-workflow`
   plugin bundles
+- `RUNTIME_GOVERNANCE.md` defines the global published bundle copy as the
+  canonical runtime source and does not mention local fallback
 - `RUNTIME_GOVERNANCE.md` does not mention `docs/repo/` and does not discuss
   ownership of repository-specific outputs
 - `README.md` explicitly mentions `docs/repo/` as the repo-local output
   boundary outside Layer 1 ownership
 - none of the four files has `{ARTIFACT_KEY_`
 - none of the four files has `delivery_scaffold_v1`
+- all four files are ASCII-only and contain no mojibake markers
 - state explicitly in your remark what you changed and whether any
   repository-specific coupling remains

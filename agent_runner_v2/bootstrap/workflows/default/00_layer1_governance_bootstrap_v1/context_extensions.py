@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path, PurePath
 
-from agent_runner_v2.constants import get_master_docs_output_paths
+from agent_runner_v2.constants import ARTIFACT_KEY_REVIEW, get_master_docs_output_paths
 from agent_runner_v2.runtime_context import JOBS_ROOT, resolve_repo_or_runtime_path
 
 
@@ -75,11 +75,11 @@ def build_context_extensions(
             runtime_root=JOBS_ROOT,
         )
         review_str = str(resolved_review)
-        extensions["REVIEW_FILE_SUGGESTED"] = review_str
+        extensions[ARTIFACT_KEY_REVIEW] = review_str
         extensions["REVIEW_FILE_PATH"] = review_str
         p = PurePath(review_str)
-        extensions["REVIEW_FILE_SUGGESTED_METAJSON"] = str(p.parent / f"{p.stem}.meta.json")
-        extensions["REVIEW_FILE_METAJSON"] = extensions["REVIEW_FILE_SUGGESTED_METAJSON"]
+        extensions[f"{ARTIFACT_KEY_REVIEW}_METAJSON"] = str(p.parent / f"{p.stem}.meta.json")
+        extensions["REVIEW_FILE_METAJSON"] = extensions[f"{ARTIFACT_KEY_REVIEW}_METAJSON"]
 
     return extensions
 

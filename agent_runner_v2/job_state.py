@@ -22,6 +22,7 @@ from typing import Any
 
 from .doc_paths import delivery_doc_rel
 
+from .constants import ARTIFACT_KEY_REVIEW
 from .execution_support import (
     build_failure_envelope,
     classify_pre_run_failure,
@@ -73,7 +74,7 @@ REVIEW_ARTIFACT_TYPES = {
     "TASK_FILE": "TASK",
     "IMPL_FILE": "IMPL",
     "VALIDATION_FILE": "VALIDATION",
-    "REVIEW_FILE": "REVIEW",
+    ARTIFACT_KEY_REVIEW: "REVIEW",
 }
 
 
@@ -728,7 +729,7 @@ def reconcile_job_state(state: dict[str, Any], group_cfg: dict[str, Any]) -> dic
         get_job_status(state) == "WAITING_FOR_HUMAN_INTERVENTION"
         and not ctx.get("active")
         and step_cfg.get("on_reject_refine")
-        and state.get("artifacts", {}).get("REVIEW_FILE")
+        and state.get("artifacts", {}).get(ARTIFACT_KEY_REVIEW)
         and state.get("last_failure_source") == "model"
         and state.get("last_failure_code") not in excluded_codes
     ):
@@ -741,7 +742,7 @@ def _apply_loop_routing(
     state: dict[str, Any], step: str, step_cfg: dict[str, Any], *, repair_type: str = "LOOP_TRIGGER",
 ) -> dict[str, Any]:
     on_reject_refine = _resolve_reject_route_for_state(state=state, step_cfg=step_cfg)
-    review_file = state.get("artifacts", {}).get("REVIEW_FILE")
+    review_file = state.get("artifacts", {}).get(ARTIFACT_KEY_REVIEW)
     state["reconciled_from_failure"] = {
         "class": state.get("last_failure_class"),
         "code": state.get("last_failure_code"),
@@ -768,7 +769,7 @@ def _apply_replan_routing(
     state: dict[str, Any], step: str, step_cfg: dict[str, Any], *, repair_type: str = "REPLAN_TRIGGER",
 ) -> dict[str, Any]:
     on_exhaust_replan = step_cfg["on_exhaust_replan"]
-    review_file = state.get("artifacts", {}).get("REVIEW_FILE")
+    review_file = state.get("artifacts", {}).get(ARTIFACT_KEY_REVIEW)
     current_replan_attempt = int(state.get("replan_context", {}).get("replan_attempt", 0))
     state["reconciled_from_failure"] = {
         "class": state.get("last_failure_class"),
@@ -820,7 +821,7 @@ def reapply_routing(state: dict[str, Any], group_cfg: dict[str, Any]) -> dict[st
 
     if (
         step_cfg.get("on_reject_refine")
-        and state.get("artifacts", {}).get("REVIEW_FILE")
+        and state.get("artifacts", {}).get(ARTIFACT_KEY_REVIEW)
         and exhausted_code
         and state.get("last_failure_code") == exhausted_code
         and on_exhaust_replan.get("step")
@@ -828,7 +829,7 @@ def reapply_routing(state: dict[str, Any], group_cfg: dict[str, Any]) -> dict[st
     ):
         return _apply_replan_routing(state, current_step, step_cfg, repair_type="USER_REAPPLY_REPLAN")
 
-    if step_cfg.get("on_reject_refine") and state.get("artifacts", {}).get("REVIEW_FILE"):
+    if step_cfg.get("on_reject_refine") and state.get("artifacts", {}).get(ARTIFACT_KEY_REVIEW):
         return _apply_loop_routing(state, current_step, step_cfg, repair_type="USER_REAPPLY")
 
     return state
@@ -862,7 +863,7 @@ def recover_exhausted_planning_job(state: dict[str, Any], group_cfg: dict[str, A
         entry.get("step") == current_step and entry.get("failure_code") == exhausted_code
         for entry in state.get("failure_history", [])
     )
-    if not has_exhausted_failure or not state.get("artifacts", {}).get("REVIEW_FILE"):
+    if not has_exhausted_failure or not state.get("artifacts", {}).get(ARTIFACT_KEY_REVIEW):
         return state
     state = _apply_replan_routing(state, current_step, step_cfg, repair_type="RECOVERY_REPLAN_MIGRATION")
     save_job(state["template_group"], state["job_id"], state)
@@ -1685,7 +1686,12 @@ def prepare_state_for_retry(*, group_name: str, state: dict[str, Any], step: str
 
 def enforce_retry_limit_before_run(*, state: dict[str, Any], step: str, max_rejects: int) -> None:
     current_count = int(state.get("reject_counts", {}).get(step, 0))
-    if max_rejects >= 0 and current_count >= max_rejects:
+    exhausted = False
+    if max_rejects == 0:
+        exhausted = current_count > 0
+    elif max_rejects > 0:
+        exhausted = current_count >= max_rejects
+    if exhausted:
         raise ValueError(
             f"Step {step!r} for job {state['job_id']} has reached max rejects "
             f"({current_count}/{max_rejects}). Use --new-job or reset the job explicitly."

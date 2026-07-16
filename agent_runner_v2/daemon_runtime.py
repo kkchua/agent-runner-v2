@@ -295,18 +295,19 @@ def build_job_sync_payload(*, job: dict[str, Any], step_result: dict[str, Any], 
     if run_status == "pending" and current_step:
         next_step_name = str(current_step)
 
-    # Artifacts: from job.json artifacts dict
+    # Artifacts: from job.json artifacts dict (filter out null values)
     artifacts_raw = job.get("artifacts") or {}
     project_root = Path(str(job.get("project_root") or "")).resolve() if str(job.get("project_root") or "").strip() else None
     output_payload = format_report_artifacts(artifacts_raw, project_root=project_root)
+    # Filter out null/empty values to prevent backend FK violations
+    output_payload = {k: v for k, v in output_payload.items() if isinstance(v, str) and v.strip()}
     artifacts_list: list[dict[str, Any]] = []
     for artifact_key, file_path in output_payload.items():
-        if isinstance(file_path, str) and file_path.strip():
-            artifacts_list.append({
-                "artifact_key": artifact_key,
-                "file_path": file_path.replace("\\", "/"),
-                "role": "output",
-            })
+        artifacts_list.append({
+            "artifact_key": artifact_key,
+            "file_path": file_path.replace("\\", "/"),
+            "role": "output",
+        })
 
     # Events: build minimal events based on state
     events: list[dict[str, Any]] = []

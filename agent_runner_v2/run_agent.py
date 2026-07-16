@@ -100,7 +100,7 @@ from .step_runner import (
 from .documentation_guardrails import EXECUTION_SCAFFOLD_WORKFLOWS, MASTER_BOOTSTRAP_WORKFLOWS
 from .workflow_packages.loader import bundle_to_template_group_dict, load_workflow_package
 
-__version__ = "0.1.0"
+__version__ = "0.3.0"
 from .execution_request import ExecutionRequest
 from .execution_result import ExecutionFailure, ExecutionResult
 from . import daemon_runtime as _daemon_runtime

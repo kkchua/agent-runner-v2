@@ -37,6 +37,7 @@ from .doc_paths import (
     system_doc_rel,
 )
 from .constants import (
+    ARTIFACT_KEY_REVIEW,
     BUG_FIX_OUTPUT_PATHS as CONSTANTS_BUG_FIX_OUTPUT_PATHS,
     FOLDER_KEY_DELIVERY_IMPLEMENTATIONS,
     FOLDER_KEY_DELIVERY_TASKS,
@@ -62,6 +63,7 @@ from .runtime_context import (
     RUNNER_ROOT,
     PathProxy,
     artifact_rel_to_meta_rel,
+    format_report_artifacts,
     get_workflow_module,
     resolve_repo_or_runtime_path,
 )
@@ -305,8 +307,16 @@ def run_step(
     )
     coder_result = meta["coder_result"]
 
-    # Validate artifact files exist on disk
     artifacts = dict(coder_result.get("artifacts") or {})
+    artifacts = _backfill_declared_produced_artifacts(
+        artifacts=artifacts,
+        produces=step_cfg.get("produces", []),
+        context=context,
+        state=state,
+        project_root=project_root,
+    )
+
+    # Validate artifact files exist on disk
     _validate_artifact_files_exist(artifacts=artifacts, project_root=project_root)
 
     # Validate template conformance if template_ref is configured
@@ -340,6 +350,13 @@ def run_step(
         project_root=project_root,
         step=step,
     )
+
+    meta["coder_result"]["artifacts"] = format_report_artifacts(
+        artifacts,
+        project_root=project_root,
+        runtime_root=JOBS_ROOT,
+    )
+    _save_json_atomic(meta_path, meta)
 
     # Print Doc ID and sidecar file path to console for visibility
     result_key = step_cfg.get("result_meta_key") or step_cfg.get("result_meta_key_from_context", "")
@@ -429,7 +446,7 @@ def run_action(
         "coder_result": {
             "status": result.status,
             "remark": result.remark,
-            "artifacts": dict(result.artifacts or {}),
+            "artifacts": format_report_artifacts(dict(result.artifacts or {}), project_root=project_root),
             **({"reject_code": result.reject_code} if result.reject_code else {}),
             "recorded_at": finished_at,
         },
@@ -734,6 +751,46 @@ def _validate_declared_produced_artifacts_exist(
             f"Step '{step}' was approved but declared produced artifacts are missing on disk: {missing}",
             missing=missing,
         )
+
+
+def _backfill_declared_produced_artifacts(
+    *,
+    artifacts: dict[str, str],
+    produces: list[str],
+    context: dict[str, str],
+    state: dict[str, Any],
+    project_root: Path,
+) -> dict[str, str]:
+    """Fill missing declared produced artifacts from their contract paths.
+
+    Some coder steps write all declared files to disk but omit part of the
+    artifact set from the sidecar. When the omitted file exists at the declared
+    contract path, bind it into the returned artifact map so downstream steps
+    can consume the full produced set.
+    """
+    if not produces:
+        return dict(artifacts)
+
+    normalized = dict(artifacts)
+    for artifact_key in produces:
+        current = str(normalized.get(artifact_key) or "").strip()
+        if current:
+            continue
+        path_str = _resolve_contract_path_from_context(
+            artifact_key=artifact_key,
+            context=context,
+            state=state,
+        )
+        if not path_str:
+            continue
+        resolved = resolve_repo_or_runtime_path(
+            path_str,
+            project_root=project_root,
+            runtime_root=JOBS_ROOT,
+        )
+        if resolved.exists() and resolved.is_file():
+            normalized[artifact_key] = _path_for_report(resolved, project_root)
+    return normalized
 
 
 def _validate_artifacts_in_produces_list(
@@ -1681,16 +1738,23 @@ def build_context(
     """Build the full context dict for prompt rendering."""
     # Use centralized constants instead of workflow module
     from .constants import REFERENCE_FILES
-    
+
     ctx: dict[str, str] = dict(REFERENCE_FILES)
-    ctx["SYSTEM_DOC_ROOT"] = system_doc_rel()
-    ctx["DOCS_ROOT"] = docs_root_rel()
+    
+    # Helper to convert relative paths to absolute paths
+    def _abs_path(rel_path: str) -> str:
+        if project_root and not Path(rel_path).is_absolute():
+            return str((project_root / rel_path).resolve()).replace("\\", "/")
+        return rel_path
+    
+    ctx["SYSTEM_DOC_ROOT"] = _abs_path(system_doc_rel())
+    ctx["DOCS_ROOT"] = _abs_path(docs_root_rel())
     ctx["SYSTEM_TEMPLATE_ROOT"] = FOLDER_KEY_SYSTEM_TEMPLATE_ROOT
     ctx["SYSTEM_DELIVERY_TEMPLATE_ROOT"] = FOLDER_KEY_SYSTEM_DELIVERY_TEMPLATE_ROOT
     ctx["SYSTEM_CODEBASE_TEMPLATE_ROOT"] = FOLDER_KEY_SYSTEM_CODEBASE_TEMPLATE_ROOT
-    ctx["CODEBASE_DOC_ROOT"] = codebase_doc_rel()
-    ctx["DELIVERY_DOC_ROOT"] = delivery_doc_rel()
-    ctx["ARCHITECTURE_SITE_ROOT"] = architecture_site_rel()
+    ctx["CODEBASE_DOC_ROOT"] = _abs_path(codebase_doc_rel())
+    ctx["DELIVERY_DOC_ROOT"] = _abs_path(delivery_doc_rel())
+    ctx["ARCHITECTURE_SITE_ROOT"] = _abs_path(architecture_site_rel())
     ctx["CODER_IMPLEMENTATION_SOP_PATH"] = "CODER_IMPLEMENTATION_SOP.md"
 
     # Get artifacts from state for fingerprinting
@@ -1780,16 +1844,16 @@ def build_context(
     ctx["LOOP_ITERATION"] = str(loop_ctx.get("loop_iteration") or 0)
 
     review_suggested = _suggested_review_file_path(state=state, step=step, step_cfg=step_cfg)
-    ctx["REVIEW_FILE_SUGGESTED"] = review_suggested
+    ctx[ARTIFACT_KEY_REVIEW] = review_suggested
     ctx["REVIEW_FILE_PATH"] = review_suggested
     # Provide meta.json path for the suggested review file
     if review_suggested:
-        ctx["REVIEW_FILE_SUGGESTED_METAJSON"] = artifact_rel_to_meta_rel(review_suggested)
-        ctx["REVIEW_FILE_METAJSON"] = ctx["REVIEW_FILE_SUGGESTED_METAJSON"]
+        ctx[f"{ARTIFACT_KEY_REVIEW}_METAJSON"] = artifact_rel_to_meta_rel(review_suggested)
+        ctx["REVIEW_FILE_METAJSON"] = ctx[f"{ARTIFACT_KEY_REVIEW}_METAJSON"]
         print(f"[step_runner] REVIEW PATH: {review_suggested}", flush=True)
-        print(f"[step_runner] REVIEW Sidecar PATH: {ctx['REVIEW_FILE_SUGGESTED_METAJSON']}", flush=True)
+        print(f"[step_runner] REVIEW Sidecar PATH: {ctx[f'{ARTIFACT_KEY_REVIEW}_METAJSON']}", flush=True)
     else:
-        ctx["REVIEW_FILE_SUGGESTED_METAJSON"] = ""
+        ctx[f"{ARTIFACT_KEY_REVIEW}_METAJSON"] = ""
         ctx["REVIEW_FILE_METAJSON"] = ""
 
     produces = (step_cfg or {}).get("produces", [])
@@ -2280,8 +2344,7 @@ def _looks_like_prompt_path(key: str, value: str) -> bool:
     if upper_key.endswith(("_PATH", "_METAJSON")):
         return True
     if upper_key in {
-        "REVIEW_FILE_SUGGESTED",
-        "REVIEW_FILE",
+        ARTIFACT_KEY_REVIEW,
         "VALIDATION_FILE",
         "PROGRESS_FILE",
         "TOOLS_DIR",
@@ -2374,6 +2437,8 @@ def _review_filename_date_code() -> str:
 
 
 def _review_step_code(step: str) -> str:
+    # Strip numeric prefix (e.g., "05_" from "05_review_master_system_docs")
+    step_base = re.sub(r"^\d+_", "", step)
     return {
         "audit_core_governance_accuracy": "acore",
         "review_core_governance_docs": "rcore",
@@ -2388,7 +2453,7 @@ def _review_step_code(step: str) -> str:
         "review_templates": "rtmpl",
         "review_agents": "ragent",
         "review_markdown": "rmd",
-    }.get(step, "")
+    }.get(step_base, "")
 
 
 def _normalize_review_slug(value: str, *, max_length: int = 40) -> str:

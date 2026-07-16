@@ -36,10 +36,14 @@ Audit requirements:
   output ownership.
 - Verify `RUNTIME_GOVERNANCE.md` defines a steady-state operating model rather
   than a transition narrative.
+- Verify `RUNTIME_GOVERNANCE.md` defines the global published bundle copy as
+  the canonical runtime source and does not define repo-local fallback or dual-path discovery.
+- Verify `BUNDLE_TAXONOMY.md` does not define runtime path resolution policy.
 - Verify `DOCUMENTATION_STANDARD.md` does not enumerate repo-derived artifact
   sets and does not contain repo-derived filenames even inside examples.
 - Verify none of the four files contains the literal text `{ARTIFACT_KEY_`.
 - Verify none of the four files contains `delivery_scaffold_v1`.
+- Verify none of the four files contains mojibake markers or replacement-character corruption, and that the generated docs are ASCII-only.
 
 Task:
 - Write the audit result to `{REVIEW_FILE_SUGGESTED}`.

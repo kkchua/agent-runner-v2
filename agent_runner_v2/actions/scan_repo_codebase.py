@@ -12,6 +12,7 @@ from typing import Any
 
 from ..action_result import ActionResult
 from ..codebase_docs import build_snapshot
+from ..constants import FOLDER_KEY_CODEBASE_CHANGES
 from ..runtime_context import resolve_step_meta_rel, write_meta_sidecar
 
 
@@ -39,7 +40,7 @@ def scan_repo_codebase(*, context: dict[str, str], state: dict, step_cfg: dict, 
         step=step,
         workflow_name=str(state.get("template_group") or mode),
     )
-    snapshot_path = project_root / "docs" / "codebase" / "04_changes" / f"{job_id}-{mode}-snapshot.json"
+    snapshot_path = project_root / FOLDER_KEY_CODEBASE_CHANGES / f"{job_id}-{mode}-snapshot.json"
     snapshot_path.parent.mkdir(parents=True, exist_ok=True)
     snapshot_path.write_text(
         json.dumps(snapshot, indent=2, ensure_ascii=False, default=_json_default) + "\n",

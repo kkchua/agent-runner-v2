@@ -16,7 +16,7 @@ from conftest import load_bootstrap_workflow_module
 
 
 _BOOTSTRAP_WORKFLOW_MODULE = load_bootstrap_workflow_module()
-_WORKFLOW_NAME = "00_master_docs_bootstrap_v2"
+_WORKFLOW_NAME = "00_repo_master_docs_bootstrap_v1"
 _ACTION_STEPS = [
     "00_scan_repo_codebase",
     "01_generate_codebase_baseline",

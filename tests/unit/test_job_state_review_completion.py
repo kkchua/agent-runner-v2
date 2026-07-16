@@ -53,3 +53,37 @@ def test_advance_step_finalizes_model_review_state_without_human_approval(
     assert review_state["human_actor"] is None
     assert review_state["final_decision"] == "APPROVED"
     assert review_state["final_decision_source"] == "MODEL"
+
+
+def test_enforce_retry_limit_before_run_allows_initial_attempt_when_max_rejects_zero() -> None:
+    state = {
+        "job_id": "00BOOT-GEN-TEST-001",
+        "reject_counts": {
+            "validate_bootstrap_lifecycle_sources": 0,
+        },
+    }
+
+    job_state.enforce_retry_limit_before_run(
+        state=state,
+        step="validate_bootstrap_lifecycle_sources",
+        max_rejects=0,
+    )
+
+
+def test_enforce_retry_limit_before_run_blocks_retry_when_max_rejects_zero() -> None:
+    state = {
+        "job_id": "00BOOT-GEN-TEST-001",
+        "reject_counts": {
+            "validate_bootstrap_lifecycle_sources": 1,
+        },
+    }
+
+    try:
+        job_state.enforce_retry_limit_before_run(
+            state=state,
+            step="validate_bootstrap_lifecycle_sources",
+            max_rejects=0,
+        )
+        raise AssertionError("Expected ValueError when retrying with max_rejects=0")
+    except ValueError as exc:
+        assert "has reached max rejects" in str(exc)

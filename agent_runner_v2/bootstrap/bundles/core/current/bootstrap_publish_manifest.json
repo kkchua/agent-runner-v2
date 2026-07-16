@@ -4,6 +4,8 @@
   "source_docs_included": true,
   "shared_registry_copied": true,
   "plugin_workflows_copied": [
-    "00_layer1_governance_bootstrap_v1"
+    "00_bootstrap_lifecycle_admin_v1",
+    "00_layer1_governance_bootstrap_v1",
+    "00_repo_master_docs_bootstrap_v1"
   ]
 }

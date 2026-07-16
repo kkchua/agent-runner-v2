@@ -1,8 +1,0 @@
-{
-  "roles": {
-    "architect_primary": { "alias": "qwen-architect", "role_type": "architect" },
-    "reviewer_primary": { "alias": "qwen-reviewer", "role_type": "reviewer" },
-    "developer_primary": { "alias": "qwen-developer", "role_type": "developer" },
-    "developer_secondary": { "alias": "deepseek-developer", "role_type": "developer" }
-  }
-}

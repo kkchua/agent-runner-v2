@@ -3,50 +3,164 @@
     "architect_primary": {
       "coder": "qwen",
       "connection": "bailian",
-      "model_id": "qwen3.7-plus",
+      "model_id": "glm-5",
       "role_type": "architect"
     },
     "architect_secondary": {
       "coder": "qwen",
-      "connection": "opencode_ai_zen_go",
-      "model_id": "deepseek-v4-flash",
+      "connection": "bailian",
+      "model_id": "qwen3.7-plus",
       "role_type": "architect"
     },
     "architect_tertiary": {
-      "coder": "opencode",
-	  "connection": "opencode_go",
+      "coder": "qwen",
+      "connection": "deepseek",
       "model_id": "deepseek-v4-flash",
       "role_type": "architect"
     },
-    "reviewer_primary": {
+    "review_primary": {
+      "coder": "qwen",
+      "connection": "deepseek",
+      "model_id": "deepseek-v4-flash",
+      "role_type": "review"
+    },
+    "review_secondary": {
       "coder": "qwen",
       "connection": "bailian",
       "model_id": "qwen3.7-plus",
-      "role_type": "reviewer"
+      "role_type": "review"
     },
-    "reviewer_secondary": {
+    "review_tertiary": {
       "coder": "qwen",
-	  "connection": "bailian",
+      "connection": "bailian",
+      "model_id": "MiniMax-M2.5",
+      "role_type": "review"
+    },
+    "refine_primary": {
+      "coder": "qwen",
+      "connection": "bailian",
+      "model_id": "glm-5",
+      "role_type": "refine"
+    },
+    "refine_secondary": {
+      "coder": "qwen",
+      "connection": "bailian",
+      "model_id": "qwen3.7-plus",
+      "role_type": "refine"
+    },
+    "refine_tertiary": {
+      "coder": "qwen",
+      "connection": "deepseek",
+      "model_id": "deepseek-v4-flash",
+      "role_type": "refine"
+    },
+    "plan_primary": {
+      "coder": "qwen",
+      "connection": "bailian",
+      "model_id": "glm-5",
+      "role_type": "plan"
+    },
+    "plan_secondary": {
+      "coder": "qwen",
+      "connection": "bailian",
+      "model_id": "qwen3.7-plus",
+      "role_type": "plan"
+    },
+    "plan_tertiary": {
+      "coder": "qwen",
+      "connection": "deepseek",
+      "model_id": "deepseek-v4-flash",
+      "role_type": "plan"
+    },
+    "implement_primary": {
+      "coder": "qwen",
+      "connection": "bailian",
+      "model_id": "qwen3-coder-plus",
+      "role_type": "implement"
+    },
+    "implement_secondary": {
+      "coder": "qwen",
+      "connection": "bailian",
+      "model_id": "MiniMax-M2.5",
+      "role_type": "implement"
+    },
+    "implement_tertiary": {
+      "coder": "qwen",
+      "connection": "bailian",
+      "model_id": "qwen3-coder-next",
+      "role_type": "implement"
+    },
+    "execution_primary": {
+      "coder": "qwen",
+      "connection": "bailian",
+      "model_id": "qwen3-coder-next",
+      "role_type": "execution"
+    },
+    "execution_secondary": {
+      "coder": "qwen",
+      "connection": "bailian",
+      "model_id": "MiniMax-M2.5",
+      "role_type": "execution"
+    },
+    "execution_tertiary": {
+      "coder": "qwen",
+      "connection": "deepseek",
+      "model_id": "deepseek-v4-flash",
+      "role_type": "execution"
+    },
+    "validation_primary": {
+      "coder": "qwen",
+      "connection": "bailian",
+      "model_id": "glm-5",
+      "role_type": "validation"
+    },
+    "validation_secondary": {
+      "coder": "qwen",
+      "connection": "deepseek",
+      "model_id": "deepseek-v4-flash",
+      "role_type": "validation"
+    },
+    "validation_tertiary": {
+      "coder": "qwen",
+      "connection": "bailian",
+      "model_id": "qwen3.7-plus",
+      "role_type": "validation"
+    },
+    "code_fix_primary": {
+      "coder": "qwen",
+      "connection": "bailian",
+      "model_id": "MiniMax-M2.5",
+      "role_type": "code_fix"
+    },
+    "code_fix_secondary": {
+      "coder": "qwen",
+      "connection": "bailian",
+      "model_id": "qwen3-coder-plus",
+      "role_type": "code_fix"
+    },
+    "code_fix_tertiary": {
+      "coder": "qwen",
+      "connection": "deepseek",
+      "model_id": "deepseek-v4-flash",
+      "role_type": "code_fix"
+    },
+    "documentation_primary": {
+      "coder": "qwen",
+      "connection": "bailian",
       "model_id": "kimi-k2.5",
-      "role_type": "reviewer"
+      "role_type": "documentation"
     },
-    "reviewer_tertiary": {
+    "documentation_secondary": {
       "coder": "qwen",
       "connection": "bailian",
-      "model_id": "deepseek-v4-flash",
-      "role_type": "reviewer"
+      "model_id": "qwen3.7-plus",
+      "role_type": "documentation"
     },
-    "developer_primary": {
+    "documentation_tertiary": {
       "coder": "qwen",
       "connection": "bailian",
-      "model_id": "qwen3.5-plus",
-      "role_type": "developer"
-    },
-    "developer_secondary": {
-      "coder": "opencode",
-      "connection": "opencode_go",
-      "model_id": "deepseek-v4-flash",
-      "role_type": "developer"
+      "model_id": "qwen3-coder-plus",
+      "role_type": "documentation"
     }
   }
 }

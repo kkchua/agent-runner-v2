@@ -3,134 +3,277 @@ template_id: "SYS-00-RG"
 version: "1.0.0"
 doc_type: "system"
 managed_by: "workflow-generated"
-generated_at: "2026-07-15T23:45:00+08:00"
+generated_at: "2026-07-16T10:05:56+08:00"
 workflow: "00_layer1_governance_bootstrap_v1"
-step: "refine_layer1_governance_docs"
-change_id: "00L1-20260715-c2f96104"
+step: "generate_layer1_governance_docs"
+change_id: "00L1-20260716-e4c16ad4"
 ---
 
-> Managed by workflow: `00_layer1_governance_bootstrap_v1` / step: `refine_layer1_governance_docs`
+> Managed by workflow: `00_layer1_governance_bootstrap_v1` / step: `generate_layer1_governance_docs`
 > This file is workflow-generated and protected from manual edits.
 
 # Runtime Governance
 
 ## Purpose
 
-This document defines the steady-state runtime operating model for plugin workflow bundles. It establishes the registry control plane, plugin bundle control model, role and connection resolution, artifact ownership enforcement, execution mode parity, validation gates, and change control rules that govern how plugin workflows operate at runtime.
+This document defines the steady-state runtime operating model for the plugin
+workflow ecosystem. It establishes the rules for bundle publishing, installation,
+registry control, validation gates, and execution mode parity.
 
 ## Runtime Scope Model
 
-The runtime scope encompasses all plugin workflow bundles registered in the ecosystem registry. Each bundle operates within its declared scope and produces artifacts according to its manifest. The runtime control plane manages bundle registration, versioning, discovery, and execution — it does not own repository-specific artifacts or repo-local outputs under `docs/repo/`. Those are managed by Layer 2 (repository master-doc structure) or Layer 3 (plugin workflow families).
+The runtime scope model defines how bundles are organized and accessed:
+
+### Global Runtime Home
+
+The global runtime home is the canonical location for published workflow
+bundles. It serves as the single source of truth for workflow definitions
+at runtime.
+
+**Location**: The global runtime home is located at a well-known path in the
+user environment and contains all published workflow bundles.
+
+**Contents**:
+
+- Published workflow bundles (core governance, plugin workflow, domain)
+- Registry files (roles, connections, policies)
+- Bundle manifests and version information
+
+### Bundle Isolation
+
+Each workflow bundle is isolated from other bundles:
+
+- Bundles do not share mutable state
+- Bundles communicate through well-defined interfaces
+- Bundle updates do not affect other bundles
 
 ## Bundle Publish And Install Model
 
-Plugin workflow bundles follow a publish/install lifecycle:
+### Publishing
 
-**Publish**
-Bundle authors publish their bundle to the ecosystem registry by registering its manifest, which declares the bundle's workflow definitions, artifact production rules, and validation gates.
+Bundle publishing follows these rules:
 
-**Install**  
-Repositories install plugin bundles from the registry. Installation copies the bundle's workflow definitions, prompts, and actions into the repository's local workflow directory. Installed bundles conform to the Layer 1 governance contract.
+1. **Source**: Bundles are authored in repository workflow directories
+2. **Validation**: Bundles must pass validation before publishing
+3. **Publish Target**: Validated bundles are published to the global runtime home
+4. **Version Recording**: Published bundles record version information in manifests
 
-**Sync**  
-Changes to bootstrap workflow files must be synced to the global runner home before they take effect in prompts. The sync mechanism ensures runtime bundles reflect the current state of the source repository.
+### Installation
+
+Bundle installation follows these rules:
+
+1. **Init Command**: The init command seeds the global runtime home with core bundles
+2. **Sync Command**: The sync command updates bundles from repository sources
+3. **Verification**: Installation verifies bundle integrity and version compatibility
+4. **Registration**: Installed bundles are registered with the runtime registry
+
+### Bundle Types at Runtime
+
+Plugin workflow bundles may be either:
+
+- **Single-workflow bundles**: Contain exactly one workflow definition with its
+  prompts, actions, and context extensions
+- **Multi-workflow bundles**: Contain multiple related workflow definitions that
+  share common resources
+
+Both bundle types follow the same publish and install model.
 
 ## Registry Control Plane
 
-The registry control plane manages the lifecycle of plugin workflow bundles:
+### Registry Purpose
 
-**Registration**  
-Bundles register themselves with the ecosystem registry, providing their manifest and metadata.
+The registry control plane provides:
 
-**Discovery**  
-Repositories discover available bundles through the registry, filtering by domain, profile, or workflow name.
+- Workflow bundle discovery
+- Role and connection resolution
+- Policy enforcement
+- Execution coordination
 
-**Versioning**  
-The registry tracks bundle versions and supports versioned installs. Breaking changes require a new major version and a migration plan.
+### Registry Components
 
-**Deprecation**  
-Deprecated bundles remain available but emit warnings during install. Removal requires a grace period and migration guidance.
+| Component | Purpose |
+|-----------|---------|
+| Workflow Registry | Discover and load workflow bundles |
+| Role Registry | Resolve roles for workflow execution |
+| Connection Registry | Resolve connections for workflow execution |
+| Policy Registry | Enforce execution policies |
+
+### Registry Access
+
+The registry is accessed through well-defined interfaces:
+
+- Bundle discovery queries
+- Role resolution queries
+- Connection resolution queries
+- Policy evaluation queries
 
 ## Plugin Bundle Control Model
 
-Plugin workflow bundles may be either single-workflow bundles or multi-workflow bundles:
+### Bundle Lifecycle
 
-**Single-Workflow Bundles**  
-A single-workflow bundle contains exactly one workflow definition. This pattern is appropriate for focused, atomic operations such as documentation generation, code scanning, or artifact validation.
+Plugin workflow bundles follow a defined lifecycle:
 
-**Multi-Workflow Bundles**  
-A multi-workflow bundle contains multiple related workflows that share context, artifacts, or execution logic. This pattern is appropriate for complex pipelines requiring sequential or conditional workflow steps.
+1. **Authoring**: Bundle is created in repository workflow directory
+2. **Validation**: Bundle is validated against schema and governance rules
+3. **Publishing**: Validated bundle is published to global runtime home
+4. **Registration**: Published bundle is registered with runtime registry
+5. **Execution**: Bundle workflows are executed on demand
+6. **Updates**: Bundle can be updated through sync or republish
 
-The runtime control plane must support both patterns without requiring separate handling logic. Bundle manifests declare whether a bundle is single-workflow or multi-workflow, and the runtime adapts accordingly.
+### Bundle Versioning
+
+Bundle versioning follows these rules:
+
+- Semantic versioning for bundle versions
+- Version compatibility checks during installation
+- Breaking changes require major version increments
+
+### Bundle Dependencies
+
+Bundle dependencies follow these rules:
+
+- Dependencies must be explicitly declared in manifest
+- Circular dependencies are not allowed
+- Core governance bundles cannot depend on plugin or domain bundles
 
 ## Role And Connection Resolution
 
-Plugin bundles resolve roles and connections at runtime:
+### Role Resolution
 
-**Role Resolution**  
-Each workflow step declares a role policy (e.g., architect_standard, reviewer_standard). The runtime resolves the role to a concrete coder adapter based on the execution context.
+Role resolution determines which role executes a workflow step:
 
-**Connection Resolution**  
-Bundles may declare external connections (MCP servers, API endpoints, credential sources). The runtime resolves these connections from the execution environment, supporting both `.env` files and shared credential resolution functions.
+- Roles are defined in registry files
+- Role policies control role assignment
+- Workflow manifests can specify required roles
+
+### Connection Resolution
+
+Connection resolution determines how workflows connect to external systems:
+
+- Connections are defined in registry files
+- Connection types are declared in workflow manifests
+- Credential resolution follows defined precedence rules
+
+### Resolution Precedence
+
+Resolution follows a defined precedence:
+
+1. Workflow manifest declarations
+2. Registry file definitions
+3. Environment-based defaults
+4. User-provided overrides
 
 ## Artifact Ownership Enforcement
 
-Artifact ownership follows the Layer 1 bundle taxonomy:
+### Ownership Rules
 
-**Declared Artifacts**
-Each workflow step declares which artifacts it produces. The runtime enforces that only declared artifacts are written to disk according to the bundle manifest.
+Artifacts generated by workflows are owned by:
 
-**Protected Artifacts**
-Layer 1 governance documents are protected from modification by plugin workflows. Attempting to write to a protected path causes a validation failure.
+- The workflow that generated the artifact
+- The bundle that contains the workflow
+- The execution that created the artifact instance
 
-**Repo-Local Output Boundary**
-Outputs under `docs/repo/` are outside Layer 1 ownership. Plugin workflows may produce repo-local outputs if their bundle manifest declares them, but these outputs are owned by Layer 2 or Layer 3, not by the Layer 1 runtime control plane.
+### Ownership Metadata
+
+Artifact ownership is recorded in:
+
+- Artifact metadata files (sidecar files)
+- Execution records
+- Bundle manifests
+
+### Ownership Queries
+
+Ownership can be queried through:
+
+- Artifact metadata inspection
+- Execution record lookup
+- Bundle manifest examination
 
 ## Execution Mode Parity
 
-Plugin workflows must behave identically across execution modes:
+### Supported Execution Modes
 
-**Daemon Mode**  
-Long-running daemon process executes workflow steps sequentially, maintaining state between steps.
+The runtime supports multiple execution modes:
 
-**Manual Mode**  
-Interactive execution where each step runs independently with explicit user approval between steps.
+| Mode | Description |
+|------|-------------|
+| Manual | Direct execution via CLI |
+| Daemon | Background execution via daemon process |
+| Worker | Distributed execution via worker processes |
 
-**Backend Mode**  
-Remote execution via backend API, supporting distributed or cloud-based workflow processing.
+### Parity Requirements
 
-All three modes must produce identical artifacts, enforce identical validation gates, and respect identical artifact ownership rules. Execution mode parity is validated at bundle registration time.
+All execution modes must follow:
+
+- Same workflow loading logic
+- Same validation gates
+- Same artifact ownership rules
+- Same notification behavior
+
+### Mode-Specific Behavior
+
+Mode-specific behavior is limited to:
+
+- Execution triggering (manual vs. daemon vs. worker)
+- Progress reporting (blocking vs. background)
+- Resource management (foreground vs. background)
+
+The core workflow execution logic must be identical across all modes.
 
 ## Validation Gates
 
-Validation gates enforce correctness before a workflow step can complete:
+### Pre-Publish Validation
 
-**Section Presence**  
-Generated documents must contain all required sections as defined in the bundle manifest.
+Before publishing, bundles must pass:
 
-**Scope Purity**  
-Layer 1 documents must not contain concrete workflow identifiers or repo-derived artifact names.
+- Schema validation (manifest structure)
+- Governance validation (scope purity, ownership)
+- Dependency validation (compatibility, circular dependencies)
 
-**Artifact Correctness**  
-Produced artifacts must match their declared schema and pass structural validation.
+### Pre-Execution Validation
 
-**Forbidden Literals**  
-Documents must not contain unresolved placeholder token patterns or references to legacy delivery scaffold identifiers.
+Before execution, workflows must pass:
 
-Failed validation gates trigger refinement loops up to a configured maximum iteration count. Exhausted refinement loops result in a human-retry-required failure.
+- Bundle validation (manifest, prompts, actions)
+- Role validation (role exists, policy permits)
+- Connection validation (connection exists, credentials available)
+
+### Post-Execution Validation
+
+After execution, results must pass:
+
+- Artifact validation (required artifacts exist, ownership recorded)
+- Status validation (terminal state is valid)
+- Metadata validation (sidecar files are complete)
 
 ## Change Control
 
-Changes to Layer 1 governance documents follow strict change control:
+### Change Categories
 
-**Backward Compatibility**  
-Changes must preserve backward compatibility where possible. Breaking changes require a new major version.
+Changes are categorized by impact:
 
-**Migration Plan**  
-Breaking changes require a bundle migration plan documenting the upgrade path for existing bundles.
+| Category | Impact | Approval Required |
+|----------|--------|-------------------|
+| Patch | Bug fixes, minor improvements | Bundle owner |
+| Minor | New features, backward compatible | Bundle owner |
+| Major | Breaking changes | System architect |
 
-**Review Requirement**  
-All Layer 1 changes require ecosystem-wide review before merge.
+### Change Process
 
-**Audit Trail**  
-Every change produces an audit record including the change ID, author, rationale, and affected documents.
+Changes follow this process:
+
+1. **Propose**: Change is proposed in change request
+2. **Validate**: Change is validated against governance rules
+3. **Approve**: Change is approved by appropriate authority
+4. **Publish**: Changed bundle is published to runtime
+5. **Verify**: Published change is verified in runtime
+
+### Rollback
+
+Rollback is supported for:
+
+- Bundle version rollback (restore previous version)
+- Configuration rollback (restore previous configuration)
+- Registry rollback (restore previous registry state)
+
+Rollback requires appropriate authority approval.

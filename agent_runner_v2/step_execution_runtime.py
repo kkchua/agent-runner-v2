@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from .constants import get_master_docs_output_paths, known_artifact_paths
+from .constants import ARTIFACT_KEY_REVIEW, get_master_docs_output_paths, known_artifact_paths
 from .documentation_guardrails import (
     EXECUTION_SCAFFOLD_WORKFLOWS,
     MASTER_BOOTSTRAP_WORKFLOWS,
@@ -69,7 +69,7 @@ def prepare_step_execution(
 
     loop_ctx = state.get("loop_context", {})
     if step_cfg.get("loop_returns_to") and loop_ctx.get("active") and loop_ctx.get("loop_source_review"):
-        context["REVIEW_FILE"] = loop_ctx["loop_source_review"]
+        context[ARTIFACT_KEY_REVIEW] = loop_ctx["loop_source_review"]
 
     action_name = str(step_cfg.get("action") or "")
     if action_name:

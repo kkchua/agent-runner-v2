@@ -3,55 +3,174 @@ template_id: "SYS-00-BT"
 version: "1.0.0"
 doc_type: "system"
 managed_by: "workflow-generated"
-generated_at: "2026-07-15T23:45:00+08:00"
+generated_at: "2026-07-16T10:05:56+08:00"
 workflow: "00_layer1_governance_bootstrap_v1"
-step: "refine_layer1_governance_docs"
-change_id: "00L1-20260715-c2f96104"
+step: "generate_layer1_governance_docs"
+change_id: "00L1-20260716-e4c16ad4"
 ---
 
-> Managed by workflow: `00_layer1_governance_bootstrap_v1` / step: `refine_layer1_governance_docs`
+> Managed by workflow: `00_layer1_governance_bootstrap_v1` / step: `generate_layer1_governance_docs`
 > This file is workflow-generated and protected from manual edits.
 
 # Bundle Taxonomy
 
+This document defines the bundle classes, ownership rules, and packaging rules
+for the plugin workflow ecosystem. It establishes WHAT bundles ARE and WHO owns
+them, without defining HOW they are loaded or resolved at runtime.
+
 ## Bundle Classes
 
-The plugin workflow ecosystem recognizes two primary bundle classes:
+The ecosystem defines three bundle classes:
 
-**Core Governance Bundles**  
-These bundles own the Layer 1 governance documents (README.md, DOCUMENTATION_STANDARD.md, BUNDLE_TAXONOMY.md, RUNTIME_GOVERNANCE.md). They define reusable ecosystem governance that applies across all repositories. Core governance bundles are canonical and must remain generic — they must not name concrete workflow identifiers or repository-specific artifacts.
+### Core Governance Bundles
 
-**Plugin Workflow Bundles**  
-These bundles define one or more workflows that conform to the Layer 1 runtime governance contract. A plugin workflow bundle may be a single-workflow bundle (containing exactly one workflow) or a multi-workflow bundle (containing multiple related workflows). Plugin bundles are owned by their authors and must declare their artifact production, validation rules, and execution mode parity requirements.
+Core governance bundles contain the foundational governance documents and
+runtime infrastructure for the workflow orchestration system.
+
+**Characteristics:**
+
+- Define ecosystem-wide governance rules
+- Establish documentation standards and validation gates
+- Provide runtime control plane definitions
+- Must remain stable and rarely change
+
+**Examples:**
+
+- Layer 1 governance document bundles
+- System bootstrap bundles
+- Runtime control plane bundles
+
+### Plugin Workflow Bundles
+
+Plugin workflow bundles contain self-contained workflow definitions with their
+associated prompts, actions, and context extensions.
+
+**Characteristics:**
+
+- Self-contained workflow definitions
+- Include prompts, actions, and context extensions
+- May be single-workflow or multi-workflow bundles
+- Can be added, updated, or removed independently
+
+**Bundle types:**
+
+- **Single-workflow bundles**: Contain exactly one workflow definition
+- **Multi-workflow bundles**: Contain multiple related workflow definitions
+
+Plugin workflow bundles are the primary extension mechanism for the ecosystem.
+
+### Domain Bundles
+
+Domain bundles contain domain-specific logic, templates, and configurations
+that support specific business domains or use cases.
+
+**Characteristics:**
+
+- Domain-specific business logic
+- Templates and configurations for specific use cases
+- May depend on core governance or plugin workflow bundles
+- Managed by domain-specific teams
+
+**Examples:**
+
+- Delivery workflow template bundles
+- Codebase analysis bundles
+- Domain-specific action bundles
 
 ## Ownership Rules
 
-Bundle ownership follows these rules:
+### Core Governance Bundle Ownership
 
-**Core Governance Ownership**
-Layer 1 governance documents are owned by the ecosystem architect role. Changes require ecosystem-wide review and must preserve backward compatibility where possible.
+| Bundle Type | Owner | Change Authority |
+|-------------|-------|------------------|
+| Layer 1 governance docs | Layer 1 governance workflow | System architects |
+| System bootstrap bundles | Bootstrap workflows | System architects |
+| Runtime control plane | Runtime governance workflow | System architects |
 
-**Plugin Bundle Ownership**
-Each plugin workflow bundle is owned by its author. The author defines the bundle's workflow definitions, artifact production rules, and validation gates. Plugin bundles must conform to the Layer 1 runtime governance contract but are otherwise autonomous.
+Core governance bundles require system architect approval for changes.
 
-**Repo-Local Output Boundary**
-Repository-specific outputs live under `docs/repo/`. These outputs are outside Layer 1 ownership and are managed by Layer 2 (repository master-doc structure) or Layer 3 (plugin workflow families). Layer 1 bundles define the generic contract for bundle packaging and artifact declaration but do not claim ownership over repository-specific artifacts.
+### Plugin Workflow Bundle Ownership
+
+| Bundle Type | Owner | Change Authority |
+|-------------|-------|------------------|
+| Single-workflow bundles | Workflow team | Workflow team lead |
+| Multi-workflow bundles | Workflow team | Workflow team lead |
+
+Plugin workflow bundles are owned by the teams that create and maintain them.
+
+### Domain Bundle Ownership
+
+| Bundle Type | Owner | Change Authority |
+|-------------|-------|------------------|
+| Domain logic bundles | Domain team | Domain team lead |
+| Domain template bundles | Domain team | Domain team lead |
+
+Domain bundles are owned by the domain-specific teams that create them.
+
+### Ownership Principles
+
+1. **Clear Ownership**: Every bundle has exactly one owner
+2. **Change Authority**: Owners control changes to their bundles
+3. **Dependency Direction**: Lower layers do not depend on higher layers
+4. **Stability Guarantees**: Core governance bundles are most stable
 
 ## Packaging Rules
 
-Plugin workflow bundles must follow these packaging rules:
+### Core Governance Bundle Packaging
 
-**Bundle Manifest**
-Every plugin bundle must include a manifest declaring its schema version, workflow definitions, artifact production rules, and validation gates.
+Core governance bundles must be packaged with:
 
-**Artifact Declaration**  
-Each workflow in a bundle must declare which artifacts it produces and which artifacts it requires as inputs. This enables deterministic artifact flow validation.
+- Complete governance documentation
+- Validation schemas and checks
+- Version identifier in manifest
+- Change log for governance changes
 
-**Execution Mode Parity**  
-Bundles must ensure their workflows behave identically across daemon mode, manual mode, and backend execution mode. Execution mode parity is enforced at validation time.
+Packaging requirements:
 
-**Validation Gates**  
-Each bundle must define validation gates that verify artifact correctness, section presence, and scope purity before a workflow step can complete.
+- Minimal dependencies on other bundles
+- Stable versioning scheme
+- Comprehensive documentation
+- Validation suite for governance compliance
 
-**Single-Workflow and Multi-Workflow Support**  
-A plugin bundle may contain exactly one workflow (single-workflow bundle) or multiple workflows (multi-workflow bundle). The runtime control plane must support both patterns without requiring separate handling logic.
+### Plugin Workflow Bundle Packaging
+
+Plugin workflow bundles must be packaged with:
+
+- Workflow manifest (declarative definition)
+- Prompt templates for all workflow steps
+- Optional: context extensions for workflow-specific hooks
+- Optional: actions for workflow-specific behaviors
+- Optional: registry files for roles, connections, policies
+
+Packaging requirements:
+
+- Self-contained workflow definition
+- No hardcoded repository paths
+- Declarative manifest with complete metadata
+- Version identifier in manifest
+
+### Domain Bundle Packaging
+
+Domain bundles must be packaged with:
+
+- Domain logic modules
+- Domain templates and configurations
+- Dependency declarations on required bundles
+- Version identifier in manifest
+
+Packaging requirements:
+
+- Clear dependency declarations
+- Domain-specific documentation
+- Version compatibility with dependencies
+- Integration tests for domain logic
+
+### Packaging Standards
+
+All bundle classes must follow these packaging standards:
+
+1. **Manifest Required**: Every bundle must have a declarative manifest
+2. **Version Identifier**: Every bundle must declare its version
+3. **Dependency Declaration**: Dependencies must be explicitly declared
+4. **Documentation**: Every bundle must include documentation
+5. **Validation**: Every bundle must pass validation checks
