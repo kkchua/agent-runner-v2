@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path, PurePath
 
-from agent_runner_v2.constants import ARTIFACT_KEY_REVIEW, get_master_docs_output_paths
+from agent_runner_v2.constants import ARTIFACT_KEY_REVIEW
 from agent_runner_v2.runtime_context import JOBS_ROOT, resolve_repo_or_runtime_path
 
 
@@ -17,9 +17,8 @@ def build_context_extensions(
     project_root: Path | None = None,
 ) -> dict[str, str]:
     job_id = str(state.get("job_id") or "00L1").strip()
-    mode = str((step_cfg or {}).get("mode") or state.get("current_mode") or "bootstrap")
     root = Path(project_root or Path.cwd()).resolve()
-    output_paths = get_master_docs_output_paths(job_id=job_id, mode=mode)
+    output_paths = _layer1_output_paths()
 
     step_dir_rel = str(state.get("backend_step_dir_rel") or "").strip()
     if not step_dir_rel:
@@ -82,6 +81,15 @@ def build_context_extensions(
         extensions["REVIEW_FILE_METAJSON"] = extensions[f"{ARTIFACT_KEY_REVIEW}_METAJSON"]
 
     return extensions
+
+
+def _layer1_output_paths() -> dict[str, str]:
+    return {
+        "SYSTEM_DOCS_INDEX": "docs/system/00_governance/bootstrap/README.md",
+        "SYSTEM_DOC_STANDARD": "docs/system/00_governance/bootstrap/DOCUMENTATION_STANDARD.md",
+        "BUNDLE_TAXONOMY": "docs/system/00_governance/bootstrap/BUNDLE_TAXONOMY.md",
+        "RUNTIME_GOVERNANCE": "docs/system/00_governance/bootstrap/RUNTIME_GOVERNANCE.md",
+    }
 
 
 def _layer1_step_names() -> list[str]:

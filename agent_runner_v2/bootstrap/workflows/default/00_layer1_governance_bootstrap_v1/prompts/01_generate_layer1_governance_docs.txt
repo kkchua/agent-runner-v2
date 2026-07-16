@@ -37,6 +37,7 @@ Layer 1 must define:
 - runtime publish/install/control-plane expectations
 - validation gates
 - the generic contract for plugin workflow bundles
+- the rule that workflow bundles own workflow-specific artifact path contracts
 
 Layer 1 must not define:
 - concrete workflow IDs
@@ -114,6 +115,10 @@ Document-specific rules:
 - `RUNTIME_GOVERNANCE.md` must define the steady-state runtime model and must
   explicitly state that plugin workflow bundles may be either
   `single-workflow` bundles or `multi-workflow` bundles.
+- `RUNTIME_GOVERNANCE.md` must explicitly state that shared runtime code may
+  provide only generic path helpers and enforcement, while workflow bundles
+  own workflow-specific document output paths, review/validation path rules,
+  and generated/protected document inventories.
 - `RUNTIME_GOVERNANCE.md` must define the global published bundle copy under
   the global runtime home as the canonical runtime source.
 - `RUNTIME_GOVERNANCE.md` must not define repo-local workflow fallback,
@@ -123,6 +128,9 @@ Document-specific rules:
   `docs/repo/`, or ownership of repository-specific outputs. Keep it at
   runtime control-plane, registry, publish/install, validation, and parity
   rules level only.
+- `RUNTIME_GOVERNANCE.md` must explicitly reject workflow-name-specific path
+  resolution branches and centralized workflow-family path registries as the
+  steady-state ownership model.
 
 ## BUNDLE_TAXONOMY.md Constraints (CRITICAL - MOST REFINEMENTS FAIL HERE)
 
@@ -133,6 +141,7 @@ It must NOT drift into runtime behavior or path resolution.
 - Bundle class definitions (Core Governance, Plugin Workflow, Domain)
 - Ownership rules for each bundle class
 - Packaging rules for each bundle class
+- Bundle-owned responsibility for workflow-specific artifact path contracts
 
 ### BUNDLE_TAXONOMY.md MUST NOT contain (CRITICAL):
 - Runtime path resolution policy (global-first, local-fallback, dual-path)
@@ -155,6 +164,8 @@ Before writing any file, state these checks explicitly:
 5. [ ] Only README.md mentions `docs/repo/`
 6. [ ] No concrete workflow identifiers in body text (frontmatter/banner only)
 7. [ ] RUNTIME_GOVERNANCE.md uses phrases `single-workflow` AND `multi-workflow`
+8. [ ] Layer 1 explicitly states that workflow bundles own workflow-specific artifact path contracts
+9. [ ] Layer 1 explicitly rejects workflow-name-specific path resolution branches in shared runtime
 
 After writing files, re-read from disk and verify each check passes.
 
@@ -177,6 +188,11 @@ Before returning final JSON:
 - verify all four files are ASCII-only
 - verify `RUNTIME_GOVERNANCE.md` explicitly uses the phrases
   `single-workflow` and `multi-workflow`
+- verify `RUNTIME_GOVERNANCE.md` explicitly states that workflow bundles own
+  workflow-specific artifact path contracts
+- verify `RUNTIME_GOVERNANCE.md` explicitly rejects workflow-name-specific
+  path resolution branches and centralized workflow-family path registries as
+  the steady-state model
 - verify `RUNTIME_GOVERNANCE.md` does not mention dual-path discovery, local
   repository fallback, or fallback loading from the repo workflows directory
 - verify `BUNDLE_TAXONOMY.md` does not define runtime path resolution policy

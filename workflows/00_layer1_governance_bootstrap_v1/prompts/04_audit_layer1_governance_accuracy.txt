@@ -27,6 +27,11 @@ Audit requirements:
 - Verify Layer 1 defines plugin workflow bundles generically.
 - Verify Layer 1 explicitly recognizes both `single-workflow` and
   `multi-workflow` plugin bundles.
+- Verify Layer 1 explicitly states that workflow bundles own workflow-specific
+  artifact path contracts.
+- Verify Layer 1 explicitly states that shared runtime may provide only
+  generic path helpers and enforcement, not workflow-specific output path
+  ownership.
 - Verify Layer 1 does not define repository-specific plugin bundle inventory.
 - Verify Layer 1 does not define repository-specific scaffold workflow names.
 - Verify Layer 1 does not claim ownership of repo-local outputs under
@@ -38,6 +43,9 @@ Audit requirements:
   than a transition narrative.
 - Verify `RUNTIME_GOVERNANCE.md` defines the global published bundle copy as
   the canonical runtime source and does not define repo-local fallback or dual-path discovery.
+- Verify `RUNTIME_GOVERNANCE.md` rejects workflow-name-specific path
+  resolution branches and centralized workflow-family path registries as the
+  steady-state ownership model.
 - Verify `BUNDLE_TAXONOMY.md` does not define runtime path resolution policy.
 - Verify `DOCUMENTATION_STANDARD.md` does not enumerate repo-derived artifact
   sets and does not contain repo-derived filenames even inside examples.

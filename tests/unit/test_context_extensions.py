@@ -136,6 +136,7 @@ class TestContextHookIntegration:
         assert ctx["REVIEW_FILE_SUGGESTED"] == str(
             project_root / "docs" / "system" / "00_governance" / "bootstrap" / "00L1-TEST-001-layer1-governance-review.md"
         )
+        assert "/docs/repo/governance/" not in ctx["SYSTEM_DOCS_INDEX"].replace("\\", "/")
 
     def test_hook_injects_layer1_review_and_audit_paths(self, project_root):
         from agent_runner_v2.step_runner import _apply_workflow_package_context_hooks
@@ -171,6 +172,33 @@ class TestContextHookIntegration:
             project_root=project_root,
         )
         assert audit_ctx["REVIEW_FILE_SUGGESTED"].endswith("00L1-TEST-003-layer1-governance-audit.md")
+
+    def test_hook_injects_master_docs_review_path_under_repo_governance(self, project_root):
+        from agent_runner_v2.step_runner import _apply_workflow_package_context_hooks
+
+        pkg_dir = project_root / "workflows" / "00_repo_master_docs_bootstrap_v1"
+        if not pkg_dir.is_dir():
+            pytest.skip("workflow package directory not found")
+        bundle = load_workflow_package(pkg_dir)
+
+        ctx: dict[str, str] = {}
+        _apply_workflow_package_context_hooks(
+            ctx=ctx,
+            state={
+                "job_id": "00RMD-TEST-001",
+                "template_group": "00_repo_master_docs_bootstrap_v1",
+            },
+            step="05_review_master_system_docs",
+            step_cfg={"_workflow_bundle": bundle, "mode": "bootstrap"},
+            project_root=project_root,
+        )
+
+        assert ctx["REVIEW_FILE_SUGGESTED"].replace("\\", "/") == str(
+            (project_root / "docs" / "repo" / "governance" / "00RMD-TEST-001-master-system-docs-review.md").resolve()
+        ).replace("\\", "/")
+        assert ctx["EXISTING_REPO_WORKFLOW_SOP"].replace("\\", "/") == str(
+            (project_root / "docs" / "repo" / "governance" / "EXISTING_REPO_WORKFLOW_SOP.md").resolve()
+        ).replace("\\", "/")
 
 
 def test_render_prompt_appends_bundle_governance_for_opted_in_bundle(project_root):

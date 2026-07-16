@@ -24,6 +24,7 @@ Review criteria:
 - no concrete scaffold workflow naming
 - no repo-derived artifact names in Layer 1 contract text
 - generic support for single-workflow and multi-workflow plugin bundles
+- explicit statement that workflow bundles own workflow-specific artifact path contracts
 - required sections and frontmatter present
 
 Reject if any file:
@@ -37,6 +38,12 @@ Reject if any file:
 - contains mojibake markers or replacement-character corruption
 - makes `RUNTIME_GOVERNANCE.md` read like a migration note instead of a
   steady-state operating governance doc
+- makes `RUNTIME_GOVERNANCE.md` allow shared runtime to own workflow-specific
+  document output paths, review/validation path rules, or generated document
+  inventories
+- makes `RUNTIME_GOVERNANCE.md` permit workflow-name-specific path resolution
+  branches or centralized workflow-family path registries as the steady-state
+  ownership model
 - makes `RUNTIME_GOVERNANCE.md` describe dual-path discovery, repo-local
   fallback, or local workflow loading fallback
 - makes `BUNDLE_TAXONOMY.md` define runtime resolution behavior such as
@@ -57,6 +64,10 @@ Approve only if all of these are true:
   canonical runtime source and does not define repo-local fallback
 - `RUNTIME_GOVERNANCE.md` explicitly recognizes both `single-workflow` and
   `multi-workflow` plugin bundles
+- `RUNTIME_GOVERNANCE.md` explicitly states that workflow bundles own
+  workflow-specific artifact path contracts
+- `RUNTIME_GOVERNANCE.md` explicitly states that shared runtime code provides
+  only generic path helpers and enforcement
 - `README.md` explicitly states that repo-local outputs live under
   `docs/repo/` and are outside Layer 1 ownership
 - `README.md` document map explicitly accounts for all four Layer 1 docs
@@ -81,6 +92,7 @@ Task:
   - `Concrete workflow-name checks`
   - `Forbidden literal checks`
   - `Repo output boundary checks`
+  - `Path ownership checks`
 - The review file must exist on disk before returning final JSON.
 - Return the review file path in `artifacts.REVIEW_FILE_SUGGESTED`.
 - Before returning, explicitly verify:
@@ -88,6 +100,10 @@ Task:
   - `RUNTIME_GOVERNANCE.md` does not contain `docs/repo/`
   - `BUNDLE_TAXONOMY.md` does not define repo-local output ownership
   - `RUNTIME_GOVERNANCE.md` does not define repo-local output ownership
+  - `RUNTIME_GOVERNANCE.md` states that workflow bundles own workflow-specific
+    artifact path contracts
+  - `RUNTIME_GOVERNANCE.md` rejects workflow-name-specific path resolution
+    branches and centralized workflow-family path registries as steady-state ownership
   - no reviewed file contains mojibake or non-ASCII punctuation corruption
   - `RUNTIME_GOVERNANCE.md` does not define dual-path discovery or local fallback
   - `BUNDLE_TAXONOMY.md` does not define runtime path resolution policy
