@@ -57,3 +57,31 @@ def test_multi_workflow_bundle_check_accepts_single_workflow_phrase() -> None:
         or ("single workflow" in runtime_text.lower())
     )
     assert "multi-workflow" in runtime_text.lower()
+
+
+def test_layer1_governance_contract_declares_bundle_owned_path_contracts() -> None:
+    contract = (
+        Path(__file__).resolve().parents[4]
+        / "workflows"
+        / "00_layer1_governance_bootstrap_v1"
+        / "bundle_governance"
+        / "core_governance.md"
+    ).read_text(encoding="utf-8")
+
+    lowered = contract.lower()
+    assert "workflow bundles must own their own artifact path contracts" in lowered
+    assert "shared runtime code may provide generic path helpers" in lowered
+    assert "must not own workflow-specific document output paths" in lowered
+
+
+def test_layer1_review_and_audit_prompts_require_path_ownership_guardrail() -> None:
+    root = Path(__file__).resolve().parents[4] / "workflows" / "00_layer1_governance_bootstrap_v1" / "prompts"
+    review_text = (root / "02_review_layer1_governance_docs.txt").read_text(encoding="utf-8")
+    audit_text = (root / "04_audit_layer1_governance_accuracy.txt").read_text(encoding="utf-8")
+    review_normalized = " ".join(review_text.split())
+    audit_normalized = " ".join(audit_text.split())
+
+    assert "workflow bundles own workflow-specific artifact path contracts" in review_normalized
+    assert "workflow-name-specific path resolution" in review_normalized
+    assert "workflow bundles own workflow-specific artifact path contracts" in audit_normalized
+    assert "centralized workflow-family path registries" in audit_normalized

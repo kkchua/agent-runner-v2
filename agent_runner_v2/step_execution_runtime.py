@@ -174,7 +174,11 @@ def generated_doc_frontmatter_contract(
     if template_group not in MASTER_BOOTSTRAP_WORKFLOWS:
         return ""
 
-    contract_rows = master_bootstrap_frontmatter_rows(step_cfg=step_cfg, state=state)
+    contract_rows = master_bootstrap_frontmatter_rows(
+        template_group=template_group,
+        step_cfg=step_cfg,
+        state=state,
+    )
     if not contract_rows:
         return ""
 
@@ -215,6 +219,7 @@ def generated_doc_frontmatter_contract(
 
 def master_bootstrap_frontmatter_rows(
     *,
+    template_group: str,
     step_cfg: dict[str, Any],
     state: dict[str, Any],
 ) -> list[tuple[str, str, str]]:
@@ -243,7 +248,11 @@ def master_bootstrap_frontmatter_rows(
     }
     job_id = str(state.get("job_id") or "{job_id}")
     mode = str((step_cfg.get("mode") or state.get("current_mode") or "bootstrap"))
-    output_paths = get_master_docs_output_paths(job_id=job_id, mode=mode)
+    output_paths = _workflow_frontmatter_output_paths(
+        template_group=template_group,
+        job_id=job_id,
+        mode=mode,
+    )
     default_paths = known_artifact_paths()
     rows: list[tuple[str, str, str]] = []
     for artifact_key in list(step_cfg.get("produces") or []):
@@ -253,6 +262,19 @@ def master_bootstrap_frontmatter_rows(
             continue
         rows.append((str(rel_path), metadata[0], metadata[1]))
     return rows
+
+
+def _workflow_frontmatter_output_paths(*, template_group: str, job_id: str, mode: str) -> dict[str, str]:
+    if template_group == "00_layer1_governance_bootstrap_v1":
+        return {
+            "SYSTEM_DOCS_INDEX": "docs/system/00_governance/bootstrap/README.md",
+            "SYSTEM_DOC_STANDARD": "docs/system/00_governance/bootstrap/DOCUMENTATION_STANDARD.md",
+            "BUNDLE_TAXONOMY": "docs/system/00_governance/bootstrap/BUNDLE_TAXONOMY.md",
+            "RUNTIME_GOVERNANCE": "docs/system/00_governance/bootstrap/RUNTIME_GOVERNANCE.md",
+            "SYSTEM_DOCS_VALIDATION": f"docs/system/00_governance/bootstrap/{job_id}-layer1-governance-validation.md",
+            "REVIEW_FILE_SUGGESTED": f"docs/system/00_governance/bootstrap/{job_id}-layer1-governance-review.md",
+        }
+    return get_master_docs_output_paths(job_id=job_id, mode=mode)
 
 
 def execute_prepared_step(

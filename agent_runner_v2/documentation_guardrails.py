@@ -47,18 +47,15 @@ def managed_banner(*, workflow: str, step: str) -> str:
 
 def master_bootstrap_doc_paths(*, job_id: str, mode: str) -> list[str]:
     """Get all master bootstrap workflow document paths."""
-    output_paths = get_master_docs_output_paths(job_id=job_id, mode=mode)
-    return list(output_paths.values())
+    return list(_layer1_governance_doc_paths(job_id=job_id).values())
 
 
 def legacy_master_bootstrap_doc_paths(*, job_id: str, mode: str) -> list[str]:
     """Get legacy master bootstrap document paths (subset without dynamic filenames)."""
-    # Use the same paths but filter out job-specific files
-    all_paths = get_master_docs_output_paths(job_id=job_id, mode=mode)
-    # Return only the static paths (those without job_id/mode in filename)
+    all_paths = _layer1_governance_doc_paths(job_id=job_id)
     return [
         path for key, path in all_paths.items()
-        if key not in ["SYSTEM_DOCS_CHANGE_LOG", "SYSTEM_DOCS_VALIDATION", "BOOTSTRAP_SUMMARY", "CODEBASE_SCAN_SNAPSHOT"]
+        if key not in ["SYSTEM_DOCS_VALIDATION", "REVIEW_FILE_SUGGESTED"]
     ]
 
 
@@ -134,7 +131,7 @@ def workflow_legacy_doc_paths(*, template_group: str, state: dict) -> list[str]:
 
 def master_bootstrap_artifact_candidates(*, job_id: str, mode: str) -> dict[str, list[str]]:
     """Get artifact path candidates for master bootstrap workflow."""
-    canonical = get_master_docs_output_paths(job_id=job_id, mode=mode)
+    canonical = _layer1_governance_doc_paths(job_id=job_id)
     
     # Build legacy paths (subset without dynamic filenames)
     legacy: dict[str, list[str]] = {}
@@ -147,6 +144,17 @@ def master_bootstrap_artifact_candidates(*, job_id: str, mode: str) -> dict[str,
     return {
         key: [canonical[key], *legacy.get(key, [])]
         for key in canonical
+    }
+
+
+def _layer1_governance_doc_paths(*, job_id: str) -> dict[str, str]:
+    return {
+        "SYSTEM_DOCS_INDEX": system_doc_rel("README.md"),
+        "SYSTEM_DOC_STANDARD": system_doc_rel("DOCUMENTATION_STANDARD.md"),
+        "BUNDLE_TAXONOMY": system_doc_rel("BUNDLE_TAXONOMY.md"),
+        "RUNTIME_GOVERNANCE": system_doc_rel("RUNTIME_GOVERNANCE.md"),
+        "SYSTEM_DOCS_VALIDATION": system_doc_rel(f"{job_id}-layer1-governance-validation.md"),
+        "REVIEW_FILE_SUGGESTED": system_doc_rel(f"{job_id}-layer1-governance-review.md"),
     }
 
 
