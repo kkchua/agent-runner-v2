@@ -204,6 +204,9 @@ def build_execution_state(*, request: ExecutionRequest, group_cfg: dict[str, Any
     state: dict[str, Any] = {
         "job_id": str(request.job_id or request.workflow_run_id or "backend-job"),
         "template_group": request.template_group,
+        "project_root": str(request.project_root or ""),
+        "workspace_path": str(request.workspace_root or request.project_root or ""),
+        "target_project_root": str(request.target_project_root or request.project_root or ""),
         "runner_version": "v2",
         "job_init_step": group_cfg.get("job_init_step"),
         "job_status": "IN_PROGRESS",

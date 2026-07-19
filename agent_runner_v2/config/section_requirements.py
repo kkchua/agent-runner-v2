@@ -35,6 +35,17 @@ SYSTEM_DOC_SECTIONS: dict[str, list[str]] = {
         "Migration Mode",
         "Conditional Standards",
     ],
+    "REPO_DOCUMENTATION_STANDARD.md": [
+        "Purpose",
+        "Audience Model",
+        "Document Set",
+        "Update Triggers",
+        "Validation",
+        "Architecture Baseline",
+        "Repo-Selected Profile",
+        "Migration Mode",
+        "Conditional Standards",
+    ],
     "README.md": [
         "System Documentation Index",
         "Audience Views",

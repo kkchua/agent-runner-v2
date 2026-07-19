@@ -27,7 +27,20 @@ onsuccess = "init_bootstrap_lifecycle_workspace"
 name = "init_bootstrap_lifecycle_workspace"
 action = "init_bootstrap_lifecycle_workspace"
 enable_notifications = true
+onsuccess = "sync_workflow_definitions"
+
+[[step]]
+name = "sync_workflow_definitions"
+action = "sync_workflow_definitions"
+enable_notifications = true
 onsuccess = "write_bootstrap_lifecycle_summary"
+
+[step.on_reject_refine]
+step = "init_bootstrap_lifecycle_workspace"
+artifact = "BOOTSTRAP_SUMMARY"
+max_iterations = 0
+exhausted_failure_code = "SYNC_FAILED"
+exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
 
 [[step]]
 name = "write_bootstrap_lifecycle_summary"

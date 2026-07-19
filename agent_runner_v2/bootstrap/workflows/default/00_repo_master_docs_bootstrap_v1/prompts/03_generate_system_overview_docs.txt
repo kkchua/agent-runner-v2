@@ -1,79 +1,66 @@
-You are generating the system overview and governance-facing master docs for the current repository.
+You are generating the core repo governance document set for the current repository.
 
-This step builds on the approved bootstrap project analysis. Keep the scope limited to overview and functional documentation.
+This step builds on the approved repo governance analysis. Keep the scope limited to repo-governance documents, not codebase implementation documentation.
 
 Inputs you must read first:
 - `{PROJECT_ANALYSIS}`
 - `{CODEBASE_DOC_ROOT}/01_inventory/codebase_inventory.md`
 - `{CODEBASE_DOC_ROOT}/04_changes/` latest change impact document
-- relevant source files under `agent_runner_v2/`
+
+Repository evidence boundary:
+- use only current-repository files as evidence for repo scope, ownership, architecture posture, and operational expectations
+- ignore global runner-home content such as `.ukbe-runner/`
+- ignore packaged bootstrap workflow copies shipped with the shared runner
+- do not promote workflow metadata or prompt paths outside the current repository root into repo facts
+
+Exclude from evidence:
+- root guidance files `CLAUDE.md`, `QWEN.md`, and `AGENTS.md`
+- generated guidance copies under Layer 1 bootstrap outputs
+- do not use those files to infer active repo governance scope, migration scope, or documentation ownership
 
 Write or refresh these docs:
 - `{SYSTEM_DOCS_INDEX}`
 - `{SYSTEM_DOC_STANDARD}`
-- `{BUNDLE_TAXONOMY}`
-- `{BUNDLE_MIGRATION_PLAN}`
-- `{SYSTEM_OVERVIEW}`
-- `{BUSINESS_CAPABILITIES}`
-- `{FUNCTIONAL_SPEC}`
-- `{NON_FUNCTIONAL_REQUIREMENTS}`
 
 Primary objectives:
-1. Explain the platform at a level useful to users, developers, and stakeholders.
-2. Define the documentation standard and repo documentation expectations.
-3. Describe the system capabilities and functional scope without drifting into low-level architecture detail.
-4. Keep the written docs aligned with the actual repository and the approved project analysis.
-5. Make the universal ecosystem baseline and repo-selected architecture posture explicit, especially when the repository has no clear prior standard.
-
-Hard ownership rule:
-- `{PROJECT_ANALYSIS}` is read-only in this step.
-- Do not create, modify, or refresh any architecture or operations docs in this step.
-- The only writable outputs are the eight files listed in "Write or refresh these docs".
-- In particular, do not touch `SYSTEM_CONTEXT.md`, `COMPONENT_ARCHITECTURE.md`, `DECISION_LOG.md`, `SYSTEM_FILE_STRUCTURE.md`, `DEVELOPER_GUIDE.md`, `RUNBOOK.md`, or `EXISTING_REPO_WORKFLOW_SOP.md`.
+1. Define the repo-governance document set and its audience.
+2. Define the repo documentation standard and ownership expectations.
+3. Keep the governance contract minimal and separate from codebase implementation documentation.
+4. Make the document index point readers to repo governance docs and repo codebase evidence without duplicating either.
+5. Keep all markdown output ASCII-only.
 
 Frontmatter contract:
 - EVERY file MUST include these YAML frontmatter fields:
-  - `template_id`: Use exact values below (REQUIRED)
-  - `version`: Set to `"1.0.0"` (REQUIRED)
-  - `doc_type`: Set to `"system"` for governance docs (REQUIRED)
-  - `managed_by`: Set to `"workflow-generated"` (REQUIRED)
-  - `generated_at`: Current ISO timestamp (REQUIRED)
-  - `workflow`: `"00_repo_master_docs_bootstrap_v1"` (REQUIRED)
-  - `step`: Current step name (REQUIRED)
-  - `change_id`: Job ID from context (REQUIRED)
-- Use these exact `template_id` values in YAML frontmatter:
-  - `README.md` -> `SYS-00-IDX`
-  - `DOCUMENTATION_STANDARD.md` -> `SYS-00-DS`
-  - `BUNDLE_TAXONOMY.md` -> `SYS-00-BT`
-  - `BUNDLE_MIGRATION_PLAN.md` -> `SYS-00-BMP`
-  - `SYSTEM_OVERVIEW.md` -> `SYS-00-SO`
-  - `BUSINESS_CAPABILITIES.md` -> `SYS-00-BC`
-  - `FUNCTIONAL_SPEC.md` -> `SYS-00-FS`
-  - `NON_FUNCTIONAL_REQUIREMENTS.md` -> `SYS-00-NFR`
+  - `template_id`
+  - `version: "1.0.0"`
+  - `doc_type: "system"`
+  - `managed_by: "workflow-generated"`
+  - `generated_at: <current ISO timestamp>`
+  - `workflow: "00_repo_master_docs_bootstrap_v1"`
+  - `step: <current step name>`
+  - `change_id: <job id from context>`
+
+Use these exact `template_id` values:
+- `README.md` -> `SYS-00-IDX`
+- `REPO_DOCUMENTATION_STANDARD.md` -> `SYS-00-DS`
 
 Required content rules:
-- `{SYSTEM_DOCS_INDEX}` should index the master doc set and describe the audience views.
-- `{SYSTEM_OVERVIEW}` should explain the platform, workflow model, and value flow, not just list files.
-- `{SYSTEM_OVERVIEW}` should separate the universal baseline from any repo-selected profile and note the migration posture when the repo standard is provisional.
-- `{SYSTEM_DOC_STANDARD}` should define the baseline rules that apply to every repo, then explain how repo-specific profiles and migration modes are selected.
-- `{BUSINESS_CAPABILITIES}` should describe what the runner enables operationally.
-- `{FUNCTIONAL_SPEC}` should describe major behaviors and workflow capabilities grounded in the repo.
-- `{NON_FUNCTIONAL_REQUIREMENTS}` should capture runtime, quality, and operational expectations already implied by the repo.
-- Each file must include complete YAML frontmatter with ALL required fields listed above.
-- Use these section headings exactly in the generated docs:
-  - `README.md`: `System Documentation Index`, `Audience Views`, `Document Map`
-  - `DOCUMENTATION_STANDARD.md`: `Purpose`, `Audience Model`, `Document Set`, `Architecture Baseline`, `Repository-Selected Profile`, `Migration Mode`, `Conditional Standards`, `Update Triggers`, `Validation`
-  - `SYSTEM_OVERVIEW.md`: `Purpose`, `Scope`, `Primary Flows`, `Architecture Profile`, `Key Risks`
-  - `BUSINESS_CAPABILITIES.md`: capability map plus operational interpretation
-  - `FUNCTIONAL_SPEC.md`: system purpose, functional capabilities, actors, core behaviors
-  - `NON_FUNCTIONAL_REQUIREMENTS.md`: quality and operational requirements
+- `{SYSTEM_DOCS_INDEX}` should index the repo governance set and describe audience views.
+- `{SYSTEM_DOC_STANDARD}` should define repo documentation rules, governance boundaries, update triggers, and validation expectations.
+- `{SYSTEM_DOCS_INDEX}` should link to `PROJECT_ANALYSIS.md`, `REPO_DOCUMENTATION_STANDARD.md`, `DECISION_LOG.md`, and `DEVELOPER_GUIDE.md`.
+- `{SYSTEM_DOCS_INDEX}` may reference `docs/repo/codebase/` as the implementation evidence area, but must not restate codebase details.
+- `{SYSTEM_DOC_STANDARD}` should define the governance doc boundary and explicitly state that implementation structure, runtime behavior, modules, and operational mechanics belong under `docs/repo/codebase/`.
+- When referring to the repo-level documentation standard, use the exact filename `REPO_DOCUMENTATION_STANDARD.md`.
+- Reserve `DOCUMENTATION_STANDARD.md` for Layer 1 references only.
+- Do not use non-ASCII punctuation or mojibake characters anywhere in the markdown output.
+- Do not describe workflow/runtime mechanics such as sidecars, daemon loops, subprocess sequencing, polling, heartbeats, or prompt/coder internals in these repo-governance docs.
 
-Workflow-owned artifact contract:
-- `SYSTEM_DOCS_INDEX` -> `{SYSTEM_DOC_ROOT}/README.md`
-- `SYSTEM_DOC_STANDARD` -> `{SYSTEM_DOC_ROOT}/DOCUMENTATION_STANDARD.md`
-- `BUNDLE_TAXONOMY` -> `{SYSTEM_DOC_ROOT}/BUNDLE_TAXONOMY.md`
-- `BUNDLE_MIGRATION_PLAN` -> `{SYSTEM_DOC_ROOT}/BUNDLE_MIGRATION_PLAN.md`
-- `SYSTEM_OVERVIEW` -> `{SYSTEM_DOC_ROOT}/SYSTEM_OVERVIEW.md`
-- `BUSINESS_CAPABILITIES` -> `{SYSTEM_DOC_ROOT}/BUSINESS_CAPABILITIES.md`
-- `FUNCTIONAL_SPEC` -> `{SYSTEM_DOC_ROOT}/FUNCTIONAL_SPEC.md`
-- `NON_FUNCTIONAL_REQUIREMENTS` -> `{SYSTEM_DOC_ROOT}/NON_FUNCTIONAL_REQUIREMENTS.md`
+Use these section headings exactly:
+- `README.md`: `System Documentation Index`, `Audience Views`, `Document Map`
+- `REPO_DOCUMENTATION_STANDARD.md`: `Purpose`, `Audience Model`, `Document Set`, `Architecture Baseline`, `Repository-Selected Profile`, `Migration Mode`, `Conditional Standards`, `Update Triggers`, `Validation`
+
+Artifact reporting rule:
+- In your result sidecar and final JSON, report canonical artifact keys, not filenames.
+- Report `SYSTEM_DOCS_INDEX` for `README.md`.
+- Report `SYSTEM_DOC_STANDARD` for `REPO_DOCUMENTATION_STANDARD.md`.
+- Do not invent filename-based artifact keys such as `REPO_DOCUMENTATION_STANDARD`.

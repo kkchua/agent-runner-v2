@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass
 from typing import Any
 
@@ -27,6 +28,28 @@ def _validate_daemon_claimed_step(*, mode: str, args: Any, state: dict[str, Any]
         raise ValueError(
             f"Daemon claimed step {claimed_step!r} but job {state['job_id']} is currently at {current_step!r}."
         )
+
+
+def _apply_daemon_backend_linkage(*, mode: str, state: dict[str, Any]) -> bool:
+    if mode != "daemon":
+        return False
+
+    changed = False
+    workflow_run_id = str(os.environ.get("AGENT_RUNNER_WORKFLOW_RUN_ID") or "").strip()
+    workflow_step_run_id = str(os.environ.get("AGENT_RUNNER_WORKFLOW_STEP_RUN_ID") or "").strip()
+    backend_url = str(os.environ.get("AGENT_RUNNER_BACKEND_URL") or "").strip()
+
+    if workflow_run_id and str(state.get("workflow_run_id") or "").strip() != workflow_run_id:
+        state["workflow_run_id"] = workflow_run_id
+        changed = True
+    if workflow_step_run_id and str(state.get("workflow_step_run_id") or "").strip() != workflow_step_run_id:
+        state["workflow_step_run_id"] = workflow_step_run_id
+        changed = True
+    if backend_url and str(state.get("backend_url") or "").strip() != backend_url:
+        state["backend_url"] = backend_url
+        changed = True
+
+    return changed
 
 
 def resolve_manual_run(*, args: Any, group_cfg: dict[str, Any], hooks: Any, mode: str = "manual") -> ManualRunResolution:
@@ -71,6 +94,8 @@ def resolve_manual_run(*, args: Any, group_cfg: dict[str, Any], hooks: Any, mode
             state = hooks.migrate_job_state(state)
             state = hooks.recover_exhausted_planning_job(state, group_cfg)
             state = hooks.reconcile_job_state(state, group_cfg)
+            if _apply_daemon_backend_linkage(mode=mode, state=state):
+                hooks.save_job(args.template_group, state["job_id"], state)
             original_current_step = state.get("current_step")
             if state.get("pending_human_approval_for"):
                 raise ValueError(
@@ -101,6 +126,8 @@ def resolve_manual_run(*, args: Any, group_cfg: dict[str, Any], hooks: Any, mode
             state = hooks.ensure_backward_compatible_state(hooks.load_job(args.template_group, completed_job_id))
             state = hooks.migrate_job_state(state)
             state = hooks.reconcile_job_state(state, group_cfg)
+            if _apply_daemon_backend_linkage(mode=mode, state=state):
+                hooks.save_job(args.template_group, state["job_id"], state)
             return ManualRunResolution(
                 state=state,
                 step=None,
@@ -124,6 +151,7 @@ def resolve_manual_run(*, args: Any, group_cfg: dict[str, Any], hooks: Any, mode
             hooks.apply_task_execution_binding(state, execution_binding)
             if not seed_artifacts.get("TASK_FILE"):
                 state["artifacts"]["TASK_FILE"] = None
+        _apply_daemon_backend_linkage(mode=mode, state=state)
         hooks.save_job(args.template_group, state["job_id"], state)
         original_current_step = state.get("current_step")
         default_init_step = group_cfg["job_init_step"]
@@ -142,6 +170,8 @@ def resolve_manual_run(*, args: Any, group_cfg: dict[str, Any], hooks: Any, mode
     state = hooks.migrate_job_state(state)
     state = hooks.recover_exhausted_planning_job(state, group_cfg)
     state = hooks.reconcile_job_state(state, group_cfg)
+    if _apply_daemon_backend_linkage(mode=mode, state=state):
+        hooks.save_job(args.template_group, state["job_id"], state)
     original_current_step = state.get("current_step")
     if state.get("pending_human_approval_for"):
         raise ValueError(

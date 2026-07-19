@@ -70,7 +70,7 @@ def test_validate_core_governance_docs_rejects_stale_references(tmp_path, monkey
         workflow_actions.CORE_GOVERNANCE_REQUIRED_SECTIONS["docs/system/00_governance/bootstrap/BUNDLE_TAXONOMY.md"],
         extra=(
             "### Class 1: Core Governance Bundles\n"
-            "- `00_master_docs_bootstrap_v2`\n\n"
+            "- `00_repo_master_docs_bootstrap_v1`\n\n"
             "### Repo-Document Bundles\n"
             "- `PROJECT_ANALYSIS` -> `docs/system/00_governance/bootstrap/SYSTEM_OVERVIEW.md`\n\n"
             "| Bundle Class | Allowed Write Paths | Forbidden Write Paths |\n"

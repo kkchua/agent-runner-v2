@@ -28,9 +28,6 @@ _LLM_STEPS = [
     "02_generate_project_analysis",
     "03_generate_system_overview_docs",
     "04_generate_architecture_docs",
-    "04b_generate_integration_docs",
-    "04c_generate_failure_docs",
-    "04d_generate_architecture_flow_docs",
 ]
 
 

@@ -23,13 +23,6 @@ from .documentation_validation_core import (
 
 
 SYSTEM_DOC_REQUIRED_SECTIONS: dict[str, list[str]] = {
-    codebase_doc_rel("00_analysis/PROJECT_ANALYSIS.md"): [
-        "Repo Overview",
-        "Codebase Structure",
-        "Operational Risks",
-        "Architectural Observations",
-        "Architecture Posture",
-    ],
     system_doc_rel("README.md"): [
         "System Documentation Index",
         "Audience Views",
@@ -46,37 +39,22 @@ SYSTEM_DOC_REQUIRED_SECTIONS: dict[str, list[str]] = {
         "Migration Mode",
         "Conditional Standards",
     ],
-    system_doc_rel("SYSTEM_OVERVIEW.md"): [
+    system_doc_rel("BUNDLE_TAXONOMY.md"): [
+        "Bundle Classes",
+        "Ownership Rules",
+        "Packaging Rules",
+    ],
+    system_doc_rel("RUNTIME_GOVERNANCE.md"): [
         "Purpose",
-        "Scope",
-        "Primary Flows",
-        "Key Risks",
-        "Architecture Profile",
-    ],
-    system_doc_rel("SYSTEM_FILE_STRUCTURE.md"): [
-        "Repository Structure",
-        "Top-Level Directories",
-        "Documentation Locations",
-    ],
-    system_doc_rel("DEVELOPER_GUIDE.md"): [
-        "Development Workflow",
-        "Key Commands",
-        "Documentation Responsibilities",
-        "Architecture Posture",
-    ],
-    system_doc_rel("RUNBOOK.md"): [
-        "Operations Scope",
-        "Routine Procedures",
-        "Failure Handling",
-    ],
-    system_doc_rel("EXISTING_REPO_WORKFLOW_SOP.md"): [
-        "Purpose",
-        "First-Time Setup",
-        "Normal Governed Delivery",
-        "Drift Reconciliation",
-        "Governance Refresh",
-        "Batch Files",
-        "Notes",
+        "Runtime Scope Model",
+        "Bundle Publish And Install Model",
+        "Registry Control Plane",
+        "Plugin Bundle Control Model",
+        "Role And Connection Resolution",
+        "Artifact Ownership Enforcement",
+        "Execution Mode Parity",
+        "Validation Gates",
+        "Change Control",
     ],
 }
 
@@ -87,7 +65,7 @@ def _system_extra_checks(project_root: Path) -> list[dict[str, object]]:
     index_text = read_file(project_root, index_path)
     if index_text is not None:
         checks.append({"check": "index_mentions_documentation_standard", "path": index_path, "ok": "DOCUMENTATION_STANDARD.md" in index_text, "detail": "present" if "DOCUMENTATION_STANDARD.md" in index_text else "missing"})
-        checks.append({"check": "index_mentions_system_overview", "path": index_path, "ok": "SYSTEM_OVERVIEW.md" in index_text, "detail": "present" if "SYSTEM_OVERVIEW.md" in index_text else "missing"})
+        checks.append({"check": "index_mentions_runtime_governance", "path": index_path, "ok": "RUNTIME_GOVERNANCE.md" in index_text, "detail": "present" if "RUNTIME_GOVERNANCE.md" in index_text else "missing"})
 
     return checks
 
@@ -106,22 +84,10 @@ def validate_system_docs(*, context: dict[str, str], state: dict, step_cfg: dict
     )
 
     required_files = (
-        codebase_doc_rel("00_analysis/PROJECT_ANALYSIS.md"),
         system_doc_rel("README.md"),
         system_doc_rel("DOCUMENTATION_STANDARD.md"),
         system_doc_rel("BUNDLE_TAXONOMY.md"),
-        system_doc_rel("BUNDLE_MIGRATION_PLAN.md"),
-        system_doc_rel("SYSTEM_OVERVIEW.md"),
-        system_doc_rel("BUSINESS_CAPABILITIES.md"),
-        system_doc_rel("FUNCTIONAL_SPEC.md"),
-        system_doc_rel("NON_FUNCTIONAL_REQUIREMENTS.md"),
-        system_doc_rel("SYSTEM_CONTEXT.md"),
-        system_doc_rel("COMPONENT_ARCHITECTURE.md"),
-        system_doc_rel("DECISION_LOG.md"),
-        system_doc_rel("SYSTEM_FILE_STRUCTURE.md"),
-        system_doc_rel("DEVELOPER_GUIDE.md"),
-        system_doc_rel("RUNBOOK.md"),
-        system_doc_rel("EXISTING_REPO_WORKFLOW_SOP.md"),
+        system_doc_rel("RUNTIME_GOVERNANCE.md"),
         system_doc_rel(f"{job_id}-{mode}-change-log.md"),
     )
 
@@ -132,17 +98,7 @@ def validate_system_docs(*, context: dict[str, str], state: dict, step_cfg: dict
             system_doc_rel("README.md"): "SYS-00-IDX",
             system_doc_rel("DOCUMENTATION_STANDARD.md"): "SYS-00-DS",
             system_doc_rel("BUNDLE_TAXONOMY.md"): "SYS-00-BT",
-            system_doc_rel("BUNDLE_MIGRATION_PLAN.md"): "SYS-00-BMP",
-            system_doc_rel("SYSTEM_OVERVIEW.md"): "SYS-00-SO",
-            system_doc_rel("BUSINESS_CAPABILITIES.md"): "SYS-00-BC",
-            system_doc_rel("FUNCTIONAL_SPEC.md"): "SYS-00-FS",
-            system_doc_rel("NON_FUNCTIONAL_REQUIREMENTS.md"): "SYS-00-NFR",
-            system_doc_rel("SYSTEM_CONTEXT.md"): "SYS-03-CTX",
-            system_doc_rel("COMPONENT_ARCHITECTURE.md"): "SYS-03-CA",
-            system_doc_rel("DECISION_LOG.md"): "SYS-03-DL",
-            system_doc_rel("SYSTEM_FILE_STRUCTURE.md"): "SYS-03-SF",
-            system_doc_rel("DEVELOPER_GUIDE.md"): "ENG-01-DG",
-            system_doc_rel("RUNBOOK.md"): "OPS-01-RB",
+            system_doc_rel("RUNTIME_GOVERNANCE.md"): "SYS-00-RG",
         },
         extra_checkers=(_system_extra_checks,),
     )

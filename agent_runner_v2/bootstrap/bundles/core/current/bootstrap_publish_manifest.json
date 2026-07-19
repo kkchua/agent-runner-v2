@@ -2,10 +2,17 @@
   "workspace_root": "D:\\MyProjectSpace\\01_Workflows\\agent-runner-v2",
   "source_root": "D:\\MyProjectSpace\\01_Workflows\\agent-runner-v2\\docs\\system\\00_governance\\bootstrap",
   "source_docs_included": true,
+  "published_workflow_root": "D:\\MyProjectSpace\\01_Workflows\\agent-runner-v2\\docs\\system\\00_governance\\bootstrap\\workflows",
+  "published_registry_copied": true,
+  "published_workflows_copied": [
+    "00_bootstrap_lifecycle_admin_v1",
+    "00_repo_master_docs_bootstrap_v1",
+    "01_governance_foundation_v1"
+  ],
   "shared_registry_copied": true,
   "plugin_workflows_copied": [
     "00_bootstrap_lifecycle_admin_v1",
-    "00_layer1_governance_bootstrap_v1",
-    "00_repo_master_docs_bootstrap_v1"
+    "00_repo_master_docs_bootstrap_v1",
+    "01_governance_foundation_v1"
   ]
 }

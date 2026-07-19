@@ -141,8 +141,10 @@ def test_master_review_step_has_deterministic_review_filename():
     assert _review_step_code("review_master_system_docs") == "rmaster"
     path = _suggested_review_file_path(
         state={
+            "template_group": "00_repo_master_docs_bootstrap_v1",
+            "job_id": "00RMD-TEST-001",
             "artifacts": {
-                "PROJECT_ANALYSIS": "docs/system/00_governance/bootstrap/project_analysis.md",
+                "PROJECT_ANALYSIS": "docs/repo/governance/PROJECT_ANALYSIS.md",
             }
         },
         step="review_master_system_docs",
@@ -150,8 +152,7 @@ def test_master_review_step_has_deterministic_review_filename():
             "on_reject_refine": {"artifact": "PROJECT_ANALYSIS"},
         },
     )
-    assert path.endswith(".md")
-    assert "rmaster" in path
+    assert path == "docs/repo/governance/00RMD-TEST-001-master-system-docs-review.md"
 
 
 def test_core_governance_review_step_has_deterministic_review_filename():
@@ -227,6 +228,56 @@ def test_html_files_are_classified_as_documentation(tmp_path):
     assert item.status == "current"
 
 
+def test_workflow_family_prompt_paths_do_not_leak_global_workflow_root(tmp_path, monkeypatch):
+    from agent_runner_v2 import codebase_docs
+    from agent_runner_v2.runtime_context import set_context
+
+    workflow_root = tmp_path / ".ukbe-runner" / "workflows" / "default"
+    workspace_root = tmp_path / "repo"
+    workflow_root.mkdir(parents=True, exist_ok=True)
+    workspace_root.mkdir(parents=True, exist_ok=True)
+
+    set_context(
+        workspace_root=workspace_root,
+        workflow_name="default",
+        workflow_root=workflow_root,
+        workflow_module=None,
+    )
+
+    monkeypatch.setattr(
+        codebase_docs,
+        "get_workflow_module",
+        lambda: type(
+            "Bundle",
+            (),
+            {
+                "TEMPLATE_GROUPS": {
+                    "00_repo_master_docs_bootstrap_v1": {
+                        "visibility": "visible",
+                        "steps": ["02_generate_project_analysis"],
+                        "step_configs": {
+                            "02_generate_project_analysis": {
+                                "prompt_file": str(
+                                    workflow_root
+                                    / "00_repo_master_docs_bootstrap_v1"
+                                    / "prompts"
+                                    / "02_generate_project_analysis.txt"
+                                ),
+                                "produces": ["PROJECT_ANALYSIS"],
+                            }
+                        },
+                    }
+                }
+            },
+        )(),
+    )
+
+    records = codebase_docs._workflow_family_records()
+    prompt_file = records[0]["steps"][0]["prompt_file"]
+
+    assert prompt_file == "00_repo_master_docs_bootstrap_v1/prompts/02_generate_project_analysis.txt"
+
+
 def test_scaffold_prompts_require_baseline_and_profile_handling():
     prompt_root = Path("agent_runner_v2/bootstrap/workflows/default/prompts")
 
@@ -254,6 +305,40 @@ def test_scaffold_prompts_require_baseline_and_profile_handling():
     sop_text_updated = (prompt_root / "10_execution_scaffold_v1" / "02_generate_sop.txt").read_text(encoding="utf-8")
     assert "repo-wide reconciliation workflow" in sop_text_updated
     assert "50_architecture_site_v1" in sop_text_updated
+
+
+def test_repo_master_doc_prompts_stay_repo_scoped_and_generic():
+    prompt_sets = [
+        Path("workflows/00_repo_master_docs_bootstrap_v1/prompts"),
+        Path("agent_runner_v2/bootstrap/workflows/default/00_repo_master_docs_bootstrap_v1/prompts"),
+        Path("agent_runner_v2/bootstrap/bundles/core/current/workflows/00_repo_master_docs_bootstrap_v1/prompts"),
+    ]
+
+    for prompt_root in prompt_sets:
+        analysis_text = (prompt_root / "02_generate_project_analysis.txt").read_text(encoding="utf-8")
+        overview_text = (prompt_root / "03_generate_system_overview_docs.txt").read_text(encoding="utf-8")
+        architecture_text = (prompt_root / "04_generate_architecture_docs.txt").read_text(encoding="utf-8")
+        review_text = (prompt_root / "05_review_master_system_docs.txt").read_text(encoding="utf-8")
+        refine_text = (prompt_root / "06_refine_master_system_docs.txt").read_text(encoding="utf-8")
+
+        assert "agent_runner_v2/" not in analysis_text
+        assert "agent_runner_v2/" not in overview_text
+        assert "agent_runner_v2/" not in architecture_text
+        assert "current repository root" in analysis_text
+        assert "do not promote workflow metadata or prompt paths outside the current repository root into repo facts" in overview_text
+        assert "repo-governance documents, not codebase implementation documentation" in overview_text
+        assert "Codebase Structure" in analysis_text
+        assert "Workflow and Runtime Model" in analysis_text
+        assert "Operational Risks" in analysis_text
+        assert "ASCII-only" in analysis_text
+        assert "ASCII-only" in overview_text
+        assert "Do not create or refresh runbooks, workflow SOPs, system context docs, component architecture docs, integration maps, failure modes docs, or architecture-flow docs" in architecture_text
+        assert "repo-governance docs are coherent, complete" in review_text
+        assert "Fix only the repo-governance document set" in refine_text
+        assert "outside the current repository root are not treated as repo-owned implementation evidence" in review_text
+        assert "outside the current repository root from repo-ownership evidence" in refine_text
+        assert "workflow/runtime mechanics terms" in review_text
+        assert "Keep all markdown output ASCII-only" in refine_text
 
 
 def test_sop_review_prompt_allows_active_workflow_generated_docs():

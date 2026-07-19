@@ -388,8 +388,9 @@ def test_run_agent_step_execution_runtime_wrappers_match_direct_contract(monkeyp
         }))
         return "contract"
 
-    def fake_master_bootstrap_frontmatter_rows(*, step_cfg, state):
+    def fake_master_bootstrap_frontmatter_rows(*, template_group, step_cfg, state):
         calls.append(("master_bootstrap_frontmatter_rows", (), {
+            "template_group": template_group,
             "step_cfg": step_cfg,
             "state": state,
         }))
@@ -427,7 +428,7 @@ def test_run_agent_step_execution_runtime_wrappers_match_direct_contract(monkeyp
         step_cfg=step_cfg,
         state=state,
     )
-    rows = run_agent._master_bootstrap_frontmatter_rows(step_cfg=step_cfg, state=state)
+    rows = run_agent._master_bootstrap_frontmatter_rows(template_group="tg", step_cfg=step_cfg, state=state)
     coder = run_agent._resolve_step_coder(
         group_cfg=group_cfg,
         state=state,
@@ -443,7 +444,7 @@ def test_run_agent_step_execution_runtime_wrappers_match_direct_contract(monkeyp
     assert calls == [
         ("augment_generated_doc_prompt", ("base",), {"template_group": "tg", "step": "a", "step_cfg": step_cfg, "state": state}),
         ("generated_doc_frontmatter_contract", (), {"template_group": "tg", "step": "a", "step_cfg": step_cfg, "state": state}),
-        ("master_bootstrap_frontmatter_rows", (), {"step_cfg": step_cfg, "state": state}),
+        ("master_bootstrap_frontmatter_rows", (), {"template_group": "tg", "step_cfg": step_cfg, "state": state}),
         ("resolve_step_coder", (), {"group_cfg": group_cfg, "state": state, "step": "a", "step_cfg": step_cfg, "cli_coder": None}),
     ]
 

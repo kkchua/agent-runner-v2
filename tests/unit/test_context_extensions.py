@@ -1,4 +1,4 @@
-"""Unit tests for the workflow package context extension system.
+﻿"""Unit tests for the workflow package context extension system.
 
 Tests that context_extensions.py produces the correct path aliases
 and integrates properly with the step_runner hook.
@@ -61,7 +61,9 @@ class TestContextExtensionsLoader:
         assert "SYSTEM_DOCS_INDEX" in result
         assert "SYSTEM_DOCS_INDEX_PATH" in result
         assert "SYSTEM_DOCS_INDEX_METAJSON" in result
+        assert "LAYER1_RUNTIME_EVIDENCE" in result
         assert "REVIEW_FILE_SUGGESTED" in result
+        assert "AUDIT_FILE_SUGGESTED" in result
 
 
 class TestContextHookIntegration:
@@ -133,6 +135,14 @@ class TestContextHookIntegration:
         assert ctx["SYSTEM_DOC_STANDARD"].endswith("DOCUMENTATION_STANDARD.md")
         assert ctx["BUNDLE_TAXONOMY"].endswith("BUNDLE_TAXONOMY.md")
         assert ctx["RUNTIME_GOVERNANCE"].endswith("RUNTIME_GOVERNANCE.md")
+        assert ctx["LAYER1_RUNTIME_EVIDENCE"] == str(
+            project_root
+            / "docs"
+            / "system"
+            / "00_governance"
+            / "bootstrap"
+            / "00L1-TEST-001-layer1-runtime-evidence.md"
+        )
         assert ctx["REVIEW_FILE_SUGGESTED"] == str(
             project_root / "docs" / "system" / "00_governance" / "bootstrap" / "00L1-TEST-001-layer1-governance-review.md"
         )
@@ -158,6 +168,7 @@ class TestContextHookIntegration:
             project_root=project_root,
         )
         assert review_ctx["REVIEW_FILE_SUGGESTED"].endswith("00L1-TEST-002-layer1-governance-review.md")
+        assert review_ctx["LAYER1_RUNTIME_EVIDENCE"].endswith("00L1-TEST-002-layer1-runtime-evidence.md")
         assert review_ctx["SYSTEM_DOCS_VALIDATION"].endswith("00L1-TEST-002-layer1-governance-validation.md")
 
         audit_ctx: dict[str, str] = {}
@@ -171,7 +182,9 @@ class TestContextHookIntegration:
             step_cfg={"_workflow_bundle": bundle},
             project_root=project_root,
         )
-        assert audit_ctx["REVIEW_FILE_SUGGESTED"].endswith("00L1-TEST-003-layer1-governance-audit.md")
+        assert audit_ctx["REVIEW_FILE_SUGGESTED"].endswith("00L1-TEST-003-layer1-governance-review.md")
+        assert audit_ctx["AUDIT_FILE_SUGGESTED"].endswith("00L1-TEST-003-layer1-governance-audit.md")
+        assert audit_ctx["LAYER1_RUNTIME_EVIDENCE"].endswith("00L1-TEST-003-layer1-runtime-evidence.md")
 
     def test_hook_injects_master_docs_review_path_under_repo_governance(self, project_root):
         from agent_runner_v2.step_runner import _apply_workflow_package_context_hooks
@@ -196,8 +209,8 @@ class TestContextHookIntegration:
         assert ctx["REVIEW_FILE_SUGGESTED"].replace("\\", "/") == str(
             (project_root / "docs" / "repo" / "governance" / "00RMD-TEST-001-master-system-docs-review.md").resolve()
         ).replace("\\", "/")
-        assert ctx["EXISTING_REPO_WORKFLOW_SOP"].replace("\\", "/") == str(
-            (project_root / "docs" / "repo" / "governance" / "EXISTING_REPO_WORKFLOW_SOP.md").resolve()
+        assert ctx["DEVELOPER_GUIDE"].replace("\\", "/") == str(
+            (project_root / "docs" / "repo" / "governance" / "DEVELOPER_GUIDE.md").resolve()
         ).replace("\\", "/")
 
 
@@ -243,3 +256,4 @@ def test_render_prompt_normalizes_windows_paths_for_coder_output_contract() -> N
     assert "D:/MyProjectSpace/01_Workflows/agent-runner-v2/docs/system/00_governance/bootstrap/JOB-audit.meta.json" in rendered
     assert "use forward slashes in JSON strings" in rendered
     assert '"status": "APPROVED"' in rendered
+

@@ -274,6 +274,7 @@ def _map_job_status_to_run_status(job_status: str) -> str:
         "IN_PROGRESS": "pending",
         "COMPLETED": "completed",
         "FAILED": "failed",
+        "WAITING_FOR_HUMAN_APPROVAL": "awaiting_human",
         "WAITING_FOR_HUMAN_INTERVENTION": "awaiting_human",
         "WAITING_FOR_AUTO_RETRY": "pending",
     }
@@ -297,10 +298,19 @@ def build_job_sync_payload(*, job: dict[str, Any], step_result: dict[str, Any], 
 
     # Artifacts: from job.json artifacts dict (filter out null values)
     artifacts_raw = job.get("artifacts") or {}
-    project_root = Path(str(job.get("project_root") or "")).resolve() if str(job.get("project_root") or "").strip() else None
+    project_root_value = (
+        str(job.get("target_project_root") or "").strip()
+        or str(job.get("project_root") or "").strip()
+        or str(job.get("workspace_path") or "").strip()
+    )
+    project_root = Path(project_root_value).resolve() if project_root_value else None
     output_payload = format_report_artifacts(artifacts_raw, project_root=project_root)
     # Filter out null/empty values to prevent backend FK violations
     output_payload = {k: v for k, v in output_payload.items() if isinstance(v, str) and v.strip()}
+    # Filter to only workflow-declared artifact keys (from bundle_governance.toml)
+    allowed_keys = set(job.get("workflow_artifact_keys") or [])
+    if allowed_keys:
+        output_payload = {k: v for k, v in output_payload.items() if k in allowed_keys}
     artifacts_list: list[dict[str, Any]] = []
     for artifact_key, file_path in output_payload.items():
         artifacts_list.append({

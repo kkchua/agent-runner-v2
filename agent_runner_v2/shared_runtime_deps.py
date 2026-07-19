@@ -6,7 +6,7 @@ from typing import Any
 
 from .backend_client import BackendClient
 from .bundle_loader import load_project_config, load_workflow_module, resolve_workflow_root
-from .constants import known_artifact_paths as _known_artifact_paths
+from .path_catalog import known_artifact_paths as _known_artifact_paths
 from .exceptions import PreflightBlockedError
 from .execution_core import invoke_prepared_step
 from .job_state import (

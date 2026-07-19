@@ -5,16 +5,18 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from .constants import ARTIFACT_KEY_REVIEW, get_master_docs_output_paths, known_artifact_paths
+from .artifact_keys import ARTIFACT_KEY_REVIEW
+from .path_catalog import known_artifact_paths
 from .documentation_guardrails import (
     EXECUTION_SCAFFOLD_WORKFLOWS,
     MASTER_BOOTSTRAP_WORKFLOWS,
     generated_doc_manifest,
     managed_banner,
 )
-from .model_config import resolve_effective_coder, resolve_role_policy
+from .coder_registry import resolve_effective_coder, resolve_role_policy
 from .runner_logger import log_resolver
 from .step_runner import StepResult
+from .workflow_path_contracts import resolve_workflow_output_paths
 
 
 @dataclass
@@ -265,16 +267,11 @@ def master_bootstrap_frontmatter_rows(
 
 
 def _workflow_frontmatter_output_paths(*, template_group: str, job_id: str, mode: str) -> dict[str, str]:
-    if template_group == "00_layer1_governance_bootstrap_v1":
-        return {
-            "SYSTEM_DOCS_INDEX": "docs/system/00_governance/bootstrap/README.md",
-            "SYSTEM_DOC_STANDARD": "docs/system/00_governance/bootstrap/DOCUMENTATION_STANDARD.md",
-            "BUNDLE_TAXONOMY": "docs/system/00_governance/bootstrap/BUNDLE_TAXONOMY.md",
-            "RUNTIME_GOVERNANCE": "docs/system/00_governance/bootstrap/RUNTIME_GOVERNANCE.md",
-            "SYSTEM_DOCS_VALIDATION": f"docs/system/00_governance/bootstrap/{job_id}-layer1-governance-validation.md",
-            "REVIEW_FILE_SUGGESTED": f"docs/system/00_governance/bootstrap/{job_id}-layer1-governance-review.md",
-        }
-    return get_master_docs_output_paths(job_id=job_id, mode=mode)
+    return resolve_workflow_output_paths(
+        template_group=template_group,
+        job_id=job_id,
+        mode=mode,
+    )
 
 
 def execute_prepared_step(

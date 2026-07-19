@@ -52,6 +52,7 @@ from .constants import (
     EXT_JSON,
     known_artifact_paths,
     prompt_literal_substitutions,
+    repo_governance_rel,
     SIDECAR_INSTRUCTION_TEMPLATE as CONSTANTS_SIDECAR_INSTRUCTION_TEMPLATE,
     TOOL_INSTRUCTION_TEMPLATE as CONSTANTS_TOOL_INSTRUCTION_TEMPLATE,
 )
@@ -61,7 +62,6 @@ from .runtime_context import (
     JOBS_ROOT,
     PACKAGE_ROOT,
     RUNNER_ROOT,
-    PathProxy,
     artifact_rel_to_meta_rel,
     format_report_artifacts,
     get_workflow_module,
@@ -71,10 +71,6 @@ from .documentation_guardrails import (
     MASTER_BOOTSTRAP_WORKFLOWS,
     master_bootstrap_artifact_candidates,
 )
-
-
-RESULT_SCHEMA_PATH = PathProxy(lambda: Path(RUNNER_ROOT) / "llm_response_schema.json")
-
 
 # ---------------------------------------------------------------------------
 # Automatic sidecar instruction injection template
@@ -254,7 +250,6 @@ def run_step(
             step=step,
             prompt_text=prompt_text,
             cwd=project_root,
-            schema_path=RESULT_SCHEMA_PATH,
             prompt_checksum=checksum,
             now_iso_fn=_now_iso,
             coder_config=coder_config,
@@ -974,7 +969,11 @@ def _canonicalize_master_bootstrap_artifacts(
 
     job_id = str(state.get("job_id") or "").strip()
     mode = str((state.get("current_step_cfg") or {}).get("mode") or state.get("current_mode") or "bootstrap")
-    candidates = master_bootstrap_artifact_candidates(job_id=job_id, mode=mode)
+    candidates = master_bootstrap_artifact_candidates(
+        template_group=str(state.get("template_group") or ""),
+        job_id=job_id,
+        mode=mode,
+    )
     normalized = dict(artifacts)
 
     for artifact_key, path_candidates in candidates.items():
@@ -1242,10 +1241,18 @@ def _set_master_docs_aliases(
     artifacts: dict[str, Any],
     produces: list[str],
     project_root: Path,
+    step_cfg: dict | None = None,
 ) -> None:
-    if state.get("template_group") not in {
+    bundle = (step_cfg or {}).get("_workflow_bundle") if step_cfg else None
+    if getattr(bundle, "context_extensions_path", None):
+        return
+
+    template_group = str(state.get("template_group") or "")
+    if template_group not in {
         "00_master_docs_bootstrap_v1",
+        "00_repo_master_docs_bootstrap_v1",
         "00_core_governance_bootstrap_v1",
+        "00_layer1_governance_bootstrap_v1",
     }:
         return
 
@@ -1256,7 +1263,6 @@ def _set_master_docs_aliases(
             idx = step_names.index(step) + 1
         except ValueError:
             idx = 1
-        template_group = state.get("template_group", "")
         job_id = state.get("job_id", "")
         step_dir_rel = f"{template_group}/{job_id}/{idx:02d}_{step}"
 
@@ -1270,7 +1276,21 @@ def _set_master_docs_aliases(
     )
     job_id = str(state.get("job_id") or "00DOC")
 
-    for artifact_key, rel_path in MASTER_DOCS_OUTPUT_PATHS.items():
+    if template_group in {"00_core_governance_bootstrap_v1", "00_layer1_governance_bootstrap_v1"}:
+        output_paths: dict[str, str] = {
+            "SYSTEM_DOCS_INDEX": system_doc_rel("README.md"),
+            "SYSTEM_DOC_STANDARD": system_doc_rel("DOCUMENTATION_STANDARD.md"),
+            "BUNDLE_TAXONOMY": system_doc_rel("BUNDLE_TAXONOMY.md"),
+            "RUNTIME_GOVERNANCE": system_doc_rel("RUNTIME_GOVERNANCE.md"),
+            "SYSTEM_DOCS_VALIDATION": system_doc_rel(f"{job_id}-layer1-governance-validation.md"),
+            "REVIEW_FILE_SUGGESTED": system_doc_rel(f"{job_id}-layer1-governance-review.md"),
+            "AUDIT_FILE_SUGGESTED": system_doc_rel(f"{job_id}-layer1-governance-audit.md"),
+            "BOOTSTRAP_SUMMARY": system_doc_rel(f"{job_id}-bootstrap-summary.md"),
+        }
+    else:
+        output_paths = MASTER_DOCS_OUTPUT_PATHS
+
+    for artifact_key, rel_path in output_paths.items():
         artifact_value = artifacts.get(artifact_key) or rel_path.format(job_id=job_id, mode=mode)
         resolved = resolve_repo_or_runtime_path(
             str(artifact_value),
@@ -1748,6 +1768,7 @@ def build_context(
         return rel_path
     
     ctx["SYSTEM_DOC_ROOT"] = _abs_path(system_doc_rel())
+    ctx["REPO_GOVERNANCE_ROOT"] = _abs_path(repo_governance_rel())
     ctx["DOCS_ROOT"] = _abs_path(docs_root_rel())
     ctx["SYSTEM_TEMPLATE_ROOT"] = FOLDER_KEY_SYSTEM_TEMPLATE_ROOT
     ctx["SYSTEM_DELIVERY_TEMPLATE_ROOT"] = FOLDER_KEY_SYSTEM_DELIVERY_TEMPLATE_ROOT
@@ -1965,6 +1986,7 @@ def build_context(
         artifacts=artifacts,
         produces=produces,
         project_root=(project_root or Path.cwd()),
+        step_cfg=step_cfg,
     )
     _set_bug_fix_aliases(
         ctx=ctx,
@@ -2205,6 +2227,47 @@ Example for a 3-step task:
   mark_complete('{STEP_NAME}', 3, notes='Result written to disk')
 
 Actually call the functions with real arguments — do NOT just describe your answer."""
+
+
+_TOOL_INSTRUCTION_TEMPLATE = """
+
+## Workflow Rules
+
+You MUST use the tools below for EVERY step. Do NOT skip them. Do NOT answer directly without calling them first.
+
+CRITICAL: Do NOT ask any clarifying questions. Do NOT ask for more info. Execute immediately using the tools.
+
+Your step ID is: {STEP_NAME}
+
+### create_todos(step_id, todos)
+Call FIRST. Break the task into concrete steps, one record per todo.
+Usage: python3 -c "import sys; sys.path.insert(0, '{TOOLS_DIR}'); import os; os.environ['PROGRESS_FILE']='{PROGRESS_FILE}'; from agent_tools import create_todos; create_todos('{STEP_NAME}', ['Step 1', 'Step 2'])"
+
+### mark_process(step_id, index, notes='')
+Call immediately BEFORE starting each todo item. This records the `processing` stage. 1-based index.
+Usage: python3 -c "import sys; sys.path.insert(0, '{TOOLS_DIR}'); import os; os.environ['PROGRESS_FILE']='{PROGRESS_FILE}'; from agent_tools import mark_process; mark_process('{STEP_NAME}', 1, notes='Started')"
+
+### mark_complete(step_id, index, notes='')
+Call immediately AFTER finishing each todo item. This records the `completed` stage. 1-based index.
+Usage: python3 -c "import sys; sys.path.insert(0, '{TOOLS_DIR}'); import os; os.environ['PROGRESS_FILE']='{PROGRESS_FILE}'; from agent_tools import mark_complete; mark_complete('{STEP_NAME}', 1, notes='Done')"
+
+## Mandatory Sequence
+1. create_todos(step_id) - list all your steps first
+2. Before starting todo item `i`, call mark_process(step_id, i)
+3. Execute todo item `i`
+4. After finishing todo item `i`, call mark_complete(step_id, i)
+5. Aim to keep every todo item in the standard sequence: `pending` -> `processing` -> `completed`
+
+Example for a 3-step task:
+  create_todos('{STEP_NAME}', ['Read input file', 'Generate output', 'Write result'])
+  mark_process('{STEP_NAME}', 1, notes='Started reading input')
+  mark_complete('{STEP_NAME}', 1, notes='File read successfully')
+  mark_process('{STEP_NAME}', 2, notes='Started generating output')
+  mark_complete('{STEP_NAME}', 2, notes='Output generated')
+  mark_process('{STEP_NAME}', 3, notes='Started writing result')
+  mark_complete('{STEP_NAME}', 3, notes='Result written to disk')
+
+Actually call the functions with real arguments - do NOT just describe your answer."""
 
 
 def render_prompt(template_text: str, context: dict[str, str], step_cfg: dict | None = None) -> str:
@@ -2492,6 +2555,25 @@ def _build_review_target_identifier(*, artifact_key: str, artifact_path: str) ->
 
 
 def _build_new_review_file_path(*, state: dict, step: str, step_cfg: dict) -> str:
+    template_group = str(state.get("template_group") or "").strip()
+    job_id = str(state.get("job_id") or "").strip()
+    mode = str((step_cfg or {}).get("mode") or state.get("current_mode") or "bootstrap").strip()
+
+    if template_group and job_id:
+        try:
+            from .workflow_path_contracts import resolve_workflow_output_paths
+
+            output_paths = resolve_workflow_output_paths(
+                template_group=template_group,
+                job_id=job_id,
+                mode=mode,
+            )
+        except Exception:
+            output_paths = {}
+        workflow_owned_review = str(output_paths.get("REVIEW_FILE_SUGGESTED") or "").strip()
+        if workflow_owned_review:
+            return workflow_owned_review
+
     artifact_key = _review_target_artifact_key(step_cfg)
     if not artifact_key:
         return ""

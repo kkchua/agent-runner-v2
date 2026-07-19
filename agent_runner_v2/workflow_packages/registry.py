@@ -182,7 +182,7 @@ def discover_workflow_package(
 ) -> WorkflowBundle | None:
     """Convenience: discover a single package by name.
 
-    Search order (first match wins):
+    Runtime search path:
     1. ``<workflow_root>/<name>/`` — global runner home workflow bundle directory
        (runtime source of truth; e.g. ``~/.ukbe-runner/workflows/default/``).
        This is the ONLY path used at runtime.
@@ -196,10 +196,6 @@ def discover_workflow_package(
         wf_root = Path(workflow_root).resolve()
         if wf_root.is_dir():
             registry.add_search_path(wf_root)
-    elif project_root is not None:
-        # Only scan project-local when no workflow_root is given
-        # (e.g. unit tests that work with the repo directly).
-        registry.add_search_path(Path(project_root) / "workflows")
     if not registry._loaded:
         registry.discover()
     try:

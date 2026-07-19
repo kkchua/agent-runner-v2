@@ -4,6 +4,7 @@ from pathlib import Path
 
 from agent_runner_v2 import bundle_loader
 from agent_runner_v2 import run_agent as run_agent_module
+from agent_runner_v2.workflow_packages.loader import bundle_to_template_group_dict, load_workflow_package
 from conftest import load_bootstrap_workflow_module
 from agent_runner_v2.workflow_bundle_validator import WorkflowBundleValidationReport
 
@@ -12,6 +13,7 @@ def test_publish_bootstrap_bundle_copies_repo_bootstrap_docs_into_package_bundle
     workspace_root = tmp_path / "workspace"
     source_root = workspace_root / "docs" / "system" / "00_governance" / "bootstrap"
     source_root.mkdir(parents=True, exist_ok=True)
+    (workspace_root / "workflows").mkdir(parents=True, exist_ok=True)
     (source_root / "README.md").write_text("# Bootstrap\n", encoding="utf-8")
     (source_root / "templates" / "delivery").mkdir(parents=True, exist_ok=True)
     (source_root / "templates" / "delivery" / "01_delivery_template_registry.md").write_text("registry", encoding="utf-8")
@@ -37,6 +39,7 @@ def test_publish_bootstrap_bundle_generates_bundle_governance_adapters(tmp_path,
     source_root = workspace_root / "docs" / "system" / "00_governance" / "bootstrap"
     source_root.mkdir(parents=True, exist_ok=True)
     (source_root / "README.md").write_text("# Bootstrap\n", encoding="utf-8")
+    (workspace_root / "workflows").mkdir(parents=True, exist_ok=True)
 
     plugin_root = workspace_root / "workflows" / "sample_bundle"
     (plugin_root / "prompts").mkdir(parents=True, exist_ok=True)
@@ -105,6 +108,7 @@ def test_publish_bootstrap_bundle_copies_shared_registry_into_bootstrap_workflow
     source_root = workspace_root / "docs" / "system" / "00_governance" / "bootstrap"
     source_root.mkdir(parents=True, exist_ok=True)
     (source_root / "README.md").write_text("# Bootstrap\n", encoding="utf-8")
+    (workspace_root / "workflows").mkdir(parents=True, exist_ok=True)
 
     registry_root = workspace_root / "workflows" / "_registry"
     registry_root.mkdir(parents=True, exist_ok=True)
@@ -129,6 +133,7 @@ def test_publish_bootstrap_bundle_resets_bootstrap_workflow_root_before_copy(tmp
     source_root = workspace_root / "docs" / "system" / "00_governance" / "bootstrap"
     source_root.mkdir(parents=True, exist_ok=True)
     (source_root / "README.md").write_text("# Bootstrap\n", encoding="utf-8")
+    (workspace_root / "workflows").mkdir(parents=True, exist_ok=True)
 
     registry_root = workspace_root / "workflows" / "_registry"
     registry_root.mkdir(parents=True, exist_ok=True)
@@ -224,6 +229,30 @@ def test_init_workspace_installs_packaged_bootstrap_bundle_and_seeds_global_exam
     package_bootstrap_root = fake_package_root / "bootstrap" / "bundles" / "core" / "current"
     package_bootstrap_root.mkdir(parents=True, exist_ok=True)
     (package_bootstrap_root / "README.md").write_text("# Packaged Bootstrap\n", encoding="utf-8")
+    source_root = tmp_path / "workspace" / "docs" / "system" / "00_governance" / "foundation" / "current"
+    source_root.mkdir(parents=True, exist_ok=True)
+    (source_root / "README.md").write_text("# Published Governance\n", encoding="utf-8")
+    published_workflows = tmp_path / "workspace" / "docs" / "system" / "00_governance" / "bootstrap" / "workflows" / "sample_bundle"
+    published_workflows.mkdir(parents=True, exist_ok=True)
+    (published_workflows / "workflow.toml").write_text(
+        "\n".join(
+            [
+                "[workflow]",
+                'name = "sample_bundle"',
+                'version = "1"',
+                'job_prefix = "SAMPLE"',
+                "",
+                "[workflow.init]",
+                'step = "one"',
+                'inputs = []',
+                "",
+                "[[step]]",
+                'name = "one"',
+                'action = "step_completion"',
+            ]
+        ),
+        encoding="utf-8",
+    )
     monkeypatch.setattr(bundle_loader, "GLOBAL_RUNNER_HOME", fake_home / ".ukbe-runner")
     monkeypatch.setattr(bundle_loader, "PACKAGE_ROOT", fake_package_root)
     monkeypatch.setattr(bundle_loader, "package_bootstrap_root", lambda: package_bootstrap_root)
@@ -257,13 +286,37 @@ def test_init_workspace_installs_packaged_bootstrap_bundle_and_seeds_global_exam
     )
 
 
-def test_init_workspace_auto_publishes_bootstrap_bundle_when_package_bundle_missing(tmp_path, monkeypatch):
+def test_init_workspace_requires_published_bootstrap_snapshot_when_package_bundle_missing(tmp_path, monkeypatch):
     fake_home = tmp_path / "home"
     fake_package_root = tmp_path / "package"
     workspace_root = tmp_path / "workspace"
     source_root = workspace_root / "docs" / "system" / "00_governance" / "bootstrap"
     source_root.mkdir(parents=True, exist_ok=True)
     (source_root / "README.md").write_text("# Workspace Bootstrap\n", encoding="utf-8")
+    foundation_current = workspace_root / "docs" / "system" / "00_governance" / "foundation" / "current"
+    foundation_current.mkdir(parents=True, exist_ok=True)
+    (foundation_current / "README.md").write_text("# Published Governance\n", encoding="utf-8")
+    published_workflows = source_root / "workflows" / "sample_bundle"
+    published_workflows.mkdir(parents=True, exist_ok=True)
+    (published_workflows / "workflow.toml").write_text(
+        "\n".join(
+            [
+                "[workflow]",
+                'name = "sample_bundle"',
+                'version = "1"',
+                'job_prefix = "SAMPLE"',
+                "",
+                "[workflow.init]",
+                'step = "one"',
+                'inputs = []',
+                "",
+                "[[step]]",
+                'name = "one"',
+                'action = "step_completion"',
+            ]
+        ),
+        encoding="utf-8",
+    )
 
     expected_package_root = fake_package_root / "bootstrap" / "bundles" / "core" / "current"
     bootstrap_workflows_root = fake_package_root / "bootstrap" / "workflows" / "default"
@@ -284,9 +337,8 @@ def test_init_workspace_auto_publishes_bootstrap_bundle_when_package_bundle_miss
     result = bundle_loader.init_workspace(workspace_root)
 
     expected_global_root = fake_home / ".ukbe-runner" / "bundles" / "core" / "current"
-    assert (expected_package_root / "README.md").exists()
     assert (expected_global_root / "README.md").exists()
-    assert result["bootstrap_install"]["package_bootstrap_root"] == str(expected_package_root)
+    assert result["bootstrap_install"]["source_root"] == str(foundation_current)
 
 
 def test_resolve_workflow_root_prefers_global_workflow(tmp_path, monkeypatch):
@@ -296,6 +348,24 @@ def test_resolve_workflow_root_prefers_global_workflow(tmp_path, monkeypatch):
     global_default.mkdir(parents=True)
 
     resolved = bundle_loader.resolve_workflow_root(tmp_path / "workspace", "default", config={"workflows": {}})
+
+    assert resolved == global_default.resolve()
+
+
+def test_resolve_workflow_root_ignores_repo_local_config_override(tmp_path, monkeypatch):
+    fake_home = tmp_path / "home"
+    monkeypatch.setattr(bundle_loader, "GLOBAL_RUNNER_HOME", fake_home / ".ukbe-runner")
+    global_default = fake_home / ".ukbe-runner" / "workflows" / "default"
+    global_default.mkdir(parents=True, exist_ok=True)
+
+    workspace_root = tmp_path / "workspace"
+    (workspace_root / "workflows" / "default").mkdir(parents=True, exist_ok=True)
+
+    resolved = bundle_loader.resolve_workflow_root(
+        workspace_root,
+        "default",
+        config={"workflows": {"default": {"path": "workflows/default"}}},
+    )
 
     assert resolved == global_default.resolve()
 
@@ -314,7 +384,7 @@ def test_load_project_config_uses_global_config(tmp_path, monkeypatch):
 
 def test_bootstrap_root_is_packaged_with_workflow_packages():
     assert bundle_loader.BOOTSTRAP_ROOT.exists()
-    assert (bundle_loader.BOOTSTRAP_ROOT / "00_layer1_governance_bootstrap_v1" / "workflow.toml").exists()
+    assert (bundle_loader.BOOTSTRAP_ROOT / "01_governance_foundation_v1" / "workflow.toml").exists()
     assert (bundle_loader.BOOTSTRAP_ROOT / "_registry").exists()
 
 
@@ -335,10 +405,9 @@ def test_run_agent_resolves_global_workflow_bundle_root(tmp_path, monkeypatch):
 
 
 def test_run_agent_parse_args_supports_bootstrap_publish():
-    args = run_agent_module.parse_args(["bootstrap-publish", "--project-root", "D:\\repo"])
+    args = run_agent_module.parse_args(["bootstrap-publish"])
 
     assert args.command == "bootstrap-publish"
-    assert args.project_root == "D:\\repo"
 
 
 def test_ensure_delivery_folders_omits_master_prompts_and_adds_codebase_docs(tmp_path):
@@ -356,36 +425,57 @@ def test_ensure_delivery_folders_omits_master_prompts_and_adds_codebase_docs(tmp
 
 
 def test_layer1_governance_bootstrap_workflow_definition_exists():
-    template_groups_module = load_bootstrap_workflow_module()
-    group = template_groups_module.TEMPLATE_GROUPS["00_layer1_governance_bootstrap_v1"]
-    assert group["job_prefix"] == "00L1"
+    bundle = load_workflow_package(
+        Path(__file__).resolve().parents[2] / "workflows" / "01_governance_foundation_v1"
+    )
+    group = bundle_to_template_group_dict(bundle)
+    assert group["job_prefix"] == "01GF"
+    assert group["default_max_rejects"] == 3
     assert group["steps"] == [
-        "generate_layer1_governance_docs",
-        "review_layer1_governance_docs",
-        "refine_layer1_governance_docs",
-        "validate_layer1_governance_docs",
-        "audit_layer1_governance_accuracy",
+        "collect_governance_context",
+        "generate_governance_foundation_docs",
+        "review_governance_foundation_docs",
+        "refine_governance_foundation_docs",
+        "validate_governance_foundation_docs",
+        "audit_governance_foundation_docs",
+        "publish_governance_foundation_set",
         "stepCompletion",
     ]
-    assert group["step_configs"]["generate_layer1_governance_docs"]["prompt_file"].endswith(
-        "00_layer1_governance_bootstrap_v1\\prompts\\01_generate_layer1_governance_docs.txt"
+    assert group["step_configs"]["generate_governance_foundation_docs"]["prompt_file"].endswith(
+        "01_governance_foundation_v1\\prompts\\01_generate_governance_foundation_docs.txt"
     )
-    assert group["step_configs"]["generate_layer1_governance_docs"]["produces"] == [
-        "SYSTEM_DOCS_INDEX",
-        "SYSTEM_DOC_STANDARD",
-        "BUNDLE_TAXONOMY",
-        "RUNTIME_GOVERNANCE",
+    assert group["step_configs"]["generate_governance_foundation_docs"]["produces"] == [
+        "L1_FOUNDATION_INDEX",
+        "L1_LAYER_MODEL",
+        "L1_DOCUMENT_AUTHORITY",
+        "L1_BUNDLE_TAXONOMY",
+        "L1_GOVERNANCE_LIFECYCLE",
+        "L1_METADATA_STANDARD",
     ]
-    assert group["step_configs"]["validate_layer1_governance_docs"]["action"] == "validate_layer1_governance_docs"
-    assert group["step_configs"]["audit_layer1_governance_accuracy"]["prompt_file"].endswith(
-        "00_layer1_governance_bootstrap_v1\\prompts\\04_audit_layer1_governance_accuracy.txt"
+    assert group["step_configs"]["collect_governance_context"]["action"] == "collect_governance_context"
+    assert group["step_configs"]["review_governance_foundation_docs"]["required_inputs"] == [
+        "GOVERNANCE_CONTEXT_INVENTORY",
+        "L1_FOUNDATION_INDEX",
+        "L1_LAYER_MODEL",
+        "L1_DOCUMENT_AUTHORITY",
+        "L1_BUNDLE_TAXONOMY",
+        "L1_GOVERNANCE_LIFECYCLE",
+        "L1_METADATA_STANDARD",
+    ]
+    assert group["step_configs"]["validate_governance_foundation_docs"]["action"] == "validate_governance_foundation_docs"
+    assert group["step_configs"]["audit_governance_foundation_docs"]["prompt_file"].endswith(
+        "01_governance_foundation_v1\\prompts\\04_audit_governance_foundation_docs.txt"
     )
+    assert group["step_configs"]["audit_governance_foundation_docs"]["produces"] == [
+        "AUDIT_FILE_SUGGESTED"
+    ]
 
 
 def test_bootstrap_root_contains_only_active_workflow_and_registry():
     names = {path.name for path in bundle_loader.BOOTSTRAP_ROOT.iterdir()}
     assert names == {
-        "00_layer1_governance_bootstrap_v1",
+        "01_governance_foundation_v1",
         "00_bootstrap_lifecycle_admin_v1",
+        "00_repo_master_docs_bootstrap_v1",
         "_registry",
     }
