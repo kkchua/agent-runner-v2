@@ -12,7 +12,7 @@ from __future__ import annotations
 from pathlib import Path, PurePath
 from typing import Any
 
-from agent_runner_v2.constants import get_master_docs_output_paths
+from agent_runner_v2.workflow_path_contracts import resolve_workflow_output_paths
 
 
 def build_context_extensions(
@@ -36,7 +36,11 @@ def build_context_extensions(
     step_names = _master_doc_step_names()
     mode = str((step_cfg or {}).get("mode") or state.get("current_mode") or "bootstrap")
 
-    output_paths = get_master_docs_output_paths(job_id=job_id, mode=mode)
+    output_paths = resolve_workflow_output_paths(
+        template_group="00_repo_master_docs_bootstrap_v1",
+        job_id=job_id,
+        mode=mode,
+    )
 
     step_dir_rel = str(state.get("backend_step_dir_rel") or "").strip()
     if not step_dir_rel and step_names:
@@ -66,13 +70,6 @@ def build_context_extensions(
             meta = str(p.parent / f"{p.stem}.meta.json").replace("\\", "/")
         extensions[f"{artifact_key}_METAJSON"] = meta
 
-    _override_review_output_path(
-        extensions=extensions,
-        state=state,
-        step=step,
-        project_root=project_root,
-    )
-
     return extensions
 
 
@@ -93,26 +90,3 @@ def _master_doc_step_names() -> list[str]:
         "08_validate_master_system_docs",
         "09_finalize_bootstrap",
     ]
-
-
-def _override_review_output_path(
-    *,
-    extensions: dict[str, str],
-    state: dict,
-    step: str,
-    project_root: Path | None,
-) -> None:
-    """Keep Layer 2 review output ownership inside the workflow bundle."""
-    if step != "05_review_master_system_docs":
-        return
-
-    review_rel = PurePath("docs/repo/governance") / f"{str(state.get('job_id') or '00RMD').strip()}-master-system-docs-review.md"
-    if project_root:
-        review_path = str((project_root / review_rel).resolve()).replace("\\", "/")
-    else:
-        review_path = str(review_rel).replace("\\", "/")
-
-    review_meta = str(PurePath(review_path).parent / f"{PurePath(review_path).stem}.meta.json").replace("\\", "/")
-    extensions["REVIEW_FILE_SUGGESTED"] = review_path
-    extensions["REVIEW_FILE_SUGGESTED_PATH"] = review_path
-    extensions["REVIEW_FILE_SUGGESTED_METAJSON"] = review_meta

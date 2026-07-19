@@ -29,13 +29,13 @@ class TestWorkflowRegistry:
         """Verify the real _v2 package is discovered by scanning workflows/."""
         registry = WorkflowRegistry.from_project_root(str(project_root))
         available = registry.list_workflows()
-        assert "00_master_docs_bootstrap_v2" in available
+        assert "00_repo_master_docs_bootstrap_v1" in available
 
     def test_get_returns_loaded_bundle(self, project_root):
         registry = WorkflowRegistry.from_project_root(str(project_root))
-        bundle = registry.get("00_master_docs_bootstrap_v2")
-        assert bundle.name == "00_master_docs_bootstrap_v2"
-        assert bundle.manifest_path.parent.name == "00_master_docs_bootstrap_v2"
+        bundle = registry.get("00_repo_master_docs_bootstrap_v1")
+        assert bundle.name == "00_repo_master_docs_bootstrap_v1"
+        assert bundle.manifest_path.parent.name == "00_repo_master_docs_bootstrap_v1"
 
     def test_discover_is_idempotent(self, project_root):
         registry = WorkflowRegistry.from_project_root(str(project_root))
@@ -63,10 +63,10 @@ class TestWorkflowRegistry:
         registry = WorkflowRegistry()
         registry.add_search_path(str(project_root / "workflows"))
         registry.discover()
-        assert registry.has("00_master_docs_bootstrap_v2")
+        assert registry.has("00_repo_master_docs_bootstrap_v1")
         # Create a new registry with empty path
         registry2 = WorkflowRegistry.create(search_paths=[tmp_path])
-        assert not registry2.has("00_master_docs_bootstrap_v2")
+        assert not registry2.has("00_repo_master_docs_bootstrap_v1")
 
     def test_global_singleton(self):
         from agent_runner_v2.workflow_packages.registry import (

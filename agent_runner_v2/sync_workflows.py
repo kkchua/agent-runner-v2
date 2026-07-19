@@ -20,27 +20,21 @@ from pathlib import Path
 from urllib import error, request
 
 from .config_loader import load_runner_config
-from .runtime_context import PACKAGE_ROOT
 from .workflow_packages.loader import (
     bundle_to_template_group_dict,
     load_workflow_package,
 )
 from .workflow_bundle_validator import validate_workflow_bundle_dir
 
-# Root of the ``workflows/`` directory containing plugin packages IN BOOTSTRAP.
-# Plugin workflows are first developed in repo root workflows/, then published
-# to bootstrap/workflows/default/ via run-bootstrap-publish.bat. The sync script
-# loads from the bootstrap location (source of truth), not the dev location.
-_WORKFLOWS_DIR = PACKAGE_ROOT / "bootstrap" / "workflows" / "default"
+def _workflows_dir() -> Path:
+    return Path.cwd().resolve() / "workflows"
 
 
-def _discover_plugin_workflows() -> dict[str, dict]:
-    """Scan bootstrap workflow root for ``workflow.toml`` packages."""
+def _discover_plugin_workflows(workflows_dir: Path) -> dict[str, dict]:
+    """Scan the current repo workflow root for ``workflow.toml`` packages."""
     plugin_workflows: dict[str, dict] = {}
-    if not _WORKFLOWS_DIR.is_dir():
-        return plugin_workflows
 
-    for candidate in sorted(_WORKFLOWS_DIR.iterdir()):
+    for candidate in sorted(workflows_dir.iterdir()):
         if not candidate.is_dir():
             continue
         manifest = candidate / "workflow.toml"
@@ -57,10 +51,10 @@ def _discover_plugin_workflows() -> dict[str, dict]:
 
     return plugin_workflows
 
-def _load_all_workflows() -> dict[str, dict]:
-    """Load packaged workflow definitions from bootstrap workflow packages."""
-    plugin = _discover_plugin_workflows()
-    print(f"[sync] Discovered {len(plugin)} workflow packages from bootstrap", file=sys.stderr)
+def _load_all_workflows(workflows_dir: Path) -> dict[str, dict]:
+    """Load workflow definitions from the current repo workflow packages."""
+    plugin = _discover_plugin_workflows(workflows_dir)
+    print(f"[sync] Discovered {len(plugin)} workflow packages from {workflows_dir}", file=sys.stderr)
     return plugin
 
 
@@ -122,7 +116,7 @@ def _print_sync_summary(*, synced: list[str], validation_failed: list[str], tran
         print(f"  backend_failed_workflows: {', '.join(transport_failed)}", file=sys.stderr)
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     cfg = load_runner_config()
     parser = argparse.ArgumentParser(
         description=(
@@ -134,8 +128,8 @@ def main() -> int:
         "workflow_names",
         nargs="*",
         help=(
-            "Workflow names to sync. If omitted, syncs every packaged workflow "
-            "from bootstrap workflow.toml packages."
+            "Workflow names to sync. If omitted, syncs every workflow.toml package "
+            "under the current repository workflows/ folder."
         ),
     )
     parser.add_argument(
@@ -151,9 +145,16 @@ def main() -> int:
         default=True,
         help="Keep existing execution history when definitions change.",
     )
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
+    workflows_dir = _workflows_dir()
+    if not workflows_dir.is_dir():
+        print(
+            f"ERROR: Required workflow source folder is missing: {workflows_dir}",
+            file=sys.stderr,
+        )
+        return 2
 
-    workflows = _load_all_workflows()
+    workflows = _load_all_workflows(workflows_dir)
     workflow_names = args.workflow_names or sorted(workflows.keys())
 
     missing = [name for name in workflow_names if name not in workflows]
@@ -174,7 +175,7 @@ def main() -> int:
     validation_failed: list[str] = []
     transport_failed: list[str] = []
     for workflow_name in workflow_names:
-        bundle_dir = _WORKFLOWS_DIR / workflow_name
+        bundle_dir = workflows_dir / workflow_name
         validation = validate_workflow_bundle_dir(bundle_dir)
         if not validation.valid:
             _print_validation_failure(workflow_name, validation)

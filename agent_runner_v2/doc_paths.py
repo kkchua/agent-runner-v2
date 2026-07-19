@@ -6,8 +6,8 @@ This module re-exports all path-related constants and functions from constants.p
 for backward compatibility with existing imports throughout the codebase.
 """
 
-# Re-export everything from constants module
-from .constants import (
+# Re-export active path primitives and path catalogs first.
+from .path_primitives import (
     # Base folder key constants
     FOLDER_KEY_DOCS,
     FOLDER_KEY_SYSTEM_DOC_ROOT,
@@ -43,6 +43,8 @@ from .constants import (
     docs_root_rel,
     system_template_rel,
     architecture_site_rel,
+)
+from .path_catalog import (
 
     # Path mapping functions
     known_artifact_paths,

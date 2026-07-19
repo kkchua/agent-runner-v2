@@ -12,7 +12,7 @@ class _FailingBackendClient:
     def submit_run(self, **_kwargs):
         raise RuntimeError(
             "Backend request failed: POST /api/runs status=404 "
-            "body={\"detail\":\"Workflow '00_master_docs_bootstrap_v2' not found\"}"
+            "body={\"detail\":\"Workflow '00_repo_master_docs_bootstrap_v1' not found\"}"
         )
 
 
@@ -23,7 +23,7 @@ def test_submit_command_returns_json_error_when_backend_rejects(monkeypatch, cap
     exit_code = submit_commands.main(
         [
             "--workflow-name",
-            "00_master_docs_bootstrap_v2",
+            "00_repo_master_docs_bootstrap_v1",
             "--project-root",
             "D:/MyProjectSpace/01_Workflows/agent-runner-v2",
         ]
@@ -34,4 +34,4 @@ def test_submit_command_returns_json_error_when_backend_rejects(monkeypatch, cap
     payload = json.loads(captured.err.strip())
     assert payload["status"] == "error"
     assert payload["code"] == "workflow_not_found"
-    assert "Workflow '00_master_docs_bootstrap_v2' is not registered in the backend" in payload["message"]
+    assert "Workflow '00_repo_master_docs_bootstrap_v1' is not registered in the backend" in payload["message"]

@@ -87,7 +87,7 @@ def validate_documentation_plan(*, project_root: Path, plan: DocumentationValida
                 "path": rel_path,
                 "section": section,
                 "ok": has,
-                "detail": "found" if has else "missing",
+                "detail": "found" if has else f"missing section `{section}`",
             })
 
     for rel_path, template_id in plan.template_ids.items():

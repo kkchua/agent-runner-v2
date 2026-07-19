@@ -387,6 +387,9 @@ def create_job(group_name: str, group_cfg: dict[str, Any], seed_artifacts: dict[
         "template_group": group_name,
         "runner_version": "v2",
         "job_init_step": group_cfg["job_init_step"],
+        "workflow_artifact_keys": [
+            a["key"] for a in group_cfg.get("artifact_registry", [])
+        ],
         "job_status": "IN_PROGRESS",
         "status": "IN_PROGRESS",
         "current_step": group_cfg["job_init_step"],
@@ -655,7 +658,11 @@ def _repair_master_bootstrap_artifacts(state: dict[str, Any]) -> None:
 
     job_id = str(state.get("job_id") or "").strip()
     mode = str((state.get("current_step_cfg") or {}).get("mode") or state.get("current_mode") or "bootstrap")
-    candidates = master_bootstrap_artifact_candidates(job_id=job_id, mode=mode)
+    candidates = master_bootstrap_artifact_candidates(
+        template_group=str(state.get("template_group") or ""),
+        job_id=job_id,
+        mode=mode,
+    )
     artifacts = state.setdefault("artifacts", {})
 
     for artifact_key, path_candidates in candidates.items():

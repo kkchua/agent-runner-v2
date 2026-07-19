@@ -1,91 +1,79 @@
 {
   "role_policies": {
     "architect_standard": {
-      "default_role": "architect_primary",
+      "default_role": "zen_go_deepseek-v4-pro",
       "allowed_roles": [
-        "architect_primary",
-        "architect_secondary",
-        "architect_tertiary"
+        "bailian_qwen3.7-plus",
+        "bailian_glm-5",
+        "deepseek_deepseek-v4-pro",
+		"agnes-2.0-flash",
+		"zen_go_deepseek-v4-pro",
+		"architect_test_bailian",
+		"zen_go_glm_52"
       ]
     },
     "reviewer_standard": {
-      "default_role": "review_primary",
+      "default_role": "bailian_qwen3.7-plus",
       "allowed_roles": [
-        "review_primary",
-        "review_secondary",
-        "review_tertiary"
+        "bailian_qwen3.7-plus",
+        "bailian_glm-5",
+        "bailian_MiniMax-M2.5"
       ]
     },
-    "architect_policy": {
-      "default_role": "architect_primary",
+    "refine_standard": {
+      "default_role": "bailian_glm-5",
       "allowed_roles": [
-        "architect_primary",
-        "architect_secondary",
-        "architect_tertiary"
+        "bailian_glm-5",
+        "bailian_qwen3.7-plus",
+        "zen_go_deepseek-v4-pro"
       ]
     },
-    "review_policy": {
-      "default_role": "review_primary",
+    "plan_standard": {
+      "default_role": "zen_go_deepseek-v4-pro",
       "allowed_roles": [
-        "review_primary",
-        "review_secondary",
-        "review_tertiary"
+        "bailian_qwen3.7-plus",
+        "bailian_glm-5",
+        "zen_go_deepseek-v4-pro"
       ]
     },
-    "refine_policy": {
-      "default_role": "refine_primary",
+    "implement_standard": {
+      "default_role": "zen_go_deepseek-v4-pro",
       "allowed_roles": [
-        "refine_primary",
-        "refine_secondary",
-        "refine_tertiary"
+        "zen_go_deepseek-v4-pro",
+        "bailian_qwen3.7-plus",
+        "bailian_qwen3-coder-next"
       ]
     },
-    "plan_policy": {
-      "default_role": "plan_primary",
+    "execution_standard": {
+      "default_role": "bailian_glm-5",
       "allowed_roles": [
-        "plan_primary",
-        "plan_secondary",
-        "plan_tertiary"
+        "bailian_glm-5",
+        "bailian_qwen3.7-plus",
+        "zen_go_deepseek-v4-pro"
       ]
     },
-    "implement_policy": {
-      "default_role": "implement_primary",
+    "validation_standard": {
+      "default_role": "bailian_qwen3.7-plus",
       "allowed_roles": [
-        "implement_primary",
-        "implement_secondary",
-        "implement_tertiary"
+        "bailian_qwen3.7-plus",
+        "zen_go_deepseek-v4-pro",
+        "bailian_glm-5"
       ]
     },
-    "execution_policy": {
-      "default_role": "execution_primary",
+    "code_fix_standard": {
+      "default_role": "bailian_MiniMax-M2.5",
       "allowed_roles": [
-        "execution_primary",
-        "execution_secondary",
-        "execution_tertiary"
+        "bailian_MiniMax-M2.5",
+        "bailian_qwen3-coder-plus",
+        "zen_go_deepseek-v4-pro"
       ]
     },
-    "validation_policy": {
-      "default_role": "validation_primary",
+    "documentation_standard": {
+      "default_role": "bailian_kimi-k2.5",
       "allowed_roles": [
-        "validation_primary",
-        "validation_secondary",
-        "validation_tertiary"
-      ]
-    },
-    "code_fix_policy": {
-      "default_role": "code_fix_primary",
-      "allowed_roles": [
-        "code_fix_primary",
-        "code_fix_secondary",
-        "code_fix_tertiary"
-      ]
-    },
-    "documentation_policy": {
-      "default_role": "documentation_primary",
-      "allowed_roles": [
-        "documentation_primary",
-        "documentation_secondary",
-        "documentation_tertiary"
+        "bailian_kimi-k2.5",
+        "bailian_qwen3.7-plus",
+        "bailian_qwen3-coder-plus"
       ]
     }
   }

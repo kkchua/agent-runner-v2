@@ -6,6 +6,17 @@ from typing import Any, Callable
 from .state_defaults import default_loop_context, default_replan_context
 
 
+def _classify_reject_kind(step: str) -> str:
+    normalized = step.strip().lower()
+    if "validate" in normalized or "validation" in normalized:
+        return "validation"
+    if "audit" in normalized:
+        return "audit"
+    if "review" in normalized:
+        return "review"
+    return "reject"
+
+
 def handle_recovery_budget_exceeded(
     *,
     state: dict[str, Any],
@@ -57,14 +68,20 @@ def activate_refine_loop(
         iteration=iteration,
     )
     timestamp = now_iso()
+    reject_kind = _classify_reject_kind(step)
     state.setdefault("loop_history", []).append(
         {
             "iteration": iteration,
             "loop_step": step,
             "refine_step": refine_step,
-            "review_result": "REJECTED",
+            "reject_step": step,
+            "reject_kind": reject_kind,
+            "reject_result": "REJECTED",
+            "reject_file": review_file,
+            "reject_at": timestamp,
+            "review_result": "REJECTED" if reject_kind == "review" else None,
             "review_file": review_file,
-            "review_at": timestamp,
+            "review_at": timestamp if reject_kind == "review" else None,
             "refine_result": None,
             "refine_at": None,
             "started_at": timestamp,

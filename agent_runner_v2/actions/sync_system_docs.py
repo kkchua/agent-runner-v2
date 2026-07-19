@@ -14,21 +14,12 @@ from ..action_result import ActionResult
 from ..doc_paths import codebase_doc_rel, system_doc_rel
 from ..codebase_docs import build_snapshot
 from ..system_docs import (
-    render_bundle_migration_plan,
     render_bundle_taxonomy,
-    render_business_capabilities,
-    render_component_architecture,
-    render_decision_log,
-    render_developer_guide,
     render_documentation_standard,
-    render_functional_spec,
-    render_nfr,
-    render_runbook,
-    render_system_context,
     render_system_docs_change_log,
     render_system_file_structure,
     render_system_index,
-    render_system_overview,
+    render_runtime_governance,
 )
 from ..runtime_context import write_meta_sidecar
 
@@ -85,17 +76,7 @@ def sync_system_docs(*, context: dict[str, str], state: dict, step_cfg: dict, pr
         system_doc_rel("README.md"): render_system_index(snapshot, repo_name=repo_name),
         system_doc_rel("DOCUMENTATION_STANDARD.md"): render_documentation_standard(snapshot),
         system_doc_rel("BUNDLE_TAXONOMY.md"): render_bundle_taxonomy(snapshot),
-        system_doc_rel("BUNDLE_MIGRATION_PLAN.md"): render_bundle_migration_plan(snapshot),
-        system_doc_rel("SYSTEM_OVERVIEW.md"): render_system_overview(snapshot, repo_name=repo_name),
-        system_doc_rel("BUSINESS_CAPABILITIES.md"): render_business_capabilities(snapshot),
-        system_doc_rel("FUNCTIONAL_SPEC.md"): render_functional_spec(snapshot, repo_name=repo_name),
-        system_doc_rel("NON_FUNCTIONAL_REQUIREMENTS.md"): render_nfr(snapshot),
-        system_doc_rel("SYSTEM_CONTEXT.md"): render_system_context(snapshot, repo_name=repo_name),
-        system_doc_rel("COMPONENT_ARCHITECTURE.md"): render_component_architecture(snapshot),
-        system_doc_rel("DECISION_LOG.md"): render_decision_log(snapshot),
-        system_doc_rel("SYSTEM_FILE_STRUCTURE.md"): render_system_file_structure(snapshot),
-        system_doc_rel("DEVELOPER_GUIDE.md"): render_developer_guide(snapshot),
-        system_doc_rel("RUNBOOK.md"): render_runbook(snapshot),
+        system_doc_rel("RUNTIME_GOVERNANCE.md"): render_runtime_governance(snapshot),
     }
 
     doc_paths = list(docs_to_write.keys())

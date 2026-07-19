@@ -12,6 +12,7 @@ import json
 import os
 import re
 import sys
+from pathlib import Path
 
 from .backend_client import BackendClient
 from .config_loader import load_runner_config
@@ -54,8 +55,8 @@ def main(argv: list[str] | None = None) -> int:
         description="Submit a run to the agent-runner-backend API.",
     )
     p.add_argument("--workflow-name", required=True, help="Workflow name, e.g. delivery_scaffold_v1")
-    p.add_argument("--project-root", default="", help="Project root path for the run.")
-    p.add_argument("--target-project-root", default="", help="Target repository root for workflows that write into a project tree.")
+    p.add_argument("--project-root", default="", help="Reserved for compatibility; must match the current repository root.")
+    p.add_argument("--target-project-root", default="", help="Not supported under the single-repo contract; must match the current repository root when provided.")
     p.add_argument("--workspace-path", default="", help="Workspace path override.")
     p.add_argument("--initiative-id", default="", help="Initiative ID to link to this run.")
     p.add_argument("--worker-id", default="", help="Pin run to a specific worker ID.")
@@ -72,6 +73,20 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--env", action="append", default=[], metavar="KEY=VALUE",
                    help="env_overrides key=value (repeatable).")
     args = p.parse_args(argv)
+    cwd_root = Path.cwd().resolve()
+
+    if args.project_root and Path(args.project_root).resolve() != cwd_root:
+        print(
+            f"ERROR: --project-root must match the current repository root under the single-repo contract: {cwd_root}",
+            file=sys.stderr,
+        )
+        return 2
+    if args.target_project_root and Path(args.target_project_root).resolve() != cwd_root:
+        print(
+            f"ERROR: --target-project-root is not supported under the single-repo contract: {cwd_root}",
+            file=sys.stderr,
+        )
+        return 2
 
     cfg = _load_config()
 
@@ -94,11 +109,11 @@ def main(argv: list[str] | None = None) -> int:
             target_worker_id=worker_id or None,
             assigned_provider=args.assigned_provider or None,
             coder_override=args.coder or None,
-            project_root=args.project_root or None,
+            project_root=str(cwd_root),
             workspace_path=args.workspace_path or None,
             repo_url=args.repo_url or None,
             repo_ref=args.repo_ref or None,
-            target_project_root=args.target_project_root or None,
+            target_project_root=str(cwd_root),
             worker_label=worker_label,
             input_payload=_parse_kv(args.input, "--input"),
             context_payload=_parse_kv(args.context, "--context"),

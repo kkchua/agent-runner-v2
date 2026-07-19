@@ -26,7 +26,7 @@ set "BACKEND_URL="
 REM Optional daemon tuning (leave blank to use config.json / CLI defaults)
 set "STEP_SPEC_SOURCE=backend"
 set "POLL_SECONDS="
-set "MAX_PARALLEL="
+set "MAX_PARALLEL=2"
 set "RUNTIME_DIR="
 set "LOG_FILE="
 set "STALLED_SECONDS="

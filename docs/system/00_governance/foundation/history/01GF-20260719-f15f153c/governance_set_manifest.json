@@ -1,0 +1,23 @@
+{
+  "workflow_id": "01_governance_foundation_v1",
+  "workflow_layer": "layer1",
+  "change_or_run_id": "01GF-20260719-f15f153c",
+  "change_class": "governance_change",
+  "artifact_inventory": {
+    "L1_FOUNDATION_INDEX": "docs/system/00_governance/foundation/current/README.md",
+    "L1_LAYER_MODEL": "docs/system/00_governance/foundation/current/LAYER_MODEL.md",
+    "L1_DOCUMENT_AUTHORITY": "docs/system/00_governance/foundation/current/DOCUMENT_AUTHORITY.md",
+    "L1_BUNDLE_TAXONOMY": "docs/system/00_governance/foundation/current/BUNDLE_TAXONOMY.md",
+    "L1_GOVERNANCE_LIFECYCLE": "docs/system/00_governance/foundation/current/GOVERNANCE_LIFECYCLE.md",
+    "L1_METADATA_STANDARD": "docs/system/00_governance/foundation/current/METADATA_STANDARD.md"
+  },
+  "artifact_permanence_class": "permanent",
+  "authority": "workflow-generated",
+  "lifecycle_status": "published",
+  "source_step": "publish_governance_foundation_set",
+  "published_timestamp": "2026-07-19T19:39:51+08:00",
+  "effective_version": "01GF-20260719-f15f153c",
+  "active_set": true,
+  "supersedes": "01GF-20260719-61ae0105",
+  "superseded_by": null
+}

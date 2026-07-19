@@ -2,7 +2,7 @@
 REM run-init.bat - Install the packaged bootstrap bundle into runner home and seed workflows
 REM
 REM Usage:
-REM   %~nx0 [--project-root <path>] [--workflow <name>] [--bundle-domain <name>] [--bundle-profile <name>]
+REM   %~nx0 [--workflow <name>] [--bundle-domain <name>] [--bundle-profile <name>]
 REM
 REM Sequence:
 REM   1. Run run-bootstrap-publish.bat after changing bootstrap docs or repo workflow packages.
@@ -24,7 +24,6 @@ if exist "%~dp0.venv\Scripts\activate.bat" (
 )
 
 set "UKBE_CLI=ukbe-run-agent"
-set "PROJECT_ROOT=%CD%"
 set "WORKFLOW=default"
 set "BUNDLE_DOMAIN=general"
 set "BUNDLE_PROFILE=core+workflow"
@@ -33,16 +32,6 @@ set "BUNDLE_PROFILE=core+workflow"
 if "%~1"=="" goto :check_args
 if /I "%~1"=="--help" goto :usage
 if /I "%~1"=="/?" goto :usage
-if /I "%~1"=="--project-root" (
-    if "%~2"=="" (
-        echo ERROR: --project-root requires a path argument.
-        exit /b 1
-    )
-    set "PROJECT_ROOT=%~2"
-    shift
-    shift
-    goto :parse_args
-)
 if /I "%~1"=="--workflow" (
     if "%~2"=="" (
         echo ERROR: --workflow requires a value.
@@ -86,17 +75,17 @@ if errorlevel 1 (
     exit /b 1
 )
 
-if not exist "%PROJECT_ROOT%" (
-    echo ERROR: Project root does not exist: %PROJECT_ROOT%
+if not exist "%CD%\docs\system\00_governance\bootstrap" (
+    echo ERROR: Required bootstrap snapshot folder is missing: %CD%\docs\system\00_governance\bootstrap
     exit /b 1
 )
 
-set "CMD=%UKBE_CLI% init --project-root "%PROJECT_ROOT%" --workflow "%WORKFLOW%" --bundle-domain "%BUNDLE_DOMAIN%" --bundle-profile "%BUNDLE_PROFILE%""
+set "CMD=%UKBE_CLI% init --workflow "%WORKFLOW%" --bundle-domain "%BUNDLE_DOMAIN%" --bundle-profile "%BUNDLE_PROFILE%""
 
 echo ===========================================================================
 echo  Runner Init
 echo ===========================================================================
-echo  Project root:     %PROJECT_ROOT%
+echo  Repository root:  %CD%
 echo  Workflow:         %WORKFLOW%
 echo  Bundle domain:    %BUNDLE_DOMAIN%
 echo  Bundle profile:   %BUNDLE_PROFILE%
@@ -122,5 +111,5 @@ echo Init completed successfully.
 exit /b 0
 
 :usage
-echo Usage: %~nx0 [--project-root ^<path^>] [--workflow ^<name^>] [--bundle-domain ^<name^>] [--bundle-profile ^<name^>]
+echo Usage: %~nx0 [--workflow ^<name^>] [--bundle-domain ^<name^>] [--bundle-profile ^<name^>]
 goto :eof

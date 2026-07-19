@@ -1,0 +1,37 @@
+{
+  "required_prompt_files": [
+    "prompts/01_generate_governance_foundation_docs.txt",
+    "prompts/02_review_governance_foundation_docs.txt",
+    "prompts/03_refine_governance_foundation_docs.txt",
+    "prompts/04_audit_governance_foundation_docs.txt"
+  ],
+  "required_prompt_markers": {
+    "prompts/01_generate_governance_foundation_docs.txt": [
+      "Objective",
+      "Layer Boundary",
+      "Output Instructions"
+    ],
+    "prompts/02_review_governance_foundation_docs.txt": [
+      "Objective",
+      "Forbidden Content",
+      "Review Decision"
+    ],
+    "prompts/03_refine_governance_foundation_docs.txt": [
+      "Objective",
+      "Forbidden Content",
+      "Output Instructions"
+    ],
+    "prompts/04_audit_governance_foundation_docs.txt": [
+      "Objective",
+      "Forbidden Content",
+      "Audit Decision"
+    ]
+  },
+  "required_rejection_terms": [
+    "runtime",
+    "registry",
+    "Layer 2",
+    "Layer 3",
+    "reject"
+  ]
+}

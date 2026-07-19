@@ -75,7 +75,7 @@ def _module_area(rel_path: str) -> str:
         return "core"
     if rel.name in {"job_state.py", "runtime_context.py", "execution_request.py", "execution_result.py"}:
         return "state"
-    if rel.name in {"coder_adapters.py", "model_config.py"}:
+    if rel.name in {"coder_adapters.py", "coder_registry.py"}:
         return "coder"
     if rel.name in {"bundle_loader.py", "template_groups.py"}:
         return "bootstrap"
@@ -563,6 +563,33 @@ def _find_test_references(project_root: Path, module_record: dict[str, Any]) -> 
     return refs
 
 
+def _normalize_workflow_metadata_path(path_value: str) -> str:
+    value = str(path_value or "").strip()
+    if not value:
+        return ""
+
+    path = Path(value)
+    if not path.is_absolute():
+        return path.as_posix()
+
+    ctx = get_context()
+    workflow_root = getattr(ctx, "workflow_root", None)
+    if isinstance(workflow_root, Path):
+        try:
+            return path.relative_to(workflow_root).as_posix()
+        except ValueError:
+            pass
+
+    workspace_root = getattr(ctx, "workspace_root", None)
+    if isinstance(workspace_root, Path):
+        try:
+            return path.relative_to(workspace_root).as_posix()
+        except ValueError:
+            pass
+
+    return path.name
+
+
 def _workflow_family_records() -> list[dict[str, Any]]:
     bundle = get_workflow_module()
     if bundle is None:
@@ -581,7 +608,7 @@ def _workflow_family_records() -> list[dict[str, Any]]:
                 "step": step_name,
                 "kind": "action" if step_cfg.get("action") else "coder",
                 "coder": (step_cfg.get("coder") or {}).get("default", ""),
-                "prompt_file": step_cfg.get("prompt_file", ""),
+                "prompt_file": _normalize_workflow_metadata_path(step_cfg.get("prompt_file", "")),
                 "produces": list(step_cfg.get("produces") or []),
             })
         records.append({

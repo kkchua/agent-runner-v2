@@ -93,6 +93,34 @@ class BackendClient:
     def get_run(self, *, run_id: str) -> dict[str, Any]:
         return self._request('GET', f'/api/runs/{run_id}')
 
+    def list_runs(
+        self,
+        *,
+        repo_path: str | None = None,
+        workflow_name: str | None = None,
+        status_group: str | None = None,
+        worker_id: str | None = None,
+    ) -> dict[str, Any]:
+        query: dict[str, str] = {}
+        if repo_path:
+            query["repo_path"] = repo_path
+        if workflow_name:
+            query["workflow_name"] = workflow_name
+        if status_group:
+            query["status_group"] = status_group
+        if worker_id:
+            query["worker_id"] = worker_id
+        return self._request('GET', '/api/runs', query=query)
+
+    def stop_run(self, *, run_id: str, reason: str | None = None, mode: str = "after_current_step") -> dict[str, Any]:
+        payload: dict[str, Any] = {"mode": mode}
+        if reason is not None:
+            payload["reason"] = reason
+        return self._request('POST', f'/api/runs/{run_id}/stop', payload)
+
+    def reset_run_step(self, *, run_id: str, step_name: str) -> dict[str, Any]:
+        return self._request('POST', f'/api/runs/{run_id}/reset-step', {"step_name": step_name})
+
     def register_worker(self, *, worker_id: str, host_name: str | None = None, capabilities: dict[str, Any] | None = None, worker_label: str = "live") -> dict[str, Any]:
         return self._request('POST', '/api/workers/register', {
             'worker_id': worker_id,
@@ -153,3 +181,10 @@ class BackendClient:
 
     def create_event(self, *, run_id: str, payload: dict[str, Any]) -> dict[str, Any]:
         return self._request('POST', f'/api/runs/{run_id}/events', payload)
+
+    def cleanup_execution(self, *, workflow_name: str, dry_run: bool = False) -> dict[str, Any]:
+        return self._request('POST', '/api/admin/execution/cleanup', {
+            "dry_run": dry_run,
+            "include_workers": False,
+            "scope": {"workflow_name": workflow_name},
+        })

@@ -33,6 +33,7 @@ from .workflow_bundle_validator import WorkflowBundleValidationReport, validate_
 GLOBAL_RUNNER_HOME = Path.home() / DEFAULT_RUNNER_HOME
 BOOTSTRAP_ROOT = PACKAGE_ROOT / "bootstrap" / "workflows" / "default"
 BOOTSTRAP_SOURCE_ROOT = Path(system_doc_rel())
+FOUNDATION_CURRENT_ROOT_REL = "docs/system/00_governance/foundation/current"
 PACKAGE_BOOTSTRAP_ROOT = PACKAGE_ROOT / "bootstrap" / "bundles" / CORE_BUNDLE_NAME / "current"
 PACKAGED_BOOTSTRAP_EXCLUDE_PATTERNS = (
     "*-bootstrap-change-log.md",
@@ -102,6 +103,10 @@ def bootstrap_source_root(workspace_root: Path) -> Path:
     return (workspace_root / BOOTSTRAP_SOURCE_ROOT).resolve()
 
 
+def published_workflows_root(workspace_root: Path) -> Path:
+    return bootstrap_source_root(workspace_root) / "workflows"
+
+
 def _replace_tree(source_root: Path, target_root: Path) -> None:
     if not source_root.exists():
         raise FileNotFoundError(f"Source tree does not exist: {source_root}")
@@ -128,6 +133,9 @@ def _cleanup_packaged_bootstrap(root: Path) -> None:
         for candidate in root.rglob(pattern):
             if candidate.is_file():
                 candidate.unlink()
+    packaged_workflows = root / "workflows"
+    if packaged_workflows.exists():
+        shutil.rmtree(packaged_workflows)
 
 
 def _copy_plugin_workflows_to_bootstrap(
@@ -225,8 +233,16 @@ def _discover_template_groups_from_packages(workflow_root: Path) -> dict[str, di
     return template_groups
 
 
-def _build_workflow_module_from_packages(workflow_root: Path, workflow_name: str) -> ModuleType:
+def _build_workflow_module_from_packages(
+    workflow_root: Path,
+    workflow_name: str,
+    *,
+    workspace_root: Path | None = None,
+) -> ModuleType:
     template_groups = _discover_template_groups_from_packages(workflow_root)
+    repo_workflow_root = (workspace_root / "workflows").resolve() if workspace_root is not None else None
+    if repo_workflow_root is not None and repo_workflow_root != workflow_root.resolve():
+        template_groups.update(_discover_template_groups_from_packages(repo_workflow_root))
     if not template_groups:
         raise FileNotFoundError(
             f"No workflow packages found under {workflow_root}. Expected one or more "
@@ -263,17 +279,27 @@ def publish_bootstrap_bundle(
     source_root = (source_root or bootstrap_source_root(workspace_root)).resolve()
     package_root = (package_root or package_bootstrap_root()).resolve()
     plugin_workflows_root = (plugin_workflows_root or workspace_root / "workflows").resolve()
+    published_workflow_root = published_workflows_root(workspace_root)
     shared_registry_root = (workspace_root / "workflows" / "_registry").resolve()
+    if not plugin_workflows_root.is_dir():
+        raise FileNotFoundError(
+            f"Required workflow source folder is missing: {plugin_workflows_root}. "
+            "Expected repo-local workflow bundles under ./workflows."
+        )
     validation_reports = _ensure_repo_workflow_bundles_valid(plugin_workflows_root)
 
-    # 1. Copy governance docs when present; otherwise create an empty packaged
-    # bootstrap root so workflow package publishing can still proceed.
-    source_docs_included = source_root.exists()
-    if source_docs_included:
-        _replace_tree(source_root, package_root)
-        _cleanup_packaged_bootstrap(package_root)
-    else:
-        _reset_tree(package_root)
+    source_root.mkdir(parents=True, exist_ok=True)
+
+    # Publish the repo workflow snapshot into docs/system/00_governance/bootstrap/workflows.
+    _reset_tree(published_workflow_root)
+    published_registry = _copy_shared_registry(shared_registry_root, published_workflow_root)
+    published_workflows = _copy_plugin_workflows_to_bootstrap(plugin_workflows_root, published_workflow_root)
+
+    # Keep the packaged bootstrap bundle in sync for local packaging workflows.
+    # The packaged core bundle should contain only the bootstrap docs/assets;
+    # runtime workflow packages are seeded from bootstrap/workflows/default.
+    _replace_tree(source_root, package_root)
+    _cleanup_packaged_bootstrap(package_root)
 
     # 2. Rebuild bootstrap workflows/default/ from repo-root workflows/
     bootstrap_wf_root = BOOTSTRAP_ROOT
@@ -284,7 +310,10 @@ def publish_bootstrap_bundle(
     publish_manifest = {
         "workspace_root": str(workspace_root),
         "source_root": str(source_root),
-        "source_docs_included": source_docs_included,
+        "source_docs_included": True,
+        "published_workflow_root": str(published_workflow_root),
+        "published_registry_copied": bool(published_registry),
+        "published_workflows_copied": [p.name for p in published_workflows],
         "shared_registry_copied": bool(copied_registry),
         "plugin_workflows_copied": [p.name for p in copied],
     }
@@ -296,9 +325,12 @@ def publish_bootstrap_bundle(
     return {
         "workspace_root": str(workspace_root),
         "source_root": str(source_root),
+        "published_workflow_root": str(published_workflow_root),
         "package_bootstrap_root": str(package_root),
         "bundle_name": CORE_BUNDLE_NAME,
-        "source_docs_included": source_docs_included,
+        "source_docs_included": True,
+        "published_registry_copied": bool(published_registry),
+        "published_workflows_copied": [p.name for p in published_workflows],
         "shared_registry_copied": bool(copied_registry),
         "plugin_workflows_copied": [p.name for p in copied],
         "validated_workflows": [report.workflow_name for report in validation_reports],
@@ -311,42 +343,34 @@ def publish_bootstrap_bundle(
 def install_bootstrap_bundle(
     workspace_root: Path,
     *,
-    package_root: Path | None = None,
     runner_home: Path | None = None,
 ) -> dict:
     workspace_root = workspace_root.resolve()
-    package_root = (package_root or package_bootstrap_root()).resolve()
     runner_home = (runner_home or GLOBAL_RUNNER_HOME).resolve()
-    if not _tree_has_files(package_root):
-        source_root = bootstrap_source_root(workspace_root)
-        if source_root.exists():
-            publish_bootstrap_bundle(
-                workspace_root,
-                source_root=source_root,
-                package_root=package_root,
-            )
-    if not _tree_has_files(package_root):
+    source_root = (workspace_root / FOUNDATION_CURRENT_ROOT_REL).resolve()
+    if not source_root.is_dir():
         raise FileNotFoundError(
-            f"Packaged bootstrap bundle is missing or empty: {package_root}. "
-            "Run bootstrap-publish first or install a package build that includes the bundle."
+            f"Required foundation current folder is missing: {source_root}. "
+            "Run the Layer 1 governance workflow and publish the set first."
+        )
+    if not _tree_has_files(source_root):
+        raise FileNotFoundError(
+            f"Foundation current folder is empty: {source_root}. "
+            "Run the Layer 1 governance workflow and publish the set first."
         )
     global_root = runner_home / "bundles" / CORE_BUNDLE_NAME / "current"
-    _replace_tree(package_root, global_root)
+    if global_root.exists():
+        _backup_workflow_folder(global_root)
+    shutil.copytree(str(source_root), str(global_root))
     return {
         "workspace_root": str(workspace_root),
-        "package_bootstrap_root": str(package_root),
+        "source_root": str(source_root),
         "global_bootstrap_root": str(global_root),
         "bundle_name": CORE_BUNDLE_NAME,
     }
 
 
 def resolve_workflow_root(workspace_root: Path, workflow_name: str, *, config: dict | None = None) -> Path:
-    workflow_cfg_map = (config or {}).get("workflows") or {}
-    workflow_cfg = workflow_cfg_map.get(workflow_name) or {}
-    workflow_path = workflow_cfg.get("path")
-    if workflow_path:
-        return (workspace_root / workflow_path).resolve()
-
     global_root = global_workflow_root(workflow_name)
     if global_root.exists():
         return global_root.resolve()
@@ -377,7 +401,11 @@ def load_workflow_module(
     config: dict | None = None,
 ) -> ModuleType:
     wf_root = resolve_workflow_root(workspace_root, workflow_name, config=config)
-    return _build_workflow_module_from_packages(wf_root, workflow_name)
+    return _build_workflow_module_from_packages(
+        wf_root,
+        workflow_name,
+        workspace_root=workspace_root,
+    )
 
 
 def _backup_workflow_folder(wf_root: Path) -> None:
@@ -408,25 +436,31 @@ def seed_workflow_bundle(target_root: Path, workflow_name: str = "default") -> P
     return wf_root
 
 
-def seed_workflow_packages(workspace_root: Path, workflow_name: str = "default") -> list[Path]:
-    """Copy plugin workflow packages from the repo into the global runner home.
+def seed_workflow_packages(
+    workspace_root: Path,
+    workflow_name: str = "default",
+    *,
+    source_root: Path | None = None,
+) -> list[Path]:
+    """Copy published workflow packages into the global runner home.
 
-    Scans ``<workspace_root>/workflows/`` for directories that contain a
-    ``workflow.toml`` manifest and copies each one into the active workflow
-    bundle at ``%USERPROFILE%/.ukbe-runner/workflows/<workflow_name>/<name>/``.
-
-    This is the plugin-package analogue of ``seed_workflow_bundle()``.
+    Init installs workflow bundles from the published bootstrap snapshot under
+    docs/system/00_governance/bootstrap/workflows, not from repo authoring
+    folders directly.
     """
-    repo_packages_dir = (workspace_root / "workflows").resolve()
+    repo_packages_dir = (source_root or published_workflows_root(workspace_root)).resolve()
     if not repo_packages_dir.is_dir():
-        return []
+        raise FileNotFoundError(
+            f"Required published workflow snapshot folder is missing: {repo_packages_dir}. "
+            "Run bootstrap-publish from the repo root first."
+        )
     _ensure_repo_workflow_bundles_valid(repo_packages_dir)
 
     # Plugin packages live inside the active workflow bundle directory,
     # alongside template_groups.py — e.g. workflows/default/<pkg_name>/
     bundle_root = global_workflow_root(workflow_name)
     bundle_root.mkdir(parents=True, exist_ok=True)
-    _copy_shared_registry((workspace_root / "workflows" / "_registry").resolve(), bundle_root)
+    _copy_shared_registry((repo_packages_dir / "_registry").resolve(), bundle_root)
     seeded: list[Path] = []
 
     for candidate in sorted(repo_packages_dir.iterdir()):
@@ -478,7 +512,7 @@ def init_workspace(
     # Seed the default workflow bundle (copied from bootstrap/workflows/default/)
     wf_root = seed_workflow_bundle(workflows_dir, workflow_name="default")
 
-    # Also seed plugin workflow packages from repo into the default bundle
+    # Seed published workflow packages from the bootstrap snapshot into the default bundle.
     seeded_plugins = seed_workflow_packages(workspace_root, workflow_name="default")
 
     (core_dir / "current").mkdir(parents=True, exist_ok=True)

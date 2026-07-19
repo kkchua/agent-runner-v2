@@ -1,0 +1,83 @@
+[governance]
+canonical_source = "bundle_governance/core_governance.md"
+generated_dir = "bundle_governance/generated"
+adapter_targets = ["AGENTS.md", "QWEN.md", "CLAUDE.md"]
+include_in_prompts = true
+prompt_targets = [
+  "generate_governance_foundation_docs",
+  "review_governance_foundation_docs",
+  "refine_governance_foundation_docs",
+  "audit_governance_foundation_docs",
+]
+
+[[artifact]]
+key = "L1_FOUNDATION_INDEX"
+path = "docs/system/00_governance/foundation/runs/<job_id>/README.md"
+description = "Staged Layer 1 governance foundation index."
+required = true
+
+[[artifact]]
+key = "L1_LAYER_MODEL"
+path = "docs/system/00_governance/foundation/runs/<job_id>/LAYER_MODEL.md"
+description = "Staged Layer 1 layer model document."
+required = true
+
+[[artifact]]
+key = "L1_DOCUMENT_AUTHORITY"
+path = "docs/system/00_governance/foundation/runs/<job_id>/DOCUMENT_AUTHORITY.md"
+description = "Staged Layer 1 authority standard."
+required = true
+
+[[artifact]]
+key = "L1_BUNDLE_TAXONOMY"
+path = "docs/system/00_governance/foundation/runs/<job_id>/BUNDLE_TAXONOMY.md"
+description = "Staged Layer 1 bundle taxonomy."
+required = true
+
+[[artifact]]
+key = "L1_GOVERNANCE_LIFECYCLE"
+path = "docs/system/00_governance/foundation/runs/<job_id>/GOVERNANCE_LIFECYCLE.md"
+description = "Staged Layer 1 lifecycle standard."
+required = true
+
+[[artifact]]
+key = "L1_METADATA_STANDARD"
+path = "docs/system/00_governance/foundation/runs/<job_id>/METADATA_STANDARD.md"
+description = "Staged Layer 1 metadata standard."
+required = true
+
+[[artifact]]
+key = "GOVERNANCE_CONTEXT_INVENTORY"
+path = "docs/system/00_governance/foundation/runs/<job_id>/<job_id>-governance-context-inventory.md"
+description = "Run-scoped governance context inventory."
+required = false
+
+[[artifact]]
+key = "GOVERNANCE_FOUNDATION_VALIDATION"
+path = "docs/system/00_governance/foundation/runs/<job_id>/<job_id>-governance-foundation-validation.md"
+description = "Deterministic validation report for the staged governance foundation set."
+required = false
+
+[[artifact]]
+key = "REVIEW_FILE_SUGGESTED"
+path = "docs/system/00_governance/foundation/runs/<job_id>/<job_id>-governance-foundation-review.md"
+description = "Review output used for refinement loops."
+required = false
+
+[[artifact]]
+key = "AUDIT_FILE_SUGGESTED"
+path = "docs/system/00_governance/foundation/runs/<job_id>/<job_id>-governance-foundation-audit.md"
+description = "Final semantic audit output."
+required = false
+
+[[artifact]]
+key = "GOVERNANCE_PUBLISH_MANIFEST"
+path = "docs/system/00_governance/foundation/current/governance_set_manifest.json"
+description = "Active publish manifest for the Layer 1 governance foundation set."
+required = false
+
+[[artifact]]
+key = "GOVERNANCE_PUBLISH_MANIFEST_HISTORY"
+path = "docs/system/00_governance/foundation/history/<job_id>/governance_set_manifest.json"
+description = "Historical publish manifest snapshot for audit trail."
+required = false

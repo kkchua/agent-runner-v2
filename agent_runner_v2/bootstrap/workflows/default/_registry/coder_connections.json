@@ -17,6 +17,14 @@
         "kimi-k2.5"
       ]
     },
+	"agnes-coder": {
+	  "provider": "agnes-coder",
+      "supported_coders": ["qwen"],
+      "model_format": "model_id",
+      "auth_type": "openai",
+      "openai_base_url": "https://apihub.agnes-ai.com/v1",
+      "available_models": ["agnes-2.0-flash"]
+    },
     "deepseek": {
       "provider": "deepseek",
       "supported_coders": ["qwen", "claude", "opencode"],
@@ -31,7 +39,7 @@
       "model_format": "model_id",
       "auth_type": "openai",
       "openai_base_url": "https://opencode.ai/zen/go/v1",
-      "available_models": ["deepseek-v4-flash"]
+      "available_models": ["deepseek-v4-flash, glm-5.2"]
     },
     "opencode_go": {
       "provider": "opencode_go",

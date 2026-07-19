@@ -69,7 +69,7 @@ from .job_state import (
     set_job_status,
     _update_document_status,
 )
-from .model_config import resolve_coder_role, resolve_role_policy
+from .coder_registry import resolve_coder_role, resolve_role_policy
 from .runner_logger import log_resolver
 from .runtime_context import (
     PROJECT_ROOT, RUNNER_ROOT, JOBS_ROOT, ARTIFACT_ROOT, PACKAGE_ROOT,
@@ -79,7 +79,7 @@ from .runtime_context import (
 )
 from .constants import RUN_AGENT_REQUIRED_DOC_DIRS, delivery_doc_rel
 from .doc_paths import repo_doc_rel
-from .constants import get_master_docs_output_paths, known_artifact_paths, legacy_artifact_paths
+from .path_catalog import get_master_docs_output_paths, known_artifact_paths, legacy_artifact_paths
 from .task_runtime import (
     build_task_execution_binding,
     build_task_execution_binding_from_ids,
@@ -243,11 +243,7 @@ def _execute_step_command(request_path: Path, result_path: Path | None = None) -
 # ---------------------------------------------------------------------------
 
 def _resolve_workflow_bundle_root(workspace_root: Path, workflow_name: str, config: dict) -> Path:
-    """Resolve the active workflow bundle root from configured overrides or runner home."""
-    workflow_cfg = ((config.get("workflows") or {}).get(workflow_name) or {})
-    workflow_path = workflow_cfg.get("path")
-    if workflow_path:
-        return (workspace_root / workflow_path).resolve()
+    """Resolve the active workflow bundle root from the global runner home."""
     return resolve_workflow_root(workspace_root, workflow_name, config=config)
 
 
@@ -258,8 +254,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
     command = raw[0]
     if command == "init":
-        p = argparse.ArgumentParser(description="Initialize the runner home and workspace configuration.")
-        p.add_argument("--project-root", default=".", help="Workspace directory to initialize.")
+        p = argparse.ArgumentParser(description="Initialize the runner home from the current repository bootstrap snapshot.")
         p.add_argument("--workflow", default="default", help="Workflow name to seed.")
         p.add_argument("--bundle-domain", default="general", help="Domain bundle to record for this workspace (e.g. frontend, backend, content).")
         p.add_argument("--bundle-profile", default="core+workflow", help="Bundle profile to record for this workspace.")
@@ -268,11 +263,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         return ns
 
     if command == "bootstrap-publish":
-        p = argparse.ArgumentParser(description="Publish repo-local bootstrap docs into the packaged core bundle.")
-        p.add_argument("--project-root", default=".", help="Workspace directory containing the repo-local bootstrap docs.")
-        p.add_argument("--source-root", default="", help="Optional explicit source directory to publish.")
-        p.add_argument("--bundle-root", default="", help="Optional explicit package bundle destination.")
-        p.add_argument("--plugin-workflows-root", default="", help="Optional explicit plugin workflows directory (defaults to <project-root>/workflows).")
+        p = argparse.ArgumentParser(description="Publish the current repository bootstrap snapshot from the current working directory.")
         ns = p.parse_args(raw[1:])
         ns.command = "bootstrap-publish"
         return ns
@@ -350,6 +341,18 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         ns.approve_argv = raw[1:]
         return ns
 
+    if command == "stop":
+        ns = argparse.Namespace()
+        ns.command = "stop"
+        ns.stop_argv = raw[1:]
+        return ns
+
+    if command == "console":
+        ns = argparse.Namespace()
+        ns.command = "console"
+        ns.console_argv = raw[1:]
+        return ns
+
     p = argparse.ArgumentParser(description="Run a job-based LLM workflow (v2).")
     p.add_argument("-v", "--version", action="version", version=f"%(prog)s {__version__}")
     p.add_argument("--project-root", default="", help="Workspace root. Defaults to the current directory.")
@@ -392,8 +395,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
+    cwd_root = Path.cwd().resolve()
     if args.command == "init":
-        workspace_root = Path(args.project_root or ".").resolve()
+        workspace_root = cwd_root
         result = init_workspace(
             workspace_root,
             workflow_name=args.workflow or "default",
@@ -404,15 +408,9 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if args.command == "bootstrap-publish":
-        workspace_root = Path(args.project_root or ".").resolve()
-        source_root = Path(args.source_root).resolve() if args.source_root else None
-        bundle_root = Path(args.bundle_root).resolve() if args.bundle_root else None
-        plugin_root = Path(args.plugin_workflows_root).resolve() if args.plugin_workflows_root else None
+        workspace_root = cwd_root
         result = publish_bootstrap_bundle(
             workspace_root,
-            source_root=source_root,
-            package_root=bundle_root,
-            plugin_workflows_root=plugin_root,
         )
         print(json.dumps(result, indent=2, ensure_ascii=False))
         return 0
@@ -463,23 +461,36 @@ def main(argv: list[str] | None = None) -> int:
         from .approve_commands import main as _approve_main
         return _approve_main(args.approve_argv)
 
-    workspace_root = Path(args.project_root or ".").resolve()
+    if args.command == "stop":
+        from .stop_commands import main as _stop_main
+        return _stop_main(args.stop_argv)
+
+    if args.command == "console":
+        from .console_commands import main as _console_main
+        return _console_main(args.console_argv)
+
+    if args.project_root and Path(args.project_root).resolve() != cwd_root:
+        raise ValueError(
+            f"--project-root is fixed to the current repository root under the single-repo contract: {cwd_root}"
+        )
+    if args.target_project_root and Path(args.target_project_root).resolve() != cwd_root:
+        raise ValueError(
+            f"--target-project-root is not supported under the single-repo contract: {cwd_root}"
+        )
+
+    workspace_root = cwd_root
     config = load_project_config(workspace_root)
     workflow_name = args.workflow or str(config.get("default_workflow") or "default")
     workflow_bundle_root = _resolve_workflow_bundle_root(workspace_root, workflow_name, config)
     workflow_module = load_workflow_module(workspace_root, workflow_name, config=config)
 
-    # Set target root for cross-project workflows that write into a repository tree.
-    delivery_root = None
-    if args.target_project_root:
-        delivery_root = Path(args.target_project_root).resolve()
-        if (
-            args.template_group.startswith("delivery_scaffold")
-            or args.template_group.startswith("codebase_")
-            or args.template_group.startswith("system_docs_")
-        ):
-            # Create the delivery folder structure in the target project
-            _ensure_delivery_folders(delivery_root)
+    delivery_root = workspace_root
+    if (
+        args.template_group.startswith("delivery_scaffold")
+        or args.template_group.startswith("codebase_")
+        or args.template_group.startswith("system_docs_")
+    ):
+        _ensure_delivery_folders(delivery_root)
 
     set_context(
         workspace_root=workspace_root,
@@ -490,8 +501,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     set_workflow_module(workflow_module)
 
-    # Effective root for artifact operations: delivery_root for scaffold, workspace_root otherwise
-    effective_root = delivery_root if delivery_root is not None else workspace_root
+    effective_root = workspace_root
 
     state: dict | None = None
     group_cfg: dict | None = None
@@ -822,10 +832,12 @@ def _generated_doc_frontmatter_contract(
 
 def _master_bootstrap_frontmatter_rows(
     *,
+    template_group: str,
     step_cfg: dict[str, Any],
     state: dict[str, Any],
 ) -> list[tuple[str, str, str]]:
     return _step_execution_runtime.master_bootstrap_frontmatter_rows(
+        template_group=template_group,
         step_cfg=step_cfg,
         state=state,
     )

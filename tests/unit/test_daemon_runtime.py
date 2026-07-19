@@ -29,3 +29,20 @@ def test_build_job_sync_payload_uses_review_decision_fields() -> None:
         "evidence": None,
         "full_result": None,
     }
+
+
+def test_build_job_sync_payload_resolves_relative_artifacts_from_target_project_root() -> None:
+    payload = build_job_sync_payload(
+        job={
+            "job_status": "IN_PROGRESS",
+            "target_project_root": "D:/repo-target",
+            "artifacts": {"CODEBASE_SCAN_SNAPSHOT": "docs/repo/codebase/04_changes/snapshot.json"},
+            "review_state": {},
+        },
+        step_result={"status": "APPROVED", "outcome": "approved", "remark": "ok"},
+        step_run_id="step-1",
+    )
+
+    assert payload["output_payload"]["CODEBASE_SCAN_SNAPSHOT"].replace("\\", "/") == (
+        "D:/repo-target/docs/repo/codebase/04_changes/snapshot.json"
+    )

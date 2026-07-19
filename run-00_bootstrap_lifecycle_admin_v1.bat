@@ -22,14 +22,8 @@ REM ==================================================================
 REM EDIT THESE VARIABLES to match your setup:
 REM ==================================================================
 
-REM Path to the agent-runner-v2 install (where the CLI lives)
-set "AGENT_RUNNER_ROOT=D:\MyProjectSpace\01_Workflows\agent-runner-v2"
-
 REM Workflow template group (loaded from workflows/<name>/workflow.toml)
 set "TEMPLATE_GROUP=00_bootstrap_lifecycle_admin_v1"
-
-REM Path to the project to bootstrap docs into
-set "TARGET_PROJECT_ROOT=D:\MyProjectSpace\01_Workflows\agent-runner-v2"
 
 REM Job ID to resume (leave blank to auto-create a new job)
 set "JOB_ID=00BOOT-GEN-20260715-002"
@@ -49,14 +43,10 @@ REM No changes needed below this line.
 REM ==================================================================
 
 REM --- Validate ---
-if not exist "%AGENT_RUNNER_ROOT%\scripts\ukbe-run-delivery.bat" (
-    echo ERROR: Cannot find ukbe-run-delivery.bat at %AGENT_RUNNER_ROOT%\scripts\
-    pause
-    exit /b 1
-)
-
-if not exist "%TARGET_PROJECT_ROOT%" (
-    echo ERROR: Target project root does not exist: %TARGET_PROJECT_ROOT%
+where ukbe-run-agent >nul 2>&1
+if errorlevel 1 (
+    echo ERROR: Cannot find ukbe-run-agent on PATH.
+    echo Install the package first, for example: pip install -e .
     pause
     exit /b 1
 )
@@ -75,9 +65,8 @@ if not "!JOB_NO!"=="" set "FLAGS=!FLAGS! --job-no !JOB_NO!"
 REM --- Run ---
 echo ===========================================================================
 echo  Workflow: !TEMPLATE_GROUP!
-echo  Target:   !TARGET_PROJECT_ROOT!
+echo  Repo:     %CD%
 echo ===========================================================================
-echo  Agent-runner:   !AGENT_RUNNER_ROOT!
 if not "!JOB_ID!"=="" echo  Job ID:          !JOB_ID!
 echo  Dry run:        !DRY_RUN!
 echo  New job:        !NEW_JOB!
@@ -85,9 +74,7 @@ echo ===========================================================================
 echo(
 
 ukbe-run-agent run ^
-    --project-root "!AGENT_RUNNER_ROOT!" ^
     --template-group "!TEMPLATE_GROUP!" ^
-    --target-project-root "!TARGET_PROJECT_ROOT!" ^
     !FLAGS!
 
 set "EXIT_CODE=!ERRORLEVEL!"
@@ -101,8 +88,9 @@ exit /b !EXIT_CODE!
 :success
 echo(
 if not "!JOB_ID!"=="" (
-    set "STATUS_FILE=!AGENT_RUNNER_ROOT!\temp\run-00-master-docs-status-!RANDOM!.txt"
-    ukbe-run-agent run --project-root "!AGENT_RUNNER_ROOT!" --template-group "!TEMPLATE_GROUP!" --job-id "!JOB_ID!" --check-job-status > "!STATUS_FILE!"
+    if not exist "%CD%\temp" mkdir "%CD%\temp" >nul 2>nul
+    set "STATUS_FILE=%CD%\temp\run-00-master-docs-status-!RANDOM!.txt"
+    ukbe-run-agent run --template-group "!TEMPLATE_GROUP!" --job-id "!JOB_ID!" --check-job-status > "!STATUS_FILE!"
     set "STATUS_EXIT=!ERRORLEVEL!"
     if "!STATUS_EXIT!"=="0" (
         set "JOB_STATUS="

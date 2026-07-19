@@ -1,13 +1,19 @@
 You are generating the Architecture Flow document for the current repository.
 
-This step produces comprehensive documentation of end-to-end execution flows for different usage modes.
+This step produces end-to-end documentation of the execution flows that are actually implemented by this repository.
 
 Inputs you must read first:
 - `{PROJECT_ANALYSIS}`
 - `{CODEBASE_DOC_ROOT}/01_inventory/codebase_inventory.md`
 - `{CODEBASE_DOC_ROOT}/04_changes/` latest change impact document
 - `{CODEBASE_DOC_ROOT}/02_modules/`
-- Source files under `agent_runner_v2/` — especially `run_agent.py`, `step_runner.py`, `workflow_router.py`, `daemon.py`, `backend_client.py`
+- source files under the repository's primary application, runtime, worker, and support packages, especially execution entrypoints, routing, worker, daemon, and integration-client modules relevant to this repo
+
+Repository evidence boundary:
+- use only current-repository files to determine execution modes and end-to-end flow behavior
+- ignore global runner-home content such as `.ukbe-runner/`
+- ignore packaged bootstrap workflow copies shipped with the shared runner
+- if a mode or flow is not implemented by the current repository, do not document it as active
 
 Write or refresh this doc:
 - `{CODEBASE_DOC_ROOT}/01_inventory/ARCHITECTURE_FLOW.md`
@@ -16,22 +22,20 @@ Workflow-owned artifact contract:
 - `ARCHITECTURE_FLOW` -> `{CODEBASE_DOC_ROOT}/01_inventory/ARCHITECTURE_FLOW.md`
 
 Primary objectives:
-1. Document the three main execution modes: local run, backend worker, daemon.
-2. Provide step-by-step flow for each mode with ASCII diagrams.
-3. Document the workflow step execution flow in detail.
-4. Document the review loop flow (review → refine → loop back).
-5. Document the failure routing flow (exception → classification → retry/escalate).
-6. Document the documentation sync flow.
+1. Document the main execution modes implemented by the current repository.
+2. Provide step-by-step flow for each verified mode with ASCII diagrams.
+3. Document the workflow or execution step flow in detail when present.
+4. Document the review loop flow when the repository implements review and refinement cycles.
+5. Document the failure routing flow when the repository implements classified retry or escalation behavior.
+6. Document the documentation sync flow when that flow exists in the current repository.
 
 Required content:
 - Execution modes overview
-- Local execution flow (with ASCII diagram)
-- Backend worker flow (with ASCII diagram)
-- Daemon supervision flow
-- Workflow step execution detail
-- Review loop mechanics
-- Failure routing flow
-- Documentation sync flow
+- Verified execution mode flows (with ASCII diagrams)
+- Workflow or execution step detail
+- Review loop mechanics when present
+- Failure routing flow when present
+- Documentation sync flow when present
 
 Frontmatter contract:
 - Use `template_id: "CB-04-AF"` in YAML frontmatter

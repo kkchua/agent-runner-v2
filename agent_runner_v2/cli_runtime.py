@@ -1,9 +1,13 @@
 from __future__ import annotations
 
 import json
+import os
 from dataclasses import dataclass
 from typing import Any
 
+from .backend_client import BackendClient
+from .config_loader import load_runner_config
+from .daemon_runtime import build_job_sync_payload
 from .state_defaults import default_loop_context, default_replan_context
 
 
@@ -14,6 +18,68 @@ class AdminCommandResolution:
     continue_execution: bool = False
     state: dict[str, Any] | None = None
     step: str | None = None
+
+
+def _sync_backend_after_human_approval(*, state: dict[str, Any]) -> str | None:
+    step_run_id = str(state.get("workflow_step_run_id") or "").strip()
+    if not step_run_id:
+        return None
+
+    cfg = load_runner_config()
+    backend_url = (
+        str(state.get("backend_url") or "").strip()
+        or os.environ.get("AGENT_RUNNER_BACKEND_URL")
+        or str(cfg.get("backend_url") or "").strip()
+    )
+    if not backend_url:
+        return "backend sync skipped: backend_url not configured"
+
+    last_model_output = state.get("last_model_output") or {}
+    step_result = {
+        "status": str(last_model_output.get("status") or "APPROVED"),
+        "outcome": "approved",
+        "coder_used": last_model_output.get("coder_used"),
+        "remark": last_model_output.get("remark"),
+        "artifacts": dict(last_model_output.get("artifacts") or {}),
+    }
+    payload = build_job_sync_payload(
+        job=state,
+        step_result=step_result,
+        step_run_id=step_run_id,
+    )
+    BackendClient(backend_url).sync_job_state(step_run_id=step_run_id, payload=payload)
+    return None
+
+
+def _sync_backend_after_override_step(*, state: dict[str, Any], step_name: str) -> str | None:
+    run_id = str(state.get("workflow_run_id") or "").strip()
+    if not run_id:
+        return None
+
+    cfg = load_runner_config()
+    backend_url = (
+        str(state.get("backend_url") or "").strip()
+        or os.environ.get("AGENT_RUNNER_BACKEND_URL")
+        or str(cfg.get("backend_url") or "").strip()
+    )
+    if not backend_url:
+        return "backend sync skipped: backend_url not configured"
+
+    BackendClient(backend_url).reset_run_step(run_id=run_id, step_name=step_name)
+    return None
+
+
+def _should_resync_completed_job(*, state: dict[str, Any], requested_step: str) -> bool:
+    pending = str(state.get("pending_human_approval_for") or "").strip()
+    if pending:
+        return False
+    completed_steps = {str(step).strip() for step in list(state.get("completed_steps") or [])}
+    return (
+        str(state.get("workflow_step_run_id") or "").strip() != ""
+        and requested_step in completed_steps
+        and state.get("current_step") is None
+        and str(state.get("job_status") or state.get("status") or "").strip().upper() == "COMPLETED"
+    )
 
 
 def handle_admin_command(*, args: Any, group_cfg: dict[str, Any], hooks: Any) -> AdminCommandResolution:
@@ -60,15 +126,32 @@ def handle_admin_command(*, args: Any, group_cfg: dict[str, Any], hooks: Any) ->
         state = hooks.ensure_backward_compatible_state(hooks.load_job(args.template_group, args.job_id))
         state = hooks.migrate_job_state(state)
         state = hooks.reconcile_job_state(state, group_cfg)
-        state = hooks.approve_step(
-            group_name=args.template_group,
-            group_cfg=group_cfg,
-            state=state,
-            step=args.approve_step.strip(),
-        )
+        requested_step = args.approve_step.strip()
+        try:
+            state = hooks.approve_step(
+                group_name=args.template_group,
+                group_cfg=group_cfg,
+                state=state,
+                step=requested_step,
+            )
+            sync_warning = _sync_backend_after_human_approval(state=state)
+            remark = (
+                f"Human approval recorded for step {requested_step!r}."
+                if not sync_warning
+                else f"Human approval recorded for step {requested_step!r}; {sync_warning}."
+            )
+        except ValueError:
+            if not _should_resync_completed_job(state=state, requested_step=requested_step):
+                raise
+            sync_warning = _sync_backend_after_human_approval(state=state)
+            remark = (
+                f"Job was already locally completed after human approval; backend status resynced for step {requested_step!r}."
+                if not sync_warning
+                else f"Job was already locally completed after human approval for step {requested_step!r}; {sync_warning}."
+            )
         print(json.dumps({
             "status": "APPROVED",
-            "remark": f"Human approval recorded for step {args.approve_step.strip()!r}.",
+            "remark": remark,
             "job_status": hooks.get_job_status(state),
             "job_id": state["job_id"],
             "current_step": state["current_step"],
@@ -87,9 +170,14 @@ def handle_admin_command(*, args: Any, group_cfg: dict[str, Any], hooks: Any) ->
             state=state,
             step=args.force_approve_step.strip(),
         )
+        sync_warning = _sync_backend_after_human_approval(state=state)
         print(json.dumps({
             "status": "APPROVED",
-            "remark": f"Force human approval recorded for step {args.force_approve_step.strip()!r}.",
+            "remark": (
+                f"Force human approval recorded for step {args.force_approve_step.strip()!r}."
+                if not sync_warning
+                else f"Force human approval recorded for step {args.force_approve_step.strip()!r}; {sync_warning}."
+            ),
             "job_status": hooks.get_job_status(state),
             "job_id": state["job_id"],
             "current_step": state["current_step"],
@@ -145,9 +233,14 @@ def handle_admin_command(*, args: Any, group_cfg: dict[str, Any], hooks: Any) ->
                             state["artifacts"][produced_key] = None
         hooks.clear_last_failure(state)
         hooks.save_job(args.template_group, state["job_id"], state)
+        sync_warning = _sync_backend_after_override_step(state=state, step_name=target_step)
         print(json.dumps({
             "status": "APPROVED",
-            "remark": f"Step overridden to {target_step!r}. Retry state and loop context reset.",
+            "remark": (
+                f"Step overridden to {target_step!r}. Retry state and loop context reset."
+                if not sync_warning
+                else f"Step overridden to {target_step!r}. Retry state and loop context reset; {sync_warning}."
+            ),
             "job_id": state["job_id"],
             "current_step": state["current_step"],
             "job_status": hooks.get_job_status(state),

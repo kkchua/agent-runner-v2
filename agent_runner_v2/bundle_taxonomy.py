@@ -26,18 +26,7 @@ CORE_DOCS = [
     system_doc_rel("README.md"),
     system_doc_rel("DOCUMENTATION_STANDARD.md"),
     system_doc_rel("BUNDLE_TAXONOMY.md"),
-    system_doc_rel("BUNDLE_MIGRATION_PLAN.md"),
-    system_doc_rel("SYSTEM_OVERVIEW.md"),
-    system_doc_rel("BUSINESS_CAPABILITIES.md"),
-    system_doc_rel("FUNCTIONAL_SPEC.md"),
-    system_doc_rel("NON_FUNCTIONAL_REQUIREMENTS.md"),
-    system_doc_rel("SYSTEM_CONTEXT.md"),
-    system_doc_rel("COMPONENT_ARCHITECTURE.md"),
-    system_doc_rel("DECISION_LOG.md"),
-    system_doc_rel("SYSTEM_FILE_STRUCTURE.md"),
-    system_doc_rel("DEVELOPER_GUIDE.md"),
-    system_doc_rel("RUNBOOK.md"),
-    system_doc_rel("EXISTING_REPO_WORKFLOW_SOP.md"),
+    system_doc_rel("RUNTIME_GOVERNANCE.md"),
 ]
 
 WORKFLOW_DOCS = [

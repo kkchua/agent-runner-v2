@@ -53,13 +53,49 @@ def test_activate_refine_loop_sets_loop_context_and_history() -> None:
     assert exit_code == 0
     assert updated["current_step"] == "refine_docs"
     assert updated["loop_context"]["loop_iteration"] == 2
+    assert updated["loop_history"][-1]["reject_step"] == "review_docs"
+    assert updated["loop_history"][-1]["reject_kind"] == "review"
+    assert updated["loop_history"][-1]["reject_result"] == "REJECTED"
     assert updated["loop_history"][-1]["review_file"] == "docs/review.md"
+    assert updated["loop_history"][-1]["review_result"] == "REJECTED"
     assert updated["loop_history"][-1]["started_at"] == "2026-07-12T13:00:00"
     assert statuses == ["IN_PROGRESS"]
     assert len(cleared) == 1
 
 
+def test_activate_refine_loop_tracks_validation_reject_without_mislabeling_review() -> None:
+    statuses: list[str] = []
+    cleared: list[dict] = []
+    state = {}
+
+    updated, exit_code = activate_refine_loop(
+        state=state,
+        step="validate_layer1_governance_docs",
+        refine_step="refine_layer1_governance_docs",
+        target_artifact="SYSTEM_DOCS_INDEX",
+        review_file="docs/system/00_governance/bootstrap/JOB-validation.md",
+        iteration=1,
+        now_iso=lambda: "2026-07-18T16:09:47",
+        clear_last_failure=lambda s: cleared.append(dict(s)),
+        set_job_status=lambda s, v: (statuses.append(v), s.__setitem__("job_status", v), s.__setitem__("status", v)),
+    )
+
+    assert exit_code == 0
+    entry = updated["loop_history"][-1]
+    assert entry["reject_step"] == "validate_layer1_governance_docs"
+    assert entry["reject_kind"] == "validation"
+    assert entry["reject_result"] == "REJECTED"
+    assert entry["reject_file"] == "docs/system/00_governance/bootstrap/JOB-validation.md"
+    assert entry["reject_at"] == "2026-07-18T16:09:47"
+    assert entry["review_result"] is None
+    assert entry["review_at"] is None
+    assert entry["started_at"] == "2026-07-18T16:09:47"
+    assert statuses == ["IN_PROGRESS"]
+    assert len(cleared) == 1
+
+
 def test_activate_replan_sets_context_history_and_resets_loop(tmp_path: Path) -> None:
+    tmp_path.mkdir(parents=True, exist_ok=True)
     target = tmp_path / "plan.md"
     target.write_text("plan", encoding="utf-8")
     statuses: list[str] = []

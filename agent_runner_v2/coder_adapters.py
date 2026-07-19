@@ -475,7 +475,7 @@ def _run_with_sidecar_poll(
 
 
 from .runner_logger import log_invocation_result, log_invocation_start
-from .model_config import get_api_key
+from .coder_registry import get_api_key
 
 
 def _mask_api_key(key: str) -> str:
@@ -547,7 +547,6 @@ def invoke_coder(
     step: str,
     prompt_text: str,
     cwd: Path,
-    schema_path: Path,
     prompt_checksum: str,
     now_iso_fn,
     coder_config: dict[str, Any] | None = None,
@@ -573,9 +572,9 @@ def invoke_coder(
     started_at = now_iso_fn()
     started_monotonic = time.monotonic()
     if coder == "codex":
-        result = _invoke_codex(step=step, prompt_text=prompt_text, cwd=cwd, schema_path=schema_path, sidecar_path=sidecar_path, timeout_seconds_override=timeout_seconds_override)
+        result = _invoke_codex(step=step, prompt_text=prompt_text, cwd=cwd, sidecar_path=sidecar_path, timeout_seconds_override=timeout_seconds_override)
     elif coder == "claude":
-        result = _invoke_claude(step=step, prompt_text=prompt_text, cwd=cwd, schema_path=schema_path, sidecar_path=sidecar_path, coder_config=cc, timeout_seconds_override=timeout_seconds_override)
+        result = _invoke_claude(step=step, prompt_text=prompt_text, cwd=cwd, sidecar_path=sidecar_path, coder_config=cc, timeout_seconds_override=timeout_seconds_override)
     elif coder == "qwen":
         result = _invoke_qwen(step=step, prompt_text=prompt_text, cwd=cwd, coder_config=cc, sidecar_path=sidecar_path, timeout_seconds_override=timeout_seconds_override)
     elif coder == "opencode":
@@ -666,7 +665,7 @@ def _invoke_plain(*, coder: str, step: str, prompt_text: str, cwd: Path, sidecar
     }
 
 
-def _invoke_codex(*, step: str, prompt_text: str, cwd: Path, schema_path: Path, sidecar_path: Path | None = None, timeout_seconds_override: int | None = None) -> dict[str, Any]:
+def _invoke_codex(*, step: str, prompt_text: str, cwd: Path, sidecar_path: Path | None = None, timeout_seconds_override: int | None = None) -> dict[str, Any]:
     with tempfile.NamedTemporaryFile("w+", encoding="utf-8", delete=False) as temp_output:
         output_path = Path(temp_output.name)
     command = [
@@ -675,8 +674,6 @@ def _invoke_codex(*, step: str, prompt_text: str, cwd: Path, schema_path: Path, 
         "--sandbox",
         "danger-full-access",
         "--json",
-        "--output-schema",
-        str(schema_path),
         "-o",
         str(output_path),
         "-",
@@ -760,11 +757,10 @@ def _extract_codex_error_from_events(lines: list[str]) -> str | None:
     return last_error
 
 
-def _invoke_claude(*, step: str, prompt_text: str, cwd: Path, schema_path: Path, sidecar_path: Path | None = None, coder_config: dict[str, Any] | None = None, timeout_seconds_override: int | None = None) -> dict[str, Any]:
-    schema_text = schema_path.read_text(encoding="utf-8")
+def _invoke_claude(*, step: str, prompt_text: str, cwd: Path, sidecar_path: Path | None = None, coder_config: dict[str, Any] | None = None, timeout_seconds_override: int | None = None) -> dict[str, Any]:
     cc = coder_config or {}
     command = ["claude"]
-    # Inject model flag when provided via model_mapping or step config
+    # Inject model flag when provided via resolved coder config
     claude_model = str(cc.get("model_id") or cc.get("model") or "").strip()
     if claude_model:
         command.extend(["--model", claude_model])

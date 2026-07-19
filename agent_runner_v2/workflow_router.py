@@ -765,7 +765,7 @@ def _cleanup_rejected_feedback_docs(
 ) -> None:
     """Remove stale downstream feedback docs before a refine reroute."""
     template_group = str(state.get("template_group") or group_name or "").strip()
-    if template_group != "00_layer1_governance_bootstrap_v1":
+    if template_group not in {"00_layer1_governance_bootstrap_v1", "01_governance_foundation_v1"}:
         return
 
     job_id = str(state.get("job_id") or "").strip()

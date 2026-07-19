@@ -40,7 +40,7 @@ Workflow-owned tests now live under:
 ```text
 tests/unit/workflows/
   00_core_governance_bootstrap_v1/
-  00_master_docs_bootstrap_v2/
+  00_repo_master_docs_bootstrap_v1/
   ...
 ```
 

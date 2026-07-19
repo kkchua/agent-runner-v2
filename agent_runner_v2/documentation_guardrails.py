@@ -7,9 +7,8 @@ documentation_guardrails.py - Workflow-owned document inventory and protection h
 from pathlib import Path
 from typing import Iterable
 
-from .doc_paths import architecture_site_rel, codebase_doc_rel, delivery_doc_rel, system_doc_rel
+from .doc_paths import architecture_site_rel, codebase_doc_rel, delivery_doc_rel
 from .constants import (
-    get_master_docs_output_paths,
     delivery_scaffold_docs,
     FOLDER_KEY_CODEBASE_CHANGES,
     FILENAME_CHANGE_LOG_PATTERN,
@@ -26,10 +25,13 @@ from .constants import (
     FILENAME_ARCH_COMPONENTS_HTML,
     FILENAME_ARCH_VALIDATION_MD,
 )
+from .workflow_path_contracts import resolve_workflow_output_paths
 
 
 MASTER_BOOTSTRAP_WORKFLOWS: set[str] = {
     "00_layer1_governance_bootstrap_v1",
+    "01_governance_foundation_v1",
+    "00_repo_master_docs_bootstrap_v1",
 }
 EXECUTION_SCAFFOLD_WORKFLOWS: set[str] = set()
 ARCHITECTURE_SITE_WORKFLOW = ""
@@ -47,12 +49,22 @@ def managed_banner(*, workflow: str, step: str) -> str:
 
 def master_bootstrap_doc_paths(*, job_id: str, mode: str) -> list[str]:
     """Get all master bootstrap workflow document paths."""
-    return list(_layer1_governance_doc_paths(job_id=job_id).values())
+    return list(
+        _master_bootstrap_doc_paths(
+            template_group="00_layer1_governance_bootstrap_v1",
+            job_id=job_id,
+            mode=mode,
+        ).values()
+    )
 
 
 def legacy_master_bootstrap_doc_paths(*, job_id: str, mode: str) -> list[str]:
     """Get legacy master bootstrap document paths (subset without dynamic filenames)."""
-    all_paths = _layer1_governance_doc_paths(job_id=job_id)
+    all_paths = _master_bootstrap_doc_paths(
+        template_group="00_layer1_governance_bootstrap_v1",
+        job_id=job_id,
+        mode=mode,
+    )
     return [
         path for key, path in all_paths.items()
         if key not in ["SYSTEM_DOCS_VALIDATION", "REVIEW_FILE_SUGGESTED"]
@@ -113,7 +125,13 @@ def workflow_canonical_doc_paths(*, template_group: str, state: dict) -> list[st
     job_id = str(state.get("job_id") or state.get("workflow_run_id") or "").strip()
     mode = str((state.get("current_step_cfg") or {}).get("mode") or state.get("current_mode") or "bootstrap")
     if template_group in MASTER_BOOTSTRAP_WORKFLOWS:
-        return master_bootstrap_doc_paths(job_id=job_id, mode=mode)
+        return list(
+            _master_bootstrap_doc_paths(
+                template_group=template_group,
+                job_id=job_id,
+                mode=mode,
+            ).values()
+        )
     if template_group in EXECUTION_SCAFFOLD_WORKFLOWS:
         return execution_scaffold_doc_paths()
     if template_group == ARCHITECTURE_SITE_WORKFLOW:
@@ -125,13 +143,30 @@ def workflow_legacy_doc_paths(*, template_group: str, state: dict) -> list[str]:
     job_id = str(state.get("job_id") or state.get("workflow_run_id") or "").strip()
     mode = str((state.get("current_step_cfg") or {}).get("mode") or state.get("current_mode") or "bootstrap")
     if template_group in MASTER_BOOTSTRAP_WORKFLOWS:
-        return legacy_master_bootstrap_doc_paths(job_id=job_id, mode=mode)
+        all_paths = _master_bootstrap_doc_paths(
+            template_group=template_group,
+            job_id=job_id,
+            mode=mode,
+        )
+        return [
+            path for key, path in all_paths.items()
+            if key not in ["SYSTEM_DOCS_VALIDATION", "REVIEW_FILE_SUGGESTED"]
+        ]
     return []
 
 
-def master_bootstrap_artifact_candidates(*, job_id: str, mode: str) -> dict[str, list[str]]:
+def master_bootstrap_artifact_candidates(
+    *,
+    template_group: str,
+    job_id: str,
+    mode: str,
+) -> dict[str, list[str]]:
     """Get artifact path candidates for master bootstrap workflow."""
-    canonical = _layer1_governance_doc_paths(job_id=job_id)
+    canonical = _master_bootstrap_doc_paths(
+        template_group=template_group,
+        job_id=job_id,
+        mode=mode,
+    )
     
     # Build legacy paths (subset without dynamic filenames)
     legacy: dict[str, list[str]] = {}
@@ -147,15 +182,17 @@ def master_bootstrap_artifact_candidates(*, job_id: str, mode: str) -> dict[str,
     }
 
 
-def _layer1_governance_doc_paths(*, job_id: str) -> dict[str, str]:
-    return {
-        "SYSTEM_DOCS_INDEX": system_doc_rel("README.md"),
-        "SYSTEM_DOC_STANDARD": system_doc_rel("DOCUMENTATION_STANDARD.md"),
-        "BUNDLE_TAXONOMY": system_doc_rel("BUNDLE_TAXONOMY.md"),
-        "RUNTIME_GOVERNANCE": system_doc_rel("RUNTIME_GOVERNANCE.md"),
-        "SYSTEM_DOCS_VALIDATION": system_doc_rel(f"{job_id}-layer1-governance-validation.md"),
-        "REVIEW_FILE_SUGGESTED": system_doc_rel(f"{job_id}-layer1-governance-review.md"),
-    }
+def _master_bootstrap_doc_paths(
+    *,
+    template_group: str,
+    job_id: str,
+    mode: str,
+) -> dict[str, str]:
+    return resolve_workflow_output_paths(
+        template_group=template_group,
+        job_id=job_id,
+        mode=mode,
+    )
 
 
 def execution_scaffold_doc_paths() -> list[str]:

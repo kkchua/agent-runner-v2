@@ -11,6 +11,7 @@ from agent_runner_v2.bundle_loader import (
 from agent_runner_v2.runtime_context import resolve_step_meta_rel, write_meta_sidecar
 from agent_runner_v2.workflow_bundle_validator import validate_workflow_bundle_dir
 from agent_runner_v2.workflow_packages.actions import action
+from agent_runner_v2 import sync_workflows
 
 
 def _bucket(state: dict) -> dict:
@@ -123,6 +124,40 @@ def init_bootstrap_lifecycle_workspace(
     return ActionResult(
         status="APPROVED",
         remark="Bootstrap runtime initialized successfully.",
+        artifacts={},
+    )
+
+
+@action("sync_workflow_definitions")
+def sync_workflow_definitions(
+    *,
+    context: dict[str, str],
+    state: dict,
+    step_cfg: dict,
+    project_root: Path,
+) -> ActionResult:
+    workflow_name = str(step_cfg.get("seed_workflow_name") or state.get("template_group") or "")
+    names = [workflow_name] if workflow_name else []
+    try:
+        exit_code = sync_workflows.main(names)
+    except Exception as exc:
+        return ActionResult(
+            status="REJECTED",
+            remark=f"Workflow sync failed: {exc}",
+            artifacts={},
+            reject_code="SYNC_FAILED",
+        )
+    if exit_code != 0:
+        return ActionResult(
+            status="REJECTED",
+            remark="Workflow sync returned non-zero exit code.",
+            artifacts={},
+            reject_code="SYNC_FAILED",
+        )
+    _bucket(state)["sync"] = {"workflow_name": workflow_name or "all"}
+    return ActionResult(
+        status="APPROVED",
+        remark="Workflow definitions synced to backend.",
         artifacts={},
     )
 

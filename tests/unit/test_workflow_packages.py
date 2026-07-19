@@ -133,13 +133,13 @@ class TestWorkflowTOMLParsing:
     """Parse real workflow.toml files and validate their structure."""
 
     def test_load_real_master_docs_v2_package(self, project_root):
-        """Verify the migrated 00_master_docs_bootstrap_v2 package loads."""
-        pkg_dir = project_root / "workflows" / "00_master_docs_bootstrap_v2"
+        """Verify the migrated 00_repo_master_docs_bootstrap_v1 package loads."""
+        pkg_dir = project_root / "workflows" / "00_repo_master_docs_bootstrap_v1"
         if not pkg_dir.is_dir():
             pytest.skip("workflow package directory not found")
 
         bundle = load_workflow_package(pkg_dir)
-        assert bundle.name == "00_master_docs_bootstrap_v2"
+        assert bundle.name == "00_repo_master_docs_bootstrap_v1"
         assert bundle.version == "2"
         assert bundle.job_prefix == "00DOC"
         assert len(bundle.step_order) == 14
@@ -246,7 +246,7 @@ class TestWorkflowTOMLParsing:
         assert "SYSTEM_DOCS_INDEX" in agents_text
 
     def test_all_steps_present(self, project_root):
-        pkg_dir = project_root / "workflows" / "00_master_docs_bootstrap_v2"
+        pkg_dir = project_root / "workflows" / "00_repo_master_docs_bootstrap_v1"
         if not pkg_dir.is_dir():
             pytest.skip("workflow package directory not found")
         bundle = load_workflow_package(pkg_dir)
@@ -256,9 +256,6 @@ class TestWorkflowTOMLParsing:
             "02_generate_project_analysis",
             "03_generate_system_overview_docs",
             "04_generate_architecture_docs",
-            "04b_generate_integration_docs",
-            "04c_generate_failure_docs",
-            "04d_generate_architecture_flow_docs",
             "05_review_master_system_docs",
             "06_refine_master_system_docs",
             "07_validate_codebase_baseline",
@@ -269,7 +266,7 @@ class TestWorkflowTOMLParsing:
         assert bundle.step_order == expected_steps
 
     def test_step_artifact_contracts(self, project_root):
-        pkg_dir = project_root / "workflows" / "00_master_docs_bootstrap_v2"
+        pkg_dir = project_root / "workflows" / "00_repo_master_docs_bootstrap_v1"
         if not pkg_dir.is_dir():
             pytest.skip("workflow package directory not found")
         bundle = load_workflow_package(pkg_dir)
@@ -284,11 +281,11 @@ class TestWorkflowTOMLParsing:
         assert analysis.prompt_file == "prompts/02_generate_project_analysis.txt"
         assert "CODEBASE_CHANGE_IMPACT" in analysis.required_inputs
         assert analysis.produces == ["PROJECT_ANALYSIS"]
-        assert analysis.coder_default_role == "architect_primary"
+        assert analysis.coder_role_policy == "architect_standard"
 
         # Review step with routing
         review = bundle.steps["05_review_master_system_docs"]
-        assert review.coder_default_role == "reviewer_primary"
+        assert review.coder_role_policy == "reviewer_standard"
         assert review.on_reject_refine is not None
         assert review.on_reject_refine["step"] == "06_refine_master_system_docs"
 
@@ -299,7 +296,7 @@ class TestWorkflowTOMLParsing:
 
     def test_produces_chain_is_consistent(self, project_root):
         """Verify that required_inputs across steps are satisfied by earlier steps."""
-        pkg_dir = project_root / "workflows" / "00_master_docs_bootstrap_v2"
+        pkg_dir = project_root / "workflows" / "00_repo_master_docs_bootstrap_v1"
         if not pkg_dir.is_dir():
             pytest.skip("workflow package directory not found")
         bundle = load_workflow_package(pkg_dir)
@@ -320,7 +317,7 @@ class TestWorkflowTOMLParsing:
 
     def test_all_prompt_files_exist(self, project_root):
         """Every step with a prompt_file points to an actual file on disk."""
-        pkg_dir = project_root / "workflows" / "00_master_docs_bootstrap_v2"
+        pkg_dir = project_root / "workflows" / "00_repo_master_docs_bootstrap_v1"
         if not pkg_dir.is_dir():
             pytest.skip("workflow package directory not found")
         bundle = load_workflow_package(pkg_dir)
@@ -342,13 +339,13 @@ class TestBundleAdapter:
     """bundle_to_template_group_dict() output matches expected dict shape."""
 
     def test_adapter_basic_structure(self, project_root):
-        pkg_dir = project_root / "workflows" / "00_master_docs_bootstrap_v2"
+        pkg_dir = project_root / "workflows" / "00_repo_master_docs_bootstrap_v1"
         if not pkg_dir.is_dir():
             pytest.skip("workflow package directory not found")
         bundle = load_workflow_package(pkg_dir)
         group = bundle_to_template_group_dict(bundle)
 
-        assert group["job_prefix"] == "00DOC"
+        assert group["job_prefix"] == "00RMD"
         assert group["job_init_step"] == "00_scan_repo_codebase"
         assert group["job_init_inputs"] == []
         assert group["default_max_rejects"] == 4
@@ -357,7 +354,7 @@ class TestBundleAdapter:
         assert "_workflow_bundle" not in group  # group-level, not stamped here
 
     def test_adapter_step_config_dict_shape(self, project_root):
-        pkg_dir = project_root / "workflows" / "00_master_docs_bootstrap_v2"
+        pkg_dir = project_root / "workflows" / "00_repo_master_docs_bootstrap_v1"
         if not pkg_dir.is_dir():
             pytest.skip("workflow package directory not found")
         bundle = load_workflow_package(pkg_dir)
@@ -373,12 +370,7 @@ class TestBundleAdapter:
         analysis_cfg = group["step_configs"]["02_generate_project_analysis"]
         assert "prompt_file" in analysis_cfg
         assert str(analysis_cfg["prompt_file"]).endswith("02_generate_project_analysis.txt")
-        assert analysis_cfg["coder"]["default_role"] == "architect_primary"
-        assert analysis_cfg["coder"]["allowed_roles"] == [
-            "architect_primary",
-            "architect_secondary",
-            "architect_tertiary",
-        ]
+        assert analysis_cfg["coder"]["role_policy"] == "architect_standard"
 
         governance_cfg = group["step_configs"]["generate_core_governance_docs"] if "generate_core_governance_docs" in group["step_configs"] else None
         if governance_cfg:
@@ -390,7 +382,7 @@ class TestBundleAdapter:
         assert review_cfg["on_reject_refine"]["step"] == "06_refine_master_system_docs"
 
     def test_adapter_prompt_file_is_absolute(self, project_root):
-        pkg_dir = project_root / "workflows" / "00_master_docs_bootstrap_v2"
+        pkg_dir = project_root / "workflows" / "00_repo_master_docs_bootstrap_v1"
         if not pkg_dir.is_dir():
             pytest.skip("workflow package directory not found")
         bundle = load_workflow_package(pkg_dir)
@@ -400,5 +392,5 @@ class TestBundleAdapter:
         prompt_path = ref["prompt_file"]
         assert Path(prompt_path).is_absolute()
         assert prompt_path.replace("\\", "/").endswith(
-            "workflows/00_master_docs_bootstrap_v2/prompts/02_generate_project_analysis.txt"
+            "workflows/00_repo_master_docs_bootstrap_v1/prompts/02_generate_project_analysis.txt"
         )

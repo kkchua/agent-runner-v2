@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 
-from agent_runner_v2.model_config import (
+from agent_runner_v2.coder_registry import (
     resolve_coder_role,
     resolve_effective_coder,
     resolve_role_policy,

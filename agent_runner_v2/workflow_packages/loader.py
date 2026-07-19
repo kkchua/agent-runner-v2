@@ -308,6 +308,12 @@ def bundle_to_template_group_dict(bundle: WorkflowBundle) -> dict[str, Any]:
     if bundle.visibility:
         group["visibility"] = bundle.visibility
 
+    if bundle.governance and bundle.governance.artifact_registry:
+        group["artifact_registry"] = [
+            {"key": a.key, "path": a.path, "required": a.required}
+            for a in bundle.governance.artifact_registry
+        ]
+
     return group
 
 

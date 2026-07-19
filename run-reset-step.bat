@@ -22,7 +22,7 @@ REM EDIT THESE VARIABLES to match your setup:
 REM ==================================================================
 
 set "AGENT_RUNNER_ROOT=D:\MyProjectSpace\01_Workflows\agent-runner-v2"
-set "TEMPLATE_GROUP=00_master_docs_bootstrap_v2"
+set "TEMPLATE_GROUP=00_repo_master_docs_bootstrap_v1"
 set "JOB_ID=00DOC-GEN-20260711-001"
 set "STEP_NAME=05_review_master_system_docs"
 

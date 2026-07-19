@@ -17,19 +17,9 @@ if exist "%~dp0.venv\Scripts\activate.bat" (
     call "%~dp0.venv\Scripts\activate.bat"
 )
 
-REM ==================================================================
-REM EDIT THESE VARIABLES to match your setup:
-REM ==================================================================
-
-set "AGENT_RUNNER_ROOT=D:\MyProjectSpace\01_Workflows\agent-runner-v2"
 set "BACKEND_URL="
-
-REM ==================================================================
-REM No changes needed below this line.
-REM ==================================================================
-
-if not exist "%AGENT_RUNNER_ROOT%" (
-    echo ERROR: Agent-runner root does not exist: %AGENT_RUNNER_ROOT%
+if not exist "%CD%\workflows" (
+    echo ERROR: Required workflow source folder is missing: %CD%\workflows
     pause
     exit /b 1
 )
@@ -45,11 +35,24 @@ echo  Backend URL:  ^<from C:\Users\kengk\.ukbe-runner\config.json / CLI default
 echo ===========================================================================
 echo(
 
-REM Use .venv Python to call the runner-side sync script
-if not "%BACKEND_URL%"=="" (
-    "%~dp0.venv\Scripts\python.exe" -m agent_runner_v2.sync_workflows --backend-url "%BACKEND_URL%" %*
+if exist "%~dp0.venv\Scripts\python.exe" (
+    if not "%BACKEND_URL%"=="" (
+        "%~dp0.venv\Scripts\python.exe" -m agent_runner_v2.sync_workflows --backend-url "%BACKEND_URL%" %*
+    ) else (
+        "%~dp0.venv\Scripts\python.exe" -m agent_runner_v2.sync_workflows %*
+    )
 ) else (
-    "%~dp0.venv\Scripts\python.exe" -m agent_runner_v2.sync_workflows %*
+    where python >nul 2>&1
+    if errorlevel 1 (
+        echo ERROR: Cannot find Python or .venv\Scripts\python.exe.
+        pause
+        exit /b 1
+    )
+    if not "%BACKEND_URL%"=="" (
+        python -m agent_runner_v2.sync_workflows --backend-url "%BACKEND_URL%" %*
+    ) else (
+        python -m agent_runner_v2.sync_workflows %*
+    )
 )
 set "EXIT_CODE=!ERRORLEVEL!"
 
