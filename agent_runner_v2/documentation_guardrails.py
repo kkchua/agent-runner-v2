@@ -7,7 +7,7 @@ documentation_guardrails.py - Workflow-owned document inventory and protection h
 from pathlib import Path
 from typing import Iterable
 
-from .doc_paths import architecture_site_rel, codebase_doc_rel, delivery_doc_rel
+from .doc_paths import codebase_doc_rel, delivery_doc_rel
 from .constants import (
     delivery_scaffold_docs,
     FOLDER_KEY_CODEBASE_CHANGES,
@@ -16,14 +16,6 @@ from .constants import (
     FILENAME_BOOTSTRAP_SUMMARY_PATTERN,
     EXT_MD,
     EXT_JSON,
-    FILENAME_SITE_INDEX_HTML,
-    FILENAME_SITE_MANIFEST_JSON,
-    FILENAME_ARCH_STAKEHOLDER_HTML,
-    FILENAME_ARCH_DEVELOPER_HTML,
-    FILENAME_ARCH_FUNCTIONAL_HTML,
-    FILENAME_ARCH_RUNTIME_HTML,
-    FILENAME_ARCH_COMPONENTS_HTML,
-    FILENAME_ARCH_VALIDATION_MD,
 )
 from .workflow_path_contracts import resolve_workflow_output_paths
 
@@ -134,8 +126,6 @@ def workflow_canonical_doc_paths(*, template_group: str, state: dict) -> list[st
         )
     if template_group in EXECUTION_SCAFFOLD_WORKFLOWS:
         return execution_scaffold_doc_paths()
-    if template_group == ARCHITECTURE_SITE_WORKFLOW:
-        return architecture_site_doc_paths()
     return []
 
 
@@ -199,20 +189,6 @@ def execution_scaffold_doc_paths() -> list[str]:
     """Get all execution scaffold workflow document paths."""
     output_paths = delivery_scaffold_docs()
     return list(output_paths.values())
-
-
-def architecture_site_doc_paths() -> list[str]:
-    """Get all architecture site document paths."""
-    return [
-        architecture_site_rel(FILENAME_SITE_INDEX_HTML),
-        architecture_site_rel(FILENAME_ARCH_STAKEHOLDER_HTML),
-        architecture_site_rel(FILENAME_ARCH_DEVELOPER_HTML),
-        architecture_site_rel(FILENAME_ARCH_FUNCTIONAL_HTML),
-        architecture_site_rel(FILENAME_ARCH_RUNTIME_HTML),
-        architecture_site_rel(FILENAME_ARCH_COMPONENTS_HTML),
-        architecture_site_rel(FILENAME_SITE_MANIFEST_JSON),
-        architecture_site_rel(FILENAME_ARCH_VALIDATION_MD),
-    ]
 
 
 def workflow_generated_doc_paths(*, template_group: str, state: dict) -> list[str]:

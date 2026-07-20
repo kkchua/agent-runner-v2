@@ -20,9 +20,9 @@ REM EDIT THESE VARIABLES to match your setup:
 REM ==================================================================
 
 set "AGENT_RUNNER_ROOT=D:\MyProjectSpace\01_Workflows\agent-runner-v2"
-set "TEMPLATE_GROUP=01_governance_foundation_v1"
-set "JOB_ID=00GF-20260718-61eaaec5"
-set "STEP_NAME=audit_governance_foundation_docs"
+set "TEMPLATE_GROUP=02_platform_core_foundation_v1"
+set "JOB_ID=02PC-GEN-20260720-005"
+set "STEP_NAME=audit_platform_core_docs"
 set "FORCE_APPROVE=false"
 
 REM ==================================================================

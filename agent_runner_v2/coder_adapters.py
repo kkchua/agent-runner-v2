@@ -587,17 +587,18 @@ def invoke_coder(
     return_code = result["return_code"]
     status = "OK" if return_code == 0 else "FAILED"
 
-    log_invocation_result(
-        step, coder, model=model_name, model_id=model_id, connection=connection, auth_type=auth_type,
-        return_code=return_code, duration_ms=duration_ms, status=status,
-    )
-
     usage = result["usage"]
     usage.step = step
     usage.coder_used = coder
     usage.duration_ms = duration_ms
     usage.started_at = started_at
     usage.finished_at = finished_at
+
+    log_invocation_result(
+        step, coder, model=model_name, model_id=model_id, connection=connection, auth_type=auth_type,
+        return_code=return_code, duration_ms=duration_ms, status=status,
+        usage=dataclass_dict(usage),
+    )
 
     manifest = InvocationManifest(
         step_name=step,

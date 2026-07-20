@@ -1,0 +1,16 @@
+{
+  "schema_version": "v2",
+  "coder_result": {
+    "status": "APPROVED",
+    "remark": "Generated all six staged Layer 1 governance foundation documents.",
+    "artifacts": {
+      "L1_FOUNDATION_INDEX": "D:/MyProjectSpace/01_Workflows/agent-runner-v2/docs/system/00_governance/foundation/runs/01GF-20260719-c5e882c3/README.md",
+      "L1_LAYER_MODEL": "D:/MyProjectSpace/01_Workflows/agent-runner-v2/docs/system/00_governance/foundation/runs/01GF-20260719-c5e882c3/LAYER_MODEL.md",
+      "L1_DOCUMENT_AUTHORITY": "D:/MyProjectSpace/01_Workflows/agent-runner-v2/docs/system/00_governance/foundation/runs/01GF-20260719-c5e882c3/DOCUMENT_AUTHORITY.md",
+      "L1_BUNDLE_TAXONOMY": "D:/MyProjectSpace/01_Workflows/agent-runner-v2/docs/system/00_governance/foundation/runs/01GF-20260719-c5e882c3/BUNDLE_TAXONOMY.md",
+      "L1_GOVERNANCE_LIFECYCLE": "D:/MyProjectSpace/01_Workflows/agent-runner-v2/docs/system/00_governance/foundation/runs/01GF-20260719-c5e882c3/GOVERNANCE_LIFECYCLE.md",
+      "L1_METADATA_STANDARD": "D:/MyProjectSpace/01_Workflows/agent-runner-v2/docs/system/00_governance/foundation/runs/01GF-20260719-c5e882c3/METADATA_STANDARD.md"
+    },
+    "recorded_at": "2026-07-19T23:50:50+08:00"
+  }
+}

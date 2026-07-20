@@ -1,7 +1,7 @@
 {
   "role_policies": {
     "architect_standard": {
-      "default_role": "zen_go_deepseek-v4-pro",
+      "default_role": "bailian_qwen3.7-plus",
       "allowed_roles": [
         "bailian_qwen3.7-plus",
         "bailian_glm-5",
@@ -13,26 +13,28 @@
       ]
     },
     "reviewer_standard": {
-      "default_role": "bailian_qwen3.7-plus",
+      "default_role": "deepseek_deepseek-v4-pro",
       "allowed_roles": [
         "bailian_qwen3.7-plus",
+		"deepseek_deepseek-v4-pro",
         "bailian_glm-5",
+		"zen_go_glm_52",
         "bailian_MiniMax-M2.5"
       ]
     },
     "refine_standard": {
-      "default_role": "bailian_glm-5",
+      "default_role": "zen_go_glm_52",
       "allowed_roles": [
-        "bailian_glm-5",
+       	"zen_go_glm_52",
         "bailian_qwen3.7-plus",
         "zen_go_deepseek-v4-pro"
       ]
     },
     "plan_standard": {
-      "default_role": "zen_go_deepseek-v4-pro",
+      "default_role": "bailian_qwen3.7-plus",
       "allowed_roles": [
         "bailian_qwen3.7-plus",
-        "bailian_glm-5",
+        "zen_go_glm_52",
         "zen_go_deepseek-v4-pro"
       ]
     },
@@ -41,15 +43,16 @@
       "allowed_roles": [
         "zen_go_deepseek-v4-pro",
         "bailian_qwen3.7-plus",
-        "bailian_qwen3-coder-next"
+        "bailian_qwen3-coder-next",
+		"bailian_qwen3-coder-plus"
       ]
     },
     "execution_standard": {
-      "default_role": "bailian_glm-5",
+      "default_role": "zen_go_deepseek-v4-flash",
       "allowed_roles": [
-        "bailian_glm-5",
-        "bailian_qwen3.7-plus",
-        "zen_go_deepseek-v4-pro"
+        "bailian_qwen3-coder-plus",
+        "zen_go_deepseek-v4-pro",
+		"zen_go_deepseek-v4-flash"
       ]
     },
     "validation_standard": {
@@ -57,7 +60,7 @@
       "allowed_roles": [
         "bailian_qwen3.7-plus",
         "zen_go_deepseek-v4-pro",
-        "bailian_glm-5"
+        "zen_go_glm_52"
       ]
     },
     "code_fix_standard": {

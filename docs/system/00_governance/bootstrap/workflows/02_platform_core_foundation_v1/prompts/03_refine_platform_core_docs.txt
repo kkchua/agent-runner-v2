@@ -1,0 +1,48 @@
+Objective
+
+Refine the staged Layer 2 platform core docs after review or validation findings.
+
+Layer Boundary
+
+- Preserve Layer 2 scope.
+- Remove Layer 1 redefinition and Layer 3 drift rather than polishing it.
+
+Reference Inputs
+
+- Read `MASTERPLAN_ARCHITECTURE_PATH`.
+- Read `MASTERPLAN_PLATFORM_SPEC_PATH`.
+- Read `PLATFORM_CONTEXT_INVENTORY`.
+- Read `REVIEW_FILE_SUGGESTED`.
+- If present, read `PLATFORM_CORE_VALIDATION`.
+
+Artifacts
+
+Update the staged permanent docs in place:
+
+- `L2_PLATFORM_INDEX`
+- `L2_RUNTIME_MODEL`
+- `L2_BUNDLE_AUTHORING_CONTRACT`
+- `L2_SHARED_SERVICES`
+- `L2_METADATA_CONTRACT`
+- `L2_VALIDATION_CONTRACT`
+
+Forbidden Content
+
+- do not introduce Layer 1 governance redefinition
+- do not introduce Layer 3 bundle-specific examples as platform rules
+- do not rewrite the bundle as a Layer 1 or Layer 3 document
+- do not change the permanent document inventory
+- do not leave staged docs in published/active lifecycle state
+
+Decision Rules
+
+- Fix metadata omissions, weak wording, missing sections, and removable scope leakage.
+- If a finding implies conceptual layer mismatch, resolve it by removing or re-scoping the content instead of elaborating it.
+
+Output Instructions
+
+- Update the staged docs in place.
+- Preserve ASCII-only content.
+- Keep frontmatter fields present and consistent.
+- Ensure `README.md` explicitly lists itself in the permanent document map.
+- Ensure `platform: "agent-runner-v2"` is present on all permanent docs.

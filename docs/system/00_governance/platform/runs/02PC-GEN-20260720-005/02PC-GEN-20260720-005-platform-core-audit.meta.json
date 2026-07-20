@@ -1,0 +1,33 @@
+{
+  "schema_version": "v2",
+  "coder_result": {
+    "status": "APPROVED",
+    "remark": "Semantic audit of the staged Layer 2 platform core constitution set is APPROVED. All six permanent documents are correctly scoped to Layer 2, inherit Layer 1 governance without redefinition, carry valid metadata, and maintain clear platform identity. One fixable finding identified: three incorrect BackendClient method names in SHARED_SERVICES.md (report_result->complete_step_run, send_heartbeat->heartbeat, approve_step->approve_run). This is a factual naming error, not a conceptual runtime model contradiction.",
+    "artifacts": {
+      "AUDIT_FILE_SUGGESTED": "D:\\MyProjectSpace\\01_Workflows\\agent-runner-v2\\docs\\system\\00_governance\\platform\\runs\\02PC-GEN-20260720-005\\02PC-GEN-20260720-005-platform-core-audit.md"
+    },
+    "recorded_at": "2026-07-20T16:58:00+08:00",
+    "usage": {
+      "input_tokens": 85000,
+      "output_tokens": 6500,
+      "total_tokens": 91500
+    }
+  },
+  "runner_data": {
+    "step": "audit_platform_core_docs",
+    "coder_used": "qwen",
+    "invoked_at": "2026-07-20T16:53:44",
+    "finished_at": "2026-07-20T16:59:09",
+    "prompt_checksum": "sha256:b50204ac49f72dc5f12b03bd98de68ae06eb569596e61da8e98856f27e927a5e",
+    "allowed_write_paths": [
+      "D:/MyProjectSpace/01_Workflows/agent-runner-v2/docs/system/00_governance/platform/runs/02PC-GEN-20260720-005/02PC-GEN-20260720-005-platform-core-audit.md",
+      "D:/MyProjectSpace/01_Workflows/agent-runner-v2/docs/system/00_governance/platform/runs/02PC-GEN-20260720-005/02PC-GEN-20260720-005-platform-core-audit.meta.json"
+    ],
+    "changed_paths": [
+      "D:/MyProjectSpace/01_Workflows/agent-runner-v2/docs/system/00_governance/platform/runs/02PC-GEN-20260720-005/02PC-GEN-20260720-005-platform-core-audit.md",
+      "D:/MyProjectSpace/01_Workflows/agent-runner-v2/docs/system/00_governance/platform/runs/02PC-GEN-20260720-005/02PC-GEN-20260720-005-platform-core-audit.meta.json"
+    ],
+    "enriched_at": "2026-07-20T16:59:09",
+    "runner_version": "v2"
+  }
+}

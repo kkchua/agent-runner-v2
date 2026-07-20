@@ -24,27 +24,10 @@ from .actions.finalize_bootstrap import finalize_bootstrap
 from .actions.copy_artifact import copy_artifact
 from .actions.promote_artifact import promote_artifact
 from .actions.promote_init import promote_init
-from .actions.prepare_delivery_scaffold import prepare_delivery_scaffold
 from .actions.scan_repo_codebase import scan_repo_codebase
-from .actions.submit_comfyui import submit_comfyui
 from .actions.sync_codebase_docs import sync_codebase_docs
 from .actions.sync_system_docs import sync_system_docs
 from .actions.validate_codebase_docs import validate_codebase_docs
-from .actions.validate_delivery_docs import validate_delivery_docs
-from .actions.validate_architecture_site import validate_architecture_site
-from .actions.validate_stakeholder_site import validate_stakeholder_site
-from .actions.validate_developer_site import validate_developer_site
-from .actions.validate_operator_site import validate_operator_site
-from .actions.validate_tester_site import validate_tester_site
-from .actions.validate_user_site import validate_user_site
-from .actions.execute_t2i import execute_t2i
-from .actions.execute_i2v import execute_i2v
-from .actions.execute_voiceover import execute_voiceover
-from .actions.assemble_video import assemble_video
-from .actions.publish_architecture_site import publish_architecture_site
-from .actions.generate_site import generate_site
-from .actions.generate_site_pdf import generate_site_pdf
-from .actions.archive_previous_version import archive_previous_version
 from .actions.step_completion import step_completion
 
 logger = logging.getLogger(__name__)
@@ -56,29 +39,12 @@ logger = logging.getLogger(__name__)
 
 ACTION_REGISTRY: dict[str, Callable] = {
     "copy_artifact": copy_artifact,
-    "generate_site": generate_site,
-    "generate_site_pdf": generate_site_pdf,
-    "archive_previous_version": archive_previous_version,
     "promote_artifact": promote_artifact,
     "promote_init": promote_init,
-    "prepare_delivery_scaffold": prepare_delivery_scaffold,
     "scan_repo_codebase": scan_repo_codebase,
-    "submit_comfyui": submit_comfyui,
     "sync_codebase_docs": sync_codebase_docs,
     "sync_system_docs": sync_system_docs,
     "validate_codebase_docs": validate_codebase_docs,
-    "validate_delivery_docs": validate_delivery_docs,
-    "validate_architecture_site": validate_architecture_site,
-    "validate_stakeholder_site": validate_stakeholder_site,
-    "validate_developer_site": validate_developer_site,
-    "validate_operator_site": validate_operator_site,
-    "validate_tester_site": validate_tester_site,
-    "validate_user_site": validate_user_site,
-    "execute_t2i": execute_t2i,
-    "execute_i2v": execute_i2v,
-    "execute_voiceover": execute_voiceover,
-    "assemble_video": assemble_video,
-    "publish_architecture_site": publish_architecture_site,
     "finalize_bootstrap": finalize_bootstrap,
     "step_completion": step_completion,
 }

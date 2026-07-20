@@ -35,8 +35,8 @@ REM Set NEW_JOB=true only when you intentionally want a fresh run
 set "NEW_JOB=false"
 
 REM Set MODE=manual/daemon
-set "MODE=daemon"
-set "JOB_NO="
+set "MODE=manual"
+set "JOB_NO=111"
 
 REM ==================================================================
 REM No changes needed below this line.
