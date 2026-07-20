@@ -1,0 +1,33 @@
+{
+  "schema_version": "v2",
+  "coder_result": {
+    "status": "APPROVED",
+    "remark": "Semantic audit passed. All six permanent Layer 2 docs verified against source code with zero factual errors. Prior finding (resolve_coder_config) resolved. All module references, function names, dataclass fields, and metadata values match the actual platform source code exactly.",
+    "artifacts": {
+      "AUDIT_FILE_SUGGESTED": "D:\\MyProjectSpace\\01_Workflows\\agent-runner-v2\\docs\\system\\00_governance\\platform\\runs\\02PC-20260720-86359b88\\02PC-20260720-86359b88-platform-core-audit.md"
+    },
+    "recorded_at": "2026-07-20T18:46:38+08:00",
+    "usage": {
+      "input_tokens": 45000,
+      "output_tokens": 6500,
+      "total_tokens": 51500
+    }
+  },
+  "runner_data": {
+    "step": "audit_platform_core_docs",
+    "coder_used": "qwen",
+    "invoked_at": "2026-07-20T18:46:38",
+    "finished_at": "2026-07-20T18:53:28",
+    "prompt_checksum": "sha256:8e5b6bdda77e6f4e3c4067abee1c3f494a3dfec17a30dc745f22c1be97c0a0fa",
+    "allowed_write_paths": [
+      "D:/MyProjectSpace/01_Workflows/agent-runner-v2/docs/system/00_governance/platform/runs/02PC-20260720-86359b88/02PC-20260720-86359b88-platform-core-audit.md",
+      "D:/MyProjectSpace/01_Workflows/agent-runner-v2/docs/system/00_governance/platform/runs/02PC-20260720-86359b88/02PC-20260720-86359b88-platform-core-audit.meta.json"
+    ],
+    "changed_paths": [
+      "D:/MyProjectSpace/01_Workflows/agent-runner-v2/docs/system/00_governance/platform/runs/02PC-20260720-86359b88/02PC-20260720-86359b88-platform-core-audit.md",
+      "D:/MyProjectSpace/01_Workflows/agent-runner-v2/docs/system/00_governance/platform/runs/02PC-20260720-86359b88/02PC-20260720-86359b88-platform-core-audit.meta.json"
+    ],
+    "enriched_at": "2026-07-20T18:53:28",
+    "runner_version": "v2"
+  }
+}

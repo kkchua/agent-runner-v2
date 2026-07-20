@@ -1,0 +1,28 @@
+{
+  "schema_version": "v2",
+  "coder_result": {
+    "status": "APPROVED",
+    "remark": "Semantic audit of all 6 staged Layer 2 platform core documents completed. All forbidden-content checks pass: no Layer 1 redefinition, no Layer 3 bundle drift, clear platform identity, correct lifecycle states, consistent metadata. One minor non-blocking observation: registry fallback path string in RUNTIME_MODEL.md is slightly imprecise. Approved for human review and publish.",
+    "artifacts": {
+      "AUDIT_FILE_SUGGESTED": "D:\\MyProjectSpace\\01_Workflows\\agent-runner-v2\\docs\\system\\00_governance\\platform\\runs\\02PC-GEN-20260720-001\\02PC-GEN-20260720-001-platform-core-audit.md"
+    },
+    "recorded_at": "2026-07-20T01:37:26+08:00"
+  },
+  "runner_data": {
+    "step": "audit_platform_core_docs",
+    "coder_used": "qwen",
+    "invoked_at": "2026-07-20T01:37:26",
+    "finished_at": "2026-07-20T01:41:14",
+    "prompt_checksum": "sha256:6938d5285f55205f622dfede0a02f350203f755751472912b9fa2a8e90e3829e",
+    "allowed_write_paths": [
+      "D:/MyProjectSpace/01_Workflows/agent-runner-v2/docs/system/00_governance/platform/runs/02PC-GEN-20260720-001/02PC-GEN-20260720-001-platform-core-audit.md",
+      "D:/MyProjectSpace/01_Workflows/agent-runner-v2/docs/system/00_governance/platform/runs/02PC-GEN-20260720-001/02PC-GEN-20260720-001-platform-core-audit.meta.json"
+    ],
+    "changed_paths": [
+      "D:/MyProjectSpace/01_Workflows/agent-runner-v2/docs/system/00_governance/platform/runs/02PC-GEN-20260720-001/02PC-GEN-20260720-001-platform-core-audit.md",
+      "D:/MyProjectSpace/01_Workflows/agent-runner-v2/docs/system/00_governance/platform/runs/02PC-GEN-20260720-001/02PC-GEN-20260720-001-platform-core-audit.meta.json"
+    ],
+    "enriched_at": "2026-07-20T01:41:14",
+    "runner_version": "v2"
+  }
+}

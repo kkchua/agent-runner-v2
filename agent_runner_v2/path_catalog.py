@@ -59,7 +59,7 @@ from .artifact_keys import (
     ARTIFACT_KEY_USER_SITE_PDF,
     ARTIFACT_KEY_WORKFLOW_SOP,
 )
-from .constants_legacy_backup_20260717 import (
+from .constants import (
     ARTIFACT_PATH_ARCHITECTURE_FLOW,
     ARTIFACT_PATH_CODEBASE_COMPONENT_TEMPLATE,
     ARTIFACT_PATH_CODEBASE_DOC_SOP,

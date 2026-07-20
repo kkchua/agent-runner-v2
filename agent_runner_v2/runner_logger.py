@@ -154,9 +154,19 @@ def log_invocation_result(
     duration_ms: int,
     status: str,
     message: str = "",
+    usage: dict[str, Any] | None = None,
 ) -> None:
     """Log the result of a coder invocation."""
     status_label = f"rc={return_code} {status}"
+    token_suffix = ""
+    if usage and isinstance(usage, dict):
+        total = usage.get("total_tokens")
+        inp = usage.get("input_tokens")
+        out = usage.get("output_tokens")
+        if total or inp or out:
+            token_suffix = f" | tokens: {total or '?'}"
+            if inp is not None or out is not None:
+                token_suffix += f" (in={inp or '?'} out={out or '?'})"
     log_event(
         step,
         coder,
@@ -172,7 +182,7 @@ def log_invocation_result(
             f"[{step}] result coder={coder}"
             f"{f' connection={connection}' if connection else ''}"
             f"{f' model_id={model_id}' if model_id else ''}"
-            f" model={model or 'n/a'} {status_label} ({duration_ms}ms)"
+            f" model={model or 'n/a'} {status_label} ({duration_ms}ms){token_suffix}"
         ),
     )
 

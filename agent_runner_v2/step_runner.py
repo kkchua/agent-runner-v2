@@ -38,7 +38,6 @@ from .doc_paths import (
 )
 from .constants import (
     ARTIFACT_KEY_REVIEW,
-    BUG_FIX_OUTPUT_PATHS as CONSTANTS_BUG_FIX_OUTPUT_PATHS,
     FOLDER_KEY_DELIVERY_IMPLEMENTATIONS,
     FOLDER_KEY_DELIVERY_TASKS,
     FOLDER_KEY_DELIVERY_PLANS,
@@ -71,72 +70,6 @@ from .documentation_guardrails import (
     MASTER_BOOTSTRAP_WORKFLOWS,
     master_bootstrap_artifact_candidates,
 )
-
-# ---------------------------------------------------------------------------
-# Automatic sidecar instruction injection template
-# ---------------------------------------------------------------------------
-
-SIDECAR_INSTRUCTION_TEMPLATE = """
-
-═══════════════════════════════════════════════════════════
-CRITICAL: RESULT REPORTING REQUIREMENT (AUTOMATED INJECTION)
-═══════════════════════════════════════════════════════════
-
-After completing your work, you MUST report results via meta.json sidecar.
-
-**Sidecar path**: `{META_JSON_PATH}`
-
-**Required steps**:
-1. Write your artifact file(s) to disk using write_file tool
-2. Verify each artifact file exists on disk
-3. Create the meta.json sidecar using write_file tool with this EXACT structure:
-   {{
-     "schema_version": "v2",
-     "coder_result": {{
-       "status": "APPROVED" or "REJECTED",
-       "remark": "Brief summary of what you accomplished",
-       "artifacts": {{
-         {ARTIFACT_ENTRIES}
-       }},
-       "recorded_at": "{CURRENT_TIMESTAMP}"
-     }}
-   }}
-4. Verify meta.json exists on disk before finishing
-
-**Status decision rule**:
-- Return APPROVED only if ALL required artifacts exist on disk AND meta.json is written
-- Return REJECTED if any artifact is missing or cannot be created
-
-**Output format rule**:
-- Return ONLY valid JSON matching this structure:
-  {{
-    "status": "APPROVED" or "REJECTED",
-    "remark": "<summary>",
-    "artifacts": {{
-      {ARTIFACT_ENTRIES}
-    }}
-  }}
-- Do NOT return markdown, explanations, or conversational text
-- The runner reads results ONLY from meta.json and your JSON output
-- If a path is absolute on Windows, use forward slashes in JSON strings
-  Example: `D:/repo/docs/system/file.md`
-
-**Valid example**:
-{{
-  "status": "APPROVED",
-  "remark": "Wrote the required artifact and meta.json successfully.",
-  "artifacts": {{
-    {ARTIFACT_ENTRIES}
-  }}
-}}
-
-**Verification requirement**:
-- You MUST verify files exist on disk before returning APPROVED
-- Use exact artifact paths provided in context variables above
-
-This requirement is MANDATORY — failure to follow these steps will cause workflow failure.
-═══════════════════════════════════════════════════════════
-"""
 
 
 CODER_SOP_INSTRUCTION_TEMPLATE = """
@@ -378,13 +311,26 @@ def run_step(
         changed_paths=changed_paths,
     )
 
+    # Build usage_data from meta.json coder_result.usage (LLM self-reported).
+    # This is the authoritative source — CLI stdout parsing is unreliable due to
+    # sidecar early-exit terminating the process before final usage output.
+    meta_usage = coder_result.get("usage") if isinstance(coder_result.get("usage"), dict) else {}
+    usage_data = _build_usage_data(
+        meta_usage=meta_usage,
+        step=step,
+        coder=coder,
+        invocation=invocation,
+    )
+    # Re-write usage.json with enriched data from meta.json.
+    _save_json_atomic(step_dir / "usage.json", usage_data)
+
     return StepResult(
         status=coder_result["status"],
         remark=str(coder_result.get("remark") or ""),
         artifacts=artifacts,
         reject_code=coder_result.get("reject_code") or None,
         meta_json_path=_path_for_report(meta_path, project_root),
-        usage_data=dataclass_dict(invocation.usage),
+        usage_data=usage_data,
     )
 
 
@@ -599,6 +545,52 @@ def _read_and_validate_meta_json(path: Path) -> dict:
         )
 
     return meta
+
+
+def _coerce_int(value: Any) -> int | None:
+    if value is None:
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _coerce_float(value: Any) -> float | None:
+    if value is None:
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _build_usage_data(
+    *,
+    meta_usage: dict[str, Any],
+    step: str,
+    coder: str,
+    invocation: Any,
+) -> dict[str, Any]:
+    """Build usage_data dict from meta.json coder_result.usage (LLM self-reported).
+
+    Falls back to not_available if the LLM did not report usage.
+    Duration is taken from the invocation (wall-clock measurement).
+    """
+    usage_source = "meta_json_reported" if meta_usage else "not_available"
+    cli_usage = dataclass_dict(invocation.usage)
+    return {
+        "step": step,
+        "coder_used": coder,
+        "usage_source": usage_source,
+        "input_tokens": _coerce_int(meta_usage.get("input_tokens")),
+        "output_tokens": _coerce_int(meta_usage.get("output_tokens")),
+        "total_tokens": _coerce_int(meta_usage.get("total_tokens")),
+        "cost": _coerce_float(meta_usage.get("cost")),
+        "duration_ms": cli_usage.get("duration_ms"),
+        "started_at": cli_usage.get("started_at", ""),
+        "finished_at": cli_usage.get("finished_at", ""),
+    }
 
 
 def _coerce_direct_result_to_meta(

@@ -1,0 +1,52 @@
+Objective
+
+Review the staged Layer 2 platform core constitution set and decide whether it is acceptable for deterministic validation.
+
+Layer Boundary
+
+- Review against Layer 2 scope only.
+- Reject content that redefines Layer 1 governance or collapses into Layer 3 bundle-specific detail.
+
+Reference Inputs
+
+- Read `MASTERPLAN_ARCHITECTURE_PATH`.
+- Read `MASTERPLAN_PLATFORM_SPEC_PATH`.
+- Read `PLATFORM_CONTEXT_INVENTORY`.
+- Read the Layer 1 governance set at `GOVERNANCE_RUNTIME_ROOT`.
+- Review all staged permanent docs:
+  `L2_PLATFORM_INDEX`, `L2_RUNTIME_MODEL`, `L2_BUNDLE_AUTHORING_CONTRACT`,
+  `L2_SHARED_SERVICES`, `L2_METADATA_CONTRACT`, `L2_VALIDATION_CONTRACT`.
+
+Forbidden Content
+
+Reject if the staged set contains:
+
+- Layer 1 governance redefinition or contradiction
+- platform standards containing bundle-specific outputs or examples presented as platform-wide rules
+- required permanent documents missing
+- platform identity missing or unclear (`agent-runner-v2`)
+- metadata values violating Layer 1 baseline
+- evidence artifacts presented as permanent platform standards
+- missing mandatory sections in a permanent document
+- operational bootstrap mechanics or repository setup instructions
+- a document map that omits `README.md` from the six-document permanent set
+- lifecycle-state misuse such as published/active values in staged docs
+
+Review Decision
+
+- Produce an explicit decision: approved or rejected.
+- Always write a review file to `REVIEW_FILE_SUGGESTED`.
+- Cite offending text directly for every rejection finding.
+- If approved, summarize briefly why the set is ready for deterministic validation.
+- Use ASCII only in the review artifact.
+
+Output Instructions
+
+Write the review file with these sections:
+
+- `Decision`
+- `Layer Boundary Findings`
+- `Structure Findings`
+- `Metadata Findings`
+- `Cited Evidence`
+- `Next Action`

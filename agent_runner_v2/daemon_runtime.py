@@ -357,6 +357,9 @@ def build_job_sync_payload(*, job: dict[str, Any], step_result: dict[str, Any], 
     # Duration estimate
     duration_seconds = None
 
+    # Usage summary for backend token/cost tracking
+    usage_summary = job.get("usage_summary")
+
     return {
         "step_status": step_result.get("status", "completed").lower(),
         "step_outcome": step_result.get("outcome"),
@@ -369,6 +372,7 @@ def build_job_sync_payload(*, job: dict[str, Any], step_result: dict[str, Any], 
         "review": review,
         "artifacts": artifacts_list,
         "events": events,
+        "usage_summary": usage_summary if isinstance(usage_summary, dict) else None,
     }
 
 

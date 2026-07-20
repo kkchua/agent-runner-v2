@@ -1,0 +1,37 @@
+{
+  "schema_version": "v2",
+  "coder_result": {
+    "status": "APPROVED",
+    "remark": "Reviewed all 6 staged Layer 1 permanent documents against masterplan and spec. All documents are within Layer 1 scope, contain no forbidden operational content, carry compliant metadata, and include all required sections. The set is approved for deterministic validation.",
+    "artifacts": {
+      "REVIEW_FILE_SUGGESTED": "D:\\MyProjectSpace\\01_Workflows\\agent-runner-v2\\docs\\system\\00_governance\\foundation\\runs\\01GF-20260719-c5e882c3\\01GF-20260719-c5e882c3-governance-foundation-review.md",
+      "L1_FOUNDATION_INDEX": "D:\\MyProjectSpace\\01_Workflows\\agent-runner-v2\\docs\\system\\00_governance\\foundation\\runs\\01GF-20260719-c5e882c3\\README.md",
+      "L1_LAYER_MODEL": "D:\\MyProjectSpace\\01_Workflows\\agent-runner-v2\\docs\\system\\00_governance\\foundation\\runs\\01GF-20260719-c5e882c3\\LAYER_MODEL.md",
+      "L1_DOCUMENT_AUTHORITY": "D:\\MyProjectSpace\\01_Workflows\\agent-runner-v2\\docs\\system\\00_governance\\foundation\\runs\\01GF-20260719-c5e882c3\\DOCUMENT_AUTHORITY.md",
+      "L1_BUNDLE_TAXONOMY": "D:\\MyProjectSpace\\01_Workflows\\agent-runner-v2\\docs\\system\\00_governance\\foundation\\runs\\01GF-20260719-c5e882c3\\BUNDLE_TAXONOMY.md",
+      "L1_GOVERNANCE_LIFECYCLE": "D:\\MyProjectSpace\\01_Workflows\\agent-runner-v2\\docs\\system\\00_governance\\foundation\\runs\\01GF-20260719-c5e882c3\\GOVERNANCE_LIFECYCLE.md",
+      "L1_METADATA_STANDARD": "D:\\MyProjectSpace\\01_Workflows\\agent-runner-v2\\docs\\system\\00_governance\\foundation\\runs\\01GF-20260719-c5e882c3\\METADATA_STANDARD.md",
+      "GOVERNANCE_CONTEXT_INVENTORY": "D:\\MyProjectSpace\\01_Workflows\\agent-runner-v2\\docs\\system\\00_governance\\foundation\\runs\\01GF-20260719-c5e882c3\\01GF-20260719-c5e882c3-governance-context-inventory.md",
+      "GOVERNANCE_FOUNDATION_VALIDATION": "D:\\MyProjectSpace\\01_Workflows\\agent-runner-v2\\docs\\system\\00_governance\\foundation\\runs\\01GF-20260719-c5e882c3\\01GF-20260719-c5e882c3-governance-foundation-validation.md",
+      "GOVERNANCE_PUBLISH_MANIFEST": "D:\\MyProjectSpace\\01_Workflows\\agent-runner-v2\\docs\\system\\00_governance\\foundation\\current\\governance_set_manifest.json"
+    },
+    "recorded_at": "2026-07-20T00:09:53+08:00"
+  },
+  "runner_data": {
+    "step": "review_governance_foundation_docs",
+    "coder_used": "qwen",
+    "invoked_at": "2026-07-20T00:09:53",
+    "finished_at": "2026-07-20T00:13:56",
+    "prompt_checksum": "sha256:15906456c46e0ab2e7917926bb3b31e3a79b7c0c7184c230d84924ede50af938",
+    "allowed_write_paths": [
+      "D:/MyProjectSpace/01_Workflows/agent-runner-v2/docs/system/00_governance/foundation/runs/01GF-20260719-c5e882c3/01GF-20260719-c5e882c3-governance-foundation-review.md",
+      "D:/MyProjectSpace/01_Workflows/agent-runner-v2/docs/system/00_governance/foundation/runs/01GF-20260719-c5e882c3/01GF-20260719-c5e882c3-governance-foundation-review.meta.json"
+    ],
+    "changed_paths": [
+      "D:/MyProjectSpace/01_Workflows/agent-runner-v2/docs/system/00_governance/foundation/runs/01GF-20260719-c5e882c3/01GF-20260719-c5e882c3-governance-foundation-review.md",
+      "D:/MyProjectSpace/01_Workflows/agent-runner-v2/docs/system/00_governance/foundation/runs/01GF-20260719-c5e882c3/01GF-20260719-c5e882c3-governance-foundation-review.meta.json"
+    ],
+    "enriched_at": "2026-07-20T00:13:57",
+    "runner_version": "v2"
+  }
+}

@@ -245,7 +245,7 @@ source paths that the LLM reads as read-only reference.
 
 | Input | Path | Purpose |
 |---|---|---|
-| Layer 1 governance set | `docs/system/00_governance/foundation/current/` | Inherited governance baseline |
+| Layer 1 governance set | `GOVERNANCE_RUNTIME_ROOT` (`~/.ukbe-runner/bundles/core/current`) | Inherited governance baseline; injected into prompt context as `{GOVERNANCE_RUNTIME_ROOT}` placeholder |
 | Layer Architecture Masterplan | `masterplan/LAYER_ARCHITECTURE_MASTERPLAN.md` | Scope and boundary definition |
 | Workflow engine core | the platform's workflow packages module | Step types, action dispatching, bundle loading |
 | Runtime context | the platform's runtime context module | Context extensions, path resolution, job root |
@@ -556,6 +556,7 @@ Purpose:
 
 Responsibilities:
 
+- verify Layer 1 governance runtime root exists before any LLM work begins
 - confirm metadata presence and baseline validity
 - confirm required document inventory exists
 - confirm required sections exist per document
