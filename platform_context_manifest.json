@@ -61,7 +61,7 @@
     "00_bootstrap_lifecycle_admin_v1",
     "00_repo_master_docs_bootstrap_v1",
     "01_governance_foundation_v1",
-    "02_platform_core_foundation_v1"
+    "02_agent_runner_platform_v1"
   ],
   "runtime_state": {
     "job_state_root": "~/.ukbe-runner/jobs/<workflow_name>/<job_id>/",

@@ -1,0 +1,188 @@
+[workflow]
+name = "02_agent_runner_platform_v1"
+version = "1"
+label = "Agent Runner Platform v1"
+job_prefix = "02AR"
+description = "Generates, validates, audits, and publishes the Layer 2 platform core constitution for agent-runner-v2."
+visibility = "canonical"
+default_max_rejects = 3
+
+[workflow.init]
+step = "collect_platform_context"
+inputs = []
+
+[[step]]
+name = "collect_platform_context"
+action = "collect_platform_context"
+enable_notifications = true
+onsuccess = "generate_platform_core_docs"
+
+[step.artifacts]
+produces = ["PLATFORM_CONTEXT_INVENTORY"]
+result_meta_key = "PLATFORM_CONTEXT_INVENTORY"
+
+[[step]]
+name = "generate_platform_core_docs"
+prompt = "prompts/01_generate_platform_core_docs.txt"
+enable_notifications = true
+onsuccess = "review_platform_core_docs"
+
+[step.artifacts]
+required_inputs = ["PLATFORM_CONTEXT_INVENTORY"]
+produces = [
+  "L2_PLATFORM_INDEX",
+  "L2_RUNTIME_MODEL",
+  "L2_BUNDLE_AUTHORING_CONTRACT",
+  "L2_SHARED_SERVICES",
+  "L2_METADATA_CONTRACT",
+  "L2_VALIDATION_CONTRACT",
+]
+result_meta_key = "L2_PLATFORM_INDEX"
+
+[step.coder]
+role_policy = "architect_standard"
+
+[[step]]
+name = "review_platform_core_docs"
+prompt = "prompts/02_review_platform_core_docs.txt"
+enable_notifications = true
+requires_human_approval_after = false
+onsuccess = "validate_platform_core_docs"
+
+[step.artifacts]
+required_inputs = [
+  "PLATFORM_CONTEXT_INVENTORY",
+  "L2_PLATFORM_INDEX",
+  "L2_RUNTIME_MODEL",
+  "L2_BUNDLE_AUTHORING_CONTRACT",
+  "L2_SHARED_SERVICES",
+  "L2_METADATA_CONTRACT",
+  "L2_VALIDATION_CONTRACT",
+]
+produces = ["REVIEW_FILE_SUGGESTED"]
+result_meta_key_from_context = "REVIEW_FILE_SUGGESTED"
+
+[step.coder]
+role_policy = "reviewer_standard"
+must_differ = false
+
+[step.on_reject_refine]
+step = "refine_platform_core_docs"
+artifact = "L2_PLATFORM_INDEX"
+max_iterations = 2
+exhausted_failure_code = "PLATFORM_CORE_REFINEMENT_EXHAUSTED"
+exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
+
+[[step]]
+name = "refine_platform_core_docs"
+prompt = "prompts/03_refine_platform_core_docs.txt"
+enable_notifications = true
+
+[step.artifacts]
+required_inputs = [
+  "PLATFORM_CONTEXT_INVENTORY",
+  "L2_PLATFORM_INDEX",
+  "L2_RUNTIME_MODEL",
+  "L2_BUNDLE_AUTHORING_CONTRACT",
+  "L2_SHARED_SERVICES",
+  "L2_METADATA_CONTRACT",
+  "L2_VALIDATION_CONTRACT",
+  "REVIEW_FILE_SUGGESTED",
+]
+optional_inputs = ["PLATFORM_CORE_VALIDATION"]
+produces = [
+  "L2_PLATFORM_INDEX",
+  "L2_RUNTIME_MODEL",
+  "L2_BUNDLE_AUTHORING_CONTRACT",
+  "L2_SHARED_SERVICES",
+  "L2_METADATA_CONTRACT",
+  "L2_VALIDATION_CONTRACT",
+]
+target_artifact = "L2_PLATFORM_INDEX"
+edit_mode = "in_place"
+result_meta_key = "L2_PLATFORM_INDEX"
+loop_returns_to = "review_platform_core_docs"
+
+[step.coder]
+role_policy = "refine_standard"
+
+[[step]]
+name = "validate_platform_core_docs"
+action = "validate_platform_core_docs"
+enable_notifications = true
+onsuccess = "audit_platform_core_docs"
+
+[step.artifacts]
+required_inputs = [
+  "L2_PLATFORM_INDEX",
+  "L2_RUNTIME_MODEL",
+  "L2_BUNDLE_AUTHORING_CONTRACT",
+  "L2_SHARED_SERVICES",
+  "L2_METADATA_CONTRACT",
+  "L2_VALIDATION_CONTRACT",
+]
+produces = ["PLATFORM_CORE_VALIDATION"]
+result_meta_key = "PLATFORM_CORE_VALIDATION"
+
+[step.on_reject_refine]
+step = "refine_platform_core_docs"
+artifact = "L2_PLATFORM_INDEX"
+max_iterations = 2
+exhausted_failure_code = "PLATFORM_CORE_VALIDATION_EXHAUSTED"
+exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
+
+[[step]]
+name = "audit_platform_core_docs"
+prompt = "prompts/04_audit_platform_core_docs.txt"
+enable_notifications = true
+requires_human_approval_after = true
+onsuccess = "publish_platform_core_set"
+
+[step.artifacts]
+required_inputs = [
+  "PLATFORM_CONTEXT_INVENTORY",
+  "L2_PLATFORM_INDEX",
+  "L2_RUNTIME_MODEL",
+  "L2_BUNDLE_AUTHORING_CONTRACT",
+  "L2_SHARED_SERVICES",
+  "L2_METADATA_CONTRACT",
+  "L2_VALIDATION_CONTRACT",
+  "PLATFORM_CORE_VALIDATION",
+]
+produces = ["AUDIT_FILE_SUGGESTED"]
+result_meta_key_from_context = "AUDIT_FILE_SUGGESTED"
+
+[step.coder]
+role_policy = "validation_standard"
+must_differ = false
+
+[step.on_reject_refine]
+step = "refine_platform_core_docs"
+artifact = "L2_PLATFORM_INDEX"
+max_iterations = 2
+exhausted_failure_code = "PLATFORM_CORE_AUDIT_EXHAUSTED"
+exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
+
+[[step]]
+name = "publish_platform_core_set"
+action = "publish_platform_core_set"
+enable_notifications = true
+onsuccess = "stepCompletion"
+
+[step.artifacts]
+required_inputs = [
+  "L2_PLATFORM_INDEX",
+  "L2_RUNTIME_MODEL",
+  "L2_BUNDLE_AUTHORING_CONTRACT",
+  "L2_SHARED_SERVICES",
+  "L2_METADATA_CONTRACT",
+  "L2_VALIDATION_CONTRACT",
+  "PLATFORM_CORE_VALIDATION",
+  "AUDIT_FILE_SUGGESTED",
+]
+produces = ["PLATFORM_PUBLISH_MANIFEST", "PLATFORM_PUBLISH_MANIFEST_HISTORY"]
+result_meta_key = "PLATFORM_PUBLISH_MANIFEST"
+
+[[step]]
+name = "stepCompletion"
+action = "step_completion"

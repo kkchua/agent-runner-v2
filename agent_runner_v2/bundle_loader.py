@@ -34,7 +34,7 @@ GLOBAL_RUNNER_HOME = Path.home() / DEFAULT_RUNNER_HOME
 BOOTSTRAP_ROOT = PACKAGE_ROOT / "bootstrap" / "workflows" / "default"
 BOOTSTRAP_SOURCE_ROOT = Path(system_doc_rel())
 FOUNDATION_CURRENT_ROOT_REL = "docs/system/00_governance/foundation/current"
-PLATFORM_CURRENT_ROOT_REL = "docs/system/00_governance/platform/current"
+PLATFORM_CURRENT_ROOT_REL = "docs/system/00_governance/platform"
 PACKAGE_BOOTSTRAP_ROOT = PACKAGE_ROOT / "bootstrap" / "bundles" / CORE_BUNDLE_NAME / "current"
 PACKAGED_BOOTSTRAP_EXCLUDE_PATTERNS = (
     "*-bootstrap-change-log.md",
@@ -378,33 +378,55 @@ def install_platform_bundle(
     *,
     runner_home: Path | None = None,
 ) -> dict:
+    """Install Layer 2 platform bundles to the global runner home.
+
+    Scans ``docs/system/00_governance/platform/`` for platform subdirectories
+    and copies each ``<platform>/current/`` tree to
+    ``BUNDLE_ROOT/platform/<platform>/``.
+
+    Args:
+        workspace_root: Repository root directory.
+        runner_home: Override for the global runner home path.
+
+    Returns:
+        Installation result dictionary with per-platform details.
+    """
     workspace_root = workspace_root.resolve()
     runner_home = (runner_home or GLOBAL_RUNNER_HOME).resolve()
-    source_root = (workspace_root / PLATFORM_CURRENT_ROOT_REL).resolve()
-    if not source_root.is_dir():
+    platform_root = (workspace_root / PLATFORM_CURRENT_ROOT_REL).resolve()
+    bundle_root = runner_home / "bundles" / CORE_BUNDLE_NAME / "current" / "platform"
+
+    if not platform_root.is_dir():
         return {
             "workspace_root": str(workspace_root),
-            "source_root": str(source_root),
-            "global_platform_root": None,
+            "platform_root": str(platform_root),
+            "installed": [],
             "skipped": True,
-            "reason": "Layer 2 platform current folder not found — run the Layer 2 workflow first.",
+            "reason": "Layer 2 platform folder not found — run the Layer 2 workflow first.",
         }
-    if not _tree_has_files(source_root):
-        return {
-            "workspace_root": str(workspace_root),
-            "source_root": str(source_root),
-            "global_platform_root": None,
-            "skipped": True,
-            "reason": "Layer 2 platform current folder is empty.",
-        }
-    platform_root = runner_home / "bundles" / CORE_BUNDLE_NAME / "current" / "platform"
-    platform_root.mkdir(parents=True, exist_ok=True)
-    shutil.copytree(str(source_root), str(platform_root), dirs_exist_ok=True)
+
+    installed = []
+    for platform_dir in sorted(platform_root.iterdir()):
+        if not platform_dir.is_dir():
+            continue
+        current_dir = platform_dir / "current"
+        if not current_dir.is_dir() or not _tree_has_files(current_dir):
+            continue
+        dest = bundle_root / platform_dir.name
+        dest.mkdir(parents=True, exist_ok=True)
+        shutil.copytree(str(current_dir), str(dest), dirs_exist_ok=True)
+        installed.append({
+            "platform": platform_dir.name,
+            "source": str(current_dir),
+            "destination": str(dest),
+        })
+
     return {
         "workspace_root": str(workspace_root),
-        "source_root": str(source_root),
-        "global_platform_root": str(platform_root),
-        "skipped": False,
+        "platform_root": str(platform_root),
+        "installed": installed,
+        "skipped": len(installed) == 0,
+        "reason": None if installed else "No platform subdirectories with current/ found.",
     }
 
 

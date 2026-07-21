@@ -31,18 +31,18 @@ Follow this lookup order unless the user explicitly asks for something else:
 When the question is about governance or platform rules:
 
 - Start with `docs/system/00_governance/foundation/current/` for Layer 1.
-- Start with `docs/system/00_governance/platform/current/` for Layer 2 platform constitution.
+- Start with `docs/system/00_governance/platform/agent_runner/current/` for Layer 2 platform constitution.
 - Use `masterplan/` only for design intent, layer boundaries, and workflow specifications.
 
 When the question is about workflow bundles:
 
 - Start with `workflows/<workflow_name>/workflow.toml`.
 - Then inspect `bundle_governance.toml`, `bundle_governance/`, and bundle-local `actions.py`.
-- Use `docs/system/00_governance/platform/current/BUNDLE_AUTHORING_CONTRACT.md` for platform-wide bundle rules.
+- Use `docs/system/00_governance/platform/agent_runner/current/BUNDLE_AUTHORING_CONTRACT.md` for platform-wide bundle rules.
 
 When the question is about runtime implementation:
 
-- Start with `docs/system/00_governance/platform/current/RUNTIME_MODEL.md`.
+- Start with `docs/system/00_governance/platform/agent_runner/current/RUNTIME_MODEL.md`.
 - Then inspect the smallest relevant module set, usually one of:
   - `agent_runner_v2/run_agent.py`
   - `agent_runner_v2/step_runner.py`
@@ -78,9 +78,9 @@ Use `rg` only after:
 
 Good examples:
 
-- search only `docs/system/00_governance/platform/current/` for metadata rules
+- search only `docs/system/00_governance/platform/agent_runner/current/` for metadata rules
 - search only `agent_runner_v2/` for daemon or router implementation
-- search only `workflows/02_platform_core_foundation_v1/` for bundle-local behavior
+- search only `workflows/02_agent_runner_platform_v1/` for bundle-local behavior
 
 Bad examples:
 
