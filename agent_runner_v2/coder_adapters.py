@@ -350,10 +350,17 @@ def _run_with_sidecar_poll(
             if resolved and resolved.lower().endswith((".cmd", ".bat")):
                 cmd = ["cmd", "/c"] + cmd
 
+        # Inject PYTHONPATH so agent_tools is importable by coder tool commands
+        # without sys.path.insert (avoids PowerShell quoting issues on Windows).
+        proc_env = dict(env) if env else dict(os.environ)
+        _tools_dir = str((Path(__file__).parent / "tools").resolve())
+        _existing_pp = proc_env.get("PYTHONPATH", "")
+        proc_env["PYTHONPATH"] = _tools_dir + (os.pathsep + _existing_pp if _existing_pp else "")
+
         proc = subprocess.Popen(
             cmd,
             cwd=cwd,
-            env=env,
+            env=proc_env,
             stdin=subprocess.PIPE if input_text is not None else subprocess.DEVNULL,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
@@ -492,6 +499,7 @@ def _log_command_for_step(step: str, command: list[str], cc: dict[str, Any], *, 
     auth = cc.get("auth_type", "")
     api_key_env = cc.get("openai_api_key_env", "")
     base_url = cc.get("openai_base_url", "")
+    agent = str(cc.get("agent") or "").strip()
 
     api_key_val = ""
     if api_key_env:
@@ -511,6 +519,8 @@ def _log_command_for_step(step: str, command: list[str], cc: dict[str, Any], *, 
         parts.append(api_key_val)
     if base_url:
         parts.append(f"base_url={base_url}")
+    if agent:
+        parts.append(f"agent={agent}")
 
     print(f"  [{step}] {' '.join(parts)}", flush=True)
 
@@ -929,6 +939,9 @@ def _invoke_opencode(*, step: str, prompt_text: str, cwd: Path, coder_config: di
     cc = coder_config or {}
     model_name = _opencode_model_from_config(cc)
     command = ["opencode", "run", "--model", model_name]
+    agent_name = str(cc.get("agent") or "").strip()
+    if agent_name:
+        command.extend(["--agent", agent_name])
 
     _log_command_for_step(step, command, cc, coder_name="opencode")
 

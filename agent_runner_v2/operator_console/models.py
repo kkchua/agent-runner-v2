@@ -11,12 +11,6 @@ class GlobalSettings:
 
 
 @dataclass(frozen=True)
-class RepoEntry:
-    name: str
-    path: str
-
-
-@dataclass(frozen=True)
 class WorkflowEntry:
     name: str
     workflow_name: str
@@ -24,9 +18,15 @@ class WorkflowEntry:
 
 
 @dataclass(frozen=True)
+class RepoEntry:
+    name: str
+    path: str
+    workflows: tuple[WorkflowEntry, ...]
+
+
+@dataclass(frozen=True)
 class ConsoleConfig:
     repos: tuple[RepoEntry, ...]
-    workflows: tuple[WorkflowEntry, ...]
 
 
 @dataclass(frozen=True)

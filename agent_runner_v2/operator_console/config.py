@@ -59,8 +59,7 @@ def load_console_config(path: str | None = None) -> ConsoleConfig:
     if not isinstance(payload, dict):
         raise ConsoleConfigError(f"Console config must be a JSON object: {config_path}")
     repos = _parse_repos(payload.get("repos"), config_path)
-    workflows = _parse_workflows(payload.get("workflows"), config_path)
-    return ConsoleConfig(repos=repos, workflows=workflows)
+    return ConsoleConfig(repos=repos)
 
 
 def _parse_repos(value: Any, config_path: Path) -> tuple[RepoEntry, ...]:
@@ -79,27 +78,28 @@ def _parse_repos(value: Any, config_path: Path) -> tuple[RepoEntry, ...]:
         if name in names:
             raise ConsoleConfigError(f"Duplicate repo name {name!r} in {config_path}")
         names.add(name)
-        repos.append(RepoEntry(name=name, path=str(normalized)))
+        workflows = _parse_repo_workflows(item.get("workflows"), config_path, name)
+        repos.append(RepoEntry(name=name, path=str(normalized), workflows=workflows))
     return tuple(repos)
 
 
-def _parse_workflows(value: Any, config_path: Path) -> tuple[WorkflowEntry, ...]:
+def _parse_repo_workflows(value: Any, config_path: Path, repo_name: str) -> tuple[WorkflowEntry, ...]:
     if not isinstance(value, list) or not value:
-        raise ConsoleConfigError(f"'workflows' must be a non-empty array in {config_path}")
+        raise ConsoleConfigError(f"'repos[{repo_name}]' must have a non-empty 'workflows' array in {config_path}")
     workflows: list[WorkflowEntry] = []
     names: set[str] = set()
     for index, item in enumerate(value):
         if not isinstance(item, dict):
-            raise ConsoleConfigError(f"'workflows[{index}]' must be an object in {config_path}")
+            raise ConsoleConfigError(f"'repos[{repo_name}].workflows[{index}]' must be an object in {config_path}")
         name = str(item.get("name") or "").strip()
         workflow_name = str(item.get("workflow_name") or "").strip()
         template_group = str(item.get("template_group") or "").strip() or None
         if not name or not workflow_name:
             raise ConsoleConfigError(
-                f"'workflows[{index}]' requires non-empty 'name' and 'workflow_name' in {config_path}"
+                f"'repos[{repo_name}].workflows[{index}]' requires non-empty 'name' and 'workflow_name' in {config_path}"
             )
         if name in names:
-            raise ConsoleConfigError(f"Duplicate workflow name {name!r} in {config_path}")
+            raise ConsoleConfigError(f"Duplicate workflow name {name!r} in repo {repo_name!r} in {config_path}")
         names.add(name)
         workflows.append(
             WorkflowEntry(

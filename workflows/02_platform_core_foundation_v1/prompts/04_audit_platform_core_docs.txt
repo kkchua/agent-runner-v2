@@ -29,6 +29,21 @@ Reject if the final staged set:
 - conflicts internally on authority, lifecycle, or metadata rules
 - leaves staged permanent docs in published/active lifecycle state
 - presents a runtime model that contradicts the actual platform source code
+- documents wrong function signatures for `build_context_extensions`, `build_output_paths`, or `resolve_repo_or_runtime_path` that do not match the actual source code
+- describes `resolve_repo_or_runtime_path()` as "check repo first, fall back to runtime" — the actual function dispatches by path prefix, not via existence-based fallback
+- contains the phrases "no disk recovery functions", "no stdout JSON parsing", or "sole communication channel" paired with a denial of fallbacks in RUNTIME_MODEL.md or SHARED_SERVICES.md — the runner does repair missing/invalid sidecars via `_repair_or_validate_meta_json` in `step_runner.py`
+- omits the `### BackendClient` subsection from SHARED_SERVICES.md or lists BackendClient method names that do not exist in `backend_client.py`
+- uses shortened or schematic example paths (e.g., `docs/platform/README.md`) instead of the full canonical path `docs/system/00_governance/platform/current/...`
+
+Required Audit Checks
+
+In addition to the forbidden-content list above, the audit must explicitly verify:
+
+- **Signature accuracy**: Cross-check every documented function signature in SHARED_SERVICES.md against the actual source code. Read `context_extensions.py` and `output_paths.py` from any bundled workflow (including this workflow's own bundle) and `runtime_context.py` from the installed `agent_runner_v2` package. Reject if any signature does not match.
+- **Resolution-order accuracy**: Verify the `### Resolution Order` section in SHARED_SERVICES.md describes the actual prefix-dispatch behavior of `resolve_repo_or_runtime_path()`, not an existence-based fallback.
+- **Meta sidecar accuracy**: Verify RUNTIME_MODEL.md and SHARED_SERVICES.md accurately describe both the primary sidecar channel and the repair fallback (`_repair_or_validate_meta_json`). Reject if the docs deny the repair mechanism.
+- **BackendClient method accuracy**: Verify every method listed in the `### BackendClient` subsection of SHARED_SERVICES.md exists as a `def` in `backend_client.py`. Reject on any mismatch.
+- **Authority / managed_by orthogonality**: Verify METADATA_CONTRACT.md's `### Usage Rules` section under `## Platform authority Values` explicitly states that `authority` (content ownership) and `managed_by` (mechanical producer) are orthogonal axes. A document carrying `authority: "platform-owned"` + `managed_by: workflow-generated` is consistent — the contract must say so. If the contract's definitions imply a contradiction between these two fields, reject with the specific inconsistency.
 
 Audit Decision
 

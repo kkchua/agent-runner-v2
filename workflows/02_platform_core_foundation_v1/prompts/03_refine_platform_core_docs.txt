@@ -2,6 +2,12 @@ Objective
 
 Refine the staged Layer 2 platform core docs after review or validation findings.
 
+Scope
+
+- ONLY modify documents that have validation or review findings.
+- Do NOT re-process, re-read, or re-validate documents that passed all checks.
+- Focus exclusively on fixing the specific issues identified in the validation report and review.
+
 Layer Boundary
 
 - Preserve Layer 2 scope.
@@ -17,7 +23,7 @@ Reference Inputs
 
 Artifacts
 
-Update the staged permanent docs in place:
+Update ONLY the staged docs that have findings:
 
 - `L2_PLATFORM_INDEX`
 - `L2_RUNTIME_MODEL`
@@ -33,6 +39,7 @@ Forbidden Content
 - do not rewrite the bundle as a Layer 1 or Layer 3 document
 - do not change the permanent document inventory
 - do not leave staged docs in published/active lifecycle state
+- do not modify documents that passed validation without findings
 
 Decision Rules
 
@@ -41,8 +48,7 @@ Decision Rules
 
 Output Instructions
 
-- Update the staged docs in place.
-- Preserve ASCII-only content.
+- Update ONLY the docs with findings in place.
 - Keep frontmatter fields present and consistent.
 - Ensure `README.md` explicitly lists itself in the permanent document map.
 - Ensure `platform: "agent-runner-v2"` is present on all permanent docs.

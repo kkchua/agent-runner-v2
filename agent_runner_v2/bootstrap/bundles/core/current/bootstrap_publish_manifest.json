@@ -6,14 +6,12 @@
   "published_registry_copied": true,
   "published_workflows_copied": [
     "00_bootstrap_lifecycle_admin_v1",
-    "00_repo_master_docs_bootstrap_v1",
     "01_governance_foundation_v1",
     "02_platform_core_foundation_v1"
   ],
   "shared_registry_copied": true,
   "plugin_workflows_copied": [
     "00_bootstrap_lifecycle_admin_v1",
-    "00_repo_master_docs_bootstrap_v1",
     "01_governance_foundation_v1",
     "02_platform_core_foundation_v1"
   ]

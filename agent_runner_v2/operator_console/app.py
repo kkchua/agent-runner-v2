@@ -7,7 +7,7 @@ from pathlib import Path
 
 from ..backend_client import BackendClient
 from .config import ConsoleConfigError, load_console_config, load_global_settings
-from .models import ActiveRunSummary, WorkflowEntry
+from .models import ActiveRunSummary, RepoEntry, WorkflowEntry
 from .services.backend_service import BackendRunService
 from .services.runner_service import ActionExecutionError, RunnerActionService
 from ..workflow_packages.loader import load_workflow_package
@@ -64,8 +64,9 @@ def main(argv: list[str] | None = None) -> int:
             "sync",
             "cleanup",
         ]
-        repo_options = [ft.dropdown.Option(repo.name) for repo in console_config.repos]
-        workflow_options = [ft.dropdown.Option(workflow.name) for workflow in console_config.workflows]
+        # Don't create workflow_options here since create_workflow_options is defined inside app function
+        initial_repo = console_config.repos[0] if console_config.repos else None
+        initial_workflows = initial_repo.workflows if initial_repo else ()
 
         output = ft.TextField(
             label="Output",
@@ -79,16 +80,72 @@ def main(argv: list[str] | None = None) -> int:
         action_dd = ft.Dropdown(label="Action", options=[ft.dropdown.Option(value) for value in actions], value=actions[0])
         repo_dd = ft.Dropdown(
             label="Repo",
-            options=repo_options,
+            hint_text="Select a repository",
             width=280,
+            options=[
+                ft.DropdownOption(
+                    key=repo.name,
+                    text=repo.name,
+                )
+                for repo in console_config.repos
+            ],
             value=console_config.repos[0].name if console_config.repos else None,
+            disabled=not bool(console_config.repos),
         )
         workflow_dd = ft.Dropdown(
             label="Workflow",
-            options=workflow_options,
+            hint_text="Select a workflow",
             width=400,
-            value=console_config.workflows[0].name if console_config.workflows else None,
+            options=[],  # Will be populated after create_workflow_options is defined
+            value="",  # Will be set after options are populated
+            disabled=True,  # Will be enabled if there are workflows
         )
+        # Additional UI elements to display selection status
+        selection_status = ft.Text(
+            value="Select a repository and workflow.",
+            size=14,
+        )
+
+        repo_details = ft.Text(
+            value="",
+            selectable=True,
+        )
+
+        workflow_details = ft.Text(
+            value="",
+            selectable=True,
+        )
+
+        def update_selection_display() -> None:
+            """
+            Update the informational text below the dropdowns.
+            """
+            repo = selected_repo()
+            workflow = find_selected_workflow()
+
+            if repo is None:
+                selection_status.value = "No repository selected."
+                repo_details.value = ""
+                workflow_details.value = ""
+                return
+
+            repo_details.value = f"Selected repository: {repo.name}"
+
+            if workflow is None:
+                selection_status.value = (
+                    f"Repository '{repo.name}' has no workflow selected."
+                )
+                workflow_details.value = ""
+                return
+
+            selection_status.value = (
+                f"Selected: {repo.name} / {workflow.name}"
+            )
+
+            workflow_details.value = (
+                f"Selected workflow: {workflow.name}"
+            )
+
         selected_run_id: str = ""
         active_runs_dd = ft.Dropdown(
             label="Active Runs",
@@ -113,19 +170,188 @@ def main(argv: list[str] | None = None) -> int:
         active_runs: list[ActiveRunSummary] = []
         dynamic_section = ft.Column(spacing=12)
 
-        def selected_repo_path() -> str:
+        def selected_repo() -> RepoEntry:
             for repo in console_config.repos:
                 if repo.name == repo_dd.value:
-                    return repo.path
+                    return repo
             raise ActionExecutionError("Select a repo.")
 
+        def create_workflow_options(repo: RepoEntry | None):
+            """Build dropdown options for the selected repository."""
+            if repo is None:
+                return []
+            
+            return [
+                ft.DropdownOption(
+                    key=workflow.name,
+                    text=workflow.name,
+                )
+                for workflow in repo.workflows
+            ]
+
+        def selected_repo_path() -> str:
+            return selected_repo().path
+
+        def find_selected_workflow():
+            """
+            Return the WorkflowEntry matching the current dropdown value.
+            """
+            repo = selected_repo()
+
+            if repo is None or not workflow_dd.value:
+                return None
+
+            return next(
+                (
+                    workflow
+                    for workflow in repo.workflows
+                    if workflow.name == workflow_dd.value
+                ),
+                None,
+            )
+
         def selected_workflow(required: bool = True) -> WorkflowEntry | None:
-            for workflow in console_config.workflows:
-                if workflow.name == workflow_dd.value:
-                    return workflow
-            if required:
+            workflow = find_selected_workflow()
+            if workflow is None and required:
                 raise ActionExecutionError("Select a workflow.")
-            return None
+            return workflow
+
+        def refresh_workflow_options() -> None:
+            try:
+                repo = selected_repo()
+                _log.info("[console] refresh_workflow_options repo=%s workflows=%s", repo.name, [w.name for w in repo.workflows])
+                
+                # Use the same pattern as the working app1.py
+                workflow_dd.options = create_workflow_options(repo)
+                _log.info("[console] Set workflow_dd options to: %s", [opt.key for opt in workflow_dd.options])
+                
+                if repo.workflows:
+                    workflow_dd.value = repo.workflows[0].name
+                    _log.info("[console] Set workflow_dd value to: %s", workflow_dd.value)
+                else:
+                    workflow_dd.value = None
+                    _log.info("[console] Set workflow_dd value to None")
+                    
+                page.update()
+                _log.info("[console] Called page.update() after refreshing workflow options")
+            except Exception as e:
+                _log.error("[console] Error in refresh_workflow_options: %s", str(e))
+                import traceback
+                _log.error("[console] Traceback: %s", traceback.format_exc())
+
+        def on_workflow_changed(_event=None) -> None:
+            """
+            Handle workflow selection changes.
+            """
+            try:
+                _log.info(
+                    "Workflow selection event fired: value=%s, data=%s",
+                    workflow_dd.value,
+                    getattr(_event, "data", None),
+                )
+
+                workflow = find_selected_workflow()
+
+                if workflow is None:
+                    _log.warning(
+                        "Selected workflow could not be found: %s",
+                        workflow_dd.value,
+                    )
+                else:
+                    _log.info(
+                        "Selected workflow: %s",
+                        workflow.name,
+                    )
+
+                update_selection_display()
+                page.update()
+
+            except Exception:
+                _log.exception(
+                    "Unexpected error while changing workflow."
+                )
+
+                show_error(
+                    "Unable to process the selected workflow."
+                )
+
+        def show_error(message: str) -> None:
+            """
+            Display an error message in the console UI.
+            """
+            _log.error(message)
+
+            page.show_dialog(
+                ft.AlertDialog(
+                    modal=True,
+                    title=ft.Text("Console Error"),
+                    content=ft.Text(message),
+                    actions=[
+                        ft.TextButton(
+                            "Close",
+                            on_click=lambda event: page.pop_dialog(),
+                        )
+                    ],
+                )
+            )
+
+        def on_repo_changed(_event=None) -> None:
+            """
+            Refresh the workflow dropdown when the repository changes.
+            """
+            try:
+                _log.info(
+                    "Repository selection event fired: value=%s, data=%s",
+                    repo_dd.value,
+                    getattr(_event, "data", None),
+                )
+
+                repo = selected_repo()
+
+                if repo is None:
+                    _log.warning(
+                        "Selected repository could not be found: %s",
+                        repo_dd.value,
+                    )
+
+                    workflow_dd.options = []
+                    workflow_dd.value = None
+                    workflow_dd.disabled = True
+
+                    update_selection_display()
+                    page.update()
+                    return
+
+                _log.info(
+                    "Selected repository: %s; workflows=%s",
+                    repo.name,
+                    [
+                        workflow.name
+                        for workflow in repo.workflows
+                    ],
+                )
+
+                workflow_dd.options = create_workflow_options(repo)
+
+                if repo.workflows:
+                    workflow_dd.value = repo.workflows[0].name
+                    workflow_dd.disabled = False
+                else:
+                    workflow_dd.value = None
+                    workflow_dd.disabled = True
+
+                update_selection_display()
+                page.update()
+
+            except Exception:
+                _log.exception(
+                    "Unexpected error while changing repository."
+                )
+
+                show_error(
+                    "Unable to update the workflow list for the "
+                    "selected repository."
+                )
 
         def refresh_step_options(_event=None) -> None:
             try:
@@ -133,6 +359,7 @@ def main(argv: list[str] | None = None) -> int:
                 if workflow is None:
                     reset_step_dd.options = []
                     reset_step_dd.value = None
+                    update_selection_display()
                     page.update()
                     return
                 repo_root = Path(selected_repo_path())
@@ -145,6 +372,7 @@ def main(argv: list[str] | None = None) -> int:
                 reset_step_dd.options = []
                 reset_step_dd.value = None
                 output.value = f"Failed to load workflow steps: {exc}"
+            update_selection_display()
             page.update()
 
         def refresh_active_runs(_event=None) -> None:
@@ -176,6 +404,7 @@ def main(argv: list[str] | None = None) -> int:
                 active_runs_dd.options = []
                 active_runs_dd.value = None
                 output.value = str(exc)
+            update_selection_display()
             page.update()
 
         def _on_active_run_selected(_event=None) -> None:
@@ -183,10 +412,12 @@ def main(argv: list[str] | None = None) -> int:
             selected_run_id = active_runs_dd.value or ""
 
         def update_visibility(_event=None) -> None:
+            _log.info("[console] update_visibility fired, action_dd.value=%s", action_dd.value or "")
             action = action_dd.value or ""
             needs_run = action in {"approval", "cancel job", "reset step"}
             workflow_dd.visible = action in {"submit job", "approval", "cancel job", "reset step", "init", "sync", "cleanup"}
             cleanup_dry_run_cb.visible = action == "cleanup"
+            update_selection_display()
             page.update()
             if needs_run and repo_dd.value and workflow_dd.value:
                 refresh_active_runs()
@@ -305,17 +536,60 @@ def main(argv: list[str] | None = None) -> int:
         submit_row = ft.Row([initiative_tf, coder_tf], wrap=True)
         init_row = ft.Row([bundle_domain_tf, bundle_profile_tf], wrap=True)
 
+        # Initialize workflow dropdown with options for the initially selected repo
+        if initial_repo:
+            workflow_dd.options = create_workflow_options(initial_repo)
+            if initial_workflows:
+                workflow_dd.value = initial_workflows[0].name
+                workflow_dd.disabled = False
+            else:
+                workflow_dd.value = None
+                workflow_dd.disabled = True
+
+        # Initialise the display text using the initial values.
+        update_selection_display()
+        
         action_dd.on_change = update_visibility
-        repo_dd.on_change = refresh_active_runs
-        workflow_dd.on_change = refresh_active_runs
+        repo_dd.on_select = on_repo_changed
+        workflow_dd.on_select = on_workflow_changed
         active_runs_dd.on_change = _on_active_run_selected
 
         page.add(
             ft.Column(
                 controls=[
                     ft.Text("Agent Runner Operator Console", size=28, weight=ft.FontWeight.BOLD),
+                    ft.Text(
+                        "Choose a repository and its workflow.",
+                        size=14,
+                    ),
+                    ft.Divider(),
+                    ft.Row(
+                        controls=[
+                            repo_dd,
+                            workflow_dd,
+                        ],
+                        wrap=True,
+                        spacing=16,
+                        run_spacing=12,
+                    ),
+                    ft.Container(
+                        content=ft.Column(
+                            controls=[
+                                selection_status,
+                                repo_details,
+                                workflow_details,
+                            ],
+                            spacing=6,
+                        ),
+                        padding=16,
+                        border=ft.Border.all(
+                            width=1,
+                            color=ft.Colors.OUTLINE_VARIANT,
+                        ),
+                        border_radius=8,
+                    ),
                     status_text,
-                    ft.Row([action_dd, repo_dd, workflow_dd], wrap=True),
+                    ft.Row([action_dd], wrap=True),
                     run_row,
                     active_runs_container,
                     reset_step_dd,
@@ -329,8 +603,6 @@ def main(argv: list[str] | None = None) -> int:
                 spacing=16,
             )
         )
-        repo_dd.on_change = lambda e: (refresh_step_options(e), refresh_active_runs(e))
-        workflow_dd.on_change = lambda e: (refresh_step_options(e), refresh_active_runs(e))
         refresh_step_options()
         update_visibility()
 

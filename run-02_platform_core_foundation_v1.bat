@@ -26,7 +26,7 @@ REM Workflow template group (loaded from workflows/<name>/workflow.toml)
 set "TEMPLATE_GROUP=02_platform_core_foundation_v1"
 
 REM Job ID to resume (leave blank to auto-create a new job)
-set "JOB_ID=02PC-GEN-20260720-005"
+set "JOB_ID=02PC-GEN-20260721-009"
 
 REM Set DRY_RUN=true to render prompts only (no coder invocation)
 set "DRY_RUN=false"

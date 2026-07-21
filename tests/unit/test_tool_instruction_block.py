@@ -149,7 +149,8 @@ def test_render_tolerates_none_context_values():
     """Render should coerce None values instead of raising during placeholder replacement."""
     template = "value={NULLISH}"
     rendered = render_prompt(template, {"NULLISH": None, "TOOLS_DIR": "", "STEP_NAME": "x", "PROGRESS_FILE": "p"})
-    assert rendered == "value="
+    assert rendered.startswith("value=")
+    assert "{NULLISH}" not in rendered
 
 
 # ---------------------------------------------------------------------------

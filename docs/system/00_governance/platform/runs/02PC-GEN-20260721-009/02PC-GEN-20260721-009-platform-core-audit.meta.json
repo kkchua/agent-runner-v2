@@ -1,0 +1,33 @@
+{
+  "schema_version": "v2",
+  "coder_result": {
+    "status": "APPROVED",
+    "remark": "Semantic audit of staged Layer 2 platform core constitution set completed. All six permanent documents pass all checks: signatures match source code exactly, resolution order is prefix-based dispatch (not existence-based fallback), meta sidecar repair fallback accurately documented, all 14 BackendClient methods verified, authority/managed_by orthogonality correctly stated, no forbidden content found, no Layer 1 redefinition or Layer 3 drift, all lifecycle statuses are draft, canonical paths used throughout. Zero findings.",
+    "artifacts": {
+      "AUDIT_FILE_SUGGESTED": "D:\\MyProjectSpace\\01_Workflows\\agent-runner-v2\\docs\\system\\00_governance\\platform\\runs\\02PC-GEN-20260721-009\\02PC-GEN-20260721-009-platform-core-audit.md"
+    },
+    "recorded_at": "2026-07-21T17:26:13+08:00",
+    "usage": {
+      "input_tokens": 85000,
+      "output_tokens": 12000,
+      "total_tokens": 97000
+    }
+  },
+  "runner_data": {
+    "step": "audit_platform_core_docs",
+    "coder_used": "opencode",
+    "invoked_at": "2026-07-21T17:26:14",
+    "finished_at": "2026-07-21T17:35:26",
+    "prompt_checksum": "sha256:765814785fc2587dae8aed38b288264a805fa2a71f4b44aa4eeb11d428d7fdf7",
+    "allowed_write_paths": [
+      "D:/MyProjectSpace/01_Workflows/agent-runner-v2/docs/system/00_governance/platform/runs/02PC-GEN-20260721-009/02PC-GEN-20260721-009-platform-core-audit.md",
+      "D:/MyProjectSpace/01_Workflows/agent-runner-v2/docs/system/00_governance/platform/runs/02PC-GEN-20260721-009/02PC-GEN-20260721-009-platform-core-audit.meta.json"
+    ],
+    "changed_paths": [
+      "D:/MyProjectSpace/01_Workflows/agent-runner-v2/docs/system/00_governance/platform/runs/02PC-GEN-20260721-009/02PC-GEN-20260721-009-platform-core-audit.md",
+      "D:/MyProjectSpace/01_Workflows/agent-runner-v2/docs/system/00_governance/platform/runs/02PC-GEN-20260721-009/02PC-GEN-20260721-009-platform-core-audit.meta.json"
+    ],
+    "enriched_at": "2026-07-21T17:35:26",
+    "runner_version": "v2"
+  }
+}
