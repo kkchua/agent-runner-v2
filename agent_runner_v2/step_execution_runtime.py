@@ -359,6 +359,9 @@ def resolve_step_coder(
     original = chosen
     resolved_role: str | None = original
     resolved_config = resolve_effective_coder(role_name=original, bundle_root=bundle_root)
+    agent_value = str(policy.get("agent") or "").strip() if policy else ""
+    if agent_value:
+        resolved_config["agent"] = agent_value
     chosen = str(resolved_config.get("coder") or "").strip() or original
 
     if resolved_config is not None:

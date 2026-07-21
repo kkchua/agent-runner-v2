@@ -22,12 +22,17 @@ def test_load_console_config_parses_repos_and_workflows(tmp_path) -> None:
     config_path.write_text(
         json.dumps(
             {
-                "repos": [{"name": "Main Repo", "path": str(tmp_path / "repo")}],
-                "workflows": [
+                "repos": [
                     {
-                        "name": "Governance",
-                        "workflow_name": "01_governance_foundation_v1",
-                        "template_group": "01_governance_foundation_v1",
+                        "name": "Main Repo",
+                        "path": str(tmp_path / "repo"),
+                        "workflows": [
+                            {
+                                "name": "Governance",
+                                "workflow_name": "01_governance_foundation_v1",
+                                "template_group": "01_governance_foundation_v1",
+                            }
+                        ],
                     }
                 ],
             }
@@ -38,8 +43,8 @@ def test_load_console_config_parses_repos_and_workflows(tmp_path) -> None:
     loaded = console_config.load_console_config(str(config_path))
 
     assert loaded.repos[0].name == "Main Repo"
-    assert loaded.workflows[0].workflow_name == "01_governance_foundation_v1"
-    assert loaded.workflows[0].template_group == "01_governance_foundation_v1"
+    assert loaded.repos[0].workflows[0].workflow_name == "01_governance_foundation_v1"
+    assert loaded.repos[0].workflows[0].template_group == "01_governance_foundation_v1"
 
 
 def test_load_console_config_rejects_duplicate_repo_names(tmp_path) -> None:
@@ -48,10 +53,9 @@ def test_load_console_config_rejects_duplicate_repo_names(tmp_path) -> None:
         json.dumps(
             {
                 "repos": [
-                    {"name": "Main Repo", "path": str(tmp_path / "repo-1")},
-                    {"name": "Main Repo", "path": str(tmp_path / "repo-2")},
+                    {"name": "Main Repo", "path": str(tmp_path / "repo-1"), "workflows": [{"name": "WF", "workflow_name": "wf"}]},
+                    {"name": "Main Repo", "path": str(tmp_path / "repo-2"), "workflows": [{"name": "WF", "workflow_name": "wf"}]},
                 ],
-                "workflows": [{"name": "WF", "workflow_name": "wf"}],
             }
         ),
         encoding="utf-8",

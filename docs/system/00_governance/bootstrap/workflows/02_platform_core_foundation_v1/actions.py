@@ -6,10 +6,22 @@ import shutil
 from datetime import datetime
 from pathlib import Path
 
+import agent_runner_v2
+
 from agent_runner_v2.action_result import ActionResult
 from agent_runner_v2.actions.documentation_validation_core import DocumentationValidationPlan, validate_documentation_plan
 from agent_runner_v2.runtime_context import GLOBAL_RUNNER_HOME, resolve_step_meta_rel, write_meta_sidecar
 from agent_runner_v2.workflow_packages.actions import action
+
+
+def _installed_platform_root() -> Path:
+    """Root of the installed ``agent_runner_v2`` package (platform source modules).
+
+    On a CLI-only PC, this is the only location where platform source files
+    live. On a dev machine with an editable install, it resolves to the repo
+    checkout. Both cases are handled by this single resolution.
+    """
+    return Path(agent_runner_v2.__file__).resolve().parent
 
 
 # ---------------------------------------------------------------------------
@@ -220,14 +232,16 @@ def _build_context_inventory(*, project_root: Path, job_id: str, step: str) -> s
         "",
         f"- `masterplan/LAYER_ARCHITECTURE_MASTERPLAN.md`",
         f"- `masterplan/LAYER2_PLATFORM_CORE_SPECIFICATION.md`",
-        f"- Layer 1 governance set: `docs/system/00_governance/foundation/current/`",
+        f"- Layer 1 governance set: `{GLOBAL_RUNNER_HOME / 'bundles' / 'core' / 'current' / 'foundation'}`",
         "",
         "## Source Code Modules (read-only reference)",
         "",
     ]
     for mod in DECLARED_REFERENCE_MODULES:
-        exists = (project_root / mod).exists()
-        status = "present" if exists else "missing"
+        installed_path = _installed_platform_root() / mod.replace("agent_runner_v2/", "", 1)
+        repo_path = project_root / mod
+        resolved = installed_path if installed_path.exists() else repo_path
+        status = "present" if resolved.exists() else "missing"
         lines.append(f"- `{mod}` ({status})")
     lines.extend([
         "",
@@ -249,6 +263,274 @@ def _build_context_inventory(*, project_root: Path, job_id: str, step: str) -> s
 
 
 # ---------------------------------------------------------------------------
+# Source-code cross-reference helpers (Aggressive mode)
+# ---------------------------------------------------------------------------
+FORBIDDEN_METASIDECAR_NEEDLES: tuple[str, ...] = (
+    "no disk recovery functions",
+    "no stdout json parsing",
+    "no stdout JSON parsing",
+)
+
+FORBIDDEN_RESOLUTION_ORDER_NEEDLES: tuple[str, ...] = (
+    "check the repository working tree first",
+    "fall back to the runtime artifact root",
+)
+
+REQUIRED_RESOLUTION_ORDER_KEYWORDS: tuple[str, ...] = (
+    "dispatches by path prefix",
+    "namespace",
+    "docs/",
+    "archive/",
+    ".ukbe-runner/",
+)
+
+NO_SIDECHANNEL_PHRASES: tuple[str, ...] = (
+    "sole communication channel",
+    "sole channel",
+)
+
+HOOK_SIGNATURE_TARGETS: tuple[str, ...] = (
+    "build_context_extensions",
+    "build_output_paths",
+    "resolve_repo_or_runtime_path",
+)
+
+
+def _resolve_source_module(module_rel: str) -> Path | None:
+    """Resolve a platform source module via installed package, then repo."""
+    rel = module_rel.replace("agent_runner_v2/", "", 1)
+    installed = _installed_platform_root() / rel
+    if installed.exists():
+        return installed
+    if "/" not in rel:
+        for candidate in _installed_platform_root().rglob(rel):
+            return candidate
+    return None
+
+
+def _extract_source_signatures(source_path: Path) -> dict[str, str]:
+    """Extract function name → full signature from source code.
+
+    Handles multi-line signatures by accumulating lines until the def
+    statement's terminating ``:`` (end of the signature). Works for both
+    top-level (column 0) and indented (method) definitions.
+    """
+    source_lines = _read_text(source_path).splitlines()
+    sigs: dict[str, str] = {}
+    for i, line in enumerate(source_lines):
+        match = re.match(r"^\s*def\s+([a-z_][a-z0-9_]*)\s*\(", line)
+        if match:
+            func_name = match.group(1)
+            sig_lines = [line.strip()]
+            if not line.rstrip().endswith(":"):
+                for j in range(i + 1, min(i + 20, len(source_lines))):
+                    sig_lines.append(source_lines[j].strip())
+                    if source_lines[j].rstrip().endswith(":"):
+                        break
+            sigs[func_name] = " ".join(sig_lines)
+    return sigs
+
+
+def _normalize_sig(sig: str) -> str:
+    """Normalize a signature string for comparison (whitespace + quotes)."""
+    return re.sub(r"\s+", " ", sig.strip().replace("'", '"'))
+
+
+def _check_shared_services(checks: list[dict[str, object]], text: str, rel_path: str) -> None:
+    """Check A: hook signature verification + Check B: resolution-order prose + Check C: meta sidecar + Check E: BackendClient section."""
+    # --- Check A: Hook signature verification ---
+    hook_sources = {
+        "build_context_extensions": [
+            Path(__file__).parent / "context_extensions.py",
+            _resolve_source_module("agent_runner_v2/workflow_packages/base.py"),
+        ],
+        "build_output_paths": [
+            Path(__file__).parent / "output_paths.py",
+            _resolve_source_module("agent_runner_v2/workflow_packages/base.py"),
+        ],
+        "resolve_repo_or_runtime_path": [
+            _resolve_source_module("agent_runner_v2/runtime_context.py"),
+        ],
+    }
+    for hook_name in HOOK_SIGNATURE_TARGETS:
+        sources = hook_sources.get(hook_name, [])
+        actual_sig: str | None = None
+        for src in sources:
+            if src and src.exists():
+                sigs = _extract_source_signatures(src)
+                if hook_name in sigs:
+                    actual_sig = sigs[hook_name]
+                    break
+        if actual_sig is None:
+            checks.append({
+                "check": f"hook_signature_source_found",
+                "path": rel_path,
+                "field": hook_name,
+                "ok": False,
+                "detail": f"source module for `{hook_name}` not found in installed package",
+            })
+            continue
+        actual_norm = _normalize_sig(actual_sig)
+        # Search the doc text for a def line matching this function
+        doc_match = re.search(rf"def\s+{hook_name}\s*\([^)]*\)", text)
+        doc_sig = doc_match.group(0) if doc_match else ""
+        doc_norm = _normalize_sig(doc_sig)
+        checks.append({
+            "check": "hook_signature_match",
+            "path": rel_path,
+            "field": hook_name,
+            "ok": bool(doc_sig) and (actual_norm in doc_norm or doc_norm in actual_norm),
+            "detail": (
+                f"matches source" if doc_sig and (actual_norm in doc_norm or doc_norm in actual_norm)
+                else f"documented signature does not match source: `{actual_sig}`"
+            ),
+        })
+
+    # --- Check B: Resolution-order prose ---
+    res_section_match = re.search(r"^### Resolution Order\n\n(.*?)(?=^### |\Z)", text, re.MULTILINE | re.DOTALL)
+    res_section = res_section_match.group(1) if res_section_match else ""
+    if res_section:
+        for needle in FORBIDDEN_RESOLUTION_ORDER_NEEDLES:
+            checks.append({
+                "check": "resolution_order_forbidden_prose",
+                "path": rel_path,
+                "field": needle,
+                "ok": needle.lower() not in res_section.lower(),
+                "detail": "clear" if needle.lower() not in res_section.lower() else f"forbidden phrase `{needle}` in Resolution Order section",
+            })
+        has_keyword = any(kw in res_section for kw in REQUIRED_RESOLUTION_ORDER_KEYWORDS)
+        checks.append({
+            "check": "resolution_order_has_dispatch_keyword",
+            "path": rel_path,
+            "ok": has_keyword,
+            "detail": "found dispatch-by-prefix keyword" if has_keyword else "must contain at least one of: " + ", ".join(REQUIRED_RESOLUTION_ORDER_KEYWORDS),
+        })
+
+    # --- Check C: Meta sidecar "no fallbacks" ban ---
+    sidecar_section_match = re.search(r"^## Meta Sidecar\n(.*?)(?=^## |\Z)", text, re.MULTILINE | re.DOTALL)
+    sidecar_section = sidecar_section_match.group(1) if sidecar_section_match else text
+    step_runner_path = _resolve_source_module("agent_runner_v2/step_runner.py")
+    repair_exists = False
+    if step_runner_path:
+        step_source = _read_text(step_runner_path)
+        repair_exists = "_repair_or_validate_meta_json" in step_source
+    if repair_exists:
+        for needle in FORBIDDEN_METASIDECAR_NEEDLES:
+            checks.append({
+                "check": "meta_sidecar_forbidden_prose",
+                "path": rel_path,
+                "field": needle,
+                "ok": needle.lower() not in sidecar_section.lower(),
+                "detail": "clear" if needle.lower() not in sidecar_section.lower() else f"forbidden phrase `{needle}` — repair function exists in step_runner.py",
+            })
+        for phrase in NO_SIDECHANNEL_PHRASES:
+            if phrase.lower() in sidecar_section.lower():
+                checks.append({
+                    "check": "meta_sidecar_sole_channel_ban",
+                    "path": rel_path,
+                    "field": phrase,
+                    "ok": False,
+                    "detail": f"`{phrase}` is forbidden when repair fallback exists — describe both primary channel and repair",
+                })
+
+    # --- Check E: BackendClient section presence + method verification ---
+    bc_path = _resolve_source_module("agent_runner_v2/backend_client.py")
+    bc_section_match = re.search(r"^### BackendClient\n\n(.*?)(?=^### |\Z)", text, re.MULTILINE | re.DOTALL)
+    bc_section = bc_section_match.group(1) if bc_section_match else ""
+
+    if not bc_section:
+        checks.append({
+            "check": "backend_client_section_missing",
+            "path": rel_path,
+            "ok": False,
+            "detail": "SHARED_SERVICES.md must include a `### BackendClient` subsection under `## Backend Sync Protocol`",
+        })
+    elif bc_path:
+        source_text = _read_text(bc_path)
+        actual_methods: set[str] = set(re.findall(r"^\s+def ([a-z_][a-z0-9_]*)", source_text, re.MULTILINE))
+        documented = set(re.findall(r"- `([a-z_][a-z0-9_]*)\(\)`", bc_section))
+        for doc_name in sorted(documented):
+            checks.append({
+                "check": "backend_client_method_verification",
+                "path": rel_path,
+                "field": doc_name,
+                "ok": doc_name in actual_methods,
+                "detail": (
+                    "matches source" if doc_name in actual_methods
+                    else f"no `{doc_name}` in backend_client.py"
+                ),
+            })
+
+
+def _check_runtime_model(checks: list[dict[str, object]], text: str, rel_path: str) -> None:
+    """Check C (runtime model variant) + Check F: source-module existence."""
+    # --- Check C: Meta sidecar "no fallbacks" ban (same as SHARED_SERVICES) ---
+    step_runner_path = _resolve_source_module("agent_runner_v2/step_runner.py")
+    repair_exists = False
+    if step_runner_path:
+        step_source = _read_text(step_runner_path)
+        repair_exists = "_repair_or_validate_meta_json" in step_source
+    if repair_exists:
+        for needle in FORBIDDEN_METASIDECAR_NEEDLES:
+            checks.append({
+                "check": "meta_sidecar_forbidden_prose",
+                "path": rel_path,
+                "field": needle,
+                "ok": needle.lower() not in text.lower(),
+                "detail": "clear" if needle.lower() not in text.lower() else f"forbidden phrase `{needle}` — repair function exists in step_runner.py",
+            })
+        for phrase in NO_SIDECHANNEL_PHRASES:
+            if phrase.lower() in text.lower():
+                checks.append({
+                    "check": "meta_sidecar_sole_channel_ban",
+                    "path": rel_path,
+                    "field": phrase,
+                    "ok": False,
+                    "detail": f"`{phrase}` is forbidden when repair fallback exists — describe both primary channel and repair",
+                })
+
+    # --- Check F: Source-module existence verification ---
+    cited_modules = set(re.findall(r"`(?:agent_runner_v2/)?([a-z_][a-z0-9_]*\.py)`", text))
+    for mod_name in sorted(cited_modules):
+        mod_rel = f"agent_runner_v2/{mod_name}"
+        resolved = _resolve_source_module(mod_rel)
+        checks.append({
+            "check": "source_module_exists",
+            "path": rel_path,
+            "field": mod_name,
+            "ok": resolved is not None and resolved.exists(),
+            "detail": (
+                f"found in installed package" if resolved and resolved.exists()
+                else f"`{mod_name}` not found in installed agent_runner_v2 package"
+            ),
+        })
+
+
+def _check_metadata_contract(checks: list[dict[str, object]], text: str, rel_path: str) -> None:
+    """Check D: authority/managed_by orthogonality."""
+    # Extract ### Usage Rules under ## Platform authority Values
+    authority_section_match = re.search(r"^## Platform authority Values\n(.*?)(?=^## |\Z)", text, re.MULTILINE | re.DOTALL)
+    authority_section = authority_section_match.group(1) if authority_section_match else ""
+    usage_rules_match = re.search(r"^### Usage Rules\n(.*?)(?=^### |\Z)", authority_section, re.MULTILINE | re.DOTALL)
+    usage_rules = usage_rules_match.group(1) if usage_rules_match else ""
+    if usage_rules:
+        has_orthogonal = (
+            "orthogonal" in usage_rules.lower()
+            or "independent axes" in usage_rules.lower()
+            or "independent axis" in usage_rules.lower()
+        )
+        checks.append({
+            "check": "authority_managed_by_orthogonality",
+            "path": rel_path,
+            "ok": has_orthogonal,
+            "detail": (
+                "orthogonality explicitly stated" if has_orthogonal
+                else "### Usage Rules must state that `authority` and `managed_by` are orthogonal (independent axes)"
+            ),
+        })
+
+
+# ---------------------------------------------------------------------------
 # Extra validation (beyond the generic DocumentationValidationPlan)
 # ---------------------------------------------------------------------------
 def _extra_validation_checks(*, project_root: Path, job_id: str) -> list[dict[str, object]]:
@@ -257,7 +539,7 @@ def _extra_validation_checks(*, project_root: Path, job_id: str) -> list[dict[st
     # ------------------------------------------------------------------
     # Pre-flight: Layer 1 governance must be installed at global runtime root
     # ------------------------------------------------------------------
-    governance_root = GLOBAL_RUNNER_HOME / "bundles" / "core" / "current"
+    governance_root = GLOBAL_RUNNER_HOME / "bundles" / "core" / "current" / "foundation"
     checks.append({
         "check": "governance_runtime_root_exists",
         "path": str(governance_root),
@@ -334,28 +616,16 @@ def _extra_validation_checks(*, project_root: Path, job_id: str) -> list[dict[st
                 "detail": "clear" if needle not in text.lower() else f"contains forbidden phrase `{needle}`",
             })
         # ------------------------------------------------------------------
-        # Source-code cross-reference: verify documented API symbols exist
+        # Source-code cross-reference checks (Aggressive mode)
+        # Resolves platform source via installed package, not repo working tree,
+        # so checks work on any CLI-installed PC.
         # ------------------------------------------------------------------
         if artifact_key == "L2_SHARED_SERVICES":
-            backend_client_path = project_root / "agent_runner_v2" / "backend_client.py"
-            if backend_client_path.exists():
-                source_text = _read_text(backend_client_path)
-                actual_methods: set[str] = set(re.findall(r"^\s+def ([a-z_][a-z0-9_]*)", source_text, re.MULTILINE))
-                # Extract only the BackendClient section from the doc
-                bc_section_match = re.search(r"^### BackendClient\n\n(.*?)(?=^### |\Z)", text, re.MULTILINE | re.DOTALL)
-                bc_section = bc_section_match.group(1) if bc_section_match else ""
-                documented = set(re.findall(r"- `([a-z_][a-z0-9_]*)\(\)`", bc_section))
-                for doc_name in sorted(documented):
-                    checks.append({
-                        "check": "backend_client_method_verification",
-                        "path": rel_path,
-                        "field": doc_name,
-                        "ok": doc_name in actual_methods,
-                        "detail": (
-                            f"matches source" if doc_name in actual_methods
-                            else f"no `{doc_name}` in backend_client.py"
-                        ),
-                    })
+            _check_shared_services(checks, text, rel_path)
+        elif artifact_key == "L2_RUNTIME_MODEL":
+            _check_runtime_model(checks, text, rel_path)
+        elif artifact_key == "L2_METADATA_CONTRACT":
+            _check_metadata_contract(checks, text, rel_path)
     readme_path = project_root / build_output_paths(job_id=job_id, mode="default")["L2_PLATFORM_INDEX"]
     if readme_path.exists():
         readme_text = _read_text(readme_path)

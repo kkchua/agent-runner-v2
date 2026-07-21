@@ -104,3 +104,57 @@ def test_invoke_opencode_sidecar_validity_short_circuits_stdout_json_parse(monke
 
     assert result["return_code"] == 0
     assert result["parsed_result"] == {}
+
+
+def test_invoke_opencode_appends_agent_flag_when_present(monkeypatch, tmp_path):
+    captured: dict[str, object] = {}
+
+    def fake_run(command, **kwargs):
+        captured["command"] = command
+        return 0, '{"status":"APPROVED","remark":"ok","artifacts":{}}', ""
+
+    monkeypatch.setattr(coder_adapters, "_run_with_sidecar_poll", fake_run)
+
+    coder_adapters._invoke_opencode(
+        step="generate",
+        prompt_text="Do the thing",
+        cwd=tmp_path,
+        coder_config={"model": "opencode-go/glm-5.2", "agent": "agent_architect"},
+        sidecar_path=None,
+        timeout_seconds_override=15,
+    )
+
+    assert captured["command"] == [
+        "opencode",
+        "run",
+        "--model",
+        "opencode-go/glm-5.2",
+        "--agent",
+        "agent_architect",
+    ]
+
+
+def test_invoke_opencode_omits_agent_flag_when_empty(monkeypatch, tmp_path):
+    captured: dict[str, object] = {}
+
+    def fake_run(command, **kwargs):
+        captured["command"] = command
+        return 0, '{"status":"APPROVED","remark":"ok","artifacts":{}}', ""
+
+    monkeypatch.setattr(coder_adapters, "_run_with_sidecar_poll", fake_run)
+
+    coder_adapters._invoke_opencode(
+        step="generate",
+        prompt_text="Do the thing",
+        cwd=tmp_path,
+        coder_config={"model": "opencode-go/glm-5.2", "agent": ""},
+        sidecar_path=None,
+        timeout_seconds_override=15,
+    )
+
+    assert captured["command"] == [
+        "opencode",
+        "run",
+        "--model",
+        "opencode-go/glm-5.2",
+    ]

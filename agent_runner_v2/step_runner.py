@@ -54,6 +54,9 @@ from .constants import (
     repo_governance_rel,
     SIDECAR_INSTRUCTION_TEMPLATE as CONSTANTS_SIDECAR_INSTRUCTION_TEMPLATE,
     TOOL_INSTRUCTION_TEMPLATE as CONSTANTS_TOOL_INSTRUCTION_TEMPLATE,
+    ASCII_ONLY_INSTRUCTION,
+    SECTION_HEADING_RULE,
+    CODER_SOP_INSTRUCTION_TEMPLATE,
 )
 from .bundle_governance import render_prompt_governance_block
 from .runtime_context import (
@@ -70,26 +73,6 @@ from .documentation_guardrails import (
     MASTER_BOOTSTRAP_WORKFLOWS,
     master_bootstrap_artifact_candidates,
 )
-
-
-CODER_SOP_INSTRUCTION_TEMPLATE = """
-
-===========================================================================
-MANDATORY CODER SOP
-===========================================================================
-Before implementing any logic, read and follow:
-{CODER_IMPLEMENTATION_SOP_PATH}
-
-Minimum required behavior:
-- Re-read the current source-of-truth files from disk before making decisions
-- Inspect existing code paths before assuming runtime behavior
-- Refactor duplicated execution logic toward one shared helper or transition path
-- Do not add new parallel logic for workflow completion, failure, notifications, or artifacts
-- Add or update tests proving all affected execution modes follow the same behavior
-
-This SOP is repository-wide and applies to all coder backends for this step.
-===========================================================================
-"""
 
 
 def _workflow_module():
@@ -574,19 +557,38 @@ def _build_usage_data(
 ) -> dict[str, Any]:
     """Build usage_data dict from meta.json coder_result.usage (LLM self-reported).
 
-    Falls back to not_available if the LLM did not report usage.
-    Duration is taken from the invocation (wall-clock measurement).
+    Falls back to stdout-extracted usage (cli_reported) when the sidecar
+    has no usage data, then to not_available if neither source has values.
+    Duration is always taken from the invocation (wall-clock measurement).
     """
-    usage_source = "meta_json_reported" if meta_usage else "not_available"
     cli_usage = dataclass_dict(invocation.usage)
+    cli_tokens = {
+        "input_tokens": cli_usage.get("input_tokens"),
+        "output_tokens": cli_usage.get("output_tokens"),
+        "total_tokens": cli_usage.get("total_tokens"),
+        "cost": cli_usage.get("cost"),
+    }
+
+    input_tokens = _coerce_int(meta_usage.get("input_tokens")) or cli_tokens["input_tokens"]
+    output_tokens = _coerce_int(meta_usage.get("output_tokens")) or cli_tokens["output_tokens"]
+    total_tokens = _coerce_int(meta_usage.get("total_tokens")) or cli_tokens["total_tokens"]
+    cost = _coerce_float(meta_usage.get("cost")) or cli_tokens["cost"]
+
+    if meta_usage:
+        usage_source = "meta_json_reported"
+    elif any(v is not None for v in [input_tokens, output_tokens, total_tokens]):
+        usage_source = "cli_reported"
+    else:
+        usage_source = "not_available"
+
     return {
         "step": step,
         "coder_used": coder,
         "usage_source": usage_source,
-        "input_tokens": _coerce_int(meta_usage.get("input_tokens")),
-        "output_tokens": _coerce_int(meta_usage.get("output_tokens")),
-        "total_tokens": _coerce_int(meta_usage.get("total_tokens")),
-        "cost": _coerce_float(meta_usage.get("cost")),
+        "input_tokens": input_tokens,
+        "output_tokens": output_tokens,
+        "total_tokens": total_tokens,
+        "cost": cost,
         "duration_ms": cli_usage.get("duration_ms"),
         "started_at": cli_usage.get("started_at", ""),
         "finished_at": cli_usage.get("finished_at", ""),
@@ -2153,7 +2155,7 @@ def build_context(
         ctx["TOOLS_DIR"] = _tools_dir
     except Exception:
         ctx["TOOLS_DIR"] = ""
-    ctx["PYTHON_CMD"] = sys.executable or "python3"
+    ctx["PYTHON_CMD"] = "python"
     ctx["TOOLS_DIR_PY"] = _python_string_literal(ctx.get("TOOLS_DIR", ""))
     ctx["PROGRESS_FILE_PY"] = _python_string_literal(ctx.get("PROGRESS_FILE", ""))
     ctx["STEP_NAME_PY"] = _python_string_literal(step)
@@ -2189,85 +2191,12 @@ def build_context(
     return ctx
 
 
-_TOOL_INSTRUCTION_TEMPLATE = """
-
-## Workflow Rules
-
-You MUST use the tools below for EVERY step. Do NOT skip them. Do NOT answer directly without calling them first.
-
-CRITICAL: Do NOT ask any clarifying questions. Do NOT ask for more info. Execute immediately using the tools.
-
-Your step ID is: {STEP_NAME}
-
-### create_todos(step_id, todos)
-Call FIRST. Break the task into concrete steps, one record per todo.
-Usage: python3 -c "import sys; sys.path.insert(0, '{TOOLS_DIR}'); import os; os.environ['PROGRESS_FILE']='{PROGRESS_FILE}'; from agent_tools import create_todos; create_todos('{STEP_NAME}', ['Step 1', 'Step 2'])"
-
-### mark_complete(step_id, index, notes='')
-Call after finishing each step. 1-based index.
-Usage: python3 -c "import sys; sys.path.insert(0, '{TOOLS_DIR}'); import os; os.environ['PROGRESS_FILE']='{PROGRESS_FILE}'; from agent_tools import mark_complete; mark_complete('{STEP_NAME}', 1, notes='Done')"
-
-## Mandatory Sequence
-1. create_todos(step_id) — list all your steps first
-2. Execute each step, call mark_complete(step_id, i) after each
-3. You MUST call mark_complete for every item before returning your final result
-
-Example for a 3-step task:
-  create_todos('{STEP_NAME}', ['Read input file', 'Generate output', 'Write result'])
-  mark_complete('{STEP_NAME}', 1, notes='File read successfully')
-  mark_complete('{STEP_NAME}', 2, notes='Output generated')
-  mark_complete('{STEP_NAME}', 3, notes='Result written to disk')
-
-Actually call the functions with real arguments — do NOT just describe your answer."""
-
-
-_TOOL_INSTRUCTION_TEMPLATE = """
-
-## Workflow Rules
-
-You MUST use the tools below for EVERY step. Do NOT skip them. Do NOT answer directly without calling them first.
-
-CRITICAL: Do NOT ask any clarifying questions. Do NOT ask for more info. Execute immediately using the tools.
-
-Your step ID is: {STEP_NAME}
-
-### create_todos(step_id, todos)
-Call FIRST. Break the task into concrete steps, one record per todo.
-Usage: python3 -c "import sys; sys.path.insert(0, '{TOOLS_DIR}'); import os; os.environ['PROGRESS_FILE']='{PROGRESS_FILE}'; from agent_tools import create_todos; create_todos('{STEP_NAME}', ['Step 1', 'Step 2'])"
-
-### mark_process(step_id, index, notes='')
-Call immediately BEFORE starting each todo item. This records the `processing` stage. 1-based index.
-Usage: python3 -c "import sys; sys.path.insert(0, '{TOOLS_DIR}'); import os; os.environ['PROGRESS_FILE']='{PROGRESS_FILE}'; from agent_tools import mark_process; mark_process('{STEP_NAME}', 1, notes='Started')"
-
-### mark_complete(step_id, index, notes='')
-Call immediately AFTER finishing each todo item. This records the `completed` stage. 1-based index.
-Usage: python3 -c "import sys; sys.path.insert(0, '{TOOLS_DIR}'); import os; os.environ['PROGRESS_FILE']='{PROGRESS_FILE}'; from agent_tools import mark_complete; mark_complete('{STEP_NAME}', 1, notes='Done')"
-
-## Mandatory Sequence
-1. create_todos(step_id) - list all your steps first
-2. Before starting todo item `i`, call mark_process(step_id, i)
-3. Execute todo item `i`
-4. After finishing todo item `i`, call mark_complete(step_id, i)
-5. Aim to keep every todo item in the standard sequence: `pending` -> `processing` -> `completed`
-
-Example for a 3-step task:
-  create_todos('{STEP_NAME}', ['Read input file', 'Generate output', 'Write result'])
-  mark_process('{STEP_NAME}', 1, notes='Started reading input')
-  mark_complete('{STEP_NAME}', 1, notes='File read successfully')
-  mark_process('{STEP_NAME}', 2, notes='Started generating output')
-  mark_complete('{STEP_NAME}', 2, notes='Output generated')
-  mark_process('{STEP_NAME}', 3, notes='Started writing result')
-  mark_complete('{STEP_NAME}', 3, notes='Result written to disk')
-
-Actually call the functions with real arguments - do NOT just describe your answer."""
-
-
 def render_prompt(template_text: str, context: dict[str, str], step_cfg: dict | None = None) -> str:
     import os as _os
     from datetime import datetime as _datetime
     _src = _os.path.abspath(__file__)
     render_context = _normalize_prompt_context_paths(context)
-    render_context.setdefault("PYTHON_CMD", sys.executable or "python3")
+    render_context.setdefault("PYTHON_CMD", "python")
     render_context.setdefault("TOOLS_DIR_PY", _python_string_literal(render_context.get("TOOLS_DIR", "")))
     render_context.setdefault("PROGRESS_FILE_PY", _python_string_literal(render_context.get("PROGRESS_FILE", "")))
     render_context.setdefault("STEP_NAME_PY", _python_string_literal(render_context.get("STEP_NAME", "")))
@@ -2327,6 +2256,9 @@ def render_prompt(template_text: str, context: dict[str, str], step_cfg: dict | 
             block = block.replace(f"{{{key}}}", _stringify_prompt_value(value))
         rendered = rendered + block
         print("[render_prompt] TOOL_INSTRUCTION appended", flush=True)
+
+    rendered += ASCII_ONLY_INSTRUCTION
+    rendered += SECTION_HEADING_RULE
     workflow_bundle = (step_cfg or {}).get("_workflow_bundle")
     governance = getattr(workflow_bundle, "governance", None)
     if workflow_bundle is not None and governance is not None and governance.include_in_prompts:

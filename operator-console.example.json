@@ -2,19 +2,19 @@
   "repos": [
     {
       "name": "agent-runner-v2",
-      "path": "D:/MyProjectSpace/01_Workflows/agent-runner-v2"
-    }
-  ],
-  "workflows": [
-    {
-      "name": "Governance Foundation",
-      "workflow_name": "01_governance_foundation_v1",
-      "template_group": "01_governance_foundation_v1"
-    },
-    {
-      "name": "Repo Master Docs Bootstrap",
-      "workflow_name": "00_repo_master_docs_bootstrap_v1",
-      "template_group": "00_repo_master_docs_bootstrap_v1"
+      "path": "D:/MyProjectSpace/01_Workflows/agent-runner-v2",
+      "workflows": [
+        {
+          "name": "Governance Foundation",
+          "workflow_name": "01_governance_foundation_v1",
+          "template_group": "01_governance_foundation_v1"
+        },
+        {
+          "name": "Repo Master Docs Bootstrap",
+          "workflow_name": "00_repo_master_docs_bootstrap_v1",
+          "template_group": "00_repo_master_docs_bootstrap_v1"
+        }
+      ]
     }
   ]
 }

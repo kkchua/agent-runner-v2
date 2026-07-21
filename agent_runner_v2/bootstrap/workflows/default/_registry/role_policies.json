@@ -1,20 +1,21 @@
 {
   "role_policies": {
     "architect_standard": {
-      "default_role": "bailian_qwen3.7-plus",
+      "default_role": "zen_go_deepseek-v4-pro",
+	  "agent": "agent_architect",
       "allowed_roles": [
         "bailian_qwen3.7-plus",
         "bailian_glm-5",
         "deepseek_deepseek-v4-pro",
 		"agnes-2.0-flash",
 		"zen_go_deepseek-v4-pro",
-		"architect_test_bailian",
-		"zen_go_glm_52"
+		"architect_test_bailian"
       ]
     },
     "reviewer_standard": {
-      "default_role": "deepseek_deepseek-v4-pro",
-      "allowed_roles": [
+      "default_role": "bailian_qwen3.7-plus",
+      "agent": "agent_architect",
+	  "allowed_roles": [
         "bailian_qwen3.7-plus",
 		"deepseek_deepseek-v4-pro",
         "bailian_glm-5",
@@ -23,15 +24,18 @@
       ]
     },
     "refine_standard": {
-      "default_role": "zen_go_glm_52",
-      "allowed_roles": [
+      "default_role": "zen_go_deepseek-v4-pro",
+      "agent": "agent_architect",
+	  "allowed_roles": [
        	"zen_go_glm_52",
         "bailian_qwen3.7-plus",
-        "zen_go_deepseek-v4-pro"
+        "zen_go_deepseek-v4-pro",
+		"deepseek_deepseek-v4-pro"
       ]
     },
     "plan_standard": {
       "default_role": "bailian_qwen3.7-plus",
+	  "agent": "agent_architect",
       "allowed_roles": [
         "bailian_qwen3.7-plus",
         "zen_go_glm_52",
@@ -39,7 +43,8 @@
       ]
     },
     "implement_standard": {
-      "default_role": "zen_go_deepseek-v4-pro",
+      "default_role": "bailian_qwen3.7-plus",
+	  "agent": "agent_architect",
       "allowed_roles": [
         "zen_go_deepseek-v4-pro",
         "bailian_qwen3.7-plus",
@@ -49,6 +54,7 @@
     },
     "execution_standard": {
       "default_role": "zen_go_deepseek-v4-flash",
+	  "agent": "agent_architect",
       "allowed_roles": [
         "bailian_qwen3-coder-plus",
         "zen_go_deepseek-v4-pro",
@@ -57,6 +63,7 @@
     },
     "validation_standard": {
       "default_role": "bailian_qwen3.7-plus",
+	  "agent": "agent_architect",
       "allowed_roles": [
         "bailian_qwen3.7-plus",
         "zen_go_deepseek-v4-pro",
@@ -65,6 +72,7 @@
     },
     "code_fix_standard": {
       "default_role": "bailian_MiniMax-M2.5",
+	  "agent": "agent_architect",
       "allowed_roles": [
         "bailian_MiniMax-M2.5",
         "bailian_qwen3-coder-plus",
@@ -73,6 +81,7 @@
     },
     "documentation_standard": {
       "default_role": "bailian_kimi-k2.5",
+	  "agent": "agent_architect",
       "allowed_roles": [
         "bailian_kimi-k2.5",
         "bailian_qwen3.7-plus",

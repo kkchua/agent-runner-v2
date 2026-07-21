@@ -273,7 +273,7 @@ def test_init_workspace_installs_packaged_bootstrap_bundle_and_seeds_global_exam
     assert (fake_home / ".ukbe-runner" / "logs").exists()
     assert (fake_home / ".ukbe-runner" / "runtime").exists()
     assert (fake_home / ".ukbe-runner" / "bundles" / "bundle-set.json").exists()
-    assert (fake_home / ".ukbe-runner" / "bundles" / "core" / "current" / "README.md").exists()
+    assert (fake_home / ".ukbe-runner" / "bundles" / "core" / "current" / "foundation" / "README.md").exists()
     assert (fake_home / ".ukbe-runner" / "bundles" / "domains" / "general" / "current").exists()
     assert not (tmp_path / "workspace" / ".ukbe-runner" / "workflows").exists()
     assert (fake_home / ".ukbe-runner" / "workflows" / "default").exists()
@@ -282,7 +282,7 @@ def test_init_workspace_installs_packaged_bootstrap_bundle_and_seeds_global_exam
     assert result["bundle_domain"] == "general"
     assert result["bundle_profile"] == "core+workflow"
     assert result["bootstrap_install"]["global_bootstrap_root"] == str(
-        fake_home / ".ukbe-runner" / "bundles" / "core" / "current"
+        fake_home / ".ukbe-runner" / "bundles" / "core" / "current" / "foundation"
     )
 
 
@@ -337,7 +337,7 @@ def test_init_workspace_requires_published_bootstrap_snapshot_when_package_bundl
     result = bundle_loader.init_workspace(workspace_root)
 
     expected_global_root = fake_home / ".ukbe-runner" / "bundles" / "core" / "current"
-    assert (expected_global_root / "README.md").exists()
+    assert (expected_global_root / "foundation" / "README.md").exists()
     assert result["bootstrap_install"]["source_root"] == str(foundation_current)
 
 
@@ -476,6 +476,6 @@ def test_bootstrap_root_contains_only_active_workflow_and_registry():
     assert names == {
         "01_governance_foundation_v1",
         "00_bootstrap_lifecycle_admin_v1",
-        "00_repo_master_docs_bootstrap_v1",
+        "02_platform_core_foundation_v1",
         "_registry",
     }

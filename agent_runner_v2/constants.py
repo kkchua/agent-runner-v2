@@ -216,6 +216,8 @@ FOLDER_KEY_CODEBASE_TEMPLATES = "docs/system/00_governance/bootstrap/templates/c
 # Runtime global folders (after ukbe-run-agent init copies bootstrap to ~/.ukbe-runner)
 # These will be resolved at runtime using the global runner home path
 FOLDER_KEY_GLOBAL_BUNDLES = "~/.ukbe-runner/bundles/core/current"
+FOLDER_KEY_GLOBAL_FOUNDATION = "~/.ukbe-runner/bundles/core/current/foundation"
+FOLDER_KEY_GLOBAL_PLATFORM = "~/.ukbe-runner/bundles/core/current/platform"
 
 # ============================================================================
 # Path Generation Function
@@ -759,6 +761,50 @@ This requirement is MANDATORY - failure to follow these steps will cause workflo
 """
 
 
+ASCII_ONLY_INSTRUCTION = """
+
+## Output Encoding Rule
+
+All generated documents MUST use ASCII characters only.
+- Use plain hyphens (-) for dashes. Do NOT use em-dashes or en-dashes.
+- Use straight quotes (" and ') for quotations. Do NOT use curly quotes.
+- Do NOT use any other Unicode characters (bullets, arrows, ellipsis, etc.).
+- If your editor or model produces non-ASCII characters, replace them before writing.
+"""
+
+
+SECTION_HEADING_RULE = r"""
+
+## Section Heading Rule
+
+Section headings (lines starting with #) MUST use plain text only.
+- Do NOT add backticks, bold, italics, or other inline formatting to section headings.
+- Section headings must match required names exactly as specified.
+- Correct: `## Platform doc_type Values`
+- Wrong: `## Platform \`doc_type\` Values` or `## **Platform doc_type Values**`
+"""
+
+
+CODER_SOP_INSTRUCTION_TEMPLATE = """
+
+===========================================================================
+MANDATORY CODER SOP
+===========================================================================
+Before implementing any logic, read and follow:
+{CODER_IMPLEMENTATION_SOP_PATH}
+
+Minimum required behavior:
+- Re-read the current source-of-truth files from disk before making decisions
+- Inspect existing code paths before assuming runtime behavior
+- Refactor duplicated execution logic toward one shared helper or transition path
+- Do not add new parallel logic for workflow completion, failure, notifications, or artifacts
+- Add or update tests proving all affected execution modes follow the same behavior
+
+This SOP is repository-wide and applies to all coder backends for this step.
+===========================================================================
+"""
+
+
 TOOL_INSTRUCTION_TEMPLATE = """
 
 ## Workflow Rules
@@ -771,15 +817,15 @@ Your step ID is: {STEP_NAME}
 
 ### create_todos(step_id, todos)
 Call FIRST. Break the task into concrete steps, one record per todo.
-Usage: "{PYTHON_CMD}" -c "import sys; sys.path.insert(0, {TOOLS_DIR_PY}); import os; os.environ['PROGRESS_FILE']={PROGRESS_FILE_PY}; from agent_tools import create_todos; create_todos({STEP_NAME_PY}, ['Step 1', 'Step 2'])"
+Usage: "{PYTHON_CMD}" -c "import os; os.environ['PROGRESS_FILE']={PROGRESS_FILE_PY}; from agent_tools import create_todos; create_todos({STEP_NAME_PY}, ['Step 1', 'Step 2'])"
 
 ### mark_process(step_id, index, notes='')
 Call immediately BEFORE starting each todo item. This inserts a `processing` status record.
-Usage: "{PYTHON_CMD}" -c "import sys; sys.path.insert(0, {TOOLS_DIR_PY}); import os; os.environ['PROGRESS_FILE']={PROGRESS_FILE_PY}; from agent_tools import mark_process; mark_process({STEP_NAME_PY}, 1, notes='Started')"
+Usage: "{PYTHON_CMD}" -c "import os; os.environ['PROGRESS_FILE']={PROGRESS_FILE_PY}; from agent_tools import mark_process; mark_process({STEP_NAME_PY}, 1, notes='Started')"
 
 ### mark_complete(step_id, index, notes='')
 Call immediately AFTER finishing each todo item. This inserts a `completed` status record. 1-based index.
-Usage: "{PYTHON_CMD}" -c "import sys; sys.path.insert(0, {TOOLS_DIR_PY}); import os; os.environ['PROGRESS_FILE']={PROGRESS_FILE_PY}; from agent_tools import mark_complete; mark_complete({STEP_NAME_PY}, 1, notes='Done')"
+Usage: "{PYTHON_CMD}" -c "import os; os.environ['PROGRESS_FILE']={PROGRESS_FILE_PY}; from agent_tools import mark_complete; mark_complete({STEP_NAME_PY}, 1, notes='Done')"
 
 ## Mandatory Sequence
 1. create_todos(step_id) - list all your steps first

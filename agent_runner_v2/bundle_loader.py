@@ -34,6 +34,7 @@ GLOBAL_RUNNER_HOME = Path.home() / DEFAULT_RUNNER_HOME
 BOOTSTRAP_ROOT = PACKAGE_ROOT / "bootstrap" / "workflows" / "default"
 BOOTSTRAP_SOURCE_ROOT = Path(system_doc_rel())
 FOUNDATION_CURRENT_ROOT_REL = "docs/system/00_governance/foundation/current"
+PLATFORM_CURRENT_ROOT_REL = "docs/system/00_governance/platform/current"
 PACKAGE_BOOTSTRAP_ROOT = PACKAGE_ROOT / "bootstrap" / "bundles" / CORE_BUNDLE_NAME / "current"
 PACKAGED_BOOTSTRAP_EXCLUDE_PATTERNS = (
     "*-bootstrap-change-log.md",
@@ -96,7 +97,7 @@ def package_bootstrap_root() -> Path:
 
 
 def global_bootstrap_root() -> Path:
-    return bundles_root() / CORE_BUNDLE_NAME / "current"
+    return bundles_root() / CORE_BUNDLE_NAME / "current" / "foundation"
 
 
 def bootstrap_source_root(workspace_root: Path) -> Path:
@@ -358,15 +359,52 @@ def install_bootstrap_bundle(
             f"Foundation current folder is empty: {source_root}. "
             "Run the Layer 1 governance workflow and publish the set first."
         )
-    global_root = runner_home / "bundles" / CORE_BUNDLE_NAME / "current"
-    if global_root.exists():
-        _backup_workflow_folder(global_root)
-    shutil.copytree(str(source_root), str(global_root))
+    current_root = runner_home / "bundles" / CORE_BUNDLE_NAME / "current"
+    foundation_root = current_root / "foundation"
+    if current_root.exists():
+        _backup_workflow_folder(current_root)
+    foundation_root.mkdir(parents=True, exist_ok=True)
+    shutil.copytree(str(source_root), str(foundation_root), dirs_exist_ok=True)
     return {
         "workspace_root": str(workspace_root),
         "source_root": str(source_root),
-        "global_bootstrap_root": str(global_root),
+        "global_bootstrap_root": str(foundation_root),
         "bundle_name": CORE_BUNDLE_NAME,
+    }
+
+
+def install_platform_bundle(
+    workspace_root: Path,
+    *,
+    runner_home: Path | None = None,
+) -> dict:
+    workspace_root = workspace_root.resolve()
+    runner_home = (runner_home or GLOBAL_RUNNER_HOME).resolve()
+    source_root = (workspace_root / PLATFORM_CURRENT_ROOT_REL).resolve()
+    if not source_root.is_dir():
+        return {
+            "workspace_root": str(workspace_root),
+            "source_root": str(source_root),
+            "global_platform_root": None,
+            "skipped": True,
+            "reason": "Layer 2 platform current folder not found — run the Layer 2 workflow first.",
+        }
+    if not _tree_has_files(source_root):
+        return {
+            "workspace_root": str(workspace_root),
+            "source_root": str(source_root),
+            "global_platform_root": None,
+            "skipped": True,
+            "reason": "Layer 2 platform current folder is empty.",
+        }
+    platform_root = runner_home / "bundles" / CORE_BUNDLE_NAME / "current" / "platform"
+    platform_root.mkdir(parents=True, exist_ok=True)
+    shutil.copytree(str(source_root), str(platform_root), dirs_exist_ok=True)
+    return {
+        "workspace_root": str(workspace_root),
+        "source_root": str(source_root),
+        "global_platform_root": str(platform_root),
+        "skipped": False,
     }
 
 
@@ -506,6 +544,11 @@ def init_workspace(
         runner_home=runner_home,
     )
 
+    platform_install = install_platform_bundle(
+        workspace_root,
+        runner_home=runner_home,
+    )
+
     workflows_dir = global_workflows_root()
     workflows_dir.mkdir(parents=True, exist_ok=True)
 
@@ -515,7 +558,6 @@ def init_workspace(
     # Seed published workflow packages from the bootstrap snapshot into the default bundle.
     seeded_plugins = seed_workflow_packages(workspace_root, workflow_name="default")
 
-    (core_dir / "current").mkdir(parents=True, exist_ok=True)
     (domain_dir / domain / "current").mkdir(parents=True, exist_ok=True)
     (workflow_dir / workflow_name / "current").mkdir(parents=True, exist_ok=True)
 
@@ -546,6 +588,7 @@ def init_workspace(
         "bundle_domain": domain,
         "bundle_manifest": str(manifest_path),
         "bootstrap_install": bootstrap_install,
+        "platform_install": platform_install,
         "workflow_root": str(wf_root),
         "plugin_workflows_seeded": sorted(
             d.name for d in wf_root.iterdir()

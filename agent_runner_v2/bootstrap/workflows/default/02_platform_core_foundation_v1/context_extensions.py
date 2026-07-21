@@ -50,7 +50,8 @@ def build_context_extensions(
     extensions: dict[str, str] = {
         "MASTERPLAN_ARCHITECTURE_PATH": str(root / "masterplan" / "LAYER_ARCHITECTURE_MASTERPLAN.md"),
         "MASTERPLAN_PLATFORM_SPEC_PATH": str(root / "masterplan" / "LAYER2_PLATFORM_CORE_SPECIFICATION.md"),
-        "GOVERNANCE_RUNTIME_ROOT": str(GLOBAL_RUNNER_HOME / "bundles" / "core" / "current"),
+        "GOVERNANCE_RUNTIME_ROOT": str(GLOBAL_RUNNER_HOME / "bundles" / "core" / "current" / "foundation"),
+        "PLATFORM_RUNTIME_ROOT": str(GLOBAL_RUNNER_HOME / "bundles" / "core" / "current" / "platform"),
         "PLATFORM_ACTIVE_ROOT": str(root / "docs" / "system" / "00_governance" / "platform" / "current"),
         "PLATFORM_HISTORY_ROOT": str(root / output_paths["PLATFORM_HISTORY_ROOT"]),
     }
