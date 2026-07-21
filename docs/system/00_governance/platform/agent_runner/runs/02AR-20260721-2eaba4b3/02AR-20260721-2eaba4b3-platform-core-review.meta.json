@@ -1,0 +1,33 @@
+{
+  "schema_version": "v2",
+  "coder_result": {
+    "status": "APPROVED",
+    "remark": "Reviewed the staged Layer 2 platform core constitution set (6 permanent docs) against Layer 1 governance, layer boundary rules, structure requirements, and metadata compliance. All checks passed. No forbidden content found. Set is ready for deterministic validation.",
+    "artifacts": {
+      "REVIEW_FILE_SUGGESTED": "D:\\MyProjectSpace\\01_Workflows\\agent-runner-v2\\docs\\system\\00_governance\\platform\\agent_runner\\runs\\02AR-20260721-2eaba4b3\\02AR-20260721-2eaba4b3-platform-core-review.md"
+    },
+    "recorded_at": "2026-07-22T00:18:26+08:00",
+    "usage": {
+      "input_tokens": 85000,
+      "output_tokens": 8500,
+      "total_tokens": 93500
+    }
+  },
+  "runner_data": {
+    "step": "review_platform_core_docs",
+    "coder_used": "opencode",
+    "invoked_at": "2026-07-22T00:18:26",
+    "finished_at": "2026-07-22T00:22:42",
+    "prompt_checksum": "sha256:2d3150610918beadb3afab7979a406e64b87eb4ca1205919d29d11d60360b892",
+    "allowed_write_paths": [
+      "D:/MyProjectSpace/01_Workflows/agent-runner-v2/docs/system/00_governance/platform/agent_runner/runs/02AR-20260721-2eaba4b3/02AR-20260721-2eaba4b3-platform-core-review.md",
+      "D:/MyProjectSpace/01_Workflows/agent-runner-v2/docs/system/00_governance/platform/agent_runner/runs/02AR-20260721-2eaba4b3/02AR-20260721-2eaba4b3-platform-core-review.meta.json"
+    ],
+    "changed_paths": [
+      "D:/MyProjectSpace/01_Workflows/agent-runner-v2/docs/system/00_governance/platform/agent_runner/runs/02AR-20260721-2eaba4b3/02AR-20260721-2eaba4b3-platform-core-review.md",
+      "D:/MyProjectSpace/01_Workflows/agent-runner-v2/docs/system/00_governance/platform/agent_runner/runs/02AR-20260721-2eaba4b3/02AR-20260721-2eaba4b3-platform-core-review.meta.json"
+    ],
+    "enriched_at": "2026-07-22T00:22:42",
+    "runner_version": "v2"
+  }
+}

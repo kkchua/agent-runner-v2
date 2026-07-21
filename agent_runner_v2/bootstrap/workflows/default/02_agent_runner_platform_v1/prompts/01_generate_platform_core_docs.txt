@@ -1,0 +1,99 @@
+Objective
+
+Generate the full staged Layer 2 platform core constitution set for agent-runner-v2.
+
+Layer Boundary
+
+- This workflow belongs to Layer 2 only.
+- Generate platform core content only.
+- Do not redefine Layer 1 governance, do not generate Layer 3 bundle definitions, do not perform codebase scanning or repo analysis.
+- Treat Layer 1 governance docs and source code modules as read-only reference inputs.
+
+Reference Inputs
+
+- Read `MASTERPLAN_ARCHITECTURE_PATH`.
+- Read `MASTERPLAN_PLATFORM_SPEC_PATH`.
+- Read `PLATFORM_CONTEXT_INVENTORY`.
+- Read Layer 1 governance set at `GOVERNANCE_RUNTIME_ROOT`.
+- Read source code modules listed in the context inventory as read-only reference.
+
+Source Accuracy Requirements
+
+- Every function signature documented in SHARED_SERVICES.md MUST be copied verbatim from the actual platform source code modules listed in the context inventory. Do not paraphrase, simplify, or invent signatures.
+- The following signatures must match the source exactly:
+  - `build_context_extensions` — read the actual `def build_context_extensions(...)` line from any bundled `context_extensions.py` (including this workflow's own `context_extensions.py`).
+  - `build_output_paths` — read the actual `def build_output_paths(...)` line from any bundled `output_paths.py` (including this workflow's own `output_paths.py`).
+  - `resolve_repo_or_runtime_path` — read the actual function from `runtime_context.py`.
+- The `resolve_repo_or_runtime_path()` function dispatches by path prefix (namespace routing), NOT by checking the repository first and falling back to runtime storage. The `### Resolution Order` section in SHARED_SERVICES.md must describe the actual dispatch behavior: absolute paths are returned unchanged; paths starting with `docs/`, `archive/`, `scripts/`, `temp/` resolve under the project root; paths starting with `.ukbe-runner/` resolve under the runner home; everything else resolves under the jobs root. The phrases "check the repository working tree first" and "fall back to the runtime artifact root" are forbidden — they describe the wrong mechanism.
+- The `meta.json` sidecar is the primary communication channel between coder and runner, but the runner also repairs missing or invalid sidecars from the coder invocation output via `_repair_or_validate_meta_json` in `step_runner.py`. The following phrases are forbidden in RUNTIME_MODEL.md and SHARED_SERVICES.md because they contradict the actual repair behavior:
+  - "no disk recovery functions"
+  - "no stdout JSON parsing"
+  - "sole communication channel" when paired with a denial of fallbacks
+  Instead, accurately describe both the primary sidecar channel and the repair fallback.
+- All example paths in code blocks (validation plans, file listings) must use the full canonical repo-relative path `docs/system/00_governance/platform/agent_runner/current/...`, not shortened or schematic paths like `docs/platform/README.md`.
+
+Artifacts
+
+Write all six permanent staged docs:
+
+- `L2_PLATFORM_INDEX`
+- `L2_RUNTIME_MODEL`
+- `L2_BUNDLE_AUTHORING_CONTRACT`
+- `L2_SHARED_SERVICES`
+- `L2_METADATA_CONTRACT`
+- `L2_VALIDATION_CONTRACT`
+
+Required Content
+
+- `README.md` must index the platform constitution set, define agent-runner-v2 as the platform, and state that Layer 1 governance is inherited, not redefined.
+- `README.md` must include itself in the document map so the published set inventory remains six documents, not five companions plus an implicit index.
+- `RUNTIME_MODEL.md` must define the execution architecture: step model (prompt-driven vs action), step types, daemon/manual execution paths, job lifecycle, coder integration, rejection/retry model, and notification model. Use actual source code module names as evidence (e.g., `step_runner.py`, `daemon.py`, `coder_adapters.py`).
+- `BUNDLE_AUTHORING_CONTRACT.md` must define the contract every Layer 3 bundle must satisfy: required files (`workflow.toml`, `actions.py`, `prompts/`, `bundle_governance.toml`), TOML format, artifact key conventions, bundle governance requirements, and metadata compliance.
+- `SHARED_SERVICES.md` must define runtime services available to Layer 3 bundles: context extension pattern (`build_context_extensions()`), artifact resolution (`resolve_repo_or_runtime_path()`), path contracts (`build_output_paths()`), meta sidecar handling, notification integration, backend sync protocol, and action registration via `@action()` decorator.
+- `SHARED_SERVICES.md` must include a `### BackendClient` subsection under `## Backend Sync Protocol` listing each public method of the `BackendClient` class in `backend_client.py` as a bullet item in the form `` - `method_name()` `` (one per method). Method names must be copied from the actual source code, not invented.
+- `METADATA_CONTRACT.md` must define platform-specific metadata extensions beyond Layer 1 baseline: platform-specific `doc_type` values (`bundle_definition`, `platform_standard`), platform-specific `authority` values (`platform-owned`, `bundle-owned`), additional frontmatter fields (`platform`, `template_id`, `managed_by`), metadata inheritance rules, and scan-policy expectations.
+- `VALIDATION_CONTRACT.md` must define the platform validation model: `DocumentationValidationPlan` pattern, section-check conventions, frontmatter enforcement, file existence checks, how Layer 3 bundles compose platform validators, and guidance for writing `validate_*` actions.
+
+Required Structure Per Document
+
+Each document must use the exact template_id and include the required section headings listed below.
+
+| Document | template_id | Required Section Headings |
+|---|---|---|
+| `README.md` | `SYS-02-IDX` | Document Map, Platform Identity, Layer 1 Inheritance |
+| `RUNTIME_MODEL.md` | `SYS-02-RM` | Step Model, Execution Paths, Job Lifecycle, Coder Integration, Rejection And Retry |
+| `BUNDLE_AUTHORING_CONTRACT.md` | `SYS-02-BAC` | Required Bundle Files, workflow.toml Format, Artifact Key Conventions, Bundle Governance Requirements, Metadata Compliance |
+| `SHARED_SERVICES.md` | `SYS-02-SS` | Context Extensions, Artifact Resolution, Path Contracts, Meta Sidecar, Notification Integration, Backend Sync Protocol, Action Registration |
+| `METADATA_CONTRACT.md` | `SYS-02-MC` | Platform doc_type Values, Platform authority Values, Additional Frontmatter Fields, Inheritance Rules, Scan Policy Expectations |
+| `VALIDATION_CONTRACT.md` | `SYS-02-VC` | ValidationPlan Pattern, Section Checks, Frontmatter Enforcement, File Existence Checks, Bundle Validator Composition |
+
+Required Frontmatter
+
+Each permanent document must include YAML frontmatter with at least:
+
+- `template_id`
+- `version`
+- `doc_type: "platform_standard"`
+- `authority: "workflow-generated"`
+- `scan_policy: "include"`
+- `scan_reason`
+- `layer: "layer2"`
+- `platform: "agent-runner-v2"`
+- `lifecycle_status: "draft"`
+- `effective_version: "{job_id}"`
+
+Forbidden Content
+
+- Layer 1 governance redefinition or contradiction
+- Layer 3 bundle-specific outputs or examples presented as platform-wide rules
+- automated codebase scanning procedures
+- repository bootstrap or installation instructions
+- concrete workflow bundle inventories
+- job-history evidence presented as platform standards
+
+Output Instructions
+
+- Write complete markdown files to the exact paths above.
+- Keep terminology consistent across all six docs.
+- These are staged run outputs. Frontmatter `lifecycle_status` must be `"draft"` (the publish step sets it to `"published"`).
+- Do NOT write a "Document Status" or "Status" section in body text claiming draft/published state — frontmatter handles lifecycle tracking.

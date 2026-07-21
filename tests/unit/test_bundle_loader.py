@@ -476,6 +476,6 @@ def test_bootstrap_root_contains_only_active_workflow_and_registry():
     assert names == {
         "01_governance_foundation_v1",
         "00_bootstrap_lifecycle_admin_v1",
-        "02_platform_core_foundation_v1",
+        "02_agent_runner_platform_v1",
         "_registry",
     }

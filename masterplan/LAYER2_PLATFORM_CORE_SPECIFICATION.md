@@ -9,11 +9,11 @@ scan_reason: "design specification for Layer 2 platform core; exclude from opera
 
 ## Status
 
-**Implemented** — The `02_platform_core_foundation_v1` workflow has been built and shipped.
+**Implemented** — The `02_agent_runner_platform_v1` workflow has been built and shipped.
 
-- **Workflow bundle:** `02_platform_core_foundation_v1`
+- **Workflow bundle:** `02_agent_runner_platform_v1`
 - **Implementation date:** 2026-07-21
-- **Published platform constitution:** `docs/system/00_governance/platform/current/`
+- **Published platform constitution:** `docs/system/00_governance/platform/agent_runner/current/`
 - **Job reference:** `02PC-20260721-b092c705` (first clean pass, zero refine cycles)
 
 This document defined the target specification for the Layer 2 platform-core workflow. The workflow has been implemented and the platform constitution is now the active Layer 2 standard for agent-runner-v2.
@@ -48,7 +48,7 @@ The new Layer 2 workflow must:
 
 ### Workflow Bundle Name
 
-`02_platform_core_foundation_v1`
+`02_agent_runner_platform_v1`
 
 ### Workflow Class
 
@@ -429,7 +429,7 @@ purpose is:
 ## Output Location
 
 ```
-docs/system/00_governance/platform/
+docs/system/00_governance/platform/agent_runner/
 ├── runs/{job_id}/        ← staged (draft) artifacts + evidence
 ├── history/{job_id}/     ← archived published snapshots
 └── current/              ← active published platform constitution

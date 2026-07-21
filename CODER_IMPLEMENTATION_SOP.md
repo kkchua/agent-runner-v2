@@ -11,5 +11,6 @@ Mandatory rules:
 5. When docs and code disagree, prefer the active workflow files and current code over old markdown.
 6. Before returning success, verify the intended files exist and the relevant tests pass.
 7. Use `.venv\Scripts\python` for Python and pytest commands in this repository.
+8. All code must include docstrings for modules, classes, and functions following PEP 257 conventions.
 
 If a task requires architecture or governance facts, obtain them from the active workflow bundle and current runner code, not from this file.

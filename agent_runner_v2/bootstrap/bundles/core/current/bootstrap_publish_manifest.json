@@ -7,12 +7,14 @@
   "published_workflows_copied": [
     "00_bootstrap_lifecycle_admin_v1",
     "01_governance_foundation_v1",
-    "02_platform_core_foundation_v1"
+    "02_agent_runner_platform_v1",
+    "sdlc_10_requirement_v1"
   ],
   "shared_registry_copied": true,
   "plugin_workflows_copied": [
     "00_bootstrap_lifecycle_admin_v1",
     "01_governance_foundation_v1",
-    "02_platform_core_foundation_v1"
+    "02_agent_runner_platform_v1",
+    "sdlc_10_requirement_v1"
   ]
 }
