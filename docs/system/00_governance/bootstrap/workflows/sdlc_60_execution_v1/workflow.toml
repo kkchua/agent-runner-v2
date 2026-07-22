@@ -1,0 +1,101 @@
+[workflow]
+name = "sdlc_60_execution_v1"
+version = "1.0.0"
+label = "SDLC Execution v1"
+job_prefix = "SDLC60EXE"
+description = "Execute tasks following approved implementation docs, producing approved EXEC document and code changes."
+visibility = "canonical"
+default_max_rejects = 2
+init_step = "execute_task"
+
+layer = "layer3"
+platform = "agent-runner-v2"
+
+[workflow.governance]
+include_in_prompts = true
+prompt_targets = ["all"]
+
+# ============================================================================
+# Step 1: Execute Task
+# ============================================================================
+[[step]]
+name = "execute_task"
+prompt = "prompts/01_execute_task.txt"
+enable_notifications = true
+onsuccess = "internal_review"
+
+[step.artifacts]
+required_inputs = ["IMPL_FILE"]
+produces = ["EXEC_FILE"]
+result_meta_key = "EXEC_FILE"
+
+[step.coder]
+role_policy = "architect_standard"
+
+# ============================================================================
+# Step 2: Internal Review Execution
+# ============================================================================
+[[step]]
+name = "internal_review"
+prompt = "prompts/02_internal_review.txt"
+enable_notifications = true
+requires_human_approval_after = true
+onsuccess = "promote_execution"
+
+[step.artifacts]
+required_inputs = ["EXEC_FILE", "IMPL_FILE"]
+produces = ["REVIEW_FILE_SUGGESTED"]
+result_meta_key = "REVIEW_FILE_SUGGESTED"
+
+[step.coder]
+role_policy = "reviewer_standard"
+
+[step.on_reject_refine]
+step = "refine_execution"
+artifact = "EXEC_FILE"
+max_iterations = 2
+exhausted_failure_code = "EXEC_REFINEMENT_EXHAUSTED"
+exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
+
+# ============================================================================
+# Step 3: Refine Execution (conditional)
+# ============================================================================
+[[step]]
+name = "refine_execution"
+prompt = "prompts/03_refine_execution.txt"
+enable_notifications = true
+
+[step.artifacts]
+required_inputs = ["EXEC_FILE", "REVIEW_FILE_SUGGESTED"]
+produces = ["EXEC_FILE"]
+target_artifact = "EXEC_FILE"
+edit_mode = "in_place"
+result_meta_key = "EXEC_FILE"
+
+loop_returns_to = "internal_review"
+
+[step.coder]
+role_policy = "architect_standard"
+
+# ============================================================================
+# Step 4: Promote Execution
+# ============================================================================
+[[step]]
+name = "promote_execution"
+action = "promote_artifact"
+enable_notifications = true
+onsuccess = "stepCompletion"
+
+[step.artifacts]
+required_inputs = ["EXEC_FILE"]
+source = "EXEC_FILE"
+dest = "EXEC_FILE"
+dest_dir = "docs/repo/agent_runner/sdlc/delivery/executions"
+result_meta_key = "EXEC_FILE"
+
+# ============================================================================
+# Step 5: Step Completion
+# ============================================================================
+[[step]]
+name = "stepCompletion"
+action = "step_completion"

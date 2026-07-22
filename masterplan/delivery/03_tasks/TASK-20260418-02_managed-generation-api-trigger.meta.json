@@ -1,0 +1,24 @@
+{
+  "schema_version": "v2",
+  "task_id": "TASK-20260418-02",
+  "plan_id": "PLAN-20260418-02",
+  "created_by": "qwen",
+  "created_at": "2026-04-18T00:00:00Z",
+  "coder_result": {
+    "status": "APPROVED",
+    "remark": "Task document created for managed generation API trigger — defines endpoint contract, schemas, tests, and validation criteria",
+    "artifacts": {
+      "TASK_FILE": "docs/delivery/03_tasks/TASK-20260418-02_managed-generation-api-trigger.md"
+    },
+    "recorded_at": "2026-04-18T00:00:00Z"
+  },
+  "runner_data": {
+    "step": "task",
+    "coder_used": "qwen",
+    "invoked_at": "2026-04-18T14:02:19",
+    "finished_at": "2026-04-18T14:03:28",
+    "prompt_checksum": "sha256:b4657835910802e844471f37f026dbb5f6ec8732219aaf31967f8c652de245f9",
+    "enriched_at": "2026-04-18T14:03:28",
+    "runner_version": "v2"
+  }
+}

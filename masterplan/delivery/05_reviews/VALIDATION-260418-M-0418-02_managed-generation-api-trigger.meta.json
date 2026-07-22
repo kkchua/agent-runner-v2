@@ -1,0 +1,21 @@
+{
+  "schema_version": "v2",
+  "created_by": "codex",
+  "coder_result": {
+    "status": "REJECTED",
+    "remark": "Managed-generation implementation violates the required 404/500 error contract and makes contract_id optional instead of schema-required; the declared pytest run timed out before completion.",
+    "artifacts": {
+      "VALIDATION_FILE": "docs/delivery/05_reviews/VALIDATION-260418-M-0418-02_managed-generation-api-trigger.md"
+    },
+    "recorded_at": "2026-04-18T19:30:59+08:00"
+  },
+  "runner_data": {
+    "step": "validator",
+    "coder_used": "codex",
+    "invoked_at": "2026-04-18T19:28:02",
+    "finished_at": "2026-04-18T19:31:14",
+    "prompt_checksum": "sha256:77ff29ef036b8517eedee26ce2eb2c9ab711d561a6e13c2fe30416791d96cbc9",
+    "enriched_at": "2026-04-18T19:31:14",
+    "runner_version": "v2"
+  }
+}

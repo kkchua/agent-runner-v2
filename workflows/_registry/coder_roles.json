@@ -1,5 +1,15 @@
 {
   "roles": {
+    "zen_deepseek-v4-flash-free": {
+      "coder": "opencode",
+      "connection": "opencode-zen",
+      "model_id": "deepseek-v4-flash-free"
+    },
+    "zen_mimo-v2.5-free": {
+      "coder": "opencode",
+      "connection": "opencode-zen",
+      "model_id": "mimo-v2.5-free"
+    },
     "agnes-2.0-flash": {
       "coder": "opencode",
       "connection": "00-Agnes-Coder",
@@ -7,18 +17,23 @@
     },
 	"zen_go_deepseek-v4-pro": {
       "coder": "opencode",
-      "connection": "opencode_go",
+      "connection": "opencode-go",
       "model_id": "deepseek-v4-pro"
     },
     "zen_go_deepseek-v4-flash": {
       "coder": "opencode",
-      "connection": "opencode_go",
+      "connection": "opencode-go",
       "model_id": "deepseek-v4-flash"
     },
-    "zen_go_glm_52": {
+    "zen_go_mimo-v2.5": {
       "coder": "opencode",
-      "connection": "opencode_go",
-      "model_id": "glm-5.2"
+      "connection": "opencode-go",
+      "model_id": "mimo-v2.5"
+    },
+    "zen_go_mimo-v2.5-pro": {
+      "coder": "opencode",
+      "connection": "opencode-go",
+      "model_id": "mimo-v2.5-pro"
     },
     "bailian_qwen3.7-plus": {
       "coder": "opencode",
@@ -29,11 +44,6 @@
       "coder": "opencode",
       "connection": "00-bailian",
       "model_id": "qwen3.6-plus"
-    },
-    "bailian_qwen3.5-plus": {
-      "coder": "opencode",
-      "connection": "00-bailian",
-      "model_id": "qwen3.5-plus"
     },
     "bailian_glm-5": {
       "coder": "opencode",

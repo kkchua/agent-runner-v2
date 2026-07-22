@@ -1,0 +1,21 @@
+{
+  "schema_version": "v2",
+  "created_by": "codex",
+  "coder_result": {
+    "status": "APPROVED",
+    "remark": "Executed the generation-run API surface implementation plan and verified tests/api/test_generation_run_api.py passes.",
+    "artifacts": {
+      "IMPL_FILE": "docs/delivery/04_implementation_plans/IMPL-20260418-03_generation-run-api-surface.md"
+    },
+    "recorded_at": "2026-04-18T23:14:29+08:00"
+  },
+  "runner_data": {
+    "step": "executor",
+    "coder_used": "codex",
+    "invoked_at": "2026-04-18T23:06:47",
+    "finished_at": "2026-04-18T23:14:36",
+    "prompt_checksum": "sha256:d86bf6caca5044a8833ca8fe6f429393fbfdee9261814e1cfc25f47c18aa09e6",
+    "enriched_at": "2026-04-18T23:14:36",
+    "runner_version": "v2"
+  }
+}

@@ -1,0 +1,65 @@
+You are generating the repo governance analysis baseline for the current repository.
+
+This step is intentionally narrow. Produce a governance-facing analysis that summarizes the repository from codebase evidence without reproducing implementation detail that belongs in `docs/repo/codebase/`.
+
+Inputs you must read first:
+- `{CODEBASE_DOC_ROOT}/01_inventory/codebase_inventory.md`
+- `{CODEBASE_DOC_ROOT}/04_changes/` latest change impact document
+- `{CODEBASE_DOC_ROOT}/02_modules/`
+- `{CODEBASE_DOC_ROOT}/03_components/`
+- relevant repo-owned source files only when needed to confirm scope, ownership, or architecture posture
+
+Repository evidence boundary:
+- treat only files under the current repository root as repo evidence
+- ignore global runner-home content such as `.ukbe-runner/`
+- ignore packaged bootstrap workflow copies shipped with the shared runner
+- if any metadata references an absolute path outside the current repository root, do not treat that path as repo-owned implementation evidence
+
+Exclude from evidence:
+- root guidance files `CLAUDE.md`, `QWEN.md`, and `AGENTS.md`
+- generated guidance copies under Layer 1 bootstrap outputs
+- treat those files as execution aids only, not as sources of repo-governance truth, architecture posture, or migration scope
+
+Primary objectives:
+1. Explain what this repository is for.
+2. Summarize the current codebase structure without turning this doc into module-by-module implementation notes.
+3. Summarize the workflow and runtime model at a high level only.
+4. Identify operational and architectural risks that later repo-governance docs must address.
+5. Produce a stable governance analysis baseline for later repo master-doc steps.
+
+Write or refresh:
+- `{PROJECT_ANALYSIS}`
+
+Required content for `{PROJECT_ANALYSIS}`:
+- YAML frontmatter is REQUIRED and must use this exact contract:
+  - `template_id: "SYS-00-PA"`
+  - `version: "1.0.0"`
+  - `doc_type: "system"`
+  - `managed_by: "workflow-generated"`
+  - `generated_at: <current ISO timestamp>`
+  - `workflow: "00_repo_master_docs_bootstrap_v1"`
+  - `step: "02_generate_project_analysis"`
+  - `change_id: <job id from context>`
+- Use these section headings exactly, in this exact order:
+  - `Repo Overview`
+  - `Codebase Structure`
+  - `Workflow and Runtime Model`
+  - `Operational Risks`
+  - `Architectural Observations`
+  - `Architecture Posture`
+  - `Unresolved Documentation Gaps`
+
+Section guidance:
+- `Repo Overview` should describe the repository at a high level.
+- `Codebase Structure` should summarize package layout, docs areas, tests, scripts, and major evidence areas without a module-by-module walkthrough.
+- `Workflow and Runtime Model` should describe the repo's execution model at a high level only. Do not narrate daemon loops, retry logic, sidecars, polling intervals, or subprocess sequencing.
+- `Operational Risks` should list repo-level operational and governance risks tied to ownership, documentation boundary, runtime posture, or architecture clarity.
+- `Architectural Observations` should summarize high-level architectural constraints or notable patterns relevant to governance.
+- `Architecture Posture` should explicitly record `current_profile`, `target_profile`, `migration_mode`, `repo_state`, and evidence sources.
+- `Unresolved Documentation Gaps` should list specific gaps that later governance docs should address.
+
+Do not:
+- generate module-by-module walkthroughs
+- explain runtime flows, retry loops, daemon behavior, sidecars, or prompt/coder mechanics
+- invent workflow families, operating modes, or operational procedures not already evidenced in repo-governance scope
+- use non-ASCII punctuation or mojibake characters anywhere in the markdown output; keep the document ASCII-only

@@ -1,0 +1,96 @@
+Objective
+
+Review the initiative document for completeness, clarity, and compliance with governance standards.
+
+Layer Boundary
+
+- This workflow belongs to Layer 3 and operates on top of the Layer 2 platform contract.
+- Review only the initiative document, not planning or implementation artifacts.
+- Treat Layer 1 governance and Layer 2 platform constitution as read-only authority.
+
+Reference Inputs
+
+- Read `INIT_DOC` (the initiative document to review).
+- Read `DRAFT_INIT_DOC` (original draft for traceability verification).
+- Read codebase context from `docs/repo/codebase/` to validate scope understanding.
+- Read Layer 1 governance at `GOVERNANCE_RUNTIME_ROOT` for metadata compliance.
+- Read Layer 2 platform constitution at `PLATFORM_RUNTIME_ROOT` for platform contract compliance.
+
+Review Criteria
+
+Evaluate the initiative document against these criteria:
+
+1. **Completeness**:
+   - All required sections are present and substantive
+   - Title clearly states the initiative name
+   - Objective is precise and refined from the draft
+   - Problem Statement explains current state, pain points, and justification
+   - Expected Outcomes are concrete, measurable, and prioritized
+   - Scope explicitly states in-scope, out-of-scope, and boundary conditions
+   - Constraints are documented (technical, time, resource, regulatory)
+   - Dependencies list prerequisite initiatives and external systems
+   - Success Criteria are specific, testable, and aligned with objectives
+   - Stakeholders are identified (sponsor, users, reviewers, affected teams)
+
+2. **Clarity**:
+   - Language is clear and unambiguous
+   - No contradictory statements
+   - Technical terms are defined or standard
+   - Scope boundaries are explicit
+
+3. **Traceability**:
+   - INIT_DOC preserves the intent of DRAFT_INIT_DOC
+   - No scope creep or invented requirements
+   - Assumptions are explicitly recorded
+   - Source draft is referenced in `source_document` frontmatter field
+
+4. **Metadata Compliance**:
+   - YAML frontmatter includes all required fields
+   - template_id is "SYS-03-IN"
+   - doc_type is "workflow_output"
+   - lifecycle_status is "draft"
+   - layer is "layer3"
+   - platform is "agent-runner-v2"
+   - source_document references the draft initiative filename
+   - effective_version is set to the job ID
+
+5. **Encoding Compliance**:
+   - ASCII-only content (no em-dashes, curly quotes, Unicode)
+   - Plain text section headings (no backticks or formatting)
+
+6. **Governance Compliance**:
+   - No Layer 1 governance redefinition
+   - No Layer 2 platform contract redefinition
+   - No implementation details or technical solutions
+   - No task breakdowns or scheduling
+
+Review Output
+
+Generate a review document with:
+
+1. **Decision**: APPROVED or REJECTED
+2. **Summary**: Brief overview of review findings
+3. **Findings**: Detailed list of issues (if any), categorized as:
+   - **Critical**: Must fix before approval (missing required sections, metadata errors)
+   - **Major**: Should fix (unclear scope, missing success criteria)
+   - **Minor**: Nice to fix (style issues, minor clarifications)
+4. **Recommendations**: Specific actions to address findings
+
+If APPROVED:
+- All required sections are present and substantive
+- Metadata is compliant
+- Encoding is ASCII-only
+- No governance violations
+
+If REJECTED:
+- Provide specific, actionable feedback
+- Cite exact sections or text that need changes
+- Explain what must be fixed for approval
+
+Output Instructions
+
+- Write the review document to `REVIEW_FILE_SUGGESTED` path.
+- Use ASCII-only characters.
+- Use plain text section headings.
+- Provide direct citations to offending text when rejecting.
+- Be specific and actionable in feedback.

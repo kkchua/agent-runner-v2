@@ -1,0 +1,102 @@
+[workflow]
+name = "sdlc_50_implementation_v1"
+version = "1.0.0"
+label = "SDLC Implementation v1"
+job_prefix = "SDLC50IMP"
+description = "Generate implementation plan from approved task, producing approved IMPL document."
+visibility = "canonical"
+default_max_rejects = 2
+init_step = "generate_implementation"
+
+# Layer 2 platform contract references
+layer = "layer3"
+platform = "agent-runner-v2"
+
+[workflow.governance]
+include_in_prompts = true
+prompt_targets = ["all"]
+
+# ============================================================================
+# Step 1: Generate Implementation
+# ============================================================================
+[[step]]
+name = "generate_implementation"
+prompt = "prompts/01_generate_implementation.txt"
+enable_notifications = true
+onsuccess = "review_implementation"
+
+[step.artifacts]
+required_inputs = ["TASK_FILE"]
+produces = ["IMPL_FILE"]
+result_meta_key = "IMPL_FILE"
+
+[step.coder]
+role_policy = "architect_standard"
+
+# ============================================================================
+# Step 2: Review Implementation
+# ============================================================================
+[[step]]
+name = "review_implementation"
+prompt = "prompts/02_review_implementation.txt"
+enable_notifications = true
+requires_human_approval_after = true
+onsuccess = "promote_implementation"
+
+[step.artifacts]
+required_inputs = ["IMPL_FILE"]
+produces = ["REVIEW_FILE_SUGGESTED"]
+result_meta_key = "REVIEW_FILE_SUGGESTED"
+
+[step.coder]
+role_policy = "reviewer_standard"
+
+[step.on_reject_refine]
+step = "refine_implementation"
+artifact = "IMPL_FILE"
+max_iterations = 2
+exhausted_failure_code = "IMPL_REFINEMENT_EXHAUSTED"
+exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
+
+# ============================================================================
+# Step 3: Refine Implementation (conditional)
+# ============================================================================
+[[step]]
+name = "refine_implementation"
+prompt = "prompts/03_refine_implementation.txt"
+enable_notifications = true
+
+[step.artifacts]
+required_inputs = ["IMPL_FILE", "REVIEW_FILE_SUGGESTED"]
+produces = ["IMPL_FILE"]
+target_artifact = "IMPL_FILE"
+edit_mode = "in_place"
+result_meta_key = "IMPL_FILE"
+
+loop_returns_to = "review_implementation"
+
+[step.coder]
+role_policy = "architect_standard"
+
+# ============================================================================
+# Step 4: Promote Implementation
+# ============================================================================
+[[step]]
+name = "promote_implementation"
+action = "promote_artifact"
+enable_notifications = true
+onsuccess = "stepCompletion"
+
+[step.artifacts]
+required_inputs = ["IMPL_FILE"]
+source = "IMPL_FILE"
+dest = "IMPL_FILE"
+dest_dir = "docs/repo/agent_runner/sdlc/delivery/implementations"
+result_meta_key = "IMPL_FILE"
+
+# ============================================================================
+# Step 5: Step Completion
+# ============================================================================
+[[step]]
+name = "stepCompletion"
+action = "step_completion"

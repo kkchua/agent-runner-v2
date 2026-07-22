@@ -1,0 +1,68 @@
+Objective
+
+Generate a structured validation report from all approved execution documents.
+
+Layer Boundary
+
+- This workflow belongs to Layer 3 and operates on top of the Layer 2 platform contract.
+- Generate only validation documentation, not review or closure artifacts.
+- Treat Layer 1 governance and Layer 2 platform constitution as read-only reference inputs.
+
+Reference Inputs
+
+- Read `EXEC_FILE` (approved execution document).
+- Read codebase context from `docs/repo/codebase/` to understand repository structure.
+- Read Layer 1 governance at `GOVERNANCE_RUNTIME_ROOT` for metadata requirements.
+- Read Layer 2 platform constitution at `PLATFORM_RUNTIME_ROOT` for platform contract.
+
+Validation Document Requirements
+
+The VAL document must include:
+
+1. YAML Frontmatter (REQUIRED):
+   - `template_id: "SYS-03-VL"`
+   - `version: "1.0.0"`
+   - `doc_type: "system"`
+   - `authority: "workflow-generated"`
+   - `scan_policy: "include"`
+   - `scan_reason: "validation report for initiative completion"`
+   - `layer: "layer3"`
+   - `platform: "agent-runner-v2"`
+   - `lifecycle_status: "draft"`
+   - `effective_version: "{job_id}"`
+   - `managed_by: "workflow-generated"`
+
+2. Required Sections (in this exact order):
+   - `Validation Overview` - High-level summary of validation scope
+   - `Execution Traceability` - Link back to approved EXEC documents
+   - `Validation Criteria` - Criteria used to validate the execution
+   - `Validation Results` - Detailed results of validation checks
+   - `Acceptance Verification` - Confirmation that acceptance criteria are met
+   - `Quality Metrics` - Quality measurements and thresholds
+   - `Compliance Check` - Governance and compliance verification
+   - `Issues and Risks` - Any remaining issues or risks
+   - `Recommendations` - Recommendations for next steps or improvements
+   - `Open Questions` - Unresolved items that need clarification
+
+3. Content Guidelines:
+   - Base all validation on the approved execution documents
+   - Normalize into canonical structure without inventing scope
+   - Record explicit assumptions where information is missing
+   - Verify all acceptance criteria from the task specification
+   - Note any audit/compliance sensitivity
+
+Output Instructions
+
+- Write the validation document to `VAL_FILE` path.
+- Use ASCII-only characters (no em-dashes, curly quotes, or Unicode).
+- Use plain text section headings (no backticks or formatting in headings).
+- Keep terminology consistent with Layer 1 and Layer 2 governance docs.
+- Do not create review or closure artifacts.
+
+Forbidden Content
+
+- Layer 1 governance redefinition or contradiction
+- Layer 2 platform contract redefinition
+- Review documents or closure artifacts
+- Implementation details or code changes
+- Content not supported by the approved execution documents

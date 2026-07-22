@@ -1,0 +1,21 @@
+{
+  "schema_version": "v2",
+  "created_by": "qwen",
+  "coder_result": {
+    "status": "APPROVED",
+    "remark": "Implemented POST /artifacts/generate-managed endpoint with GenerateManagedRequest/GenerateManagedResponse schemas, _make_generator factory, and error mapping (400/404/500). All 12 tests pass. Existing /artifacts/generate endpoint unaffected (11 existing tests pass).",
+    "artifacts": {
+      "IMPL_FILE": "docs/delivery/04_implementation_plans/IMPL-20260418-02_managed-generation-api-trigger.md"
+    },
+    "recorded_at": "2026-04-18T00:00:00Z"
+  },
+  "runner_data": {
+    "step": "executor",
+    "coder_used": "qwen",
+    "invoked_at": "2026-04-18T19:19:36",
+    "finished_at": "2026-04-18T19:26:23",
+    "prompt_checksum": "sha256:dda9b611b19af0185db439f3609ee5fa421a48704bb9c4d4e20d31ea9de9be14",
+    "enriched_at": "2026-04-18T19:26:23",
+    "runner_version": "v2"
+  }
+}

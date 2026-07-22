@@ -1,0 +1,100 @@
+[workflow]
+name = "sdlc_10_requirement_v1"
+version = "1.0.0"
+label = "SDLC Requirement Intake v1"
+job_prefix = "SDLC10REQ"
+description = "Capture and structure requirements from initiative input, producing approved REQ document."
+visibility = "canonical"
+default_max_rejects = 2
+init_step = "generate_initiative"
+
+# Layer 2 platform contract references
+layer = "layer3"
+platform = "agent-runner-v2"
+
+[workflow.governance]
+include_in_prompts = true
+prompt_targets = ["all"]
+
+# ============================================================================
+# Step 1: Generate Initiative
+# ============================================================================
+[[step]]
+name = "generate_initiative"
+prompt = "prompts/01_generate_initiative.txt"
+enable_notifications = true
+onsuccess = "review_initiative"
+
+[step.artifacts]
+required_inputs = ["DRAFT_INIT_DOC"]
+produces = ["INIT_DOC"]
+result_meta_key = "INIT_DOC"
+
+[step.coder]
+role_policy = "architect_standard"
+
+# ============================================================================
+# Step 2: Review Initiative
+# ============================================================================
+[[step]]
+name = "review_initiative"
+prompt = "prompts/02_review_initiative.txt"
+enable_notifications = true
+requires_human_approval_after = true
+onsuccess = "promote_initiative"
+
+[step.artifacts]
+required_inputs = ["INIT_DOC"]
+produces = ["REVIEW_FILE_SUGGESTED"]
+result_meta_key = "REVIEW_FILE_SUGGESTED"
+
+[step.coder]
+role_policy = "reviewer_standard"
+
+[step.on_reject_refine]
+step = "refine_initiative"
+artifact = "INIT_DOC"
+max_iterations = 2
+exhausted_failure_code = "INIT_REFINEMENT_EXHAUSTED"
+exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
+
+# ============================================================================
+# Step 3: Refine Initiative (conditional)
+# ============================================================================
+[[step]]
+name = "refine_initiative"
+prompt = "prompts/03_refine_initiative.txt"
+enable_notifications = true
+
+[step.artifacts]
+required_inputs = ["INIT_DOC", "REVIEW_FILE_SUGGESTED"]
+produces = ["INIT_DOC"]
+target_artifact = "INIT_DOC"
+edit_mode = "in_place"
+result_meta_key = "INIT_DOC"
+
+loop_returns_to = "review_initiative"
+
+[step.coder]
+role_policy = "architect_standard"
+
+# ============================================================================
+# Step 4: Promote Initiative
+# ============================================================================
+[[step]]
+name = "promote_initiative"
+action = "promote_artifact"
+enable_notifications = true
+onsuccess = "stepCompletion"
+
+[step.artifacts]
+required_inputs = ["INIT_DOC"]
+promotes = "INIT_DOC"
+result_meta_key = "INIT_DOC"
+
+# ============================================================================
+# Step 5: Step Completion
+# ============================================================================
+[[step]]
+name = "stepCompletion"
+action = "step_completion"

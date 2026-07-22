@@ -1,0 +1,138 @@
+[workflow]
+name = "sdlc_00_delivery_scaffold_v1"
+version = "1.0.0"
+label = "SDLC Delivery Scaffold v1"
+job_prefix = "SDLC00SCF"
+description = "Generate master document templates and agent contracts for the SDLC delivery system."
+visibility = "canonical"
+default_max_rejects = 2
+init_step = "generate_templates"
+
+# Layer 2 platform contract references
+layer = "layer3"
+platform = "agent-runner-v2"
+
+[workflow.governance]
+include_in_prompts = true
+prompt_targets = ["all"]
+
+# ============================================================================
+# Step 1: Generate Master Templates
+# ============================================================================
+[[step]]
+name = "generate_templates"
+prompt = "prompts/01_generate_templates.txt"
+enable_notifications = true
+onsuccess = "generate_agent_contracts"
+
+[step.artifacts]
+produces = ["SDLC_TEMPLATE_REGISTRY", "SDLC_WORKFLOW_SOP", "SDLC_TEMPLATE_DRAFT_INIT", "SDLC_TEMPLATE_INIT", "SDLC_TEMPLATE_REQ", "SDLC_TEMPLATE_PLAN", "SDLC_TEMPLATE_BACKLOG", "SDLC_TEMPLATE_TASK", "SDLC_TEMPLATE_IMPL", "SDLC_TEMPLATE_VALID", "SDLC_TEMPLATE_REV", "SDLC_TEMPLATE_MEM", "SDLC_TEMPLATE_CLOSE"]
+result_meta_key = "SDLC_TEMPLATE_REGISTRY"
+
+[step.coder]
+role_policy = "architect_standard"
+
+[step.on_reject_refine]
+step = "generate_templates"
+artifact = "SDLC_TEMPLATE_REGISTRY"
+max_iterations = 1
+exhausted_failure_code = "TEMPLATE_GENERATION_EXHAUSTED"
+exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
+
+# ============================================================================
+# Step 2: Generate Agent Contracts
+# ============================================================================
+[[step]]
+name = "generate_agent_contracts"
+prompt = "prompts/02_generate_agent_contracts.txt"
+enable_notifications = true
+onsuccess = "review_scaffold"
+
+[step.artifacts]
+produces = ["SDLC_AGENTS_INDEX", "SDLC_AGENT_PLANNER", "SDLC_AGENT_TASK_DECOMPOSER", "SDLC_AGENT_IMPL_PLANNER", "SDLC_AGENT_EXECUTOR", "SDLC_AGENT_REVIEWER", "SDLC_AGENT_MEMORY_MANAGER", "SDLC_DELIVERY_STATUS_RULES"]
+result_meta_key = "SDLC_AGENTS_INDEX"
+
+[step.coder]
+role_policy = "architect_standard"
+
+[step.on_reject_refine]
+step = "generate_agent_contracts"
+artifact = "SDLC_AGENTS_INDEX"
+max_iterations = 1
+exhausted_failure_code = "AGENT_CONTRACTS_GENERATION_EXHAUSTED"
+exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
+
+# ============================================================================
+# Step 3: Review Scaffold
+# ============================================================================
+[[step]]
+name = "review_scaffold"
+prompt = "prompts/03_review_scaffold.txt"
+enable_notifications = true
+requires_human_approval_after = true
+onsuccess = "publish_sdlc_scaffold"
+
+[step.artifacts]
+required_inputs = ["SDLC_TEMPLATE_REGISTRY", "SDLC_AGENTS_INDEX"]
+produces = ["REVIEW_FILE_SUGGESTED"]
+result_meta_key = "REVIEW_FILE_SUGGESTED"
+
+[step.coder]
+role_policy = "reviewer_standard"
+
+[step.on_reject_refine]
+step = "refine_scaffold"
+artifact = "REVIEW_FILE_SUGGESTED"
+max_iterations = 2
+exhausted_failure_code = "SCAFFOLD_REFINEMENT_EXHAUSTED"
+exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
+
+# ============================================================================
+# Step 4: Refine Scaffold (conditional)
+# ============================================================================
+[[step]]
+name = "refine_scaffold"
+prompt = "prompts/04_refine_scaffold.txt"
+enable_notifications = true
+
+[step.artifacts]
+required_inputs = ["REVIEW_FILE_SUGGESTED"]
+produces = ["REVIEW_FILE_SUGGESTED"]
+target_artifact = "REVIEW_FILE_SUGGESTED"
+edit_mode = "in_place"
+result_meta_key = "REVIEW_FILE_SUGGESTED"
+
+loop_returns_to = "review_scaffold"
+
+[step.coder]
+role_policy = "architect_standard"
+
+# ============================================================================
+# Step 5: Publish Scaffold
+# ============================================================================
+[[step]]
+name = "publish_sdlc_scaffold"
+action = "publish_sdlc_scaffold"
+enable_notifications = true
+onsuccess = "stepCompletion"
+
+[step.artifacts]
+required_inputs = [
+  "SDLC_TEMPLATE_REGISTRY", "SDLC_WORKFLOW_SOP",
+  "SDLC_TEMPLATE_DRAFT_INIT", "SDLC_TEMPLATE_INIT", "SDLC_TEMPLATE_REQ",
+  "SDLC_TEMPLATE_PLAN", "SDLC_TEMPLATE_BACKLOG", "SDLC_TEMPLATE_TASK",
+  "SDLC_TEMPLATE_IMPL", "SDLC_TEMPLATE_VALID", "SDLC_TEMPLATE_REV",
+  "SDLC_TEMPLATE_MEM", "SDLC_TEMPLATE_CLOSE",
+  "SDLC_AGENTS_INDEX", "SDLC_AGENT_PLANNER", "SDLC_AGENT_TASK_DECOMPOSER",
+  "SDLC_AGENT_IMPL_PLANNER", "SDLC_AGENT_EXECUTOR", "SDLC_AGENT_REVIEWER",
+  "SDLC_AGENT_MEMORY_MANAGER", "SDLC_DELIVERY_STATUS_RULES",
+]
+produces = ["SDLC_SCAFFOLD_PUBLISH_MANIFEST", "SDLC_SCAFFOLD_PUBLISH_MANIFEST_HISTORY"]
+result_meta_key = "SDLC_SCAFFOLD_PUBLISH_MANIFEST"
+
+# ============================================================================
+# Step 6: Step Completion
+# ============================================================================
+[[step]]
+name = "stepCompletion"
+action = "step_completion"

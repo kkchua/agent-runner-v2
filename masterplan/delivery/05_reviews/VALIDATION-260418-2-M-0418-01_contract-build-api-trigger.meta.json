@@ -1,0 +1,21 @@
+{
+  "schema_version": "v2",
+  "created_by": "claude",
+  "coder_result": {
+    "status": "APPROVED",
+    "remark": "All 11 tests pass; all deliverables present; docstring linkage verified; implementation matches approved task contract.",
+    "artifacts": {
+      "VALIDATION_FILE": "docs/delivery/05_reviews/VALIDATION-260418-2-M-0418-01_contract-build-api-trigger.md"
+    },
+    "recorded_at": "2026-04-18T00:00:00+00:00"
+  },
+  "runner_data": {
+    "step": "validator",
+    "coder_used": "claude",
+    "invoked_at": "2026-04-18T14:12:53",
+    "finished_at": "2026-04-18T14:13:54",
+    "prompt_checksum": "sha256:03297f9585cee37011f5d48ab6f38f160d9bd21efd37d47bc259443ee88c62ee",
+    "enriched_at": "2026-04-18T14:13:54",
+    "runner_version": "v2"
+  }
+}

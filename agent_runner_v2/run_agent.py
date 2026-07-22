@@ -353,6 +353,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         ns.console_argv = raw[1:]
         return ns
 
+    if command == "codebase-init":
+        ns = argparse.Namespace()
+        ns.command = "codebase-init"
+        ns.codebase_init_argv = raw[1:]
+        return ns
+
     p = argparse.ArgumentParser(description="Run a job-based LLM workflow (v2).")
     p.add_argument("-v", "--version", action="version", version=f"%(prog)s {__version__}")
     p.add_argument("--project-root", default="", help="Workspace root. Defaults to the current directory.")
@@ -468,6 +474,10 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "console":
         from .console_commands import main as _console_main
         return _console_main(args.console_argv)
+
+    if args.command == "codebase-init":
+        from .codebase_init_commands import main as _codebase_init_main
+        return _codebase_init_main(args.codebase_init_argv)
 
     if args.project_root and Path(args.project_root).resolve() != cwd_root:
         raise ValueError(

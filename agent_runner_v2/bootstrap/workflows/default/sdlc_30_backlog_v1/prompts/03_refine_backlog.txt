@@ -1,0 +1,70 @@
+Objective
+
+Refine the backlog document based on review findings.
+
+Layer Boundary
+
+- This workflow belongs to Layer 3 and operates on top of the Layer 2 platform contract.
+- Refine only the backlog document, not task or implementation artifacts.
+- Treat Layer 1 governance and Layer 2 platform constitution as read-only authority.
+
+Reference Inputs
+
+- Read `BACKLOG_FILE` (the backlog document to refine).
+- Read `REVIEW_FILE_SUGGESTED` (review findings with specific feedback).
+- Read `PLAN_FILE` (approved plan for traceability verification).
+- Read codebase context from `docs/repo/codebase/` if needed for scope clarification.
+
+Refinement Rules
+
+1. **Address All Critical Findings**:
+   - Missing required sections must be added
+   - Metadata errors must be corrected
+   - Encoding violations must be fixed
+
+2. **Address All Major Findings**:
+   - Unclear work items must be clarified
+   - Missing traceability must be added
+   - Contradictory statements must be resolved
+
+3. **Address Minor Findings** (if time permits):
+   - Style issues should be improved
+   - Minor clarifications should be added
+
+4. **Preserve Original Intent**:
+   - Do not invent new scope not supported by the plan
+   - Do not add implementation details or code
+   - Do not add task-level specifications
+   - Maintain traceability to the source plan
+
+5. **Update Traceability**:
+   - If content was refined, update the traceability section
+   - Record what was changed and why
+   - Reference the review findings
+
+Refinement Process
+
+1. Read the review findings carefully
+2. Identify all critical and major issues
+3. Address each issue systematically
+4. Update the document in place
+5. Verify all required sections are present
+6. Verify metadata is compliant
+7. Verify encoding is ASCII-only
+
+Output Instructions
+
+- Update the backlog document in place at `BACKLOG_FILE` path.
+- Use ASCII-only characters.
+- Use plain text section headings.
+- Keep frontmatter fields present and consistent.
+- Do not change the document structure unless required by review findings.
+
+Forbidden Content
+
+- Layer 1 governance redefinition or contradiction
+- Layer 2 platform contract redefinition
+- Implementation details or code
+- Task-level specifications (belongs to task phase)
+- Execution or scheduling details
+- Content not supported by the approved plan

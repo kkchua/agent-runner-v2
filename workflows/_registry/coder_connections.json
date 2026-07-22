@@ -34,19 +34,17 @@
       "openai_base_url": "https://api.deepseek.com",
       "available_models": ["deepseek-v4-flash"]
     },
-    "opencode_ai_zen_go": {
-      "provider": "opencode_ai_zen_go",
-      "supported_coders": ["qwen"],
-      "model_format": "model_id",
-      "auth_type": "openai",
-      "openai_base_url": "https://opencode.ai/zen/go/v1",
-      "available_models": ["deepseek-v4-flash, glm-5.2"]
-    },
-    "opencode_go": {
+    "opencode-go": {
       "provider": "opencode_go",
       "supported_coders": ["opencode"],
       "model_format": "provider/model_id",
       "provider_prefix": "opencode-go"
+    },
+	"opencode-zen": {
+      "provider": "opencode-zen",
+      "supported_coders": ["opencode"],
+      "model_format": "provider/model_id",
+      "provider_prefix": "opencode"
     },
 	"00-Agnes-Coder": {
       "provider": "00-Agnes-Coder",
