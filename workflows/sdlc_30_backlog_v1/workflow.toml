@@ -1,0 +1,102 @@
+[workflow]
+name = "sdlc_30_backlog_v1"
+version = "1.0.0"
+label = "SDLC Backlog v1"
+job_prefix = "SDLC30BLG"
+description = "Generate backlog from approved plan, producing approved BACKLOG document."
+visibility = "canonical"
+default_max_rejects = 2
+init_step = "generate_backlog"
+
+# Layer 2 platform contract references
+layer = "layer3"
+platform = "agent-runner-v2"
+
+[workflow.governance]
+include_in_prompts = true
+prompt_targets = ["all"]
+
+# ============================================================================
+# Step 1: Generate Backlog
+# ============================================================================
+[[step]]
+name = "generate_backlog"
+prompt = "prompts/01_generate_backlog.txt"
+enable_notifications = true
+onsuccess = "review_backlog"
+
+[step.artifacts]
+required_inputs = ["PLAN_FILE"]
+produces = ["BACKLOG_FILE"]
+result_meta_key = "BACKLOG_FILE"
+
+[step.coder]
+role_policy = "architect_standard"
+
+# ============================================================================
+# Step 2: Review Backlog
+# ============================================================================
+[[step]]
+name = "review_backlog"
+prompt = "prompts/02_review_backlog.txt"
+enable_notifications = true
+requires_human_approval_after = true
+onsuccess = "promote_backlog"
+
+[step.artifacts]
+required_inputs = ["BACKLOG_FILE"]
+produces = ["REVIEW_FILE_SUGGESTED"]
+result_meta_key = "REVIEW_FILE_SUGGESTED"
+
+[step.coder]
+role_policy = "reviewer_standard"
+
+[step.on_reject_refine]
+step = "refine_backlog"
+artifact = "BACKLOG_FILE"
+max_iterations = 2
+exhausted_failure_code = "BACKLOG_REFINEMENT_EXHAUSTED"
+exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
+
+# ============================================================================
+# Step 3: Refine Backlog (conditional)
+# ============================================================================
+[[step]]
+name = "refine_backlog"
+prompt = "prompts/03_refine_backlog.txt"
+enable_notifications = true
+
+[step.artifacts]
+required_inputs = ["BACKLOG_FILE", "REVIEW_FILE_SUGGESTED"]
+produces = ["BACKLOG_FILE"]
+target_artifact = "BACKLOG_FILE"
+edit_mode = "in_place"
+result_meta_key = "BACKLOG_FILE"
+
+loop_returns_to = "review_backlog"
+
+[step.coder]
+role_policy = "architect_standard"
+
+# ============================================================================
+# Step 4: Promote Backlog
+# ============================================================================
+[[step]]
+name = "promote_backlog"
+action = "promote_artifact"
+enable_notifications = true
+onsuccess = "stepCompletion"
+
+[step.artifacts]
+required_inputs = ["BACKLOG_FILE"]
+source = "BACKLOG_FILE"
+dest = "BACKLOG_FILE"
+dest_dir = "docs/repo/agent_runner/sdlc/delivery/backlogs"
+result_meta_key = "BACKLOG_FILE"
+
+# ============================================================================
+# Step 5: Step Completion
+# ============================================================================
+[[step]]
+name = "stepCompletion"
+action = "step_completion"

@@ -1,0 +1,66 @@
+Objective
+
+Generate a structured backlog document from the approved plan.
+
+Layer Boundary
+
+- This workflow belongs to Layer 3 and operates on top of the Layer 2 platform contract.
+- Generate only backlog documentation, not task or implementation artifacts.
+- Treat Layer 1 governance and Layer 2 platform constitution as read-only reference inputs.
+
+Reference Inputs
+
+- Read `PLAN_FILE` (approved plan document).
+- Read codebase context from `docs/repo/codebase/` to understand repository structure.
+- Read Layer 1 governance at `GOVERNANCE_RUNTIME_ROOT` for metadata requirements.
+- Read Layer 2 platform constitution at `PLATFORM_RUNTIME_ROOT` for platform contract.
+
+Backlog Document Requirements
+
+The BACKLOG document must include:
+
+1. YAML Frontmatter (REQUIRED):
+   - `template_id: "SYS-03-BL"`
+   - `version: "1.0.0"`
+   - `doc_type: "system"`
+   - `authority: "workflow-generated"`
+   - `scan_policy: "include"`
+   - `scan_reason: "backlog for initiative execution"`
+   - `layer: "layer3"`
+   - `platform: "agent-runner-v2"`
+   - `lifecycle_status: "draft"`
+   - `effective_version: "{job_id}"`
+   - `managed_by: "workflow-generated"`
+
+2. Required Sections (in this exact order):
+   - `Backlog Overview` - High-level summary of the backlog scope
+   - `Plan Traceability` - Link back to approved PLAN and key components
+   - `Work Items` - Ordered list of work items derived from the plan
+   - `Prioritization` - Priority ordering and rationale
+   - `Dependencies` - Inter-item dependencies and prerequisites
+   - `Acceptance Criteria` - High-level acceptance criteria for each work item
+   - `Effort Estimates` - Relative effort estimates for each work item
+   - `Open Questions` - Unresolved items that need clarification
+
+3. Content Guidelines:
+   - Base all work items on the approved plan document
+   - Normalize into canonical structure without inventing scope
+   - Record explicit assumptions where information is missing
+   - Identify codebase areas likely affected by each work item
+   - Note any audit/compliance sensitivity
+
+Output Instructions
+
+- Write the backlog document to `BACKLOG_FILE` path.
+- Use ASCII-only characters (no em-dashes, curly quotes, or Unicode).
+- Use plain text section headings (no backticks or formatting in headings).
+- Keep terminology consistent with Layer 1 and Layer 2 governance docs.
+- Do not create task specifications or implementation artifacts.
+
+Forbidden Content
+
+- Layer 1 governance redefinition or contradiction
+- Layer 2 platform contract redefinition
+- Implementation details or code
+- Task-level specifications (belongs to task phase)
+- Execution or scheduling details

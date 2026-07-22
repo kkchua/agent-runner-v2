@@ -1,0 +1,45 @@
+You are generating the Integration Map document for the current repository.
+
+This step produces a comprehensive map of how modules connect, how data flows through the system, and which integration points are actually implemented by this repository.
+
+Inputs you must read first:
+- `{PROJECT_ANALYSIS}`
+- `{CODEBASE_DOC_ROOT}/01_inventory/codebase_inventory.md`
+- `{CODEBASE_DOC_ROOT}/04_changes/` latest change impact document
+- `{CODEBASE_DOC_ROOT}/02_modules/`
+- `{CODEBASE_DOC_ROOT}/03_components/`
+- relevant source files under the repository's primary application, runtime, worker, and support packages
+
+Repository evidence boundary:
+- use only current-repository files to determine module dependencies, data flows, and integration points
+- ignore global runner-home content such as `.ukbe-runner/`
+- ignore packaged bootstrap workflow copies shipped with the shared runner
+- list an external integration only when the current repository contains direct evidence for it
+
+Write or refresh this doc:
+- `{CODEBASE_DOC_ROOT}/01_inventory/INTEGRATION_MAP.md`
+
+Workflow-owned artifact contract:
+- `INTEGRATION_MAP` -> `{CODEBASE_DOC_ROOT}/01_inventory/INTEGRATION_MAP.md`
+
+Primary objectives:
+1. Document the module dependency graph: what depends on what.
+2. Document the verified data flow through the system from entrypoint to completion.
+3. Identify integration points with external systems only when they are evidenced in the current repository.
+4. Document internal module boundaries and extension points.
+5. Show the key interactions implemented by this repository, such as workflow step execution, artifact validation, review loops, or failure handling when present.
+
+Required content:
+- Module dependency graph (text or ASCII diagram)
+- Data flow diagrams for main execution paths
+- Integration points table (external systems, protocols, direction)
+- Module areas and their responsibilities
+- Key interaction sequences
+
+Frontmatter contract:
+- Use `template_id: "CB-04-IM"` in YAML frontmatter
+- Include standard workflow metadata (workflow, step, generated, managed_by)
+
+Hard ownership rule:
+- This step only writes `INTEGRATION_MAP.md`.
+- Do not modify any other documentation files.

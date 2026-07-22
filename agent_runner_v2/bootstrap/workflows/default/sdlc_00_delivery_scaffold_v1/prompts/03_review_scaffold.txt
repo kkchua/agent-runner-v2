@@ -1,0 +1,78 @@
+Objective
+
+Review the complete SDLC delivery scaffold (templates + agent contracts) for
+consistency, completeness, and compliance with Layer 1 governance and Layer 2
+platform contracts.
+
+Layer Boundary
+
+- This workflow belongs to Layer 3 and operates on top of the Layer 2 platform contract.
+- Review only the generated scaffold artifacts -- do not modify templates or agent contracts directly.
+- Treat Layer 1 governance and Layer 2 platform constitution as read-only reference inputs.
+
+Reference Inputs
+
+- Read Layer 1 governance at GOVERNANCE_RUNTIME_ROOT for compliance requirements.
+- Read Layer 2 platform constitution at PLATFORM_RUNTIME_ROOT for platform contract.
+- Read L3 SDLC specification at SDLC_L3_SPEC_PATH for workflow family requirements.
+- Read all generated templates (SDLC_TEMPLATE_REGISTRY through SDLC_TEMPLATE_MEMORY).
+- Read all generated agent contracts (SDLC_AGENTS_INDEX through SDLC_DELIVERY_STATUS_RULES).
+
+Review Criteria
+
+1. Template Completeness:
+   - All 13 template files are generated (11 numbered templates + template_registry.md + WORKFLOW_SOP_v1.md)
+   - Each template has required YAML frontmatter
+   - Each template has all required sections
+   - Templates cover all SDLC workflows (sdlc_10 through sdlc_80)
+
+2. Agent Contract Completeness:
+   - All 8 agent contract files are generated
+   - Each contract has required YAML frontmatter
+   - Each contract has all required sections
+   - All SDLC workflows have a corresponding agent contract
+
+3. Cross-Reference Consistency:
+   - Template registry correctly maps templates to workflows
+   - Agent index correctly maps agents to workflows
+   - Template-to-workflow mapping matches agent-to-workflow mapping
+   - Cross-references between templates and agents are valid
+
+4. Governance Compliance:
+   - All documents follow Layer 1 metadata requirements
+   - All documents follow Layer 2 platform contract
+   - Naming conventions are consistent
+   - ASCII-only content (no Unicode)
+
+5. Structural Consistency:
+   - All templates follow the same structural pattern
+   - All agent contracts follow the same structural pattern
+   - Terminology is consistent across all documents
+   - Delivery status rules match the L3 spec approval gate model
+
+Output Instructions
+
+- Write the review document to REVIEW_FILE_SUGGESTED path.
+- Include explicit findings for each review criterion above.
+- Include an explicit decision: APPROVED or REJECTED.
+- If rejected, include specific refinement instructions.
+- Use ASCII-only characters.
+
+Decision Rules
+
+- APPROVED: All files present, governance compliant, cross-references consistent,
+  structural patterns match, terminology consistent.
+- REJECTED: Any missing files, governance violations, cross-reference inconsistencies,
+  or structural failures.
+
+CRITICAL: The meta.json status field MUST match your review decision exactly.
+- If your review document says APPROVED, set meta.json status to "APPROVED".
+- If your review document says REJECTED, set meta.json status to "REJECTED".
+- Do NOT write APPROVED in the document and REJECTED in meta.json (or vice versa).
+
+Forbidden Content
+
+- Modifying template or agent contract files directly
+- Layer 1 governance redefinition
+- Layer 2 platform contract redefinition
+- Vague findings without specific evidence

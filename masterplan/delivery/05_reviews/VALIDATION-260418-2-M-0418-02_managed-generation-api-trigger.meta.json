@@ -1,0 +1,12 @@
+{
+  "schema_version": "v2",
+  "created_by": "codex",
+  "recorded_at": "2026-04-18T19:53:41+08:00",
+  "coder_result": {
+    "status": "REJECTED",
+    "remark": "Managed-generation implementation diverges from the approved thin-wrapper flow and the declared pytest run timed out on the first test.",
+    "artifacts": {
+      "VALIDATION_FILE": "docs/delivery/05_reviews/VALIDATION-260418-2-M-0418-02_managed-generation-api-trigger.md"
+    }
+  }
+}

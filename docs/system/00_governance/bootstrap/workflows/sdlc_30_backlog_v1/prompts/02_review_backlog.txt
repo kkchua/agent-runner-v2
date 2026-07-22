@@ -1,0 +1,92 @@
+Objective
+
+Review the backlog document for completeness, clarity, and compliance with governance standards.
+
+Layer Boundary
+
+- This workflow belongs to Layer 3 and operates on top of the Layer 2 platform contract.
+- Review only the backlog document, not task or implementation artifacts.
+- Treat Layer 1 governance and Layer 2 platform constitution as read-only authority.
+
+Reference Inputs
+
+- Read `BACKLOG_FILE` (the backlog document to review).
+- Read `PLAN_FILE` (approved plan for traceability verification).
+- Read codebase context from `docs/repo/codebase/` to validate scope understanding.
+- Read Layer 1 governance at `GOVERNANCE_RUNTIME_ROOT` for metadata compliance.
+- Read Layer 2 platform constitution at `PLATFORM_RUNTIME_ROOT` for platform contract compliance.
+
+Review Criteria
+
+Evaluate the backlog document against these criteria:
+
+1. **Completeness**:
+   - All required sections are present and substantive
+   - Backlog Overview clearly states the scope
+   - Plan Traceability links back to PLAN_FILE
+   - Work Items are clearly defined and ordered
+   - Prioritization rationale is documented
+   - Dependencies are identified
+   - Acceptance Criteria are defined for each work item
+   - Effort Estimates are provided
+   - Open Questions are captured (if any)
+
+2. **Clarity**:
+   - Language is clear and unambiguous
+   - No contradictory statements
+   - Technical terms are defined or standard
+   - Work item boundaries are explicit
+
+3. **Traceability**:
+   - BACKLOG preserves the intent of PLAN_FILE
+   - No scope creep or invented requirements
+   - Assumptions are explicitly recorded
+   - Source plan is referenced
+
+4. **Metadata Compliance**:
+   - YAML frontmatter includes all required fields
+   - template_id is "SYS-03-BL"
+   - lifecycle_status is "draft"
+   - layer is "layer3"
+   - platform is "agent-runner-v2"
+
+5. **Encoding Compliance**:
+   - ASCII-only content (no em-dashes, curly quotes, Unicode)
+   - Plain text section headings (no backticks or formatting)
+
+6. **Governance Compliance**:
+   - No Layer 1 governance redefinition
+   - No Layer 2 platform contract redefinition
+   - No implementation details or code
+   - No task-level specifications
+
+Review Output
+
+Generate a review document with:
+
+1. **Decision**: APPROVED or REJECTED
+2. **Summary**: Brief overview of review findings
+3. **Findings**: Detailed list of issues (if any), categorized as:
+   - **Critical**: Must fix before approval (missing required sections, metadata errors)
+   - **Major**: Should fix (unclear work items, missing traceability)
+   - **Minor**: Nice to fix (style issues, minor clarifications)
+4. **Recommendations**: Specific actions to address findings
+
+If APPROVED:
+- All required sections are present and substantive
+- Metadata is compliant
+- Encoding is ASCII-only
+- No governance violations
+
+If REJECTED:
+- Provide specific, actionable feedback
+- Cite exact sections or text that need changes
+- Explain what must be fixed for approval
+
+Output Instructions
+
+- Write the review document to `REVIEW_FILE_SUGGESTED` path.
+- Use ASCII-only characters.
+- Use plain text section headings.
+- Provide direct citations to offending text when rejecting.
+- Be specific and actionable in feedback.

@@ -1,0 +1,46 @@
+You are generating the Failure Modes document for the current repository.
+
+This step produces a comprehensive catalog of error conditions, exception handling patterns, and recovery procedures grounded in the actual codebase.
+
+Inputs you must read first:
+- `{PROJECT_ANALYSIS}`
+- `{CODEBASE_DOC_ROOT}/01_inventory/codebase_inventory.md`
+- `{CODEBASE_DOC_ROOT}/04_changes/` latest change impact document
+- `{CODEBASE_DOC_ROOT}/02_modules/`
+- source files under the repository's primary application, runtime, worker, and support packages, especially exception, routing, job-state, worker, and execution modules relevant to this repo
+
+Repository evidence boundary:
+- use only current-repository files to determine failure conditions, retry behavior, and operator recovery guidance
+- ignore global runner-home content such as `.ukbe-runner/`
+- ignore packaged bootstrap workflow copies shipped with the shared runner
+- if the repository does not define a formal failure classification contract, state that explicitly instead of inferring one
+
+Write or refresh this doc:
+- `{CODEBASE_DOC_ROOT}/01_inventory/FAILURE_MODES.md`
+
+Workflow-owned artifact contract:
+- `FAILURE_MODES` -> `{CODEBASE_DOC_ROOT}/01_inventory/FAILURE_MODES.md`
+
+Primary objectives:
+1. Catalog all exception types defined in the codebase.
+2. Document when each exception is raised.
+3. Document how each exception is handled.
+4. Document recovery procedures for operators.
+5. Explain any formal failure classification system used by the repository when present.
+6. Document retry and review loop mechanics only when the current repository implements them.
+
+Required content:
+- Exception catalog table (exception, when raised, raised by, handling, recovery)
+- Failure classification explanation
+- Error handling patterns per relevant execution path or step type
+- Retry and recovery procedures
+- Operational troubleshooting guide
+- Common failure scenarios and diagnosis
+
+Frontmatter contract:
+- Use `template_id: "CB-04-FM"` in YAML frontmatter
+- Include standard workflow metadata (workflow, step, generated, managed_by)
+
+Hard ownership rule:
+- This step only writes `FAILURE_MODES.md`.
+- Do not modify any other documentation files.

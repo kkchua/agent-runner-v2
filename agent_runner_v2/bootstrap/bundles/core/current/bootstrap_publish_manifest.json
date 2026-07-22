@@ -8,13 +8,29 @@
     "00_bootstrap_lifecycle_admin_v1",
     "01_governance_foundation_v1",
     "02_agent_runner_platform_v1",
-    "sdlc_10_requirement_v1"
+    "sdlc_00_delivery_scaffold_v1",
+    "sdlc_10_requirement_v1",
+    "sdlc_20_planning_v1",
+    "sdlc_30_backlog_v1",
+    "sdlc_40_task_v1",
+    "sdlc_50_implementation_v1",
+    "sdlc_60_execution_v1",
+    "sdlc_70_validation_v1",
+    "sdlc_80_review_v1"
   ],
   "shared_registry_copied": true,
   "plugin_workflows_copied": [
     "00_bootstrap_lifecycle_admin_v1",
     "01_governance_foundation_v1",
     "02_agent_runner_platform_v1",
-    "sdlc_10_requirement_v1"
+    "sdlc_00_delivery_scaffold_v1",
+    "sdlc_10_requirement_v1",
+    "sdlc_20_planning_v1",
+    "sdlc_30_backlog_v1",
+    "sdlc_40_task_v1",
+    "sdlc_50_implementation_v1",
+    "sdlc_60_execution_v1",
+    "sdlc_70_validation_v1",
+    "sdlc_80_review_v1"
   ]
 }

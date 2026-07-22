@@ -1,0 +1,93 @@
+Objective
+
+Review the execution document for completeness, accuracy, and compliance with governance standards.
+
+Layer Boundary
+
+- This workflow belongs to Layer 3 and operates on top of the Layer 2 platform contract.
+- Review only the execution document, not validation artifacts.
+- Treat Layer 1 governance and Layer 2 platform constitution as read-only authority.
+
+Reference Inputs
+
+- Read `EXEC_FILE` (the execution document to review).
+- Read `IMPL_FILE` (approved implementation plan for traceability verification).
+- Read codebase context from `docs/repo/codebase/` to validate changes.
+- Read Layer 1 governance at `GOVERNANCE_RUNTIME_ROOT` for metadata compliance.
+- Read Layer 2 platform constitution at `PLATFORM_RUNTIME_ROOT` for platform contract compliance.
+
+Review Criteria
+
+Evaluate the execution document against these criteria:
+
+1. **Completeness**:
+   - All required sections are present and substantive
+   - Execution Overview clearly states what was done
+   - Implementation Traceability links back to IMPL_FILE
+   - Execution Steps are detailed and ordered
+   - Code Changes Made lists specific files
+   - Test Results are documented
+   - Issues Encountered are recorded (if any)
+   - Rollback Status is documented
+   - Verification confirms acceptance criteria met
+   - Open Questions are captured (if any)
+
+2. **Accuracy**:
+   - Execution matches the approved implementation plan
+   - Code changes are correctly documented
+   - Test results are accurate
+   - No undocumented deviations from the plan
+
+3. **Traceability**:
+   - EXEC preserves the intent of IMPL_FILE
+   - All steps trace back to implementation plan
+   - Assumptions are explicitly recorded
+   - Source implementation is referenced
+
+4. **Metadata Compliance**:
+   - YAML frontmatter includes all required fields
+   - template_id is "SYS-03-EX"
+   - lifecycle_status is "draft"
+   - layer is "layer3"
+   - platform is "agent-runner-v2"
+
+5. **Encoding Compliance**:
+   - ASCII-only content (no em-dashes, curly quotes, Unicode)
+   - Plain text section headings (no backticks or formatting)
+
+6. **Governance Compliance**:
+   - No Layer 1 governance redefinition
+   - No Layer 2 platform contract redefinition
+   - No scope not covered by implementation plan
+   - No validation reports or review documents
+
+Review Output
+
+Generate a review document with:
+
+1. **Decision**: APPROVED or REJECTED
+2. **Summary**: Brief overview of review findings
+3. **Findings**: Detailed list of issues (if any), categorized as:
+   - **Critical**: Must fix before approval (missing required sections, metadata errors)
+   - **Major**: Should fix (inaccurate execution record, missing test results)
+   - **Minor**: Nice to fix (style issues, minor clarifications)
+4. **Recommendations**: Specific actions to address findings
+
+If APPROVED:
+- All required sections are present and substantive
+- Metadata is compliant
+- Encoding is ASCII-only
+- No governance violations
+
+If REJECTED:
+- Provide specific, actionable feedback
+- Cite exact sections or text that need changes
+- Explain what must be fixed for approval
+
+Output Instructions
+
+- Write the review document to `REVIEW_FILE_SUGGESTED` path.
+- Use ASCII-only characters.
+- Use plain text section headings.
+- Provide direct citations to offending text when rejecting.
+- Be specific and actionable in feedback.

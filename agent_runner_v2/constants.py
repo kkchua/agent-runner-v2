@@ -817,15 +817,15 @@ Your step ID is: {STEP_NAME}
 
 ### create_todos(step_id, todos)
 Call FIRST. Break the task into concrete steps, one record per todo.
-Usage: "{PYTHON_CMD}" -c "import os; os.environ['PROGRESS_FILE']={PROGRESS_FILE_PY}; from agent_tools import create_todos; create_todos({STEP_NAME_PY}, ['Step 1', 'Step 2'])"
+Usage: {PYTHON_CMD} -c "import os; os.environ['PROGRESS_FILE']={PROGRESS_FILE_PY}; from agent_tools import create_todos; create_todos({STEP_NAME_PY}, ['Step 1', 'Step 2'])"
 
 ### mark_process(step_id, index, notes='')
 Call immediately BEFORE starting each todo item. This inserts a `processing` status record.
-Usage: "{PYTHON_CMD}" -c "import os; os.environ['PROGRESS_FILE']={PROGRESS_FILE_PY}; from agent_tools import mark_process; mark_process({STEP_NAME_PY}, 1, notes='Started')"
+Usage: {PYTHON_CMD} -c "import os; os.environ['PROGRESS_FILE']={PROGRESS_FILE_PY}; from agent_tools import mark_process; mark_process({STEP_NAME_PY}, 1, notes='Started')"
 
 ### mark_complete(step_id, index, notes='')
 Call immediately AFTER finishing each todo item. This inserts a `completed` status record. 1-based index.
-Usage: "{PYTHON_CMD}" -c "import os; os.environ['PROGRESS_FILE']={PROGRESS_FILE_PY}; from agent_tools import mark_complete; mark_complete({STEP_NAME_PY}, 1, notes='Done')"
+Usage: {PYTHON_CMD} -c "import os; os.environ['PROGRESS_FILE']={PROGRESS_FILE_PY}; from agent_tools import mark_complete; mark_complete({STEP_NAME_PY}, 1, notes='Done')"
 
 ## Mandatory Sequence
 1. create_todos(step_id) - list all your steps first

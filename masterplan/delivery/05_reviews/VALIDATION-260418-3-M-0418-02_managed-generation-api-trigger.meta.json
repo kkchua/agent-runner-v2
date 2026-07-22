@@ -1,0 +1,21 @@
+{
+  "schema_version": "v2",
+  "created_by": "codex",
+  "coder_result": {
+    "status": "APPROVED",
+    "remark": "Managed generation validation passed: required files and Related linkage are present, and pytest tests/api/test_generation_api.py completed with 13/13 passing.",
+    "artifacts": {
+      "VALIDATION_FILE": "docs/delivery/05_reviews/VALIDATION-260418-3-M-0418-02_managed-generation-api-trigger.md"
+    },
+    "recorded_at": "2026-04-18T20:09:40+08:00"
+  },
+  "runner_data": {
+    "step": "validator",
+    "coder_used": "codex",
+    "invoked_at": "2026-04-18T20:09:01",
+    "finished_at": "2026-04-18T20:09:55",
+    "prompt_checksum": "sha256:6df43fd4e8954d45042bbfeebd384c956d70653aa068a9fa366ebfd73291ad02",
+    "enriched_at": "2026-04-18T20:09:55",
+    "runner_version": "v2"
+  }
+}

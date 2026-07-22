@@ -1,0 +1,28 @@
+{
+  "schema_version": "v2",
+  "coder_result": {
+    "status": "APPROVED",
+    "remark": "Generated all 13 SDLC master document templates (template_registry, WORKFLOW_SOP_v1, and 11 document templates 01_DRAFT_INIT through 11_CLOSE). All files use ASCII-only content, correct YAML frontmatter, consistent structural patterns, and correct agent-to-workflow cross-references per the authoritative mapping.",
+    "artifacts": {
+      "SDLC_TEMPLATE_REGISTRY": "D:/MyProjectSpace/01_Workflows/agent-runner-v2/docs/system/00_governance/platform/agent_runner/sdlc/runs/SDLC00SCF-20260722-f831acb7/01_templates/template_registry.md",
+      "SDLC_WORKFLOW_SOP": "D:/MyProjectSpace/01_Workflows/agent-runner-v2/docs/system/00_governance/platform/agent_runner/sdlc/runs/SDLC00SCF-20260722-f831acb7/01_templates/WORKFLOW_SOP_v1.md",
+      "SDLC_TEMPLATE_DRAFT_INIT": "D:/MyProjectSpace/01_Workflows/agent-runner-v2/docs/system/00_governance/platform/agent_runner/sdlc/runs/SDLC00SCF-20260722-f831acb7/01_templates/01_DRAFT_INIT_template.md",
+      "SDLC_TEMPLATE_INIT": "D:/MyProjectSpace/01_Workflows/agent-runner-v2/docs/system/00_governance/platform/agent_runner/sdlc/runs/SDLC00SCF-20260722-f831acb7/01_templates/02_INIT_template.md",
+      "SDLC_TEMPLATE_REQ": "D:/MyProjectSpace/01_Workflows/agent-runner-v2/docs/system/00_governance/platform/agent_runner/sdlc/runs/SDLC00SCF-20260722-f831acb7/01_templates/03_REQ_template.md",
+      "SDLC_TEMPLATE_PLAN": "D:/MyProjectSpace/01_Workflows/agent-runner-v2/docs/system/00_governance/platform/agent_runner/sdlc/runs/SDLC00SCF-20260722-f831acb7/01_templates/04_PLAN_template.md",
+      "SDLC_TEMPLATE_BACKLOG": "D:/MyProjectSpace/01_Workflows/agent-runner-v2/docs/system/00_governance/platform/agent_runner/sdlc/runs/SDLC00SCF-20260722-f831acb7/01_templates/05_BACKLOG_template.md",
+      "SDLC_TEMPLATE_TASK": "D:/MyProjectSpace/01_Workflows/agent-runner-v2/docs/system/00_governance/platform/agent_runner/sdlc/runs/SDLC00SCF-20260722-f831acb7/01_templates/06_TASK_template.md",
+      "SDLC_TEMPLATE_IMPL": "D:/MyProjectSpace/01_Workflows/agent-runner-v2/docs/system/00_governance/platform/agent_runner/sdlc/runs/SDLC00SCF-20260722-f831acb7/01_templates/07_IMPL_template.md",
+      "SDLC_TEMPLATE_VALID": "D:/MyProjectSpace/01_Workflows/agent-runner-v2/docs/system/00_governance/platform/agent_runner/sdlc/runs/SDLC00SCF-20260722-f831acb7/01_templates/08_VALID_template.md",
+      "SDLC_TEMPLATE_REV": "D:/MyProjectSpace/01_Workflows/agent-runner-v2/docs/system/00_governance/platform/agent_runner/sdlc/runs/SDLC00SCF-20260722-f831acb7/01_templates/09_REV_template.md",
+      "SDLC_TEMPLATE_MEM": "D:/MyProjectSpace/01_Workflows/agent-runner-v2/docs/system/00_governance/platform/agent_runner/sdlc/runs/SDLC00SCF-20260722-f831acb7/01_templates/10_MEM_template.md",
+      "SDLC_TEMPLATE_CLOSE": "D:/MyProjectSpace/01_Workflows/agent-runner-v2/docs/system/00_governance/platform/agent_runner/sdlc/runs/SDLC00SCF-20260722-f831acb7/01_templates/11_CLOSE_template.md"
+    },
+    "recorded_at": "2026-07-22T16:10:00+08:00",
+    "usage": {
+      "input_tokens": 85000,
+      "output_tokens": 22000,
+      "total_tokens": 107000
+    }
+  }
+}
