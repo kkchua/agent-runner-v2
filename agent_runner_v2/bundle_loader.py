@@ -430,6 +430,90 @@ def install_platform_bundle(
     }
 
 
+def install_workflow_plugins(
+    workspace_root: Path,
+    *,
+    runner_home: Path | None = None,
+) -> dict:
+    """Scan workflow folders for install.py scripts and execute them.
+
+    Each workflow can optionally provide an install.py that implements
+    install_workflow(project_root, runner_home) to handle its own
+    global path installation.
+
+    Args:
+        workspace_root: Repository root directory.
+        runner_home: Override for the global runner home path.
+
+    Returns:
+        Installation result dictionary with per-workflow details.
+    """
+    import importlib.util
+
+    runner_home = (runner_home or GLOBAL_RUNNER_HOME).resolve()
+
+    # Scan bootstrap/workflows/default/ for workflow packages
+    bootstrap_wf_root = workspace_root / "agent_runner_v2" / "bootstrap" / "workflows" / "default"
+    if not bootstrap_wf_root.is_dir():
+        bootstrap_wf_root = workspace_root / "workflows"
+
+    if not bootstrap_wf_root.is_dir():
+        return {
+            "workspace_root": str(workspace_root),
+            "workflows_scanned": 0,
+            "workflows_installed": 0,
+            "installed": [],
+            "skipped": True,
+            "reason": "No workflow folder found.",
+        }
+
+    installed = []
+    for workflow_dir in sorted(bootstrap_wf_root.iterdir()):
+        if not workflow_dir.is_dir():
+            continue
+        install_script = workflow_dir / "install.py"
+        if not install_script.is_file():
+            continue
+
+        # Import and call install_workflow()
+        try:
+            spec = importlib.util.spec_from_file_location(
+                f"{workflow_dir.name}_install",
+                install_script,
+            )
+            module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)
+
+            if hasattr(module, "install_workflow"):
+                result = module.install_workflow(
+                    project_root=workspace_root,
+                    runner_home=runner_home,
+                )
+                installed.append({
+                    "workflow": workflow_dir.name,
+                    "result": result,
+                })
+            else:
+                installed.append({
+                    "workflow": workflow_dir.name,
+                    "error": "install.py found but no install_workflow() function",
+                })
+        except Exception as e:
+            installed.append({
+                "workflow": workflow_dir.name,
+                "error": str(e),
+            })
+
+    return {
+        "workspace_root": str(workspace_root),
+        "workflows_scanned": len([d for d in bootstrap_wf_root.iterdir() if d.is_dir()]),
+        "workflows_installed": len(installed),
+        "installed": installed,
+        "skipped": len(installed) == 0,
+        "reason": None if installed else "No workflows with install.py found.",
+    }
+
+
 def resolve_workflow_root(workspace_root: Path, workflow_name: str, *, config: dict | None = None) -> Path:
     global_root = global_workflow_root(workflow_name)
     if global_root.exists():
@@ -571,6 +655,12 @@ def init_workspace(
         runner_home=runner_home,
     )
 
+    # Install workflow plugins (workflows with install.py)
+    workflow_plugins_install = install_workflow_plugins(
+        workspace_root,
+        runner_home=runner_home,
+    )
+
     workflows_dir = global_workflows_root()
     workflows_dir.mkdir(parents=True, exist_ok=True)
 
@@ -611,6 +701,7 @@ def init_workspace(
         "bundle_manifest": str(manifest_path),
         "bootstrap_install": bootstrap_install,
         "platform_install": platform_install,
+        "workflow_plugins_install": workflow_plugins_install,
         "workflow_root": str(wf_root),
         "plugin_workflows_seeded": sorted(
             d.name for d in wf_root.iterdir()

@@ -38,6 +38,10 @@ REM Set MODE=manual/daemon
 set "MODE=manual"
 set "JOB_NO="
 
+REM Draft initiative input file (filename only, e.g., DRAFT-INIT-20260722-001_console-sdlc10-support.md)
+REM Must exist in docs/repo/agent_runner/sdlc/delivery/draft_initiatives/
+set "DRAFT_INIT_FILE=DRAFT-INIT-20260722-001_console-sdlc10-support.md"
+
 REM ==================================================================
 REM No changes needed below this line.
 REM ==================================================================
@@ -61,6 +65,17 @@ if not "!JOB_ID!"=="" set "FLAGS=!FLAGS! --job-id !JOB_ID!"
 set "FLAGS=!FLAGS! --mode !MODE!"
 if not "!JOB_NO!"=="" set "FLAGS=!FLAGS! --job-no !JOB_NO!"
 
+REM --- Build --set flags for seed artifacts ---
+set "SEED_FLAGS="
+if not "!DRAFT_INIT_FILE!"=="" (
+    set "DRAFT_INIT_PATH=%CD%\docs\repo\agent_runner\sdlc\delivery\draft_initiatives\!DRAFT_INIT_FILE!"
+    if not exist "!DRAFT_INIT_PATH!" (
+        echo ERROR: Draft initiative file not found: !DRAFT_INIT_PATH!
+        pause
+        exit /b 1
+    )
+    set "SEED_FLAGS=--set DRAFT_INIT_DOC=!DRAFT_INIT_PATH!"
+)
 
 REM --- Run ---
 echo ===========================================================================
@@ -68,6 +83,7 @@ echo  Workflow: !TEMPLATE_GROUP!
 echo  Repo:     %CD%
 echo ===========================================================================
 if not "!JOB_ID!"=="" echo  Job ID:          !JOB_ID!
+if not "!DRAFT_INIT_FILE!"=="" echo  Draft Init:      !DRAFT_INIT_FILE!
 echo  Dry run:        !DRY_RUN!
 echo  New job:        !NEW_JOB!
 echo ===========================================================================
@@ -75,7 +91,8 @@ echo(
 
 ukbe-run-agent run ^
     --template-group "!TEMPLATE_GROUP!" ^
-    !FLAGS!
+    !FLAGS! ^
+    !SEED_FLAGS!
 
 set "EXIT_CODE=!ERRORLEVEL!"
 
