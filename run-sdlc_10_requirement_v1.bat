@@ -2,13 +2,13 @@
 REM run-sdlc_10_requirement_v1.bat - Edit the variables below, then double-click (or run).
 REM
 REM Runs ukbe-run-agent for the sdlc_10_requirement_v1 workflow (plugin package):
-REM   Captures and structures requirements from initiative input.
+REM   Generates structured requirements from approved initiative document.
 REM   Loads the workflow definition from workflows/sdlc_10_requirement_v1/workflow.toml.
 REM
 REM Runtime jobs and sidecars are stored under %USERPROFILE%\.ukbe-runner\jobs\
 REM
 REM Typical workflow:
-REM   1. Edit the variables below
+REM   1. Edit the variables below (especially INIT_FILE)
 REM   2. Double-click or run it
 
 setlocal enabledelayedexpansion
@@ -38,9 +38,9 @@ REM Set MODE=manual/daemon
 set "MODE=manual"
 set "JOB_NO="
 
-REM Draft initiative input file (filename only, e.g., DRAFT-INIT-20260722-001_console-sdlc10-support.md)
-REM Must exist in docs/repo/agent_runner/sdlc/delivery/draft_initiatives/
-set "DRAFT_INIT_FILE=DRAFT-INIT-20260722-001_console-sdlc10-support.md"
+REM Approved initiative document (filename only, e.g., INIT-20260722-001_console-sdlc10-support.md)
+REM Must exist in docs/repo/agent_runner/sdlc/delivery/00_initiatives/
+set "INIT_FILE=INIT-20260722-001_console-sdlc10-support.md"
 
 REM ==================================================================
 REM No changes needed below this line.
@@ -67,14 +67,14 @@ if not "!JOB_NO!"=="" set "FLAGS=!FLAGS! --job-no !JOB_NO!"
 
 REM --- Build --set flags for seed artifacts ---
 set "SEED_FLAGS="
-if not "!DRAFT_INIT_FILE!"=="" (
-    set "DRAFT_INIT_PATH=%CD%\docs\repo\agent_runner\sdlc\delivery\draft_initiatives\!DRAFT_INIT_FILE!"
-    if not exist "!DRAFT_INIT_PATH!" (
-        echo ERROR: Draft initiative file not found: !DRAFT_INIT_PATH!
+if not "!INIT_FILE!"=="" (
+    set "INIT_PATH=%CD%\docs\repo\agent_runner\sdlc\delivery\00_initiatives\!INIT_FILE!"
+    if not exist "!INIT_PATH!" (
+        echo ERROR: Initiative file not found: !INIT_PATH!
         pause
         exit /b 1
     )
-    set "SEED_FLAGS=--set DRAFT_INIT_DOC=!DRAFT_INIT_PATH!"
+    set "SEED_FLAGS=--set INIT_FILE=!INIT_PATH!"
 )
 
 REM --- Run ---
@@ -83,7 +83,7 @@ echo  Workflow: !TEMPLATE_GROUP!
 echo  Repo:     %CD%
 echo ===========================================================================
 if not "!JOB_ID!"=="" echo  Job ID:          !JOB_ID!
-if not "!DRAFT_INIT_FILE!"=="" echo  Draft Init:      !DRAFT_INIT_FILE!
+if not "!INIT_FILE!"=="" echo  Init File:       !INIT_FILE!
 echo  Dry run:        !DRY_RUN!
 echo  New job:        !NEW_JOB!
 echo ===========================================================================

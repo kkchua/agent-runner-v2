@@ -375,7 +375,34 @@ def create_job(group_name: str, group_cfg: dict[str, Any], seed_artifacts: dict[
     else:
         job_id = make_job_id(group_name, group_cfg, seed_artifacts)
     ensure_dir(job_dir(group_name, job_id))
-    artifact_keys = _artifact_keys()
+    artifact_keys = list(_artifact_keys())
+    artifact_keys_set = set(artifact_keys)
+
+    # Merge workflow-declared artifact keys (from workflow.toml steps)
+    _STEP_ARTIFACT_FIELDS = (
+        "required_inputs", "optional_inputs", "produces",
+        "target_artifact", "promotes", "result_meta_key",
+        "source", "dest",
+    )
+    for step_cfg in group_cfg.get("step_configs", {}).values():
+        for field in _STEP_ARTIFACT_FIELDS:
+            val = step_cfg.get(field)
+            if isinstance(val, list):
+                for k in val:
+                    if isinstance(k, str) and k not in artifact_keys_set:
+                        artifact_keys.append(k)
+                        artifact_keys_set.add(k)
+            elif isinstance(val, str) and val not in artifact_keys_set:
+                artifact_keys.append(val)
+                artifact_keys_set.add(val)
+
+    # Merge governance artifact registry keys
+    for a in group_cfg.get("artifact_registry", []):
+        k = a.get("key", "")
+        if isinstance(k, str) and k and k not in artifact_keys_set:
+            artifact_keys.append(k)
+            artifact_keys_set.add(k)
+
     artifacts: dict[str, Any] = {k: None for k in artifact_keys}
     for key, value in seed_artifacts.items():
         if key not in artifact_keys:

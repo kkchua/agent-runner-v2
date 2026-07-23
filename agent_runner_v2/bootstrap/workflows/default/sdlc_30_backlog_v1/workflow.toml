@@ -84,6 +84,7 @@ role_policy = "architect_standard"
 [[step]]
 name = "promote_backlog"
 action = "promote_artifact"
+promotes = "BACKLOG_FILE"
 enable_notifications = true
 onsuccess = "stepCompletion"
 
@@ -91,7 +92,7 @@ onsuccess = "stepCompletion"
 required_inputs = ["BACKLOG_FILE"]
 source = "BACKLOG_FILE"
 dest = "BACKLOG_FILE"
-dest_dir = "docs/repo/agent_runner/sdlc/delivery/backlogs"
+dest_dir = "docs/repo/agent_runner/sdlc/delivery/30_backlogs"
 result_meta_key = "BACKLOG_FILE"
 
 # ============================================================================

@@ -84,6 +84,7 @@ role_policy = "architect_standard"
 [[step]]
 name = "promote_plan"
 action = "promote_artifact"
+promotes = "PLAN_FILE"
 enable_notifications = true
 onsuccess = "stepCompletion"
 
@@ -91,7 +92,7 @@ onsuccess = "stepCompletion"
 required_inputs = ["PLAN_FILE"]
 source = "PLAN_FILE"
 dest = "PLAN_FILE"
-dest_dir = "docs/repo/agent_runner/sdlc/delivery/plans"
+dest_dir = "docs/repo/agent_runner/sdlc/delivery/20_plans"
 result_meta_key = "PLAN_FILE"
 
 # ============================================================================

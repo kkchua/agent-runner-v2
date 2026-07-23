@@ -32,6 +32,14 @@
 
 ---
 
+## Architecture
+
+| Document | Scope | Status |
+|---|---|---|
+| [WORKFLOW_EXTENSION_INTERFACE_PLAN.md](WORKFLOW_EXTENSION_INTERFACE_PLAN.md) | Workflow plugin interface (WorkflowExtensions base class + scanner) | **Draft** |
+
+---
+
 ## Future
 
 - Implement Layer 3 AI-Driven SDLC workflow bundles (spec drafted, see LAYER3_AI_DRIVEN_SDLC_SPECIFICATION.md)

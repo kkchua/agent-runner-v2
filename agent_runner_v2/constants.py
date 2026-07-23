@@ -1107,3 +1107,50 @@ SOP_AND_STATUS_RULES_REQUIREMENTS: dict[str, list[str]] = {
     ARTIFACT_PATH_CODEBASE_DOC_SOP: CODEBASE_SOP_REQUIRED_SECTIONS,
     ARTIFACT_PATH_CODEBASE_DOC_STATUS_RULES: CODEBASE_STATUS_RULES_REQUIRED_SECTIONS,
 }
+
+
+# ============================================================================
+# Shared SDLC Constants
+# ============================================================================
+# Common base paths used across all SDLC workflow packages.
+# Workflows reference these instead of hardcoding path strings.
+
+SDLC_DELIVERY_BASE = "docs/repo/agent_runner/sdlc/delivery"
+
+
+# ============================================================================
+# Global Artifact Path Registry
+# ============================================================================
+# Runtime-populated dict that maps artifact keys to repo-relative paths.
+# Populated by workflow_packages/hooks.py when workflows register their
+# artifact keys via WorkflowExtensions.register_artifact_keys().
+#
+# This is the single lookup table for artifact path resolution at runtime.
+
+ARTIFACT_PATHS: dict[str, str] = {}
+
+
+def register_artifact_paths(paths: dict[str, str]) -> None:
+    """Merge workflow-contributed paths into the global registry.
+
+    Called by the scanner (workflow_packages/hooks.py) when a workflow's
+    ``register_artifact_keys()`` hook returns path mappings.
+
+    Parameters:
+        paths: Dict mapping artifact key strings to repo-relative
+            path templates.
+    """
+    ARTIFACT_PATHS.update(paths)
+
+
+def get_artifact_path(key: str, default: str = "") -> str:
+    """Look up an artifact path from the global registry.
+
+    Parameters:
+        key: Artifact key (e.g. ``"INIT_FILE"``).
+        default: Value to return when the key is not registered.
+
+    Returns:
+        The repo-relative path template, or *default* if not found.
+    """
+    return ARTIFACT_PATHS.get(key, default)

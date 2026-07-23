@@ -84,6 +84,7 @@ role_policy = "architect_standard"
 [[step]]
 name = "promote_implementation"
 action = "promote_artifact"
+promotes = "IMPL_FILE"
 enable_notifications = true
 onsuccess = "stepCompletion"
 
@@ -91,7 +92,7 @@ onsuccess = "stepCompletion"
 required_inputs = ["IMPL_FILE"]
 source = "IMPL_FILE"
 dest = "IMPL_FILE"
-dest_dir = "docs/repo/agent_runner/sdlc/delivery/implementations"
+dest_dir = "docs/repo/agent_runner/sdlc/delivery/50_implementations"
 result_meta_key = "IMPL_FILE"
 
 # ============================================================================

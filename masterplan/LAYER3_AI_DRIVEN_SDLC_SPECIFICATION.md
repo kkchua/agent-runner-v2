@@ -73,14 +73,14 @@ This command is run once per repository to create the initial codebase documenta
 |----------|----------------|------------------|-------------------|----------------|
 | `sdlc_00_delivery_scaffold_v1` | Master template designs (reference) | Templates (01_templates/), Agent contracts (02_agents/) | N/A (bootstrap scaffold) | Yes (after review) |
 | `sdlc_00_codebase_v1` | Source code repository | Codebase docs, Sync log, Backup | N/A (no approval gates) | No (maintenance) |
-| `sdlc_10_requirement_v1` | DRAFT_INIT_DOC, Codebase docs | INIT-DOC (approved) | Single artifact | Yes (after review) |
-| `sdlc_20_planning_v1` | INIT-DOC (APPROVED), Codebase docs | REQ-DOC (approved) | Single artifact | Yes (after review) |
-| `sdlc_30_backlog_v1` | REQ-DOC (APPROVED), Codebase docs | PLAN-DOC (approved) | Single artifact | Yes (after review) |
-| `sdlc_40_task_v1` | PLAN-DOC (APPROVED), Codebase docs | BACKLOG-DOC (approved) | Single artifact | Yes (after review) |
-| `sdlc_50_implementation_v1` | BACKLOG-DOC (APPROVED), Codebase docs | TASK-DOC (approved) | Single artifact | Yes (after review) |
-| `sdlc_60_execution_v1` | TASK-DOC (APPROVED), Codebase docs | IMPL-DOC (approved) | Single artifact | Yes (after review) |
-| `sdlc_70_validation_v1` | IMPL-DOC (APPROVED) | VALIDATE-DOC (approved), Code changes | Single artifact | Yes (after internal review) |
-| `sdlc_80_review_v1` | VALIDATE-DOC (APPROVED), All delivery docs, Codebase docs | REV-DOC, MEM-DOC, CLOSE-DOC (approved) | Multi-artifact | Yes (after review of all docs) |
+| `sdlc_10_requirement_v1` | DRAFT_INIT_FILE, Codebase docs | INIT_FILE (approved) | Single artifact | Yes (after review) |
+| `sdlc_20_planning_v1` | INIT_FILE (APPROVED), Codebase docs | REQ_FILE (approved) | Single artifact | Yes (after review) |
+| `sdlc_30_backlog_v1` | REQ_FILE (APPROVED), Codebase docs | PLAN_FILE (approved) | Single artifact | Yes (after review) |
+| `sdlc_40_task_v1` | PLAN_FILE (APPROVED), Codebase docs | BACKLOG_FILE (approved) | Single artifact | Yes (after review) |
+| `sdlc_50_implementation_v1` | BACKLOG_FILE (APPROVED), Codebase docs | TASK_FILE (approved) | Single artifact | Yes (after review) |
+| `sdlc_60_execution_v1` | TASK_FILE (APPROVED), Codebase docs | IMPL_FILE (approved) | Single artifact | Yes (after review) |
+| `sdlc_70_validation_v1` | IMPL_FILE (APPROVED) | VAL_FILE (approved), Code changes | Single artifact | Yes (after internal review) |
+| `sdlc_80_review_v1` | VAL_FILE (APPROVED), All delivery docs, Codebase docs | REV_FILE, MEM_FILE, CLOSE_FILE (approved) | Multi-artifact | Yes (after review of all docs) |
 
 **Legend:**
 - **Single artifact:** Changes frontmatter status from `draft` to `approved` on the same file
@@ -111,21 +111,21 @@ Layer 3: AI-Driven SDLC workflows
     v
     sdlc_00_delivery_scaffold_v1 (prerequisite -- generates templates + agents)
         v (APPROVED)
-    sdlc_10_requirement_v1 (DRAFT_INIT -> INIT-DOC)
+    sdlc_10_requirement_v1 (DRAFT_INIT_FILE -> INIT_FILE)
         v (APPROVED)
-    sdlc_20_planning_v1 (INIT-DOC -> REQ-DOC)
+    sdlc_20_planning_v1 (INIT_FILE -> REQ_FILE)
         v (APPROVED)
-    sdlc_30_backlog_v1 (REQ-DOC -> PLAN-DOC)
+    sdlc_30_backlog_v1 (REQ_FILE -> PLAN_FILE)
         v (APPROVED)
-    sdlc_40_task_v1 (PLAN-DOC -> BACKLOG-DOC)
+    sdlc_40_task_v1 (PLAN_FILE -> BACKLOG_FILE)
         v (APPROVED)
-    sdlc_50_implementation_v1 (BACKLOG-DOC -> TASK-DOC)
+    sdlc_50_implementation_v1 (BACKLOG_FILE -> TASK_FILE)
         v (APPROVED)
-    sdlc_60_execution_v1 (TASK-DOC -> IMPL-DOC)
+    sdlc_60_execution_v1 (TASK_FILE -> IMPL_FILE)
         v (APPROVED)
-    sdlc_70_validation_v1 (IMPL-DOC -> VALIDATE-DOC)
+    sdlc_70_validation_v1 (IMPL_FILE -> VAL_FILE)
         v (APPROVED)
-    sdlc_80_review_v1 (VALIDATE-DOC -> REV + MEM + CLOSE)
+    sdlc_80_review_v1 (VAL_FILE -> REV_FILE + MEM_FILE + CLOSE_FILE)
 ```
 
 ### Maintenance Workflow (Standalone)
@@ -423,11 +423,11 @@ Codebase documents (`docs/repo/codebase/`) are living documentation that can be 
 **Purpose:** Generate an approved initiative document from a user-authored draft
 
 **Inputs:**
-- User draft initiative (DRAFT_INIT_DOC from `draft_initiatives/`)
+- User draft initiative (DRAFT_INIT_FILE from `draft_initiatives/`)
 - Codebase context (from docs/repo/codebase/)
 
 **Outputs:**
-- INIT-DOC document (approved, in `initiatives/`)
+- INIT_FILE document (approved, in `initiatives/`)
 
 **Template:** `02_INIT_template.md`
 
@@ -451,11 +451,11 @@ Codebase documents (`docs/repo/codebase/`) are living documentation that can be 
 **Purpose:** Generate an approved requirement document from an approved initiative
 
 **Inputs:**
-- INIT-DOC (APPROVED from sdlc_10)
+- INIT_FILE (APPROVED from sdlc_10)
 - Codebase context (from docs/repo/codebase/)
 
 **Outputs:**
-- REQ-DOC document (approved)
+- REQ_FILE document (approved)
 
 **Template:** `03_REQ_template.md`
 
@@ -478,11 +478,11 @@ Codebase documents (`docs/repo/codebase/`) are living documentation that can be 
 **Purpose:** Generate a plan document from an approved requirement
 
 **Inputs:**
-- REQ-DOC (APPROVED from sdlc_20)
+- REQ_FILE (APPROVED from sdlc_20)
 - Codebase context (from docs/repo/codebase/)
 
 **Outputs:**
-- PLAN-DOC document (approved)
+- PLAN_FILE document (approved)
 
 **Template:** `04_PLAN_template.md`
 
@@ -505,11 +505,11 @@ Codebase documents (`docs/repo/codebase/`) are living documentation that can be 
 **Purpose:** Generate a backlog document from an approved plan
 
 **Inputs:**
-- PLAN-DOC (APPROVED from sdlc_30)
+- PLAN_FILE (APPROVED from sdlc_30)
 - Codebase context (from docs/repo/codebase/)
 
 **Outputs:**
-- BACKLOG-DOC document (approved)
+- BACKLOG_FILE document (approved)
 
 **Template:** `05_BACKLOG_template.md`
 
@@ -532,11 +532,11 @@ Codebase documents (`docs/repo/codebase/`) are living documentation that can be 
 **Purpose:** Generate task specifications from an approved backlog
 
 **Inputs:**
-- BACKLOG-DOC (APPROVED from sdlc_40)
+- BACKLOG_FILE (APPROVED from sdlc_40)
 - Codebase context (from docs/repo/codebase/)
 
 **Outputs:**
-- TASK-DOC document (approved)
+- TASK_FILE document (approved)
 
 **Template:** `06_TASK_template.md`
 
@@ -559,11 +559,11 @@ Codebase documents (`docs/repo/codebase/`) are living documentation that can be 
 **Purpose:** Generate implementation docs from approved task specs
 
 **Inputs:**
-- TASK-DOC (APPROVED from sdlc_50)
+- TASK_FILE (APPROVED from sdlc_50)
 - Codebase context (from docs/repo/codebase/)
 
 **Outputs:**
-- IMPL-DOC document (approved)
+- IMPL_FILE document (approved)
 
 **Template:** `07_IMPL_template.md`
 
@@ -586,17 +586,17 @@ Codebase documents (`docs/repo/codebase/`) are living documentation that can be 
 **Purpose:** Execute tasks and validate following implementation docs
 
 **Inputs:**
-- IMPL-DOC (APPROVED from sdlc_60)
+- IMPL_FILE (APPROVED from sdlc_60)
 
 **Outputs:**
-- VALIDATE-DOC document (approved)
+- VAL_FILE document (approved)
 - Actual code changes in source repository
 
 **Template:** `08_VALID_template.md`
 
 **Steps:**
-1. `execute_task` (prompt) - Execute task following IMPL-DOC
-2. `internal_review` (prompt) - Review if execution followed IMPL-DOC
+1. `execute_task` (prompt) - Execute task following IMPL_FILE
+2. `internal_review` (prompt) - Review if execution followed IMPL_FILE
 3. `refine_execution` (prompt) - Re-execute based on review (if needed)
 4. `promote_execution` (action) - Promote to approved
 5. `stepCompletion` (action) - Finalize
@@ -614,14 +614,14 @@ Codebase documents (`docs/repo/codebase/`) are living documentation that can be 
 **Purpose:** Final review, memory capture, and initiative closure
 
 **Inputs:**
-- VALIDATE-DOC (APPROVED from sdlc_70)
+- VAL_FILE (APPROVED from sdlc_70)
 - All previous delivery documents
 - Codebase context (from docs/repo/codebase/)
 
 **Outputs:**
-- REV-DOC document (approved, final review)
-- MEM-DOC document (approved, lessons learned)
-- CLOSE-DOC document (approved, initiative closure)
+- REV_FILE document (approved, final review)
+- MEM_FILE document (approved, lessons learned)
+- CLOSE_FILE document (approved, initiative closure)
 
 **Templates:** `09_REV_template.md`, `10_MEM_template.md`, `11_CLOSE_template.md`
 
@@ -733,17 +733,17 @@ Key patterns to preserve:
 
 | Template | Produces | SDLC Workflow |
 |---|---|---|
-| `01_DRAFT_INIT_template.md` | DRAFT-INIT-DOC | (user-authored, input to sdlc_10) |
-| `02_INIT_template.md` | INIT-DOC | sdlc_10 |
-| `03_REQ_template.md` | REQ-DOC | sdlc_20 |
-| `04_PLAN_template.md` | PLAN-DOC | sdlc_30 |
-| `05_BACKLOG_template.md` | BACKLOG-DOC | sdlc_40 |
-| `06_TASK_template.md` | TASK-DOC | sdlc_50 |
-| `07_IMPL_template.md` | IMPL-DOC | sdlc_60 |
-| `08_VALID_template.md` | VALIDATE-DOC | sdlc_70 |
-| `09_REV_template.md` | REV-DOC | sdlc_80 |
-| `10_MEM_template.md` | MEM-DOC | sdlc_80 |
-| `11_CLOSE_template.md` | CLOSE-DOC | sdlc_80 |
+| `01_DRAFT_INIT_template.md` | DRAFT_INIT_FILE | (user-authored, input to sdlc_10) |
+| `02_INIT_template.md` | INIT_FILE | sdlc_10 |
+| `03_REQ_template.md` | REQ_FILE | sdlc_20 |
+| `04_PLAN_template.md` | PLAN_FILE | sdlc_30 |
+| `05_BACKLOG_template.md` | BACKLOG_FILE | sdlc_40 |
+| `06_TASK_template.md` | TASK_FILE | sdlc_50 |
+| `07_IMPL_template.md` | IMPL_FILE | sdlc_60 |
+| `08_VALID_template.md` | VAL_FILE | sdlc_70 |
+| `09_REV_template.md` | REV_FILE | sdlc_80 |
+| `10_MEM_template.md` | MEM_FILE | sdlc_80 |
+| `11_CLOSE_template.md` | CLOSE_FILE | sdlc_80 |
 
 ## Agent-to-Workflow Mapping
 

@@ -84,6 +84,7 @@ role_policy = "architect_standard"
 [[step]]
 name = "promote_validation"
 action = "promote_artifact"
+promotes = "VAL_FILE"
 enable_notifications = true
 onsuccess = "stepCompletion"
 
@@ -91,7 +92,7 @@ onsuccess = "stepCompletion"
 required_inputs = ["VAL_FILE"]
 source = "VAL_FILE"
 dest = "VAL_FILE"
-dest_dir = "docs/repo/agent_runner/sdlc/delivery/validations"
+dest_dir = "docs/repo/agent_runner/sdlc/delivery/70_validations"
 result_meta_key = "VAL_FILE"
 
 # ============================================================================

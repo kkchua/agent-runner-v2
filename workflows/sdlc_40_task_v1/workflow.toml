@@ -84,6 +84,7 @@ role_policy = "architect_standard"
 [[step]]
 name = "promote_task"
 action = "promote_artifact"
+promotes = "TASK_FILE"
 enable_notifications = true
 onsuccess = "stepCompletion"
 
@@ -91,7 +92,7 @@ onsuccess = "stepCompletion"
 required_inputs = ["TASK_FILE"]
 source = "TASK_FILE"
 dest = "TASK_FILE"
-dest_dir = "docs/repo/agent_runner/sdlc/delivery/tasks"
+dest_dir = "docs/repo/agent_runner/sdlc/delivery/40_tasks"
 result_meta_key = "TASK_FILE"
 
 # ============================================================================
