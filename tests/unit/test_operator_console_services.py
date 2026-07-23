@@ -76,25 +76,22 @@ def test_runner_action_service_submit_passes_global_settings(monkeypatch, tmp_pa
     )
     result = service.submit_job(
         repo_path=str(repo_path),
-        workflow=WorkflowEntry(name="Governance", workflow_name="01_governance_foundation_v1"),
-        initiative_id="INIT-1",
-        coder="claude",
+        workflow=WorkflowEntry(name="SDLC Requirement", workflow_name="sdlc_10_requirement_v1"),
+        input_artifacts={"INIT_FILE": "D:/repo/docs/repo/agent_runner/sdlc/delivery/00_initiatives/INIT-001.md"},
     )
 
     assert result == "ok"
     assert captured["argv"] == [
         "--workflow-name",
-        "01_governance_foundation_v1",
-        "--initiative-id",
-        "INIT-1",
-        "--coder",
-        "claude",
+        "sdlc_10_requirement_v1",
         "--backend-url",
         "http://127.0.0.1:8100",
         "--worker-id",
         "worker-1",
         "--worker-label",
         "live",
+        "--input",
+        "INIT_FILE=D:/repo/docs/repo/agent_runner/sdlc/delivery/00_initiatives/INIT-001.md",
     ]
 
 

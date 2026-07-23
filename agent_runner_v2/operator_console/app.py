@@ -1,6 +1,23 @@
+"""Operator Console — Flet-based desktop GUI for managing agent-runner-v2 workflows.
+
+Provides a universal launcher that replaces per-workflow batch files.  The console
+dynamically detects each workflow's input requirements from ``workflow.toml`` and
+generates appropriate UI fields (file pickers for file artifacts, text fields for
+scalar values).
+
+Actions
+-------
+- **Submit** — queue a workflow run via the backend API.
+- **Approve** — approve a step awaiting human review.
+- **Reject** — reject a step awaiting human review, sending it back for refinement.
+- **Reset** — override the current step of an active run.
+- **Cancel** — stop an active run.
+"""
 from __future__ import annotations
 
 import argparse
+import asyncio
+import json
 import logging
 import sys
 from pathlib import Path
@@ -11,11 +28,46 @@ from .models import ActiveRunSummary, RepoEntry, WorkflowEntry
 from .services.backend_service import BackendRunService
 from .services.runner_service import ActionExecutionError, RunnerActionService
 from ..workflow_packages.loader import load_workflow_package
+from ..runtime_context import get_workflow_root
 
 _log = logging.getLogger(__name__)
 
+# ---------------------------------------------------------------------------
+# SDLC artifact key → delivery subdirectory (relative to repo root)
+# ---------------------------------------------------------------------------
+SDLC_INPUT_DIRS: dict[str, str] = {
+    "DRAFT_INIT_FILE": "docs/repo/agent_runner/sdlc/delivery/00_draft_initiatives",
+    "INIT_FILE":       "docs/repo/agent_runner/sdlc/delivery/00_initiatives",
+    "REQ_FILE":        "docs/repo/agent_runner/sdlc/delivery/10_requirements",
+    "PLAN_FILE":       "docs/repo/agent_runner/sdlc/delivery/20_plans",
+    "BACKLOG_FILE":    "docs/repo/agent_runner/sdlc/delivery/30_backlogs",
+    "TASK_FILE":       "docs/repo/agent_runner/sdlc/delivery/40_tasks",
+    "IMPL_FILE":       "docs/repo/agent_runner/sdlc/delivery/50_implementations",
+    "EXEC_FILE":       "docs/repo/agent_runner/sdlc/delivery/60_executions",
+    "VAL_FILE":        "docs/repo/agent_runner/sdlc/delivery/70_validations",
+}
+
+
+# ===========================================================================
+# CLI entry point
+# ===========================================================================
 
 def main(argv: list[str] | None = None) -> int:
+    """Launch the desktop operator console.
+
+    Parses CLI arguments, loads runner and console configuration, then starts
+    the Flet application.
+
+    Parameters
+    ----------
+    argv :
+        Optional argument list (defaults to ``sys.argv[1:]``).
+
+    Returns
+    -------
+    int
+        Exit code: 0 on success, 2 on configuration error.
+    """
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s [console] %(levelname)s %(message)s",
@@ -44,295 +96,281 @@ def main(argv: list[str] | None = None) -> int:
         print(str(exc), file=sys.stderr)
         return 2
 
-    backend_service = BackendRunService(BackendClient(settings.backend_url), worker_id=settings.worker_id)
+    backend_service = BackendRunService(
+        BackendClient(settings.backend_url), worker_id=settings.worker_id,
+    )
     runner_service = RunnerActionService(settings)
 
+    # -----------------------------------------------------------------------
+    # Flet application
+    # -----------------------------------------------------------------------
+
     def app(page: ft.Page) -> None:
+        """Build the operator console UI and wire all event handlers."""
         page.title = "Agent Runner Operator Console"
         page.window_width = 980
         page.window_height = 760
         page.scroll = ft.ScrollMode.AUTO
         page.padding = 20
 
-        actions = [
-            "submit job",
-            "approval",
-            "cancel job",
-            "reset step",
-            "bootstrap",
-            "init",
-            "sync",
-            "cleanup",
-        ]
-        # Don't create workflow_options here since create_workflow_options is defined inside app function
-        initial_repo = console_config.repos[0] if console_config.repos else None
-        initial_workflows = initial_repo.workflows if initial_repo else ()
+        # -- Actions --------------------------------------------------------
+        actions = ["Submit", "Approve", "Reject", "Reset", "Cancel"]
 
+        # -- State ----------------------------------------------------------
+        input_fields: dict[str, ft.TextField] = {}
+        active_runs: list[ActiveRunSummary] = []
+        selected_run_id: str = ""
+
+        # -- Shared UI controls ---------------------------------------------
         output = ft.TextField(
-            label="Output",
-            multiline=True,
-            min_lines=14,
-            max_lines=20,
-            read_only=True,
-            expand=True,
+            label="Output", multiline=True,
+            min_lines=14, max_lines=20, read_only=True, expand=True,
         )
-        status_text = ft.Text(value=f"Backend: {settings.backend_url} | Worker: {settings.worker_id}")
-        action_dd = ft.Dropdown(label="Action", options=[ft.dropdown.Option(value) for value in actions], value=actions[0])
+        status_text = ft.Text(
+            value=f"Backend: {settings.backend_url} | Worker: {settings.worker_id}",
+        )
+        action_dd = ft.Dropdown(
+            label="Action",
+            options=[ft.dropdown.Option(a) for a in actions],
+            value=actions[0],
+        )
         repo_dd = ft.Dropdown(
-            label="Repo",
-            hint_text="Select a repository",
-            width=280,
-            options=[
-                ft.DropdownOption(
-                    key=repo.name,
-                    text=repo.name,
-                )
-                for repo in console_config.repos
-            ],
+            label="Repo", hint_text="Select a repository", width=280,
+            options=[ft.DropdownOption(key=r.name, text=r.name) for r in console_config.repos],
             value=console_config.repos[0].name if console_config.repos else None,
             disabled=not bool(console_config.repos),
         )
         workflow_dd = ft.Dropdown(
-            label="Workflow",
-            hint_text="Select a workflow",
-            width=400,
-            options=[],  # Will be populated after create_workflow_options is defined
-            value="",  # Will be set after options are populated
-            disabled=True,  # Will be enabled if there are workflows
+            label="Workflow", hint_text="Select a workflow",
+            width=400, options=[], value="", disabled=True,
         )
-        # Additional UI elements to display selection status
-        selection_status = ft.Text(
-            value="Select a repository and workflow.",
-            size=14,
-        )
-
-        repo_details = ft.Text(
-            value="",
-            selectable=True,
-        )
-
-        workflow_details = ft.Text(
-            value="",
-            selectable=True,
-        )
-
-        def update_selection_display() -> None:
-            """
-            Update the informational text below the dropdowns.
-            """
-            repo = selected_repo()
-            workflow = find_selected_workflow()
-
-            if repo is None:
-                selection_status.value = "No repository selected."
-                repo_details.value = ""
-                workflow_details.value = ""
-                return
-
-            repo_details.value = f"Selected repository: {repo.name}"
-
-            if workflow is None:
-                selection_status.value = (
-                    f"Repository '{repo.name}' has no workflow selected."
-                )
-                workflow_details.value = ""
-                return
-
-            selection_status.value = (
-                f"Selected: {repo.name} / {workflow.name}"
-            )
-
-            workflow_details.value = (
-                f"Selected workflow: {workflow.name}"
-            )
-
-        selected_run_id: str = ""
-        active_runs_dd = ft.Dropdown(
-            label="Active Runs",
-            options=[],
-            width=880,
-        )
+        active_runs_dd = ft.Dropdown(label="Active Runs", options=[], width=880)
         active_runs_container = ft.Container(
-            content=active_runs_dd,
-            border_radius=8,
-            padding=12,
-            width=900,
+            content=active_runs_dd, border_radius=8, padding=12, width=900,
         )
-        feedback_tf = ft.TextField(label="Feedback / Reason", multiline=True, min_lines=2, max_lines=4)
-        initiative_tf = ft.TextField(label="Initiative ID")
-        coder_tf = ft.TextField(label="Coder Override")
-        reset_step_dd = ft.Dropdown(label="Reset Target Step", width=580)
-        bundle_domain_tf = ft.TextField(label="Bundle Domain", value="general")
-        bundle_profile_tf = ft.TextField(label="Bundle Profile", value="core+workflow")
-        reject_cb = ft.Checkbox(label="Reject approval action", value=False)
-        cleanup_dry_run_cb = ft.Checkbox(label="Cleanup dry-run (preview only)", value=True)
+        feedback_tf = ft.TextField(
+            label="Feedback / Reason", multiline=True,
+            min_lines=2, max_lines=4, visible=False,
+        )
+        reset_step_dd = ft.Dropdown(
+            label="Reset Target Step", width=580, visible=False,
+        )
 
-        active_runs: list[ActiveRunSummary] = []
-        dynamic_section = ft.Column(spacing=12)
+        # Dynamic workflow-inputs panel
+        dynamic_inputs_column = ft.Column(spacing=8)
+        dynamic_inputs_container = ft.Container(
+            content=dynamic_inputs_column,
+            border=ft.Border.all(width=1, color=ft.Colors.OUTLINE_VARIANT),
+            border_radius=8, padding=12, visible=False,
+        )
 
-        def selected_repo() -> RepoEntry:
+        # Shared file picker for all dynamic file inputs
+        file_picker = ft.FilePicker()
+
+        # ==================================================================
+        # Selection helpers
+        # ==================================================================
+
+        def selected_repo() -> RepoEntry | None:
+            """Return the RepoEntry matching the current repo dropdown value."""
             for repo in console_config.repos:
                 if repo.name == repo_dd.value:
                     return repo
-            raise ActionExecutionError("Select a repo.")
-
-        def create_workflow_options(repo: RepoEntry | None):
-            """Build dropdown options for the selected repository."""
-            if repo is None:
-                return []
-            
-            return [
-                ft.DropdownOption(
-                    key=workflow.name,
-                    text=workflow.name,
-                )
-                for workflow in repo.workflows
-            ]
+            return None
 
         def selected_repo_path() -> str:
-            return selected_repo().path
-
-        def find_selected_workflow():
-            """
-            Return the WorkflowEntry matching the current dropdown value.
-            """
+            """Return the filesystem path of the selected repository."""
             repo = selected_repo()
+            if repo is None:
+                raise ActionExecutionError("Select a repo.")
+            return repo.path
 
+        def find_selected_workflow() -> WorkflowEntry | None:
+            """Return the WorkflowEntry matching the current workflow dropdown value."""
+            repo = selected_repo()
             if repo is None or not workflow_dd.value:
                 return None
-
-            return next(
-                (
-                    workflow
-                    for workflow in repo.workflows
-                    if workflow.name == workflow_dd.value
-                ),
-                None,
-            )
+            return next((w for w in repo.workflows if w.name == workflow_dd.value), None)
 
         def selected_workflow(required: bool = True) -> WorkflowEntry | None:
+            """Return the selected workflow, raising if *required* and none is selected."""
             workflow = find_selected_workflow()
             if workflow is None and required:
                 raise ActionExecutionError("Select a workflow.")
             return workflow
 
-        def refresh_workflow_options() -> None:
-            try:
-                repo = selected_repo()
-                _log.info("[console] refresh_workflow_options repo=%s workflows=%s", repo.name, [w.name for w in repo.workflows])
-                
-                # Use the same pattern as the working app1.py
-                workflow_dd.options = create_workflow_options(repo)
-                _log.info("[console] Set workflow_dd options to: %s", [opt.key for opt in workflow_dd.options])
-                
-                if repo.workflows:
-                    workflow_dd.value = repo.workflows[0].name
-                    _log.info("[console] Set workflow_dd value to: %s", workflow_dd.value)
-                else:
-                    workflow_dd.value = None
-                    _log.info("[console] Set workflow_dd value to None")
-                    
-                page.update()
-                _log.info("[console] Called page.update() after refreshing workflow options")
-            except Exception as e:
-                _log.error("[console] Error in refresh_workflow_options: %s", str(e))
-                import traceback
-                _log.error("[console] Traceback: %s", traceback.format_exc())
-
-        def on_workflow_changed(_event=None) -> None:
-            """
-            Handle workflow selection changes.
-            """
-            try:
-                _log.info(
-                    "Workflow selection event fired: value=%s, data=%s",
-                    workflow_dd.value,
-                    getattr(_event, "data", None),
-                )
-
-                workflow = find_selected_workflow()
-
-                if workflow is None:
-                    _log.warning(
-                        "Selected workflow could not be found: %s",
-                        workflow_dd.value,
-                    )
-                else:
-                    _log.info(
-                        "Selected workflow: %s",
-                        workflow.name,
-                    )
-
-                update_selection_display()
-                page.update()
-
-            except Exception:
-                _log.exception(
-                    "Unexpected error while changing workflow."
-                )
-
-                show_error(
-                    "Unable to process the selected workflow."
-                )
+        def create_workflow_options(repo: RepoEntry | None) -> list:
+            """Build dropdown options for the workflows in *repo*."""
+            if repo is None:
+                return []
+            return [ft.DropdownOption(key=w.name, text=w.name) for w in repo.workflows]
 
         def show_error(message: str) -> None:
-            """
-            Display an error message in the console UI.
-            """
+            """Display a modal error dialog."""
             _log.error(message)
+            page.show_dialog(ft.AlertDialog(
+                modal=True, title=ft.Text("Console Error"),
+                content=ft.Text(message),
+                actions=[ft.TextButton("Close", on_click=lambda e: page.pop_dialog())],
+            ))
 
-            page.show_dialog(
-                ft.AlertDialog(
-                    modal=True,
-                    title=ft.Text("Console Error"),
-                    content=ft.Text(message),
-                    actions=[
-                        ft.TextButton(
-                            "Close",
-                            on_click=lambda event: page.pop_dialog(),
-                        )
-                    ],
+        # ==================================================================
+        # Dynamic input field generation from workflow.toml
+        # ==================================================================
+
+        def rebuild_input_fields() -> None:
+            """Rebuild the dynamic input panel for the selected workflow.
+
+            Loads the workflow's ``workflow.toml``, reads the init step's
+            ``required_inputs``, and creates a TextField (+ Browse button for
+            ``*_FILE`` keys) for each required input.
+            """
+            input_fields.clear()
+            dynamic_inputs_column.controls.clear()
+
+            workflow = find_selected_workflow()
+            if workflow is None:
+                dynamic_inputs_container.visible = False
+                return
+
+            bundle_dir = get_workflow_root() / workflow.workflow_name
+
+            if not bundle_dir.exists():
+                dynamic_inputs_column.controls.append(
+                    ft.Text(f"Workflow directory not found: {bundle_dir}", color="red"),
                 )
-            )
+                dynamic_inputs_container.visible = True
+                return
 
-        def on_repo_changed(_event=None) -> None:
-            """
-            Refresh the workflow dropdown when the repository changes.
-            """
             try:
-                _log.info(
-                    "Repository selection event fired: value=%s, data=%s",
-                    repo_dd.value,
-                    getattr(_event, "data", None),
+                bundle = load_workflow_package(bundle_dir)
+            except Exception as exc:
+                dynamic_inputs_column.controls.append(
+                    ft.Text(f"Failed to load workflow: {exc}", color="red"),
                 )
+                dynamic_inputs_container.visible = True
+                return
 
-                repo = selected_repo()
+            init_step_name = bundle.init_step
+            if not init_step_name or init_step_name not in bundle.steps:
+                dynamic_inputs_column.controls.append(
+                    ft.Text("No input artifacts required.", italic=True, color="grey"),
+                )
+                dynamic_inputs_container.visible = True
+                return
 
-                if repo is None:
-                    _log.warning(
-                        "Selected repository could not be found: %s",
-                        repo_dd.value,
+            required_inputs = bundle.steps[init_step_name].required_inputs
+            if not required_inputs:
+                dynamic_inputs_column.controls.append(
+                    ft.Text("No input artifacts required.", italic=True, color="grey"),
+                )
+                dynamic_inputs_container.visible = True
+                return
+
+            for key in required_inputs:
+                if key.endswith("_FILE"):
+                    tf = ft.TextField(
+                        label=key, read_only=False, expand=True,
+                        hint_text=f"Filename or browse for {key}",
                     )
 
+                    async def on_browse_click(e, k=key, f=tf):
+                        """Open file picker, optionally rooted at the SDLC delivery dir."""
+                        if k in SDLC_INPUT_DIRS:
+                            resolved = Path(selected_repo_path()) / SDLC_INPUT_DIRS[k]
+                            if resolved.is_dir():
+                                file_picker.root_directory = str(resolved)
+                        else:
+                            file_picker.root_directory = None
+                        files = await file_picker.pick_files(
+                            file_type=ft.FilePickerFileType.CUSTOM,
+                            allowed_extensions=["md"],
+                        )
+                        if files:
+                            f.value = files[0].path or ""
+                            page.update()
+
+                    btn = ft.ElevatedButton("Browse", on_click=on_browse_click)
+                    input_fields[key] = tf
+                    dynamic_inputs_column.controls.append(ft.Column([
+                        ft.Text(key, weight=ft.FontWeight.BOLD, size=12),
+                        ft.Row([tf, btn], spacing=8),
+                    ], spacing=4))
+                else:
+                    tf = ft.TextField(label=key, expand=True, hint_text=f"Enter {key}")
+                    input_fields[key] = tf
+                    dynamic_inputs_column.controls.append(ft.Column([
+                        ft.Text(key, weight=ft.FontWeight.BOLD, size=12),
+                        ft.Row([tf], spacing=8),
+                    ], spacing=4))
+
+            dynamic_inputs_container.visible = True
+
+        # ==================================================================
+        # File resolution
+        # ==================================================================
+
+        def resolve_input_path(key: str, value: str, repo_path: Path) -> str:
+            """Resolve an input value to an absolute path.
+
+            - If *value* is an existing absolute path, return as-is.
+            - If *key* is in ``SDLC_INPUT_DIRS``, resolve the filename against
+              the known delivery subdirectory.
+            - Non-file keys are returned as-is.
+            """
+            value = value.strip()
+            if not value:
+                return ""
+
+            p = Path(value)
+            if p.is_absolute() and p.exists():
+                return str(p)
+
+            if key in SDLC_INPUT_DIRS:
+                resolved = repo_path / SDLC_INPUT_DIRS[key] / value
+                if resolved.exists():
+                    return str(resolved)
+                raise ActionExecutionError(
+                    f"File not found for {key}: {value}\n"
+                    f"  Tried: {resolved}\n"
+                    f"  Expected in: {SDLC_INPUT_DIRS[key]}/"
+                )
+
+            if not key.endswith("_FILE"):
+                return value
+
+            raise ActionExecutionError(
+                f"Cannot resolve file path for {key}: {value}\n"
+                f"  Provide a full path or browse for the file."
+            )
+
+        def collect_input_artifacts(repo_path: Path) -> dict[str, str]:
+            """Collect and resolve all dynamic input field values."""
+            result: dict[str, str] = {}
+            for key, tf in input_fields.items():
+                value = (tf.value or "").strip()
+                if not value:
+                    continue
+                result[key] = resolve_input_path(key, value, repo_path)
+            return result
+
+        # ==================================================================
+        # Dropdown event handlers
+        # ==================================================================
+
+        def on_repo_changed(_event=None) -> None:
+            """Refresh the workflow dropdown when the repository changes."""
+            try:
+                repo = selected_repo()
+                if repo is None:
                     workflow_dd.options = []
                     workflow_dd.value = None
                     workflow_dd.disabled = True
-
-                    update_selection_display()
+                    rebuild_input_fields()
                     page.update()
                     return
 
-                _log.info(
-                    "Selected repository: %s; workflows=%s",
-                    repo.name,
-                    [
-                        workflow.name
-                        for workflow in repo.workflows
-                    ],
-                )
-
                 workflow_dd.options = create_workflow_options(repo)
-
                 if repo.workflows:
                     workflow_dd.value = repo.workflows[0].name
                     workflow_dd.disabled = False
@@ -340,42 +378,47 @@ def main(argv: list[str] | None = None) -> int:
                     workflow_dd.value = None
                     workflow_dd.disabled = True
 
-                update_selection_display()
+                rebuild_input_fields()
                 page.update()
-
             except Exception:
-                _log.exception(
-                    "Unexpected error while changing repository."
-                )
+                _log.exception("Unexpected error while changing repository.")
+                show_error("Unable to update the workflow list for the selected repository.")
 
-                show_error(
-                    "Unable to update the workflow list for the "
-                    "selected repository."
-                )
+        def on_workflow_changed(_event=None) -> None:
+            """Rebuild dynamic input fields when the workflow selection changes."""
+            try:
+                rebuild_input_fields()
+                page.update()
+            except Exception:
+                _log.exception("Unexpected error while changing workflow.")
+                show_error("Unable to process the selected workflow.")
 
         def refresh_step_options(_event=None) -> None:
+            """Populate the Reset Target Step dropdown from the workflow's step order."""
+            workflow = selected_workflow(required=False)
+            if workflow is None:
+                reset_step_dd.options = []
+                reset_step_dd.value = None
+                page.update()
+                return
+            bundle_dir = get_workflow_root() / workflow.workflow_name
             try:
-                workflow = selected_workflow(required=False)
-                if workflow is None:
-                    reset_step_dd.options = []
-                    reset_step_dd.value = None
-                    update_selection_display()
-                    page.update()
-                    return
-                repo_root = Path(selected_repo_path())
-                bundle_dir = repo_root / "workflows" / workflow.workflow_name
                 bundle = load_workflow_package(bundle_dir)
-                reset_step_dd.options = [ft.dropdown.Option(step_name) for step_name in bundle.step_order]
+                reset_step_dd.options = [ft.dropdown.Option(s) for s in bundle.step_order]
                 if bundle.step_order:
                     reset_step_dd.value = bundle.step_order[0]
             except Exception as exc:
                 reset_step_dd.options = []
                 reset_step_dd.value = None
                 output.value = f"Failed to load workflow steps: {exc}"
-            update_selection_display()
             page.update()
 
+        # ==================================================================
+        # Active runs
+        # ==================================================================
+
         def refresh_active_runs(_event=None) -> None:
+            """Fetch active runs from the backend and populate the dropdown."""
             nonlocal active_runs, selected_run_id
             try:
                 workflow = selected_workflow(required=False)
@@ -384,8 +427,7 @@ def main(argv: list[str] | None = None) -> int:
                     workflow_name=workflow.workflow_name if workflow else None,
                 )
                 if active_runs:
-                    selected = active_runs[0]
-                    selected_run_id = selected.run_id
+                    selected_run_id = active_runs[0].run_id
                     active_runs_dd.options = [
                         ft.dropdown.Option(
                             key=run.run_id,
@@ -404,74 +446,112 @@ def main(argv: list[str] | None = None) -> int:
                 active_runs_dd.options = []
                 active_runs_dd.value = None
                 output.value = str(exc)
-            update_selection_display()
             page.update()
 
         def _on_active_run_selected(_event=None) -> None:
+            """Track which active run is selected in the dropdown."""
             nonlocal selected_run_id
             selected_run_id = active_runs_dd.value or ""
 
+        # ==================================================================
+        # Auto-refresh
+        # ==================================================================
+
+        async def _auto_refresh_loop() -> None:
+            """Periodically refresh active runs every 5 seconds while enabled."""
+            while auto_refresh_cb.value:
+                await asyncio.sleep(5)
+                if not auto_refresh_cb.value:
+                    break
+                try:
+                    refresh_active_runs()
+                except Exception:
+                    _log.exception("[console] auto-refresh error")
+
+        def _on_auto_refresh_changed(e) -> None:
+            """Start the auto-refresh loop when the checkbox is enabled."""
+            if auto_refresh_cb.value:
+                page.run_task(_auto_refresh_loop)
+
+        # ==================================================================
+        # Visibility
+        # ==================================================================
+
         def update_visibility(_event=None) -> None:
-            _log.info("[console] update_visibility fired, action_dd.value=%s", action_dd.value or "")
+            """Show/hide UI sections based on the selected action."""
             action = action_dd.value or ""
-            needs_run = action in {"approval", "cancel job", "reset step"}
-            workflow_dd.visible = action in {"submit job", "approval", "cancel job", "reset step", "init", "sync", "cleanup"}
-            cleanup_dry_run_cb.visible = action == "cleanup"
-            update_selection_display()
+            needs_active = action in {"Approve", "Reject", "Reset", "Cancel"}
+
+            feedback_tf.visible = needs_active
+            reset_step_dd.visible = action == "Reset"
+
             page.update()
-            if needs_run and repo_dd.value and workflow_dd.value:
+
+            if needs_active and repo_dd.value and workflow_dd.value:
                 refresh_active_runs()
 
+        # ==================================================================
+        # Execute action
+        # ==================================================================
+
         def execute_action(_event) -> None:
+            """Dispatch the selected action to the appropriate service method."""
             try:
                 action = action_dd.value or ""
                 repo_path = selected_repo_path()
-                if action == "submit job":
+                workflow = selected_workflow(required=True)
+                input_artifacts = collect_input_artifacts(Path(repo_path))
+
+                if action == "Submit":
                     rendered = runner_service.submit_job(
                         repo_path=repo_path,
-                        workflow=selected_workflow(required=True),
-                        initiative_id=initiative_tf.value or "",
-                        coder=coder_tf.value or "",
+                        workflow=workflow,
+                        input_artifacts=input_artifacts,
                     )
-                elif action == "approval":
+
+                elif action == "Approve":
                     run_id = str(selected_run_id or "").strip()
                     if not run_id:
-                        raise ActionExecutionError("Select an active run for approval.")
-                    if reject_cb.value:
-                        result = backend_service.approve_run(
-                            run_id=run_id,
-                            reject=True,
-                            feedback=feedback_tf.value or "",
+                        raise ActionExecutionError("Select an active run to approve.")
+                    detail = backend_service.get_run_detail(run_id=run_id)
+                    run_payload = detail.get("run") or {}
+                    step_name = str(run_payload.get("awaiting_human_step") or "").strip()
+                    job_id = str(run_payload.get("run_code") or "").strip()
+                    if not step_name or not job_id:
+                        raise ActionExecutionError(
+                            "Selected run is missing awaiting_human_step or run_code.",
                         )
-                        rendered = _render_result(result)
-                    else:
-                        detail = backend_service.get_run_detail(run_id=run_id)
-                        run_payload = detail.get("run") or {}
-                        step_name = str(run_payload.get("awaiting_human_step") or "").strip()
-                        job_id = str(run_payload.get("run_code") or "").strip()
-                        workflow = selected_workflow(required=True)
-                        if not step_name or not job_id:
-                            raise ActionExecutionError("Selected run is missing awaiting_human_step or run_code.")
-                        rendered_local = runner_service.approve_step(
-                            repo_path=repo_path,
-                            template_group=workflow.workflow_name,
-                            job_id=job_id,
-                            step_name=step_name,
-                        )
-                        backend_result = backend_service.approve_run(
-                            run_id=run_id,
-                            reject=False,
-                            feedback=feedback_tf.value or "",
-                        )
-                        rendered = f"Local: {rendered_local}\n\nBackend: {_render_result(backend_result)}"
-                elif action == "cancel job":
+                    rendered_local = runner_service.approve_step(
+                        repo_path=repo_path,
+                        template_group=workflow.template_group or workflow.workflow_name,
+                        job_id=job_id, step_name=step_name,
+                    )
+                    backend_result = backend_service.approve_run(
+                        run_id=run_id, reject=False,
+                        feedback=feedback_tf.value or "",
+                    )
+                    rendered = f"Local: {rendered_local}\n\nBackend: {_render_result(backend_result)}"
+
+                elif action == "Reject":
+                    run_id = str(selected_run_id or "").strip()
+                    if not run_id:
+                        raise ActionExecutionError("Select an active run to reject.")
+                    result = backend_service.approve_run(
+                        run_id=run_id, reject=True,
+                        feedback=feedback_tf.value or "",
+                    )
+                    rendered = _render_result(result)
+
+                elif action == "Cancel":
                     run_id = str(selected_run_id or "").strip()
                     if not run_id:
                         raise ActionExecutionError("Select an active run to cancel.")
-                    result = backend_service.stop_run(run_id=run_id, reason=feedback_tf.value or "")
+                    result = backend_service.stop_run(
+                        run_id=run_id, reason=feedback_tf.value or "",
+                    )
                     rendered = _render_result(result)
-                elif action == "reset step":
-                    workflow = selected_workflow(required=True)
+
+                elif action == "Reset":
                     step_name = str(reset_step_dd.value or "").strip()
                     if not step_name:
                         raise ActionExecutionError("Select a reset target step.")
@@ -483,134 +563,100 @@ def main(argv: list[str] | None = None) -> int:
                         raise ActionExecutionError("Selected run not found in active list.")
                     if not target_run.run_code:
                         raise ActionExecutionError("Selected run has no run_code.")
-                    _log.info("[console] reset_step run_id=%s run_code=%s step=%s workflow=%s",
-                              target_run.run_id, target_run.run_code, step_name, workflow.workflow_name)
                     rendered_local = runner_service.override_step(
                         repo_path=repo_path,
-                        template_group=workflow.workflow_name,
-                        job_id=target_run.run_code,
-                        step_name=step_name,
+                        template_group=workflow.template_group or workflow.workflow_name,
+                        job_id=target_run.run_code, step_name=step_name,
                     )
-                    _log.info("[console] reset_step local override complete: %s", rendered_local[:200])
                     try:
                         backend_result = backend_service.reset_run_step(
-                            run_id=target_run.run_id,
-                            step_name=step_name,
+                            run_id=target_run.run_id, step_name=step_name,
                         )
-                        _log.info("[console] reset_step backend update: %s", _render_result(backend_result)[:200])
                         rendered = f"Local: {rendered_local}\n\nBackend: {_render_result(backend_result)}"
                     except RuntimeError as be:
-                        _log.warning("[console] reset_step backend call failed (endpoint may need restart): %s", be)
+                        _log.warning("[console] reset backend call failed: %s", be)
                         rendered = f"Local: {rendered_local}\n\nBackend (warning): {be}"
-                elif action == "bootstrap":
-                    rendered = runner_service.bootstrap_publish(repo_path=repo_path)
-                elif action == "init":
-                    workflow = selected_workflow(required=True)
-                    rendered = runner_service.init_workspace(
-                        repo_path=repo_path,
-                        workflow_name=workflow.workflow_name,
-                        bundle_domain=bundle_domain_tf.value or "general",
-                        bundle_profile=bundle_profile_tf.value or "core+workflow",
-                    )
-                elif action == "sync":
-                    rendered = runner_service.sync_workflow(
-                        repo_path=repo_path,
-                        workflow=selected_workflow(required=True),
-                    )
-                elif action == "cleanup":
-                    workflow = selected_workflow(required=True)
-                    rendered = runner_service.cleanup_execution(
-                        workflow_name=workflow.workflow_name,
-                        dry_run=cleanup_dry_run_cb.value,
-                    )
+
                 else:
                     raise ActionExecutionError(f"Unsupported action: {action}")
+
                 output.value = rendered
             except Exception as exc:
                 output.value = str(exc)
             page.update()
 
-        refresh_button = ft.ElevatedButton("Refresh Active Runs", on_click=refresh_active_runs)
-        execute_button = ft.ElevatedButton("Run Action", on_click=execute_action)
-        run_row = ft.Row([refresh_button, execute_button], wrap=True)
-        submit_row = ft.Row([initiative_tf, coder_tf], wrap=True)
-        init_row = ft.Row([bundle_domain_tf, bundle_profile_tf], wrap=True)
+        # ==================================================================
+        # Button controls
+        # ==================================================================
 
-        # Initialize workflow dropdown with options for the initially selected repo
+        refresh_button = ft.ElevatedButton("Refresh Active Runs", on_click=refresh_active_runs)
+        execute_button = ft.ElevatedButton(
+            "Run Action", on_click=execute_action,
+            bgcolor=ft.Colors.BLUE, color=ft.Colors.WHITE,
+            style=ft.ButtonStyle(text_style=ft.TextStyle(weight=ft.FontWeight.BOLD)),
+        )
+        auto_refresh_cb = ft.Checkbox(label="Auto-refresh", value=False)
+
+        # ==================================================================
+        # Initialise workflow dropdown for the first repo
+        # ==================================================================
+
+        initial_repo = console_config.repos[0] if console_config.repos else None
         if initial_repo:
             workflow_dd.options = create_workflow_options(initial_repo)
-            if initial_workflows:
-                workflow_dd.value = initial_workflows[0].name
+            if initial_repo.workflows:
+                workflow_dd.value = initial_repo.workflows[0].name
                 workflow_dd.disabled = False
             else:
                 workflow_dd.value = None
                 workflow_dd.disabled = True
 
-        # Initialise the display text using the initial values.
-        update_selection_display()
-        
+        # -- Wire event handlers --------------------------------------------
         action_dd.on_change = update_visibility
         repo_dd.on_select = on_repo_changed
         workflow_dd.on_select = on_workflow_changed
         active_runs_dd.on_change = _on_active_run_selected
+        auto_refresh_cb.on_change = _on_auto_refresh_changed
 
-        page.add(
-            ft.Column(
-                controls=[
-                    ft.Text("Agent Runner Operator Console", size=28, weight=ft.FontWeight.BOLD),
-                    ft.Text(
-                        "Choose a repository and its workflow.",
-                        size=14,
-                    ),
-                    ft.Divider(),
-                    ft.Row(
-                        controls=[
-                            repo_dd,
-                            workflow_dd,
-                        ],
-                        wrap=True,
-                        spacing=16,
-                        run_spacing=12,
-                    ),
-                    ft.Container(
-                        content=ft.Column(
-                            controls=[
-                                selection_status,
-                                repo_details,
-                                workflow_details,
-                            ],
-                            spacing=6,
-                        ),
-                        padding=16,
-                        border=ft.Border.all(
-                            width=1,
-                            color=ft.Colors.OUTLINE_VARIANT,
-                        ),
-                        border_radius=8,
-                    ),
-                    status_text,
-                    ft.Row([action_dd], wrap=True),
-                    run_row,
-                    active_runs_container,
-                    reset_step_dd,
-                    feedback_tf,
-                    reject_cb,
-                    cleanup_dry_run_cb,
-                    submit_row,
-                    init_row,
-                    output,
-                ],
-                spacing=16,
-            )
-        )
+        page.services.append(file_picker)
+
+        # ==================================================================
+        # Page layout
+        # ==================================================================
+
+        page.add(ft.Column(controls=[
+            ft.Text("Agent Runner Operator Console", size=28, weight=ft.FontWeight.BOLD),
+            ft.Text("Choose a repository and its workflow.", size=14),
+            ft.Divider(),
+            ft.Row(
+                controls=[repo_dd, workflow_dd, action_dd, execute_button],
+                wrap=True, spacing=16, run_spacing=12,
+                vertical_alignment=ft.CrossAxisAlignment.END,
+            ),
+            status_text,
+            ft.Row(
+                controls=[active_runs_container, ft.Column([refresh_button, auto_refresh_cb])],
+                wrap=True, spacing=16,
+                vertical_alignment=ft.CrossAxisAlignment.START,
+            ),
+            reset_step_dd,
+            feedback_tf,
+            dynamic_inputs_container,
+            output,
+        ], spacing=16))
+
+        # Initial population
+        rebuild_input_fields()
         refresh_step_options()
-        update_visibility()
 
     ft.app(target=app)
     return 0
 
 
-def _render_result(payload: object) -> str:
-    import json
+# ===========================================================================
+# Helpers
+# ===========================================================================
 
+def _render_result(payload: object) -> str:
+    """Render a backend response payload as pretty-printed JSON."""
     return json.dumps(payload, indent=2, ensure_ascii=False)
