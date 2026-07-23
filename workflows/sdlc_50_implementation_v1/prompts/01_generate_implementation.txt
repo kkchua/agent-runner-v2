@@ -22,7 +22,7 @@ The IMPL document must include:
 1. YAML Frontmatter (REQUIRED):
    - `template_id: "SYS-03-IM"`
    - `version: "1.0.0"`
-   - `doc_type: "system"`
+   - `doc_type: "workflow_output"`
    - `authority: "workflow-generated"`
    - `scan_policy: "include"`
    - `scan_reason: "implementation plan for task execution"`
