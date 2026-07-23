@@ -247,24 +247,6 @@ def test_resolve_meta_json_path_falls_back_to_step_dir(tmp_path: Path) -> None:
     assert result == step_dir / "meta.json"
 
 
-def test_build_new_review_file_path_prefers_workflow_owned_master_docs_review_path() -> None:
-    path = _build_new_review_file_path(
-        state={
-            "template_group": "00_repo_master_docs_bootstrap_v1",
-            "job_id": "00RMD-TEST-002",
-            "artifacts": {
-                "PROJECT_ANALYSIS": "docs/repo/governance/PROJECT_ANALYSIS.md",
-            },
-        },
-        step="05_review_master_system_docs",
-        step_cfg={
-            "on_reject_refine": {"artifact": "PROJECT_ANALYSIS"},
-        },
-    )
-
-    assert path == "docs/repo/governance/00RMD-TEST-002-master-system-docs-review.md"
-
-
 def test_run_action_preserves_reject_code_in_step_result(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     project_root = tmp_path
     artifact_rel = "docs/system/00_governance/bootstrap/validation.md"

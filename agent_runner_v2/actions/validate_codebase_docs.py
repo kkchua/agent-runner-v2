@@ -25,6 +25,15 @@ def validate_codebase_docs(*, context: dict[str, str], state: dict, step_cfg: di
     job_id = str(state.get("job_id") or "codebase-scan")
     step = str(state.get("current_step") or "validate_codebase_docs")
     meta_rel = resolve_step_meta_rel(context=context, state=state, context_key="VALIDATION_FILE_METAJSON", default_step=step)
+
+    # Support staging root override (for sdlc_00_codebase_v1 staging pattern)
+    staging_root = str(step_cfg.get("staging_root") or "")
+    if staging_root:
+        staging_root = staging_root.replace("{job_id}", job_id)
+        base_rel = staging_root
+    else:
+        base_rel = codebase_doc_rel("")
+
     snapshot = build_snapshot(
         project_root,
         mode=mode,
@@ -33,10 +42,10 @@ def validate_codebase_docs(*, context: dict[str, str], state: dict, step_cfg: di
         workflow_name=str(state.get("template_group") or mode),
     )
 
-    inventory_path = project_root / codebase_doc_rel("01_inventory/codebase_inventory.md")
-    module_dir = project_root / codebase_doc_rel("02_modules")
-    component_dir = project_root / codebase_doc_rel("03_components")
-    change_dir = project_root / codebase_doc_rel("04_changes")
+    inventory_path = project_root / f"{base_rel}/01_inventory/codebase_inventory.md"
+    module_dir = project_root / f"{base_rel}/02_modules"
+    component_dir = project_root / f"{base_rel}/03_components"
+    change_dir = project_root / f"{base_rel}/04_changes"
     change_path = change_dir / f"{job_id}-{mode}.md"
 
     checks: list[tuple[str, bool, str]] = []

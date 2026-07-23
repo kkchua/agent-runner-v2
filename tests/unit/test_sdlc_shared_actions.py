@@ -326,30 +326,48 @@ class TestCreateBackup:
     """Tests for create_backup action."""
 
     def test_creates_backup_of_codebase(self, tmp_path: Path) -> None:
-        """Test that action creates backup of codebase docs."""
-        # Create test codebase structure
+        """Test that action creates backup of current/ codebase docs."""
+        # Create test codebase structure with current/ directory
         codebase_dir = tmp_path / "docs" / "repo" / "codebase"
-        codebase_dir.mkdir(parents=True)
-        (codebase_dir / "test.md").write_text("# Test")
-        
+        current_dir = codebase_dir / "current"
+        current_dir.mkdir(parents=True)
+        (current_dir / "test.md").write_text("# Test")
+
         context = {}
         state = {}
         step_cfg = {}
-        
+
         result = create_backup(
             context=context,
             state=state,
             step_cfg=step_cfg,
             project_root=tmp_path,
         )
-        
+
         assert result.status == "APPROVED"
         assert "CODEBASE_BACKUP" in result.artifacts
-        
-        # Verify backup was created
+
+        # Verify backup was created from current/
         backup_path = tmp_path / result.artifacts["CODEBASE_BACKUP"]
         assert backup_path.exists()
         assert (backup_path / "test.md").exists()
+
+    def test_creates_empty_backup_when_no_current(self, tmp_path: Path) -> None:
+        """Test that action creates empty backup marker when current/ doesn't exist."""
+        codebase_dir = tmp_path / "docs" / "repo" / "codebase"
+        codebase_dir.mkdir(parents=True)
+
+        result = create_backup(
+            context={},
+            state={},
+            step_cfg={},
+            project_root=tmp_path,
+        )
+
+        assert result.status == "APPROVED"
+        backup_path = tmp_path / result.artifacts["CODEBASE_BACKUP"]
+        assert backup_path.exists()
+        assert (backup_path / "README.md").exists()
 
     def test_rejects_if_codebase_not_found(self, tmp_path: Path) -> None:
         """Test that action rejects if codebase root doesn't exist."""

@@ -191,7 +191,7 @@ def _is_valid_sidecar_json(path: Path) -> bool:
 
         # Check 3: Parse and validate JSON schema
         try:
-            text_content = path.read_text(encoding="utf-8")
+            text_content = path.read_text(encoding="utf-8-sig")
             data = json.loads(text_content)
             print(f"[_is_valid_sidecar_json] Check 3a PASS: JSON parsed successfully, size={len(text_content)} bytes", flush=True)
         except Exception as e:

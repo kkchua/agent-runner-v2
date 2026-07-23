@@ -119,6 +119,9 @@ Each template must include:
    - Must enforce consistent structure across all instances
    - Must reference Layer 1 governance metadata requirements
    - Must align with the approval gate model from the L3 spec
+   - Verify API and SDK usage against the actual installed library version
+     by reading the source code or documentation in the virtual environment.
+     Do not rely on training data for library APIs -- they may have changed.
 
 Output Instructions
 

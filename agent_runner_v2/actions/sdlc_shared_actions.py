@@ -473,8 +473,9 @@ def create_backup(
     
     # Define paths
     codebase_root = project_root / "docs" / "repo" / "codebase"
+    current_root = codebase_root / "current"
     backup_dir = project_root / backup_dir_rel
-    
+
     if not codebase_root.exists():
         remark = f"Codebase root does not exist: {codebase_root}"
         return ActionResult(
@@ -483,17 +484,25 @@ def create_backup(
             artifacts={},
             reject_code="CODEBASE_ROOT_NOT_FOUND",
         )
-    
+
     # Generate backup directory name with timestamp
     timestamp = dt.datetime.now().strftime("%Y%m%d-%H%M%S")
     backup_name = f"BACKUP-{timestamp}"
     backup_path = backup_dir / backup_name
-    
-    # Create backup by copying codebase docs
+
+    # Create backup -- only back up current/ (the published stable version)
     try:
         if backup_path.exists():
             shutil.rmtree(backup_path)
-        shutil.copytree(codebase_root, backup_path, ignore=shutil.ignore_patterns("backups"))
+        if current_root.exists():
+            shutil.copytree(current_root, backup_path)
+        else:
+            # No current/ yet (first run) -- create empty backup marker
+            backup_path.mkdir(parents=True)
+            (backup_path / "README.md").write_text(
+                "# Backup (empty)\n\nNo previous current/ directory existed.\n",
+                encoding="utf-8",
+            )
     except Exception as e:
         remark = f"Failed to create backup: {e}"
         return ActionResult(
@@ -533,23 +542,20 @@ def generate_sync_log(
     """
     step = str(state.get("current_step") or "generate_sync_log")
     job_id = str(state.get("job_id") or "")
-    
+
     # Get sync information from context
     timestamp = dt.datetime.now().isoformat(timespec="seconds")
-    date_str = dt.datetime.now().strftime("%Y%m%d")
-    
-    # Determine sync sequence number
-    sync_log_dir = project_root / "docs" / "repo" / "codebase" / "sync_logs"
+
+    # Support staging root override (for sdlc_00_codebase_v1 staging pattern)
+    staging_root = str(step_cfg.get("staging_root") or "")
+    if staging_root:
+        staging_root = staging_root.replace("{job_id}", job_id)
+        sync_log_dir = project_root / staging_root / "sync_logs"
+    else:
+        sync_log_dir = project_root / "docs" / "repo" / "codebase" / "sync_logs"
     sync_log_dir.mkdir(parents=True, exist_ok=True)
-    
-    # Find existing sync logs to determine sequence
-    existing_logs = list(sync_log_dir.glob(f"SYNC-{date_str}-*.md"))
-    seq = len(existing_logs) + 1
-    seq_str = f"{seq:03d}"
-    
+
     # Generate sync log content
-    # In a real implementation, this would compare before/after states
-    # For now, we generate a basic log structure
     log_content = f"""---
 template_id: "SYS-00-SL"
 version: "1.0.0"
@@ -596,9 +602,15 @@ Review this sync log to verify that all changes are expected.
 If any unexpected changes are found, restore from the backup
 created before this sync operation.
 """
-    
-    # Write sync log
-    log_filename = f"SYNC-{date_str}-{seq_str}.md"
+
+    # Write sync log -- use job_id-based filename for staging, date-based for global
+    if staging_root:
+        log_filename = f"SYNC-{job_id}.md"
+    else:
+        date_str = dt.datetime.now().strftime("%Y%m%d")
+        existing_logs = list(sync_log_dir.glob(f"SYNC-{date_str}-*.md"))
+        seq = len(existing_logs) + 1
+        log_filename = f"SYNC-{date_str}-{seq:03d}.md"
     log_path = sync_log_dir / log_filename
     _write_text(log_path, log_content)
     

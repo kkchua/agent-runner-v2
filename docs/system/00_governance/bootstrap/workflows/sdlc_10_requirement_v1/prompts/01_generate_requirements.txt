@@ -11,7 +11,7 @@ Layer Boundary
 Reference Inputs
 
 - Read `INIT_FILE` (approved initiative document).
-- Read codebase context from `docs/repo/codebase/` to understand repository structure.
+- Read codebase context from `docs/repo/codebase/current/` to understand repository structure.
 - Read Layer 1 governance at `GOVERNANCE_RUNTIME_ROOT` for metadata requirements.
 - Read Layer 2 platform constitution at `PLATFORM_RUNTIME_ROOT` for platform contract.
 
@@ -22,7 +22,7 @@ The REQ document must include:
 1. YAML Frontmatter (REQUIRED):
    - `template_id: "SYS-03-REQ"`
    - `version: "1.0.0"`
-   - `doc_type: "system"`
+   - `doc_type: "workflow_output"`
    - `authority: "workflow-generated"`
    - `scan_policy: "include"`
    - `scan_reason: "structured requirements derived from approved initiative"`
@@ -49,6 +49,9 @@ The REQ document must include:
    - Normalize into canonical structure without inventing scope
    - Record explicit assumptions where information is missing
    - Preserve the intent and boundaries of the original initiative
+   - Verify API and SDK usage against the actual installed library version
+     by reading the source code or documentation in the virtual environment.
+     Do not rely on training data for library APIs -- they may have changed.
 
 Output Instructions
 

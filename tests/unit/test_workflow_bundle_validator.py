@@ -10,8 +10,8 @@ def _write(path: Path, content: str) -> None:
     path.write_text(content, encoding="utf-8")
 
 
-def test_validate_workflow_bundle_dir_accepts_core_governance_bundle() -> None:
-    bundle_root = Path("workflows/00_layer1_governance_bootstrap_v1").resolve()
+def test_validate_workflow_bundle_dir_accepts_active_governance_bundle() -> None:
+    bundle_root = Path("workflows/01_governance_foundation_v1").resolve()
     report = validate_workflow_bundle_dir(bundle_root)
 
     assert report.valid is True

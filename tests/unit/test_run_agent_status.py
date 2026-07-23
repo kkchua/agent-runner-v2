@@ -81,12 +81,8 @@ def test_main_returns_success_for_completed_matching_seed(monkeypatch, tmp_path,
     rc = run_agent_module.main(
         [
             "run",
-            "--project-root",
-            str(workspace),
             "--template-group",
             "delivery_scaffold_v1",
-            "--target-project-root",
-            str(workspace),
         ]
     )
 

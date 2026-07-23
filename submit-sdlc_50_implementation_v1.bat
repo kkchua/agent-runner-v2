@@ -25,9 +25,9 @@ set "WORKER_ID="
 set "BACKEND_URL="
 set "CODER="
 
-REM Approved task document (filename only, e.g., TASK-20260722-001_console-sdlc10-support.md)
+REM Approved task document (filename only, e.g., WI-20260723-001_console-sdlc10-support-01.md)
 REM Must exist in docs/repo/agent_runner/sdlc/delivery/40_tasks/
-set "TASK_FILE=TASK-20260722-001_console-sdlc10-support.md"
+set "TASK_FILE=WI-20260723-001_console-sdlc10-support-01.md"
 
 REM ==================================================================
 REM No changes needed below this line.

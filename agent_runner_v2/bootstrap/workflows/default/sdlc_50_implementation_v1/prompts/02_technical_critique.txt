@@ -1,0 +1,94 @@
+Objective
+
+Perform a technical critique of the implementation plan, focusing on test implementation correctness, code change precision, and implementation completeness.
+
+Layer Boundary
+
+- This workflow belongs to Layer 3 and operates on top of the Layer 2 platform contract.
+- Critique only the implementation plan, not execution or validation artifacts.
+- Treat Layer 1 governance and Layer 2 platform constitution as read-only authority.
+
+Reference Inputs
+
+- Read `IMPL_FILE` (the implementation plan to critique).
+- Read `TASK_FILE` (approved task specification for traceability verification).
+- Read codebase context from `docs/repo/codebase/current/` to validate code change targets.
+- Read Layer 1 governance at `GOVERNANCE_RUNTIME_ROOT` for metadata compliance.
+- Read Layer 2 platform constitution at `PLATFORM_RUNTIME_ROOT` for platform contract compliance.
+
+Critique Criteria
+
+Evaluate the implementation plan against these criteria:
+
+1. **Test Implementation Correctness**:
+   - Do the tests actually cover the test scope defined in TASK?
+   - Are tests correctly targeting the acceptance criteria?
+   - Is the test code syntactically correct?
+   - Test assertions match expected outcomes from the task specification
+   - Test setup and teardown are appropriate
+
+2. **Code Change Precision**:
+   - Verify against actual code: read the files to be modified, confirm change locations exist
+   - Line numbers and function references point to real locations in the codebase
+   - Change descriptions match the actual code structure
+   - No changes target nonexistent files, functions, or variables
+
+3. **Implementation Completeness**:
+   - Are all code changes complete with no missing steps?
+   - Every acceptance criterion from TASK has a corresponding implementation step
+   - No orphaned steps that do not contribute to acceptance criteria
+   - Rollback plan covers all changes described
+
+4. **Naming Consistency**:
+   - Are variable names consistent with existing codebase conventions?
+   - Function and class names follow the project's naming patterns
+   - New identifiers do not shadow or conflict with existing ones
+   - Import statements reference correct module paths
+
+5. **Deprecation and Pattern Safety**:
+   - Are deprecated APIs or patterns flagged?
+   - No use of APIs marked as deprecated in the installed library version
+   - Existing codebase patterns are followed for consistency
+   - No introduction of anti-patterns visible in the codebase
+
+6. **Import and Syntax Verification**:
+   - Run import and syntax checks on referenced modules
+   - All import statements reference modules that exist in the project
+   - No circular import risks introduced by the changes
+   - Syntax of code snippets is valid for the target Python version
+
+7. **API and SDK Verification**:
+   - Verify API and SDK usage against the actual installed library version
+   - Check referenced modules, function signatures, and patterns against the codebase
+   - Do not rely on training data for library APIs -- they may have changed
+
+Critique Output
+
+Generate a critique document with:
+
+1. **Decision**: PASS or FAIL
+2. **Summary**: Brief overview of critique findings
+3. **Findings**: Detailed list of issues (if any), categorized as:
+   - **Critical**: Must fix (tests do not cover acceptance criteria, code changes target wrong locations, missing implementation steps)
+   - **Major**: Should fix (incomplete test coverage, naming inconsistencies, deprecated API usage)
+   - **Minor**: Nice to fix (style issues, minor documentation gaps)
+4. **Recommendations**: Specific actions to address findings
+
+If PASS:
+   - Tests correctly implement the test scope from TASK
+   - Code changes target verified locations in the codebase
+   - Implementation is complete with no missing steps
+   - Naming and patterns are consistent with the codebase
+
+If FAIL:
+   - Provide specific, actionable feedback
+   - Cite exact code locations, test cases, or steps that are incorrect
+   - Explain what must be fixed for the critique to pass
+
+Output Instructions
+
+- Write the critique document to `CRITIQUE_FILE_SUGGESTED` path.
+- Use ASCII-only characters.
+- Use plain text section headings.
+- Provide direct citations to offending text when failing.
+- Be specific and actionable in feedback.

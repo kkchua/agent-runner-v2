@@ -22,7 +22,7 @@ from typing import Any
 
 from .doc_paths import delivery_doc_rel
 
-from .constants import ARTIFACT_KEY_REVIEW
+from .constants import ARTIFACT_KEY_REVIEW, ARTIFACT_PATHS
 from .execution_support import (
     build_failure_envelope,
     classify_pre_run_failure,
@@ -400,6 +400,12 @@ def create_job(group_name: str, group_cfg: dict[str, Any], seed_artifacts: dict[
     for a in group_cfg.get("artifact_registry", []):
         k = a.get("key", "")
         if isinstance(k, str) and k and k not in artifact_keys_set:
+            artifact_keys.append(k)
+            artifact_keys_set.add(k)
+
+    # Merge globally registered artifact keys (from all workflows' register_artifact_keys())
+    for k in ARTIFACT_PATHS:
+        if k not in artifact_keys_set:
             artifact_keys.append(k)
             artifact_keys_set.add(k)
 

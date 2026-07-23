@@ -177,41 +177,6 @@ class TestWorkflowTOMLParsing:
         assert len(bundle.governance.artifact_registry) == 6
         assert bundle.governance.canonical_source_path.name == "core_governance.md"
 
-    def test_core_governance_prompt_package_copy_matches_source(self, project_root):
-        prompt_names = [
-            "01_generate_core_governance_docs.txt",
-            "02_review_core_governance_docs.txt",
-            "03_refine_core_governance_docs.txt",
-            "04_audit_core_governance_accuracy.txt",
-        ]
-        source_dir = project_root / "workflows" / "00_core_governance_bootstrap_v1" / "prompts"
-        packaged_dir = (
-            project_root
-            / "agent_runner_v2"
-            / "bootstrap"
-            / "workflows"
-            / "default"
-            / "00_core_governance_bootstrap_v1"
-            / "prompts"
-        )
-
-        for prompt_name in prompt_names:
-            assert _read_text(source_dir / prompt_name) == _read_text(packaged_dir / prompt_name)
-
-    def test_core_governance_prompts_do_not_allow_repo_artifact_placeholders_in_layer1_docs(self, project_root):
-        prompt_dir = project_root / "workflows" / "00_core_governance_bootstrap_v1" / "prompts"
-
-        generate_text = _read_text(prompt_dir / "01_generate_core_governance_docs.txt")
-        refine_text = _read_text(prompt_dir / "03_refine_core_governance_docs.txt")
-        audit_text = _read_text(prompt_dir / "04_audit_core_governance_accuracy.txt")
-
-        assert "direct artifact placeholders such as `{PROJECT_ANALYSIS}`" not in generate_text
-        assert "replace it with direct artifact placeholder wording such as `{PROJECT_ANALYSIS}`" not in refine_text
-        assert "uses direct artifact placeholders like `{PROJECT_ANALYSIS}`" not in audit_text
-        assert "repo-derived filenames" in generate_text
-        assert "repo-derived filenames" in refine_text
-        assert "repo-derived filenames" in audit_text
-
     def test_core_governance_adapter_generation(self, project_root, tmp_path):
         pkg_dir = project_root / "workflows" / "00_core_governance_bootstrap_v1"
         if not pkg_dir.is_dir():

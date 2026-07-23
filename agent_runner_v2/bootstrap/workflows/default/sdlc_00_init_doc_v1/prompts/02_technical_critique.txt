@@ -1,0 +1,56 @@
+Objective
+
+Critically evaluate the initiative document for scope, feasibility, and technical soundness.
+
+Layer Boundary
+
+- This workflow belongs to Layer 3 and operates on top of the Layer 2 platform contract.
+- Critique only the initiative document, not planning or implementation artifacts.
+- Treat Layer 1 governance and Layer 2 platform constitution as read-only reference inputs.
+
+Reference Inputs
+
+- Read `INIT_FILE` (the initiative document to critique).
+- Read `DRAFT_INIT_FILE` (original draft for comparison).
+- Read codebase context from `docs/repo/codebase/` to validate feasibility.
+- Read Layer 1 governance at `GOVERNANCE_RUNTIME_ROOT` for metadata requirements.
+- Read Layer 2 platform constitution at `PLATFORM_RUNTIME_ROOT` for platform contract.
+
+Critique Criteria
+
+Evaluate the initiative against these criteria:
+
+1. **Scope Validity**:
+   - Is the problem statement clear and well-motivated?
+   - Are assumptions explicit and reasonable?
+   - Is the scope achievable with available resources and constraints?
+
+2. **Technical Feasibility**:
+   - Are there early technical risks or blockers not addressed?
+   - Does the initiative overlap or conflict with existing system capabilities?
+   - Verify any referenced APIs, modules, or patterns against the actual codebase.
+
+3. **Design Quality**:
+   - Is this the right approach? Are there better alternatives?
+   - Is the initiative implementable as described?
+
+4. **API and Library Verification**:
+   - Verify API and SDK usage against the actual installed library version.
+   - Do not rely on training data for library APIs -- they may have changed.
+
+Critique Output
+
+Generate a critique document with:
+
+1. **Decision**: APPROVED or REJECTED
+2. **Summary**: Brief overview of critique findings
+3. **Technical Findings**: Detailed list of issues found
+4. **Design Quality Assessment**: Is this the right approach?
+5. **Recommendations**: Specific actions to address findings
+
+Output Instructions
+
+- Write the critique document to `CRITIQUE_FILE_SUGGESTED` path.
+- Use ASCII-only characters.
+- Use plain text section headings.
+- Be specific and actionable in findings.

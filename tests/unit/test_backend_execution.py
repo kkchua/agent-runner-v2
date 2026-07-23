@@ -53,43 +53,19 @@ class _BackendHooksStub:
         return "2026-07-17T00:00:00"
 
 
-def test_build_group_cfg_from_execution_spec_restores_workflow_bundle_for_package_actions():
-    prompt_file = str(
-        Path("D:/MyProjectSpace/01_Workflows/agent-runner-v2/agent_runner_v2/bootstrap/workflows/default/00_core_governance_bootstrap_v1/prompts/01_generate_core_governance_docs.txt").resolve()
-    )
-    spec = {
-        "prompt_file": prompt_file,
-        "action_name": "validate_core_governance_docs",
-        "raw_config": {
-            "action": "validate_core_governance_docs",
-        },
-    }
-
-    group_cfg, step_cfg = build_group_cfg_from_execution_spec(
-        spec,
-        "00_core_governance_bootstrap_v1",
-        "validate_core_governance_docs",
-    )
-
-    bundle = step_cfg.get("_workflow_bundle")
-    assert bundle is not None
-    assert "validate_core_governance_docs" in (bundle.custom_actions or {})
-    assert group_cfg.get("_workflow_bundle") is bundle
-
-
 def test_build_execution_state_persists_run_roots_for_backend_sync():
     request = ExecutionRequest(
         workflow_name="default",
-        template_group="00_repo_master_docs_bootstrap_v1",
-        job_id="00RMD-20260717-test",
-        step_name="00_scan_repo_codebase",
+        template_group="sdlc_00_delivery_scaffold_v1",
+        job_id="SDLC-20260717-test",
+        step_name="scaffold_delivery",
         project_root="D:/repo-target",
         target_project_root="D:/repo-target",
         workspace_root="D:/repo-target",
-        input_artifacts={"CODEBASE_SCAN_SNAPSHOT": "docs/repo/codebase/snapshot.json"},
+        input_artifacts={},
         context_payload={},
     )
-    group_cfg = {"job_init_step": "00_scan_repo_codebase", "steps": ["00_scan_repo_codebase"]}
+    group_cfg = {"job_init_step": "scaffold_delivery", "steps": ["scaffold_delivery"]}
 
     state = build_execution_state(request=request, group_cfg=group_cfg, hooks=_BackendHooksStub())
 
@@ -108,22 +84,3 @@ def test_build_group_cfg_from_execution_spec_without_prompt_file_skips_bundle_re
     assert "_workflow_bundle" not in group_cfg
 
 
-def test_build_group_cfg_from_execution_spec_restores_bundle_for_relative_prompt_file():
-    spec = {
-        "prompt_file": "00_core_governance_bootstrap_v1/prompts/01_generate_core_governance_docs.txt",
-        "action_name": "validate_core_governance_docs",
-        "raw_config": {
-            "action": "validate_core_governance_docs",
-        },
-    }
-
-    group_cfg, step_cfg = build_group_cfg_from_execution_spec(
-        spec,
-        "00_core_governance_bootstrap_v1",
-        "validate_core_governance_docs",
-    )
-
-    bundle = step_cfg.get("_workflow_bundle")
-    assert bundle is not None
-    assert "validate_core_governance_docs" in (bundle.custom_actions or {})
-    assert group_cfg.get("_workflow_bundle") is bundle

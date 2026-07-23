@@ -64,6 +64,9 @@ Content Guidelines
 - Constraints and dependencies should be more complete
 - Identify codebase areas likely affected
 - If a sub-item does not apply, state "None" explicitly
+- Verify API and SDK usage against the actual installed library version
+  by reading the source code or documentation in the virtual environment.
+  Do not rely on training data for library APIs -- they may have changed.
 
 Output Instructions
 

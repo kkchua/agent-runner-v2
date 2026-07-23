@@ -27,7 +27,7 @@ set "CODER="
 
 REM Approved implementation document (filename only, e.g., IMPL-20260722-001_console-sdlc10-support.md)
 REM Must exist in docs/repo/agent_runner/sdlc/delivery/50_implementations/
-set "IMPL_FILE=IMPL-20260722-001_console-sdlc10-support.md"
+set "IMPL_FILE=IMPL-20260723-001-001_console-sdlc10-support-01.md"
 
 REM ==================================================================
 REM No changes needed below this line.

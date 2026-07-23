@@ -56,6 +56,7 @@ from .constants import (
     TOOL_INSTRUCTION_TEMPLATE as CONSTANTS_TOOL_INSTRUCTION_TEMPLATE,
     ASCII_ONLY_INSTRUCTION,
     SECTION_HEADING_RULE,
+    GOVERNANCE_PATH_REFERENCE_RULE,
     CODER_SOP_INSTRUCTION_TEMPLATE,
 )
 from .bundle_governance import render_prompt_governance_block
@@ -2320,6 +2321,7 @@ def render_prompt(template_text: str, context: dict[str, str], step_cfg: dict | 
 
     rendered += ASCII_ONLY_INSTRUCTION
     rendered += SECTION_HEADING_RULE
+    rendered += GOVERNANCE_PATH_REFERENCE_RULE
     workflow_bundle = (step_cfg or {}).get("_workflow_bundle")
     governance = getattr(workflow_bundle, "governance", None)
     if workflow_bundle is not None and governance is not None and governance.include_in_prompts:
