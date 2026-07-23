@@ -230,6 +230,9 @@ def run_step(
     # Validate artifact files exist on disk
     _validate_artifact_files_exist(artifacts=artifacts, project_root=project_root)
 
+    # Strip UTF-8 BOM from coder-written artifact files
+    _strip_bom_from_artifacts(artifacts=artifacts, project_root=project_root)
+
     # Validate template conformance if template_ref is configured
     template_ref = step_cfg.get("template_ref")
     if template_ref:
@@ -383,6 +386,9 @@ def run_action(
     # Validate artifact files exist on disk
     artifacts = dict(coder_result.get("artifacts") or {})
     _validate_artifact_files_exist(artifacts=artifacts, project_root=project_root)
+
+    # Strip UTF-8 BOM from artifact files (no-op for clean files)
+    _strip_bom_from_artifacts(artifacts=artifacts, project_root=project_root)
 
     # Validate artifacts are in the produces list (declarative protection model)
     produces = step_cfg.get("produces", [])
@@ -683,7 +689,7 @@ def _validate_artifact_files_exist(
     project_root: Path,
 ) -> None:
     """Raise ArtifactMissingError if any artifact path in the dict doesn't exist.
-    
+
     Note: Skips .meta.json files as they are sidecars, not actual artifacts.
     """
     missing = [
@@ -696,6 +702,27 @@ def _validate_artifact_files_exist(
             f"Artifact files claimed in meta.json do not exist on disk: {missing}",
             missing=missing,
         )
+
+
+def _strip_bom_from_artifacts(
+    *,
+    artifacts: dict[str, str],
+    project_root: Path,
+) -> None:
+    """Strip UTF-8 BOM from artifact files if present.
+
+    Some coders write files with a BOM (U+FEFF) which breaks YAML frontmatter
+    parsing and ASCII-only compliance.  This is a no-op for clean files.
+    """
+    for path_str in artifacts.values():
+        if not path_str or path_str.endswith(".meta.json"):
+            continue
+        abs_path = project_root / path_str
+        if not abs_path.exists() or not abs_path.is_file():
+            continue
+        content = abs_path.read_text(encoding="utf-8")
+        if content.startswith("\ufeff"):
+            abs_path.write_text(content[1:], encoding="utf-8")
 
 
 def _validate_declared_produced_artifacts_exist(
@@ -1669,9 +1696,15 @@ def _apply_workflow_package_context_hooks(
 ) -> None:
     """Load and run context_extensions.py from the active workflow package.
 
+    Resolution order:
+    1. New interface: ``WorkflowExtensions.build_context_extensions()``
+       via the hooks scanner (preferred).
+    2. Legacy fallback: free-function ``build_context_extensions()``
+       (for existing workflows that have not migrated yet).
+
     When ``step_cfg`` carries a ``_workflow_bundle`` reference (stamped by
     ``_load_group`` in ``run_agent.py``), this function discovers and invokes
-    any context hooks exported by the workflow package's ``context_extensions.py``.
+    the context hooks exported by the workflow package.
     """
     if not step_cfg:
         return
@@ -1679,17 +1712,45 @@ def _apply_workflow_package_context_hooks(
     if bundle is None:
         return
 
+    # 1. Try new WorkflowExtensions interface
+    from .workflow_packages.hooks import get_extension
+
+    ext = get_extension(bundle.name)
+    if ext is not None:
+        try:
+            extensions = ext.build_context_extensions(
+                state=state,
+                step=step,
+                step_cfg=step_cfg,
+                ctx=ctx,
+                project_root=project_root,
+            )
+            if isinstance(extensions, dict):
+                artifacts = state.get("artifacts") or {}
+                for k, v in extensions.items():
+                    if k in artifacts and artifacts[k] is not None:
+                        continue  # preserve user-provided or prior-step artifact value
+                    ctx[k] = v
+            return
+        except Exception:
+            import logging  # noqa: PLC0415
+
+            logging.getLogger(__name__).exception(
+                "WorkflowExtensions.build_context_extensions failed for %s",
+                bundle.name,
+            )
+            return
+
+    # 2. Legacy fallback: free-function build_context_extensions()
     ext_path = getattr(bundle, "context_extensions_path", None)
     if ext_path is None:
         return
 
-    # Cache key: module path → loaded build_context_extensions callable (or None)
     cache_key = str(ext_path)
 
     if cache_key in _CONTEXT_HOOK_CACHE:
         hooks_fn = _CONTEXT_HOOK_CACHE[cache_key]
     else:
-        # First load — import the module and discover the hook function
         hooks_fn = _load_context_extensions_module(ext_path, cache_key)
         _CONTEXT_HOOK_CACHE[cache_key] = hooks_fn
 

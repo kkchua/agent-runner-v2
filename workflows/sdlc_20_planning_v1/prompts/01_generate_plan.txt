@@ -22,7 +22,7 @@ The PLAN document must include:
 1. YAML Frontmatter (REQUIRED):
    - `template_id: "SYS-03-PL"`
    - `version: "1.0.0"`
-   - `doc_type: "system"`
+   - `doc_type: "workflow_output"`
    - `authority: "workflow-generated"`
    - `scan_policy: "include"`
    - `scan_reason: "solution architecture plan for initiative"`

@@ -25,9 +25,29 @@ _KV_STATUS_RE = re.compile(
     r"^(\s*(?:[-*]\s*)?(?:\*\*)?Status(?:\*\*)?(?::\s*|\*\*:\s*))\S[^\n]*$",
     re.IGNORECASE | re.MULTILINE,
 )
+_FRONTMATTER_RE = re.compile(r"^---\s*\n(.*?)\n---\s*\n", re.DOTALL)
+
+
+def _update_frontmatter_status(content: str, new_status: str) -> str | None:
+    """Update lifecycle_status in YAML frontmatter. Returns updated content or None if no frontmatter."""
+    match = _FRONTMATTER_RE.match(content)
+    if not match:
+        return None
+    frontmatter = match.group(1)
+    if "lifecycle_status:" not in frontmatter:
+        return None
+    updated_frontmatter = re.sub(
+        r"lifecycle_status:\s*[\"']?[^\"'\n]+[\"']?",
+        f'lifecycle_status: "{new_status}"',
+        frontmatter,
+    )
+    return content[:match.start(1)] + updated_frontmatter + content[match.end(1):]
 
 
 def _set_status(content: str, target_status: str) -> str:
+    result = _update_frontmatter_status(content, target_status)
+    if result is not None:
+        return result
     content = _TABLE_STATUS_RE.sub(rf"\1`{target_status}`\2", content)
     content = _KV_STATUS_RE.sub(rf"\g<1>{target_status}", content)
     return content
@@ -58,17 +78,19 @@ def promote_artifact(
     for artifact_key in promotes:
         rel = context.get(artifact_key, "")
         if not rel:
-            print(f"[promote_artifact] {artifact_key} not in context — skipping", flush=True)
+            print(f"[promote_artifact] {artifact_key} not in context - skipping", flush=True)
             continue
         path = project_root / rel
         if not path.exists():
-            print(f"[promote_artifact] {artifact_key} file not found: {rel} — skipping", flush=True)
+            print(f"[promote_artifact] {artifact_key} file not found: {rel} - skipping", flush=True)
             continue
         content = path.read_text(encoding="utf-8")
+        if content.startswith("\ufeff"):
+            content = content[1:]
         updated = _set_status(content, target_status)
         path.write_text(updated, encoding="utf-8")
         promoted[artifact_key] = rel
-        print(f"[promote_artifact] {artifact_key} Status → {target_status}: {rel}", flush=True)
+        print(f"[promote_artifact] {artifact_key} Status -> {target_status}: {rel}", flush=True)
 
     if not promoted:
         remark = f"No artifacts promoted (keys: {promotes})"
