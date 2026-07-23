@@ -1,69 +1,54 @@
-"""Context extensions for sdlc_20_planning_v1 workflow.
-
-This module provides workflow-specific context variables for the planning
-workflow, including paths to Layer 1 and Layer 2 governance docs,
-codebase context, and SDLC delivery paths.
-"""
+"""Context extensions for sdlc_20_planning_v1 workflow."""
 from __future__ import annotations
 
+import datetime as dt
+import re
 from pathlib import Path
+from typing import Any
 
-from agent_runner_v2.runtime_context import get_workspace_root, get_runner_home
+from agent_runner_v2.constants import SDLC_DELIVERY_BASE
+from agent_runner_v2.runtime_context import get_runner_home, get_workspace_root
+from agent_runner_v2.workflow_packages.extensions_base import WorkflowExtensions
 
 
-def build_context_extensions(
-    *,
-    state: dict,
-    step: str,
-    step_cfg: dict,
-    ctx: dict[str, str],
-    project_root: Path | None = None,
-) -> dict[str, str]:
-    """Build context extensions for sdlc_20_planning_v1 workflow.
+def _extract_slug_from_path(file_path: str) -> str:
+    """Extract the slug from an SDLC artifact filename."""
+    if not file_path:
+        return "unknown"
+    filename = Path(file_path).stem
+    match = re.search(r"_(.+)$", filename)
+    if match:
+        return match.group(1)
+    return "unknown"
 
-    This function provides additional context variables needed by the
-    planning workflow prompts, including:
-    - Layer 1 governance runtime root
-    - Layer 2 platform runtime root
-    - Codebase documentation root
-    - SDLC delivery root and plan-specific subdirectories
 
-    Args:
-        state: Current job state dictionary.
-        step: Current step name.
-        step_cfg: Current step configuration dictionary.
-        ctx: Base context dictionary from the runner.
-        project_root: Project root directory path.
+class Sdlc20PlanningExtensions(WorkflowExtensions):
+    """Workflow extension hooks for sdlc_20_planning_v1."""
 
-    Returns:
-        Dictionary of additional context variables for prompt rendering.
-    """
-    result: dict[str, str] = {}
+    workflow_name = "sdlc_20_planning_v1"
 
-    # Layer 1 governance runtime root (global path)
-    runner_home = get_runner_home()
-    if runner_home:
-        foundation_root = Path(runner_home) / "bundles" / "core" / "current" / "foundation"
-        result["GOVERNANCE_RUNTIME_ROOT"] = str(foundation_root)
+    def register_artifact_keys(self, *, job_id: str = "{job_id}", mode: str = "{mode}") -> dict[str, str]:
+        date_str = dt.datetime.now().strftime("%Y%m%d")
+        return {
+            "PLAN_FILE": f"{SDLC_DELIVERY_BASE}/20_plans/PLAN-{date_str}-001_{{slug}}.md",
+            "REVIEW_FILE_SUGGESTED": f"{SDLC_DELIVERY_BASE}/80_reviews/{{slug}}-REV-20-plan.md",
+        }
 
-    # Layer 2 platform runtime root (global path)
-    if runner_home:
-        platform_root = Path(runner_home) / "bundles" / "core" / "current" / "platform"
-        result["PLATFORM_RUNTIME_ROOT"] = str(platform_root)
-
-    # Codebase documentation root (project-local)
-    workspace_root = get_workspace_root()
-    if workspace_root:
-        codebase_root = Path(workspace_root) / "docs" / "repo" / "codebase"
-        result["CODEBASE_DOC_ROOT"] = str(codebase_root)
-
-    # SDLC delivery root (project-local)
-    if workspace_root:
-        sdlc_delivery_root = Path(workspace_root) / "docs" / "repo" / "agent_runner" / "sdlc" / "delivery"
-        result["SDLC_DELIVERY_ROOT"] = str(sdlc_delivery_root)
-
-        # Plans directory
-        plan_dir = sdlc_delivery_root / "plans"
-        result["PLAN_DIR"] = str(plan_dir)
-
-    return result
+    def build_context_extensions(self, *, state: dict[str, Any], step: str, step_cfg: dict[str, Any], ctx: dict[str, str], project_root: Path | None = None) -> dict[str, str]:
+        result: dict[str, str] = {}
+        runner_home = get_runner_home()
+        if runner_home:
+            result["GOVERNANCE_RUNTIME_ROOT"] = str(Path(runner_home) / "bundles" / "core" / "current" / "foundation")
+            result["PLATFORM_RUNTIME_ROOT"] = str(Path(runner_home) / "bundles" / "core" / "current" / "platform")
+        workspace_root = get_workspace_root()
+        if workspace_root:
+            result["CODEBASE_DOC_ROOT"] = str(Path(workspace_root) / "docs" / "repo" / "codebase")
+        effective_root = Path(project_root or workspace_root or Path.cwd())
+        job_id = str(state.get("job_id", "unknown"))
+        # Extract slug from REQ_FILE (input from sdlc_10)
+        artifacts = state.get("artifacts") or {}
+        slug = _extract_slug_from_path(artifacts.get("REQ_FILE", ""))
+        for key, rel_path in self.register_artifact_keys(job_id=job_id).items():
+            resolved = rel_path.replace("{slug}", slug)
+            result[key] = str(effective_root / resolved)
+        return result

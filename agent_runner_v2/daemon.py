@@ -311,6 +311,12 @@ def _spawn_child(*, claim: dict[str, Any], runtime_root: Path, cli_pythonpath: s
     if request_payload.get("target_project_root"):
         cli_args.extend(['--target-project-root', request_payload["target_project_root"]])
 
+    # Pass input artifacts as --set flags so they seed into job state
+    input_artifacts = request_payload.get("input_artifacts") or {}
+    for key, value in input_artifacts.items():
+        if value:
+            cli_args.extend(['--set', f'{key}={value}'])
+
     proc = subprocess.Popen(
         cli_args,
         stdout=log_handle,

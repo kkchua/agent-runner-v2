@@ -4,7 +4,7 @@ actions/promote_init.py — Promote a reviewed PRE_INIT_FILE to an official INIT
 
 Reads the PRE_INIT_FILE, extracts the Initiative ID and title, derives a
 kebab-case filename, and writes the promoted copy to docs/delivery/01_initiatives/
-with Status changed from draft → Approved.
+with Status changed from draft -> Approved.
 """
 from __future__ import annotations
 
@@ -102,7 +102,7 @@ def promote_init(
     promoted_content = _STATUS_RE.sub(r"\1`Approved`", content, count=1)
     dest_path.write_text(promoted_content, encoding="utf-8")
     init_file_rel = relpath(dest_dir_rel, filename)
-    print(f"[promote_init] wrote INIT_FILE → {init_file_rel}", flush=True)
+    print(f"[promote_init] wrote INIT_FILE -> {init_file_rel}", flush=True)
 
     if meta_rel:
         write_meta_sidecar(meta_rel, project_root=project_root, status="APPROVED", remark=f"Promoted to {init_file_rel}", artifacts={"INIT_FILE": init_file_rel})

@@ -27,82 +27,82 @@ has specific input requirements that the console must handle.
 ### Phase 1: sdlc_10_requirement_v1 (Initiative Intake)
 
 **Console requirements:**
-- File picker for DRAFT_INIT_DOC (user selects a draft initiative file)
+- File picker for DRAFT_INIT_FILE (user selects a draft initiative file)
 - Submit job with the selected file path as input artifact
 - Display submission result
 
-**Input:** DRAFT_INIT_DOC (file path selected by user)
-**Output:** INIT_DOC (approved initiative document)
+**Input:** DRAFT_INIT_FILE (file path selected by user)
+**Output:** INIT_FILE (approved initiative document)
 
 ### Phase 2: sdlc_20_planning_v1 (Planning)
 
 **Console requirements:**
-- Dropdown or file picker to select an approved INIT_DOC
-- Submit job with INIT_DOC as input
-- Display generated REQ_DOC location
+- Dropdown or file picker to select an approved INIT_FILE
+- Submit job with INIT_FILE as input
+- Display generated REQ_FILE location
 
-**Input:** INIT_DOC (approved, from sdlc_10 output)
-**Output:** REQ_DOC (requirements document)
+**Input:** INIT_FILE (approved, from sdlc_10 output)
+**Output:** REQ_FILE (requirements document)
 
 ### Phase 3: sdlc_30_backlog_v1 (Backlog)
 
 **Console requirements:**
-- Dropdown or file picker to select an approved REQ_DOC
-- Submit job with REQ_DOC as input
-- Display generated PLAN_DOC location
+- Dropdown or file picker to select an approved REQ_FILE
+- Submit job with REQ_FILE as input
+- Display generated PLAN_FILE location
 
-**Input:** REQ_DOC (approved)
-**Output:** PLAN_DOC (plan document)
+**Input:** REQ_FILE (approved)
+**Output:** PLAN_FILE (plan document)
 
 ### Phase 4: sdlc_40_task_v1 (Task)
 
 **Console requirements:**
-- Dropdown or file picker to select an approved PLAN_DOC
-- Submit job with PLAN_DOC as input
-- Display generated BACKLOG_DOC location
+- Dropdown or file picker to select an approved PLAN_FILE
+- Submit job with PLAN_FILE as input
+- Display generated BACKLOG_FILE location
 
-**Input:** PLAN_DOC (approved)
-**Output:** BACKLOG_DOC (backlog document)
+**Input:** PLAN_FILE (approved)
+**Output:** BACKLOG_FILE (backlog document)
 
 ### Phase 5: sdlc_50_implementation_v1 (Implementation Planning)
 
 **Console requirements:**
-- Dropdown or file picker to select an approved BACKLOG_DOC
-- Submit job with BACKLOG_DOC as input
-- Display generated TASK_DOC location
+- Dropdown or file picker to select an approved BACKLOG_FILE
+- Submit job with BACKLOG_FILE as input
+- Display generated TASK_FILE location
 
-**Input:** BACKLOG_DOC (approved)
-**Output:** TASK_DOC (task specification)
+**Input:** BACKLOG_FILE (approved)
+**Output:** TASK_FILE (task specification)
 
 ### Phase 6: sdlc_60_execution_v1 (Execution)
 
 **Console requirements:**
-- Dropdown or file picker to select an approved TASK_DOC
-- Submit job with TASK_DOC as input
-- Display generated IMPL_DOC and code changes
+- Dropdown or file picker to select an approved TASK_FILE
+- Submit job with TASK_FILE as input
+- Display generated IMPL_FILE and code changes
 
-**Input:** TASK_DOC (approved)
-**Output:** IMPL_DOC (implementation record) + code changes
+**Input:** TASK_FILE (approved)
+**Output:** IMPL_FILE (implementation record) + code changes
 
 ### Phase 7: sdlc_70_validation_v1 (Validation)
 
 **Console requirements:**
-- Dropdown or file picker to select an approved IMPL_DOC
-- Submit job with IMPL_DOC as input
-- Display generated VALID_DOC (validation report)
+- Dropdown or file picker to select an approved IMPL_FILE
+- Submit job with IMPL_FILE as input
+- Display generated VAL_FILE (validation report)
 
-**Input:** IMPL_DOC (approved)
-**Output:** VALID_DOC (validation report)
+**Input:** IMPL_FILE (approved)
+**Output:** VAL_FILE (validation report)
 
 ### Phase 8: sdlc_80_review_v1 (Review)
 
 **Console requirements:**
-- Dropdown or file picker to select an approved VALID_DOC
-- Submit job with VALID_DOC as input
-- Display generated REV_DOC, MEM_DOC, CLOSE_DOC
+- Dropdown or file picker to select an approved VAL_FILE
+- Submit job with VAL_FILE as input
+- Display generated REV_FILE, MEM_FILE, CLOSE_FILE
 
-**Input:** VALID_DOC (approved)
-**Output:** REV_DOC + MEM_DOC + CLOSE_DOC
+**Input:** VAL_FILE (approved)
+**Output:** REV_FILE + MEM_FILE + CLOSE_FILE
 
 ## Common UI Components Needed
 

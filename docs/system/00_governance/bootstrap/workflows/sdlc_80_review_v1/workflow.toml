@@ -84,12 +84,13 @@ role_policy = "architect_standard"
 [[step]]
 name = "promote_all"
 action = "promote_all"
+promotes = ["REV_FILE", "MEM_FILE", "CLOSE_FILE"]
 enable_notifications = true
 onsuccess = "stepCompletion"
 
 [step.artifacts]
 required_inputs = ["REV_FILE", "MEM_FILE", "CLOSE_FILE"]
-dest_dir = "docs/repo/agent_runner/sdlc/delivery/reviews"
+dest_dir = "docs/repo/agent_runner/sdlc/delivery/80_reviews"
 result_meta_key = "REV_FILE"
 
 # ============================================================================

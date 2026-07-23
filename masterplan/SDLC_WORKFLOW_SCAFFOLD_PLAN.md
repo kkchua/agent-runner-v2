@@ -200,8 +200,8 @@ workflows/sdlc_NN_xxx_v1/
 | 2026-07-22 | Step 13: Verify all | Done | 9 workflows, 54 files, all pass |
 | 2026-07-22 | Step 14a: L3 spec update | Done | Corrected workflow chain, folder structure, 11 templates, naming convention |
 | 2026-07-22 | Step 14c: sdlc_00 scaffold update | Done | workflow.toml, output_paths.py, prompts updated for 11 templates |
-| 2026-07-22 | Step 14b: sdlc_10 workflow.toml | Needs Review | Updated to INIT_DOC chain but user flagged logic is wrong — relook tomorrow |
-| 2026-07-22 | Step 14b: sdlc_10 output_paths | Done | DRAFT_INIT_DOC, INIT_DOC paths |
+| 2026-07-22 | Step 14b: sdlc_10 workflow.toml | Done | Updated to INIT_FILE chain, artifact keys aligned to _FILE convention |
+| 2026-07-22 | Step 14b: sdlc_10 output_paths | Done | DRAFT_INIT_FILE, INIT_FILE paths |
 | 2026-07-22 | Step 14b: sdlc_20-80 workflow.toml | **TODO** | Need to update artifact keys for new chain |
 | 2026-07-22 | Step 14b: sdlc_20-80 output_paths | **TODO** | Need to update artifact keys and paths |
 | 2026-07-22 | Step 14b: sdlc_10-80 prompts | **TODO** | Need to rename prompt files and update content |
@@ -220,31 +220,31 @@ When submitting a job via the operator console, the user must manually type arti
 Each workflow takes the previous step's output as input and produces a new document:
 
 ```
-sdlc_10: DRAFT_INIT_DOC → INIT-DOC     (using 01_initiative.template.md)
-sdlc_20: INIT-DOC       → REQ-DOC      (using 02_requirement.template.md)
-sdlc_30: REQ-DOC        → PLAN-DOC     (using 03_plan.template.md)
-sdlc_40: PLAN-DOC       → BACKLOG-DOC  (using 04_task_graph.template.md)
-sdlc_50: BACKLOG-DOC    → TASK-DOC     (using 05_task.template.md)
-sdlc_60: TASK-DOC       → IMPL-DOC     (using 06_implementation_plan.template.md)
-sdlc_70: IMPL-DOC       → VALIDATE-DOC (using 07_validation.template.md)
-sdlc_80: VALIDATE-DOC   → REV + MEM + CLOSE (new workflow)
+sdlc_10: DRAFT_INIT_FILE → INIT_FILE     (using 01_initiative.template.md)
+sdlc_20: INIT_FILE       → REQ_FILE      (using 02_requirement.template.md)
+sdlc_30: REQ_FILE        → PLAN_FILE     (using 03_plan.template.md)
+sdlc_40: PLAN_FILE       → BACKLOG_FILE  (using 04_task_graph.template.md)
+sdlc_50: BACKLOG_FILE    → TASK_FILE     (using 05_task.template.md)
+sdlc_60: TASK_FILE       → IMPL_FILE     (using 06_implementation_plan.template.md)
+sdlc_70: IMPL_FILE       → VAL_FILE      (using 07_validation.template.md)
+sdlc_80: VAL_FILE        → REV_FILE + MEM_FILE + CLOSE_FILE (new workflow)
 ```
 
 ### Template Mapping (1 DOC = 1 template)
 
 | # | Template Filename | Produces | Used By | Source |
 |---|---|---|---|---|
-| 01 | `01_DRAFT_INIT_template.md` | DRAFT-INIT-DOC | User-authored (input to sdlc_10) | From old `01_initiative` |
-| 02 | `02_INIT_template.md` | INIT-DOC | sdlc_10 | **NEW** (split from old 01) |
-| 03 | `03_REQ_template.md` | REQ-DOC | sdlc_20 | From old `02_plan` |
-| 04 | `04_PLAN_template.md` | PLAN-DOC | sdlc_30 | From old `02b_task_graph` |
-| 05 | `05_BACKLOG_template.md` | BACKLOG-DOC | sdlc_40 | From old `03_task` |
-| 06 | `06_TASK_template.md` | TASK-DOC | sdlc_50 | From old `04_implementation_plan` |
-| 07 | `07_IMPL_template.md` | IMPL-DOC | sdlc_60 | From old `05_validation` |
-| 08 | `08_VALID_template.md` | VALIDATE-DOC | sdlc_70 | From old `04_review` |
-| 09 | `09_REV_template.md` | REV-DOC | sdlc_80 | **NEW** |
-| 10 | `10_MEM_template.md` | MEM-DOC | sdlc_80 | From old `06_memory` |
-| 11 | `11_CLOSE_template.md` | CLOSE-DOC | sdlc_80 | **NEW** |
+| 01 | `01_DRAFT_INIT_template.md` | DRAFT_INIT_FILE | User-authored (input to sdlc_10) | From old `01_initiative` |
+| 02 | `02_INIT_template.md` | INIT_FILE | sdlc_10 | **NEW** (split from old 01) |
+| 03 | `03_REQ_template.md` | REQ_FILE | sdlc_20 | From old `02_plan` |
+| 04 | `04_PLAN_template.md` | PLAN_FILE | sdlc_30 | From old `02b_task_graph` |
+| 05 | `05_BACKLOG_template.md` | BACKLOG_FILE | sdlc_40 | From old `03_task` |
+| 06 | `06_TASK_template.md` | TASK_FILE | sdlc_50 | From old `04_implementation_plan` |
+| 07 | `07_IMPL_template.md` | IMPL_FILE | sdlc_60 | From old `05_validation` |
+| 08 | `08_VALID_template.md` | VAL_FILE | sdlc_70 | From old `04_review` |
+| 09 | `09_REV_template.md` | REV_FILE | sdlc_80 | **NEW** |
+| 10 | `10_MEM_template.md` | MEM_FILE | sdlc_80 | From old `06_memory` |
+| 11 | `11_CLOSE_template.md` | CLOSE_FILE | sdlc_80 | **NEW** |
 
 **3 new templates** must be created from scratch: `02_INIT`, `09_REV`, `11_CLOSE`.
 
@@ -252,14 +252,14 @@ sdlc_80: VALIDATE-DOC   → REV + MEM + CLOSE (new workflow)
 
 | Workflow Selected | Required Input | Scan Directory |
 |---|---|---|
-| sdlc_10 | DRAFT_INIT_DOC | `draft_initiatives/` |
-| sdlc_20 | INIT-DOC | `initiatives/` |
-| sdlc_30 | REQ-DOC | `requirements/` |
-| sdlc_40 | PLAN-DOC | `plans/` |
-| sdlc_50 | BACKLOG-DOC | `backlogs/` |
-| sdlc_60 | TASK-DOC | `tasks/` |
-| sdlc_70 | IMPL-DOC | `implementations/` |
-| sdlc_80 | VALIDATE-DOC | `validations/` |
+| sdlc_10 | DRAFT_INIT_FILE | `draft_initiatives/` |
+| sdlc_20 | INIT_FILE | `initiatives/` |
+| sdlc_30 | REQ_FILE | `requirements/` |
+| sdlc_40 | PLAN_FILE | `plans/` |
+| sdlc_50 | BACKLOG_FILE | `backlogs/` |
+| sdlc_60 | TASK_FILE | `tasks/` |
+| sdlc_70 | IMPL_FILE | `implementations/` |
+| sdlc_80 | VAL_FILE | `validations/` |
 
 ### Implementation
 
@@ -275,7 +275,7 @@ sdlc_80: VALIDATE-DOC   → REV + MEM + CLOSE (new workflow)
 
 - [x] Update L3 spec delivery folder structure (add `draft_initiatives/`, `initiatives/`)
 - [x] Update sdlc_00 scaffold prompts + output_paths + workflow.toml (11 template names)
-- [x] Update sdlc_10 workflow.toml + output_paths (INIT_DOC chain) — **NEEDS FULL REVIEW: logic is wrong**
+- [x] Update sdlc_10 workflow.toml + output_paths (INIT_FILE chain) — **FIXED: artifact keys aligned to _FILE convention**
 - [ ] Update sdlc_20 through sdlc_80 workflow.toml files (correct input/output artifact keys)
 - [ ] Update sdlc_20 through sdlc_80 output_paths.py files (correct paths)
 - [ ] Rename sdlc_10 through sdlc_80 prompt files to match new step names

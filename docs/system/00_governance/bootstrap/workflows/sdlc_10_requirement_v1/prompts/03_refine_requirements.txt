@@ -1,0 +1,87 @@
+Objective
+
+Refine the requirements document based on review findings.
+
+Layer Boundary
+
+- This workflow belongs to Layer 3 and operates on top of the Layer 2 platform contract.
+- Refine only the requirements document, not planning or implementation artifacts.
+- Treat Layer 1 governance and Layer 2 platform constitution as read-only authority.
+
+Reference Inputs
+
+- Read `REQ_FILE` (the requirements document to refine).
+- Read `REVIEW_FILE_SUGGESTED` (review findings with specific feedback).
+- Read `INIT_FILE` (approved initiative for traceability verification).
+- Read codebase context from `docs/repo/codebase/` if needed for scope clarification.
+
+Authorized Sections
+
+The refined document must contain exactly these sections:
+1. Requirements Overview
+2. Functional Requirements
+3. Non-Functional Requirements
+4. Scope Definition
+5. Acceptance Criteria
+6. Dependencies and Constraints
+7. Risk Assessment
+
+Do NOT add sections not in this list. Do NOT remove sections from this list.
+
+Refinement Rules
+
+1. **Address All Critical Findings**:
+   - Missing required sections must be added
+   - Metadata errors must be corrected
+   - Encoding violations must be fixed
+   - Incorrect artifact key names must be corrected (_FILE suffix, not _DOC)
+
+2. **Address All Major Findings**:
+   - Unclear requirements must be clarified
+   - Missing traceability must be added
+   - Contradictory statements must be resolved
+   - Requirements must be made specific and testable
+
+3. **Address Minor Findings** (if time permits):
+   - Style issues should be improved
+   - Minor clarifications should be added
+
+4. **Preserve Original Intent**:
+   - Do not invent new requirements not supported by the initiative
+   - Do not add solution architecture or design decisions
+   - Do not add implementation details or code
+   - Do not add task breakdowns or scheduling
+   - Maintain traceability to the source initiative
+
+5. **Update Traceability**:
+   - If content was refined, update relevant sections
+   - Record what was changed and why
+   - Reference the review findings
+
+Refinement Process
+
+1. Read the review findings carefully
+2. Identify all critical and major issues
+3. Address each issue systematically
+4. Update the document in place
+5. Verify all 7 required sections are present
+6. Verify metadata is compliant
+7. Verify encoding is ASCII-only
+8. Verify artifact key names use _FILE suffix
+
+Output Instructions
+
+- Update the requirements document in place at `REQ_FILE` path.
+- Use ASCII-only characters.
+- Use plain text section headings.
+- Keep frontmatter fields present and consistent.
+- Do not change the document structure unless required by review findings.
+
+Forbidden Content
+
+- Layer 1 governance redefinition or contradiction
+- Layer 2 platform contract redefinition
+- Solution architecture or design decisions (belongs to planning phase)
+- Implementation details or code
+- Task breakdowns or scheduling
+- Content not traceable to the approved initiative

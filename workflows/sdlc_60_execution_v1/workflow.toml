@@ -83,6 +83,7 @@ role_policy = "architect_standard"
 [[step]]
 name = "promote_execution"
 action = "promote_artifact"
+promotes = "EXEC_FILE"
 enable_notifications = true
 onsuccess = "stepCompletion"
 
@@ -90,7 +91,7 @@ onsuccess = "stepCompletion"
 required_inputs = ["EXEC_FILE"]
 source = "EXEC_FILE"
 dest = "EXEC_FILE"
-dest_dir = "docs/repo/agent_runner/sdlc/delivery/executions"
+dest_dir = "docs/repo/agent_runner/sdlc/delivery/60_executions"
 result_meta_key = "EXEC_FILE"
 
 # ============================================================================

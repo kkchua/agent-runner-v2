@@ -1,12 +1,12 @@
 [workflow]
 name = "sdlc_10_requirement_v1"
 version = "1.0.0"
-label = "SDLC Requirement Intake v1"
+label = "SDLC Requirement Generation v1"
 job_prefix = "SDLC10REQ"
-description = "Capture and structure requirements from initiative input, producing approved REQ document."
+description = "Generate structured requirements from approved initiative document, producing approved REQ document."
 visibility = "canonical"
 default_max_rejects = 2
-init_step = "generate_initiative"
+init_step = "generate_requirements"
 
 # Layer 2 platform contract references
 layer = "layer3"
@@ -17,34 +17,34 @@ include_in_prompts = true
 prompt_targets = ["all"]
 
 # ============================================================================
-# Step 1: Generate Initiative
+# Step 1: Generate Requirements
 # ============================================================================
 [[step]]
-name = "generate_initiative"
-prompt = "prompts/01_generate_initiative.txt"
+name = "generate_requirements"
+prompt = "prompts/01_generate_requirements.txt"
 enable_notifications = true
-onsuccess = "review_initiative"
+onsuccess = "review_requirements"
 
 [step.artifacts]
-required_inputs = ["DRAFT_INIT_DOC"]
-produces = ["INIT_DOC"]
-result_meta_key = "INIT_DOC"
+required_inputs = ["INIT_FILE"]
+produces = ["REQ_FILE"]
+result_meta_key = "REQ_FILE"
 
 [step.coder]
 role_policy = "architect_standard"
 
 # ============================================================================
-# Step 2: Review Initiative
+# Step 2: Review Requirements
 # ============================================================================
 [[step]]
-name = "review_initiative"
-prompt = "prompts/02_review_initiative.txt"
+name = "review_requirements"
+prompt = "prompts/02_review_requirements.txt"
 enable_notifications = true
 requires_human_approval_after = true
-onsuccess = "promote_initiative"
+onsuccess = "promote_requirements"
 
 [step.artifacts]
-required_inputs = ["INIT_DOC"]
+required_inputs = ["REQ_FILE"]
 produces = ["REVIEW_FILE_SUGGESTED"]
 result_meta_key = "REVIEW_FILE_SUGGESTED"
 
@@ -52,45 +52,48 @@ result_meta_key = "REVIEW_FILE_SUGGESTED"
 role_policy = "reviewer_standard"
 
 [step.on_reject_refine]
-step = "refine_initiative"
-artifact = "INIT_DOC"
+step = "refine_requirements"
+artifact = "REQ_FILE"
 max_iterations = 2
-exhausted_failure_code = "INIT_REFINEMENT_EXHAUSTED"
+exhausted_failure_code = "REQ_REFINEMENT_EXHAUSTED"
 exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
 
 # ============================================================================
-# Step 3: Refine Initiative (conditional)
+# Step 3: Refine Requirements (conditional)
 # ============================================================================
 [[step]]
-name = "refine_initiative"
-prompt = "prompts/03_refine_initiative.txt"
+name = "refine_requirements"
+prompt = "prompts/03_refine_requirements.txt"
 enable_notifications = true
 
 [step.artifacts]
-required_inputs = ["INIT_DOC", "REVIEW_FILE_SUGGESTED"]
-produces = ["INIT_DOC"]
-target_artifact = "INIT_DOC"
+required_inputs = ["REQ_FILE", "REVIEW_FILE_SUGGESTED"]
+produces = ["REQ_FILE"]
+target_artifact = "REQ_FILE"
 edit_mode = "in_place"
-result_meta_key = "INIT_DOC"
+result_meta_key = "REQ_FILE"
 
-loop_returns_to = "review_initiative"
+loop_returns_to = "review_requirements"
 
 [step.coder]
 role_policy = "architect_standard"
 
 # ============================================================================
-# Step 4: Promote Initiative
+# Step 4: Promote Requirements
 # ============================================================================
 [[step]]
-name = "promote_initiative"
+name = "promote_requirements"
 action = "promote_artifact"
+promotes = "REQ_FILE"
 enable_notifications = true
 onsuccess = "stepCompletion"
 
 [step.artifacts]
-required_inputs = ["INIT_DOC"]
-promotes = "INIT_DOC"
-result_meta_key = "INIT_DOC"
+required_inputs = ["REQ_FILE"]
+source = "REQ_FILE"
+dest = "REQ_FILE"
+dest_dir = "docs/repo/agent_runner/sdlc/delivery/20_requirements"
+result_meta_key = "REQ_FILE"
 
 # ============================================================================
 # Step 5: Step Completion

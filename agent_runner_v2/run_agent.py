@@ -410,6 +410,11 @@ def main(argv: list[str] | None = None) -> int:
             domain=args.bundle_domain or "general",
             bundle_profile=args.bundle_profile or "core+workflow",
         )
+        # Run init hooks on all discovered workflow packages
+        from .workflow_packages.hooks import init_all
+        from .runtime_context import get_runner_home
+        runner_home = Path(get_runner_home()) if get_runner_home() else Path.home() / ".ukbe-runner"
+        init_all(workspace_root=workspace_root, runner_home=runner_home)
         print(json.dumps(result, indent=2, ensure_ascii=False))
         return 0
 
@@ -524,6 +529,10 @@ def main(argv: list[str] | None = None) -> int:
     try:
         group_cfg = _load_group(args.template_group, workspace_root=workspace_root, workflow_root=workflow_bundle_root)
         _validate_static_reference_files(workspace_root, group_cfg, template_group=args.template_group)
+
+        # Register artifact keys from all discovered workflow packages
+        from .workflow_packages.hooks import register_all_artifact_keys
+        register_all_artifact_keys(job_id="{job_id}", mode=str(args.mode or "manual"))
 
         if (args.task_graph_id or args.task_node_id) and args.template_group != "task_execution_v1":
             raise ValueError("--task-graph-id/--task-node-id are supported only for template group 'task_execution_v1'.")
