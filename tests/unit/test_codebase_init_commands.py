@@ -89,11 +89,11 @@ class TestCodebaseInitCommands:
         assert result == 0
         
         # Check directories were created
-        assert (tmp_path / "docs" / "repo" / "codebase" / "00_standards").is_dir()
-        assert (tmp_path / "docs" / "repo" / "codebase" / "01_inventory").is_dir()
-        assert (tmp_path / "docs" / "repo" / "codebase" / "02_modules").is_dir()
-        assert (tmp_path / "docs" / "repo" / "codebase" / "03_components").is_dir()
-        assert (tmp_path / "docs" / "repo" / "codebase" / "04_changes").is_dir()
+        assert (tmp_path / "docs" / "repo" / "codebase" / "current" / "00_standards").is_dir()
+        assert (tmp_path / "docs" / "repo" / "codebase" / "current" / "01_inventory").is_dir()
+        assert (tmp_path / "docs" / "repo" / "codebase" / "current" / "02_modules").is_dir()
+        assert (tmp_path / "docs" / "repo" / "codebase" / "current" / "03_components").is_dir()
+        assert (tmp_path / "docs" / "repo" / "codebase" / "current" / "04_changes").is_dir()
 
     def test_main_generates_files(self, tmp_path: Path) -> None:
         """Test that main generates the expected files."""
@@ -102,9 +102,9 @@ class TestCodebaseInitCommands:
         assert result == 0
         
         # Check files were created
-        assert (tmp_path / "docs" / "repo" / "codebase" / "01_inventory" / "codebase_inventory.md").is_file()
-        assert (tmp_path / "docs" / "repo" / "codebase" / "00_standards" / "CODEBASE_DOC_SOP.md").is_file()
-        assert (tmp_path / "docs" / "repo" / "codebase" / "00_standards" / "CODEBASE_DOC_STATUS_RULES.md").is_file()
+        assert (tmp_path / "docs" / "repo" / "codebase" / "current" / "01_inventory" / "codebase_inventory.md").is_file()
+        assert (tmp_path / "docs" / "repo" / "codebase" / "current" / "00_standards" / "CODEBASE_DOC_SOP.md").is_file()
+        assert (tmp_path / "docs" / "repo" / "codebase" / "current" / "00_standards" / "CODEBASE_DOC_STATUS_RULES.md").is_file()
 
     def test_main_fails_if_codebase_exists_without_force(self, tmp_path: Path) -> None:
         """Test that main fails if codebase docs exist without --force."""
@@ -147,7 +147,7 @@ class TestCodebaseInitCommands:
         """Test that generated inventory has correct metadata."""
         main(["--project-root", str(tmp_path)])
         
-        inventory_path = tmp_path / "docs" / "repo" / "codebase" / "01_inventory" / "codebase_inventory.md"
+        inventory_path = tmp_path / "docs" / "repo" / "codebase" / "current" / "01_inventory" / "codebase_inventory.md"
         content = inventory_path.read_text(encoding="utf-8")
         
         assert 'template_id: "SYS-00-CI"' in content
@@ -159,7 +159,7 @@ class TestCodebaseInitCommands:
         """Test that generated SOP has correct metadata."""
         main(["--project-root", str(tmp_path)])
         
-        sop_path = tmp_path / "docs" / "repo" / "codebase" / "00_standards" / "CODEBASE_DOC_SOP.md"
+        sop_path = tmp_path / "docs" / "repo" / "codebase" / "current" / "00_standards" / "CODEBASE_DOC_SOP.md"
         content = sop_path.read_text(encoding="utf-8")
         
         assert 'template_id: "SYS-00-CDS"' in content
@@ -170,7 +170,7 @@ class TestCodebaseInitCommands:
         """Test that generated status rules has correct metadata."""
         main(["--project-root", str(tmp_path)])
         
-        rules_path = tmp_path / "docs" / "repo" / "codebase" / "00_standards" / "CODEBASE_DOC_STATUS_RULES.md"
+        rules_path = tmp_path / "docs" / "repo" / "codebase" / "current" / "00_standards" / "CODEBASE_DOC_STATUS_RULES.md"
         content = rules_path.read_text(encoding="utf-8")
         
         assert 'template_id: "SYS-00-CSR"' in content

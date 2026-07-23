@@ -27,7 +27,7 @@ set "CODER="
 
 REM Approved plan document (filename only, e.g., PLAN-20260722-001_console-sdlc10-support.md)
 REM Must exist in docs/repo/agent_runner/sdlc/delivery/20_plans/
-set "PLAN_FILE=PLAN-20260722-001_console-sdlc10-support.md"
+set "PLAN_FILE=PLAN-20260723-001_console-sdlc10-support.md"
 
 REM ==================================================================
 REM No changes needed below this line.

@@ -27,7 +27,10 @@ set "CODER="
 
 REM Approved backlog document (filename only, e.g., BACKLOG-20260722-001_console-sdlc10-support.md)
 REM Must exist in docs/repo/agent_runner/sdlc/delivery/30_backlogs/
-set "BACKLOG_FILE=BACKLOG-20260722-001_console-sdlc10-support.md"
+set "BACKLOG_FILE=BACKLOG-20260723-001_console-sdlc10-support.md"
+
+REM Work item ID from the backlog (globally unique, e.g., WI-20260723-001_console-sdlc10-support-01)
+set "WORK_ITEM=WI-20260723-001_console-sdlc10-support-02"
 
 REM ==================================================================
 REM No changes needed below this line.
@@ -59,6 +62,9 @@ if not "!BACKLOG_FILE!"=="" (
     )
     set "INPUT_FLAGS=--input BACKLOG_FILE=!BACKLOG_PATH!"
 )
+if not "!WORK_ITEM!"=="" (
+    set "INPUT_FLAGS=!INPUT_FLAGS! --input WORK_ITEM=!WORK_ITEM!"
+)
 
 echo ===========================================================================
 echo  Workflow:        !WORKFLOW_NAME!
@@ -80,6 +86,7 @@ echo  Backend URL:     !BACKEND_URL!
 echo  Backend URL:     ^<from C:\Users\kengk\.ukbe-runner\config.json / CLI default^>
 )
 if not "!BACKLOG_FILE!"=="" echo  Backlog File:    !BACKLOG_FILE!
+if not "!WORK_ITEM!"=="" echo  Work Item:       !WORK_ITEM!
 echo ===========================================================================
 echo(
 

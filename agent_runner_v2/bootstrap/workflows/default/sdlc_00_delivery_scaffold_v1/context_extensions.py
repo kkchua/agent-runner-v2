@@ -4,6 +4,7 @@ from __future__ import annotations
 from pathlib import Path, PurePath
 from typing import Any
 
+from agent_runner_v2.constants import SDLC_DELIVERY_BASE
 from agent_runner_v2.runtime_context import GLOBAL_RUNNER_HOME, JOBS_ROOT, resolve_repo_or_runtime_path
 from agent_runner_v2.workflow_packages.extensions_base import WorkflowExtensions
 
@@ -53,6 +54,24 @@ class Sdlc00DeliveryScaffoldExtensions(WorkflowExtensions):
             "SDLC_HISTORY_ROOT": history_root,
             "SDLC_SCAFFOLD_PUBLISH_MANIFEST": f"{current_root}/sdlc_scaffold_manifest.json",
             "SDLC_SCAFFOLD_PUBLISH_MANIFEST_HISTORY": f"{history_root}/sdlc_scaffold_manifest.json",
+            # -- SDLC Delivery Artifact Keys (shared across all downstream workflows) --
+            # These keys are registered globally so create_job() accepts them as seed inputs.
+            # Actual per-workflow path resolution happens in each workflow's context_extensions.py.
+            "DRAFT_INIT_FILE": f"{SDLC_DELIVERY_BASE}/00_draft_initiatives/DRAFT-INIT.md",
+            "PRE_INIT_FILE": f"{SDLC_DELIVERY_BASE}/00_draft_initiatives/PRE-INIT.md",
+            "INIT_FILE": f"{SDLC_DELIVERY_BASE}/00_initiatives/INIT.md",
+            "REQ_FILE": f"{SDLC_DELIVERY_BASE}/10_requirements/REQ.md",
+            "PLAN_FILE": f"{SDLC_DELIVERY_BASE}/20_plans/PLAN.md",
+            "BACKLOG_FILE": f"{SDLC_DELIVERY_BASE}/30_backlogs/BACKLOG.md",
+            "TASK_FILE": f"{SDLC_DELIVERY_BASE}/40_tasks/TASK.md",
+            "WORK_ITEM": "",
+            "IMPL_FILE": f"{SDLC_DELIVERY_BASE}/50_implementations/IMPL.md",
+            "EXEC_FILE": f"{SDLC_DELIVERY_BASE}/60_executions/EXEC.md",
+            "VAL_FILE": f"{SDLC_DELIVERY_BASE}/70_validations/VAL.md",
+            "MEM_FILE": f"{SDLC_DELIVERY_BASE}/80_reviews/MEM.md",
+            "CLOSE_FILE": f"{SDLC_DELIVERY_BASE}/80_reviews/CLOSE.md",
+            "AUDIT_FILE_SUGGESTED": f"{SDLC_DELIVERY_BASE}/80_reviews/AUDIT.md",
+            "CONTEXT_PACK_FILE": f"{SDLC_DELIVERY_BASE}/00_context_packs/CONTEXT.md",
         }
 
     def build_context_extensions(

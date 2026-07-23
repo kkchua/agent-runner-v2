@@ -6,7 +6,7 @@ import re
 from pathlib import Path
 from typing import Any
 
-from agent_runner_v2.constants import SDLC_DELIVERY_BASE
+from agent_runner_v2.constants import SDLC_DELIVERY_BASE, resolve_next_seq
 from agent_runner_v2.runtime_context import get_runner_home, get_workspace_root
 from agent_runner_v2.workflow_packages.extensions_base import WorkflowExtensions
 
@@ -30,7 +30,8 @@ class Sdlc50ImplementationExtensions(WorkflowExtensions):
     def register_artifact_keys(self, *, job_id: str = "{job_id}", mode: str = "{mode}") -> dict[str, str]:
         date_str = dt.datetime.now().strftime("%Y%m%d")
         return {
-            "IMPL_FILE": f"{SDLC_DELIVERY_BASE}/50_implementations/IMPL-{date_str}-001-001_{{slug}}.md",
+            "IMPL_FILE": f"{SDLC_DELIVERY_BASE}/50_implementations/IMPL-{date_str}-001-{{seq}}_{{slug}}.md",
+            "CRITIQUE_FILE_SUGGESTED": f"{SDLC_DELIVERY_BASE}/80_reviews/{{slug}}-CRITIQUE-50-impl.md",
             "REVIEW_FILE_SUGGESTED": f"{SDLC_DELIVERY_BASE}/80_reviews/{{slug}}-REV-50-impl.md",
         }
 
@@ -41,13 +42,17 @@ class Sdlc50ImplementationExtensions(WorkflowExtensions):
             result["GOVERNANCE_RUNTIME_ROOT"] = str(Path(runner_home) / "bundles" / "core" / "current" / "foundation")
             result["PLATFORM_RUNTIME_ROOT"] = str(Path(runner_home) / "bundles" / "core" / "current" / "platform")
         workspace_root = get_workspace_root()
-        if workspace_root:
-            result["CODEBASE_DOC_ROOT"] = str(Path(workspace_root) / "docs" / "repo" / "codebase")
         effective_root = Path(project_root or workspace_root or Path.cwd())
         job_id = str(state.get("job_id", "unknown"))
         artifacts = state.get("artifacts") or {}
         slug = _extract_slug_from_path(artifacts.get("TASK_FILE", ""))
         for key, rel_path in self.register_artifact_keys(job_id=job_id).items():
             resolved = rel_path.replace("{slug}", slug)
+            if "{seq}" in resolved:
+                path_dir, path_file = resolved.rsplit("/", 1)
+                target_dir = effective_root / path_dir
+                prefix = path_file.split("{seq}")[0]
+                seq = resolve_next_seq(target_dir, prefix)
+                resolved = resolved.replace("{seq}", seq)
             result[key] = str(effective_root / resolved)
         return result

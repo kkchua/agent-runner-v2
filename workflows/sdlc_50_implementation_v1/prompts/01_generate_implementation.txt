@@ -11,7 +11,7 @@ Layer Boundary
 Reference Inputs
 
 - Read `TASK_FILE` (approved task specification).
-- Read codebase context from `docs/repo/codebase/` to understand repository structure.
+- Read codebase context from `docs/repo/codebase/current/` to understand repository structure.
 - Read Layer 1 governance at `GOVERNANCE_RUNTIME_ROOT` for metadata requirements.
 - Read Layer 2 platform constitution at `PLATFORM_RUNTIME_ROOT` for platform contract.
 
@@ -39,6 +39,7 @@ The IMPL document must include:
    - `Step-by-Step Plan` - Ordered steps to implement the task
    - `Code Changes` - Specific files and changes required
    - `Testing Strategy` - How to verify the implementation
+   - `Test Implementation` - Actual test code implementing the test scope from TASK
    - `Rollback Plan` - How to revert if implementation fails
    - `Dependencies` - External dependencies and prerequisites
    - `Open Questions` - Unresolved items that need clarification
@@ -49,6 +50,9 @@ The IMPL document must include:
    - Record explicit assumptions where information is missing
    - Identify specific codebase files and components affected
    - Note any audit/compliance sensitivity
+   - Verify API and SDK usage against the actual installed library version
+     by reading the source code or documentation in the virtual environment.
+     Do not rely on training data for library APIs -- they may have changed.
 
 Output Instructions
 
@@ -62,6 +66,6 @@ Forbidden Content
 
 - Layer 1 governance redefinition or contradiction
 - Layer 2 platform contract redefinition
-- Actual code implementation or execution results
+- Actual feature implementation code or execution results (test code is permitted and required)
 - Execution logs or validation results
 - Content not supported by the approved task

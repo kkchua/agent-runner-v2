@@ -11,7 +11,7 @@ Layer Boundary
 Reference Inputs
 
 - Read `IMPL_FILE` (approved implementation plan).
-- Read codebase context from `docs/repo/codebase/` to understand repository structure.
+- Read codebase context from `docs/repo/codebase/current/` to understand repository structure.
 - Read Layer 1 governance at `GOVERNANCE_RUNTIME_ROOT` for metadata requirements.
 - Read Layer 2 platform constitution at `PLATFORM_RUNTIME_ROOT` for platform contract.
 
@@ -22,7 +22,7 @@ The EXEC document must include:
 1. YAML Frontmatter (REQUIRED):
    - `template_id: "SYS-03-EX"`
    - `version: "1.0.0"`
-   - `doc_type: "system"`
+   - `doc_type: "workflow_output"`
    - `authority: "workflow-generated"`
    - `scan_policy: "include"`
    - `scan_reason: "execution record for task completion"`
@@ -37,7 +37,8 @@ The EXEC document must include:
    - `Implementation Traceability` - Link back to approved IMPL and steps
    - `Execution Steps` - Detailed record of each step performed
    - `Code Changes Made` - Specific files changed and what was changed
-   - `Test Results` - Results of testing performed
+   - `Test Files Created` - Test files written to the codebase from the IMPL test implementation
+   - `Test Execution Results` - Actual test output and pass/fail results
    - `Issues Encountered` - Any issues found during execution
    - `Rollback Status` - Whether rollback was needed or available
    - `Verification` - How execution was verified against acceptance criteria
@@ -45,10 +46,17 @@ The EXEC document must include:
 
 3. Content Guidelines:
    - Execute only per the approved implementation plan
+   - Implement all code changes specified in the IMPL document
+   - Create test files in the codebase from the test implementation section
+     of the IMPL document (write actual test files to tests/ directory)
+   - Run the test suite after implementation: .venv\Scripts\python -m pytest tests/unit/ -x -q
+   - Record actual test output (not fabricated results) with pass/fail status
    - Document all changes made with specific file paths
-   - Record test results with pass/fail status
    - Note any deviations from the plan
    - Capture lessons learned for future executions
+   - Verify API and SDK usage against the actual installed library version
+     by reading the source code or documentation in the virtual environment.
+     Do not rely on training data for library APIs -- they may have changed.
 
 Output Instructions
 

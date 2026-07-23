@@ -16,7 +16,7 @@ Usage:
 
 from __future__ import annotations
 
-from pathlib import PurePosixPath
+from pathlib import Path, PurePosixPath
 
 # ============================================================================
 # File Extension Constants
@@ -171,7 +171,7 @@ FOLDER_KEY_SYSTEM_DOC_ROOT = "docs/system/00_governance/bootstrap"
 FOLDER_KEY_SYSTEM_TEMPLATE_ROOT = "docs/system/00_governance/bootstrap/templates"
 FOLDER_KEY_SYSTEM_DELIVERY_TEMPLATE_ROOT = "docs/system/00_governance/bootstrap/templates/delivery"
 FOLDER_KEY_SYSTEM_CODEBASE_TEMPLATE_ROOT = "docs/system/00_governance/bootstrap/templates/codebase"
-FOLDER_KEY_CODEBASE_DOC_ROOT = "docs/repo/codebase"
+FOLDER_KEY_CODEBASE_DOC_ROOT = "docs/repo/codebase/current"
 FOLDER_KEY_DELIVERY_DOC_ROOT = "docs/repo/delivery"
 FOLDER_KEY_AUDIENCE_DOC_ROOT = "docs/repo/audience"
 FOLDER_KEY_DOCS_SITE_ROOT = "docs/repo/site"
@@ -189,12 +189,12 @@ FOLDER_KEY_LEGACY_DOCS_SITE_ROOT = "docs/site"
 
 # Bootstrap folders (where 00_master_docs_bootstrap_v1 writes during development)
 FOLDER_KEY_SYSTEM_BOOTSTRAP = "docs/system/00_governance/bootstrap"
-FOLDER_KEY_CODEBASE_ANALYSIS = "docs/repo/codebase/00_analysis"
-FOLDER_KEY_CODEBASE_STANDARDS = "docs/repo/codebase/00_standards"
-FOLDER_KEY_CODEBASE_INVENTORY = "docs/repo/codebase/01_inventory"
-FOLDER_KEY_CODEBASE_MODULES = "docs/repo/codebase/02_modules"
-FOLDER_KEY_CODEBASE_COMPONENTS = "docs/repo/codebase/03_components"
-FOLDER_KEY_CODEBASE_CHANGES = "docs/repo/codebase/04_changes"
+FOLDER_KEY_CODEBASE_ANALYSIS = "docs/repo/codebase/current/00_analysis"
+FOLDER_KEY_CODEBASE_STANDARDS = "docs/repo/codebase/current/00_standards"
+FOLDER_KEY_CODEBASE_INVENTORY = "docs/repo/codebase/current/01_inventory"
+FOLDER_KEY_CODEBASE_MODULES = "docs/repo/codebase/current/02_modules"
+FOLDER_KEY_CODEBASE_COMPONENTS = "docs/repo/codebase/current/03_components"
+FOLDER_KEY_CODEBASE_CHANGES = "docs/repo/codebase/current/04_changes"
 
 # Repo governance folder (Layer 2 repo master docs)
 FOLDER_KEY_REPO_GOVERNANCE = "docs/repo/governance"
@@ -343,15 +343,6 @@ ARTIFACT_PATH_CODEBASE_COMPONENT_TEMPLATE = f"{FOLDER_KEY_CODEBASE_TEMPLATES}/{F
 ARTIFACT_PATH_CODEBASE_CHANGE_TEMPLATE = f"{FOLDER_KEY_CODEBASE_TEMPLATES}/{FILENAME_CODEBASE_CHANGE_TEMPLATE}{EXT_MD}"
 
 DELIVERY_SCAFFOLD_DIRS = [
-    FOLDER_KEY_DELIVERY_INITIATIVES,
-    FOLDER_KEY_DELIVERY_PLANS,
-    FOLDER_KEY_DELIVERY_TASKS,
-    FOLDER_KEY_DELIVERY_IMPLEMENTATIONS,
-    FOLDER_KEY_DELIVERY_REVIEWS,
-    FOLDER_KEY_DELIVERY_MEMORY,
-    FOLDER_KEY_DELIVERY_STANDARDS,
-    "docs/codebase/00_templates",
-    "docs/codebase/05_archives",
     FOLDER_KEY_SYSTEM_DELIVERY_TEMPLATE_ROOT,
     FOLDER_KEY_SYSTEM_CODEBASE_TEMPLATE_ROOT,
 ]
@@ -359,20 +350,9 @@ DELIVERY_SCAFFOLD_DIRS = [
 RUN_AGENT_REQUIRED_DOC_DIRS = [
     *DELIVERY_SCAFFOLD_DIRS,
     FOLDER_KEY_CODEBASE_STANDARDS,
-    FOLDER_KEY_CODEBASE_INVENTORY,
-    FOLDER_KEY_CODEBASE_MODULES,
-    FOLDER_KEY_CODEBASE_COMPONENTS,
-    FOLDER_KEY_CODEBASE_CHANGES,
     relpath(FOLDER_KEY_DOCS, "system", "00_governance"),
     FOLDER_KEY_SYSTEM_BOOTSTRAP,
     FOLDER_KEY_SYSTEM_TEMPLATE_ROOT,
-    FOLDER_KEY_SYSTEM_DELIVERY_TEMPLATE_ROOT,
-    FOLDER_KEY_SYSTEM_CODEBASE_TEMPLATE_ROOT,
-    relpath(FOLDER_KEY_DOCS, "system", "01_overview"),
-    relpath(FOLDER_KEY_DOCS, "system", "02_functional"),
-    relpath(FOLDER_KEY_DOCS, "system", "03_architecture"),
-    relpath(FOLDER_KEY_DOCS, "engineering"),
-    relpath(FOLDER_KEY_DOCS, "operations"),
 ]
 
 # ============================================================================
@@ -770,6 +750,7 @@ All generated documents MUST use ASCII characters only.
 - Use straight quotes (" and ') for quotations. Do NOT use curly quotes.
 - Do NOT use any other Unicode characters (bullets, arrows, ellipsis, etc.).
 - If your editor or model produces non-ASCII characters, replace them before writing.
+- NEVER call sanitization tools on JSON files (meta.json, .meta.json, etc.) — only on .md documentation files if needed.
 """
 
 
@@ -782,6 +763,16 @@ Section headings (lines starting with #) MUST use plain text only.
 - Section headings must match required names exactly as specified.
 - Correct: `## Platform doc_type Values`
 - Wrong: `## Platform \`doc_type\` Values` or `## **Platform doc_type Values**`
+"""
+
+
+GOVERNANCE_PATH_REFERENCE_RULE = """
+
+## Governance Path Reference Rule
+
+When referencing governance or platform documents in output, use filenames
+only (e.g., METADATA_STANDARD.md, METADATA_CONTRACT.md). Do NOT include
+resolved filesystem paths or repo-local directory paths.
 """
 
 
@@ -1154,3 +1145,51 @@ def get_artifact_path(key: str, default: str = "") -> str:
         The repo-relative path template, or *default* if not found.
     """
     return ARTIFACT_PATHS.get(key, default)
+
+
+# ============================================================================
+# SDLC Sequence Number Resolution
+# ============================================================================
+
+def resolve_next_seq(directory: Path, prefix: str) -> str:
+    """Scan *directory* for ``.md`` files starting with *prefix*.
+
+    Extracts the sequence number from the segment immediately before the
+    ``_slug`` part of each filename and returns the next available number
+    as a zero-padded 3-digit string.
+
+    Examples::
+
+        # BACKLOG-20260723-001_console-sdlc10-support.md  → seq 001
+        # BACKLOG-20260723-002_console-sdlc10-support.md  → seq 002
+        resolve_next_seq(dir, "BACKLOG-20260723-") → "003"
+
+        # IMPL-20260723-001-003_console-sdlc10-support.md → seq 003
+        resolve_next_seq(dir, "IMPL-20260723-") → "004"
+
+    Parameters:
+        directory: Target directory to scan.
+        prefix: Filename prefix including the date (e.g. ``"BACKLOG-20260723-"``).
+
+    Returns:
+        Next 3-digit zero-padded sequence number (``"001"`` when no
+        matching files exist).
+    """
+    import re
+    max_seq = 0
+    if directory.is_dir():
+        for f in directory.iterdir():
+            if f.suffix != ".md":
+                continue
+            if not f.name.startswith(prefix):
+                continue
+            # Find the segment containing '_' and extract digits before it
+            stem = f.stem
+            parts = stem.split("-")
+            for part in reversed(parts):
+                if "_" in part:
+                    num_str = part.split("_")[0]
+                    if num_str.isdigit():
+                        max_seq = max(max_seq, int(num_str))
+                    break
+    return str(max_seq + 1).zfill(3)

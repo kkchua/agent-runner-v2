@@ -11,7 +11,7 @@ Layer Boundary
 Reference Inputs
 
 - Read `VAL_FILE` (approved validation report).
-- Read codebase context from `docs/repo/codebase/` to understand repository structure.
+- Read codebase context from `docs/repo/codebase/current/` to understand repository structure.
 - Read Layer 1 governance at `GOVERNANCE_RUNTIME_ROOT` for metadata requirements.
 - Read Layer 2 platform constitution at `PLATFORM_RUNTIME_ROOT` for platform contract.
 
@@ -104,6 +104,9 @@ Content Guidelines
 - Record explicit assumptions where information is missing
 - Capture lessons learned explicitly
 - Note any audit/compliance sensitivity
+- Verify API and SDK usage against the actual installed library version
+  by reading the source code or documentation in the virtual environment.
+  Do not rely on training data for library APIs -- they may have changed.
 
 Output Instructions
 

@@ -171,13 +171,17 @@ and changes.
 
 ## Documentation Structure
 
-Codebase documentation is organized under `docs/repo/codebase/`:
+Codebase documentation follows a staging pattern under `docs/repo/codebase/`:
 
-- `00_standards/` - Documentation standards and rules
-- `01_inventory/` - Codebase inventory
-- `02_modules/` - Module-level documentation
-- `03_components/` - Component-level documentation
-- `04_changes/` - Change impact documentation
+- `current/` -- Published stable version (active docs)
+  - `00_standards/` - Documentation standards and rules
+  - `01_inventory/` - Codebase inventory
+  - `02_modules/` - Module-level documentation
+  - `03_components/` - Component-level documentation
+  - `04_changes/` - Change impact documentation
+- `runs/<job_id>/` -- Staging area for in-progress sync operations
+- `history/<job_id>/` -- Archived previous versions
+- `backups/` -- Pre-sync safety snapshots
 
 ## Documentation Rules
 
@@ -311,7 +315,7 @@ def main(argv: list[str] | None = None) -> int:
         return 1
     
     # Define codebase documentation paths
-    codebase_root = project_root / "docs" / "repo" / "codebase"
+    codebase_root = project_root / "docs" / "repo" / "codebase" / "current"
     standards_dir = codebase_root / "00_standards"
     inventory_dir = codebase_root / "01_inventory"
     modules_dir = codebase_root / "02_modules"

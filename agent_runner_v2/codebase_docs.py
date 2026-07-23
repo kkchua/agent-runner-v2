@@ -17,6 +17,7 @@ from typing import Any
 from .runtime_context import get_context, get_workflow_module
 from .bundle_loader import load_project_config
 from .doc_paths import codebase_doc_rel
+from .doc_text import sanitize_ascii
 
 
 EXCLUDED_DIRS = {
@@ -37,6 +38,7 @@ EXCLUDED_DIRS = {
     "venv",
     "env",
     "agent_runner_v2.egg-info",
+    "masterplan",
 }
 
 STD_LIBS = set(getattr(sys, "stdlib_module_names", set()))
@@ -412,7 +414,7 @@ def _extract_raises(docstring: str) -> list[dict[str, str]]:
             # Check if this is a new exception line
             # Look for patterns: "ExceptionName - desc", "ExceptionName: desc", "ExceptionName — desc"
             is_exception_line = False
-            for sep in [" - ", " — ", ":"]:
+            for sep in [" - ", " -- ", " — ", ":"]:
                 if sep in stripped:
                     # Check if the part before separator looks like an exception name
                     parts = stripped.split(sep, 1)
@@ -690,7 +692,11 @@ def render_inventory(snapshot: dict[str, Any], *, title: str) -> str:
         _frontmatter([
             f'title: "Codebase Inventory - {title}"',
             'template_id: "CODEBASE-INV-v1"',
-            'status: "active"',
+            'version: "1.0.0"',
+            'doc_type: "system"',
+            'authority: "workflow-generated"',
+            'scan_policy: "include"',
+            'lifecycle_status: "approved"',
             f'generated: "{generated_at}"',
             f'workflow: "{workflow_name}"',
             f'step: "{step}"',
@@ -784,7 +790,7 @@ def render_inventory(snapshot: dict[str, Any], *, title: str) -> str:
         ["Date", "Verified By", "Scope", "Result"],
         [[generated_at[:10], workflow_name, "repository scan", "complete"]],
     ))
-    return "".join(sections)
+    return sanitize_ascii("".join(sections))
 
 
 def render_module_doc(snapshot: dict[str, Any], module_record: dict[str, Any]) -> str:
@@ -795,7 +801,11 @@ def render_module_doc(snapshot: dict[str, Any], module_record: dict[str, Any]) -
     frontmatter = _frontmatter([
         f'title: "Module Documentation: {module_name}"',
         'template_id: "CB-02"',
-        'status: "active"',
+        'version: "1.0.0"',
+        'doc_type: "system"',
+        'authority: "workflow-generated"',
+        'scan_policy: "include"',
+        'lifecycle_status: "approved"',
         f'module_path: "{rel_path}"',
         f'module_area: "{module_record["module_area"]}"',
         f'documentation_mode: "{module_record["doc_mode"]}"',
@@ -809,7 +819,7 @@ def render_module_doc(snapshot: dict[str, Any], module_record: dict[str, Any]) -
         f"# Module Documentation: {module_name}\n\n",
         "## 1. Module Overview\n\n",
         "### 1.1 Purpose\n\n",
-        (module_record["module_doc"].splitlines()[0] if module_record["module_doc"] else "Auto-generated baseline documentation from repository scan.") + "\n\n",
+        (sanitize_ascii(module_record["module_doc"].splitlines()[0]) if module_record["module_doc"] else "Auto-generated baseline documentation from repository scan.") + "\n\n",
         "### 1.2 Responsibility\n\n",
         f"This module belongs to the `{module_record['module_area']}` area and is documented as `{module_record['doc_mode']}`.\n\n",
         "### 1.3 Dependencies\n\n",
@@ -833,14 +843,14 @@ def render_module_doc(snapshot: dict[str, Any], module_record: dict[str, Any]) -
                 lines.append(f"**Inherits from**: {', '.join(f'`{b}`' for b in cls['bases'])}\n\n")
             if cls.get('decorators'):
                 lines.append(f"**Decorators**: {', '.join(f'`@{d}`' for d in cls['decorators'])}\n\n")
-            lines.append(f"**Purpose**: {cls.get('summary') or 'Public class'}\n\n")
+            lines.append(f"**Purpose**: {sanitize_ascii(cls.get('summary') or 'Public class')}\n\n")
             if cls.get('methods'):
                 lines.append("**Methods**:\n\n")
                 for method in cls['methods']:
                     sig = method.get('signature', '()')
                     ret = method.get('return_type', '')
-                    ret_str = f" → `{ret}`" if ret else ""
-                    lines.append(f"- `{method['name']}{sig}`{ret_str} — {method.get('summary') or 'method'}\n")
+                    ret_str = f" -> `{ret}`" if ret else ""
+                    lines.append(f"- `{method['name']}{sig}`{ret_str} -- {sanitize_ascii(method.get('summary') or 'method')}\n")
                 lines.append("\n")
     else:
         lines.append("No public classes.\n\n")
@@ -861,7 +871,7 @@ def render_module_doc(snapshot: dict[str, Any], module_record: dict[str, Any]) -
 
             # Summary/Purpose
             if fn.get('summary'):
-                lines.append(f"**Purpose**: {fn['summary']}\n\n")
+                lines.append(f"**Purpose**: {sanitize_ascii(fn['summary'])}\n\n")
 
             # Full docstring (if different from summary)
             docstring = fn.get('docstring', '')
@@ -874,7 +884,7 @@ def render_module_doc(snapshot: dict[str, Any], module_record: dict[str, Any]) -
                     desc_lines.append(line)
                 desc = '\n'.join(desc_lines).strip()
                 if desc and desc != fn.get('summary', ''):
-                    lines.append(f"**Description**:\n\n{desc}\n\n")
+                    lines.append(f"**Description**:\n\n{sanitize_ascii(desc)}\n\n")
 
             # Parameters table
             params = fn.get('parameters', [])
@@ -886,8 +896,8 @@ def render_module_doc(snapshot: dict[str, Any], module_record: dict[str, Any]) -
                     ptype = param.get('type', '')
                     default = param.get('default', '')
                     kind = param.get('kind', '')
-                    type_str = f"`{ptype}`" if ptype else "—"
-                    default_str = f"`{default}`" if default else "—"
+                    type_str = f"`{ptype}`" if ptype else "--"
+                    default_str = f"`{default}`" if default else "--"
                     # Try to get description from docstring
                     param_desc = _extract_param_description(docstring, name)
                     lines.append(f"| `{name}` | {type_str} | {default_str} | {param_desc} |\n")
@@ -905,7 +915,7 @@ def render_module_doc(snapshot: dict[str, Any], module_record: dict[str, Any]) -
                 for exc in raises:
                     exc_name = exc.get('exception', '')
                     exc_desc = exc.get('description', '')
-                    lines.append(f"- `{exc_name}` — {exc_desc}\n")
+                    lines.append(f"- `{exc_name}` -- {exc_desc}\n")
                 lines.append("\n")
 
             lines.append("---\n\n")
@@ -961,13 +971,13 @@ def render_module_doc(snapshot: dict[str, Any], module_record: dict[str, Any]) -
     lines.append("\n## 5. Change Log\n\n")
     lines.append("| Date | Change | Verified By |\n|------|--------|-------------|\n")
     lines.append(f"| {_today_date()} | Initial baseline generated from repository scan | {workflow_name} |\n")
-    return "".join(lines)
+    return sanitize_ascii("".join(lines))
 
 
 def _extract_param_description(docstring: str, param_name: str) -> str:
     """Extract parameter description from docstring Args/Parameters section."""
     if not docstring:
-        return "—"
+        return "--"
 
     lines = docstring.splitlines()
     in_args = False
@@ -993,12 +1003,12 @@ def _extract_param_description(docstring: str, param_name: str) -> str:
                     # Extract description
                     if ':' in stripped:
                         desc = stripped.split(':', 1)[1].strip()
-                        return desc if desc else "—"
+                        return desc if desc else "--"
             # Check for continuation lines (indented)
             if line.startswith('    ') and not stripped.startswith(param_name):
                 continue
 
-    return "—"
+    return "--"
 
 
 def render_component_doc(snapshot: dict[str, Any], *, component_name: str, rows: list[dict[str, str]], overview: str) -> str:
@@ -1007,7 +1017,11 @@ def render_component_doc(snapshot: dict[str, Any], *, component_name: str, rows:
     frontmatter = _frontmatter([
         f'title: "Component Documentation: {component_name}"',
         'template_id: "CB-03"',
-        'status: "active"',
+        'version: "1.0.0"',
+        'doc_type: "system"',
+        'authority: "workflow-generated"',
+        'scan_policy: "include"',
+        'lifecycle_status: "approved"',
         f'component_id: "{_slugify(component_name)}"',
         f'created: "{generated_at}"',
         f'owner: "{workflow_name}"',
@@ -1024,7 +1038,7 @@ def render_component_doc(snapshot: dict[str, Any], *, component_name: str, rows:
     out.append("| | | | |\n")
     out.append("\n## 5. Constraints\n\n| Constraint | Rationale | Enforcement |\n|------------|-----------|-------------|\n| Zero mutation of source code | Documentation bootstrap must not alter code | Workflow writes docs only |\n\n## 6. Testing\n\n### 6.1 Integration Tests\n\n| Test | Coverage |\n|------|----------|\n| | |\n\n### 6.2 Known Gaps\n\nAuto-generated baseline; extend with component-specific checks as needed.\n\n## 7. Change Log\n\n| Date | Change | Modules Affected | Verified By |\n|------|--------|-----------------|-------------|\n")
     out.append(f"| {_today_date()} | Initial baseline generated from repository scan | {len(rows)} modules/files | {workflow_name} |\n")
-    return "".join(out)
+    return sanitize_ascii("".join(out))
 
 
 def render_change_impact(snapshot: dict[str, Any], *, title: str, changed_files: list[str], docs_created: list[str], docs_updated: list[str], stale_docs: list[str]) -> str:
@@ -1034,7 +1048,11 @@ def render_change_impact(snapshot: dict[str, Any], *, title: str, changed_files:
         _frontmatter([
             f'title: "Change Impact: {title}"',
             'template_id: "CB-04"',
-            'status: "active"',
+            'version: "1.0.0"',
+            'doc_type: "system"',
+            'authority: "workflow-generated"',
+            'scan_policy: "include"',
+            'lifecycle_status: "approved"',
             f'change_id: "{snapshot["job_id"]}"',
             f'task_id: "{workflow_name}"',
             'initiative_id: "codebase-doc-bootstrap"',
@@ -1081,7 +1099,7 @@ def render_change_impact(snapshot: dict[str, Any], *, title: str, changed_files:
     lines.append("\n## 6. Documentation Debt\n\n| Item | Reason for Deferral | Owner | Due Date |\n|------|-------------------|-------|----------|\n| | | | |\n")
     lines.append("\n## 7. Verification\n\n| Check | Status | Notes |\n|-------|--------|-------|\n")
     lines.append("| All changed files listed | pass | repository scan summary |\n| All updated docs listed | pass | generated docs |\n| Stale docs identified and handled | pass | regenerated baseline |\n| Inventory updated | pass | current scan |\n")
-    return "".join(lines)
+    return sanitize_ascii("".join(lines))
 
 
 def render_validation(snapshot: dict[str, Any], *, title: str, checks: list[tuple[str, bool, str]]) -> str:
@@ -1091,7 +1109,11 @@ def render_validation(snapshot: dict[str, Any], *, title: str, checks: list[tupl
         _frontmatter([
             f'title: "Validation Record: {title}"',
             'template_id: "CB-05"',
-            'status: "active"',
+            'version: "1.0.0"',
+            'doc_type: "system"',
+            'authority: "workflow-generated"',
+            'scan_policy: "include"',
+            'lifecycle_status: "approved"',
             f'validation_id: "{snapshot["job_id"]}"',
             f'created: "{generated_at}"',
             f'author: "{workflow_name}"',
@@ -1106,4 +1128,4 @@ def render_validation(snapshot: dict[str, Any], *, title: str, checks: list[tupl
     lines.append("\n## 3. Results\n\n")
     passes = sum(1 for _, ok, _ in checks if ok)
     lines.append(f"{passes}/{len(checks)} checks passed.\n")
-    return "".join(lines)
+    return sanitize_ascii("".join(lines))

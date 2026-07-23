@@ -11,7 +11,9 @@ Layer Boundary
 Reference Inputs
 
 - Read `BACKLOG_FILE` (approved backlog document).
-- Read codebase context from `docs/repo/codebase/` to understand repository structure.
+- Focus on work item `WORK_ITEM` from the backlog. Look up its full
+  description, constraints, acceptance criteria, and dependencies.
+- Read codebase context from `docs/repo/codebase/current/` to understand repository structure.
 - Read Layer 1 governance at `GOVERNANCE_RUNTIME_ROOT` for metadata requirements.
 - Read Layer 2 platform constitution at `PLATFORM_RUNTIME_ROOT` for platform contract.
 
@@ -22,7 +24,7 @@ The TASK document must include:
 1. YAML Frontmatter (REQUIRED):
    - `template_id: "SYS-03-TK"`
    - `version: "1.0.0"`
-   - `doc_type: "system"`
+   - `doc_type: "workflow_output"`
    - `authority: "workflow-generated"`
    - `scan_policy: "include"`
    - `scan_reason: "task specification for initiative execution"`
@@ -41,6 +43,7 @@ The TASK document must include:
    - `Files and Components` - Files and components affected
    - `Dependencies` - Dependencies on other tasks or external resources
    - `Risk Factors` - Task-specific risks and mitigations
+   - `Test Scope` - What must be tested, test cases, expected outcomes, pass/fail criteria
    - `Open Questions` - Unresolved items that need clarification
 
 3. Content Guidelines:
@@ -49,6 +52,9 @@ The TASK document must include:
    - Record explicit assumptions where information is missing
    - Identify specific codebase files and components affected
    - Note any audit/compliance sensitivity
+   - Verify API and SDK usage against the actual installed library version
+     by reading the source code or documentation in the virtual environment.
+     Do not rely on training data for library APIs -- they may have changed.
 
 Output Instructions
 

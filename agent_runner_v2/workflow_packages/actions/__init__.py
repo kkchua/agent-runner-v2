@@ -48,13 +48,10 @@ def action(name: str | None = None) -> Callable[[ActionFn], ActionFn]:
     def decorator(fn: ActionFn) -> ActionFn:
         action_name = name if name is not None else fn.__name__
         if action_name in REGISTERED_ACTIONS:
-            import logging  # noqa: PLC0415
-            logging.getLogger(__name__).warning(
-                "Action '%s' is being re-registered (was previously defined "
-                "in %s). The new definition wins.",
-                action_name,
-                REGISTERED_ACTIONS[action_name],
-            )
+            # First registration wins — silently skip duplicates from
+            # secondary loads (e.g. repo-local workflows/ when the same
+            # action already exists from the global bootstrap root).
+            return fn
         REGISTERED_ACTIONS[action_name] = fn
         return fn
     return decorator

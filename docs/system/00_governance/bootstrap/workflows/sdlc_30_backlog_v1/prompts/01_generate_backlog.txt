@@ -11,7 +11,7 @@ Layer Boundary
 Reference Inputs
 
 - Read `PLAN_FILE` (approved plan document).
-- Read codebase context from `docs/repo/codebase/` to understand repository structure.
+- Read codebase context from `docs/repo/codebase/current/` to understand repository structure.
 - Read Layer 1 governance at `GOVERNANCE_RUNTIME_ROOT` for metadata requirements.
 - Read Layer 2 platform constitution at `PLATFORM_RUNTIME_ROOT` for platform contract.
 
@@ -22,7 +22,7 @@ The BACKLOG document must include:
 1. YAML Frontmatter (REQUIRED):
    - `template_id: "SYS-03-BL"`
    - `version: "1.0.0"`
-   - `doc_type: "system"`
+   - `doc_type: "workflow_output"`
    - `authority: "workflow-generated"`
    - `scan_policy: "include"`
    - `scan_reason: "backlog for initiative execution"`
@@ -48,6 +48,17 @@ The BACKLOG document must include:
    - Record explicit assumptions where information is missing
    - Identify codebase areas likely affected by each work item
    - Note any audit/compliance sensitivity
+   - Work item IDs MUST be globally unique using the format:
+     `WI-{BACKLOG_STEM}-{running_number}`
+     where {BACKLOG_STEM} is the backlog filename without the BACKLOG-
+     prefix and .md extension, and {running_number} is a two-digit
+     sequence starting from 01.
+     Example: WI-20260723-001_console-sdlc10-support-01
+     Use this exact ID format in all section headings, dependency
+     tables, and cross-references within the document.
+   - Verify API and SDK usage against the actual installed library version
+     by reading the source code or documentation in the virtual environment.
+     Do not rely on training data for library APIs -- they may have changed.
 
 Output Instructions
 

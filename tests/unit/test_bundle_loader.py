@@ -417,11 +417,12 @@ def test_ensure_delivery_folders_omits_master_prompts_and_adds_codebase_docs(tmp
     run_agent_module._ensure_delivery_folders(target_root)
 
     assert not (target_root / "docs" / "delivery" / "07_master_prompts").exists()
-    assert (target_root / "docs" / "repo" / "codebase" / "00_standards").exists()
-    assert (target_root / "docs" / "repo" / "codebase" / "04_changes").exists()
+    assert (target_root / "docs" / "repo" / "codebase" / "current" / "00_standards").exists()
     assert (target_root / "docs" / "system" / "00_governance").exists()
-    assert (target_root / "docs" / "engineering").exists()
-    assert (target_root / "docs" / "operations").exists()
+    # Legacy paths are no longer auto-created
+    assert not (target_root / "docs" / "repo" / "codebase" / "04_changes").exists()
+    assert not (target_root / "docs" / "engineering").exists()
+    assert not (target_root / "docs" / "operations").exists()
 
 
 def test_layer1_governance_bootstrap_workflow_definition_exists():
@@ -474,8 +475,19 @@ def test_layer1_governance_bootstrap_workflow_definition_exists():
 def test_bootstrap_root_contains_only_active_workflow_and_registry():
     names = {path.name for path in bundle_loader.BOOTSTRAP_ROOT.iterdir()}
     assert names == {
-        "01_governance_foundation_v1",
         "00_bootstrap_lifecycle_admin_v1",
+        "01_governance_foundation_v1",
         "02_agent_runner_platform_v1",
+        "sdlc_00_codebase_v1",
+        "sdlc_00_delivery_scaffold_v1",
+        "sdlc_00_init_doc_v1",
+        "sdlc_10_requirement_v1",
+        "sdlc_20_planning_v1",
+        "sdlc_30_backlog_v1",
+        "sdlc_40_task_v1",
+        "sdlc_50_implementation_v1",
+        "sdlc_60_execution_v1",
+        "sdlc_70_validation_v1",
+        "sdlc_80_review_v1",
         "_registry",
     }

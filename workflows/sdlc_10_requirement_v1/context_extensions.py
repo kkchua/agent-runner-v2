@@ -11,7 +11,7 @@ import re
 from pathlib import Path
 from typing import Any
 
-from agent_runner_v2.constants import SDLC_DELIVERY_BASE
+from agent_runner_v2.constants import SDLC_DELIVERY_BASE, resolve_next_seq
 from agent_runner_v2.runtime_context import get_runner_home, get_workspace_root
 from agent_runner_v2.workflow_packages.extensions_base import WorkflowExtensions
 
@@ -53,7 +53,12 @@ class Sdlc10RequirementExtensions(WorkflowExtensions):
             # Requirements document (output)
             "REQ_FILE": (
                 f"{SDLC_DELIVERY_BASE}/10_requirements/"
-                f"REQ-{date_str}-001_{{slug}}.md"
+                f"REQ-{date_str}-{{seq}}_{{slug}}.md"
+            ),
+            # Critique document (evidence artifact)
+            "CRITIQUE_FILE_SUGGESTED": (
+                f"{SDLC_DELIVERY_BASE}/80_reviews/"
+                f"{{slug}}-CRITIQUE-10-req.md"
             ),
             # Review document (evidence artifact)
             "REVIEW_FILE_SUGGESTED": (
@@ -96,12 +101,6 @@ class Sdlc10RequirementExtensions(WorkflowExtensions):
             )
             result["PLATFORM_RUNTIME_ROOT"] = str(platform_root)
 
-        # Codebase documentation root (project-local)
-        workspace_root = get_workspace_root()
-        if workspace_root:
-            codebase_root = Path(workspace_root) / "docs" / "repo" / "codebase"
-            result["CODEBASE_DOC_ROOT"] = str(codebase_root)
-
         # Resolve artifact paths to absolute
         effective_root = Path(project_root or workspace_root or Path.cwd())
         job_id = str(state.get("job_id", "unknown"))
@@ -113,6 +112,12 @@ class Sdlc10RequirementExtensions(WorkflowExtensions):
 
         for key, rel_path in self.register_artifact_keys(job_id=job_id).items():
             resolved = rel_path.replace("{slug}", slug)
+            if "{seq}" in resolved:
+                path_dir, path_file = resolved.rsplit("/", 1)
+                target_dir = effective_root / path_dir
+                prefix = path_file.split("{seq}")[0]
+                seq = resolve_next_seq(target_dir, prefix)
+                resolved = resolved.replace("{seq}", seq)
             result[key] = str(effective_root / resolved)
 
         return result

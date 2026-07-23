@@ -25,6 +25,7 @@ from .actions.copy_artifact import copy_artifact
 from .actions.promote_artifact import promote_artifact
 from .actions.promote_init import promote_init
 from .actions.scan_repo_codebase import scan_repo_codebase
+from .actions.sdlc_shared_actions import create_backup, generate_sync_log, commit_changes
 from .actions.sync_codebase_docs import sync_codebase_docs
 from .actions.sync_system_docs import sync_system_docs
 from .actions.validate_codebase_docs import validate_codebase_docs
@@ -42,6 +43,9 @@ ACTION_REGISTRY: dict[str, Callable] = {
     "promote_artifact": promote_artifact,
     "promote_init": promote_init,
     "scan_repo_codebase": scan_repo_codebase,
+    "create_backup": create_backup,
+    "generate_sync_log": generate_sync_log,
+    "commit_changes": commit_changes,
     "sync_codebase_docs": sync_codebase_docs,
     "sync_system_docs": sync_system_docs,
     "validate_codebase_docs": validate_codebase_docs,

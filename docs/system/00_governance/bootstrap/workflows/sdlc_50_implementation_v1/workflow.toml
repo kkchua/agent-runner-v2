@@ -23,7 +23,7 @@ prompt_targets = ["all"]
 name = "generate_implementation"
 prompt = "prompts/01_generate_implementation.txt"
 enable_notifications = true
-onsuccess = "review_implementation"
+onsuccess = "technical_critique"
 
 [step.artifacts]
 required_inputs = ["TASK_FILE"]
@@ -34,11 +34,35 @@ result_meta_key = "IMPL_FILE"
 role_policy = "architect_standard"
 
 # ============================================================================
-# Step 2: Review Implementation
+# Step 2: Technical Critique
+# ============================================================================
+[[step]]
+name = "technical_critique"
+prompt = "prompts/02_technical_critique.txt"
+enable_notifications = true
+onsuccess = "review_implementation"
+
+[step.artifacts]
+required_inputs = ["IMPL_FILE"]
+produces = ["CRITIQUE_FILE_SUGGESTED"]
+result_meta_key = "CRITIQUE_FILE_SUGGESTED"
+
+[step.coder]
+role_policy = "reviewer_standard"
+
+[step.on_reject_refine]
+step = "generate_implementation"
+artifact = "IMPL_FILE"
+max_iterations = 2
+exhausted_failure_code = "IMPL_CRITIQUE_EXHAUSTED"
+exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
+
+# ============================================================================
+# Step 3: Review Implementation
 # ============================================================================
 [[step]]
 name = "review_implementation"
-prompt = "prompts/02_review_implementation.txt"
+prompt = "prompts/03_review_implementation.txt"
 enable_notifications = true
 requires_human_approval_after = true
 onsuccess = "promote_implementation"
@@ -59,11 +83,11 @@ exhausted_failure_code = "IMPL_REFINEMENT_EXHAUSTED"
 exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
 
 # ============================================================================
-# Step 3: Refine Implementation (conditional)
+# Step 4: Refine Implementation (conditional)
 # ============================================================================
 [[step]]
 name = "refine_implementation"
-prompt = "prompts/03_refine_implementation.txt"
+prompt = "prompts/04_refine_implementation.txt"
 enable_notifications = true
 
 [step.artifacts]
@@ -79,7 +103,7 @@ loop_returns_to = "review_implementation"
 role_policy = "architect_standard"
 
 # ============================================================================
-# Step 4: Promote Implementation
+# Step 5: Promote Implementation
 # ============================================================================
 [[step]]
 name = "promote_implementation"
@@ -96,7 +120,7 @@ dest_dir = "docs/repo/agent_runner/sdlc/delivery/50_implementations"
 result_meta_key = "IMPL_FILE"
 
 # ============================================================================
-# Step 5: Step Completion
+# Step 6: Step Completion
 # ============================================================================
 [[step]]
 name = "stepCompletion"

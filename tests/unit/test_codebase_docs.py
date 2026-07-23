@@ -111,7 +111,7 @@ def test_render_inventory_uses_workflow_name_in_frontmatter(tmp_path, monkeypatc
     )
 
     rendered = codebase_docs.render_inventory(snapshot, title="Repo")
-    assert 'workflow: "00_master_docs_bootstrap_v1"' in rendered.splitlines()[:8]
+    assert 'workflow: "00_master_docs_bootstrap_v1"' in rendered.splitlines()[:12]
 
 
 def test_extract_raises_parses_docstring():

@@ -17,7 +17,7 @@ def test_prompt_literal_substitutions_include_aliased_system_docs():
     assert substitutions["docs/system/00_governance/bootstrap/README.md"] == f"{{{ARTIFACT_KEY_SYSTEM_DOCS_INDEX}}}"
     assert substitutions["docs/system/00_governance/bootstrap/DOCUMENTATION_STANDARD.md"] == f"{{{ARTIFACT_KEY_SYSTEM_DOC_STANDARD}}}"
     assert substitutions["docs/codebase/01_inventory/CODEBASE_INVENTORY.md"] == f"{{{ARTIFACT_KEY_CODEBASE_INVENTORY}}}"
-    assert substitutions["docs/repo/codebase/01_inventory/CODEBASE_INVENTORY.md"] == f"{{{ARTIFACT_KEY_CODEBASE_INVENTORY}}}"
+    assert substitutions["docs/repo/codebase/current/01_inventory/CODEBASE_INVENTORY.md"] == f"{{{ARTIFACT_KEY_CODEBASE_INVENTORY}}}"
 
 
 def test_delivery_scaffold_dirs_include_template_roots():

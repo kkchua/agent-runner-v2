@@ -6,6 +6,7 @@
 |---|---|
 | **Draft** | Written but not yet reviewed or accepted as the target design. |
 | **Confirmed** | Reviewed and accepted as the authoritative design. Ready for implementation. |
+| **Planned** | Implementation plan written, not yet built. |
 | **Implemented** | Workflow package built, synced to backend, and running. |
 
 ---
@@ -29,6 +30,7 @@
 | `02_agent_runner_platform_v1` | Layer 2 | **Implemented** | Shipped in v0.4.0 (post-release). Produces the active Layer 2 platform constitution for agent-runner-v2. |
 | `00_bootstrap_lifecycle_admin_v1` | Layer 3 | **Implemented** | Shipped in v0.4.0. Validates, publishes, inits, and syncs bootstrap workflows. |
 | `00_repo_master_docs_bootstrap_v1` | Layer 3 | **Implemented** | Legacy workflow. Generates repo-level codebase and governance docs. |
+| `sdlc_00_codebase_v1` | Layer 3 | **Planned** | Periodic codebase doc sync (maintenance workflow). Plan: [SDLC_00_CODEBASE_V1_PLAN.md](SDLC_00_CODEBASE_V1_PLAN.md). |
 
 ---
 
@@ -37,6 +39,7 @@
 | Document | Scope | Status |
 |---|---|---|
 | [WORKFLOW_EXTENSION_INTERFACE_PLAN.md](WORKFLOW_EXTENSION_INTERFACE_PLAN.md) | Workflow plugin interface (WorkflowExtensions base class + scanner) | **Draft** |
+| [SDLC_00_CODEBASE_V1_PLAN.md](SDLC_00_CODEBASE_V1_PLAN.md) | Codebase sync maintenance workflow implementation plan | **Draft** |
 
 ---
 
