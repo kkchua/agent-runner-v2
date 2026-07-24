@@ -558,8 +558,9 @@ def main(argv: list[str] | None = None) -> int:
                 return
 
             # Find the repo and workflow for this run's workflow_name
+            # Only consider repos belonging to the selected worker
             found = False
-            for repo in console_config.repos:
+            for repo in repos_for_worker(selected_worker_id()):
                 for wf in repo.workflows:
                     if wf.workflow_name == selected_run.workflow_name:
                         # Update the dropdowns
