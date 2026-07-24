@@ -237,6 +237,6 @@ def _is_cross_os(os_type: str) -> bool:
     """Return True when *os_type* indicates a different OS from the console."""
     if not os_type:
         return False
+    repo_is_windows = os_type.lower() == "windows"
     console_is_windows = sys.platform == "win32"
-    repo_is_linux = os_type.lower() in ("linux", "wsl")
-    return repo_is_linux != console_is_windows
+    return repo_is_windows != console_is_windows
