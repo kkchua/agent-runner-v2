@@ -645,14 +645,18 @@ def main(argv: list[str] | None = None) -> int:
 
         async def _auto_refresh_loop() -> None:
             """Periodically refresh active runs every 5 seconds while enabled."""
+            _log.info("[console] auto-refresh loop started")
             while auto_refresh_cb.value:
                 await asyncio.sleep(5)
                 if not auto_refresh_cb.value:
                     break
                 try:
+                    _log.info("[console] auto-refresh tick")
                     refresh_active_runs()
+                    page.update()
                 except Exception:
                     _log.exception("[console] auto-refresh error")
+            _log.info("[console] auto-refresh loop stopped")
 
         def _on_auto_refresh_changed(e) -> None:
             """Start the auto-refresh loop when the checkbox is enabled."""
