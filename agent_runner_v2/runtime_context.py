@@ -104,12 +104,43 @@ def get_workspace_root() -> Path:
     return _CTX.workspace_root
 
 
+def get_repo_root() -> Path:
+    """Return the agent-runner-v2 repo root from config, or workspace_root.
+
+    Reads ``repo_root`` from ``~/.ukbe-runner/config.json``.  When
+    ``engine_version`` is ``"SNAPSHOT"`` this tells the system where
+    the repo lives so it can find ``workflows/`` and other repo-local
+    resources when running from an arbitrary working directory.
+
+    Falls back to :func:`get_workspace_root` when no ``repo_root`` is
+    configured or the path does not exist.
+    """
+    from .config_loader import load_runner_config
+    cfg = load_runner_config()
+    repo_root_str = str(cfg.get("repo_root") or "").strip()
+    if repo_root_str:
+        candidate = Path(repo_root_str).resolve()
+        if candidate.is_dir():
+            return candidate
+    return get_workspace_root()
+
+
 def get_runner_home() -> Path:
     return _CTX.runner_home
 
 
 def get_jobs_root() -> Path:
     return _CTX.runner_home / "jobs"
+
+
+def get_governance_runtime_root() -> Path:
+    """Return the Layer 1 governance runtime root (global bundle path)."""
+    return _CTX.runner_home / "bundles" / "core" / "current" / "foundation"
+
+
+def get_platform_runtime_root() -> Path:
+    """Return the Layer 2 platform runtime root (global bundle path)."""
+    return _CTX.runner_home / "bundles" / "core" / "current" / "platform"
 
 
 def get_workflow_root() -> Path:

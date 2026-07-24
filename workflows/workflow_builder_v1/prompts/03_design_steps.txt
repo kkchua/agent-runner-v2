@@ -1,0 +1,63 @@
+Objective
+
+Design the step sequence for the new workflow package based on the
+requirements and artifact contract.
+
+Reference Inputs
+
+- Read {WORKFLOW_REQUIREMENTS} for the structured requirements.
+- Read {ARTIFACT_CONTRACT} for the defined artifact keys and paths.
+- Read {ROLE_POLICIES} for available role policies that can be assigned to
+  each step.
+- Read {WORKFLOW_CREATION_GUIDE} Part C.1 for workflow.toml step syntax and
+  routing options.
+
+Step Design Tasks
+
+1. Define each step in execution order:
+   - Step name (lowercase_with_underscores)
+   - Step type: prompt-driven (has a prompt file) or action (runs a function)
+   - For prompt steps: the prompt file path (prompts/NN_name.txt)
+   - For action steps: the action function name
+2. Define routing for each step:
+   - onsuccess: the next step name, or stepCompletion for the final step
+   - on_reject_refine: optional refinement step for review steps
+   - loop_returns_to: for refine steps, the step to return to after fix
+3. Assign a role_policy to each prompt-driven step:
+   - architect_standard for generation and design steps
+   - reviewer_standard for review steps
+4. Define artifact bindings per step:
+   - required_inputs: list of artifact keys the step reads
+   - produces: list of artifact keys the step writes
+   - result_meta_key: the primary output key for meta.json
+5. Include a stepCompletion terminal step as the final step.
+6. Set init_step to the first step in the sequence.
+7. Mark review steps with requires_human_approval_after if the workflow
+  requires human gate.
+
+Output Instructions
+
+- Write the step architecture document to {STEP_ARCHITECTURE}.
+- Output must be ASCII-only.
+- Include YAML frontmatter with at minimum:
+  - doc_type: "step_architecture"
+  - lifecycle_status: "draft"
+  - effective_version: "{job_id}"
+- Include these sections:
+  1. Step Sequence: numbered list of steps in execution order with type and
+     role policy.
+  2. Step Details: for each step, a subsection with name, type, prompt/action
+     reference, artifact bindings, and routing rules.
+  3. Routing Diagram: ASCII diagram showing the step flow including
+     conditional branches (reject to refine, refine back to review).
+  4. Terminal Steps: list the stepCompletion step and any failure routing.
+  5. Configuration Summary: init_step value, default_max_rejects, and any
+     enable_notifications flags.
+- Step names must be lowercase_with_underscores.
+- Every step must have a clear onsuccess target.
+
+Forbidden Content
+
+- workflow.toml syntax (handled by generate_package step)
+- Prompt file content (handled by generate_package step)
+- Non-ASCII characters

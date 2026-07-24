@@ -53,6 +53,10 @@ def _resolve_engine_pythonpath(cfg: dict, log) -> str | None:
 
     version = (cfg.get('engine_version') or '').strip()
     if not version or version == 'SNAPSHOT':
+        repo_root = str(cfg.get('repo_root') or '').strip()
+        if repo_root:
+            log('info', 'engine_mode', message=f'engine version={version!r} using repo_root from config: {repo_root}')
+            return repo_root
         log('info', 'engine_mode', message=f'engine version={version!r} using ambient PYTHONPATH')
         return None
 

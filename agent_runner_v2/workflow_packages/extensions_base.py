@@ -93,3 +93,47 @@ class WorkflowExtensions:
         happen once per environment.
         """
         pass
+
+    # ------------------------------------------------------------------
+    # Installation and sync
+    # ------------------------------------------------------------------
+
+    def install_to_global(
+        self,
+        *,
+        workspace_root: Path,
+        runner_home: Path,
+    ) -> dict[str, Any]:
+        """Install workflow files to the global runner home.
+
+        Called by ``ukbe-run-agent init`` and ``ukbe-run-agent install``
+        to copy workflow-specific artifacts (templates, contracts,
+        governance docs) to the global runner home directory.
+
+        Returns:
+            Dict with at least a ``"status"`` key:
+            ``"INSTALLED"`` if files were copied,
+            ``"SKIPPED"`` if prerequisites are missing,
+            ``"NO_OP"`` if this workflow has nothing to install.
+        """
+        return {"status": "NO_OP"}
+
+    def sync_to_backend(
+        self,
+        *,
+        workspace_root: Path,
+    ) -> dict[str, Any]:
+        """Sync workflow definition to the backend registry.
+
+        Called by ``ukbe-run-agent sync-workflows`` and
+        ``ukbe-run-agent install`` to register the workflow's step
+        definitions, artifact types, and routing rules with the
+        backend database.
+
+        Returns:
+            Dict with at least a ``"status"`` key:
+            ``"SYNCED"`` if the definition was posted,
+            ``"SKIPPED"`` if no backend is configured,
+            ``"NO_OP"`` if this workflow does not sync.
+        """
+        return {"status": "NO_OP"}

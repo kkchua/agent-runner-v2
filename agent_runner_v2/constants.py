@@ -1193,3 +1193,37 @@ def resolve_next_seq(directory: Path, prefix: str) -> str:
                         max_seq = max(max_seq, int(num_str))
                     break
     return str(max_seq + 1).zfill(3)
+
+
+# ============================================================================
+# SDLC Slug Extraction
+# ============================================================================
+
+def extract_slug_from_path(file_path: str) -> str:
+    """Extract the slug from an SDLC artifact filename.
+
+    Pattern: ``{TYPE}-{date}-{seq}_{slug}.md`` → returns ``{slug}``.
+    Falls back to ``"unknown"`` if the pattern does not match.
+
+    Examples::
+
+        extract_slug_from_path(".../INIT-20260722-001_console-sdlc10-support.md")
+        → "console-sdlc10-support"
+
+        extract_slug_from_path("")
+        → "unknown"
+
+    Parameters:
+        file_path: Path or filename string to extract the slug from.
+
+    Returns:
+        The slug substring after the last ``_``, or ``"unknown"``.
+    """
+    import re
+    if not file_path:
+        return "unknown"
+    filename = Path(file_path).stem
+    match = re.search(r"_(.+)$", filename)
+    if match:
+        return match.group(1)
+    return "unknown"
