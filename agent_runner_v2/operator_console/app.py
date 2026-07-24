@@ -575,14 +575,16 @@ def main(argv: list[str] | None = None) -> int:
                     display_options = []
                     for run in active_runs:
                         repo_name = "-"
-                        for repo in console_config.repos:
+                        workflow_display = run.workflow_name
+                        for repo in repos_for_worker(run.worker_id or selected_worker_id()):
                             for wf in repo.workflows:
                                 if wf.workflow_name == run.workflow_name:
                                     repo_name = repo.name
+                                    workflow_display = wf.name
                                     break
                             if repo_name != "-":
                                 break
-                        display_text = f"[{run.worker_id or '-'}] [{repo_name}] [{run.workflow_name}] {run.run_code or run.run_id} | {run.status} | {run.current_step or '-'}"
+                        display_text = f"[{run.worker_id or '-'}] [{repo_name}] [{workflow_display}] {run.run_code or run.run_id} | {run.status} | {run.current_step or '-'}"
                         display_options.append(ft.dropdown.Option(key=run.run_id, text=display_text))
                     active_runs_dd.options = display_options
                     active_runs_dd.value = active_runs[0].run_id
