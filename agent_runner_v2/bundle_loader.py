@@ -302,6 +302,23 @@ def publish_bootstrap_bundle(
     _replace_tree(source_root, package_root)
     _cleanup_packaged_bootstrap(package_root)
 
+    # Copy L1 foundation docs into the packaged bootstrap so pip-installed
+    # users get governance docs without needing the repo checkout.
+    foundation_src = (workspace_root / FOUNDATION_CURRENT_ROOT_REL).resolve()
+    if foundation_src.is_dir() and _tree_has_files(foundation_src):
+        foundation_dest = package_root / "foundation"
+        if foundation_dest.exists():
+            shutil.rmtree(foundation_dest)
+        shutil.copytree(str(foundation_src), str(foundation_dest))
+
+    # Copy L2 platform docs into the packaged bootstrap.
+    platform_src = (workspace_root / PLATFORM_CURRENT_ROOT_REL).resolve()
+    if platform_src.is_dir():
+        platform_dest = package_root / "platform"
+        if platform_dest.exists():
+            shutil.rmtree(platform_dest)
+        shutil.copytree(str(platform_src), str(platform_dest))
+
     # 2. Rebuild bootstrap workflows/default/ from repo-root workflows/
     bootstrap_wf_root = BOOTSTRAP_ROOT
     _reset_tree(bootstrap_wf_root)
@@ -349,19 +366,15 @@ def install_bootstrap_bundle(
     workspace_root = workspace_root.resolve()
     runner_home = (runner_home or GLOBAL_RUNNER_HOME).resolve()
     source_root = (workspace_root / FOUNDATION_CURRENT_ROOT_REL).resolve()
-    if not source_root.is_dir():
+    packaged_source = PACKAGE_BOOTSTRAP_ROOT / "foundation"
+    if not source_root.is_dir() or not _tree_has_files(source_root):
+        source_root = packaged_source
+    if not source_root.is_dir() or not _tree_has_files(source_root):
         return {
             "workspace_root": str(workspace_root),
             "source_root": str(source_root),
             "skipped": True,
             "reason": "Layer 1 foundation docs not found — run the Layer 1 governance workflow to generate them.",
-        }
-    if not _tree_has_files(source_root):
-        return {
-            "workspace_root": str(workspace_root),
-            "source_root": str(source_root),
-            "skipped": True,
-            "reason": "Layer 1 foundation folder is empty — run the Layer 1 governance workflow to generate them.",
         }
     current_root = runner_home / "bundles" / CORE_BUNDLE_NAME / "current"
     foundation_root = current_root / "foundation"
@@ -401,13 +414,17 @@ def install_platform_bundle(
     bundle_root = runner_home / "bundles" / CORE_BUNDLE_NAME / "current" / "platform"
 
     if not platform_root.is_dir():
-        return {
-            "workspace_root": str(workspace_root),
-            "platform_root": str(platform_root),
-            "installed": [],
-            "skipped": True,
-            "reason": "Layer 2 platform folder not found — run the Layer 2 workflow first.",
-        }
+        packaged_platform = PACKAGE_BOOTSTRAP_ROOT / "platform"
+        if packaged_platform.is_dir():
+            platform_root = packaged_platform
+        else:
+            return {
+                "workspace_root": str(workspace_root),
+                "platform_root": str(platform_root),
+                "installed": [],
+                "skipped": True,
+                "reason": "Layer 2 platform folder not found — run the Layer 2 workflow first.",
+            }
 
     installed = []
     for platform_dir in sorted(platform_root.iterdir()):

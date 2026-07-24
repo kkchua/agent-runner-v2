@@ -1,0 +1,33 @@
+{
+  "schema_version": "v2",
+  "coder_result": {
+    "status": "APPROVED",
+    "remark": "Reviewed the staged Layer 2 platform core constitution set (6 permanent docs + context inventory). All documents pass: correct metadata, no Layer 1 redefinition, no Layer 3 drift, all required sections present, function signatures cross-verified against source, ASCII-only confirmed, lifecycle states appropriate.",
+    "artifacts": {
+      "REVIEW_FILE_SUGGESTED": "D:\\MyProjectSpace\\01_Workflows\\agent-runner-v2\\docs\\system\\00_governance\\platform\\runs\\02PC-20260721-b092c705\\02PC-20260721-b092c705-platform-core-review.md"
+    },
+    "recorded_at": "2026-07-21T17:46:56+08:00",
+    "usage": {
+      "input_tokens": 75000,
+      "output_tokens": 8000,
+      "total_tokens": 83000
+    }
+  },
+  "runner_data": {
+    "step": "review_platform_core_docs",
+    "coder_used": "opencode",
+    "invoked_at": "2026-07-21T17:46:56",
+    "finished_at": "2026-07-21T17:52:08",
+    "prompt_checksum": "sha256:c95c72e8f7459b2ccac5bfd701c2c32dadfd4fdcbaa3cbc04a764a949353bf1c",
+    "allowed_write_paths": [
+      "D:/MyProjectSpace/01_Workflows/agent-runner-v2/docs/system/00_governance/platform/runs/02PC-20260721-b092c705/02PC-20260721-b092c705-platform-core-review.md",
+      "D:/MyProjectSpace/01_Workflows/agent-runner-v2/docs/system/00_governance/platform/runs/02PC-20260721-b092c705/02PC-20260721-b092c705-platform-core-review.meta.json"
+    ],
+    "changed_paths": [
+      "D:/MyProjectSpace/01_Workflows/agent-runner-v2/docs/system/00_governance/platform/runs/02PC-20260721-b092c705/02PC-20260721-b092c705-platform-core-review.md",
+      "D:/MyProjectSpace/01_Workflows/agent-runner-v2/docs/system/00_governance/platform/runs/02PC-20260721-b092c705/02PC-20260721-b092c705-platform-core-review.meta.json"
+    ],
+    "enriched_at": "2026-07-21T17:52:08",
+    "runner_version": "v2"
+  }
+}

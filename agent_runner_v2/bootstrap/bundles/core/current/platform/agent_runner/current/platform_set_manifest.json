@@ -1,0 +1,24 @@
+{
+  "workflow_id": "02_agent_runner_platform_v1",
+  "workflow_layer": "layer2",
+  "platform": "agent-runner-v2",
+  "change_or_run_id": "02AR-20260721-2eaba4b3",
+  "change_class": "governance_change",
+  "artifact_inventory": {
+    "L2_PLATFORM_INDEX": "docs/system/00_governance/platform/agent_runner/current/README.md",
+    "L2_RUNTIME_MODEL": "docs/system/00_governance/platform/agent_runner/current/RUNTIME_MODEL.md",
+    "L2_BUNDLE_AUTHORING_CONTRACT": "docs/system/00_governance/platform/agent_runner/current/BUNDLE_AUTHORING_CONTRACT.md",
+    "L2_SHARED_SERVICES": "docs/system/00_governance/platform/agent_runner/current/SHARED_SERVICES.md",
+    "L2_METADATA_CONTRACT": "docs/system/00_governance/platform/agent_runner/current/METADATA_CONTRACT.md",
+    "L2_VALIDATION_CONTRACT": "docs/system/00_governance/platform/agent_runner/current/VALIDATION_CONTRACT.md"
+  },
+  "artifact_permanence_class": "permanent",
+  "authority": "platform-owned",
+  "lifecycle_status": "published",
+  "source_step": "publish_platform_core_set",
+  "published_timestamp": "2026-07-22T00:36:09+08:00",
+  "effective_version": "02AR-20260721-2eaba4b3",
+  "active_set": true,
+  "supersedes": "02PC-20260721-b092c705",
+  "superseded_by": null
+}
