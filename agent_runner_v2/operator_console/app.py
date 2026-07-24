@@ -634,8 +634,8 @@ def main(argv: list[str] | None = None) -> int:
                         break
                 if found:
                     break
-            if found:
-                page.update()
+            # No page.update() here — callers (refresh_active_runs, on_change event)
+            # handle the update after all dropdown changes are applied.
 
         # ==================================================================
         # Auto-refresh
