@@ -350,15 +350,19 @@ def install_bootstrap_bundle(
     runner_home = (runner_home or GLOBAL_RUNNER_HOME).resolve()
     source_root = (workspace_root / FOUNDATION_CURRENT_ROOT_REL).resolve()
     if not source_root.is_dir():
-        raise FileNotFoundError(
-            f"Required foundation current folder is missing: {source_root}. "
-            "Run the Layer 1 governance workflow and publish the set first."
-        )
+        return {
+            "workspace_root": str(workspace_root),
+            "source_root": str(source_root),
+            "skipped": True,
+            "reason": "Layer 1 foundation docs not found — run the Layer 1 governance workflow to generate them.",
+        }
     if not _tree_has_files(source_root):
-        raise FileNotFoundError(
-            f"Foundation current folder is empty: {source_root}. "
-            "Run the Layer 1 governance workflow and publish the set first."
-        )
+        return {
+            "workspace_root": str(workspace_root),
+            "source_root": str(source_root),
+            "skipped": True,
+            "reason": "Layer 1 foundation folder is empty — run the Layer 1 governance workflow to generate them.",
+        }
     current_root = runner_home / "bundles" / CORE_BUNDLE_NAME / "current"
     foundation_root = current_root / "foundation"
     if current_root.exists():
@@ -594,10 +598,9 @@ def seed_workflow_packages(
     """
     repo_packages_dir = (source_root or published_workflows_root(workspace_root)).resolve()
     if not repo_packages_dir.is_dir():
-        raise FileNotFoundError(
-            f"Required published workflow snapshot folder is missing: {repo_packages_dir}. "
-            "Run bootstrap-publish from the repo root first."
-        )
+        repo_packages_dir = BOOTSTRAP_ROOT
+    if not repo_packages_dir.is_dir():
+        return []
     _ensure_repo_workflow_bundles_valid(repo_packages_dir)
 
     # Plugin packages live inside the active workflow bundle directory,
