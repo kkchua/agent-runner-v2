@@ -563,8 +563,16 @@ def main(argv: list[str] | None = None) -> int:
         # Active runs
         # ==================================================================
 
-        def refresh_active_runs(_event=None) -> None:
-            """Fetch active runs from the backend and populate the dropdown."""
+        def refresh_active_runs(_event=None, *, auto_populate: bool = True) -> None:
+            """Fetch active runs from the backend and populate the dropdown.
+
+            Parameters
+            ----------
+            auto_populate :
+                When True (default), also sync repo/workflow dropdowns to the
+                selected run.  Set to False from the auto-refresh loop so the
+                user's manual selections are not overwritten.
+            """
             nonlocal active_runs, selected_run_id
             try:
                 active_runs = backend_service.list_active_runs_for_worker(worker_id=selected_worker_id())
@@ -593,8 +601,8 @@ def main(argv: list[str] | None = None) -> int:
                     active_runs_dd.options = []
                     active_runs_dd.value = None
                 output.value = f"Found {len(active_runs)} active run(s)."
-                # Refresh repo/workflow dropdowns based on the currently selected run
-                _on_active_run_selected()
+                if auto_populate:
+                    _on_active_run_selected()
             except Exception as exc:
                 selected_run_id = ""
                 active_runs_dd.options = []
@@ -652,7 +660,7 @@ def main(argv: list[str] | None = None) -> int:
                     break
                 try:
                     _log.info("[console] auto-refresh tick")
-                    refresh_active_runs()
+                    refresh_active_runs(auto_populate=False)
                     page.update()
                 except Exception:
                     _log.exception("[console] auto-refresh error")
