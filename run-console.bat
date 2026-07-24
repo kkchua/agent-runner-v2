@@ -54,7 +54,7 @@ echo ===========================================================================
 echo(
 
 pushd "%AGENT_RUNNER_ROOT%"
-call "!VENV_PYTHON!" -m agent_runner_v2.run_agent console !FLAGS!
+call "!VENV_PYTHON!" -m agent_runner_v2.run_agent console --web !FLAGS!
 set "EXIT_CODE=!ERRORLEVEL!"
 popd
 

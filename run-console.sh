@@ -46,7 +46,7 @@ echo "==========================================================================
 echo ""
 
 cd "$AGENT_RUNNER_ROOT"
-eval "$VENV_PYTHON" -m agent_runner_v2.run_agent console $FLAGS
+eval "$VENV_PYTHON" -m agent_runner_v2.run_agent console --web $FLAGS
 EXIT_CODE=$?
 
 echo ""
