@@ -34,6 +34,7 @@ def _coerce_run(item: dict[str, Any]) -> ActiveRunSummary:
         current_step=current_step,
         updated_at=str(item.get("updated_at") or item.get("modified_at") or "").strip(),
         worker_id=str(item.get("worker_id") or item.get("target_worker_id") or "").strip(),
+        project_root=str(item.get("project_root") or item.get("target_project_root") or "").strip(),
     )
 
 

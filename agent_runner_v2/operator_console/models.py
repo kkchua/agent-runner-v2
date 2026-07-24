@@ -40,3 +40,4 @@ class ActiveRunSummary:
     current_step: str
     updated_at: str
     worker_id: str = ""
+    project_root: str = ""
