@@ -161,6 +161,12 @@ def main(argv: list[str] | None = None) -> int:
         active_runs: list[ActiveRunSummary] = []
         selected_run_id: str = ""
 
+        # Build lookup: (worker_id, workflow_name) -> (repo_name, workflow_display)
+        run_lookup: dict[tuple[str, str], tuple[str, str]] = {}
+        for repo in console_config.repos:
+            for wf in repo.workflows:
+                run_lookup[(repo.worker_id, wf.workflow_name)] = (repo.name, wf.name)
+
         # Collect unique worker_ids from all configured repos
         all_worker_ids: list[str] = sorted({r.worker_id for r in console_config.repos if r.worker_id})
 
@@ -582,30 +588,10 @@ def main(argv: list[str] | None = None) -> int:
                     # We look up the repo for each run based on workflow_name
                     display_options = []
                     for run in active_runs:
-                        repo_name = "-"
-                        workflow_display = run.workflow_name
-                        # Match repo by project_root first (exact path match),
-                        # then fall back to worker + workflow_name lookup
-                        matched_repo = None
-                        if run.project_root:
-                            for repo in console_config.repos:
-                                if repo.path.rstrip("/\\") == run.project_root.rstrip("/\\"):
-                                    matched_repo = repo
-                                    break
-                        if matched_repo is None:
-                            for repo in repos_for_worker(run.worker_id or selected_worker_id()):
-                                for wf in repo.workflows:
-                                    if wf.workflow_name == run.workflow_name:
-                                        matched_repo = repo
-                                        break
-                                if matched_repo is not None:
-                                    break
-                        if matched_repo is not None:
-                            repo_name = matched_repo.name
-                            for wf in matched_repo.workflows:
-                                if wf.workflow_name == run.workflow_name:
-                                    workflow_display = wf.name
-                                    break
+                        repo_name, workflow_display = run_lookup.get(
+                            (run.worker_id, run.workflow_name),
+                            ("-", run.workflow_name),
+                        )
                         display_text = f"[{run.worker_id or '-'}] [{repo_name}] [{workflow_display}] {run.run_code or run.run_id} | {run.status} | {run.current_step or '-'}"
                         display_options.append(ft.dropdown.Option(key=run.run_id, text=display_text))
                     active_runs_dd.options = display_options
