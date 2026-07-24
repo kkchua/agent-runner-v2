@@ -632,11 +632,13 @@ def main(argv: list[str] | None = None) -> int:
                 input_artifacts = collect_input_artifacts(Path(repo_path))
 
                 if action == "Submit":
+                    repo = selected_repo()
                     rendered = runner_service.submit_job(
                         repo_path=repo_path,
                         workflow=workflow,
                         input_artifacts=input_artifacts,
                         worker_id=selected_worker_id(),
+                        os_type=repo.os_type if repo else "",
                     )
 
                 elif action == "Approve":

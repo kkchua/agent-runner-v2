@@ -8,8 +8,10 @@ from __future__ import annotations
 
 import contextlib
 import io
+import json
 import logging
 import os
+import sys
 from pathlib import Path
 from typing import Callable
 
@@ -42,6 +44,7 @@ class RunnerActionService:
         workflow: WorkflowEntry,
         input_artifacts: dict[str, str] | None = None,
         worker_id: str | None = None,
+        os_type: str = "",
     ) -> str:
         """Submit a workflow run to the backend queue.
 
@@ -55,7 +58,18 @@ class RunnerActionService:
             Optional dict of ``{KEY: VALUE}`` pairs passed as ``--input`` flags.
         worker_id :
             Override worker ID. Falls back to global settings if not provided.
+        os_type :
+            Repo OS type (e.g. "linux", "wsl"). When it differs from the
+            console's OS, submit directly via the backend API instead of
+            invoking the local CLI (which requires the path to exist locally).
         """
+        if _is_cross_os(os_type):
+            return self._submit_via_backend(
+                repo_path=repo_path,
+                workflow=workflow,
+                input_artifacts=input_artifacts,
+                worker_id=worker_id,
+            )
         args = ["--workflow-name", workflow.workflow_name]
         args.extend(["--backend-url", self._settings.backend_url])
         effective_worker_id = worker_id or self._settings.worker_id
@@ -67,6 +81,36 @@ class RunnerActionService:
             for key, value in input_artifacts.items():
                 args.extend(["--input", f"{key}={value}"])
         return self._invoke(repo_path=repo_path, func=submit_commands.main, argv=args)
+
+    def _submit_via_backend(
+        self,
+        *,
+        repo_path: str,
+        workflow: WorkflowEntry,
+        input_artifacts: dict[str, str] | None = None,
+        worker_id: str | None = None,
+    ) -> str:
+        """Submit directly via the backend API for cross-OS repos.
+
+        Used when the repo path lives on a different OS (e.g., WSL) and the
+        local CLI cannot ``chdir`` into it.  The backend/daemon on the target
+        OS resolves the path natively.
+        """
+        effective_worker_id = worker_id or self._settings.worker_id
+        _log.info(
+            "[console] _submit_via_backend workflow=%s worker=%s project_root=%s",
+            workflow.workflow_name, effective_worker_id, repo_path,
+        )
+        client = BackendClient(self._settings.backend_url)
+        result = client.submit_run(
+            workflow_name=workflow.workflow_name,
+            target_worker_id=effective_worker_id or None,
+            project_root=repo_path,
+            target_project_root=repo_path,
+            worker_label=self._settings.worker_label,
+            input_payload=input_artifacts,
+        )
+        return json.dumps(result, indent=2, ensure_ascii=False)
 
     def init_workspace(
         self,
@@ -187,3 +231,12 @@ def _pushd(path: Path):
         yield
     finally:
         os.chdir(original)
+
+
+def _is_cross_os(os_type: str) -> bool:
+    """Return True when *os_type* indicates a different OS from the console."""
+    if not os_type:
+        return False
+    console_is_windows = sys.platform == "win32"
+    repo_is_linux = os_type.lower() in ("linux", "wsl")
+    return repo_is_linux != console_is_windows
