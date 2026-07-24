@@ -78,6 +78,7 @@ def main(argv: list[str] | None = None) -> int:
         description="Launch the desktop operator console.",
     )
     parser.add_argument("--config", default="", help="Override operator console config path.")
+    parser.add_argument("--web", action="store_true", help="Open console in web browser instead of desktop window.")
     args = parser.parse_args(argv)
 
     try:
@@ -144,9 +145,9 @@ def main(argv: list[str] | None = None) -> int:
             label="Workflow", hint_text="Select a workflow",
             width=400, options=[], value="", disabled=True,
         )
-        active_runs_dd = ft.Dropdown(label="Active Runs", options=[], width=880)
+        active_runs_dd = ft.Dropdown(label="Active Runs", options=[], width=1000)
         active_runs_container = ft.Container(
-            content=active_runs_dd, border_radius=8, padding=12, width=900,
+            content=active_runs_dd, border_radius=8, padding=12, width=1020,
         )
         feedback_tf = ft.TextField(
             label="Feedback / Reason", multiline=True,
@@ -447,19 +448,29 @@ def main(argv: list[str] | None = None) -> int:
                 active_runs = backend_service.list_active_runs_for_worker()
                 if active_runs:
                     selected_run_id = active_runs[0].run_id
-                    active_runs_dd.options = [
-                        ft.dropdown.Option(
-                            key=run.run_id,
-                            text=f"[{run.workflow_name}] {run.run_code or run.run_id} | {run.status} | {run.current_step or '-'}",
-                        )
-                        for run in active_runs
-                    ]
+                    # Build display text with: repo_name, workflow_name, run_code, status, current_step
+                    # We look up the repo for each run based on workflow_name
+                    display_options = []
+                    for run in active_runs:
+                        repo_name = "-"
+                        for repo in console_config.repos:
+                            for wf in repo.workflows:
+                                if wf.workflow_name == run.workflow_name:
+                                    repo_name = repo.name
+                                    break
+                            if repo_name != "-":
+                                break
+                        display_text = f"[{repo_name}] [{run.workflow_name}] {run.run_code or run.run_id} | {run.status} | {run.current_step or '-'}"
+                        display_options.append(ft.dropdown.Option(key=run.run_id, text=display_text))
+                    active_runs_dd.options = display_options
                     active_runs_dd.value = active_runs[0].run_id
                 else:
                     selected_run_id = ""
                     active_runs_dd.options = []
                     active_runs_dd.value = None
                 output.value = f"Found {len(active_runs)} active run(s)."
+                # Refresh repo/workflow dropdowns based on the currently selected run
+                _on_active_run_selected()
             except Exception as exc:
                 selected_run_id = ""
                 active_runs_dd.options = []
@@ -468,9 +479,40 @@ def main(argv: list[str] | None = None) -> int:
                 page.update()
 
         def _on_active_run_selected(_event=None) -> None:
-            """Track which active run is selected in the dropdown."""
+            """Track which active run is selected and auto-populate repo/workflow dropdowns."""
             nonlocal selected_run_id
             selected_run_id = active_runs_dd.value or ""
+
+            # Auto-populate repo and workflow dropdowns based on the selected run
+            if not selected_run_id:
+                return
+
+            # Find the selected run
+            selected_run = next((r for r in active_runs if r.run_id == selected_run_id), None)
+            if not selected_run:
+                return
+
+            # Find the repo and workflow for this run's workflow_name
+            found = False
+            for repo in console_config.repos:
+                for wf in repo.workflows:
+                    if wf.workflow_name == selected_run.workflow_name:
+                        # Update the dropdowns
+                        repo_changed = repo_dd.value != repo.name
+                        if repo_changed:
+                            repo_dd.value = repo.name
+                            repo_dd.disabled = False
+                            # Update workflow dropdown
+                            workflow_dd.options = create_workflow_options(repo)
+                        if workflow_dd.value != wf.name:
+                            workflow_dd.value = wf.name
+                        workflow_dd.disabled = False
+                        found = True
+                        break
+                if found:
+                    break
+            if found:
+                page.update()
 
         # ==================================================================
         # Auto-refresh
@@ -681,7 +723,8 @@ def main(argv: list[str] | None = None) -> int:
         rebuild_input_fields()
         refresh_step_options()
 
-    ft.app(target=app)
+    view = ft.AppView.WEB_BROWSER if args.web else None
+    ft.app(target=app, view=view)
     return 0
 
 
