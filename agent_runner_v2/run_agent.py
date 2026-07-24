@@ -262,6 +262,13 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         ns.command = "init"
         return ns
 
+    if command == "install":
+        p = argparse.ArgumentParser(description="Install and sync workflow packages. Run without arguments to install all workflows, or specify a workflow name.")
+        p.add_argument("workflow_name", nargs="?", default="", help="Workflow name to install (optional — omit to install all).")
+        ns = p.parse_args(raw[1:])
+        ns.command = "install"
+        return ns
+
     if command == "bootstrap-publish":
         p = argparse.ArgumentParser(description="Publish the current repository bootstrap snapshot from the current working directory.")
         ns = p.parse_args(raw[1:])
@@ -411,12 +418,43 @@ def main(argv: list[str] | None = None) -> int:
             bundle_profile=args.bundle_profile or "core+workflow",
         )
         # Run init hooks on all discovered workflow packages
-        from .workflow_packages.hooks import init_all
+        from .workflow_packages.hooks import init_all, install_all, sync_all
         from .runtime_context import get_runner_home
         runner_home = Path(get_runner_home()) if get_runner_home() else Path.home() / ".ukbe-runner"
         init_all(workspace_root=workspace_root, runner_home=runner_home)
+        # Run per-workflow install and sync hooks
+        install_results = install_all(workspace_root=workspace_root, runner_home=runner_home)
+        sync_results = sync_all(workspace_root=workspace_root)
+        result["workflow_install"] = install_results
+        result["workflow_sync"] = sync_results
         print(json.dumps(result, indent=2, ensure_ascii=False))
         return 0
+
+    if args.command == "install":
+        workspace_root = cwd_root
+        from .workflow_packages.hooks import install_all, sync_all, get_extension
+        from .runtime_context import get_runner_home
+        runner_home = Path(get_runner_home()) if get_runner_home() else Path.home() / ".ukbe-runner"
+        workflow_name = getattr(args, "workflow_name", "") or ""
+        if workflow_name:
+            # Install a single workflow
+            ext = get_extension(workflow_name)
+            if ext is None:
+                print(json.dumps({"error": f"Workflow {workflow_name!r} not found or has no WorkflowExtensions class"}))
+                return 1
+            inst = ext.install_to_global(workspace_root=workspace_root, runner_home=runner_home)
+            sync = ext.sync_to_backend(workspace_root=workspace_root)
+            print(json.dumps({"workflow": workflow_name, "install": inst, "sync": sync}, indent=2))
+        else:
+            # Install all workflows
+            install_results = install_all(workspace_root=workspace_root, runner_home=runner_home)
+            sync_results = sync_all(workspace_root=workspace_root)
+            print(json.dumps({"install": install_results, "sync": sync_results}, indent=2))
+        return 0
+
+    if args.command == "engine":
+        from .engine_commands import main as _engine_main
+        return _engine_main(args.engine_argv)
 
     if args.command == "bootstrap-publish":
         workspace_root = cwd_root
@@ -484,11 +522,16 @@ def main(argv: list[str] | None = None) -> int:
         from .codebase_init_commands import main as _codebase_init_main
         return _codebase_init_main(args.codebase_init_argv)
 
-    if args.project_root and Path(args.project_root).resolve() != cwd_root:
+    # Only the "run" command defines --project-root / --target-project-root.
+    # Use getattr so any subcommand that slips through (or is added in the
+    # future) cannot crash here with an AttributeError.
+    _project_root = getattr(args, "project_root", "")
+    if _project_root and Path(_project_root).resolve() != cwd_root:
         raise ValueError(
             f"--project-root is fixed to the current repository root under the single-repo contract: {cwd_root}"
         )
-    if args.target_project_root and Path(args.target_project_root).resolve() != cwd_root:
+    _target_project_root = getattr(args, "target_project_root", "")
+    if _target_project_root and Path(_target_project_root).resolve() != cwd_root:
         raise ValueError(
             f"--target-project-root is not supported under the single-repo contract: {cwd_root}"
         )
