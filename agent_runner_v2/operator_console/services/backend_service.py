@@ -41,21 +41,21 @@ class BackendRunService:
         self.client = client
         self.worker_id = worker_id
 
-    def list_active_runs(self, *, repo_path: str, workflow_name: str | None = None) -> list[ActiveRunSummary]:
+    def list_active_runs(self, *, repo_path: str, workflow_name: str | None = None, worker_id: str | None = None) -> list[ActiveRunSummary]:
         """List non-terminal runs for the specified repo and optional workflow."""
         payload = self.client.list_runs(
             repo_path=repo_path,
             workflow_name=workflow_name,
             status_group="non_terminal",
-            worker_id=self.worker_id,
+            worker_id=worker_id or self.worker_id,
         )
         return _extract_runs(payload)
 
-    def list_active_runs_for_worker(self) -> list[ActiveRunSummary]:
-        """List all non-terminal runs for this worker across all repos and workflows."""
+    def list_active_runs_for_worker(self, worker_id: str | None = None) -> list[ActiveRunSummary]:
+        """List all non-terminal runs for a worker across all repos and workflows."""
         payload = self.client.list_runs(
             status_group="non_terminal",
-            worker_id=self.worker_id,
+            worker_id=worker_id or self.worker_id,
         )
         return _extract_runs(payload)
 

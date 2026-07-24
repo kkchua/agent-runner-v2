@@ -41,6 +41,7 @@ class RunnerActionService:
         repo_path: str,
         workflow: WorkflowEntry,
         input_artifacts: dict[str, str] | None = None,
+        worker_id: str | None = None,
     ) -> str:
         """Submit a workflow run to the backend queue.
 
@@ -52,11 +53,14 @@ class RunnerActionService:
             The workflow entry to submit.
         input_artifacts :
             Optional dict of ``{KEY: VALUE}`` pairs passed as ``--input`` flags.
+        worker_id :
+            Override worker ID. Falls back to global settings if not provided.
         """
         args = ["--workflow-name", workflow.workflow_name]
         args.extend(["--backend-url", self._settings.backend_url])
-        if self._settings.worker_id:
-            args.extend(["--worker-id", self._settings.worker_id])
+        effective_worker_id = worker_id or self._settings.worker_id
+        if effective_worker_id:
+            args.extend(["--worker-id", effective_worker_id])
         if self._settings.worker_label:
             args.extend(["--worker-label", self._settings.worker_label])
         if input_artifacts:

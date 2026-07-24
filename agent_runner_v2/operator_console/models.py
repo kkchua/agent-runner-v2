@@ -21,7 +21,8 @@ class WorkflowEntry:
 class RepoEntry:
     name: str
     path: str
-    workflows: tuple[WorkflowEntry, ...]
+    worker_id: str = ""
+    workflows: tuple[WorkflowEntry, ...] = ()
 
 
 @dataclass(frozen=True)
