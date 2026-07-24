@@ -4,6 +4,7 @@
       "name": "agent-runner-v2",
       "path": "D:/MyProjectSpace/01_Workflows/agent-runner-v2",
       "worker_id": "my-worker-01",
+      "os_type": "windows",
       "workflows": [
         {
           "name": "Governance Foundation",
@@ -19,8 +20,9 @@
     },
     {
       "name": "agent-runner-backend",
-      "path": "D:/MyProjectSpace/01_Workflows/agent-runner-backend",
+      "path": "/home/kengk/projects/agent-runner-backend",
       "worker_id": "my-worker-02",
+      "os_type": "wsl",
       "workflows": [
         {
           "name": "REPO Codebase v1",

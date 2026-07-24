@@ -22,6 +22,7 @@ class RepoEntry:
     name: str
     path: str
     worker_id: str = ""
+    os_type: str = ""
     workflows: tuple[WorkflowEntry, ...] = ()
 
 

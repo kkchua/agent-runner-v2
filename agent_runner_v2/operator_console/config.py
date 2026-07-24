@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -73,14 +74,22 @@ def _parse_repos(value: Any, config_path: Path) -> tuple[RepoEntry, ...]:
         name = str(item.get("name") or "").strip()
         path = str(item.get("path") or "").strip()
         worker_id = str(item.get("worker_id") or "").strip()
+        os_type = str(item.get("os_type") or "").strip()
         if not name or not path:
             raise ConsoleConfigError(f"'repos[{index}]' requires non-empty 'name' and 'path' in {config_path}")
-        normalized = Path(path).expanduser().resolve()
+        # For cross-OS repos (e.g., WSL path on Windows console), keep path as-is
+        # so the backend/daemon can resolve it natively.
+        console_is_windows = sys.platform == "win32"
+        repo_is_linux = os_type.lower() in ("linux", "wsl")
+        if repo_is_linux == console_is_windows:
+            normalized_path = path  # cross-OS: preserve original path
+        else:
+            normalized_path = str(Path(path).expanduser().resolve())
         if name in names:
             raise ConsoleConfigError(f"Duplicate repo name {name!r} in {config_path}")
         names.add(name)
         workflows = _parse_repo_workflows(item.get("workflows"), config_path, name)
-        repos.append(RepoEntry(name=name, path=str(normalized), worker_id=worker_id, workflows=workflows))
+        repos.append(RepoEntry(name=name, path=normalized_path, worker_id=worker_id, os_type=os_type, workflows=workflows))
     return tuple(repos)
 
 
