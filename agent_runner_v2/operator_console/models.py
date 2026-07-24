@@ -39,3 +39,4 @@ class ActiveRunSummary:
     status: str
     current_step: str
     updated_at: str
+    worker_id: str = ""
