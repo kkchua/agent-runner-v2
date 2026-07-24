@@ -348,7 +348,7 @@ def _spawn_child(*, claim: dict[str, Any], runtime_root: Path, cli_pythonpath: s
         last_heartbeat_at=0.0,
         job_step_result_path=job_step_result_path,
     )
-    logger.log('info', 'child_spawned', message='spawned execute-step child', child=child, details={'request_path': str(request_path), 'result_path': str(result_path), 'log_file': str(combined_log_path), 'step_spec_source': step_spec_source, 'coder_override': request_payload.get('coder_override')})
+    logger.log('info', 'child_spawned', message='spawned execute-step child', child=child, details={'request_path': str(request_path), 'result_path': str(result_path), 'log_file': str(combined_log_path), 'step_spec_source': step_spec_source, 'engine_pythonpath': env.get('PYTHONPATH', '(default)'), 'coder_override': request_payload.get('coder_override')})
     return child
 
 
@@ -412,7 +412,7 @@ def _terminate_child(child: ChildExecution, logger: _DaemonLogger, sigkill: bool
         return
 
 
-def _run_supervisor(*, worker_id: str, worker_label: str, backend_url: str, poll_seconds: int, max_parallel: int, stalled_seconds: int, step_timeout_seconds: int, kill_grace_seconds: int, runtime_dir: Path, log_file: Path, cli_pythonpath: str | None, step_spec_source: str, once: bool = False) -> int:
+def _run_supervisor(*, worker_id: str, worker_label: str, backend_url: str, poll_seconds: int, max_parallel: int, stalled_seconds: int, step_timeout_seconds: int, kill_grace_seconds: int, runtime_dir: Path, log_file: Path, cli_pythonpath: str | None, step_spec_source: str, cli_version: str = "", engine_version: str = "", once: bool = False) -> int:
     from .backend_client import BackendClient
     from .daemon_runtime import build_job_sync_payload
     from .job_state import job_dir
@@ -420,7 +420,7 @@ def _run_supervisor(*, worker_id: str, worker_label: str, backend_url: str, poll
     logger = _DaemonLogger(log_file, worker_id)
     client = BackendClient(backend_url)
     client.register_worker(worker_id=worker_id, host_name=None, capabilities={'mode': ['execute-step-daemon'], 'max_parallel': max_parallel}, worker_label=worker_label)
-    logger.log('info', 'daemon_started', message='worker daemon started', details={'backend_url': backend_url, 'worker_label': worker_label, 'max_parallel': max_parallel, 'runtime_dir': str(runtime_dir), 'step_spec_source': step_spec_source})
+    logger.log('info', 'daemon_started', message='worker daemon started', details={'backend_url': backend_url, 'worker_label': worker_label, 'max_parallel': max_parallel, 'runtime_dir': str(runtime_dir), 'step_spec_source': step_spec_source, 'cli_version': cli_version, 'engine_version': engine_version, 'engine_pythonpath': cli_pythonpath or '(ambient)'})
 
     children: dict[str, ChildExecution] = {}
     running = True
@@ -600,7 +600,12 @@ def _run_supervisor(*, worker_id: str, worker_label: str, backend_url: str, poll
 def main(argv: list[str] | None = None) -> int:
     import argparse
 
+    cfg = _load_config()
+    engine_version = (cfg.get('engine_version') or '').strip() or '(not set)'
+
+    from .run_agent import __version__ as cli_version
     p = argparse.ArgumentParser(prog='ukbe-run-agent daemon', description='Worker daemon supervisor.')
+    p.add_argument('-v', '--version', action='version', version=f'%(prog)s {cli_version} (engine: {engine_version})')
     p.add_argument('worker_id', nargs='?', default='', help='Worker ID (overrides config and WORKER_ID env var).')
     p.add_argument('--worker-label', default='', help='Queue label override (live or dev).')
     p.add_argument('--backend-url', default='', help='Backend URL override.')
@@ -616,7 +621,6 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument('--once', action='store_true', help='Claim and process at most one step, then exit.')
     args = p.parse_args(argv)
 
-    cfg = _load_config()
     worker_id = args.worker_id or _setting(cfg, 'WORKER_ID', 'worker_id', 'kode-worker-01')
     worker_label = args.worker_label or _setting(cfg, 'WORKER_LABEL', 'worker_label', 'live')
     backend_url = args.backend_url or _setting(cfg, 'AGENT_RUNNER_BACKEND_URL', 'backend_url', 'http://127.0.0.1:8100')
@@ -648,5 +652,7 @@ def main(argv: list[str] | None = None) -> int:
         log_file=log_file,
         cli_pythonpath=cli_pythonpath,
         step_spec_source=step_spec_source,
+        cli_version=cli_version,
+        engine_version=engine_version,
         once=args.once,
     )
