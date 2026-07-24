@@ -724,7 +724,7 @@ def main(argv: list[str] | None = None) -> int:
         refresh_step_options()
 
     view = ft.AppView.WEB_BROWSER if args.web else None
-    ft.app(target=app, view=view)
+    ft.run(main=app, view=view)
     return 0
 
 
