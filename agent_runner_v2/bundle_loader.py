@@ -56,6 +56,32 @@ class WorkflowBundlePublishValidationError(RuntimeError):
         super().__init__(f"Workflow bundle validation failed for: {names}")
 
 
+def resolve_engine_repo_root() -> Path:
+    """Resolve the engine repo root using the same logic as the daemon.
+
+    Reads ``engine_version`` from ``~/.ukbe-runner/config.json``:
+    - ``"SNAPSHOT"`` → use ``repo_root`` from config (the actual repo).
+    - ``"v0.7.0"`` → use ``~/.ukbe-runner/engine/versions/v0.7.0/``.
+    - empty → fall back to the pip-installed package root.
+
+    Returns a path where ``agent_runner_v2/bootstrap/`` is always accessible.
+    """
+    from .config_loader import load_runner_config
+    cfg = load_runner_config()
+    version = (cfg.get("engine_version") or "").strip()
+    if not version or version.upper() == "SNAPSHOT":
+        repo_root_str = str(cfg.get("repo_root") or "").strip()
+        if repo_root_str:
+            candidate = Path(repo_root_str).resolve()
+            if candidate.is_dir():
+                return candidate
+        return Path.cwd().resolve()
+    global_dir = (Path.home() / ".ukbe-runner" / "engine" / "versions" / version).resolve()
+    if global_dir.is_dir():
+        return global_dir
+    return Path.cwd().resolve()
+
+
 def bundles_root() -> Path:
     return GLOBAL_RUNNER_HOME / "bundles"
 
@@ -365,16 +391,16 @@ def install_bootstrap_bundle(
 ) -> dict:
     workspace_root = workspace_root.resolve()
     runner_home = (runner_home or GLOBAL_RUNNER_HOME).resolve()
-    source_root = (workspace_root / FOUNDATION_CURRENT_ROOT_REL).resolve()
-    packaged_source = PACKAGE_BOOTSTRAP_ROOT / "foundation"
+    repo_root = resolve_engine_repo_root()
+    source_root = (repo_root / "agent_runner_v2" / "bootstrap" / "bundles" / CORE_BUNDLE_NAME / "current" / "foundation").resolve()
     if not source_root.is_dir() or not _tree_has_files(source_root):
-        source_root = packaged_source
+        source_root = PACKAGE_BOOTSTRAP_ROOT / "foundation"
     if not source_root.is_dir() or not _tree_has_files(source_root):
         return {
             "workspace_root": str(workspace_root),
             "source_root": str(source_root),
             "skipped": True,
-            "reason": "Layer 1 foundation docs not found — run the Layer 1 governance workflow to generate them.",
+            "reason": "Layer 1 foundation docs not found — run bootstrap-publish first.",
         }
     current_root = runner_home / "bundles" / CORE_BUNDLE_NAME / "current"
     foundation_root = current_root / "foundation"
@@ -410,7 +436,8 @@ def install_platform_bundle(
     """
     workspace_root = workspace_root.resolve()
     runner_home = (runner_home or GLOBAL_RUNNER_HOME).resolve()
-    platform_root = (workspace_root / PLATFORM_CURRENT_ROOT_REL).resolve()
+    repo_root = resolve_engine_repo_root()
+    platform_root = (repo_root / "agent_runner_v2" / "bootstrap" / "bundles" / CORE_BUNDLE_NAME / "current" / "platform").resolve()
     bundle_root = runner_home / "bundles" / CORE_BUNDLE_NAME / "current" / "platform"
 
     if not platform_root.is_dir():
@@ -613,7 +640,10 @@ def seed_workflow_packages(
     docs/system/00_governance/bootstrap/workflows, not from repo authoring
     folders directly.
     """
-    repo_packages_dir = (source_root or published_workflows_root(workspace_root)).resolve()
+    repo_packages_dir = (source_root or None)
+    if repo_packages_dir is None:
+        repo_root = resolve_engine_repo_root()
+        repo_packages_dir = (repo_root / "agent_runner_v2" / "bootstrap" / "workflows" / "default").resolve()
     if not repo_packages_dir.is_dir():
         repo_packages_dir = BOOTSTRAP_ROOT
     if not repo_packages_dir.is_dir():

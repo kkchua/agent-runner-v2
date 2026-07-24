@@ -56,10 +56,9 @@ def _write_version_json(version_dir: Path, data: dict) -> None:
 
 def _verify_import(version_dir: Path) -> None:
     env = os.environ.copy()
-    # Mirror how _invoke_execute_step_subprocess resolves the engine:
-    # prepend <engine_root>/agent_runner_v2 so the inner package is found first,
-    # even if agent_runner_v2 is also installed as a pip package.
-    env["PYTHONPATH"] = str(version_dir / "agent_runner_v2") + os.pathsep + env.get("PYTHONPATH", "")
+    # With flat layout, the package is at version_dir/agent_runner_v2/.
+    # PYTHONPATH must point to version_dir so Python finds agent_runner_v2 as a package.
+    env["PYTHONPATH"] = str(version_dir) + os.pathsep + env.get("PYTHONPATH", "")
     result = subprocess.run(
         [sys.executable, "-c", "import agent_runner_v2.run_agent; print('import OK')"],
         capture_output=True, text=True, env=env,
@@ -76,10 +75,9 @@ def _copy_pkg_to(src_inner_pkg: Path, dest_version_dir: Path) -> None:
     dest_version_dir — e.g. ~/.ukbe-runner/engine/versions/1.0.1/
     Result layout:
       dest_version_dir/
-        agent_runner_v2/
-          agent_runner_v2/   <- importable package
+        agent_runner_v2/   <- importable package (flat, matches repo layout)
     """
-    dest_pkg = dest_version_dir / "agent_runner_v2" / "agent_runner_v2"
+    dest_pkg = dest_version_dir / "agent_runner_v2"
     if dest_version_dir.exists():
         shutil.rmtree(dest_version_dir)
     dest_pkg.mkdir(parents=True)

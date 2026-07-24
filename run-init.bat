@@ -75,11 +75,6 @@ if errorlevel 1 (
     exit /b 1
 )
 
-if not exist "%CD%\docs\system\00_governance\bootstrap" (
-    echo ERROR: Required bootstrap snapshot folder is missing: %CD%\docs\system\00_governance\bootstrap
-    exit /b 1
-)
-
 set "CMD=%UKBE_CLI% init --workflow "%WORKFLOW%" --bundle-domain "%BUNDLE_DOMAIN%" --bundle-profile "%BUNDLE_PROFILE%""
 
 echo ===========================================================================
