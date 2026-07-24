@@ -425,12 +425,21 @@ def main(argv: list[str] | None = None) -> int:
                 if filtered:
                     repo_dd.value = filtered[0].name
                     repo_dd.disabled = False
+                    # Populate workflow dropdown for the first repo (on_select doesn't fire on programmatic change)
+                    first_repo = filtered[0]
+                    workflow_dd.options = create_workflow_options(first_repo)
+                    if first_repo.workflows:
+                        workflow_dd.value = first_repo.workflows[0].name
+                        workflow_dd.disabled = False
+                    else:
+                        workflow_dd.value = None
+                        workflow_dd.disabled = True
                 else:
                     repo_dd.value = None
                     repo_dd.disabled = True
-                workflow_dd.options = []
-                workflow_dd.value = ""
-                workflow_dd.disabled = True
+                    workflow_dd.options = []
+                    workflow_dd.value = ""
+                    workflow_dd.disabled = True
                 rebuild_input_fields()
                 refresh_active_runs()
                 page.update()
