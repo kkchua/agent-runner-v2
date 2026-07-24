@@ -28,6 +28,7 @@ from .models import ActiveRunSummary, RepoEntry, WorkflowEntry
 from .services.backend_service import BackendRunService
 from .services.runner_service import ActionExecutionError, RunnerActionService
 from ..workflow_packages.loader import load_workflow_package
+from ..workflow_packages.hooks import get_extension
 from ..runtime_context import get_workflow_root
 
 _log = logging.getLogger(__name__)
@@ -50,6 +51,40 @@ SDLC_INPUT_DIRS: dict[str, str] = {
 
 # All artifact keys that should show a file picker (not just _FILE suffix)
 KNOWN_FILE_INPUTS: frozenset[str] = frozenset(SDLC_INPUT_DIRS.keys())
+
+
+def _get_input_dir_for_key(key: str, workflow_name: str) -> str | None:
+    """Resolve the input subdirectory for *key* from the workflow's extensions.
+
+    Calls ``register_artifact_keys()`` on the workflow's ``WorkflowExtensions``
+    subclass and extracts the directory portion of the registered path.
+    Falls back to the hardcoded ``SDLC_INPUT_DIRS`` when the extension is
+    unavailable or does not register the key.
+
+    Returns None when no directory is known.
+    """
+    ext = get_extension(workflow_name)
+    if ext is not None:
+        try:
+            paths = ext.register_artifact_keys()
+            if key in paths:
+                rel_path = paths[key]
+                if "/" in rel_path:
+                    return rel_path.rsplit("/", 1)[0]
+                return "."
+        except Exception:
+            _log.debug("register_artifact_keys() failed for %s", workflow_name, exc_info=True)
+    # Fallback to hardcoded mapping
+    return SDLC_INPUT_DIRS.get(key)
+
+
+def _is_cross_os(os_type: str) -> bool:
+    """Return True when *os_type* indicates a different OS from the console."""
+    if not os_type:
+        return False
+    console_is_windows = sys.platform == "win32"
+    repo_is_linux = os_type.lower() in ("linux", "wsl")
+    return repo_is_linux != console_is_windows
 
 
 # ===========================================================================
@@ -311,20 +346,28 @@ def main(argv: list[str] | None = None) -> int:
                 return
 
             for key in required_inputs:
-                if key in KNOWN_FILE_INPUTS or key.endswith("_FILE"):
+                input_dir = _get_input_dir_for_key(key, workflow.workflow_name)
+                is_file_key = input_dir is not None or key in KNOWN_FILE_INPUTS or key.endswith("_FILE")
+                if is_file_key:
                     tf = ft.TextField(
                         label=key, read_only=False, expand=True,
                         hint_text=f"Filename or browse for {key}",
                     )
 
-                    async def on_browse_click(e, k=key, f=tf):
-                        """Open file picker, optionally rooted at the SDLC delivery dir."""
-                        if k in SDLC_INPUT_DIRS:
-                            resolved = Path(selected_repo_path()) / SDLC_INPUT_DIRS[k]
+                    async def on_browse_click(e, k=key, f=tf, d=input_dir):
+                        """Open file picker, optionally rooted at the delivery dir."""
+                        repo_path = selected_repo_path()
+                        # For cross-OS repos, file picker can't navigate Linux paths
+                        if _is_cross_os(selected_repo().os_type if selected_repo() else ""):
+                            file_picker.root_directory = None
+                        elif d and d != ".":
+                            resolved = Path(repo_path) / d
                             if resolved.is_dir():
                                 file_picker.root_directory = str(resolved)
+                            else:
+                                file_picker.root_directory = repo_path
                         else:
-                            file_picker.root_directory = selected_repo_path()
+                            file_picker.root_directory = repo_path
                         files = await file_picker.pick_files(
                             file_type=ft.FilePickerFileType.CUSTOM,
                             allowed_extensions=["md"],
@@ -353,13 +396,14 @@ def main(argv: list[str] | None = None) -> int:
         # File resolution
         # ==================================================================
 
-        def resolve_input_path(key: str, value: str, repo_path: Path) -> str:
-            """Resolve an input value to an absolute path.
+        def resolve_input_path(key: str, value: str, repo_path: Path, *, os_type: str = "") -> str:
+            """Resolve an input value to a path string.
 
             - If *value* is an existing absolute path, return as-is.
-            - If *key* is in ``SDLC_INPUT_DIRS``, resolve the filename against
-              the known delivery subdirectory.
-            - If *key* is in ``KNOWN_FILE_INPUTS``, search repo root for the file.
+            - Resolve the subdirectory from the workflow's extensions (or fallback).
+            - For cross-OS repos, construct a POSIX path string without local
+              existence checks (the target daemon resolves natively).
+            - For same-OS repos, verify the file exists locally.
             - Non-file keys are returned as-is.
             """
             value = value.strip()
@@ -370,8 +414,17 @@ def main(argv: list[str] | None = None) -> int:
             if p.is_absolute() and p.exists():
                 return str(p)
 
-            if key in SDLC_INPUT_DIRS:
-                subdirectory = SDLC_INPUT_DIRS[key]
+            workflow = find_selected_workflow()
+            workflow_name = workflow.workflow_name if workflow else ""
+            subdirectory = _get_input_dir_for_key(key, workflow_name)
+
+            if subdirectory is not None:
+                if _is_cross_os(os_type):
+                    # Construct POSIX path string for the target daemon
+                    if subdirectory == ".":
+                        return f"{repo_path}/{value}"
+                    return f"{repo_path}/{subdirectory}/{value}"
+                # Same-OS: resolve locally and verify existence
                 if subdirectory == ".":
                     resolved = repo_path / value
                 else:
@@ -385,6 +438,8 @@ def main(argv: list[str] | None = None) -> int:
                 )
 
             if key in KNOWN_FILE_INPUTS or key.endswith("_FILE"):
+                if _is_cross_os(os_type):
+                    return f"{repo_path}/{value}"
                 # Search repo root for the filename
                 matches = list(repo_path.rglob(value))
                 existing = [m for m in matches if m.is_file()]
@@ -402,14 +457,14 @@ def main(argv: list[str] | None = None) -> int:
 
             return value
 
-        def collect_input_artifacts(repo_path: Path) -> dict[str, str]:
+        def collect_input_artifacts(repo_path: Path, *, os_type: str = "") -> dict[str, str]:
             """Collect and resolve all dynamic input field values."""
             result: dict[str, str] = {}
             for key, tf in input_fields.items():
                 value = (tf.value or "").strip()
                 if not value:
                     continue
-                result[key] = resolve_input_path(key, value, repo_path)
+                result[key] = resolve_input_path(key, value, repo_path, os_type=os_type)
             return result
 
         # ==================================================================
@@ -627,18 +682,19 @@ def main(argv: list[str] | None = None) -> int:
             """Dispatch the selected action to the appropriate service method."""
             try:
                 action = action_dd.value or ""
+                repo = selected_repo()
                 repo_path = selected_repo_path()
                 workflow = selected_workflow(required=True)
-                input_artifacts = collect_input_artifacts(Path(repo_path))
+                os_type = repo.os_type if repo else ""
+                input_artifacts = collect_input_artifacts(Path(repo_path), os_type=os_type)
 
                 if action == "Submit":
-                    repo = selected_repo()
                     rendered = runner_service.submit_job(
                         repo_path=repo_path,
                         workflow=workflow,
                         input_artifacts=input_artifacts,
                         worker_id=selected_worker_id(),
-                        os_type=repo.os_type if repo else "",
+                        os_type=os_type,
                     )
 
                 elif action == "Approve":
