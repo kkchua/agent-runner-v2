@@ -199,6 +199,29 @@ def main(argv: list[str] | None = None) -> int:
                 raise ActionExecutionError("Select a workflow.")
             return workflow
 
+        def _resolve_repo_and_workflow(workflow_name: str) -> tuple[str, WorkflowEntry | None]:
+            """Find the repo path and WorkflowEntry matching a workflow_name.
+
+            Scans all configured repos to find the first match for the given
+            workflow name. Used when resolving approvable/resettable runs
+            selected from a worker-scoped active runs list.
+
+            Parameters
+            ----------
+            workflow_name :
+                The name of the workflow to find.
+
+            Returns
+            -------
+            tuple[str, WorkflowEntry | None]
+                A tuple of (repo_path, WorkflowEntry or None if not found).
+            """
+            for repo in console_config.repos:
+                for wf in repo.workflows:
+                    if wf.workflow_name == workflow_name:
+                        return repo.path, wf
+            return "", None
+
         def create_workflow_options(repo: RepoEntry | None) -> list:
             """Build dropdown options for the workflows in *repo*."""
             if repo is None:
@@ -421,17 +444,13 @@ def main(argv: list[str] | None = None) -> int:
             """Fetch active runs from the backend and populate the dropdown."""
             nonlocal active_runs, selected_run_id
             try:
-                workflow = selected_workflow(required=False)
-                active_runs = backend_service.list_active_runs(
-                    repo_path=selected_repo_path(),
-                    workflow_name=workflow.workflow_name if workflow else None,
-                )
+                active_runs = backend_service.list_active_runs_for_worker()
                 if active_runs:
                     selected_run_id = active_runs[0].run_id
                     active_runs_dd.options = [
                         ft.dropdown.Option(
                             key=run.run_id,
-                            text=f"{run.run_code or run.run_id} | {run.status} | {run.current_step or '-'}",
+                            text=f"[{run.workflow_name}] {run.run_code or run.run_id} | {run.status} | {run.current_step or '-'}",
                         )
                         for run in active_runs
                     ]
@@ -446,7 +465,7 @@ def main(argv: list[str] | None = None) -> int:
                 active_runs_dd.options = []
                 active_runs_dd.value = None
                 output.value = str(exc)
-            page.update()
+                page.update()
 
         def _on_active_run_selected(_event=None) -> None:
             """Track which active run is selected in the dropdown."""
@@ -487,7 +506,7 @@ def main(argv: list[str] | None = None) -> int:
 
             page.update()
 
-            if needs_active and repo_dd.value and workflow_dd.value:
+            if needs_active:
                 refresh_active_runs()
 
         # ==================================================================
@@ -517,13 +536,20 @@ def main(argv: list[str] | None = None) -> int:
                     run_payload = detail.get("run") or {}
                     step_name = str(run_payload.get("awaiting_human_step") or "").strip()
                     job_id = str(run_payload.get("run_code") or "").strip()
+                    workflow_name = str(run_payload.get("workflow_name") or "").strip()
                     if not step_name or not job_id:
                         raise ActionExecutionError(
                             "Selected run is missing awaiting_human_step or run_code.",
                         )
+                    # Resolve repo and workflow from the run's workflow_name for local runner call
+                    resolved_repo_path, resolved_workflow = _resolve_repo_and_workflow(workflow_name)
+                    if resolved_workflow is None:
+                        raise ActionExecutionError(
+                            f"Unable to find workflow '{workflow_name}' in configured repos."
+                        )
                     rendered_local = runner_service.approve_step(
-                        repo_path=repo_path,
-                        template_group=workflow.template_group or workflow.workflow_name,
+                        repo_path=resolved_repo_path,
+                        template_group=resolved_workflow.template_group or resolved_workflow.workflow_name,
                         job_id=job_id, step_name=step_name,
                     )
                     backend_result = backend_service.approve_run(
@@ -563,9 +589,15 @@ def main(argv: list[str] | None = None) -> int:
                         raise ActionExecutionError("Selected run not found in active list.")
                     if not target_run.run_code:
                         raise ActionExecutionError("Selected run has no run_code.")
+                    # Resolve repo and workflow from the run's workflow_name for local runner call
+                    resolved_repo_path, resolved_workflow = _resolve_repo_and_workflow(target_run.workflow_name)
+                    if resolved_workflow is None:
+                        raise ActionExecutionError(
+                            f"Unable to find workflow '{target_run.workflow_name}' in configured repos."
+                        )
                     rendered_local = runner_service.override_step(
-                        repo_path=repo_path,
-                        template_group=workflow.template_group or workflow.workflow_name,
+                        repo_path=resolved_repo_path,
+                        template_group=resolved_workflow.template_group or resolved_workflow.workflow_name,
                         job_id=target_run.run_code, step_name=step_name,
                     )
                     try:

@@ -59,7 +59,7 @@ operator_console/
 **Existing actions:** submit job, approval, cancel job, reset step, bootstrap, init,
 sync, cleanup.
 
-**New actions (simplified):** Run, Submit, Approve, Reject, Reset, Cancel.
+**Simplified actions:** Submit, Approve, Reject, Reset, Cancel.
 
 **Current `submit_job()` in `runner_service.py`:**
 ```python
@@ -401,21 +401,18 @@ SDLC_INPUT_DIRS = {
 This is the same mapping already used by all batch files and
 `context_extensions.py`. Sourced from `SDLC_DELIVERY_BASE` in `constants.py`.
 
-### 4.3 Actions: Run and Submit
+### 4.3 Actions
 
-Add a new action `"Run"` to the actions dropdown. This executes the
-workflow locally (same as the `run-*.bat` files), as opposed to `"Submit"`
-which sends it to the backend queue.
+The console provides five actions: **Submit**, **Approve**, **Reject**, **Reset**, and **Cancel**.
 
-**Run-specific UI controls:** None. All run parameters use fixed defaults:
-`MODE=manual`, `JOB_NO=` (empty), `NEW_JOB=false`, `DRY_RUN=false`.
-The user only fills in the dynamic input fields from workflow.toml.
+- **Submit** — sends the workflow to the backend queue with `--input` flags for each resolved artifact.
+- **Approve / Reject / Reset / Cancel** — operate on active runs via the backend API (and local runner for Approve/Reset).
 
-**Shared controls** (visible for both submit and run):
+**Shared controls** (visible for Submit):
 
 | Control | Type | Maps to |
 |---|---|---|
-| Dynamic input fields | File/Text | `--input` (submit) or `--set` (run) |
+| Dynamic input fields | File/Text | `--input` (submit) |
 
 ### 4.4 Data Flow
 
@@ -442,26 +439,6 @@ Backend queues job → daemon picks up → daemon converts --input to --set
     → spawns run_agent subprocess
 ```
 
-#### Run Flow (action = "Run", local execution)
-```
-User selects workflow → dynamic fields appear
-User fills in input artifacts
-User clicks "Run Action" (action = "Run")
-    ↓
-Console resolves filenames → absolute paths
-Console calls runner_service.run_workflow(
-    workflow=...,
-    input_artifacts={"INIT_FILE": "/abs/path/to/INIT.md"},
-)
-    ↓
-runner_service builds argv (with fixed defaults):
-    run --template-group sdlc_10_requirement_v1
-    --mode manual
-    --set INIT_FILE=/abs/path/to/INIT.md
-    ↓
-run_agent.main(argv) → local execution
-```
-
 ## 5. UI Layout
 
 ```
@@ -475,7 +452,7 @@ run_agent.main(argv) → local execution
 │  └─────────────────────────────────────────────────────────┘   │
 │  Backend: http://... | Worker: worker-1                         │
 │                                                                  │
-│  [Action: Run ▼]                                              │
+│  [Action: Submit ▼]                                          │
 │  [Refresh Active Runs] [Run Action]                              │
 │                                                                  │
 │  ┌─ Active Runs ────────────────────────────────────────────┐   │
@@ -510,7 +487,7 @@ run_agent.main(argv) → local execution
 | File | Change |
 |---|---|
 | `operator_console/app.py` | Dynamic input panel, "run workflow" action, visibility logic |
-| `operator_console/services/runner_service.py` | Extend `submit_job()`, add `run_workflow()` |
+| `operator_console/services/runner_service.py` | Extend `submit_job()` with `input_artifacts` support |
 
 No changes to `models.py`, `config.py`, `backend_service.py`, or any core runner
 modules.
@@ -582,11 +559,10 @@ def run_workflow(self, *, repo_path, workflow, input_artifacts=None):
     return self._invoke(repo_path=repo_path, func=run_agent.main, argv=args)
 ```
 
-#### Step 5: Wire "Run" and update action handlers in `execute_action()`
+#### Step 5: Wire action handlers in `execute_action()`
 
 Update the `execute_action()` function:
 - Rename `"submit job"` → `"Submit"` — calls `runner_service.submit_job()`.
-- Add `"Run"` — calls `runner_service.run_workflow()`.
 - Split `"approval"` → `"Approve"` and `"Reject"`:
   - `"Approve"` — same as old approval without reject flag.
   - `"Reject"` — same as old approval with reject flag + feedback.
@@ -597,7 +573,7 @@ Update the `execute_action()` function:
 #### Step 6: Update visibility logic
 
 Update `update_visibility()` for the 6 new actions:
-- **Run, Submit** — show workflow inputs only.
+- **Submit** — show workflow inputs only.
 - **Approve, Reject** — show active runs + feedback field.
 - **Reset** — show active runs + feedback + reset target step dropdown.
 - **Cancel** — show active runs + feedback (reason for cancellation).
@@ -647,19 +623,16 @@ The dynamic input detection works for **any** workflow, not just SDLC:
 5. **Submit:**
    - Select "Submit" action → fill in INIT_FILE → click Run Action → verify
      `--input INIT_FILE=...` appears in the output.
-6. **Run:**
-   - Select "Run" action → fill INIT_FILE → click Run Action → verify
-     `--mode manual` and `--set INIT_FILE=...` in the output.
-7. **Approve / Reject:**
+6. **Approve / Reject:**
    - Select "Approve" → verify active runs listed → select a run → click Run Action.
    - Select "Reject" → enter feedback → click Run Action → verify rejection.
-8. **Reset:**
+7. **Reset:**
    - Select "Reset" → verify reset target step dropdown populated → select step → click Run Action.
-9. **Cancel:**
+8. **Cancel:**
    - Select "Cancel" → verify active runs listed → select a run → enter reason → click Run Action.
-10. **Switch workflows:**
+9. **Switch workflows:**
    - Change workflow selection → verify old fields are cleared and new fields appear.
-11. **Non-SDLC workflow:**
+10. **Non-SDLC workflow:**
     - Select `00_bootstrap_lifecycle_admin_v1` → verify no input fields needed.
 
 ### Edge Cases

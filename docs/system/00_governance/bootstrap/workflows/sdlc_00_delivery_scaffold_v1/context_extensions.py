@@ -5,7 +5,7 @@ from pathlib import Path, PurePath
 from typing import Any
 
 from agent_runner_v2.constants import SDLC_DELIVERY_BASE
-from agent_runner_v2.runtime_context import GLOBAL_RUNNER_HOME, JOBS_ROOT, resolve_repo_or_runtime_path
+from agent_runner_v2.runtime_context import get_governance_runtime_root, get_platform_runtime_root, JOBS_ROOT, resolve_repo_or_runtime_path
 from agent_runner_v2.workflow_packages.extensions_base import WorkflowExtensions
 
 
@@ -90,8 +90,8 @@ class Sdlc00DeliveryScaffoldExtensions(WorkflowExtensions):
         output_paths = self.register_artifact_keys(job_id=job_id, mode=str(state.get("mode") or "default"))
 
         extensions: dict[str, str] = {
-            "GOVERNANCE_RUNTIME_ROOT": str(GLOBAL_RUNNER_HOME / "bundles" / "core" / "current" / "foundation"),
-            "PLATFORM_RUNTIME_ROOT": str(GLOBAL_RUNNER_HOME / "bundles" / "core" / "current" / "platform" / "agent_runner"),
+            "GOVERNANCE_RUNTIME_ROOT": str(get_governance_runtime_root()),
+            "PLATFORM_RUNTIME_ROOT": str(get_platform_runtime_root() / "agent_runner"),
             "SDLC_L3_SPEC_PATH": str(root / "masterplan" / "LAYER3_AI_DRIVEN_SDLC_SPECIFICATION.md"),
             "SDLC_MASTER_TEMPLATE_ROOT": str(root / "masterplan" / "delivery" / "00_templates"),
             "SDLC_MASTER_AGENT_ROOT": str(root / "masterplan" / "delivery" / "08_agents"),
@@ -110,3 +110,21 @@ class Sdlc00DeliveryScaffoldExtensions(WorkflowExtensions):
             extensions[f"{artifact_key}_METAJSON"] = str(pure.parent / f"{pure.stem}.meta.json")
 
         return extensions
+
+    def install_to_global(self, *, workspace_root, runner_home):
+        """Copy SDLC scaffold to global runner home."""
+        import shutil
+        source = Path(workspace_root) / "docs" / "system" / "00_governance" / "platform" / "agent_runner" / "sdlc" / "current"
+        dest = Path(runner_home) / "bundles" / "core" / "current" / "platform" / "agent_runner" / "sdlc"
+        if not source.is_dir():
+            return {"status": "SKIPPED", "reason": "SDLC scaffold not published yet"}
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        if dest.exists():
+            shutil.rmtree(dest)
+        shutil.copytree(str(source), str(dest))
+        count = sum(1 for _ in dest.rglob("*") if _.is_file())
+        return {"status": "INSTALLED", "source": str(source), "destination": str(dest), "files_copied": count}
+
+    def sync_to_backend(self, *, workspace_root):
+        """Sync via `ukbe-run-agent sync-workflows` CLI instead."""
+        return {"status": "NO_OP"}

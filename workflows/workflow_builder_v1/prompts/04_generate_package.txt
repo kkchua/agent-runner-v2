@@ -1,0 +1,74 @@
+Objective
+
+Generate all workflow package files from the design documents. This step
+produces the actual workflow.toml, context_extensions.py, and prompt template
+files that constitute a deployable workflow package.
+
+Reference Inputs
+
+- Read {WORKFLOW_REQUIREMENTS} for the structured requirements.
+- Read {ARTIFACT_CONTRACT} for artifact key definitions and path patterns.
+- Read {STEP_ARCHITECTURE} for the step sequence and routing design.
+- Read {WORKFLOW_CREATION_GUIDE} for the complete file reference covering
+  workflow.toml syntax, context_extensions.py structure, and prompt
+  conventions.
+- Read {EXAMPLE_WORKFLOW_TOML} for a working workflow.toml pattern.
+- Read {EXAMPLE_CONTEXT_EXTENSIONS} for a working context_extensions.py
+  pattern.
+
+Generation Tasks
+
+1. Generate workflow.toml and write it to {WORKFLOW_MANIFEST}:
+   - [workflow] section with name, version, label, job_prefix, description,
+     visibility, default_max_rejects, and init_step
+   - One [[step]] block per step from the step architecture
+   - Each step must have name, prompt or action, onsuccess routing
+   - Prompt steps must have [step.artifacts] with required_inputs, produces,
+     and result_meta_key
+   - Prompt steps must have [step.coder] with role_policy
+   - Review steps must have requires_human_approval_after and
+     [step.on_reject_refine] block
+   - Refine steps must have loop_returns_to
+   - Final step must be stepCompletion with action = "step_completion"
+   - promotes key must be at the top level of [workflow], not inside [[step]]
+
+2. Generate context_extensions.py and write it to {WORKFLOW_EXTENSIONS}:
+   - Import WorkflowExtensions from
+     agent_runner_v2.workflow_packages.extensions_base
+   - Import get_governance_runtime_root and get_platform_runtime_root from
+     agent_runner_v2.runtime_context
+   - Set workflow_name to match the workflow directory name exactly
+   - Implement register_artifact_keys() returning relative path patterns
+     with {job_id}, {seq}, and {slug} placeholders
+   - Implement build_context_extensions() returning absolute paths resolved
+     against the workspace root
+   - Implement install_to_global() (may return NO_OP)
+   - Implement sync_to_backend() (may return NO_OP)
+   - Include module docstring, class docstring, and method docstrings
+
+3. Generate prompt .txt files in a prompts/ subdirectory:
+   - One file per prompt-driven step
+   - Naming: prompts/NN_step_name.txt where NN is the step sequence number
+   - Each prompt must include Objective, Reference Inputs, and Output
+     Instructions sections
+   - Use bare {ARTIFACT_KEY} placeholders for file paths -- never wrap
+     placeholders in backticks
+   - All prompt content must be ASCII-only
+
+Output Instructions
+
+- Write workflow.toml to {WORKFLOW_MANIFEST}.
+- Write context_extensions.py to {WORKFLOW_EXTENSIONS}.
+- Write a prompts index to {WORKFLOW_PROMPTS_INDEX} listing every generated
+  prompt file with its step name and purpose.
+- All generated files must be ASCII-only.
+- Artifact keys in workflow.toml must match exactly between produces lists
+  and the context_extensions.py register_artifact_keys() return dict.
+
+Forbidden Content
+
+- Non-ASCII characters in any generated file
+- Backtick-wrapped placeholders like {KEY} -- always use bare {KEY}
+- Hardcoded absolute paths in context_extensions.py register_artifact_keys()
+- Missing stepCompletion terminal step
+- promotes key inside [[step]] instead of at [workflow] level

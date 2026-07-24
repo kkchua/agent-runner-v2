@@ -249,6 +249,33 @@ def init_all(*, workspace_root: Path, runner_home: Path) -> None:
     )
 
 
+def install_all(
+    *, workspace_root: Path, runner_home: Path,
+) -> dict[str, Any]:
+    """Call ``install_to_global()`` on all workflows.
+
+    Returns:
+        Dict mapping workflow name to its install result dict.
+    """
+    return scan_all(
+        "install_to_global",
+        workspace_root=workspace_root,
+        runner_home=runner_home,
+    )
+
+
+def sync_all(*, workspace_root: Path) -> dict[str, Any]:
+    """Call ``sync_to_backend()`` on all workflows.
+
+    Returns:
+        Dict mapping workflow name to its sync result dict.
+    """
+    return scan_all(
+        "sync_to_backend",
+        workspace_root=workspace_root,
+    )
+
+
 # ---------------------------------------------------------------------------
 # Cache management (for tests)
 # ---------------------------------------------------------------------------

@@ -232,7 +232,7 @@ def _global_config_path() -> Path:
     return Path.home() / ".ukbe-runner" / "config.json"
 
 
-def cmd_use(project_root: Path, version: str, local: bool = False) -> None:
+def cmd_use(project_root: Path, version: str, local: bool = False, repo_root: str = "") -> None:
     """Set the active engine version in config.json.
 
     Writes to the single global config at ~/.ukbe-runner/config.json.
@@ -269,10 +269,20 @@ def cmd_use(project_root: Path, version: str, local: bool = False) -> None:
         "log_file": "/tmp/worker-daemon.log",
     }
     config = {**defaults, **existing, "engine_version": version}
+
+    # When switching to SNAPSHOT, auto-set repo_root if not already configured
+    if version.upper() == "SNAPSHOT" and not existing.get("repo_root"):
+        config["repo_root"] = str(project_root.resolve())
+
+    # Explicit --repo-root overrides everything
+    if repo_root:
+        config["repo_root"] = str(Path(repo_root).resolve())
+
     config_path.write_text(json.dumps(config, indent=2), encoding="utf-8")
 
     if version.upper() == "SNAPSHOT":
-        store_location = "SNAPSHOT (ambient PYTHONPATH)"
+        repo_root_val = config.get("repo_root", "")
+        store_location = f"SNAPSHOT (repo_root={repo_root_val})" if repo_root_val else "SNAPSHOT (ambient PYTHONPATH)"
     elif global_dir.exists():
         store_location = "global"
     else:
@@ -355,6 +365,8 @@ def main(argv: list[str] | None = None) -> int:
     p_use.add_argument("version", help="Version name or SNAPSHOT.")
     p_use.add_argument("--local", action="store_true", default=False,
                        help="Deprecated. Config is now always written to ~/.ukbe-runner/config.json.")
+    p_use.add_argument("--repo-root", default="",
+                       help="Set the repo root path in config (used by SNAPSHOT mode to find workflows/).")
 
     sub.add_parser("list", help="List installed versions (global + repo-local).")
 
@@ -373,7 +385,7 @@ def main(argv: list[str] | None = None) -> int:
             project_root=project_root,
         )
     elif args.command == "use":
-        cmd_use(project_root, args.version, local=args.local)
+        cmd_use(project_root, args.version, local=args.local, repo_root=args.repo_root or "")
     elif args.command == "list":
         cmd_list(project_root)
 

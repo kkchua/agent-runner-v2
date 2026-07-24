@@ -146,10 +146,11 @@ repairs it via `_repair_or_validate_meta_json` in `step_runner.py`.
 
 ```python
 def build_context_extensions(
+    self,
     *,
-    state: dict,
+    state: dict[str, Any],
     step: str,
-    step_cfg: dict,
+    step_cfg: dict[str, Any],
     ctx: dict[str, str],
     project_root: Path | None = None,
 ) -> dict[str, str]:

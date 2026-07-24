@@ -6,14 +6,13 @@ injection, and Layer 1/Layer 2 governance root resolution.
 """
 from __future__ import annotations
 
-import datetime as dt
 from pathlib import Path, PurePath
 from typing import Any
 
 from agent_runner_v2.runtime_context import (
-    GLOBAL_RUNNER_HOME,
     JOBS_ROOT,
-    get_runner_home,
+    get_governance_runtime_root,
+    get_platform_runtime_root,
     get_workspace_root,
     resolve_repo_or_runtime_path,
 )
@@ -73,19 +72,10 @@ class Sdlc00CodebaseExtensions(WorkflowExtensions):
         result: dict[str, str] = {}
 
         # Layer 1 governance runtime root (global path)
-        runner_home = get_runner_home()
-        if runner_home:
-            foundation_root = (
-                Path(runner_home) / "bundles" / "core" / "current" / "foundation"
-            )
-            result["GOVERNANCE_RUNTIME_ROOT"] = str(foundation_root)
+        result["GOVERNANCE_RUNTIME_ROOT"] = str(get_governance_runtime_root())
 
         # Layer 2 platform runtime root (global path)
-        if runner_home:
-            platform_root = (
-                Path(runner_home) / "bundles" / "core" / "current" / "platform"
-            )
-            result["PLATFORM_RUNTIME_ROOT"] = str(platform_root)
+        result["PLATFORM_RUNTIME_ROOT"] = str(get_platform_runtime_root())
 
         # Codebase documentation roots (project-local)
         workspace_root = get_workspace_root()
@@ -114,3 +104,11 @@ class Sdlc00CodebaseExtensions(WorkflowExtensions):
             )
 
         return result
+
+    def install_to_global(self, *, workspace_root, runner_home):
+        """This workflow has no global installation artifacts."""
+        return {"status": "NO_OP"}
+
+    def sync_to_backend(self, *, workspace_root):
+        """Sync via `ukbe-run-agent sync-workflows` CLI instead."""
+        return {"status": "NO_OP"}

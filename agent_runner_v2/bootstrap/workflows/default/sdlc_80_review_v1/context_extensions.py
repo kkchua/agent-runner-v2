@@ -2,24 +2,12 @@
 from __future__ import annotations
 
 import datetime as dt
-import re
 from pathlib import Path
 from typing import Any
 
-from agent_runner_v2.constants import SDLC_DELIVERY_BASE, resolve_next_seq
-from agent_runner_v2.runtime_context import get_runner_home, get_workspace_root
+from agent_runner_v2.constants import SDLC_DELIVERY_BASE, extract_slug_from_path, resolve_next_seq
+from agent_runner_v2.runtime_context import get_governance_runtime_root, get_platform_runtime_root, get_workspace_root
 from agent_runner_v2.workflow_packages.extensions_base import WorkflowExtensions
-
-
-def _extract_slug_from_path(file_path: str) -> str:
-    """Extract the slug from an SDLC artifact filename."""
-    if not file_path:
-        return "unknown"
-    filename = Path(file_path).stem
-    match = re.search(r"_(.+)$", filename)
-    if match:
-        return match.group(1)
-    return "unknown"
 
 
 class Sdlc80ReviewExtensions(WorkflowExtensions):
@@ -39,15 +27,13 @@ class Sdlc80ReviewExtensions(WorkflowExtensions):
 
     def build_context_extensions(self, *, state: dict[str, Any], step: str, step_cfg: dict[str, Any], ctx: dict[str, str], project_root: Path | None = None) -> dict[str, str]:
         result: dict[str, str] = {}
-        runner_home = get_runner_home()
-        if runner_home:
-            result["GOVERNANCE_RUNTIME_ROOT"] = str(Path(runner_home) / "bundles" / "core" / "current" / "foundation")
-            result["PLATFORM_RUNTIME_ROOT"] = str(Path(runner_home) / "bundles" / "core" / "current" / "platform")
+        result["GOVERNANCE_RUNTIME_ROOT"] = str(get_governance_runtime_root())
+        result["PLATFORM_RUNTIME_ROOT"] = str(get_platform_runtime_root())
         workspace_root = get_workspace_root()
         effective_root = Path(project_root or workspace_root or Path.cwd())
         job_id = str(state.get("job_id", "unknown"))
         artifacts = state.get("artifacts") or {}
-        slug = _extract_slug_from_path(artifacts.get("VAL_FILE", ""))
+        slug = extract_slug_from_path(artifacts.get("VAL_FILE", ""))
         for key, rel_path in self.register_artifact_keys(job_id=job_id).items():
             resolved = rel_path.replace("{slug}", slug)
             if "{seq}" in resolved:
@@ -58,3 +44,11 @@ class Sdlc80ReviewExtensions(WorkflowExtensions):
                 resolved = resolved.replace("{seq}", seq)
             result[key] = str(effective_root / resolved)
         return result
+
+    def install_to_global(self, *, workspace_root, runner_home):
+        """This workflow has no global installation artifacts."""
+        return {"status": "NO_OP"}
+
+    def sync_to_backend(self, *, workspace_root):
+        """Sync via `ukbe-run-agent sync-workflows` CLI instead."""
+        return {"status": "NO_OP"}
