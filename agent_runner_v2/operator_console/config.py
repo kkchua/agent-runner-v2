@@ -80,8 +80,8 @@ def _parse_repos(value: Any, config_path: Path) -> tuple[RepoEntry, ...]:
         # For cross-OS repos (e.g., WSL path on Windows console), keep path as-is
         # so the backend/daemon can resolve it natively.
         console_is_windows = sys.platform == "win32"
-        repo_is_linux = os_type.lower() in ("linux", "wsl")
-        if repo_is_linux == console_is_windows:
+        repo_is_windows = os_type.lower() == "windows"
+        if repo_is_windows != console_is_windows:
             normalized_path = path  # cross-OS: preserve original path
         else:
             normalized_path = str(Path(path).expanduser().resolve())
