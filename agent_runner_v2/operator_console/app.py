@@ -420,7 +420,9 @@ def main(argv: list[str] | None = None) -> int:
             """Filter repos and refresh active runs when worker_id changes."""
             try:
                 wid = selected_worker_id()
+                _log.info("[console] on_worker_id_changed fired: worker_id=%r", wid)
                 filtered = repos_for_worker(wid)
+                _log.info("[console] filtered repos: %s", [r.name for r in filtered])
                 repo_dd.options = [ft.DropdownOption(key=r.name, text=r.name) for r in filtered]
                 if filtered:
                     repo_dd.value = filtered[0].name
@@ -754,7 +756,7 @@ def main(argv: list[str] | None = None) -> int:
 
         # -- Wire event handlers --------------------------------------------
         action_dd.on_change = update_visibility
-        worker_id_dd.on_change = on_worker_id_changed
+        worker_id_dd.on_select = on_worker_id_changed
         repo_dd.on_select = on_repo_changed
         workflow_dd.on_select = on_workflow_changed
         active_runs_dd.on_change = _on_active_run_selected
