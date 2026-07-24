@@ -584,14 +584,28 @@ def main(argv: list[str] | None = None) -> int:
                     for run in active_runs:
                         repo_name = "-"
                         workflow_display = run.workflow_name
-                        for repo in repos_for_worker(run.worker_id or selected_worker_id()):
-                            for wf in repo.workflows:
+                        # Match repo by project_root first (exact path match),
+                        # then fall back to worker + workflow_name lookup
+                        matched_repo = None
+                        if run.project_root:
+                            for repo in console_config.repos:
+                                if repo.path.rstrip("/\\") == run.project_root.rstrip("/\\"):
+                                    matched_repo = repo
+                                    break
+                        if matched_repo is None:
+                            for repo in repos_for_worker(run.worker_id or selected_worker_id()):
+                                for wf in repo.workflows:
+                                    if wf.workflow_name == run.workflow_name:
+                                        matched_repo = repo
+                                        break
+                                if matched_repo is not None:
+                                    break
+                        if matched_repo is not None:
+                            repo_name = matched_repo.name
+                            for wf in matched_repo.workflows:
                                 if wf.workflow_name == run.workflow_name:
-                                    repo_name = repo.name
                                     workflow_display = wf.name
                                     break
-                            if repo_name != "-":
-                                break
                         display_text = f"[{run.worker_id or '-'}] [{repo_name}] [{workflow_display}] {run.run_code or run.run_id} | {run.status} | {run.current_step or '-'}"
                         display_options.append(ft.dropdown.Option(key=run.run_id, text=display_text))
                     active_runs_dd.options = display_options
