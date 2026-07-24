@@ -3,6 +3,7 @@
     {
       "name": "agent-runner-v2",
       "path": "D:/MyProjectSpace/01_Workflows/agent-runner-v2",
+      "worker_id": "my-worker-01",
       "workflows": [
         {
           "name": "Governance Foundation",
@@ -10,54 +11,21 @@
           "template_group": "01_governance_foundation_v1"
         },
         {
-          "name": "Repo Master Docs Bootstrap",
-          "workflow_name": "00_repo_master_docs_bootstrap_v1",
-          "template_group": "00_repo_master_docs_bootstrap_v1"
-        },
-        {
           "name": "SDLC: Delivery Scaffold",
           "workflow_name": "sdlc_00_delivery_scaffold_v1",
           "template_group": "sdlc_00_delivery_scaffold_v1"
-        },
+        }
+      ]
+    },
+    {
+      "name": "agent-runner-backend",
+      "path": "D:/MyProjectSpace/01_Workflows/agent-runner-backend",
+      "worker_id": "my-worker-02",
+      "workflows": [
         {
-          "name": "SDLC: Requirement Intake",
-          "workflow_name": "sdlc_10_requirement_v1",
-          "template_group": "sdlc_10_requirement_v1"
-        },
-        {
-          "name": "SDLC: Planning",
-          "workflow_name": "sdlc_20_planning_v1",
-          "template_group": "sdlc_20_planning_v1"
-        },
-        {
-          "name": "SDLC: Backlog",
-          "workflow_name": "sdlc_30_backlog_v1",
-          "template_group": "sdlc_30_backlog_v1"
-        },
-        {
-          "name": "SDLC: Task",
-          "workflow_name": "sdlc_40_task_v1",
-          "template_group": "sdlc_40_task_v1"
-        },
-        {
-          "name": "SDLC: Implementation",
-          "workflow_name": "sdlc_50_implementation_v1",
-          "template_group": "sdlc_50_implementation_v1"
-        },
-        {
-          "name": "SDLC: Execution",
-          "workflow_name": "sdlc_60_execution_v1",
-          "template_group": "sdlc_60_execution_v1"
-        },
-        {
-          "name": "SDLC: Validation",
-          "workflow_name": "sdlc_70_validation_v1",
-          "template_group": "sdlc_70_validation_v1"
-        },
-        {
-          "name": "SDLC: Review",
-          "workflow_name": "sdlc_80_review_v1",
-          "template_group": "sdlc_80_review_v1"
+          "name": "REPO Codebase v1",
+          "workflow_name": "sdlc_00_codebase_v1",
+          "template_group": "sdlc_00_codebase_v1"
         }
       ]
     }

@@ -72,6 +72,7 @@ def _parse_repos(value: Any, config_path: Path) -> tuple[RepoEntry, ...]:
             raise ConsoleConfigError(f"'repos[{index}]' must be an object in {config_path}")
         name = str(item.get("name") or "").strip()
         path = str(item.get("path") or "").strip()
+        worker_id = str(item.get("worker_id") or "").strip()
         if not name or not path:
             raise ConsoleConfigError(f"'repos[{index}]' requires non-empty 'name' and 'path' in {config_path}")
         normalized = Path(path).expanduser().resolve()
@@ -79,7 +80,7 @@ def _parse_repos(value: Any, config_path: Path) -> tuple[RepoEntry, ...]:
             raise ConsoleConfigError(f"Duplicate repo name {name!r} in {config_path}")
         names.add(name)
         workflows = _parse_repo_workflows(item.get("workflows"), config_path, name)
-        repos.append(RepoEntry(name=name, path=str(normalized), workflows=workflows))
+        repos.append(RepoEntry(name=name, path=str(normalized), worker_id=worker_id, workflows=workflows))
     return tuple(repos)
 
 

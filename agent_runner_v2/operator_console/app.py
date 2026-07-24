@@ -45,7 +45,11 @@ SDLC_INPUT_DIRS: dict[str, str] = {
     "IMPL_FILE":       "docs/repo/agent_runner/sdlc/delivery/50_implementations",
     "EXEC_FILE":       "docs/repo/agent_runner/sdlc/delivery/60_executions",
     "VAL_FILE":        "docs/repo/agent_runner/sdlc/delivery/70_validations",
+    "WORKFLOW_SPEC":   ".",
 }
+
+# All artifact keys that should show a file picker (not just _FILE suffix)
+KNOWN_FILE_INPUTS: frozenset[str] = frozenset(SDLC_INPUT_DIRS.keys())
 
 
 # ===========================================================================
@@ -122,24 +126,31 @@ def main(argv: list[str] | None = None) -> int:
         active_runs: list[ActiveRunSummary] = []
         selected_run_id: str = ""
 
+        # Collect unique worker_ids from all configured repos
+        all_worker_ids: list[str] = sorted({r.worker_id for r in console_config.repos if r.worker_id})
+
         # -- Shared UI controls ---------------------------------------------
         output = ft.TextField(
             label="Output", multiline=True,
             min_lines=14, max_lines=20, read_only=True, expand=True,
         )
         status_text = ft.Text(
-            value=f"Backend: {settings.backend_url} | Worker: {settings.worker_id}",
+            value=f"Backend: {settings.backend_url}",
         )
         action_dd = ft.Dropdown(
             label="Action",
             options=[ft.dropdown.Option(a) for a in actions],
             value=actions[0],
         )
+        worker_id_dd = ft.Dropdown(
+            label="Worker ID", hint_text="Select a worker", width=280,
+            options=[ft.DropdownOption(key=w, text=w) for w in all_worker_ids],
+            value=all_worker_ids[0] if all_worker_ids else None,
+            disabled=not bool(all_worker_ids),
+        )
         repo_dd = ft.Dropdown(
             label="Repo", hint_text="Select a repository", width=280,
-            options=[ft.DropdownOption(key=r.name, text=r.name) for r in console_config.repos],
-            value=console_config.repos[0].name if console_config.repos else None,
-            disabled=not bool(console_config.repos),
+            options=[], value=None, disabled=True,
         )
         workflow_dd = ft.Dropdown(
             label="Workflow", hint_text="Select a workflow",
@@ -171,6 +182,14 @@ def main(argv: list[str] | None = None) -> int:
         # ==================================================================
         # Selection helpers
         # ==================================================================
+
+        def selected_worker_id() -> str:
+            """Return the currently selected worker_id from the dropdown."""
+            return worker_id_dd.value or ""
+
+        def repos_for_worker(worker_id: str) -> list[RepoEntry]:
+            """Return repos matching the given worker_id."""
+            return [r for r in console_config.repos if r.worker_id == worker_id]
 
         def selected_repo() -> RepoEntry | None:
             """Return the RepoEntry matching the current repo dropdown value."""
@@ -292,7 +311,7 @@ def main(argv: list[str] | None = None) -> int:
                 return
 
             for key in required_inputs:
-                if key.endswith("_FILE"):
+                if key in KNOWN_FILE_INPUTS or key.endswith("_FILE"):
                     tf = ft.TextField(
                         label=key, read_only=False, expand=True,
                         hint_text=f"Filename or browse for {key}",
@@ -305,13 +324,13 @@ def main(argv: list[str] | None = None) -> int:
                             if resolved.is_dir():
                                 file_picker.root_directory = str(resolved)
                         else:
-                            file_picker.root_directory = None
+                            file_picker.root_directory = selected_repo_path()
                         files = await file_picker.pick_files(
                             file_type=ft.FilePickerFileType.CUSTOM,
                             allowed_extensions=["md"],
                         )
                         if files:
-                            f.value = files[0].path or ""
+                            f.value = Path(files[0].path).name
                             page.update()
 
                     btn = ft.ElevatedButton("Browse", on_click=on_browse_click)
@@ -340,6 +359,7 @@ def main(argv: list[str] | None = None) -> int:
             - If *value* is an existing absolute path, return as-is.
             - If *key* is in ``SDLC_INPUT_DIRS``, resolve the filename against
               the known delivery subdirectory.
+            - If *key* is in ``KNOWN_FILE_INPUTS``, search repo root for the file.
             - Non-file keys are returned as-is.
             """
             value = value.strip()
@@ -351,22 +371,36 @@ def main(argv: list[str] | None = None) -> int:
                 return str(p)
 
             if key in SDLC_INPUT_DIRS:
-                resolved = repo_path / SDLC_INPUT_DIRS[key] / value
+                subdirectory = SDLC_INPUT_DIRS[key]
+                if subdirectory == ".":
+                    resolved = repo_path / value
+                else:
+                    resolved = repo_path / subdirectory / value
                 if resolved.exists():
                     return str(resolved)
                 raise ActionExecutionError(
                     f"File not found for {key}: {value}\n"
                     f"  Tried: {resolved}\n"
-                    f"  Expected in: {SDLC_INPUT_DIRS[key]}/"
+                    f"  Expected in: {subdirectory}/"
                 )
 
-            if not key.endswith("_FILE"):
-                return value
+            if key in KNOWN_FILE_INPUTS or key.endswith("_FILE"):
+                # Search repo root for the filename
+                matches = list(repo_path.rglob(value))
+                existing = [m for m in matches if m.is_file()]
+                if len(existing) == 1:
+                    return str(existing[0])
+                if len(existing) > 1:
+                    raise ActionExecutionError(
+                        f"Ambiguous file for {key}: {value}\n"
+                        f"  Found {len(existing)} matches under {repo_path}"
+                    )
+                raise ActionExecutionError(
+                    f"File not found for {key}: {value}\n"
+                    f"  Searched: {repo_path}"
+                )
 
-            raise ActionExecutionError(
-                f"Cannot resolve file path for {key}: {value}\n"
-                f"  Provide a full path or browse for the file."
-            )
+            return value
 
         def collect_input_artifacts(repo_path: Path) -> dict[str, str]:
             """Collect and resolve all dynamic input field values."""
@@ -381,6 +415,28 @@ def main(argv: list[str] | None = None) -> int:
         # ==================================================================
         # Dropdown event handlers
         # ==================================================================
+
+        def on_worker_id_changed(_event=None) -> None:
+            """Filter repos and refresh active runs when worker_id changes."""
+            try:
+                wid = selected_worker_id()
+                filtered = repos_for_worker(wid)
+                repo_dd.options = [ft.DropdownOption(key=r.name, text=r.name) for r in filtered]
+                if filtered:
+                    repo_dd.value = filtered[0].name
+                    repo_dd.disabled = False
+                else:
+                    repo_dd.value = None
+                    repo_dd.disabled = True
+                workflow_dd.options = []
+                workflow_dd.value = ""
+                workflow_dd.disabled = True
+                rebuild_input_fields()
+                refresh_active_runs()
+                page.update()
+            except Exception:
+                _log.exception("Unexpected error while changing worker ID.")
+                show_error("Unable to update repos for the selected worker.")
 
         def on_repo_changed(_event=None) -> None:
             """Refresh the workflow dropdown when the repository changes."""
@@ -445,7 +501,7 @@ def main(argv: list[str] | None = None) -> int:
             """Fetch active runs from the backend and populate the dropdown."""
             nonlocal active_runs, selected_run_id
             try:
-                active_runs = backend_service.list_active_runs_for_worker()
+                active_runs = backend_service.list_active_runs_for_worker(worker_id=selected_worker_id())
                 if active_runs:
                     selected_run_id = active_runs[0].run_id
                     # Build display text with: repo_name, workflow_name, run_code, status, current_step
@@ -568,6 +624,7 @@ def main(argv: list[str] | None = None) -> int:
                         repo_path=repo_path,
                         workflow=workflow,
                         input_artifacts=input_artifacts,
+                        worker_id=selected_worker_id(),
                     )
 
                 elif action == "Approve":
@@ -687,6 +744,7 @@ def main(argv: list[str] | None = None) -> int:
 
         # -- Wire event handlers --------------------------------------------
         action_dd.on_change = update_visibility
+        worker_id_dd.on_change = on_worker_id_changed
         repo_dd.on_select = on_repo_changed
         workflow_dd.on_select = on_workflow_changed
         active_runs_dd.on_change = _on_active_run_selected
@@ -700,8 +758,13 @@ def main(argv: list[str] | None = None) -> int:
 
         page.add(ft.Column(controls=[
             ft.Text("Agent Runner Operator Console", size=28, weight=ft.FontWeight.BOLD),
-            ft.Text("Choose a repository and its workflow.", size=14),
+            ft.Text("Choose a worker, repository and its workflow.", size=14),
             ft.Divider(),
+            ft.Row(
+                controls=[worker_id_dd],
+                wrap=True, spacing=16, run_spacing=12,
+                vertical_alignment=ft.CrossAxisAlignment.END,
+            ),
             ft.Row(
                 controls=[repo_dd, workflow_dd, action_dd, execute_button],
                 wrap=True, spacing=16, run_spacing=12,
@@ -719,8 +782,8 @@ def main(argv: list[str] | None = None) -> int:
             output,
         ], spacing=16))
 
-        # Initial population
-        rebuild_input_fields()
+        # Initial population — trigger worker_id change to populate repos
+        on_worker_id_changed()
         refresh_step_options()
 
     view = ft.AppView.WEB_BROWSER if args.web else None
