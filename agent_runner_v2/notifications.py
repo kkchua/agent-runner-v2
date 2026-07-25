@@ -121,6 +121,7 @@ def _load_notification_config() -> dict[str, Any]:
             "COMPLETED": 0,
             "FAILED": 1,
             "WAITING_FOR_HUMAN_INTERVENTION": 0,
+            "WAITING_FOR_HUMAN_MAXRETRIED": 0,
             "STEP_REJECTED": 0,
         }
     }
@@ -205,6 +206,9 @@ def _format_default_message(status: str, context: dict[str, Any], msg_cfg: dict[
         status_type = "Workflow" if status == "FAILED" else "Step"
     elif status == "WAITING_FOR_HUMAN_INTERVENTION":
         status_emoji = "⚠️"
+        status_type = "Workflow"
+    elif status == "WAITING_FOR_HUMAN_MAXRETRIED":
+        status_emoji = "🔄"
         status_type = "Workflow"
     else:
         status_emoji = "ℹ️"

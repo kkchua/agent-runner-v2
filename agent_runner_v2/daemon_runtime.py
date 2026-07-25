@@ -276,6 +276,7 @@ def _map_job_status_to_run_status(job_status: str) -> str:
         "FAILED": "failed",
         "WAITING_FOR_HUMAN_APPROVAL": "awaiting_human",
         "WAITING_FOR_HUMAN_INTERVENTION": "awaiting_human",
+        "WAITING_FOR_HUMAN_MAXRETRIED": "awaiting_human",
         "WAITING_FOR_AUTO_RETRY": "pending",
     }
     return mapping.get(job_status.upper(), "pending")

@@ -30,7 +30,7 @@ def test_handle_recovery_budget_exceeded_sets_failure_and_waiting() -> None:
     assert reject_counts["review_docs"] == 1
     assert failures[0]["failure_code"] == "PLANNING_ATTEMPT_BUDGET_EXCEEDED"
     assert history[0]["failure_code"] == "PLANNING_ATTEMPT_BUDGET_EXCEEDED"
-    assert statuses == ["WAITING_FOR_HUMAN_INTERVENTION"]
+    assert statuses == ["WAITING_FOR_HUMAN_MAXRETRIED"]
 
 
 def test_activate_refine_loop_sets_loop_context_and_history() -> None:

@@ -1,5 +1,4 @@
----
-title: "Codebase Inventory - agent-runner-v2"
+START "Codebase Inventory - agent-runner-v2"
 template_id: "CODEBASE-INV-v1"
 version: "1.0.0"
 doc_type: "system"

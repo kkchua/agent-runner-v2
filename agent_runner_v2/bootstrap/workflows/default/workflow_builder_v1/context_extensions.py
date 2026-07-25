@@ -27,6 +27,7 @@ class WorkflowBuilderExtensions(WorkflowExtensions):
         date_str = dt.datetime.now().strftime("%Y%m%d")
         run_root = f"docs/repo/workflow_builder/runs/{job_id}"
         return {
+            "WORKFLOW_SPEC": "docs/repo/workflow_builder/specs/{slug}.md",
             "WORKFLOW_REQUIREMENTS": f"{run_root}/REQUIREMENTS-{date_str}-{{seq}}_{{slug}}.md",
             "ARTIFACT_CONTRACT": f"{run_root}/ARTIFACTS-{date_str}-{{seq}}_{{slug}}.md",
             "STEP_ARCHITECTURE": f"{run_root}/STEPS-{date_str}-{{seq}}_{{slug}}.md",
@@ -76,6 +77,13 @@ class WorkflowBuilderExtensions(WorkflowExtensions):
         slug = extract_slug_from_path(spec_path)
 
         for key, rel_path in self.register_artifact_keys(job_id=job_id).items():
+            # Input artifacts provided externally (e.g. by operator console)
+            # already have absolute paths in state — preserve them.
+            if key in artifacts and artifacts[key]:
+                existing = artifacts[key]
+                if Path(existing).is_absolute():
+                    result[key] = existing
+                    continue
             resolved = rel_path.replace("{slug}", slug)
             if "{seq}" in resolved:
                 path_dir, path_file = resolved.rsplit("/", 1)

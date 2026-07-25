@@ -236,6 +236,8 @@ def route_after_failure(
         "WAITING_FOR_AUTO_RETRY" if failure_class == "AUTO_RETRYABLE" else "WAITING_FOR_HUMAN_INTERVENTION",
     )
     state["current_step"] = step
+    if failure_class != "AUTO_RETRYABLE":
+        state["pending_intervention_for"] = step
     save_job(group_name, state["job_id"], state)
     if failure_class != "AUTO_RETRYABLE":
         send_workflow_notification("WAITING_FOR_HUMAN_INTERVENTION", dict(state))
@@ -358,6 +360,8 @@ def _route_rejected(
         "WAITING_FOR_AUTO_RETRY" if failure_class == "AUTO_RETRYABLE" else "WAITING_FOR_HUMAN_INTERVENTION",
     )
     state["current_step"] = step
+    if failure_class != "AUTO_RETRYABLE":
+        state["pending_intervention_for"] = step
     save_job(group_name, state["job_id"], state)
     if failure_class != "AUTO_RETRYABLE":
         send_workflow_notification("WAITING_FOR_HUMAN_INTERVENTION", dict(state))
@@ -471,10 +475,11 @@ def _route_loop_or_replan(
         failure_code=exhausted_failure_code,
         failure_source="runner",
     )
-    set_job_status(state, "WAITING_FOR_HUMAN_INTERVENTION")
+    set_job_status(state, "WAITING_FOR_HUMAN_MAXRETRIED")
     state["current_step"] = step
+    state["pending_intervention_for"] = step
     save_job(group_name, state["job_id"], state)
-    send_workflow_notification("WAITING_FOR_HUMAN_INTERVENTION", dict(state))
+    send_workflow_notification("WAITING_FOR_HUMAN_MAXRETRIED", dict(state))
     return state, 1
 
 

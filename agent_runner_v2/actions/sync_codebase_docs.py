@@ -35,10 +35,11 @@ def _component_specs(snapshot: dict, project_root: Path, *, base_rel: str = "") 
         base_rel: Optional base path override for staging (e.g. "docs/repo/codebase/runs/<job_id>").
                   When empty, uses the default codebase_doc_rel() paths.
     """
+    pkg_root = snapshot.get("pkg_root") or "agent_runner_v2"
     python_modules = snapshot["python_modules"]
     module_paths = [m["rel_path"] for m in python_modules]
-    action_modules = [m for m in module_paths if m.startswith("agent_runner_v2/actions/")]
-    workflow_modules = [m for m in module_paths if m in {"agent_runner_v2/run_agent.py", "agent_runner_v2/step_runner.py", "agent_runner_v2/workflow_router.py", "agent_runner_v2/bundle_loader.py"}]
+    action_modules = [m for m in module_paths if m.startswith(f"{pkg_root}/actions/")]
+    workflow_modules = [m for m in module_paths if m in {f"{pkg_root}/run_agent.py", f"{pkg_root}/step_runner.py", f"{pkg_root}/workflow_router.py", f"{pkg_root}/bundle_loader.py"}]
     tests = [item.rel_path for item in snapshot["items"] if item.category == "test files"]
     scripts = [item.rel_path for item in snapshot["items"] if item.category == "scripts"]
     config = [item.rel_path for item in snapshot["items"] if item.category == "configuration/data files"]

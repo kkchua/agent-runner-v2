@@ -127,6 +127,29 @@ def handle_admin_command(*, args: Any, group_cfg: dict[str, Any], hooks: Any) ->
         state = hooks.migrate_job_state(state)
         state = hooks.reconcile_job_state(state, group_cfg)
         requested_step = args.approve_step.strip()
+        current_status = hooks.get_job_status(state)
+        # Auto-detect intervention/maxretried and delegate to resume_step
+        if current_status in ("WAITING_FOR_HUMAN_INTERVENTION", "WAITING_FOR_HUMAN_MAXRETRIED"):
+            state = hooks.resume_step(
+                group_name=args.template_group,
+                group_cfg=group_cfg,
+                state=state,
+                step=requested_step,
+            )
+            sync_warning = _sync_backend_after_human_approval(state=state)
+            remark = (
+                f"Step {requested_step!r} resumed (was {current_status})."
+                if not sync_warning
+                else f"Step {requested_step!r} resumed (was {current_status}); {sync_warning}."
+            )
+            print(json.dumps({
+                "status": "APPROVED",
+                "remark": remark,
+                "job_status": hooks.get_job_status(state),
+                "job_id": state["job_id"],
+                "current_step": state["current_step"],
+            }, indent=2))
+            return AdminCommandResolution(handled=True, exit_code=0)
         try:
             state = hooks.approve_step(
                 group_name=args.template_group,
@@ -152,6 +175,60 @@ def handle_admin_command(*, args: Any, group_cfg: dict[str, Any], hooks: Any) ->
         print(json.dumps({
             "status": "APPROVED",
             "remark": remark,
+            "job_status": hooks.get_job_status(state),
+            "job_id": state["job_id"],
+            "current_step": state["current_step"],
+        }, indent=2))
+        return AdminCommandResolution(handled=True, exit_code=0)
+
+    if args.resume_step:
+        if not args.job_id:
+            raise ValueError("--resume-step requires --job-id")
+        state = hooks.ensure_backward_compatible_state(hooks.load_job(args.template_group, args.job_id))
+        state = hooks.migrate_job_state(state)
+        state = hooks.reconcile_job_state(state, group_cfg)
+        requested_step = args.resume_step.strip()
+        state = hooks.resume_step(
+            group_name=args.template_group,
+            group_cfg=group_cfg,
+            state=state,
+            step=requested_step,
+        )
+        sync_warning = _sync_backend_after_human_approval(state=state)
+        print(json.dumps({
+            "status": "APPROVED",
+            "remark": (
+                f"Step {requested_step!r} resumed — advancing to next step."
+                if not sync_warning
+                else f"Step {requested_step!r} resumed — advancing to next step; {sync_warning}."
+            ),
+            "job_status": hooks.get_job_status(state),
+            "job_id": state["job_id"],
+            "current_step": state["current_step"],
+        }, indent=2))
+        return AdminCommandResolution(handled=True, exit_code=0)
+
+    if args.retry_step:
+        if not args.job_id:
+            raise ValueError("--retry-step requires --job-id")
+        state = hooks.ensure_backward_compatible_state(hooks.load_job(args.template_group, args.job_id))
+        state = hooks.migrate_job_state(state)
+        state = hooks.reconcile_job_state(state, group_cfg)
+        requested_step = args.retry_step.strip()
+        state = hooks.retry_step(
+            group_name=args.template_group,
+            group_cfg=group_cfg,
+            state=state,
+            step=requested_step,
+        )
+        sync_warning = _sync_backend_after_human_approval(state=state)
+        print(json.dumps({
+            "status": "APPROVED",
+            "remark": (
+                f"Step {requested_step!r} reset for retry — reject count cleared."
+                if not sync_warning
+                else f"Step {requested_step!r} reset for retry — reject count cleared; {sync_warning}."
+            ),
             "job_status": hooks.get_job_status(state),
             "job_id": state["job_id"],
             "current_step": state["current_step"],

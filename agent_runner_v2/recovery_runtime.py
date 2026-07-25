@@ -42,8 +42,9 @@ def handle_recovery_budget_exceeded(
         failure_code="PLANNING_ATTEMPT_BUDGET_EXCEEDED",
         failure_source="runner",
     )
-    set_job_status(state, "WAITING_FOR_HUMAN_INTERVENTION")
+    set_job_status(state, "WAITING_FOR_HUMAN_MAXRETRIED")
     state["current_step"] = step
+    state["pending_intervention_for"] = step
     return state, 1
 
 

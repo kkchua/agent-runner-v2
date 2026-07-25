@@ -15,6 +15,7 @@ init_step = "analyze_spec"
 name = "analyze_spec"
 prompt = "prompts/01_analyze_spec.txt"
 enable_notifications = true
+requires_human_approval_after = true
 onsuccess = "define_artifacts"
 
 [step.artifacts]
@@ -32,6 +33,7 @@ role_policy = "architect_standard"
 name = "define_artifacts"
 prompt = "prompts/02_define_artifacts.txt"
 enable_notifications = true
+requires_human_approval_after = true
 onsuccess = "design_steps"
 
 [step.artifacts]
@@ -49,6 +51,7 @@ role_policy = "architect_standard"
 name = "design_steps"
 prompt = "prompts/03_design_steps.txt"
 enable_notifications = true
+requires_human_approval_after = true
 onsuccess = "generate_package"
 
 [step.artifacts]
@@ -66,6 +69,7 @@ role_policy = "architect_standard"
 name = "generate_package"
 prompt = "prompts/04_generate_package.txt"
 enable_notifications = true
+requires_human_approval_after = true
 onsuccess = "validate_bundle"
 
 [step.artifacts]
@@ -83,6 +87,7 @@ role_policy = "architect_standard"
 name = "validate_bundle"
 action = "validate_workflow_bundle"
 enable_notifications = true
+requires_human_approval_after = true
 onsuccess = "review_package"
 
 [step.artifacts]
@@ -122,6 +127,7 @@ exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
 name = "refine_package"
 prompt = "prompts/06_refine_package.txt"
 enable_notifications = true
+requires_human_approval_after = true
 
 [step.artifacts]
 required_inputs = ["REVIEW_FILE_SUGGESTED", "WORKFLOW_MANIFEST", "WORKFLOW_EXTENSIONS", "WORKFLOW_PROMPTS_INDEX"]
@@ -131,7 +137,7 @@ result_meta_key = "WORKFLOW_PROMPTS_INDEX"
 loop_returns_to = "review_package"
 
 [step.coder]
-role_policy = "architect_standard"
+role_policy = "refine_standard"
 
 # ============================================================================
 # Step 8: Step Completion

@@ -1203,12 +1203,16 @@ def extract_slug_from_path(file_path: str) -> str:
     """Extract the slug from an SDLC artifact filename.
 
     Pattern: ``{TYPE}-{date}-{seq}_{slug}.md`` → returns ``{slug}``.
-    Falls back to ``"unknown"`` if the pattern does not match.
+    Falls back to the filename stem (e.g. ``"my-workflow-spec"``),
+    then to ``"unknown"`` if the path is empty.
 
     Examples::
 
         extract_slug_from_path(".../INIT-20260722-001_console-sdlc10-support.md")
         → "console-sdlc10-support"
+
+        extract_slug_from_path(".../specs/agnes-media-gen-v1.md")
+        → "agnes-media-gen-v1"
 
         extract_slug_from_path("")
         → "unknown"
@@ -1217,13 +1221,15 @@ def extract_slug_from_path(file_path: str) -> str:
         file_path: Path or filename string to extract the slug from.
 
     Returns:
-        The slug substring after the last ``_``, or ``"unknown"``.
+        The slug substring after the last ``_``, the filename stem, or ``"unknown"``.
     """
     import re
     if not file_path:
         return "unknown"
     filename = Path(file_path).stem
+    if not filename:
+        return "unknown"
     match = re.search(r"_(.+)$", filename)
     if match:
         return match.group(1)
-    return "unknown"
+    return filename

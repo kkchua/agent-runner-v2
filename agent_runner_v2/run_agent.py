@@ -391,6 +391,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument("--approve-step", default="", help="Record human approval for a pending step and exit.")
     p.add_argument("--force-approve-step", default="",
                    help="Force-approve a step regardless of review decision.")
+    p.add_argument("--resume-step", default="",
+                   help="Resume a step waiting for intervention or max-retried (force-approve, advance to next step).")
+    p.add_argument("--retry-step", default="",
+                   help="Retry a step waiting for intervention or max-retried (reset counts, re-execute).")
     p.add_argument("--dry-run", action="store_true", help="Render prompt and save prompt.txt without invoking coder.")
     p.add_argument("--new-job", action="store_true", help="Force creation of a new job instead of auto-resuming.")
     p.add_argument("--max-rejects", type=int, default=-1, help="Override max rejects for this run.")

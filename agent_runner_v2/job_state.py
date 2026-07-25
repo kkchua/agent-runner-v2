@@ -59,6 +59,7 @@ NON_TERMINAL_JOB_STATUSES = {
     "WAITING_FOR_AUTO_RETRY",
     "WAITING_FOR_HUMAN_INTERVENTION",
     "WAITING_FOR_HUMAN_APPROVAL",
+    "WAITING_FOR_HUMAN_MAXRETRIED",
 }
 
 REVIEW_DECISIONS = {"PENDING", "APPROVED", "REJECTED"}
@@ -79,6 +80,7 @@ REVIEW_ARTIFACT_TYPES = {
 
 
 def _workflow_module():
+    """Return the loaded workflow module, raising if it is not available."""
     module = get_workflow_module()
     if module is None:
         raise RuntimeError("Workflow module is not loaded. Runtime must use the global workflow bundle.")
@@ -86,10 +88,12 @@ def _workflow_module():
 
 
 def _artifact_keys() -> list[str]:
+    """Return the canonical list of artifact key strings from the workflow module."""
     return list(_workflow_module().ARTIFACT_KEYS)
 
 
 def _template_groups() -> dict[str, dict[str, Any]]:
+    """Return the TEMPLATE_GROUPS dict mapping workflow names to their configs."""
     return _workflow_module().TEMPLATE_GROUPS
 
 
@@ -98,6 +102,7 @@ def _template_groups() -> dict[str, dict[str, Any]]:
 # ---------------------------------------------------------------------------
 
 def now_iso() -> str:
+    """Return the current local time as an ISO-8601 string (second precision)."""
     return dt.datetime.now().isoformat(timespec="seconds")
 
 
@@ -106,10 +111,12 @@ def now_iso() -> str:
 # ---------------------------------------------------------------------------
 
 def get_job_status(state: dict[str, Any]) -> str:
+    """Return the current job status string, checking both status field names."""
     return str(state.get("job_status") or state.get("status") or "")
 
 
 def set_job_status(state: dict[str, Any], value: str) -> None:
+    """Set the job status on both ``job_status`` and ``status`` fields."""
     state["job_status"] = value
     state["status"] = value
 
@@ -119,10 +126,12 @@ def set_job_status(state: dict[str, Any], value: str) -> None:
 # ---------------------------------------------------------------------------
 
 def ensure_dir(path: Path) -> None:
+    """Create a directory and any missing parents (no error if it exists)."""
     path.mkdir(parents=True, exist_ok=True)
 
 
 def resolve_repo_path(value: str) -> Path:
+    """Resolve a path relative to PROJECT_ROOT, or return it if already absolute."""
     path = Path(value)
     if not path.is_absolute():
         path = PROJECT_ROOT / path
@@ -130,26 +139,32 @@ def resolve_repo_path(value: str) -> Path:
 
 
 def normalize_repo_relative_path(value: str) -> str:
+    """Return the repo-relative POSIX path for *value*, resolved against PROJECT_ROOT."""
     return str(resolve_repo_path(value).resolve().relative_to(PROJECT_ROOT.resolve()))
 
 
 def group_dir(group_name: str) -> Path:
+    """Return the jobs root directory for a workflow template group."""
     return JOBS_ROOT / group_name
 
 
 def job_dir(group_name: str, job_id: str) -> Path:
+    """Return the directory containing a specific job's state and step folders."""
     return group_dir(group_name) / job_id
 
 
 def job_state_path(group_name: str, job_id: str) -> Path:
+    """Return the path to a job's ``job.json`` state file."""
     return job_dir(group_name, job_id) / "job.json"
 
 
 def get_step_index(group_cfg: dict[str, Any], step: str) -> int:
+    """Return the 1-based position of *step* in the workflow's step list."""
     return group_cfg["steps"].index(step) + 1
 
 
 def _allocate_unique_step_dir(base_dir: Path) -> Path:
+    """Return *base_dir* if unused, otherwise append ``_runN`` to avoid collisions."""
     if not base_dir.exists():
         return base_dir
     next_run = 2
@@ -204,6 +219,7 @@ def create_step_dir(
 
 
 def next_step_sequence_for_job(*, group_name: str, job_id: str) -> int:
+    """Compute the next monotonic step sequence number from existing step folders."""
     job_root = job_dir(group_name, job_id)
     if not job_root.exists():
         return 1
@@ -223,7 +239,10 @@ def next_step_sequence_for_job(*, group_name: str, job_id: str) -> int:
 
 
 def make_step_dir(group_cfg: dict[str, Any], state: dict[str, Any], step: str) -> Path:
-    # Use a monotonic execution sequence based on existing step folders.
+    """Build the canonical step directory path with sequence prefix and loop suffix.
+
+    Uses a monotonic execution sequence based on existing step folders.
+    """
     idx = next_step_sequence_for_job(
         group_name=state["template_group"],
         job_id=state["job_id"],
@@ -242,14 +261,21 @@ def make_step_dir(group_cfg: dict[str, Any], state: dict[str, Any], step: str) -
 # ---------------------------------------------------------------------------
 
 def load_json(path: Path) -> dict[str, Any]:
+    """Read and parse a JSON file, returning the decoded dict."""
     return json.loads(path.read_text(encoding="utf-8"))
 
 
 def save_json(path: Path, data: dict[str, Any]) -> None:
+    """Write *data* as JSON to *path* using atomic write semantics."""
     save_json_atomic(path, data)
 
 
 def save_json_atomic(path: Path, data: dict[str, Any]) -> None:
+    """Atomically write *data* as indented JSON via a temp-file rename.
+
+    Retries on transient ``PermissionError`` (common on Windows) and
+    cleans up the temp file on any failure.
+    """
     ensure_dir(path.parent)
     attempts = 0
     while True:
@@ -273,16 +299,19 @@ def save_json_atomic(path: Path, data: dict[str, Any]) -> None:
 
 
 def save_text(path: Path, content: str) -> None:
+    """Write UTF-8 text to *path*, creating parent directories as needed."""
     ensure_dir(path.parent)
     path.write_text(content, encoding="utf-8")
 
 
 def record_step_usage(state: dict[str, Any], step: str, usage_data: dict[str, Any]) -> None:
+    """Store per-step token/cost usage and recompute the aggregate summary."""
     state.setdefault("step_usage", {})[step] = usage_data
     state["usage_summary"] = _recompute_usage_summary(state["step_usage"])
 
 
 def _has_usage_metrics(usage: dict[str, Any]) -> bool:
+    """Return True if *usage* contains at least one non-None metric field."""
     for field in ("input_tokens", "output_tokens", "total_tokens", "cost", "duration_ms"):
         if usage.get(field) is not None:
             return True
@@ -290,6 +319,7 @@ def _has_usage_metrics(usage: dict[str, Any]) -> bool:
 
 
 def _recompute_usage_summary(step_usage: dict[str, Any]) -> dict[str, Any]:
+    """Aggregate per-step usage dicts into a single summary with totals."""
     summary = default_usage_summary()
     totals: dict[str, float] = {}
     for usage in step_usage.values():
@@ -314,6 +344,7 @@ def _recompute_usage_summary(step_usage: dict[str, Any]) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 def _extract_short_id(file_path: str, prefix: str) -> str:
+    """Extract a zero-padded sequence suffix from a dated filename (e.g. ``INIT01``)."""
     name = Path(file_path).name
     match = re.search(rf"{prefix}-(\d{{8}})-(\d+)", name)
     if match:
@@ -322,12 +353,18 @@ def _extract_short_id(file_path: str, prefix: str) -> str:
 
 
 def _extract_draft_short_id(file_path: str) -> str:
+    """Extract a ``DRAFT<year>`` identifier from a draft initiative filename."""
     name = Path(file_path).name
     match = re.search(r"(\d{2})-(\d{4})(?=_)", name)
     return f"DRAFT{match.group(2)}" if match else "DRAFT"
 
 
 def make_job_id(group_name: str, group_cfg: dict[str, Any], seed_artifacts: dict[str, str]) -> str:
+    """Generate a unique job ID string with workflow prefix, source tag, date, and sequence number.
+
+    The format is ``{PREFIX}-{SOURCE_ID}-{YYYYMMDD}-{NNN}`` where SOURCE_ID is
+    derived from the seed artifact filename for workflows that carry one.
+    """
     gd = group_dir(group_name)
     ensure_dir(gd)
     prefix = group_cfg.get("job_prefix", group_name.upper())
@@ -359,6 +396,11 @@ def make_job_id(group_name: str, group_cfg: dict[str, Any], seed_artifacts: dict
 # ---------------------------------------------------------------------------
 
 def infer_seed_identity(group_name: str, seed_artifacts: dict[str, str]) -> tuple[str | None, str | None]:
+    """Determine the primary seed artifact type and repo-relative path for a workflow.
+
+    Returns ``(artifact_type, normalized_path)`` or ``(None, None)`` when the
+    workflow has no identifiable seed artifact.
+    """
     if group_name == "task_execution_v1" and seed_artifacts.get("TASK_FILE"):
         return "TASK_FILE", normalize_repo_relative_path(seed_artifacts["TASK_FILE"])
     if group_name == "delivery_planning_v1" and seed_artifacts.get("INIT_FILE"):
@@ -370,6 +412,26 @@ def infer_seed_identity(group_name: str, seed_artifacts: dict[str, str]) -> tupl
 
 def create_job(group_name: str, group_cfg: dict[str, Any], seed_artifacts: dict[str, str],
                mode: str = "manual", job_no: str = "") -> dict[str, Any]:
+    """Create a new job state on disk and return the initialized state dict.
+
+    Merges artifact keys from the workflow module, step configs, the governance
+    artifact registry, and global ``ARTIFACT_PATHS``.  In daemon mode the
+    caller-supplied *job_no* is used as the job ID; otherwise a unique ID is
+    generated via :func:`make_job_id`.
+
+    Args:
+        group_name: Workflow template group name.
+        group_cfg: Full workflow configuration dict.
+        seed_artifacts: Pre-populated artifact key→path mappings.
+        mode: ``"manual"`` or ``"daemon"``.
+        job_no: Backend-assigned job number (daemon mode only).
+
+    Returns:
+        The newly created job state dict (also persisted to ``job.json``).
+
+    Raises:
+        ValueError: If a seed artifact key is not declared in the merged key set.
+    """
     if mode == "daemon" and job_no:
         job_id = job_no
     else:
@@ -471,6 +533,19 @@ def create_job(group_name: str, group_cfg: dict[str, Any], seed_artifacts: dict[
 
 
 def load_job(group_name: str, job_id: str) -> dict[str, Any]:
+    """Load a job state dict from ``job.json``, verifying group ownership.
+
+    Args:
+        group_name: Expected workflow template group name.
+        job_id: The job identifier.
+
+    Returns:
+        The parsed job state dict.
+
+    Raises:
+        FileNotFoundError: If the job state file does not exist.
+        ValueError: If the stored group does not match *group_name*.
+    """
     path = job_state_path(group_name, job_id)
     if not path.exists():
         raise FileNotFoundError(f"Job state not found: {path}")
@@ -486,6 +561,7 @@ def load_job(group_name: str, job_id: str) -> dict[str, Any]:
 
 
 def save_job(group_name: str, job_id: str, state: dict[str, Any]) -> None:
+    """Persist the job state dict to ``job.json``, syncing dual status fields."""
     state["updated_at"] = now_iso()
     if state.get("job_status") and not state.get("status"):
         state["status"] = state["job_status"]
@@ -501,6 +577,7 @@ def save_job(group_name: str, job_id: str, state: dict[str, Any]) -> None:
 # ---------------------------------------------------------------------------
 
 def iter_group_jobs(group_name: str) -> list[dict[str, Any]]:
+    """Load all job states for a workflow group, applying backward-compat normalization."""
     gd = group_dir(group_name)
     if not gd.exists():
         return []
@@ -518,6 +595,11 @@ def iter_group_jobs(group_name: str) -> list[dict[str, Any]]:
 def find_matching_active_job(
     *, group_name: str, seed_artifact_type: str, seed_artifact_path: str,
 ) -> str | None:
+    """Find the unique active job matching a seed artifact, or return None.
+
+    Raises:
+        ValueError: If multiple active jobs match the seed artifact.
+    """
     matches: list[str] = []
     for state in iter_group_jobs(group_name):
         if get_job_status(state) not in NON_TERMINAL_JOB_STATUSES:
@@ -541,6 +623,11 @@ def find_matching_active_job(
 def find_matching_completed_job(
     *, group_name: str, seed_artifact_type: str, seed_artifact_path: str,
 ) -> str | None:
+    """Find the unique completed job matching a seed artifact, or return None.
+
+    Raises:
+        ValueError: If multiple completed jobs match the seed artifact.
+    """
     matches: list[str] = []
     for state in iter_group_jobs(group_name):
         if get_job_status(state) != "COMPLETED":
@@ -560,6 +647,11 @@ def find_matching_completed_job(
 # ---------------------------------------------------------------------------
 
 def migrate_job_state(state: dict[str, Any]) -> dict[str, Any]:
+    """Apply sequential schema migrations to bring *state* to the current version.
+
+    Each ``version < N`` block adds fields introduced in that schema version.
+    Also fixes ``task_id`` → ``task_node_id`` aliasing in the execution binding.
+    """
     version = int(state.get("state_schema_version", 1))
 
     if version < 2:
@@ -604,6 +696,13 @@ def migrate_job_state(state: dict[str, Any]) -> dict[str, Any]:
 
 
 def ensure_backward_compatible_state(state: dict[str, Any]) -> dict[str, Any]:
+    """Normalize a raw job state dict so all downstream code can rely on a uniform schema.
+
+    Handles backend-managed job field aliases (``run_code`` → ``job_id``, etc.),
+    applies ``setdefault`` for every field introduced across schema versions,
+    recomputes usage summaries, infers seed identity, and repairs master
+    bootstrap artifact paths.
+    """
     # --- Backend-managed job normalization ---------------------------------
     # Backend daemon creates jobs with different field names (run_code,
     # current_step_name, context_payload). Map them to v2 runner fields
@@ -686,6 +785,12 @@ def ensure_backward_compatible_state(state: dict[str, Any]) -> dict[str, Any]:
 
 
 def _repair_master_bootstrap_artifacts(state: dict[str, Any]) -> None:
+    """Repair artifact paths for master bootstrap workflows by selecting canonical locations.
+
+    For known bootstrap workflows, checks each artifact candidate path and
+    copies the first existing file to the canonical location so downstream
+    code always finds artifacts at the expected path.
+    """
     if state.get("template_group") not in MASTER_BOOTSTRAP_WORKFLOWS:
         return
 
@@ -781,6 +886,11 @@ def reconcile_job_state(state: dict[str, Any], group_cfg: dict[str, Any]) -> dic
 def _apply_loop_routing(
     state: dict[str, Any], step: str, step_cfg: dict[str, Any], *, repair_type: str = "LOOP_TRIGGER",
 ) -> dict[str, Any]:
+    """Activate a refine loop on *state*, routing to the configured refine step.
+
+    Records the trigger in ``reconciled_from_failure`` and ``repair_history``,
+    clears last-failure state, and sets the job back to IN_PROGRESS.
+    """
     on_reject_refine = _resolve_reject_route_for_state(state=state, step_cfg=step_cfg)
     review_file = state.get("artifacts", {}).get(ARTIFACT_KEY_REVIEW)
     state["reconciled_from_failure"] = {
@@ -808,6 +918,11 @@ def _apply_loop_routing(
 def _apply_replan_routing(
     state: dict[str, Any], step: str, step_cfg: dict[str, Any], *, repair_type: str = "REPLAN_TRIGGER",
 ) -> dict[str, Any]:
+    """Activate a replan cycle on *state*, routing to the configured replan step.
+
+    Captures a pre-replan checksum of the target artifact, resets loop context,
+    appends to ``replan_history``, and sets the job back to IN_PROGRESS.
+    """
     on_exhaust_replan = step_cfg["on_exhaust_replan"]
     review_file = state.get("artifacts", {}).get(ARTIFACT_KEY_REVIEW)
     current_replan_attempt = int(state.get("replan_context", {}).get("replan_attempt", 0))
@@ -851,6 +966,12 @@ def _apply_replan_routing(
 
 
 def reapply_routing(state: dict[str, Any], group_cfg: dict[str, Any]) -> dict[str, Any]:
+    """Re-evaluate routing for the current step and activate replan or refine loops as needed.
+
+    Called when a user manually requests routing repair (e.g. after overriding
+    the current step).  Prefers replan routing when the exhausted failure code
+    matches and replan budget remains; otherwise falls back to refine loop.
+    """
     current_step = state.get("current_step")
     step_cfg = group_cfg.get("step_configs", {}).get(current_step, {})
     on_reject_refine = _resolve_reject_route_for_state(state=state, step_cfg=step_cfg) or {}
@@ -888,6 +1009,12 @@ def _resolve_reject_route_for_state(*, state: dict[str, Any], step_cfg: dict[str
 
 
 def recover_exhausted_planning_job(state: dict[str, Any], group_cfg: dict[str, Any]) -> dict[str, Any]:
+    """Attempt to recover a FAILED job by activating replan routing if budget allows.
+
+    Only applies when the job is FAILED, the current step has an exhausted
+    failure code in its history, a review artifact exists, and replan attempts
+    remain.  Persists the repaired state to disk on success.
+    """
     if get_job_status(state) != "FAILED":
         return state
     current_step = state.get("current_step")
@@ -915,6 +1042,7 @@ def recover_exhausted_planning_job(state: dict[str, Any], group_cfg: dict[str, A
 # ---------------------------------------------------------------------------
 
 def _extract_document_status(content: str) -> str | None:
+    """Parse a markdown document's Status field from bullet or YAML-style lines."""
     pattern = re.compile(
         r"^\s*[-*]\s*(?:\*\*)?Status(?::(?:\*\*)?|\*\*:\s*|:)\s*(.+?)\s*$",
         re.IGNORECASE | re.MULTILINE,
@@ -929,6 +1057,7 @@ def _extract_document_status(content: str) -> str | None:
 
 
 def _normalize_document_status(value: str) -> str:
+    """Normalize a status string to lowercase with underscores (e.g. ``changes_requested``)."""
     return re.sub(r"\s+", "_", value.strip().lower().replace("-", "_"))
 
 
@@ -965,6 +1094,13 @@ def _update_document_status(*, file_path: str, new_status: str) -> None:
 
 
 def check_preflight_artifact_status(*, step_cfg: dict[str, Any], state: dict[str, Any]) -> None:
+    """Verify that an artifact document has the required status before step execution.
+
+    Reads the artifact's Status field and raises :class:`PreflightBlockedError`
+    if it does not match the ``required_status`` declared in the step config.
+    Silently passes when no preflight check is configured or the artifact is
+    missing.
+    """
     check = step_cfg.get("preflight_status_check")
     if not check:
         return
@@ -993,11 +1129,13 @@ def check_preflight_artifact_status(*, step_cfg: dict[str, Any], state: dict[str
 # ---------------------------------------------------------------------------
 
 def task_queue_is_initialized(state: dict[str, Any]) -> bool:
+    """Return True if the task generation queue has been populated with ordered tasks."""
     queue = state.get("task_generation_state")
     return isinstance(queue, dict) and bool(queue.get("ordered_tasks"))
 
 
 def task_queue_current_item(state: dict[str, Any]) -> dict[str, Any] | None:
+    """Return the task queue item currently being processed, or None."""
     queue = state.get("task_generation_state")
     if not isinstance(queue, dict):
         return None
@@ -1009,6 +1147,7 @@ def task_queue_current_item(state: dict[str, Any]) -> dict[str, Any] | None:
 
 
 def next_pending_task_queue_item(state: dict[str, Any]) -> dict[str, Any] | None:
+    """Return the first PENDING task queue item, or None if all are done."""
     queue = state.get("task_generation_state")
     if not isinstance(queue, dict):
         return None
@@ -1019,6 +1158,7 @@ def next_pending_task_queue_item(state: dict[str, Any]) -> dict[str, Any] | None
 
 
 def task_queue_has_remaining_work(state: dict[str, Any]) -> bool:
+    """Return True if any task queue item has not yet been approved."""
     queue = state.get("task_generation_state")
     if not isinstance(queue, dict):
         return False
@@ -1026,10 +1166,12 @@ def task_queue_has_remaining_work(state: dict[str, Any]) -> bool:
 
 
 def _make_task_queue_item_id(sequence: int) -> str:
+    """Generate a deterministic queue item ID from a 1-based sequence number."""
     return f"tgq_{sequence:04d}"
 
 
 def _extract_document_metadata_value(content: str, key: str) -> str | None:
+    """Extract a metadata value from markdown by key, matching bullet or table-row formats."""
     bullet_pattern = re.compile(
         rf"^\s*[-*]\s*(?:\*\*)?{re.escape(key)}(?::(?:\*\*)?|\*\*:\s*|:)\s*(.+?)\s*$",
         re.IGNORECASE,
@@ -1053,6 +1195,12 @@ def _extract_document_metadata_value(content: str, key: str) -> str | None:
 
 
 def extract_task_graph_nodes(task_graph_path: str) -> list[dict[str, Any]]:
+    """Parse an approved task graph markdown file into an ordered list of task node dicts.
+
+    Each node contains ``task_node_id``, ``title``, ``sequence``, and queue
+    metadata.  Raises ``ValueError`` if the file is missing, unparseable, or
+    contains duplicate node IDs.
+    """
     path = resolve_repo_path(task_graph_path)
     if not path.exists() or not path.is_file():
         raise ValueError(f"Task graph artifact does not exist: {path}")
@@ -1081,11 +1229,21 @@ def extract_task_graph_nodes(task_graph_path: str) -> list[dict[str, Any]]:
 
 
 def _md5_file(path: Path) -> str:
+    """Return the hex MD5 digest of a file's contents."""
     import hashlib as _hashlib
     return _hashlib.md5(path.read_bytes()).hexdigest()
 
 
 def find_task_graph_file_by_id(task_graph_id: str) -> str:
+    """Locate the unique approved task graph document matching *task_graph_id*.
+
+    Scans ``docs/delivery/02_plans/artifacts/`` for markdown files whose
+    ``Task Graph ID`` metadata matches.  Returns the repo-relative path.
+
+    Raises:
+        FileNotFoundError: If no matching file exists.
+        ValueError: If the match is not approved or multiple files match.
+    """
     task_graph_id = task_graph_id.strip()
     if not task_graph_id:
         raise ValueError("task_graph_id is required.")
@@ -1110,6 +1268,15 @@ def find_task_graph_file_by_id(task_graph_id: str) -> str:
 
 
 def find_plan_file_by_id(plan_id: str) -> str:
+    """Locate the unique approved plan document matching *plan_id*.
+
+    Scans ``docs/delivery/02_plans/`` for markdown files whose ``Plan ID``
+    metadata matches.  Returns the repo-relative path.
+
+    Raises:
+        FileNotFoundError: If no matching file exists.
+        ValueError: If the match is not approved or multiple files match.
+    """
     plan_id = plan_id.strip()
     if not plan_id:
         raise ValueError("plan_id is required.")
@@ -1134,6 +1301,15 @@ def find_plan_file_by_id(plan_id: str) -> str:
 
 
 def build_task_execution_binding(*, task_graph_file: str, task_node_id: str) -> dict[str, Any]:
+    """Build a complete task execution binding dict for a specific task node.
+
+    Parses the task graph, resolves the plan file, captures a checksum, and
+    takes a snapshot of the task node metadata.
+
+    Raises:
+        ValueError: If the task node is not found, is duplicated, or the task
+            graph is missing Plan ID metadata.
+    """
     ordered_tasks = extract_task_graph_nodes(task_graph_file)
     matches = [item for item in ordered_tasks if item.get("task_node_id") == task_node_id]
     if not matches:
@@ -1164,6 +1340,7 @@ def build_task_execution_binding(*, task_graph_file: str, task_node_id: str) -> 
 
 
 def build_task_execution_binding_from_ids(*, task_graph_id: str, task_node_id: str) -> dict[str, Any]:
+    """Build a task execution binding by looking up the task graph file from its ID."""
     task_graph_file = find_task_graph_file_by_id(task_graph_id)
     binding = build_task_execution_binding(task_graph_file=task_graph_file, task_node_id=task_node_id)
     if not binding.get("task_graph_id"):
@@ -1172,6 +1349,7 @@ def build_task_execution_binding_from_ids(*, task_graph_id: str, task_node_id: s
 
 
 def task_execution_binding_identity(binding: dict[str, Any] | None) -> tuple[str | None, str | None]:
+    """Return ``(seed_artifact_type, seed_artifact_path)`` for a binding, or ``(None, None)``."""
     if not isinstance(binding, dict):
         return None, None
     task_graph_file = str(binding.get("task_graph_file") or "").strip()
@@ -1182,6 +1360,7 @@ def task_execution_binding_identity(binding: dict[str, Any] | None) -> tuple[str
 
 
 def task_execution_binding_current_item(state: dict[str, Any]) -> dict[str, Any] | None:
+    """Return a lightweight dict of the currently bound task node, or None."""
     binding = state.get("task_execution_binding")
     if not isinstance(binding, dict):
         return None
@@ -1196,6 +1375,7 @@ def task_execution_binding_current_item(state: dict[str, Any]) -> dict[str, Any]
 
 
 def apply_task_execution_binding(state: dict[str, Any], binding: dict[str, Any]) -> None:
+    """Apply a task execution binding to *state*, updating artifacts and seed identity."""
     normalized = default_task_execution_binding()
     normalized.update(binding)
     state["task_execution_binding"] = normalized
@@ -1211,6 +1391,11 @@ def apply_task_execution_binding(state: dict[str, Any], binding: dict[str, Any])
 
 
 def initialize_task_generation_state(state: dict[str, Any]) -> None:
+    """Parse the approved task graph and populate the task generation queue in *state*.
+
+    Raises:
+        ValueError: If the queue is already initialized or TASK_GRAPH_FILE is missing.
+    """
     if task_queue_is_initialized(state):
         raise ValueError("Task generation queue is already initialized for this job.")
     task_graph_path = state.get("artifacts", {}).get("TASK_GRAPH_FILE")
@@ -1232,6 +1417,12 @@ def initialize_task_generation_state(state: dict[str, Any]) -> None:
 
 
 def ensure_planning_task_queue_integrity(state: dict[str, Any], *, step: str) -> None:
+    """Verify the task generation queue is intact for delivery planning steps.
+
+    Checks initialization, source task graph existence, checksum integrity,
+    and current-item availability.  Raises :class:`PreflightBlockedError` on
+    any inconsistency.  No-op for non-planning workflows or unrelated steps.
+    """
     if state.get("template_group") != "delivery_planning_v1":
         return
     if step not in {"task", "review_task", "refine_task", "replan_task"}:
@@ -1265,6 +1456,12 @@ def ensure_planning_task_queue_integrity(state: dict[str, Any], *, step: str) ->
 
 
 def ensure_execution_task_binding_integrity(state: dict[str, Any], *, step: str) -> None:
+    """Verify the task execution binding is intact for task execution steps.
+
+    Checks binding initialization, task graph existence, checksum integrity,
+    and task node snapshot consistency.  Raises :class:`PreflightBlockedError`
+    on any mismatch.  No-op for non-execution workflows or unrelated steps.
+    """
     if state.get("template_group") != "task_execution_v1":
         return
     if step not in {"task", "review_task", "refine_task"}:
@@ -1318,6 +1515,7 @@ def ensure_execution_task_binding_integrity(state: dict[str, Any], *, step: str)
 # ---------------------------------------------------------------------------
 
 def get_next_step(group_cfg: dict[str, Any], state: dict[str, Any]) -> str | None:
+    """Return the first incomplete step in the workflow, or None if all are done."""
     completed = set(state.get("completed_steps", []))
     for step in group_cfg["steps"]:
         if step not in completed:
@@ -1389,6 +1587,7 @@ def advance_step(
 def _handle_refine_success(
     state: dict[str, Any], step: str, step_cfg: dict[str, Any], artifacts: dict[str, Any],
 ) -> tuple[dict[str, Any], int]:
+    """Complete a refine recovery step: verify content changed, update loop history, and return to the review step."""
     loop_returns_to = step_cfg["loop_returns_to"]
     ctx = state.get("loop_context", {})
     target_key = ctx.get("loop_target_artifact") or step_cfg.get("target_artifact", "IMPL_FILE")
@@ -1417,6 +1616,7 @@ def _handle_refine_success(
 def _handle_replan_success(
     state: dict[str, Any], step: str, step_cfg: dict[str, Any], artifacts: dict[str, Any],
 ) -> tuple[dict[str, Any], int]:
+    """Complete a replan recovery step: verify content changed, update replan history, and return to the review step."""
     replan_returns_to = step_cfg["replan_returns_to"]
     ctx = state.get("replan_context", {})
     target_key = ctx.get("target_artifact") or step_cfg.get("target_artifact", "PLAN_FILE")
@@ -1445,6 +1645,7 @@ def _handle_replan_success(
 def _handle_review_approval(
     state: dict[str, Any], step: str, step_cfg: dict[str, Any], coder_used: str,
 ) -> tuple[dict[str, Any], int]:
+    """Transition the job to WAITING_FOR_HUMAN_APPROVAL after a successful model review."""
     return mark_review_waiting_for_human(
         state=state,
         step=step,
@@ -1456,6 +1657,7 @@ def _handle_review_approval(
 
 
 def _handle_task_exec_success(state: dict[str, Any], step: str) -> tuple[dict[str, Any], int]:
+    """Handle successful task step in the task_execution_v1 workflow."""
     return mark_task_exec_success(
         state=state,
         step=step,
@@ -1466,6 +1668,11 @@ def _handle_task_exec_success(state: dict[str, Any], step: str) -> tuple[dict[st
 def _handle_task_queue_success(
     state: dict[str, Any], step: str, artifacts: dict[str, Any],
 ) -> tuple[dict[str, Any], int]:
+    """Advance the task generation queue after a successful task step in delivery_planning_v1.
+
+    Marks the current queue item as DRAFT_CREATED and routes to review_task.
+    If no current item exists, sets a failure and returns exit_code 1.
+    """
     current_item = task_queue_current_item(state)
     if current_item is None:
         set_last_failure(state=state, failure_class="HUMAN_RETRY_REQUIRED",
@@ -1490,6 +1697,7 @@ def _handle_task_queue_success(
 def _advance_to_next(
     group_cfg: dict[str, Any], state: dict[str, Any], step: str, step_cfg: dict[str, Any] | None = None,
 ) -> tuple[dict[str, Any], int]:
+    """Advance to the next workflow step, or mark the job COMPLETED if none remains."""
     return advance_to_next_step(
         group_cfg=group_cfg,
         state=state,
@@ -1538,6 +1746,26 @@ def _resolve_approval_target_artifact(*, group_name: str, step: str, group_cfg: 
 def approve_step(
     *, group_name: str, group_cfg: dict[str, Any], state: dict[str, Any], step: str,
 ) -> dict[str, Any]:
+    """Record human approval for a step that passed model review.
+
+    The step must be pending human approval (``pending_human_approval_for``)
+    and must have a recorded model approval in ``model_approved_steps``.
+    On success the review state is updated to APPROVED/HUMAN and the job
+    advances to the next step (or completes if this was the last step).
+
+    Args:
+        group_name: Workflow template group name.
+        group_cfg: Full workflow configuration dict.
+        state: Mutable job state dict.
+        step: Name of the step to approve.
+
+    Returns:
+        The updated job state dict.
+
+    Raises:
+        ValueError: If the step is not pending human approval, has no model
+            approval, or the review decision is not APPROVED.
+    """
     pending = state.get("pending_human_approval_for")
     if pending != step:
         raise ValueError(f"Step {step!r} is not pending human approval. Current pending: {pending!r}")
@@ -1606,6 +1834,25 @@ def approve_step(
 def force_approve_step(
     *, group_name: str, group_cfg: dict[str, Any], state: dict[str, Any], step: str,
 ) -> dict[str, Any]:
+    """Force-approve a step regardless of its current review decision.
+
+    Unlike ``approve_step``, this does not require the step to be pending
+    human approval or to have a model approval.  It sets the review decision
+    to APPROVED, records a human approval with ``force_override: True``,
+    clears failure state, and advances to the next step.
+
+    Args:
+        group_name: Workflow template group name.
+        group_cfg: Full workflow configuration dict.
+        state: Mutable job state dict.
+        step: Name of the step to force-approve.
+
+    Returns:
+        The updated job state dict.
+
+    Raises:
+        ValueError: If the step is not defined in the workflow.
+    """
     step_cfg = group_cfg["step_configs"].get(step)
     if not step_cfg:
         raise ValueError(f"Step {step!r} is not defined for template group {group_name!r}")
@@ -1672,11 +1919,127 @@ def force_approve_step(
     return state
 
 
+def resume_step(
+    *, group_name: str, group_cfg: dict[str, Any], state: dict[str, Any], step: str,
+) -> dict[str, Any]:
+    """Force-approve a step that is waiting for intervention or max-retried.
+
+    Records human approval (with ``resume: True``), clears all failure state
+    (loop context, pending intervention, last failure), and advances to the
+    next step in the workflow.  If no next step exists the job is marked
+    COMPLETED.
+
+    Use this when the user has investigated and fixed the root cause
+    (INTERVENTION) or decided the content is acceptable despite rejections
+    (MAXRETRIED) and wants to move forward without re-executing the step.
+
+    Args:
+        group_name: Workflow template group name.
+        group_cfg: Full workflow configuration dict.
+        state: Mutable job state dict.
+        step: Name of the step to resume.
+
+    Returns:
+        The updated job state dict.
+
+    Raises:
+        ValueError: If the job status is not WAITING_FOR_HUMAN_INTERVENTION
+            or WAITING_FOR_HUMAN_MAXRETRIED.
+    """
+    current_status = get_job_status(state)
+    if current_status not in {"WAITING_FOR_HUMAN_INTERVENTION", "WAITING_FOR_HUMAN_MAXRETRIED"}:
+        raise ValueError(
+            f"Step {step!r} cannot be resumed: job status is {current_status!r}, "
+            f"expected WAITING_FOR_HUMAN_INTERVENTION or WAITING_FOR_HUMAN_MAXRETRIED."
+        )
+
+    state.setdefault("human_approvals", {})[step] = {
+        "status": "APPROVED", "approved_at": now_iso(), "approved_by": "human", "resume": True,
+    }
+
+    review_state = state.setdefault("review_state", default_review_state())
+    review_state["human_decision"] = "APPROVED"
+    review_state["human_decided_at"] = now_iso()
+    review_state["human_actor"] = "human"
+    review_state["final_decision"] = "APPROVED"
+    review_state["final_decision_source"] = "HUMAN"
+
+    completed_steps = state.setdefault("completed_steps", [])
+    state["completed_steps"] = list(dict.fromkeys(completed_steps + [step]))
+    state["pending_intervention_for"] = None
+    state["pending_human_approval_for"] = None
+    state["loop_context"] = default_loop_context()
+    clear_last_failure(state)
+
+    next_step = get_next_step_skipping_refine_replan(group_cfg, list(state.get("completed_steps", [])))
+    if next_step is None:
+        set_job_status(state, "COMPLETED")
+        state["current_step"] = None
+        save_job(group_name, state["job_id"], state)
+        send_workflow_notification("COMPLETED", dict(state))
+    else:
+        set_job_status(state, "IN_PROGRESS")
+        state["current_step"] = next_step
+    save_job(group_name, state["job_id"], state)
+    return state
+
+
+def retry_step(
+    *, group_name: str, group_cfg: dict[str, Any], state: dict[str, Any], step: str,
+) -> dict[str, Any]:
+    """Reset failure and reject state so the step can be re-executed.
+
+    Clears the reject count, auto/human retry counts, loop context, replan
+    context, and last failure for the step.  The job returns to IN_PROGRESS
+    with ``current_step`` unchanged so the daemon or next manual invocation
+    picks up the same step with a fresh attempt budget.
+
+    Unlike ``resume_step``, this does NOT advance to the next step and does
+    NOT mark the step as completed — it gives the coder another chance to
+    produce an acceptable result.
+
+    Args:
+        group_name: Workflow template group name.
+        group_cfg: Full workflow configuration dict (unused but kept for
+            API consistency with ``resume_step`` and ``approve_step``).
+        state: Mutable job state dict.
+        step: Name of the step to retry.
+
+    Returns:
+        The updated job state dict.
+
+    Raises:
+        ValueError: If the job status is not WAITING_FOR_HUMAN_INTERVENTION
+            or WAITING_FOR_HUMAN_MAXRETRIED.
+    """
+    current_status = get_job_status(state)
+    if current_status not in {"WAITING_FOR_HUMAN_INTERVENTION", "WAITING_FOR_HUMAN_MAXRETRIED"}:
+        raise ValueError(
+            f"Step {step!r} cannot be retried: job status is {current_status!r}, "
+            f"expected WAITING_FOR_HUMAN_INTERVENTION or WAITING_FOR_HUMAN_MAXRETRIED."
+        )
+
+    state.setdefault("reject_counts", {})[step] = 0
+    state.setdefault("auto_retry_count_by_step", {})[step] = 0
+    state.setdefault("human_retry_count_by_step", {})[step] = 0
+    state["pending_intervention_for"] = None
+    state["pending_human_approval_for"] = None
+    state["loop_context"] = default_loop_context()
+    state["replan_context"] = default_replan_context()
+    clear_last_failure(state)
+
+    set_job_status(state, "IN_PROGRESS")
+    state["current_step"] = step
+    save_job(group_name, state["job_id"], state)
+    return state
+
+
 # ---------------------------------------------------------------------------
 # PRE-INIT promotion (initiative_intake_v1 only)
 # ---------------------------------------------------------------------------
 
 def _derive_init_path_from_pre_init(pre_init_path: str) -> str:
+    """Compute the INIT_FILE path by replacing the ``PRE-INIT-`` prefix with ``INIT-``."""
     rel = Path(pre_init_path)
     if rel.parent != Path(delivery_doc_rel("01_initiatives/pre_init")):
         raise ValueError(f"Unexpected PRE_INIT_FILE path for promotion: {pre_init_path!r}")
@@ -1688,6 +2051,14 @@ def _derive_init_path_from_pre_init(pre_init_path: str) -> str:
 
 
 def _promote_pre_init_to_init(state: dict[str, Any]) -> str:
+    """Copy PRE_INIT_FILE to the canonical INIT_FILE location and update the artifact.
+
+    Returns the repo-relative path of the promoted INIT_FILE.
+
+    Raises:
+        ValueError: If PRE_INIT_FILE is not set in the artifact dict.
+        FileNotFoundError: If the PRE_INIT_FILE does not exist on disk.
+    """
     artifacts = state.setdefault("artifacts", {})
     pre_init_path = str(artifacts.get("PRE_INIT_FILE") or "").strip()
     if not pre_init_path:
@@ -1711,8 +2082,27 @@ def _promote_pre_init_to_init(state: dict[str, Any]) -> str:
 # ---------------------------------------------------------------------------
 
 def prepare_state_for_retry(*, group_name: str, state: dict[str, Any], step: str) -> dict[str, Any]:
+    """Reset a waiting job back to IN_PROGRESS so the step can be re-executed.
+
+    Handles three waiting statuses:
+    - ``WAITING_FOR_AUTO_RETRY`` — clears status, keeps current_step.
+    - ``WAITING_FOR_HUMAN_INTERVENTION`` — clears status and
+      ``pending_intervention_for``.
+    - ``WAITING_FOR_HUMAN_MAXRETRIED`` — clears status only.
+
+    Also handles the special case where the job is IN_PROGRESS with an
+    active loop context (refine loop was activated but step has not run yet).
+
+    Args:
+        group_name: Workflow template group name.
+        state: Mutable job state dict.
+        step: The step to set as current.
+
+    Returns:
+        The updated job state dict.
+    """
     previous_status = get_job_status(state)
-    if previous_status in {"WAITING_FOR_AUTO_RETRY", "WAITING_FOR_HUMAN_INTERVENTION"}:
+    if previous_status in {"WAITING_FOR_AUTO_RETRY", "WAITING_FOR_HUMAN_INTERVENTION", "WAITING_FOR_HUMAN_MAXRETRIED"}:
         set_job_status(state, "IN_PROGRESS")
         state["current_step"] = step
         if previous_status == "WAITING_FOR_HUMAN_INTERVENTION":
@@ -1725,6 +2115,20 @@ def prepare_state_for_retry(*, group_name: str, state: dict[str, Any], step: str
 
 
 def enforce_retry_limit_before_run(*, state: dict[str, Any], step: str, max_rejects: int) -> None:
+    """Raise if the step has already exhausted its allowed reject count.
+
+    Called before each step execution to prevent infinite retry loops.
+    If ``max_rejects`` is 0, any prior reject is an error.  If positive,
+    the current reject count must be strictly less than the limit.
+
+    Args:
+        state: Mutable job state dict (reads ``reject_counts``).
+        step: Name of the step about to execute.
+        max_rejects: Maximum allowed rejects for this step.
+
+    Raises:
+        ValueError: If the step has reached or exceeded max rejects.
+    """
     current_count = int(state.get("reject_counts", {}).get(step, 0))
     exhausted = False
     if max_rejects == 0:
