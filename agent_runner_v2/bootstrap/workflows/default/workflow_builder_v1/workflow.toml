@@ -16,10 +16,28 @@ name = "analyze_spec"
 prompt = "prompts/01_analyze_spec.txt"
 enable_notifications = true
 requires_human_approval_after = true
-onsuccess = "define_artifacts"
+onsuccess = "resolve_questions"
 
 [step.artifacts]
 required_inputs = ["WORKFLOW_SPEC"]
+produces = ["WORKFLOW_REQUIREMENTS"]
+result_meta_key = "WORKFLOW_REQUIREMENTS"
+
+[step.coder]
+role_policy = "architect_standard"
+
+# ============================================================================
+# Step 1b: Resolve Open Questions
+# ============================================================================
+[[step]]
+name = "resolve_questions"
+prompt = "prompts/01b_resolve_questions.txt"
+enable_notifications = true
+requires_human_approval_after = true
+onsuccess = "define_artifacts"
+
+[step.artifacts]
+required_inputs = ["WORKFLOW_REQUIREMENTS", "WORKFLOW_SPEC"]
 produces = ["WORKFLOW_REQUIREMENTS"]
 result_meta_key = "WORKFLOW_REQUIREMENTS"
 
