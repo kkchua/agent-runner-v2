@@ -122,13 +122,13 @@ def test_refine_loop_exhaustion_sends_waiting_notification(monkeypatch) -> None:
     )
 
     assert exit_code == 1
-    assert get_job_status(state) == "WAITING_FOR_HUMAN_INTERVENTION"
+    assert get_job_status(state) == "WAITING_FOR_HUMAN_MAXRETRIED"
     assert len(step_captured) == 1
     assert step_captured[0][0] == "STEP_REJECTED"
     assert step_captured[0][2] == "review_docs"
     assert step_captured[0][3] == step_cfg
     assert len(workflow_captured) == 1
-    assert workflow_captured[0][0] == "WAITING_FOR_HUMAN_INTERVENTION"
+    assert workflow_captured[0][0] == "WAITING_FOR_HUMAN_MAXRETRIED"
 
 
 def test_rejected_with_refine_loop_sends_step_rejected_before_recovery(monkeypatch) -> None:
@@ -360,7 +360,7 @@ def test_refine_loop_uses_persistent_reject_count_for_exhaustion(monkeypatch) ->
     )
 
     assert exit_code == 1
-    assert get_job_status(state) == "WAITING_FOR_HUMAN_INTERVENTION"
+    assert get_job_status(state) == "WAITING_FOR_HUMAN_MAXRETRIED"
     assert state["current_step"] == "review_docs"
     assert state["reject_counts"]["review_docs"] == 3
     assert state["last_failure_code"] == "REFINE_EXHAUSTED"
@@ -369,4 +369,4 @@ def test_refine_loop_uses_persistent_reject_count_for_exhaustion(monkeypatch) ->
     assert step_captured[0][2] == "review_docs"
     assert step_captured[0][3] == step_cfg
     assert len(workflow_captured) == 1
-    assert workflow_captured[0][0] == "WAITING_FOR_HUMAN_INTERVENTION"
+    assert workflow_captured[0][0] == "WAITING_FOR_HUMAN_MAXRETRIED"

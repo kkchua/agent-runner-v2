@@ -160,6 +160,28 @@ class RunnerActionService:
         ]
         return self._invoke(repo_path=repo_path, func=run_agent.main, argv=args)
 
+    def resume_step(
+        self, *, repo_path: str, template_group: str,
+        job_id: str, step_name: str,
+    ) -> str:
+        """Resume a step waiting for intervention or max-retried (force-approve, advance)."""
+        args = [
+            "run", "--template-group", template_group,
+            "--job-id", job_id, "--resume-step", step_name,
+        ]
+        return self._invoke(repo_path=repo_path, func=run_agent.main, argv=args)
+
+    def retry_step(
+        self, *, repo_path: str, template_group: str,
+        job_id: str, step_name: str,
+    ) -> str:
+        """Retry a step waiting for intervention or max-retried (reset counts, re-execute)."""
+        args = [
+            "run", "--template-group", template_group,
+            "--job-id", job_id, "--retry-step", step_name,
+        ]
+        return self._invoke(repo_path=repo_path, func=run_agent.main, argv=args)
+
     def override_step(
         self, *, repo_path: str, template_group: str,
         job_id: str, step_name: str,

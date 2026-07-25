@@ -1,8 +1,15 @@
 {
   "role_policies": {
+	"agnes_standard": {
+      "default_role": "agnes-2.0-flash",
+	  "agent": "arv_architect",
+      "allowed_roles": [
+        "agnes-2.0-flash"
+      ]
+    },
     "architect_standard": {
       "default_role": "bailian_qwen3.7-plus",
-	  "agent": "agent_architect",
+	  "agent": "arv_architect",
       "allowed_roles": [
         "bailian_qwen3.7-plus",
         "bailian_glm-5",
@@ -15,7 +22,7 @@
     },
     "reviewer_standard": {
       "default_role": "bailian_glm-5",
-      "agent": "agent_architect",
+      "agent": "arv_reviewer",
 	  "allowed_roles": [
         "zen_go_mimo-v2.5-pro",
 		"zen_go_deepseek-v4-pro",
@@ -27,7 +34,7 @@
     },
     "refine_standard": {
       "default_role": "bailian_qwen3.7-plus",
-      "agent": "agent_architect",
+      "agent": "arv_reviewer",
 	  "allowed_roles": [
        	"bailian_glm-5",
         "bailian_qwen3.7-plus",
@@ -38,7 +45,7 @@
     },
     "plan_standard": {
       "default_role": "bailian_glm-5",
-	  "agent": "agent_architect",
+	  "agent": "arv_architect",
       "allowed_roles": [
         "bailian_qwen3.7-plus",
         "zen_go_deepseek-v4-pro",
@@ -49,7 +56,7 @@
     },
 	"backlog_standard": {
       "default_role": "bailian_kimi-k2.5",
-	  "agent": "agent_architect",
+	  "agent": "arv_architect",
       "allowed_roles": [
 	    "bailian_qwen3.7-plus",
         "bailian_kimi-k2.5",
@@ -60,7 +67,7 @@
     },
 	"task_standard": {
       "default_role": "bailian_MiniMax-M2.5",
-	  "agent": "agent_architect",
+	  "agent": "arv_architect",
       "allowed_roles": [
         "bailian_MiniMax-M2.5",
         "zen_go_deepseek-v4-pro",
@@ -70,7 +77,7 @@
     },
     "implement_standard": {
       "default_role": "bailian_qwen3-coder-next",
-	  "agent": "agent_architect",
+	  "agent": "arv_architect",
       "allowed_roles": [
         "zen_go_deepseek-v4-pro",
 		"zen_go_deepseek-v4-flash",
@@ -82,7 +89,7 @@
     },
     "execution_standard": {
       "default_role": "bailian_qwen3-coder-next",
-	  "agent": "agent_architect",
+	  "agent": "arv_coder",
       "allowed_roles": [
         "bailian_qwen3-coder-next",
         "bailian_qwen3-coder-plus",
@@ -91,7 +98,7 @@
     },
     "validation_standard": {
       "default_role": "bailian_qwen3.7-plus",
-	  "agent": "agent_architect",
+	  "agent": "arv_reviewer",
       "allowed_roles": [
         "bailian_qwen3.7-plus",
         "zen_go_deepseek-v4-pro",
@@ -101,7 +108,7 @@
     },
     "code_fix_standard": {
       "default_role": "bailian_MiniMax-M2.5",
-	  "agent": "agent_architect",
+	  "agent": "arv_coder",
       "allowed_roles": [
         "bailian_MiniMax-M2.5",
         "bailian_qwen3-coder-plus",
@@ -110,7 +117,7 @@
     },
     "documentation_standard": {
       "default_role": "bailian_kimi-k2.5",
-	  "agent": "agent_architect",
+	  "agent": "arv_architect",
       "allowed_roles": [
         "bailian_kimi-k2.5",
         "bailian_qwen3.7-plus",

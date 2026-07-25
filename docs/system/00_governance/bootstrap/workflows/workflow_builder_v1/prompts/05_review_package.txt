@@ -19,7 +19,7 @@ Review Checklist
    - stepCompletion terminal step is present as the last [[step]]
    - init_step matches the first step name
    - Every onsuccess target references a valid step name or stepCompletion
-   - promotes key is at [workflow] level, not inside [[step]]
+   - promotes key is at [[step]] top level, not inside [step.artifacts]
    - onsuccess is at step level, not inside [step.artifacts]
    - Every prompt step has [step.coder] with a valid role_policy
    - Every prompt step has [step.artifacts] with produces and result_meta_key

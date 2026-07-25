@@ -30,7 +30,7 @@ Generation Tasks
      [step.on_reject_refine] block
    - Refine steps must have loop_returns_to
    - Final step must be stepCompletion with action = "step_completion"
-   - promotes key must be at the top level of [workflow], not inside [[step]]
+   - promotes key must be at the [[step]] top level, not inside [step.artifacts]
 
 2. Generate context_extensions.py and write it to {WORKFLOW_EXTENSIONS}:
    - Import WorkflowExtensions from
@@ -71,4 +71,4 @@ Forbidden Content
 - Backtick-wrapped placeholders like {KEY} -- always use bare {KEY}
 - Hardcoded absolute paths in context_extensions.py register_artifact_keys()
 - Missing stepCompletion terminal step
-- promotes key inside [[step]] instead of at [workflow] level
+- promotes key inside [step.artifacts] instead of at [[step]] top level

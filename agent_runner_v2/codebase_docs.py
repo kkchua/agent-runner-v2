@@ -69,43 +69,87 @@ def _slugify(value: str) -> str:
     return value.strip("-")
 
 
-def _module_area(rel_path: str) -> str:
+_NON_PACKAGE_DIRS = {
+    "tests", "test", "scripts", "docs", "tools", "masterplan",
+    "migrations", "alembic", "examples", "example", "fixtures",
+}
+
+
+def _detect_package_root(project_root: Path) -> str | None:
+    """Auto-detect the main Python package directory name."""
+    candidates = []
+    for child in sorted(project_root.iterdir()):
+        if not child.is_dir():
+            continue
+        name = child.name
+        if name.startswith((".", "_")) or name.startswith("__"):
+            continue
+        if name in EXCLUDED_DIRS or name in _NON_PACKAGE_DIRS:
+            continue
+        if name.endswith((".egg-info", ".dist-info")):
+            continue
+        if (child / "__init__.py").exists():
+            candidates.append(name)
+    if len(candidates) == 1:
+        return candidates[0]
+    if len(candidates) > 1:
+        for name in candidates:
+            if (project_root / name / "__main__.py").exists():
+                return name
+        return max(candidates, key=lambda n: sum(
+            1 for _ in (project_root / n).rglob("*.py")
+        ))
+    return None
+
+
+_DIR_AREA_MAP = {
+    "actions": "actions",
+    "tools": "tools",
+    "api": "api",
+    "core": "core",
+    "database": "database",
+    "db": "database",
+    "models": "models",
+    "services": "services",
+    "workers": "workers",
+    "commands": "commands",
+    "schema": "schema",
+    "state": "state",
+    "coder": "coder",
+    "bootstrap": "bootstrap",
+    "backend": "backend",
+}
+
+_FULL_DOC_DIRS = {"actions", "core", "api", "services", "database", "db", "backend", "workers"}
+
+
+def _module_area(rel_path: str, pkg_root: str | None = None) -> str:
     rel = PurePosixPath(rel_path)
-    if rel.parts[:2] == ("agent_runner_v2", "actions"):
-        return "actions"
-    if rel.name == "run_agent.py" or rel.name == "step_runner.py" or rel.name == "workflow_router.py":
-        return "core"
-    if rel.name in {"job_state.py", "runtime_context.py", "execution_request.py", "execution_result.py"}:
-        return "state"
-    if rel.name in {"coder_adapters.py", "coder_registry.py"}:
-        return "coder"
-    if rel.name in {"bundle_loader.py", "template_groups.py"}:
-        return "bootstrap"
-    if rel.name in {"backend_client.py", "daemon.py", "runner_logger.py"}:
-        return "backend"
-    if rel.name in {"approve_commands.py", "submit_commands.py", "engine_commands.py", "submitter.py"}:
-        return "commands"
-    if rel.name in {"action_result.py", "artifact_paths.py", "exceptions.py", "runner_actions.py"}:
-        return "schema"
-    if rel.parts[:2] == ("agent_runner_v2", "tools"):
-        return "tools"
     if rel.name == "__init__.py":
         return "package"
+    if pkg_root and rel.parts[0] == pkg_root and len(rel.parts) == 2:
+        return "core"
+    if len(rel.parts) >= 3 and rel.parts[0] == (pkg_root or rel.parts[0]):
+        dir_name = rel.parts[1]
+        if dir_name in _DIR_AREA_MAP:
+            return _DIR_AREA_MAP[dir_name]
+    if len(rel.parts) >= 2:
+        dir_name = rel.parts[-2]
+        if dir_name in _DIR_AREA_MAP:
+            return _DIR_AREA_MAP[dir_name]
     return "support"
 
 
-def _module_doc_mode(rel_path: str) -> str:
+def _module_doc_mode(rel_path: str, pkg_root: str | None = None) -> str:
     rel = PurePosixPath(rel_path)
     if rel.name == "__init__.py":
         return "stub"
-    if rel.parts[:2] == ("agent_runner_v2", "actions"):
+    if pkg_root and rel.parts[0] == pkg_root and len(rel.parts) >= 3:
+        dir_name = rel.parts[1]
+        if dir_name in _FULL_DOC_DIRS:
+            return "full"
+    if pkg_root and rel.parts[0] == pkg_root and len(rel.parts) == 2:
         return "full"
-    if rel.parts[0] == "agent_runner_v2" and rel.name.endswith(".py"):
-        if rel.name in {"run_agent.py", "step_runner.py", "workflow_router.py", "job_state.py", "runtime_context.py", "coder_adapters.py", "bundle_loader.py", "template_groups.py"}:
-            return "full"
-        if rel.name in {"backend_client.py", "daemon.py", "runner_logger.py"}:
-            return "full"
-        return "summary"
     return "summary"
 
 
@@ -119,12 +163,13 @@ def _module_doc_path(rel_path: str) -> str:
     return codebase_doc_rel(f"02_modules/{stem}.md")
 
 
-def _module_name_from_path(rel_path: str) -> str:
+def _module_name_from_path(rel_path: str, pkg_root: str | None = None) -> str:
     rel = PurePosixPath(rel_path)
-    if rel.parts[0] != "agent_runner_v2":
+    effective_root = pkg_root or "agent_runner_v2"
+    if not pkg_root or rel.parts[0] != effective_root:
         return rel_path
     if rel.name == "__init__.py":
-        return "agent_runner_v2"
+        return effective_root
     return ".".join(rel.with_suffix("").parts)
 
 
@@ -180,15 +225,16 @@ def _iter_git_tracked_and_unignored_files(project_root: Path) -> list[Path] | No
     return sorted(files, key=lambda p: p.relative_to(project_root).as_posix().lower())
 
 
-def _classify_file(project_root: Path, path: Path) -> ScanItem:
+def _classify_file(project_root: Path, path: Path, pkg_root: str | None = None) -> ScanItem:
     rel_path = path.relative_to(project_root).as_posix()
     rel = PurePosixPath(rel_path)
-    if rel.parts[0] == "agent_runner_v2" and rel.suffix == ".py":
+    effective_pkg = pkg_root or "agent_runner_v2"
+    if pkg_root and rel.parts[0] == pkg_root and rel.suffix == ".py":
         category = "python modules"
-        subcategory = _module_area(rel_path)
+        subcategory = _module_area(rel_path, pkg_root=pkg_root)
         owner_doc = _module_doc_path(rel_path)
-        doc_mode = _module_doc_mode(rel_path)
-    elif rel.parts[:3] == ("agent_runner_v2", "bootstrap", "workflows"):
+        doc_mode = _module_doc_mode(rel_path, pkg_root=pkg_root)
+    elif rel.parts[:3] == (effective_pkg, "bootstrap", "workflows"):
         category = "bootstrap workflow files"
         subcategory = "workflow assets"
         owner_doc = _component_owner_doc("workflow families")
@@ -466,7 +512,7 @@ def _extract_decorators(node: ast.FunctionDef | ast.AsyncFunctionDef | ast.Class
     return decorators
 
 
-def _scan_python_module(project_root: Path, path: Path) -> dict[str, Any]:
+def _scan_python_module(project_root: Path, path: Path, pkg_root: str | None = None) -> dict[str, Any]:
     rel_path = path.relative_to(project_root).as_posix()
     try:
         tree = ast.parse(_read_text(path))
@@ -528,9 +574,10 @@ def _scan_python_module(project_root: Path, path: Path) -> dict[str, Any]:
     stdlib_imports = []
     local_imports = []
     external_imports = []
+    effective_pkg = pkg_root or "agent_runner_v2"
     for imp in imports:
         top = imp.split(".", 1)[0]
-        if top == "agent_runner_v2" or imp.startswith("."):
+        if top == effective_pkg or imp.startswith("."):
             local_imports.append(imp)
         elif top in STD_LIBS:
             stdlib_imports.append(imp)
@@ -539,9 +586,9 @@ def _scan_python_module(project_root: Path, path: Path) -> dict[str, Any]:
 
     return {
         "rel_path": rel_path,
-        "module_name": _module_name_from_path(rel_path),
-        "module_area": _module_area(rel_path),
-        "doc_mode": _module_doc_mode(rel_path),
+        "module_name": _module_name_from_path(rel_path, pkg_root=pkg_root),
+        "module_area": _module_area(rel_path, pkg_root=pkg_root),
+        "doc_mode": _module_doc_mode(rel_path, pkg_root=pkg_root),
         "owner_doc_path": _module_doc_path(rel_path),
         "summary": module_doc.splitlines()[0] if module_doc else "Auto-generated baseline module documentation.",
         "module_doc": module_doc,
@@ -630,13 +677,14 @@ def build_snapshot(project_root: Path, *, mode: str, job_id: str, step: str, wor
     now = _today_iso()
     workflow_name = str(workflow_name or get_context().workflow_name or mode)
     project_config = load_project_config(project_root)
+    pkg_root = _detect_package_root(project_root)
     files = _iter_repo_files(project_root)
-    items = [_classify_file(project_root, path) for path in files]
+    items = [_classify_file(project_root, path, pkg_root=pkg_root) for path in files]
     python_modules = []
     for path in files:
         rel = path.relative_to(project_root)
-        if rel.parts[0] == "agent_runner_v2" and rel.suffix == ".py":
-            rec = _scan_python_module(project_root, path)
+        if pkg_root and rel.parts[0] == pkg_root and rel.suffix == ".py":
+            rec = _scan_python_module(project_root, path, pkg_root=pkg_root)
             python_modules.append(rec)
     for rec in python_modules:
         rec["test_references"] = _find_test_references(project_root, rec)
@@ -653,6 +701,7 @@ def build_snapshot(project_root: Path, *, mode: str, job_id: str, step: str, wor
         "generated_at": now,
         "mode": mode,
         "workflow_name": workflow_name,
+        "pkg_root": pkg_root,
         "bundle_profile": str(project_config.get("bundle_profile") or "core+workflow"),
         "bundle_domain": str(project_config.get("bundle_domain") or "general"),
         "bundle_manifest": str(project_config.get("bundle_manifest") or ""),

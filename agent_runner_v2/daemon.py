@@ -574,7 +574,32 @@ def _run_supervisor(*, worker_id: str, worker_label: str, backend_url: str, poll
                 if _is_stop_requested(claim['run']):
                     _handle_stop_on_claim(client, claim, logger)
                     continue
-                child = _spawn_child(claim=claim, runtime_root=runtime_dir, cli_pythonpath=cli_pythonpath, logger=logger, backend_url=backend_url, step_spec_source=step_spec_source)
+                try:
+                    child = _spawn_child(claim=claim, runtime_root=runtime_dir, cli_pythonpath=cli_pythonpath, logger=logger, backend_url=backend_url, step_spec_source=step_spec_source)
+                except Exception as exc:
+                    step_run_id = str(claim.get('step_run', {}).get('id') or '')
+                    run_code = str(claim.get('run', {}).get('run_code') or '')
+                    logger.log('error', 'spawn_child_failed', message=f'failed to spawn child for run {run_code}: {exc}', details={'step_run_id': step_run_id, 'run_code': run_code, 'error': str(exc)})
+                    try:
+                        client.sync_job_state(
+                            step_run_id=step_run_id,
+                            payload={
+                                "run_status": "failed",
+                                "step_status": "failed",
+                                "step_outcome": "failed",
+                                "step_coder": None,
+                                "step_duration_seconds": 0,
+                                "next_step_name": None,
+                                "output_payload": {},
+                                "error_message": f"Daemon failed to spawn child: {exc}",
+                                "review": None,
+                                "artifacts": [],
+                                "events": [{"event_type": "SPAWN_FAILED", "message": f"Failed to spawn child: {exc}"}],
+                            },
+                        )
+                    except Exception:
+                        pass
+                    continue
                 children[child.step_run_id] = child
                 _send_child_heartbeat(client, worker_id, child, status='busy')
                 child.last_heartbeat_at = time.monotonic()

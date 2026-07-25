@@ -363,9 +363,11 @@ def main(argv: list[str] | None = None) -> int:
                     async def on_browse_click(e, k=key, f=tf, d=input_dir):
                         """Open file picker, optionally rooted at the delivery dir."""
                         repo_path = selected_repo_path()
-                        # For cross-OS repos, file picker can't navigate Linux paths
+                        # For cross-OS repos, file picker can't navigate Linux paths;
+                        # root at the user's home directory instead of None (which
+                        # triggers os.fspath(None) in Flet).
                         if _is_cross_os(selected_repo().os_type if selected_repo() else ""):
-                            file_picker.root_directory = None
+                            file_picker.root_directory = str(Path.home())
                         elif d and d != ".":
                             resolved = Path(repo_path) / d
                             if resolved.is_dir():
@@ -379,7 +381,8 @@ def main(argv: list[str] | None = None) -> int:
                             allowed_extensions=["md"],
                         )
                         if files:
-                            f.value = Path(files[0].path).name
+                            picked = files[0]
+                            f.value = str(Path(picked.path).name) if picked.path else picked.name
                             page.update()
 
                     btn = ft.ElevatedButton("Browse", on_click=on_browse_click)
@@ -661,7 +664,6 @@ def main(argv: list[str] | None = None) -> int:
                 if not auto_refresh_cb.value:
                     break
                 try:
-                    _log.info("[console] auto-refresh tick")
                     refresh_active_runs(auto_populate=False)
                     page.update()
                 except Exception:
@@ -747,11 +749,47 @@ def main(argv: list[str] | None = None) -> int:
                     run_id = str(selected_run_id or "").strip()
                     if not run_id:
                         raise ActionExecutionError("Select an active run to reject.")
-                    result = backend_service.approve_run(
-                        run_id=run_id, reject=True,
-                        feedback=feedback_tf.value or "",
-                    )
-                    rendered = _render_result(result)
+                    detail = backend_service.get_run_detail(run_id=run_id)
+                    run_payload = detail.get("run") or {}
+                    step_name = str(run_payload.get("awaiting_human_step") or "").strip()
+                    job_id = str(run_payload.get("run_code") or "").strip()
+                    workflow_name = str(run_payload.get("workflow_name") or "").strip()
+                    # Resolve repo and workflow for local runner call
+                    resolved_repo_path, resolved_workflow = _resolve_repo_and_workflow(workflow_name)
+                    if resolved_workflow is None:
+                        raise ActionExecutionError(
+                            f"Unable to find workflow '{workflow_name}' in configured repos."
+                        )
+                    # Check local job status to determine reject behavior
+                    from pathlib import Path as _Path
+                    import json as _json
+                    job_json_path = _Path.home() / ".ukbe-runner" / "jobs" / (resolved_workflow.template_group or resolved_workflow.workflow_name) / job_id / "job.json"
+                    local_status = ""
+                    if job_json_path.exists():
+                        try:
+                            local_job = _json.loads(job_json_path.read_text(encoding="utf-8"))
+                            local_status = str(local_job.get("job_status") or local_job.get("status") or "").strip()
+                        except Exception:
+                            pass
+                    if local_status in ("WAITING_FOR_HUMAN_INTERVENTION", "WAITING_FOR_HUMAN_MAXRETRIED"):
+                        # For intervention/maxretried: Reject = Retry (reset counts, re-execute)
+                        rendered_local = runner_service.retry_step(
+                            repo_path=resolved_repo_path,
+                            template_group=resolved_workflow.template_group or resolved_workflow.workflow_name,
+                            job_id=job_id, step_name=step_name,
+                        )
+                        backend_result = backend_service.approve_run(
+                            run_id=run_id, reject=False,
+                            feedback=feedback_tf.value or "Retry after intervention",
+                        )
+                        rendered = f"Local: {rendered_local}\n\nBackend: {_render_result(backend_result)}"
+                    else:
+                        # For approval: standard backend reject
+                        result = backend_service.approve_run(
+                            run_id=run_id, reject=True,
+                            feedback=feedback_tf.value or "",
+                        )
+                        rendered = _render_result(result)
 
                 elif action == "Cancel":
                     run_id = str(selected_run_id or "").strip()
