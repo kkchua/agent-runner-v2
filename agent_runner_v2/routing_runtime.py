@@ -8,11 +8,15 @@ from .task_runtime import task_queue_current_item
 def get_next_step_skipping_refine_replan(group_cfg: dict[str, Any], completed_steps: list[str]) -> str | None:
     completed = set(completed_steps)
     skip_steps: set[str] = set()
-    for sc in group_cfg.get("step_configs", {}).values():
-        for key in ("on_reject_refine", "on_exhaust_replan"):
-            candidate = (sc.get(key) or {}).get("step")
-            if candidate:
-                skip_steps.add(str(candidate))
+    # Only skip actual recovery steps (those with loop_returns_to or replan_returns_to).
+    # Do NOT skip steps that are merely mentioned as on_reject_refine targets --
+    # many workflows use self-referencing on_reject_refine (step points to itself),
+    # which means the step should rerun on rejection, not be skipped entirely.
+    for step_name, sc in group_cfg.get("step_configs", {}).items():
+        if sc.get("loop_returns_to") or sc.get("replan_returns_to"):
+            skip_steps.add(str(step_name))
+    # Also skip steps with "refine" or "replan" in their name (fallback for
+    # workflows that don't use loop_returns_to/replan_returns_to).
     for step in group_cfg.get("steps", []):
         lowered = str(step).lower()
         if "replan" in lowered or "refine" in lowered:

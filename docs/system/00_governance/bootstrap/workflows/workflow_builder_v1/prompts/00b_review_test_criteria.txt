@@ -1,0 +1,72 @@
+Objective
+
+Review the generated test criteria document for completeness, clarity,
+and alignment with the workflow specification. Produce a detailed review
+with an APPROVED or REJECTED verdict.
+
+Reference Inputs
+
+- Read {TEST_CRITERIA} for the generated test criteria document.
+- Read {WORKFLOW_SPEC} for the original specification to verify alignment.
+
+Review Checklist
+
+1. Spec Objective Summary:
+   - Does it accurately capture the workflow's end-to-end transformation?
+   - Does it match the spec's stated purpose?
+
+2. Criteria for analyze_spec step:
+   - Are all spec requirements covered?
+   - Are the expected input/output artifacts correctly identified?
+   - Is the workflow type classification correct?
+
+3. Criteria for generate_package step:
+   - Are all required files listed with semantic (not just structural) criteria?
+   - Are action-driven steps described with actual implementation requirements
+     (API calls, data flow, error handling)?
+   - Are negative criteria included (what must NOT be generated)?
+   - Are hardcoded vs dynamic paths correctly specified?
+
+4. Criteria for validate_bundle step:
+   - Are both structural and semantic checks included?
+   - Can each criterion be verified by reading the generated files?
+
+5. Criteria for review_package step:
+   - Does it verify spec fulfillment (not just file structure)?
+   - Does it check data flow between steps?
+   - Does it check for hallucinated configurations?
+
+6. Quality checks:
+   - Every criterion is specific and verifiable (not vague)
+   - No contradictory criteria
+   - All content is ASCII-only
+   - YAML frontmatter is present and correct
+
+Output Instructions
+
+- Write the review document to {REVIEW_FILE_SUGGESTED}.
+- Output must be ASCII-only.
+- Include YAML frontmatter with at minimum:
+  - doc_type: "workflow_review"
+  - lifecycle_status: "draft"
+  - effective_version: "{job_id}"
+- Include these sections:
+  1. Summary: one-paragraph overall assessment.
+  2. Findings: pass/fail for each checklist item with evidence.
+  3. Issues: numbered list of specific issues to fix (if any).
+  4. Verdict: APPROVED or REJECTED on its own line at the end.
+- If REJECTED, each issue must include the section, location, and
+  specific fix required.
+
+Decision Rules
+
+- APPROVED: All criteria are specific, verifiable, and aligned with spec.
+- REJECTED: Any vague criteria, missing sections, or misalignment with spec.
+
+CRITICAL: The meta.json status field MUST match your review verdict exactly.
+
+Forbidden Content
+
+- Modifying the test criteria directly (that is the refine step)
+- Vague findings without specific references
+- Non-ASCII characters

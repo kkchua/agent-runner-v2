@@ -154,7 +154,7 @@ def main(argv: list[str] | None = None) -> int:
         page.padding = 20
 
         # -- Actions --------------------------------------------------------
-        actions = ["Submit", "Approve", "Reject", "Reset", "Cancel"]
+        actions = ["Submit", "Approve", "Reject", "Resume", "Retry", "Reset", "Cancel"]
 
         # -- State ----------------------------------------------------------
         input_fields: dict[str, ft.TextField] = {}
@@ -207,6 +207,10 @@ def main(argv: list[str] | None = None) -> int:
         )
         reset_step_dd = ft.Dropdown(
             label="Reset Target Step", width=580, visible=False,
+        )
+        start_step_dd = ft.Dropdown(
+            label="Start Step (optional)", width=580, visible=True,
+            hint_text="Leave empty to start from beginning",
         )
 
         # Dynamic workflow-inputs panel
@@ -507,6 +511,7 @@ def main(argv: list[str] | None = None) -> int:
                     workflow_dd.value = ""
                     workflow_dd.disabled = True
                 rebuild_input_fields()
+                refresh_step_options()
                 refresh_active_runs()
                 page.update()
             except Exception:
@@ -522,6 +527,7 @@ def main(argv: list[str] | None = None) -> int:
                     workflow_dd.value = None
                     workflow_dd.disabled = True
                     rebuild_input_fields()
+                    refresh_step_options()
                     page.update()
                     return
 
@@ -534,6 +540,7 @@ def main(argv: list[str] | None = None) -> int:
                     workflow_dd.disabled = True
 
                 rebuild_input_fields()
+                refresh_step_options()
                 page.update()
             except Exception:
                 _log.exception("Unexpected error while changing repository.")
@@ -543,34 +550,50 @@ def main(argv: list[str] | None = None) -> int:
             """Rebuild dynamic input fields when the workflow selection changes."""
             try:
                 rebuild_input_fields()
+                refresh_step_options()
                 page.update()
             except Exception:
                 _log.exception("Unexpected error while changing workflow.")
                 show_error("Unable to process the selected workflow.")
 
         def refresh_step_options(_event=None) -> None:
-            """Populate the Reset Target Step dropdown from the workflow's step order."""
+            """Populate the Reset Target Step and Start Step dropdowns from the workflow's step order."""
             workflow = selected_workflow(required=False)
             if workflow is None:
                 reset_step_dd.options = []
                 reset_step_dd.value = None
+                start_step_dd.options = []
+                start_step_dd.value = None
                 page.update()
                 return
             bundle_dir = get_workflow_root() / workflow.workflow_name
             try:
                 bundle = load_workflow_package(bundle_dir)
-                reset_step_dd.options = [ft.dropdown.Option(s) for s in bundle.step_order]
+                step_options = [ft.dropdown.Option(s) for s in bundle.step_order]
+                reset_step_dd.options = step_options
                 if bundle.step_order:
                     reset_step_dd.value = bundle.step_order[0]
+                # Start Step dropdown — same options but no default (empty = start from beginning)
+                start_step_dd.options = [ft.dropdown.Option(key="", text="(start from beginning)")] + step_options
+                start_step_dd.value = ""
             except Exception as exc:
                 reset_step_dd.options = []
                 reset_step_dd.value = None
+                start_step_dd.options = []
+                start_step_dd.value = None
                 output.value = f"Failed to load workflow steps: {exc}"
             page.update()
 
         # ==================================================================
         # Active runs
         # ==================================================================
+
+        _STATUS_ICONS = {
+            "WAITING_FOR_HUMAN_APPROVAL": "🟡",
+            "WAITING_FOR_HUMAN_INTERVENTION": "🔴",
+            "WAITING_FOR_HUMAN_MAXRETRIED": "🛑",
+            "IN_PROGRESS": "🔵",
+        }
 
         def refresh_active_runs(_event=None, *, auto_populate: bool = True) -> None:
             """Fetch active runs from the backend and populate the dropdown.
@@ -597,7 +620,7 @@ def main(argv: list[str] | None = None) -> int:
                         if entry:
                             repo_name, wf_map = entry
                             workflow_display = wf_map.get(run.workflow_name, run.workflow_name)
-                        display_text = f"[{run.worker_id or '-'}] [{repo_name}] [{workflow_display}] {run.run_code or run.run_id} | {run.status} | {run.current_step or '-'}"
+                        display_text = f"[{run.worker_id or '-'}] [{repo_name}] [{workflow_display}] {run.run_code or run.run_id} | {_STATUS_ICONS.get(run.status, '⚪')} {run.status} | {run.current_step or '-'}"
                         display_options.append(ft.dropdown.Option(key=run.run_id, text=display_text))
                     active_runs_dd.options = display_options
                     active_runs_dd.value = active_runs[0].run_id
@@ -682,10 +705,11 @@ def main(argv: list[str] | None = None) -> int:
         def update_visibility(_event=None) -> None:
             """Show/hide UI sections based on the selected action."""
             action = action_dd.value or ""
-            needs_active = action in {"Approve", "Reject", "Reset", "Cancel"}
+            needs_active = action in {"Approve", "Reject", "Resume", "Retry", "Reset", "Cancel"}
 
             feedback_tf.visible = needs_active
             reset_step_dd.visible = action == "Reset"
+            start_step_dd.visible = action == "Submit"
 
             page.update()
 
@@ -713,6 +737,7 @@ def main(argv: list[str] | None = None) -> int:
                         input_artifacts=input_artifacts,
                         worker_id=selected_worker_id(),
                         os_type=os_type,
+                        start_step=start_step_dd.value or "",
                     )
 
                 elif action == "Approve":
@@ -754,42 +779,83 @@ def main(argv: list[str] | None = None) -> int:
                     step_name = str(run_payload.get("awaiting_human_step") or "").strip()
                     job_id = str(run_payload.get("run_code") or "").strip()
                     workflow_name = str(run_payload.get("workflow_name") or "").strip()
-                    # Resolve repo and workflow for local runner call
+                    if not step_name or not job_id:
+                        raise ActionExecutionError(
+                            "Selected run is missing awaiting_human_step or run_code.",
+                        )
                     resolved_repo_path, resolved_workflow = _resolve_repo_and_workflow(workflow_name)
                     if resolved_workflow is None:
                         raise ActionExecutionError(
                             f"Unable to find workflow '{workflow_name}' in configured repos."
                         )
-                    # Check local job status to determine reject behavior
-                    from pathlib import Path as _Path
-                    import json as _json
-                    job_json_path = _Path.home() / ".ukbe-runner" / "jobs" / (resolved_workflow.template_group or resolved_workflow.workflow_name) / job_id / "job.json"
-                    local_status = ""
-                    if job_json_path.exists():
-                        try:
-                            local_job = _json.loads(job_json_path.read_text(encoding="utf-8"))
-                            local_status = str(local_job.get("job_status") or local_job.get("status") or "").strip()
-                        except Exception:
-                            pass
-                    if local_status in ("WAITING_FOR_HUMAN_INTERVENTION", "WAITING_FOR_HUMAN_MAXRETRIED"):
-                        # For intervention/maxretried: Reject = Retry (reset counts, re-execute)
-                        rendered_local = runner_service.retry_step(
-                            repo_path=resolved_repo_path,
-                            template_group=resolved_workflow.template_group or resolved_workflow.workflow_name,
-                            job_id=job_id, step_name=step_name,
+                    rendered_local = runner_service.reject_step(
+                        repo_path=resolved_repo_path,
+                        template_group=resolved_workflow.template_group or resolved_workflow.workflow_name,
+                        job_id=job_id, step_name=step_name,
+                    )
+                    backend_result = backend_service.approve_run(
+                        run_id=run_id, reject=True,
+                        feedback=feedback_tf.value or "",
+                    )
+                    rendered = f"Local: {rendered_local}\n\nBackend: {_render_result(backend_result)}"
+
+                elif action == "Resume":
+                    run_id = str(selected_run_id or "").strip()
+                    if not run_id:
+                        raise ActionExecutionError("Select an active run to resume.")
+                    detail = backend_service.get_run_detail(run_id=run_id)
+                    run_payload = detail.get("run") or {}
+                    step_name = str(run_payload.get("awaiting_human_step") or "").strip()
+                    job_id = str(run_payload.get("run_code") or "").strip()
+                    workflow_name = str(run_payload.get("workflow_name") or "").strip()
+                    if not step_name or not job_id:
+                        raise ActionExecutionError(
+                            "Selected run is missing awaiting_human_step or run_code.",
                         )
-                        backend_result = backend_service.approve_run(
-                            run_id=run_id, reject=False,
-                            feedback=feedback_tf.value or "Retry after intervention",
+                    resolved_repo_path, resolved_workflow = _resolve_repo_and_workflow(workflow_name)
+                    if resolved_workflow is None:
+                        raise ActionExecutionError(
+                            f"Unable to find workflow '{workflow_name}' in configured repos."
                         )
-                        rendered = f"Local: {rendered_local}\n\nBackend: {_render_result(backend_result)}"
-                    else:
-                        # For approval: standard backend reject
-                        result = backend_service.approve_run(
-                            run_id=run_id, reject=True,
-                            feedback=feedback_tf.value or "",
+                    rendered_local = runner_service.resume_step(
+                        repo_path=resolved_repo_path,
+                        template_group=resolved_workflow.template_group or resolved_workflow.workflow_name,
+                        job_id=job_id, step_name=step_name,
+                    )
+                    backend_result = backend_service.approve_run(
+                        run_id=run_id, reject=False,
+                        feedback=feedback_tf.value or "Resumed by operator",
+                    )
+                    rendered = f"Local: {rendered_local}\n\nBackend: {_render_result(backend_result)}"
+
+                elif action == "Retry":
+                    run_id = str(selected_run_id or "").strip()
+                    if not run_id:
+                        raise ActionExecutionError("Select an active run to retry.")
+                    detail = backend_service.get_run_detail(run_id=run_id)
+                    run_payload = detail.get("run") or {}
+                    step_name = str(run_payload.get("awaiting_human_step") or "").strip()
+                    job_id = str(run_payload.get("run_code") or "").strip()
+                    workflow_name = str(run_payload.get("workflow_name") or "").strip()
+                    if not step_name or not job_id:
+                        raise ActionExecutionError(
+                            "Selected run is missing awaiting_human_step or run_code.",
                         )
-                        rendered = _render_result(result)
+                    resolved_repo_path, resolved_workflow = _resolve_repo_and_workflow(workflow_name)
+                    if resolved_workflow is None:
+                        raise ActionExecutionError(
+                            f"Unable to find workflow '{workflow_name}' in configured repos."
+                        )
+                    rendered_local = runner_service.retry_step(
+                        repo_path=resolved_repo_path,
+                        template_group=resolved_workflow.template_group or resolved_workflow.workflow_name,
+                        job_id=job_id, step_name=step_name,
+                    )
+                    backend_result = backend_service.approve_run(
+                        run_id=run_id, reject=False,
+                        feedback=feedback_tf.value or "Retried by operator",
+                    )
+                    rendered = f"Local: {rendered_local}\n\nBackend: {_render_result(backend_result)}"
 
                 elif action == "Cancel":
                     run_id = str(selected_run_id or "").strip()
@@ -798,6 +864,15 @@ def main(argv: list[str] | None = None) -> int:
                     result = backend_service.stop_run(
                         run_id=run_id, reason=feedback_tf.value or "",
                     )
+                    # Also try to reset the backend step so daemon can pick up the stop
+                    try:
+                        detail = backend_service.get_run_detail(run_id=run_id)
+                        run_payload = detail.get("run") or {}
+                        step_name = str(run_payload.get("awaiting_human_step") or run_payload.get("current_step") or "").strip()
+                        if step_name:
+                            backend_service.reset_run_step(run_id=run_id, step_name=step_name)
+                    except Exception as reset_exc:
+                        _log.warning("[console] cancel reset-step failed: %s", reset_exc)
                     rendered = _render_result(result)
 
                 elif action == "Reset":
@@ -901,6 +976,7 @@ def main(argv: list[str] | None = None) -> int:
                 vertical_alignment=ft.CrossAxisAlignment.START,
             ),
             reset_step_dd,
+            start_step_dd,
             feedback_tf,
             dynamic_inputs_container,
             output,

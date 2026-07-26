@@ -152,18 +152,42 @@ def resolve_manual_run(*, args: Any, group_cfg: dict[str, Any], hooks: Any, mode
             if not seed_artifacts.get("TASK_FILE"):
                 state["artifacts"]["TASK_FILE"] = None
         _apply_daemon_backend_linkage(mode=mode, state=state)
-        hooks.save_job(args.template_group, state["job_id"], state)
-        original_current_step = state.get("current_step")
+
         default_init_step = group_cfg["job_init_step"]
-        step = args.job.strip() or default_init_step
-        if step != default_init_step:
-            raise ValueError(
-                f"New job may only start with init step {default_init_step!r} "
-                f"for template group {args.template_group!r}"
-            )
-        missing_init = hooks._missing_artifacts(group_cfg.get("job_init_inputs", []), state)
-        if missing_init:
-            raise FileNotFoundError("Missing required job init input(s): " + ", ".join(missing_init))
+        start_step = getattr(args, "start_step", "").strip()
+
+        if start_step:
+            # Validate the start step exists in the workflow
+            step_configs = group_cfg.get("step_configs", {})
+            if start_step not in step_configs:
+                raise ValueError(
+                    f"--start-step {start_step!r} is not a valid step for "
+                    f"template group {args.template_group!r}. "
+                    f"Available steps: {list(step_configs.keys())}"
+                )
+            # Set current_step to the start step
+            state["current_step"] = start_step
+            # Mark all steps before the start step as completed
+            step_order = group_cfg.get("steps", [])
+            if start_step in step_order:
+                start_idx = step_order.index(start_step)
+                state["completed_steps"] = list(step_order[:start_idx])
+            hooks.save_job(args.template_group, state["job_id"], state)
+            original_current_step = start_step
+            step = start_step
+        else:
+            hooks.save_job(args.template_group, state["job_id"], state)
+            original_current_step = state.get("current_step")
+            step = args.job.strip() or default_init_step
+            if step != default_init_step:
+                raise ValueError(
+                    f"New job may only start with init step {default_init_step!r} "
+                    f"for template group {args.template_group!r}"
+                )
+            missing_init = hooks._missing_artifacts(group_cfg.get("job_init_inputs", []), state)
+            if missing_init:
+                raise FileNotFoundError("Missing required job init input(s): " + ", ".join(missing_init))
+
         return ManualRunResolution(state=state, step=step, original_current_step=original_current_step)
 
     state = hooks.ensure_backward_compatible_state(hooks.load_job(args.template_group, args.job_id))

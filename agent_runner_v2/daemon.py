@@ -321,6 +321,12 @@ def _spawn_child(*, claim: dict[str, Any], runtime_root: Path, cli_pythonpath: s
         if value:
             cli_args.extend(['--set', f'{key}={value}'])
 
+    # Pass start_step from context_payload if provided
+    context_payload = request_payload.get("context_payload") or {}
+    start_step = str(context_payload.get("start_step") or "").strip()
+    if start_step:
+        cli_args.extend(['--start-step', start_step])
+
     proc = subprocess.Popen(
         cli_args,
         stdout=log_handle,

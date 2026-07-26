@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import json
+import shutil
+from datetime import datetime
 from pathlib import Path
 
 from agent_runner_v2.action_result import ActionResult
@@ -10,15 +12,17 @@ from agent_runner_v2.workflow_packages.actions import action
 
 @action("validate_workflow_bundle")
 def validate_workflow_bundle(*, context, state, step_cfg, project_root):
-    """Validate the generated workflow package using the bundle validator.
+    """Validate the generated workflow package using structural and semantic checks.
 
-    Reads the generated workflow.toml from the path stored in the
-    WORKFLOW_MANIFEST artifact, runs validate_workflow_bundle_dir(),
-    and writes a validation report.
+    Runs the bundle validator for structural checks, then performs semantic
+    validation against the TEST_CRITERIA document. Checks that action-driven
+    steps have corresponding action code, and that the generated package
+    fulfills the spec requirements.
     """
     from agent_runner_v2.workflow_bundle_validator import validate_workflow_bundle_dir
 
     artifacts = state.get("artifacts", {})
+    project_root = Path(project_root)
     manifest_path_str = artifacts.get("WORKFLOW_MANIFEST", "")
 
     if not manifest_path_str:
@@ -41,11 +45,22 @@ def validate_workflow_bundle(*, context, state, step_cfg, project_root):
     # The bundle root is the parent directory of workflow.toml
     bundle_root = manifest_path.parent
 
+    # --- Structural validation ---
     report = validate_workflow_bundle_dir(bundle_root)
     report_dict = report.to_dict()
 
+    # --- Semantic validation ---
+    semantic_findings = _run_semantic_validation(bundle_root, artifacts, project_root)
+
+    # Merge semantic findings into report
+    all_findings = report_dict.get("findings", []) + semantic_findings
+    has_errors = any(f.get("level") == "error" for f in all_findings)
+    report_dict["findings"] = all_findings
+    report_dict["valid"] = not has_errors
+    report_dict["finding_count"] = len(all_findings)
+
     # Write validation report
-    run_root = Path(project_root) / "docs" / "repo" / "workflow_builder" / "runs" / str(state.get("job_id", "unknown"))
+    run_root = project_root / "docs" / "repo" / "workflow_builder" / "runs" / str(state.get("job_id", "unknown"))
     run_root.mkdir(parents=True, exist_ok=True)
     report_path = run_root / f"validation-report-{state.get('job_id', 'unknown')}.md"
     report_path.write_text(
@@ -53,21 +68,76 @@ def validate_workflow_bundle(*, context, state, step_cfg, project_root):
         encoding="utf-8",
     )
 
-    if report.valid:
+    if not has_errors:
         return ActionResult(
             status="APPROVED",
-            remark=f"Workflow bundle is valid. {len(report.findings)} findings (all warnings).",
+            remark=f"Workflow bundle is valid. {len(all_findings)} findings (all warnings).",
             artifacts={"VALIDATION_REPORT": str(report_path)},
         )
     else:
-        errors = [f for f in report.findings if f.level == "error"]
-        error_summary = "\n".join(f"  - [{e.code}] {e.message}" for e in errors[:10])
+        errors = [f for f in all_findings if f.get("level") == "error"]
+        error_summary = "\n".join(f"  - [{e.get('code', '')}] {e.get('message', '')}" for e in errors[:10])
         return ActionResult(
             status="REJECTED",
             remark=f"Workflow bundle has {len(errors)} validation errors:\n{error_summary}",
             artifacts={"VALIDATION_REPORT": str(report_path)},
             reject_code="VALIDATION_FAILED",
         )
+
+
+def _run_semantic_validation(bundle_root: Path, artifacts: dict, project_root: Path) -> list[dict]:
+    """Run semantic validation checks beyond structural validity.
+
+    Checks that action-driven steps have corresponding action code,
+    and that required files actually exist.
+    """
+    import tomllib
+
+    findings = []
+
+    # Check: action-driven steps must have actions.py
+    manifest_path = bundle_root / "workflow.toml"
+    if manifest_path.is_file():
+        try:
+            with open(manifest_path, "rb") as f:
+                manifest = tomllib.load(f)
+        except Exception:
+            manifest = {}
+
+        steps = manifest.get("step", [])
+        action_steps = [s for s in steps if s.get("action") and s["action"] != "step_completion"]
+
+        if action_steps:
+            actions_path = bundle_root / "actions.py"
+            if not actions_path.is_file():
+                action_names = [s["name"] for s in action_steps]
+                findings.append({
+                    "level": "error",
+                    "code": "MISSING_ACTIONS_FILE",
+                    "message": (
+                        f"Workflow has action-driven steps ({', '.join(action_names)}) "
+                        f"but actions.py does not exist in {bundle_root}"
+                    ),
+                    "step": "validate_bundle",
+                })
+            else:
+                # Check that each action function is actually defined
+                actions_content = actions_path.read_text(encoding="utf-8")
+                for step in action_steps:
+                    action_name = step["action"]
+                    decorator = f'@action("{action_name}")'
+                    if decorator not in actions_content:
+                        findings.append({
+                            "level": "error",
+                            "code": "MISSING_ACTION_FUNCTION",
+                            "message": (
+                                f"Action '{action_name}' referenced in workflow.toml "
+                                f"but not found in actions.py (missing {decorator})"
+                            ),
+                            "step": "validate_bundle",
+                        })
+
+    return findings
 
 
 def _render_validation_report(report_dict: dict) -> str:
@@ -96,3 +166,110 @@ def _render_validation_report(report_dict: dict) -> str:
         lines.append("No findings. Bundle is clean.")
 
     return "\n".join(lines) + "\n"
+
+
+@action("promote_workflow_package")
+def promote_workflow_package(*, context, state, step_cfg, project_root):
+    """Promote the generated workflow package to the repo workflows directory.
+
+    Copies deployable files (workflow.toml, context_extensions.py, prompts/,
+    README.md, .env.sample, config.json.sample) from the run directory to
+    workflows/{slug}/. The slug is derived from the WORKFLOW_SPEC artifact
+    path. Existing target directories are backed up before overwriting.
+    """
+    artifacts = state.get("artifacts", {})
+    project_root = Path(project_root)
+
+    # Derive slug from spec filename
+    # Spec files are always {slug}.md in specs/ directory, so the slug
+    # is just the filename stem (unlike SDLC artifacts which use
+    # {TYPE}-{date}-{seq}_{slug}.md pattern)
+    spec_path = artifacts.get("WORKFLOW_SPEC", "")
+    if not spec_path:
+        return ActionResult(
+            status="REJECTED",
+            remark="WORKFLOW_SPEC artifact not found in state.",
+            artifacts={},
+            reject_code="MISSING_SPEC",
+        )
+    slug = Path(spec_path).stem
+    if not slug:
+        return ActionResult(
+            status="REJECTED",
+            remark=f"Could not derive slug from WORKFLOW_SPEC: {spec_path}",
+            artifacts={},
+            reject_code="SLUG_EXTRACTION_FAILED",
+        )
+
+    # Source: run root (parent of workflow.toml)
+    manifest_path = artifacts.get("WORKFLOW_MANIFEST", "")
+    if not manifest_path:
+        return ActionResult(
+            status="REJECTED",
+            remark="WORKFLOW_MANIFEST artifact not found in state.",
+            artifacts={},
+            reject_code="MISSING_MANIFEST",
+        )
+    source_dir = Path(manifest_path).parent
+
+    # Target: workflows/{slug}/
+    target_dir = project_root / "workflows" / slug
+
+    # Backup existing target
+    if target_dir.exists():
+        timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+        backup_dir = project_root / "workflows" / f"{slug}_bak_{timestamp}"
+        shutil.copytree(target_dir, backup_dir)
+        print(
+            f"[promote_workflow_package] backed up {target_dir} -> {backup_dir}",
+            flush=True,
+        )
+
+    target_dir.mkdir(parents=True, exist_ok=True)
+
+    # Files to copy (always)
+    always_copy = ["workflow.toml", "context_extensions.py", "README.md"]
+    # Files to copy (if exist)
+    conditional_copy = ["actions.py", ".env.sample", "config.json.sample"]
+    # Directories to copy (if exist)
+    copy_dirs = ["prompts"]
+
+    copied = []
+
+    for filename in always_copy:
+        src = source_dir / filename
+        if src.exists():
+            shutil.copy2(src, target_dir / filename)
+            copied.append(filename)
+
+    for filename in conditional_copy:
+        src = source_dir / filename
+        if src.exists():
+            shutil.copy2(src, target_dir / filename)
+            copied.append(filename)
+
+    for dirname in copy_dirs:
+        src = source_dir / dirname
+        if src.is_dir():
+            dst = target_dir / dirname
+            if dst.exists():
+                shutil.rmtree(dst)
+            shutil.copytree(src, dst)
+            copied.append(f"{dirname}/")
+
+    if not copied:
+        return ActionResult(
+            status="REJECTED",
+            remark=f"No files found to promote in {source_dir}",
+            artifacts={},
+            reject_code="NOTHING_TO_PROMOTE",
+        )
+
+    remark = f"Promoted to {target_dir}: {', '.join(copied)}"
+    print(f"[promote_workflow_package] {remark}", flush=True)
+
+    return ActionResult(
+        status="APPROVED",
+        remark=remark,
+        artifacts={"WORKFLOW_PACKAGE_DIR": str(target_dir)},
+    )

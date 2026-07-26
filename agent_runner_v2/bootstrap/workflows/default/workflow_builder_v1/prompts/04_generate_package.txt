@@ -6,6 +6,9 @@ files that constitute a deployable workflow package.
 
 Reference Inputs
 
+- Read {TEST_CRITERIA} for the acceptance criteria -- your generated files
+  MUST fulfill all criteria listed in the "Criteria for generate_package step"
+  section. This is the primary verification contract.
 - Read {WORKFLOW_REQUIREMENTS} for the structured requirements.
 - Read {ARTIFACT_CONTRACT} for artifact key definitions and path patterns.
 - Read {STEP_ARCHITECTURE} for the step sequence and routing design.
@@ -55,15 +58,85 @@ Generation Tasks
      placeholders in backticks
    - All prompt content must be ASCII-only
 
+4. Generate README.md and write it to {WORKFLOW_README}:
+   - Overview section: what the workflow does, its purpose and scope
+   - Prerequisites section: required setup, dependencies, API access,
+     credentials needed
+   - Installation section: how to deploy the workflow package (copy to
+     workflows/ directory, run init, sync to backend)
+   - Configuration section: environment variables from .env.sample and
+     config.json settings (omit if neither supplementary file is needed)
+   - Usage section: how to run the workflow (batch file, operator console,
+     daemon mode)
+   - Step Reference section: table of all steps with columns for name,
+     type (prompt/action), role policy, and purpose
+   - Artifact Keys section: table of all artifact keys with descriptions
+
+5. Generate .env.sample and write it to {WORKFLOW_ENV_SAMPLE} (conditional):
+   - Only generate if the workflow needs environment variables such as
+     API keys, credentials, or external service configuration
+   - Each variable must have a comment describing its purpose
+   - Use placeholder values (e.g., your_api_key_here)
+   - If the workflow does not need any environment variables, skip this
+     file entirely
+
+6. Generate config.json.sample and write it to {WORKFLOW_CONFIG_SAMPLE}
+   (conditional):
+   - Only generate if the workflow needs runtime configuration beyond
+     what environment variables provide
+   - Must be valid JSON with sensible defaults
+   - Include comments where possible to explain each setting
+   - If the workflow does not need runtime config, skip this file entirely
+
 Output Instructions
 
 - Write workflow.toml to {WORKFLOW_MANIFEST}.
 - Write context_extensions.py to {WORKFLOW_EXTENSIONS}.
+- Write prompt .txt files into a "prompts/" subdirectory under the run
+  directory (the parent directory of {WORKFLOW_PROMPTS_INDEX}).
 - Write a prompts index to {WORKFLOW_PROMPTS_INDEX} listing every generated
   prompt file with its step name and purpose.
+- Write README.md to {WORKFLOW_README}.
+- Write .env.sample to {WORKFLOW_ENV_SAMPLE} if the workflow needs
+  environment variables; otherwise skip.
+- Write config.json.sample to {WORKFLOW_CONFIG_SAMPLE} if the workflow
+  needs runtime config; otherwise skip.
 - All generated files must be ASCII-only.
 - Artifact keys in workflow.toml must match exactly between produces lists
   and the context_extensions.py register_artifact_keys() return dict.
+- The workflow name (in workflow.toml name field and context_extensions.py
+  workflow_name attribute) must match the slug from the input spec filename.
+
+CRITICAL: meta.json artifact reporting
+
+You MUST report ALL produced artifact paths in meta.json, not just one.
+The runner uses meta.json as the sole communication channel — unreported
+artifacts remain null and cause downstream steps to fail.
+
+Required artifacts to report in meta.json:
+- WORKFLOW_MANIFEST: absolute path to workflow.toml
+- WORKFLOW_EXTENSIONS: absolute path to context_extensions.py
+- WORKFLOW_PROMPTS_INDEX: absolute path to the prompts index file
+- WORKFLOW_README: absolute path to README.md
+- WORKFLOW_ENV_SAMPLE: absolute path to .env.sample (if generated)
+- WORKFLOW_CONFIG_SAMPLE: absolute path to config.json.sample (if generated)
+
+Example meta.json structure:
+{
+  "status": "APPROVED",
+  "remark": "...",
+  "artifacts": {
+    "WORKFLOW_MANIFEST": "D:/path/to/workflow.toml",
+    "WORKFLOW_EXTENSIONS": "D:/path/to/context_extensions.py",
+    "WORKFLOW_PROMPTS_INDEX": "D:/path/to/PROMPTS-....md",
+    "WORKFLOW_README": "D:/path/to/README.md",
+    "WORKFLOW_ENV_SAMPLE": "D:/path/to/.env.sample",
+    "WORKFLOW_CONFIG_SAMPLE": "D:/path/to/config.json.sample"
+  }
+}
+
+If .env.sample or config.json.sample was not generated (conditional files),
+omit those keys from the artifacts dict.
 
 Forbidden Content
 
@@ -72,3 +145,4 @@ Forbidden Content
 - Hardcoded absolute paths in context_extensions.py register_artifact_keys()
 - Missing stepCompletion terminal step
 - promotes key inside [step.artifacts] instead of at [[step]] top level
+- Reporting only one artifact in meta.json when multiple files were generated

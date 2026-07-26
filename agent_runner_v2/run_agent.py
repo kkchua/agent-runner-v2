@@ -18,6 +18,7 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import json
+import logging
 import os
 import re
 import shutil
@@ -43,6 +44,7 @@ from .job_state import (
     advance_step,
     apply_task_execution_binding,
     approve_step,
+    reject_step,
     build_failure_envelope,
     check_preflight_artifact_status,
     classify_pre_run_failure,
@@ -384,11 +386,15 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument("--mode", choices=["manual", "daemon"], default="manual",
                    help="Execution mode: manual (auto-generate job ID) or daemon (use provided --job-no)")
     p.add_argument("--job", default="", help="Explicit step to run. If omitted, auto-resolve.")
+    p.add_argument("--start-step", default="",
+                   help="Override the starting step for a new job (skip earlier steps).")
     p.add_argument("--set", action="append", default=[], help="Seed artifact for new job: KEY=PATH")
     p.add_argument("--task-graph-id", default="", help="Approved task graph id for execution binding startup.")
     p.add_argument("--task-node-id", default="", help="Selected task node id within the approved task graph.")
     p.add_argument("--show-job", action="store_true", help="Print current job.json and exit.")
     p.add_argument("--approve-step", default="", help="Record human approval for a pending step and exit.")
+    p.add_argument("--reject-step", default="",
+                   help="Reject a step pending approval, triggering on_reject_refine routing.")
     p.add_argument("--force-approve-step", default="",
                    help="Force-approve a step regardless of review decision.")
     p.add_argument("--resume-step", default="",
@@ -415,6 +421,16 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 
 def main(argv: list[str] | None = None) -> int:
+    # Configure logging so logger output goes to stderr (captured by daemon
+    # into child.log).  Level defaults to INFO; override with env var
+    # AGENT_RUNNER_LOG_LEVEL=DEBUG for verbose output.
+    _log_level = os.environ.get("AGENT_RUNNER_LOG_LEVEL", "INFO").upper()
+    logging.basicConfig(
+        level=getattr(logging, _log_level, logging.INFO),
+        format="%(levelname)s %(name)s: %(message)s",
+        stream=sys.stderr,
+    )
+
     args = parse_args(argv)
     cwd_root = Path.cwd().resolve()
     if args.command == "init":
@@ -548,6 +564,12 @@ def main(argv: list[str] | None = None) -> int:
     config = load_project_config(workspace_root)
     workflow_name = args.workflow or str(config.get("default_workflow") or "default")
     workflow_bundle_root = _resolve_workflow_bundle_root(workspace_root, workflow_name, config)
+
+    # Register global workflow root so get_extension() and register_all_artifact_keys()
+    # can discover workflow packages from the global runner home.
+    from .workflow_packages.registry import get_global_registry
+    get_global_registry().add_search_path(workflow_bundle_root)
+
     workflow_module = load_workflow_module(workspace_root, workflow_name, config=config)
 
     delivery_root = workspace_root

@@ -28,12 +28,16 @@ class WorkflowBuilderExtensions(WorkflowExtensions):
         run_root = f"docs/repo/workflow_builder/runs/{job_id}"
         return {
             "WORKFLOW_SPEC": "docs/repo/workflow_builder/specs/{slug}.md",
+            "TEST_CRITERIA": f"{run_root}/TEST_CRITERIA-{date_str}-{{seq}}_{{slug}}.md",
             "WORKFLOW_REQUIREMENTS": f"{run_root}/REQUIREMENTS-{date_str}-{{seq}}_{{slug}}.md",
             "ARTIFACT_CONTRACT": f"{run_root}/ARTIFACTS-{date_str}-{{seq}}_{{slug}}.md",
             "STEP_ARCHITECTURE": f"{run_root}/STEPS-{date_str}-{{seq}}_{{slug}}.md",
-            "WORKFLOW_MANIFEST": f"{run_root}/WORKFLOW-{date_str}-{{seq}}_{{slug}}.toml",
-            "WORKFLOW_EXTENSIONS": f"{run_root}/EXTENSIONS-{date_str}-{{seq}}_{{slug}}.py",
+            "WORKFLOW_MANIFEST": f"{run_root}/workflow.toml",
+            "WORKFLOW_EXTENSIONS": f"{run_root}/context_extensions.py",
             "WORKFLOW_PROMPTS_INDEX": f"{run_root}/PROMPTS-{date_str}-{{seq}}_{{slug}}.md",
+            "WORKFLOW_README": f"{run_root}/README.md",
+            "WORKFLOW_ENV_SAMPLE": f"{run_root}/.env.sample",
+            "WORKFLOW_CONFIG_SAMPLE": f"{run_root}/config.json.sample",
             "VALIDATION_REPORT": f"{run_root}/VALIDATION-{date_str}-{{seq}}_{{slug}}.md",
             "REVIEW_FILE_SUGGESTED": f"{run_root}/REVIEW-{date_str}-{{seq}}_{{slug}}.md",
         }

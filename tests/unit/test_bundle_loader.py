@@ -491,5 +491,6 @@ def test_bootstrap_root_contains_only_active_workflow_and_registry():
         "sdlc_60_execution_v1",
         "sdlc_70_validation_v1",
         "sdlc_80_review_v1",
+        "workflow_builder_v1",
         "_registry",
     }

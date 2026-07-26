@@ -30,6 +30,7 @@ from .actions.sync_codebase_docs import sync_codebase_docs
 from .actions.sync_system_docs import sync_system_docs
 from .actions.validate_codebase_docs import validate_codebase_docs
 from .actions.step_completion import step_completion
+from .actions.archive_inputs import archive_inputs
 
 logger = logging.getLogger(__name__)
 
@@ -51,6 +52,7 @@ ACTION_REGISTRY: dict[str, Callable] = {
     "validate_codebase_docs": validate_codebase_docs,
     "finalize_bootstrap": finalize_bootstrap,
     "step_completion": step_completion,
+    "archive_inputs": archive_inputs,
 }
 
 
