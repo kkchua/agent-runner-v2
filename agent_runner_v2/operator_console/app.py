@@ -861,19 +861,24 @@ def main(argv: list[str] | None = None) -> int:
                     run_id = str(selected_run_id or "").strip()
                     if not run_id:
                         raise ActionExecutionError("Select an active run to cancel.")
-                    result = backend_service.stop_run(
-                        run_id=run_id, reason=feedback_tf.value or "",
+                    detail = backend_service.get_run_detail(run_id=run_id)
+                    run_payload = detail.get("run") or {}
+                    job_id = str(run_payload.get("run_code") or "").strip()
+                    workflow_name = str(run_payload.get("workflow_name") or "").strip()
+                    if not job_id:
+                        raise ActionExecutionError(
+                            "Selected run is missing run_code.",
+                        )
+                    resolved_repo_path, resolved_workflow = _resolve_repo_and_workflow(workflow_name)
+                    if resolved_workflow is None:
+                        raise ActionExecutionError(
+                            f"Unable to find workflow '{workflow_name}' in configured repos."
+                        )
+                    rendered = runner_service.cancel_run(
+                        repo_path=resolved_repo_path,
+                        template_group=resolved_workflow.template_group or resolved_workflow.workflow_name,
+                        job_id=job_id,
                     )
-                    # Also try to reset the backend step so daemon can pick up the stop
-                    try:
-                        detail = backend_service.get_run_detail(run_id=run_id)
-                        run_payload = detail.get("run") or {}
-                        step_name = str(run_payload.get("awaiting_human_step") or run_payload.get("current_step") or "").strip()
-                        if step_name:
-                            backend_service.reset_run_step(run_id=run_id, step_name=step_name)
-                    except Exception as reset_exc:
-                        _log.warning("[console] cancel reset-step failed: %s", reset_exc)
-                    rendered = _render_result(result)
 
                 elif action == "Reset":
                     step_name = str(reset_step_dd.value or "").strip()

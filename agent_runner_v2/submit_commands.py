@@ -126,6 +126,12 @@ def main(argv: list[str] | None = None) -> int:
             context_payload=context_payload or None,
             env_overrides=_parse_kv(args.env, "--env"),
         )
+        # If --start-step specified, reset the run to the correct step
+        if args.start_step:
+            run_id = str((result.get("run") or {}).get("id") or "").strip()
+            if run_id:
+                reset_result = client.reset_run_step(run_id=run_id, step_name=args.start_step)
+                result["reset_step"] = reset_result
         print(json.dumps(result, indent=2, ensure_ascii=False))
         return 0
     except RuntimeError as e:

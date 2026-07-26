@@ -401,6 +401,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
                    help="Resume a step waiting for intervention or max-retried (force-approve, advance to next step).")
     p.add_argument("--retry-step", default="",
                    help="Retry a step waiting for intervention or max-retried (reset counts, re-execute).")
+    p.add_argument("--cancel-run", action="store_true",
+                   help="Cancel the entire run — set job status to STOPPED and sync to backend.")
     p.add_argument("--dry-run", action="store_true", help="Render prompt and save prompt.txt without invoking coder.")
     p.add_argument("--new-job", action="store_true", help="Force creation of a new job instead of auto-resuming.")
     p.add_argument("--max-rejects", type=int, default=-1, help="Override max rejects for this run.")
