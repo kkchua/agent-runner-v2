@@ -303,25 +303,30 @@ def handle_admin_command(*, args: Any, group_cfg: dict[str, Any], hooks: Any) ->
             or os.environ.get("AGENT_RUNNER_BACKEND_URL")
             or str(load_runner_config().get("backend_url") or "").strip()
         )
-        if step_run_id and backend_url:
-            from datetime import datetime, timezone
+        if backend_url:
             client = BackendClient(backend_url)
-            client.sync_job_state(
-                step_run_id=step_run_id,
-                payload={
-                    "run_status": "stopped",
-                    "step_status": "cancelled",
-                    "step_outcome": "cancelled",
-                    "step_coder": None,
-                    "step_duration_seconds": 0,
-                    "next_step_name": None,
-                    "output_payload": {},
-                    "error_message": "Cancelled by operator",
-                    "review": None,
-                    "artifacts": [],
-                    "events": [{"event_type": "RUN_STOPPED", "message": f"Run {state['job_id']} cancelled by operator"}],
-                },
-            )
+            run_id = str(state.get("workflow_run_id") or "").strip()
+            if step_run_id:
+                from datetime import datetime, timezone
+                client.sync_job_state(
+                    step_run_id=step_run_id,
+                    payload={
+                        "run_status": "stopped",
+                        "step_status": "cancelled",
+                        "step_outcome": "cancelled",
+                        "step_coder": None,
+                        "step_duration_seconds": 0,
+                        "next_step_name": None,
+                        "output_payload": {},
+                        "error_message": "Cancelled by operator",
+                        "review": None,
+                        "artifacts": [],
+                        "context_payload": {"__run_control": {"stop_requested": True}},
+                        "events": [{"event_type": "RUN_STOPPED", "message": f"Run {state['job_id']} cancelled by operator"}],
+                    },
+                )
+            if run_id:
+                client.stop_run(run_id=run_id, reason="Cancelled by operator")
         print(json.dumps({
             "status": "STOPPED",
             "remark": "Run cancelled by operator.",
