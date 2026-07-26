@@ -205,13 +205,13 @@ def _send_child_heartbeat(client, worker_id: str, child: ChildExecution, *, stat
 
 
 def _is_stop_requested(run: dict[str, Any]) -> bool:
-    """Check if a stop was requested in the run's context_payload."""
+    """Check if a stop was requested via context_payload flag or run_status."""
     context = run.get("context_payload") or {}
     if isinstance(context, dict):
         control = context.get("__run_control") or {}
-        if isinstance(control, dict):
-            return bool(control.get("stop_requested"))
-    return False
+        if isinstance(control, dict) and control.get("stop_requested"):
+            return True
+    return str(run.get("run_status") or "").lower() == "stopped"
 
 
 def _handle_stop_on_claim(client, claim: dict, logger) -> None:
