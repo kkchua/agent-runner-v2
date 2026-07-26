@@ -119,6 +119,12 @@ class RunnerActionService:
             input_payload=input_artifacts,
             context_payload=context_payload,
         )
+        # If start_step specified, reset the run to the correct step
+        if start_step:
+            run_id = str((result.get("run") or {}).get("id") or "").strip()
+            if run_id:
+                reset_result = client.reset_run_step(run_id=run_id, step_name=start_step)
+                result["reset_step"] = reset_result
         return json.dumps(result, indent=2, ensure_ascii=False)
 
     def init_workspace(
@@ -199,6 +205,17 @@ class RunnerActionService:
         args = [
             "run", "--template-group", template_group,
             "--job-id", job_id, "--retry-step", step_name,
+        ]
+        return self._invoke(repo_path=repo_path, func=run_agent.main, argv=args)
+
+    def cancel_run(
+        self, *, repo_path: str, template_group: str,
+        job_id: str,
+    ) -> str:
+        """Cancel an entire run — set job status to STOPPED and sync to backend."""
+        args = [
+            "run", "--template-group", template_group,
+            "--job-id", job_id, "--cancel-run",
         ]
         return self._invoke(repo_path=repo_path, func=run_agent.main, argv=args)
 

@@ -480,6 +480,7 @@ def test_bootstrap_root_contains_only_active_workflow_and_registry():
         "00_bootstrap_lifecycle_admin_v1",
         "01_governance_foundation_v1",
         "02_agent_runner_platform_v1",
+        "agnes_media_gen_v1",
         "sdlc_00_codebase_v1",
         "sdlc_00_delivery_scaffold_v1",
         "sdlc_00_init_doc_v1",
