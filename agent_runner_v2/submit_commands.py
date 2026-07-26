@@ -72,6 +72,8 @@ def main(argv: list[str] | None = None) -> int:
                    help="context_payload key=value (repeatable).")
     p.add_argument("--env", action="append", default=[], metavar="KEY=VALUE",
                    help="env_overrides key=value (repeatable).")
+    p.add_argument("--start-step", default="",
+                   help="Override the starting step for a new job (skip earlier steps).")
     args = p.parse_args(argv)
     cwd_root = Path.cwd().resolve()
 
@@ -103,6 +105,11 @@ def main(argv: list[str] | None = None) -> int:
 
     client = BackendClient(backend_url)
     try:
+        # Build context_payload, merging --start-step if provided
+        context_payload = _parse_kv(args.context, "--context") or {}
+        if args.start_step:
+            context_payload["start_step"] = args.start_step
+
         result = client.submit_run(
             workflow_name=args.workflow_name,
             initiative_id=args.initiative_id or None,
@@ -116,7 +123,7 @@ def main(argv: list[str] | None = None) -> int:
             target_project_root=str(cwd_root),
             worker_label=worker_label,
             input_payload=_parse_kv(args.input, "--input"),
-            context_payload=_parse_kv(args.context, "--context"),
+            context_payload=context_payload or None,
             env_overrides=_parse_kv(args.env, "--env"),
         )
         print(json.dumps(result, indent=2, ensure_ascii=False))

@@ -1831,6 +1831,99 @@ def approve_step(
     return state
 
 
+def reject_step(
+    *, group_name: str, group_cfg: dict[str, Any], state: dict[str, Any], step: str,
+) -> dict[str, Any]:
+    """Reject a step pending human approval, triggering on_reject_refine routing.
+
+    Clears the approval state, records the rejection, and either routes to
+    the configured refine step (activating a loop context) or marks the job
+    as FAILED if no refine route exists.
+
+    Args:
+        group_name: Workflow template group name.
+        group_cfg: Full workflow configuration dict.
+        state: Mutable job state dict.
+        step: Name of the step to reject.
+
+    Returns:
+        The updated job state dict.
+
+    Raises:
+        ValueError: If the step is not pending human approval.
+    """
+    pending = state.get("pending_human_approval_for")
+    if pending != step:
+        raise ValueError(f"Step {step!r} is not pending human approval. Current pending: {pending!r}")
+
+    step_cfg = group_cfg.get("step_configs", {}).get(step, {})
+    on_reject_refine = step_cfg.get("on_reject_refine") or {}
+
+    # Record rejection in review state
+    review_state = state.setdefault("review_state", default_review_state())
+    review_state["human_decision"] = "REJECTED"
+    review_state["human_decided_at"] = now_iso()
+    review_state["human_actor"] = "human"
+    review_state["final_decision"] = "REJECTED"
+    review_state["final_decision_source"] = "HUMAN"
+
+    # Clear approval state
+    state["pending_human_approval_for"] = None
+    state.setdefault("human_approvals", {}).pop(step, None)
+
+    # Increment reject count
+    state.setdefault("reject_counts", {})[step] = state.get("reject_counts", {}).get(step, 0) + 1
+
+    if on_reject_refine.get("step") and on_reject_refine.get("artifact"):
+        # Route to refine step via loop context
+        max_iter = int(on_reject_refine.get("max_iterations", 2))
+        current_count = state["reject_counts"][step]
+        if current_count > max_iter:
+            # Exhausted refine budget — mark as failed
+            exhausted_code = on_reject_refine.get("exhausted_failure_code") or "REFINEMENT_EXHAUSTED"
+            set_last_failure(
+                state=state,
+                failure_class=on_reject_refine.get("exhausted_failure_class") or "HUMAN_RETRY_REQUIRED",
+                failure_code=exhausted_code,
+                failure_reason=f"Reject count ({current_count}) exceeded max iterations ({max_iter}) for step {step!r}.",
+                failure_source="human_reject",
+                step=step,
+            )
+            set_job_status(state, "WAITING_FOR_HUMAN_INTERVENTION")
+            state["pending_intervention_for"] = step
+            state["current_step"] = step
+        else:
+            # Activate refine loop
+            review_file = state.get("artifacts", {}).get(on_reject_refine["artifact"])
+            state["loop_context"] = default_loop_context(
+                active=True,
+                loop_step=step,
+                refine_step=on_reject_refine["step"],
+                target_artifact=on_reject_refine["artifact"],
+                review_file=review_file,
+                iteration=current_count,
+            )
+            state["current_step"] = on_reject_refine["step"]
+            set_job_status(state, "IN_PROGRESS")
+            clear_last_failure(state)
+    else:
+        # No refine route — mark as failed
+        set_job_status(state, "WAITING_FOR_HUMAN_INTERVENTION")
+        state["pending_intervention_for"] = step
+        state["current_step"] = step
+        set_last_failure(
+            state=state,
+            failure_class="HUMAN_RETRY_REQUIRED",
+            failure_code="HUMAN_REJECTED",
+            failure_reason=f"Step {step!r} rejected by human. No on_reject_refine route configured.",
+            failure_source="human_reject",
+            step=step,
+        )
+
+    save_job(group_name, state["job_id"], state)
+    return state
+
+
 def force_approve_step(
     *, group_name: str, group_cfg: dict[str, Any], state: dict[str, Any], step: str,
 ) -> dict[str, Any]:

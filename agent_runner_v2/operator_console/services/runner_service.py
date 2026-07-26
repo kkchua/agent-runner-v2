@@ -45,6 +45,7 @@ class RunnerActionService:
         input_artifacts: dict[str, str] | None = None,
         worker_id: str | None = None,
         os_type: str = "",
+        start_step: str = "",
     ) -> str:
         """Submit a workflow run to the backend queue.
 
@@ -62,6 +63,8 @@ class RunnerActionService:
             Repo OS type (e.g. "linux", "wsl"). When it differs from the
             console's OS, submit directly via the backend API instead of
             invoking the local CLI (which requires the path to exist locally).
+        start_step :
+            Override the starting step for a new job (skip earlier steps).
         """
         if _is_cross_os(os_type):
             return self._submit_via_backend(
@@ -69,6 +72,7 @@ class RunnerActionService:
                 workflow=workflow,
                 input_artifacts=input_artifacts,
                 worker_id=worker_id,
+                start_step=start_step,
             )
         args = ["--workflow-name", workflow.workflow_name]
         args.extend(["--backend-url", self._settings.backend_url])
@@ -80,6 +84,8 @@ class RunnerActionService:
         if input_artifacts:
             for key, value in input_artifacts.items():
                 args.extend(["--input", f"{key}={value}"])
+        if start_step:
+            args.extend(["--start-step", start_step])
         return self._invoke(repo_path=repo_path, func=submit_commands.main, argv=args)
 
     def _submit_via_backend(
@@ -89,6 +95,7 @@ class RunnerActionService:
         workflow: WorkflowEntry,
         input_artifacts: dict[str, str] | None = None,
         worker_id: str | None = None,
+        start_step: str = "",
     ) -> str:
         """Submit directly via the backend API for cross-OS repos.
 
@@ -101,6 +108,7 @@ class RunnerActionService:
             "[console] _submit_via_backend workflow=%s worker=%s project_root=%s",
             workflow.workflow_name, effective_worker_id, repo_path,
         )
+        context_payload = {"start_step": start_step} if start_step else None
         client = BackendClient(self._settings.backend_url)
         result = client.submit_run(
             workflow_name=workflow.workflow_name,
@@ -109,6 +117,7 @@ class RunnerActionService:
             target_project_root=repo_path,
             worker_label=self._settings.worker_label,
             input_payload=input_artifacts,
+            context_payload=context_payload,
         )
         return json.dumps(result, indent=2, ensure_ascii=False)
 
@@ -157,6 +166,17 @@ class RunnerActionService:
         args = [
             "run", "--template-group", template_group,
             "--job-id", job_id, "--approve-step", step_name,
+        ]
+        return self._invoke(repo_path=repo_path, func=run_agent.main, argv=args)
+
+    def reject_step(
+        self, *, repo_path: str, template_group: str,
+        job_id: str, step_name: str,
+    ) -> str:
+        """Reject a specific step in a running job (local runner invocation)."""
+        args = [
+            "run", "--template-group", template_group,
+            "--job-id", job_id, "--reject-step", step_name,
         ]
         return self._invoke(repo_path=repo_path, func=run_agent.main, argv=args)
 

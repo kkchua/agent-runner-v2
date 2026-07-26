@@ -22,7 +22,15 @@ docs/repo/workflow_builder/
 │   ├── STEPS-{date}-{seq}_{slug}.md
 │   ├── PROMPTS-{date}-{seq}_{slug}.md
 │   ├── VALIDATION-{date}-{seq}_{slug}.md
-│   └── REVIEW-{date}-{seq}_{slug}.md
+│   ├── REVIEW-{date}-{seq}_{slug}.md
+│   ├── workflow.toml                         ← Generated manifest
+│   ├── context_extensions.py                 ← Generated extensions
+│   ├── README.md                             ← Generated user guide
+│   ├── .env.sample                           ← Generated env template (conditional)
+│   ├── config.json.sample                    ← Generated config template (conditional)
+│   └── prompts/                              ← Generated prompt templates
+│       ├── 01_step_name.txt
+│       └── ...
 └── history/{job_id}/                         ← Archived after completion
 ```
 
@@ -31,8 +39,10 @@ docs/repo/workflow_builder/
 ### Input Specs
 
 - Location: `docs/repo/workflow_builder/specs/`
-- Format: `{slug}.md` where slug is a short descriptive name
-- Example: `image-csv-gen-v3.md`, `notification-pipeline.md`
+- Format: `{slug}.md` where slug uses `lowercase_with_underscores`
+- Example: `agnes_media_gen_v1.md`, `notification_pipeline.md`
+- The slug becomes the workflow package name (directory, workflow.toml
+  name, context_extensions.py workflow_name)
 
 ### Per-Run Artifacts
 
@@ -43,11 +53,87 @@ docs/repo/workflow_builder/
 
 ### Generated Workflow Package
 
-- Location: `workflows/{workflow_name}/`
-- The workflow name must match:
+- Location: `workflows/{slug}/`
+- The slug is derived from the input spec filename (e.g.,
+  `specs/agnes-media-gen-v1.md` → slug `agnes-media-gen-v1`)
+- The slug must match:
   - `name` field in `workflow.toml`
   - `workflow_name` attribute in `context_extensions.py`
   - Directory name
+
+## Supplementary Files
+
+The generate_package step produces supplementary files alongside the
+required workflow.toml and context_extensions.py:
+
+### README.md (always generated)
+
+A user guide for the generated workflow package. Must include:
+
+- **Overview** — what the workflow does, its purpose and scope
+- **Prerequisites** — required setup, dependencies, API access
+- **Installation** — how to deploy the workflow package
+- **Configuration** — environment variables (.env) and config.json settings
+- **Usage** — how to run the workflow (batch file, operator console, daemon)
+- **Step Reference** — table of steps with name, type, role, and purpose
+- **Artifact Keys** — table of all artifact keys with descriptions
+
+### .env.sample (conditional)
+
+Generated only when the workflow needs environment variables such as
+API keys, credentials, or external service configuration. Format:
+
+```
+# Description of what this variable does
+WORKFLOW_API_KEY=your_api_key_here
+```
+
+### config.json.sample (conditional)
+
+Generated only when the workflow needs runtime configuration beyond
+what .env provides. Must be valid JSON with sensible defaults and
+inline comments where possible.
+
+## Promotion
+
+After the review_package step approves the generated package, the
+promote_package step copies the deployable files to the repo workflows
+directory:
+
+```
+Source:  docs/repo/workflow_builder/runs/{job_id}/
+Target:  workflows/{workflow_name}/
+```
+
+### Files copied during promotion
+
+| File | Condition |
+|------|-----------|
+| `workflow.toml` | Always |
+| `context_extensions.py` | Always |
+| `actions.py` | If exists |
+| `prompts/` | If exists |
+| `README.md` | Always |
+| `.env.sample` | If exists |
+| `config.json.sample` | If exists |
+
+### Files NOT copied
+
+Design docs (REQUIREMENTS, ARTIFACTS, STEPS, PROMPTS index, VALIDATION,
+REVIEW), meta.json sidecars, and validation reports stay in the run
+directory for the audit trail.
+
+### Backup behavior
+
+If the target directory already exists, it is backed up as
+`workflows/{workflow_name}_bak_{timestamp}/` before copying.
+
+### Post-promotion
+
+After promotion, the user should:
+1. Run `ukbe-run-agent sync-workflows {workflow_name}` to sync to backend
+2. Run bootstrap-publish if the workflow should be included in the
+   packaged bootstrap bundle
 
 ## Document Lifecycle
 

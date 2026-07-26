@@ -18,6 +18,7 @@ import datetime as dt
 import hashlib
 import importlib.util
 import json
+import logging
 import re
 import shutil
 import sys
@@ -93,6 +94,9 @@ def _get_step_names_from_state(state: dict) -> list[str]:
     # Backend should provide step order via step_execution_spec
     # For now, return empty - the calling code should handle this gracefully
     return []
+
+
+logger = logging.getLogger(__name__)
 
 
 def _path_for_report(path: Path, base: Path) -> str:
@@ -1708,10 +1712,14 @@ def _apply_workflow_package_context_hooks(
     the context hooks exported by the workflow package.
     """
     if not step_cfg:
+        logger.debug("[ctx_hooks] step_cfg is empty/None, skipping")
         return
     bundle = step_cfg.get("_workflow_bundle")
     if bundle is None:
+        logger.debug("[ctx_hooks] _workflow_bundle not in step_cfg, skipping")
         return
+
+    logger.info("[ctx_hooks] bundle=%s", bundle.name)
 
     # 1. Try new WorkflowExtensions interface
     from .workflow_packages.hooks import get_extension
@@ -1730,17 +1738,23 @@ def _apply_workflow_package_context_hooks(
                 artifacts = state.get("artifacts") or {}
                 for k, v in extensions.items():
                     if k in artifacts and artifacts[k] is not None:
+                        logger.debug("[ctx_hooks] skip %s (in artifacts)", k)
                         continue  # preserve user-provided or prior-step artifact value
                     ctx[k] = v
+                logger.info(
+                    "[ctx_hooks] injected %d keys: %s",
+                    len(extensions),
+                    sorted(extensions.keys()),
+                )
             return
         except Exception:
-            import logging  # noqa: PLC0415
-
-            logging.getLogger(__name__).exception(
-                "WorkflowExtensions.build_context_extensions failed for %s",
+            logger.exception(
+                "[ctx_hooks] build_context_extensions failed for %s",
                 bundle.name,
             )
             return
+
+    logger.warning("[ctx_hooks] get_extension(%r) returned None — context extensions will NOT be applied", bundle.name)
 
     # 2. Legacy fallback: free-function build_context_extensions()
     ext_path = getattr(bundle, "context_extensions_path", None)

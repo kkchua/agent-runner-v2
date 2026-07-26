@@ -181,6 +181,34 @@ def handle_admin_command(*, args: Any, group_cfg: dict[str, Any], hooks: Any) ->
         }, indent=2))
         return AdminCommandResolution(handled=True, exit_code=0)
 
+    if args.reject_step:
+        if not args.job_id:
+            raise ValueError("--reject-step requires --job-id")
+        state = hooks.ensure_backward_compatible_state(hooks.load_job(args.template_group, args.job_id))
+        state = hooks.migrate_job_state(state)
+        state = hooks.reconcile_job_state(state, group_cfg)
+        requested_step = args.reject_step.strip()
+        state = hooks.reject_step(
+            group_name=args.template_group,
+            group_cfg=group_cfg,
+            state=state,
+            step=requested_step,
+        )
+        sync_warning = _sync_backend_after_human_approval(state=state)
+        remark = (
+            f"Step {requested_step!r} rejected — routed to refine step."
+            if not sync_warning
+            else f"Step {requested_step!r} rejected — routed to refine step; {sync_warning}."
+        )
+        print(json.dumps({
+            "status": "REJECTED",
+            "remark": remark,
+            "job_status": hooks.get_job_status(state),
+            "job_id": state["job_id"],
+            "current_step": state["current_step"],
+        }, indent=2))
+        return AdminCommandResolution(handled=True, exit_code=0)
+
     if args.resume_step:
         if not args.job_id:
             raise ValueError("--resume-step requires --job-id")

@@ -92,31 +92,16 @@ def get_extension(template_group: str) -> WorkflowExtensions | None:
         A ``WorkflowExtensions`` instance, or ``None``.
     """
     if template_group in _EXT_CACHE:
+        print(f"[get_extension] cache hit for {template_group!r}", flush=True)
         return _EXT_CACHE[template_group]
 
-    # Resolve the context_extensions.py path from the registry
-    from .registry import get_global_registry
+    # Workflows live at the global runner home — no fallbacks.
+    from ..runtime_context import get_runner_home
 
-    registry = get_global_registry()
-
-    ext_path: Path | None = None
-
-    # Try the registry first (workflow packages discovered at startup)
-    if registry.has(template_group):
-        bundle = registry.get(template_group)
-        candidate = bundle.bundle_root / "context_extensions.py"
-        if candidate.is_file():
-            ext_path = candidate
-
-    # Fallback: scan standard locations
-    if ext_path is None:
-        from ..runtime_context import get_workspace_root
-
-        workspace = get_workspace_root()
-        if workspace:
-            candidate = Path(workspace) / "workflows" / template_group / "context_extensions.py"
-            if candidate.is_file():
-                ext_path = candidate
+    global_wf = Path(get_runner_home()) / "workflows" / "default" / template_group
+    candidate = global_wf / "context_extensions.py"
+    print(f"[get_extension] looking up {template_group!r}: path={candidate}, exists={candidate.is_file()}", flush=True)
+    ext_path: Path | None = candidate if candidate.is_file() else None
 
     if ext_path is None:
         _EXT_CACHE[template_group] = None
@@ -124,16 +109,19 @@ def get_extension(template_group: str) -> WorkflowExtensions | None:
 
     mod = _load_extension_module(ext_path, str(ext_path))
     if mod is None:
+        print(f"[get_extension] failed to load module from {ext_path}", flush=True)
         _EXT_CACHE[template_group] = None
         return None
 
     cls = _find_extension_class(mod)
     if cls is None:
+        print(f"[get_extension] no WorkflowExtensions subclass found in {ext_path}", flush=True)
         _EXT_CACHE[template_group] = None
         return None
 
     instance = cls()
     _EXT_CACHE[template_group] = instance
+    print(f"[get_extension] loaded {cls.__name__} for {template_group!r}", flush=True)
     return instance
 
 
@@ -143,25 +131,12 @@ def get_legacy_context_hook(template_group: str) -> Any | None:
     This is the backward-compatibility path for workflows that have not
     yet migrated to the ``WorkflowExtensions`` base class.
     """
-    from .registry import get_global_registry
+    # Workflows live at the global runner home — no fallbacks.
+    from ..runtime_context import get_runner_home
 
-    registry = get_global_registry()
-    ext_path: Path | None = None
-
-    if registry.has(template_group):
-        bundle = registry.get(template_group)
-        candidate = bundle.bundle_root / "context_extensions.py"
-        if candidate.is_file():
-            ext_path = candidate
-
-    if ext_path is None:
-        from ..runtime_context import get_workspace_root
-
-        workspace = get_workspace_root()
-        if workspace:
-            candidate = Path(workspace) / "workflows" / template_group / "context_extensions.py"
-            if candidate.is_file():
-                ext_path = candidate
+    global_wf = Path(get_runner_home()) / "workflows" / "default" / template_group
+    candidate = global_wf / "context_extensions.py"
+    ext_path: Path | None = candidate if candidate.is_file() else None
 
     if ext_path is None:
         return None
