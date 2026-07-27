@@ -1,62 +1,12 @@
+"""Unit tests for operator console runner_service (CLI-only architecture)."""
 from __future__ import annotations
 
 from agent_runner_v2.operator_console.models import GlobalSettings, WorkflowEntry
-from agent_runner_v2.operator_console.services.backend_service import BackendRunService
 from agent_runner_v2.operator_console.services.runner_service import RunnerActionService
 
 
-class _FakeBackendClient:
-    def __init__(self) -> None:
-        self.calls: list[tuple[str, dict[str, object]]] = []
-
-    def list_runs(self, **kwargs):
-        self.calls.append(("list_runs", kwargs))
-        return {
-            "runs": [
-                {
-                    "id": "run-1",
-                    "run_code": "RUN-1",
-                    "workflow_name": "01_governance_foundation_v1",
-                    "status": "IN_PROGRESS",
-                    "current_step": "review_docs",
-                    "updated_at": "2026-07-18T00:00:00Z",
-                }
-            ]
-        }
-
-    def stop_run(self, **kwargs):
-        self.calls.append(("stop_run", kwargs))
-        return {"status": "ok"}
-
-    def approve_run(self, **kwargs):
-        self.calls.append(("approve_run", kwargs))
-        return {"status": "ok"}
-
-
-def test_backend_run_service_lists_active_runs() -> None:
-    client = _FakeBackendClient()
-    service = BackendRunService(client, worker_id="worker-1")  # type: ignore[arg-type]
-
-    runs = service.list_active_runs(
-        repo_path="D:/MyProjectSpace/01_Workflows/agent-runner-v2",
-        workflow_name="01_governance_foundation_v1",
-    )
-
-    assert len(runs) == 1
-    assert runs[0].run_id == "run-1"
-    assert runs[0].current_step == "review_docs"
-    assert client.calls[0] == (
-        "list_runs",
-        {
-            "repo_path": "D:/MyProjectSpace/01_Workflows/agent-runner-v2",
-            "workflow_name": "01_governance_foundation_v1",
-            "status_group": "non_terminal",
-            "worker_id": "worker-1",
-        },
-    )
-
-
-def test_runner_action_service_submit_passes_global_settings(monkeypatch, tmp_path) -> None:
+def test_runner_action_service_submit_passes_settings(monkeypatch, tmp_path) -> None:
+    """submit_job builds correct CLI argv from global settings."""
     captured: dict[str, object] = {}
     repo_path = tmp_path / "repo"
     repo_path.mkdir()
@@ -81,11 +31,10 @@ def test_runner_action_service_submit_passes_global_settings(monkeypatch, tmp_pa
     )
 
     assert result == "ok"
+    # CLI reads backend_url from config.json — no --backend-url in argv
     assert captured["argv"] == [
         "--workflow-name",
         "sdlc_10_requirement_v1",
-        "--backend-url",
-        "http://127.0.0.1:8100",
         "--worker-id",
         "worker-1",
         "--worker-label",
@@ -96,6 +45,7 @@ def test_runner_action_service_submit_passes_global_settings(monkeypatch, tmp_pa
 
 
 def test_runner_action_service_approve_step_invokes_run_agent(monkeypatch, tmp_path) -> None:
+    """approve_step builds correct CLI argv."""
     captured: dict[str, object] = {}
     repo_path = tmp_path / "repo"
     repo_path.mkdir()
@@ -133,6 +83,7 @@ def test_runner_action_service_approve_step_invokes_run_agent(monkeypatch, tmp_p
 
 
 def test_runner_action_service_override_step_invokes_run_agent(monkeypatch, tmp_path) -> None:
+    """override_step builds correct CLI argv."""
     captured: dict[str, object] = {}
     repo_path = tmp_path / "repo"
     repo_path.mkdir()
@@ -167,3 +118,100 @@ def test_runner_action_service_override_step_invokes_run_agent(monkeypatch, tmp_
         "--override-step",
         "publish_governance_foundation_set",
     ]
+
+
+def test_runner_service_list_active_runs_parses_json(monkeypatch) -> None:
+    """list_active_runs_for_worker parses CLI JSON output into ActiveRunSummary."""
+    import json
+
+    def fake_list_runs_main(argv):
+        print(json.dumps({
+            "runs": [
+                {
+                    "id": "run-uuid-1",
+                    "run_code": "JOB-001",
+                    "workflow_name": "agnes_media_gen_v1",
+                    "run_status": "pending",
+                    "current_step": "generate_prompts",
+                    "updated_at": "2026-07-27T10:00:00",
+                    "worker_id": "worker-01",
+                    "project_root": "/tmp/repo",
+                }
+            ]
+        }))
+        return 0
+
+    monkeypatch.setattr(
+        "agent_runner_v2.operator_console.services.runner_service.list_runs_commands.main",
+        fake_list_runs_main,
+    )
+
+    service = RunnerActionService(
+        GlobalSettings(
+            backend_url="http://127.0.0.1:8100",
+            worker_id="worker-1",
+            worker_label="live",
+        )
+    )
+    runs = service.list_active_runs_for_worker(worker_id="worker-01")
+
+    assert len(runs) == 1
+    assert runs[0].run_id == "run-uuid-1"
+    assert runs[0].run_code == "JOB-001"
+    assert runs[0].workflow_name == "agnes_media_gen_v1"
+    assert runs[0].status == "pending"
+    assert runs[0].current_step == "generate_prompts"
+
+
+def test_runner_service_stop_run(monkeypatch) -> None:
+    """stop_run builds correct CLI argv."""
+    captured: dict[str, object] = {}
+
+    def fake_stop_main(argv):
+        captured["argv"] = list(argv or [])
+        print('{"status": "ok"}')
+        return 0
+
+    monkeypatch.setattr(
+        "agent_runner_v2.operator_console.services.runner_service.stop_commands.main",
+        fake_stop_main,
+    )
+
+    service = RunnerActionService(
+        GlobalSettings(
+            backend_url="http://127.0.0.1:8100",
+            worker_id="worker-1",
+            worker_label="live",
+        )
+    )
+    result = service.stop_run(run_id="run-uuid-1", reason="Cancelled by operator")
+
+    assert '"status": "ok"' in result
+    assert captured["argv"] == ["stop", "run-uuid-1", "--reason", "Cancelled by operator"]
+
+
+def test_runner_service_approve(monkeypatch) -> None:
+    """approve builds correct CLI argv with --resume flag."""
+    captured: dict[str, object] = {}
+
+    def fake_approve_main(argv):
+        captured["argv"] = list(argv or [])
+        print('{"status": "ok"}')
+        return 0
+
+    monkeypatch.setattr(
+        "agent_runner_v2.operator_console.services.runner_service.approve_commands.main",
+        fake_approve_main,
+    )
+
+    service = RunnerActionService(
+        GlobalSettings(
+            backend_url="http://127.0.0.1:8100",
+            worker_id="worker-1",
+            worker_label="live",
+        )
+    )
+    result = service.approve(run_id="run-uuid-1", resume=True)
+
+    assert '"status": "ok"' in result
+    assert captured["argv"] == ["approve", "run-uuid-1", "--resume"]

@@ -22,10 +22,8 @@ import logging
 import sys
 from pathlib import Path
 
-from ..backend_client import BackendClient
 from .config import ConsoleConfigError, load_console_config, load_global_settings
 from .models import ActiveRunSummary, RepoEntry, WorkflowEntry
-from .services.backend_service import BackendRunService
 from .services.runner_service import ActionExecutionError, RunnerActionService
 from ..workflow_packages.loader import load_workflow_package
 from ..workflow_packages.hooks import get_extension
@@ -136,9 +134,6 @@ def main(argv: list[str] | None = None) -> int:
         print(str(exc), file=sys.stderr)
         return 2
 
-    backend_service = BackendRunService(
-        BackendClient(settings.backend_url), worker_id=settings.worker_id,
-    )
     runner_service = RunnerActionService(settings)
 
     # -----------------------------------------------------------------------
@@ -607,7 +602,7 @@ def main(argv: list[str] | None = None) -> int:
             """
             nonlocal active_runs, selected_run_id
             try:
-                active_runs = backend_service.list_active_runs_for_worker(worker_id=selected_worker_id())
+                active_runs = runner_service.list_active_runs_for_worker(worker_id=selected_worker_id())
                 if active_runs:
                     selected_run_id = active_runs[0].run_id
                     # Build display text with: repo_name, workflow_name, run_code, status, current_step
@@ -744,7 +739,7 @@ def main(argv: list[str] | None = None) -> int:
                     run_id = str(selected_run_id or "").strip()
                     if not run_id:
                         raise ActionExecutionError("Select an active run to approve.")
-                    detail = backend_service.get_run_detail(run_id=run_id)
+                    detail = runner_service.get_run_detail_dict(run_id=run_id)
                     run_payload = detail.get("run") or {}
                     step_name = str(run_payload.get("awaiting_human_step") or "").strip()
                     job_id = str(run_payload.get("run_code") or "").strip()
@@ -753,28 +748,22 @@ def main(argv: list[str] | None = None) -> int:
                         raise ActionExecutionError(
                             "Selected run is missing awaiting_human_step or run_code.",
                         )
-                    # Resolve repo and workflow from the run's workflow_name for local runner call
                     resolved_repo_path, resolved_workflow = _resolve_repo_and_workflow(workflow_name)
                     if resolved_workflow is None:
                         raise ActionExecutionError(
                             f"Unable to find workflow '{workflow_name}' in configured repos."
                         )
-                    rendered_local = runner_service.approve_step(
+                    rendered = runner_service.approve_step(
                         repo_path=resolved_repo_path,
                         template_group=resolved_workflow.template_group or resolved_workflow.workflow_name,
                         job_id=job_id, step_name=step_name,
                     )
-                    backend_result = backend_service.approve_run(
-                        run_id=run_id, reject=False,
-                        feedback=feedback_tf.value or "",
-                    )
-                    rendered = f"Local: {rendered_local}\n\nBackend: {_render_result(backend_result)}"
 
                 elif action == "Reject":
                     run_id = str(selected_run_id or "").strip()
                     if not run_id:
                         raise ActionExecutionError("Select an active run to reject.")
-                    detail = backend_service.get_run_detail(run_id=run_id)
+                    detail = runner_service.get_run_detail_dict(run_id=run_id)
                     run_payload = detail.get("run") or {}
                     step_name = str(run_payload.get("awaiting_human_step") or "").strip()
                     job_id = str(run_payload.get("run_code") or "").strip()
@@ -788,22 +777,17 @@ def main(argv: list[str] | None = None) -> int:
                         raise ActionExecutionError(
                             f"Unable to find workflow '{workflow_name}' in configured repos."
                         )
-                    rendered_local = runner_service.reject_step(
+                    rendered = runner_service.reject_step(
                         repo_path=resolved_repo_path,
                         template_group=resolved_workflow.template_group or resolved_workflow.workflow_name,
                         job_id=job_id, step_name=step_name,
                     )
-                    backend_result = backend_service.approve_run(
-                        run_id=run_id, reject=True,
-                        feedback=feedback_tf.value or "",
-                    )
-                    rendered = f"Local: {rendered_local}\n\nBackend: {_render_result(backend_result)}"
 
                 elif action == "Resume":
                     run_id = str(selected_run_id or "").strip()
                     if not run_id:
                         raise ActionExecutionError("Select an active run to resume.")
-                    detail = backend_service.get_run_detail(run_id=run_id)
+                    detail = runner_service.get_run_detail_dict(run_id=run_id)
                     run_payload = detail.get("run") or {}
                     step_name = str(run_payload.get("awaiting_human_step") or "").strip()
                     job_id = str(run_payload.get("run_code") or "").strip()
@@ -817,22 +801,17 @@ def main(argv: list[str] | None = None) -> int:
                         raise ActionExecutionError(
                             f"Unable to find workflow '{workflow_name}' in configured repos."
                         )
-                    rendered_local = runner_service.resume_step(
+                    rendered = runner_service.resume_step(
                         repo_path=resolved_repo_path,
                         template_group=resolved_workflow.template_group or resolved_workflow.workflow_name,
                         job_id=job_id, step_name=step_name,
                     )
-                    backend_result = backend_service.approve_run(
-                        run_id=run_id, reject=False,
-                        feedback=feedback_tf.value or "Resumed by operator",
-                    )
-                    rendered = f"Local: {rendered_local}\n\nBackend: {_render_result(backend_result)}"
 
                 elif action == "Retry":
                     run_id = str(selected_run_id or "").strip()
                     if not run_id:
                         raise ActionExecutionError("Select an active run to retry.")
-                    detail = backend_service.get_run_detail(run_id=run_id)
+                    detail = runner_service.get_run_detail_dict(run_id=run_id)
                     run_payload = detail.get("run") or {}
                     step_name = str(run_payload.get("awaiting_human_step") or "").strip()
                     job_id = str(run_payload.get("run_code") or "").strip()
@@ -846,22 +825,17 @@ def main(argv: list[str] | None = None) -> int:
                         raise ActionExecutionError(
                             f"Unable to find workflow '{workflow_name}' in configured repos."
                         )
-                    rendered_local = runner_service.retry_step(
+                    rendered = runner_service.retry_step(
                         repo_path=resolved_repo_path,
                         template_group=resolved_workflow.template_group or resolved_workflow.workflow_name,
                         job_id=job_id, step_name=step_name,
                     )
-                    backend_result = backend_service.approve_run(
-                        run_id=run_id, reject=False,
-                        feedback=feedback_tf.value or "Retried by operator",
-                    )
-                    rendered = f"Local: {rendered_local}\n\nBackend: {_render_result(backend_result)}"
 
                 elif action == "Cancel":
                     run_id = str(selected_run_id or "").strip()
                     if not run_id:
                         raise ActionExecutionError("Select an active run to cancel.")
-                    detail = backend_service.get_run_detail(run_id=run_id)
+                    detail = runner_service.get_run_detail_dict(run_id=run_id)
                     run_payload = detail.get("run") or {}
                     job_id = str(run_payload.get("run_code") or "").strip()
                     workflow_name = str(run_payload.get("workflow_name") or "").strip()
@@ -892,25 +866,16 @@ def main(argv: list[str] | None = None) -> int:
                         raise ActionExecutionError("Selected run not found in active list.")
                     if not target_run.run_code:
                         raise ActionExecutionError("Selected run has no run_code.")
-                    # Resolve repo and workflow from the run's workflow_name for local runner call
                     resolved_repo_path, resolved_workflow = _resolve_repo_and_workflow(target_run.workflow_name)
                     if resolved_workflow is None:
                         raise ActionExecutionError(
                             f"Unable to find workflow '{target_run.workflow_name}' in configured repos."
                         )
-                    rendered_local = runner_service.override_step(
+                    rendered = runner_service.override_step(
                         repo_path=resolved_repo_path,
                         template_group=resolved_workflow.template_group or resolved_workflow.workflow_name,
                         job_id=target_run.run_code, step_name=step_name,
                     )
-                    try:
-                        backend_result = backend_service.reset_run_step(
-                            run_id=target_run.run_id, step_name=step_name,
-                        )
-                        rendered = f"Local: {rendered_local}\n\nBackend: {_render_result(backend_result)}"
-                    except RuntimeError as be:
-                        _log.warning("[console] reset backend call failed: %s", be)
-                        rendered = f"Local: {rendered_local}\n\nBackend (warning): {be}"
 
                 else:
                     raise ActionExecutionError(f"Unsupported action: {action}")

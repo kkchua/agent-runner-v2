@@ -360,6 +360,24 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         ns.stop_argv = raw[1:]
         return ns
 
+    if command == "list-runs":
+        ns = argparse.Namespace()
+        ns.command = "list-runs"
+        ns.list_runs_argv = raw[1:]
+        return ns
+
+    if command == "show-run":
+        ns = argparse.Namespace()
+        ns.command = "show-run"
+        ns.show_run_argv = raw[1:]
+        return ns
+
+    if command == "reset-step":
+        ns = argparse.Namespace()
+        ns.command = "reset-step"
+        ns.reset_step_argv = raw[1:]
+        return ns
+
     if command == "console":
         ns = argparse.Namespace()
         ns.command = "console"
@@ -539,6 +557,18 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "stop":
         from .stop_commands import main as _stop_main
         return _stop_main(args.stop_argv)
+
+    if args.command == "list-runs":
+        from .list_runs_commands import main as _list_runs_main
+        return _list_runs_main(args.list_runs_argv)
+
+    if args.command == "show-run":
+        from .show_run_commands import main as _show_run_main
+        return _show_run_main(args.show_run_argv)
+
+    if args.command == "reset-step":
+        from .reset_step_commands import main as _reset_step_main
+        return _reset_step_main(args.reset_step_argv)
 
     if args.command == "console":
         from .console_commands import main as _console_main
@@ -826,6 +856,15 @@ def main(argv: list[str] | None = None) -> int:
         "meta_json_path": report_meta_json_path,
     })
 
+    # Daemon mode: sync results to backend automatically
+    if args.mode == "daemon" and state.get("workflow_step_run_id"):
+        _sync_results_to_backend(
+            state=state,
+            step_result=step_result,
+            coder_used=coder_used,
+            backend_url=os.environ.get("AGENT_RUNNER_BACKEND_URL") or "",
+        )
+
     print(json.dumps({
         "status": step_result.status,
         "remark": step_result.remark,
@@ -845,6 +884,84 @@ def main(argv: list[str] | None = None) -> int:
         "step_dir": _safe_relative_to(step_dir, JOBS_ROOT),
     }, indent=2))
     return exit_code
+
+
+def _sync_results_to_backend(
+    *,
+    state: dict[str, Any],
+    step_result: Any,
+    coder_used: str,
+    backend_url: str,
+) -> None:
+    """Sync step execution results to the backend (daemon mode only).
+
+    Called automatically after step execution when running in daemon mode.
+    Uses ``build_job_sync_payload`` from ``daemon_runtime`` to map the
+    job.json state to the backend persistence API format.
+
+    Before syncing, checks if backend state changed during execution
+    (e.g., cancelled by console). If cancelled/stopped, skips sync to
+    preserve the cancelled state.
+
+    Parameters
+    ----------
+    state :
+        The current job state dict (from job.json).
+    step_result :
+        The StepResult from step execution.
+    coder_used :
+        Name of the coder that executed the step.
+    backend_url :
+        Backend base URL. If empty, sync is skipped.
+    """
+    step_run_id = str(state.get("workflow_step_run_id") or "").strip()
+    run_id = str(state.get("workflow_run_id") or "").strip()
+    if not backend_url or not step_run_id:
+        return
+    try:
+        from .daemon_runtime import build_job_sync_payload
+        from .backend_client import BackendClient
+
+        client = BackendClient(backend_url)
+        
+        # Check backend status before sync (post-execution conflict check)
+        if run_id:
+            try:
+                run_detail = client.get_run(run_id=run_id)
+                run = run_detail.get("run", {})
+                run_status = str(run.get("run_status") or "").strip().lower()
+                context = run.get("context_payload") or {}
+                stop_requested = False
+                if isinstance(context, dict):
+                    control = context.get("__run_control") or {}
+                    if isinstance(control, dict):
+                        stop_requested = bool(control.get("stop_requested"))
+                
+                if run_status == "stopped" or stop_requested:
+                    print(
+                        f"[daemon-sync] Backend state changed during execution "
+                        f"(run_status={run_status}, stop_requested={stop_requested}), "
+                        f"skipping sync to preserve cancelled state",
+                        file=sys.stderr
+                    )
+                    return
+            except Exception as check_exc:
+                # Non-fatal: proceed with sync if we can't check backend status
+                print(f"[daemon-sync] Warning: could not check backend status before sync: {check_exc}", file=sys.stderr)
+
+        result_dict = {
+            "status": step_result.status,
+            "outcome": step_result.status.lower(),
+            "coder_used": coder_used,
+            "remark": step_result.remark,
+        }
+        sync_payload = build_job_sync_payload(
+            job=state, step_result=result_dict, step_run_id=step_run_id,
+        )
+        client.sync_job_state(step_run_id=step_run_id, payload=sync_payload)
+        print(f"[daemon-sync] results synced to backend (step_run_id={step_run_id})", file=sys.stderr)
+    except Exception as sync_exc:
+        print(f"[daemon-sync] result sync failed: {sync_exc}", file=sys.stderr)
 
 
 def _build_worker_request_payload(
