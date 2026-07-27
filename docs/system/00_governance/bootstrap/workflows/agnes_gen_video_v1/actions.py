@@ -15,6 +15,7 @@ graceful partial failure handling.
 """
 from __future__ import annotations
 
+import base64
 import json
 import logging
 import os
@@ -316,11 +317,14 @@ def generate_videos_from_images(
         video_filename = png_path.stem + ".mp4"
         vid_output_path = step_04_dir / video_filename
 
+        # Base64-encode image for API (expects data URI, not local path)
+        image_b64 = base64.b64encode(png_path.read_bytes()).decode("utf-8")
+
         # Submit video generation request
         payload = {
             "model": vid_model,
             "prompt": t2i_prompt1,
-            "image": str(png_path),  # Use local file path
+            "image": f"data:image/png;base64,{image_b64}",
             "width": vid_width,
             "height": vid_height,
             "num_frames": vid_num_frames,

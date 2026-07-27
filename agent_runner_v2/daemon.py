@@ -697,7 +697,7 @@ def _run_supervisor(*, worker_id: str, worker_label: str, backend_url: str, poll
                     child.state = 'killed'
                     child.watchdog_reason = 'kill_grace_exceeded'
                     _terminate_child(child, logger, sigkill=True)
-                elif child.term_sent_at is None and now - child.started_at_monotonic >= step_timeout_seconds:
+                elif step_timeout_seconds > 0 and child.term_sent_at is None and now - child.started_at_monotonic >= step_timeout_seconds:
                     child.state = 'timed_out'
                     child.watchdog_reason = 'step_timeout_exceeded'
                     child.term_sent_at = now
@@ -822,7 +822,13 @@ def main(argv: list[str] | None = None) -> int:
     poll_seconds = args.poll_seconds or _setting_int(cfg, 'WORKER_POLL_SEC', 'poll_seconds', 5)
     max_parallel = args.max_parallel or _setting_int(cfg, 'WORKER_MAX_PARALLEL', 'max_parallel', 1)
     stalled_seconds = args.stalled_seconds or _setting_int(cfg, 'WORKER_STALLED_SEC', 'stalled_seconds', 300)
-    step_timeout_seconds = args.step_timeout_seconds or _setting_int(cfg, 'WORKER_STEP_TIMEOUT_SEC', 'step_timeout_seconds', 3600)
+    step_timeout_seconds = (
+        args.step_timeout_seconds
+        if args.step_timeout_seconds is not None and args.step_timeout_seconds > 0
+        else int(os.environ['WORKER_STEP_TIMEOUT_SEC']) if os.environ.get('WORKER_STEP_TIMEOUT_SEC') is not None
+        else int(cfg['step_timeout_seconds']) if 'step_timeout_seconds' in cfg and cfg['step_timeout_seconds'] is not None
+        else 3600
+    )
     kill_grace_seconds = args.kill_grace_seconds or _setting_int(cfg, 'WORKER_KILL_GRACE_SEC', 'kill_grace_seconds', 30)
     step_spec_source = _step_spec_source(cfg, args.step_spec_source)
     default_log_file = str(GLOBAL_RUNNER_HOME / 'logs' / 'worker-daemon.jsonl')
