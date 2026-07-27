@@ -1,95 +1,295 @@
-"""Unit tests for daemon-mode result sync in run_agent."""
+"""Unit tests for daemon_runtime sync payload construction.
+
+Tests the pure functions that build sync payloads and map job status.
+These functions have no external dependencies - they take dicts as input
+and produce dicts as output, making them straightforward to unit test.
+"""
 from __future__ import annotations
 
-from unittest.mock import MagicMock, patch
-
-from agent_runner_v2 import run_agent
-
-
-class _FakeStepResult:
-    """Minimal StepResult stand-in for testing."""
-
-    def __init__(self, status: str = "APPROVED", remark: str = "Step completed") -> None:
-        self.status = status
-        self.remark = remark
-        self.artifacts = {}
-        self.reject_code = None
-        self.usage_data = None
-        self.meta_json_path = None
+from agent_runner_v2.daemon_runtime import (
+    build_job_sync_payload,
+    _map_job_status_to_run_status,
+)
 
 
-def test_sync_results_skips_when_no_backend_url() -> None:
-    """_sync_results_to_backend does nothing when backend_url is empty."""
-    state = {"workflow_step_run_id": "step-run-abc", "job_status": "IN_PROGRESS"}
-    result = _FakeStepResult()
+class TestMapJobStatusToRunStatus:
+    """Test the job status to run_status mapping."""
 
-    with patch("agent_runner_v2.run_agent.BackendClient") as mock_client_cls:
-        run_agent._sync_results_to_backend(
-            state=state, step_result=result, coder_used="test-coder", backend_url="",
-        )
-        mock_client_cls.assert_not_called()
+    def test_in_progress_maps_to_pending(self) -> None:
+        assert _map_job_status_to_run_status("IN_PROGRESS") == "pending"
+
+    def test_completed_maps_to_completed(self) -> None:
+        assert _map_job_status_to_run_status("COMPLETED") == "completed"
+
+    def test_failed_maps_to_failed(self) -> None:
+        assert _map_job_status_to_run_status("FAILED") == "failed"
+
+    def test_waiting_for_human_approval_maps_to_awaiting_human(self) -> None:
+        assert _map_job_status_to_run_status("WAITING_FOR_HUMAN_APPROVAL") == "awaiting_human"
+
+    def test_waiting_for_human_intervention_maps_to_awaiting_human(self) -> None:
+        assert _map_job_status_to_run_status("WAITING_FOR_HUMAN_INTERVENTION") == "awaiting_human"
+
+    def test_waiting_for_human_maxretried_maps_to_awaiting_human(self) -> None:
+        assert _map_job_status_to_run_status("WAITING_FOR_HUMAN_MAXRETRIED") == "awaiting_human"
+
+    def test_waiting_for_auto_retry_maps_to_pending(self) -> None:
+        assert _map_job_status_to_run_status("WAITING_FOR_AUTO_RETRY") == "pending"
+
+    def test_unknown_status_defaults_to_pending(self) -> None:
+        assert _map_job_status_to_run_status("UNKNOWN_STATUS") == "pending"
+
+    def test_lowercase_input_works(self) -> None:
+        assert _map_job_status_to_run_status("in_progress") == "pending"
+
+    def test_mixed_case_input_works(self) -> None:
+        assert _map_job_status_to_run_status("In_Progress") == "pending"
 
 
-def test_sync_results_skips_when_no_step_run_id() -> None:
-    """_sync_results_to_backend does nothing when workflow_step_run_id is missing."""
-    state = {"workflow_step_run_id": "", "job_status": "IN_PROGRESS"}
-    result = _FakeStepResult()
+class TestBuildJobSyncPayload:
+    """Test the sync payload construction from job state."""
 
-    with patch("agent_runner_v2.run_agent.BackendClient") as mock_client_cls:
-        run_agent._sync_results_to_backend(
-            state=state, step_result=result, coder_used="test-coder",
-            backend_url="http://localhost:8100",
-        )
-        mock_client_cls.assert_not_called()
+    def test_builds_basic_payload_with_pending_status(self) -> None:
+        """Test payload construction for a running job."""
+        job = {
+            "job_status": "IN_PROGRESS",
+            "current_step": "generate_prompts",
+            "artifacts": {"DOC_1": "/path/to/doc.md"},
+            "completed_steps": ["init"],
+            "failed_steps": [],
+        }
+        step_result = {
+            "status": "APPROVED",
+            "outcome": "approved",
+            "coder_used": "qwen-coder",
+            "remark": "Step completed",
+        }
 
-
-def test_sync_results_calls_backend() -> None:
-    """_sync_results_to_backend calls sync_job_state with correct payload."""
-    state = {
-        "workflow_step_run_id": "step-run-abc",
-        "workflow_run_id": "run-123",
-        "job_status": "IN_PROGRESS",
-        "status": "IN_PROGRESS",
-        "current_step": "generate_prompts",
-        "artifacts": {},
-        "completed_steps": [],
-        "failed_steps": [],
-        "review_state": {},
-        "usage_summary": None,
-        "last_failure_reason": None,
-        "target_project_root": "",
-        "project_root": "/tmp/test",
-        "workspace_path": "/tmp/test",
-    }
-    result = _FakeStepResult(status="APPROVED", remark="Generated 5 prompts")
-
-    mock_client = MagicMock()
-    mock_client.sync_job_state.return_value = {"status": "ok"}
-
-    with patch("agent_runner_v2.backend_client.BackendClient", return_value=mock_client):
-        run_agent._sync_results_to_backend(
-            state=state, step_result=result, coder_used="test-coder",
-            backend_url="http://localhost:8100",
+        payload = build_job_sync_payload(
+            job=job,
+            step_result=step_result,
+            step_run_id="step-run-abc",
         )
 
-    mock_client.sync_job_state.assert_called_once()
-    call_kwargs = mock_client.sync_job_state.call_args
-    assert call_kwargs.kwargs["step_run_id"] == "step-run-abc"
-    payload = call_kwargs.kwargs["payload"]
-    assert payload["run_status"] == "pending"
-    assert payload["next_step_name"] == "generate_prompts"
+        assert payload["run_status"] == "pending"
+        assert payload["next_step_name"] == "generate_prompts"
+        assert payload["step_status"] == "approved"
+        assert payload["step_coder"] == "qwen-coder"
+        assert len(payload["artifacts"]) == 1
+        assert payload["artifacts"][0]["artifact_key"] == "DOC_1"
 
+    def test_builds_payload_for_completed_job(self) -> None:
+        """Test payload construction for a completed job."""
+        job = {
+            "job_status": "COMPLETED",
+            "current_step": None,
+            "artifacts": {"OUTPUT_FILE": "/path/to/output.md"},
+            "completed_steps": ["init", "generate", "review"],
+            "failed_steps": [],
+        }
+        step_result = {
+            "status": "APPROVED",
+            "outcome": "approved",
+            "coder_used": "qwen-coder",
+            "remark": "Workflow completed",
+        }
 
-def test_sync_results_handles_backend_error(capsys) -> None:
-    """_sync_results_to_backend prints error to stderr but does not raise."""
-    state = {"workflow_step_run_id": "step-run-abc", "job_status": "IN_PROGRESS"}
-    result = _FakeStepResult()
-
-    with patch("agent_runner_v2.backend_client.BackendClient", side_effect=RuntimeError("Connection refused")):
-        run_agent._sync_results_to_backend(
-            state=state, step_result=result, coder_used="test-coder",
-            backend_url="http://localhost:8100",
+        payload = build_job_sync_payload(
+            job=job,
+            step_result=step_result,
+            step_run_id="step-run-final",
         )
 
-    captured = capsys.readouterr()
-    assert "[daemon-sync] result sync failed" in captured.err
+        assert payload["run_status"] == "completed"
+        assert payload["next_step_name"] is None
+        assert payload["step_status"] == "approved"
+
+    def test_builds_payload_for_failed_job(self) -> None:
+        """Test payload construction for a failed job."""
+        job = {
+            "job_status": "FAILED",
+            "current_step": "generate",
+            "artifacts": {},
+            "completed_steps": ["init"],
+            "failed_steps": ["generate"],
+            "last_failure_reason": "Coder crashed",
+        }
+        step_result = {
+            "status": "FAILED",
+            "outcome": "failed",
+            "coder_used": "qwen-coder",
+            "remark": "Step failed",
+        }
+
+        payload = build_job_sync_payload(
+            job=job,
+            step_result=step_result,
+            step_run_id="step-run-failed",
+        )
+
+        assert payload["run_status"] == "failed"
+        assert payload["error_message"] == "Coder crashed"
+        assert any(e["event_type"] == "RUN_FAILED" for e in payload["events"])
+
+    def test_builds_payload_for_awaiting_human(self) -> None:
+        """Test payload construction for human approval wait."""
+        job = {
+            "job_status": "WAITING_FOR_HUMAN_APPROVAL",
+            "current_step": "review",
+            "artifacts": {"REVIEW_FILE": "/path/to/review.md"},
+            "completed_steps": ["init", "generate"],
+            "failed_steps": [],
+            "review_state": {
+                "final_decision": "PENDING",
+            },
+        }
+        step_result = {
+            "status": "APPROVED",
+            "outcome": "approved",
+            "coder_used": "reviewer",
+            "remark": "Review completed, awaiting human",
+        }
+
+        payload = build_job_sync_payload(
+            job=job,
+            step_result=step_result,
+            step_run_id="step-run-review",
+        )
+
+        assert payload["run_status"] == "awaiting_human"
+        assert any(e["event_type"] == "HUMAN_APPROVAL_REQUIRED" for e in payload["events"])
+
+    def test_filters_null_artifacts(self) -> None:
+        """Test that null/empty artifacts are filtered out."""
+        job = {
+            "job_status": "IN_PROGRESS",
+            "current_step": "next_step",
+            "artifacts": {
+                "VALID_DOC": "/path/to/valid.md",
+                "NULL_DOC": None,
+                "EMPTY_DOC": "",
+            },
+            "completed_steps": [],
+            "failed_steps": [],
+        }
+        step_result = {
+            "status": "APPROVED",
+            "outcome": "approved",
+        }
+
+        payload = build_job_sync_payload(
+            job=job,
+            step_result=step_result,
+            step_run_id="step-run-test",
+        )
+
+        artifact_keys = [a["artifact_key"] for a in payload["artifacts"]]
+        assert "VALID_DOC" in artifact_keys
+        assert "NULL_DOC" not in artifact_keys
+        assert "EMPTY_DOC" not in artifact_keys
+
+    def test_normalizes_windows_paths_in_artifacts(self) -> None:
+        """Test that Windows backslashes are converted to forward slashes."""
+        job = {
+            "job_status": "IN_PROGRESS",
+            "current_step": "next_step",
+            "artifacts": {"DOC": r"D:\path\to\doc.md"},
+            "completed_steps": [],
+            "failed_steps": [],
+        }
+        step_result = {
+            "status": "APPROVED",
+            "outcome": "approved",
+        }
+
+        payload = build_job_sync_payload(
+            job=job,
+            step_result=step_result,
+            step_run_id="step-run-test",
+        )
+
+        # Artifact path should use forward slashes
+        assert payload["artifacts"][0]["file_path"] == "D:/path/to/doc.md"
+
+    def test_includes_review_when_decision_made(self) -> None:
+        """Test that review payload is included when decision is final."""
+        job = {
+            "job_status": "IN_PROGRESS",
+            "current_step": "next_step",
+            "artifacts": {},
+            "completed_steps": [],
+            "failed_steps": [],
+            "review_state": {
+                "final_decision": "APPROVED",
+                "remark": "Looks good",
+                "findings": ["Minor typo"],
+            },
+        }
+        step_result = {
+            "status": "APPROVED",
+            "outcome": "approved",
+            "remark": "Review approved",
+        }
+
+        payload = build_job_sync_payload(
+            job=job,
+            step_result=step_result,
+            step_run_id="step-run-review",
+        )
+
+        assert payload["review"] is not None
+        assert payload["review"]["decision"] == "APPROVED"
+        assert payload["review"]["remark"] == "Looks good"
+
+    def test_skips_review_when_decision_pending(self) -> None:
+        """Test that review payload is omitted when decision is PENDING."""
+        job = {
+            "job_status": "IN_PROGRESS",
+            "current_step": "next_step",
+            "artifacts": {},
+            "completed_steps": [],
+            "failed_steps": [],
+            "review_state": {
+                "final_decision": "PENDING",
+            },
+        }
+        step_result = {
+            "status": "APPROVED",
+            "outcome": "approved",
+        }
+
+        payload = build_job_sync_payload(
+            job=job,
+            step_result=step_result,
+            step_run_id="step-run-review",
+        )
+
+        assert payload["review"] is None
+
+    def test_filters_artifacts_to_allowed_keys_when_specified(self) -> None:
+        """Test that artifacts are filtered to workflow-declared keys."""
+        job = {
+            "job_status": "IN_PROGRESS",
+            "current_step": "next_step",
+            "artifacts": {
+                "DECLARED_KEY": "/path/to/declared.md",
+                "UNDECLARED_KEY": "/path/to/undeclared.md",
+            },
+            "completed_steps": [],
+            "failed_steps": [],
+            "workflow_artifact_keys": ["DECLARED_KEY"],
+        }
+        step_result = {
+            "status": "APPROVED",
+            "outcome": "approved",
+        }
+
+        payload = build_job_sync_payload(
+            job=job,
+            step_result=step_result,
+            step_run_id="step-run-test",
+        )
+
+        artifact_keys = [a["artifact_key"] for a in payload["artifacts"]]
+        assert "DECLARED_KEY" in artifact_keys
+        assert "UNDECLARED_KEY" not in artifact_keys
