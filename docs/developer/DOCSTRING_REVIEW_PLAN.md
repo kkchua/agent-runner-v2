@@ -21,17 +21,19 @@ Systematic review of all Python source files in `agent_runner_v2/` to add PEP 25
 
 | # | File | Defs | Missing | Coverage | Mod Doc | Status |
 |---|------|------|---------|----------|---------|--------|
-| 1 | `step_runner.py` | 88 | 49 | 44% | Y | TODO |
-| 2 | `coder_adapters.py` | 46 | 35 | 23% | N | TODO |
-| 3 | `bundle_loader.py` | 40 | 31 | 22% | N | TODO |
-| 4 | `run_agent.py` | 26 | 25 | 3% | Y | TODO |
-| 5 | `daemon.py` | 25 | 23 | 8% | Y | TODO |
-| 6 | `runtime_context.py` | 35 | 24 | 31% | N | TODO |
-| 7 | `backend_client.py` | 17 | 17 | 0% | N | TODO |
-| 8 | `task_runtime.py` | 17 | 17 | 0% | N | TODO |
-| 9 | `coder_registry.py` | 17 | 16 | 5% | Y | TODO |
+| 1 | `step_runner.py` | 88 | 49 | 44% | Y | ✅ DONE |
+| 2 | `coder_adapters.py` | 46 | 35 | 23% | N | ✅ DONE |
+| 3 | `bundle_loader.py` | 40 | 31 | 22% | N | ✅ DONE |
+| 4 | `run_agent.py` | 26 | 25 | 3% | Y | ✅ DONE |
+| 5 | `daemon.py` | 25 | 23 | 8% | Y | ✅ DONE |
+| 6 | `runtime_context.py` | 35 | 24 | 31% | N | ✅ DONE |
+| 7 | `backend_client.py` | 17 | 17 | 0% | N | ✅ DONE |
+| 8 | `task_runtime.py` | 17 | 17 | 0% | N | ✅ DONE |
+| 9 | `coder_registry.py` | 17 | 16 | 5% | Y | ✅ DONE |
 
-**Phase 1 subtotal: 237 missing**
+**Phase 1 subtotal: 237 missing → ✅ COMPLETE (1,418 lines added)**
+
+**Commits:** c178886, 4d4fda7, 3e9e0fe, 77faac5, edbf79b, 3bce5a4, 5aa2d69, 8cf3826, cae469e
 
 ---
 
@@ -178,15 +180,17 @@ Systematic review of all Python source files in `agent_runner_v2/` to add PEP 25
 
 ## Summary
 
-| Phase | Description | Files | Missing |
-|-------|-------------|-------|---------|
-| 1 | Core runtime | 9 | 237 |
-| 2 | Documentation & path infrastructure | 8 | 134 |
-| 3 | Execution pipeline | 13 | 69 |
-| 4 | CLI, commands & runtime deps | 12 | 57 |
-| 5 | Actions modules | 11 | 33 |
-| 6 | Operator console, config, misc | 12 | 55 |
-| 7 | Workflow packages | 3 | 7 |
-| **Total** | | **68 files** | **592** |
+| Phase | Description | Files | Missing | Status |
+|-------|-------------|-------|---------|--------|
+| 1 | Core runtime | 9 | 237 | ✅ COMPLETE |
+| 2 | Documentation & path infrastructure | 8 | 134 | TODO |
+| 3 | Execution pipeline | 13 | 69 | TODO |
+| 4 | CLI, commands & runtime deps | 12 | 57 | TODO |
+| 5 | Actions modules | 11 | 33 | TODO |
+| 6 | Operator console, config, misc | 12 | 55 | TODO |
+| 7 | Workflow packages | 3 | 7 | TODO |
+| **Total** | | **68 files** | **592** | **237 done, 355 remaining** |
 
-**Estimated total: ~592 function/class docstrings + ~25 missing module docstrings to add.**
+**Progress: 237 / 592 (40%) complete**
+
+**Phase 1 added 1,418 lines of docstrings across 9 core runtime files.**
