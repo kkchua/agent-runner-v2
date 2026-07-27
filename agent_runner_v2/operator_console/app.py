@@ -848,10 +848,9 @@ def main(argv: list[str] | None = None) -> int:
                         raise ActionExecutionError(
                             f"Unable to find workflow '{workflow_name}' in configured repos."
                         )
-                    rendered = runner_service.cancel_run(
-                        repo_path=resolved_repo_path,
-                        template_group=resolved_workflow.template_group or resolved_workflow.workflow_name,
-                        job_id=job_id,
+                    rendered = runner_service.stop_run(
+                        run_id=run_id,
+                        reason="Cancelled by operator",
                     )
 
                 elif action == "Reset":

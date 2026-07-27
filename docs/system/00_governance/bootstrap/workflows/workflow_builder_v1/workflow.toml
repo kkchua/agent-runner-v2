@@ -1,0 +1,241 @@
+[workflow]
+name = "workflow_builder_v1"
+version = "1.0.0"
+label = "Workflow Builder v1"
+job_prefix = "WFBUILD"
+description = "Generates a complete agent-runner-v2 workflow package from a user-provided specification document."
+visibility = "canonical"
+default_max_rejects = 3
+init_step = "generate_test_criteria"
+
+# ============================================================================
+# Step 0: Generate Test Criteria
+# ============================================================================
+[[step]]
+name = "generate_test_criteria"
+prompt = "prompts/00_generate_test_criteria.txt"
+enable_notifications = true
+requires_human_approval_after = true
+onsuccess = "review_test_criteria"
+
+[step.artifacts]
+required_inputs = ["WORKFLOW_SPEC"]
+produces = ["TEST_CRITERIA"]
+result_meta_key = "TEST_CRITERIA"
+
+[step.coder]
+role_policy = "architect_standard"
+
+# ============================================================================
+# Step 0b: Review Test Criteria
+# ============================================================================
+[[step]]
+name = "review_test_criteria"
+prompt = "prompts/00b_review_test_criteria.txt"
+enable_notifications = true
+requires_human_approval_after = true
+onsuccess = "analyze_spec"
+
+[step.artifacts]
+required_inputs = ["TEST_CRITERIA", "WORKFLOW_SPEC"]
+produces = ["REVIEW_FILE_SUGGESTED"]
+result_meta_key = "REVIEW_FILE_SUGGESTED"
+
+[step.coder]
+role_policy = "reviewer_standard"
+
+[step.on_reject_refine]
+step = "refine_test_criteria"
+artifact = "REVIEW_FILE_SUGGESTED"
+max_iterations = 2
+exhausted_failure_code = "TEST_CRITERIA_REFINEMENT_EXHAUSTED"
+exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
+
+# ============================================================================
+# Step 0c: Refine Test Criteria (conditional)
+# ============================================================================
+[[step]]
+name = "refine_test_criteria"
+prompt = "prompts/00c_refine_test_criteria.txt"
+enable_notifications = true
+requires_human_approval_after = true
+
+[step.artifacts]
+required_inputs = ["REVIEW_FILE_SUGGESTED", "TEST_CRITERIA", "WORKFLOW_SPEC"]
+produces = ["TEST_CRITERIA"]
+result_meta_key = "TEST_CRITERIA"
+
+loop_returns_to = "review_test_criteria"
+
+[step.coder]
+role_policy = "refine_standard"
+
+# ============================================================================
+# Step 1: Analyze Specification
+# ============================================================================
+[[step]]
+name = "analyze_spec"
+prompt = "prompts/01_analyze_spec.txt"
+enable_notifications = true
+requires_human_approval_after = true
+onsuccess = "resolve_questions"
+
+[step.artifacts]
+required_inputs = ["WORKFLOW_SPEC", "TEST_CRITERIA"]
+produces = ["WORKFLOW_REQUIREMENTS"]
+result_meta_key = "WORKFLOW_REQUIREMENTS"
+
+[step.coder]
+role_policy = "architect_standard"
+
+# ============================================================================
+# Step 1b: Resolve Open Questions
+# ============================================================================
+[[step]]
+name = "resolve_questions"
+prompt = "prompts/01b_resolve_questions.txt"
+enable_notifications = true
+requires_human_approval_after = true
+onsuccess = "define_artifacts"
+
+[step.artifacts]
+required_inputs = ["WORKFLOW_REQUIREMENTS", "WORKFLOW_SPEC"]
+produces = ["WORKFLOW_REQUIREMENTS"]
+result_meta_key = "WORKFLOW_REQUIREMENTS"
+
+[step.coder]
+role_policy = "architect_standard"
+
+# ============================================================================
+# Step 2: Define Artifacts
+# ============================================================================
+[[step]]
+name = "define_artifacts"
+prompt = "prompts/02_define_artifacts.txt"
+enable_notifications = true
+requires_human_approval_after = true
+onsuccess = "design_steps"
+
+[step.artifacts]
+required_inputs = ["WORKFLOW_REQUIREMENTS"]
+produces = ["ARTIFACT_CONTRACT"]
+result_meta_key = "ARTIFACT_CONTRACT"
+
+[step.coder]
+role_policy = "architect_standard"
+
+# ============================================================================
+# Step 3: Design Steps
+# ============================================================================
+[[step]]
+name = "design_steps"
+prompt = "prompts/03_design_steps.txt"
+enable_notifications = true
+requires_human_approval_after = true
+onsuccess = "generate_package"
+
+[step.artifacts]
+required_inputs = ["WORKFLOW_REQUIREMENTS", "ARTIFACT_CONTRACT"]
+produces = ["STEP_ARCHITECTURE"]
+result_meta_key = "STEP_ARCHITECTURE"
+
+[step.coder]
+role_policy = "architect_standard"
+
+# ============================================================================
+# Step 4: Generate Package
+# ============================================================================
+[[step]]
+name = "generate_package"
+prompt = "prompts/04_generate_package.txt"
+enable_notifications = true
+requires_human_approval_after = true
+onsuccess = "validate_bundle"
+
+[step.artifacts]
+required_inputs = ["WORKFLOW_REQUIREMENTS", "ARTIFACT_CONTRACT", "STEP_ARCHITECTURE", "TEST_CRITERIA"]
+produces = ["WORKFLOW_MANIFEST", "WORKFLOW_EXTENSIONS", "WORKFLOW_PROMPTS_INDEX", "WORKFLOW_README", "WORKFLOW_ENV_SAMPLE", "WORKFLOW_CONFIG_SAMPLE"]
+result_meta_key = "WORKFLOW_PROMPTS_INDEX"
+
+[step.coder]
+role_policy = "architect_standard"
+
+# ============================================================================
+# Step 5: Validate Bundle
+# ============================================================================
+[[step]]
+name = "validate_bundle"
+action = "validate_workflow_bundle"
+enable_notifications = true
+requires_human_approval_after = true
+onsuccess = "review_package"
+
+[step.artifacts]
+required_inputs = ["WORKFLOW_MANIFEST", "WORKFLOW_EXTENSIONS", "TEST_CRITERIA"]
+produces = ["VALIDATION_REPORT"]
+result_meta_key = "VALIDATION_REPORT"
+
+# ============================================================================
+# Step 6: Review Package
+# ============================================================================
+[[step]]
+name = "review_package"
+prompt = "prompts/05_review_package.txt"
+enable_notifications = true
+requires_human_approval_after = true
+onsuccess = "promote_package"
+
+[step.artifacts]
+required_inputs = ["WORKFLOW_MANIFEST", "WORKFLOW_EXTENSIONS", "WORKFLOW_PROMPTS_INDEX", "VALIDATION_REPORT", "TEST_CRITERIA", "WORKFLOW_SPEC"]
+produces = ["REVIEW_FILE_SUGGESTED"]
+result_meta_key = "REVIEW_FILE_SUGGESTED"
+
+[step.coder]
+role_policy = "reviewer_standard"
+
+[step.on_reject_refine]
+step = "refine_package"
+artifact = "REVIEW_FILE_SUGGESTED"
+max_iterations = 2
+exhausted_failure_code = "WORKFLOW_REFINEMENT_EXHAUSTED"
+exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
+
+# ============================================================================
+# Step 7: Refine Package (conditional)
+# ============================================================================
+[[step]]
+name = "refine_package"
+prompt = "prompts/06_refine_package.txt"
+enable_notifications = true
+requires_human_approval_after = true
+
+[step.artifacts]
+required_inputs = ["REVIEW_FILE_SUGGESTED", "WORKFLOW_MANIFEST", "WORKFLOW_EXTENSIONS", "WORKFLOW_PROMPTS_INDEX"]
+produces = ["WORKFLOW_MANIFEST", "WORKFLOW_EXTENSIONS", "WORKFLOW_PROMPTS_INDEX", "WORKFLOW_README", "WORKFLOW_ENV_SAMPLE", "WORKFLOW_CONFIG_SAMPLE"]
+result_meta_key = "WORKFLOW_PROMPTS_INDEX"
+
+loop_returns_to = "review_package"
+
+[step.coder]
+role_policy = "refine_standard"
+
+# ============================================================================
+# Step 8: Promote Package
+# ============================================================================
+[[step]]
+name = "promote_package"
+action = "promote_workflow_package"
+enable_notifications = true
+onsuccess = "stepCompletion"
+
+[step.artifacts]
+required_inputs = ["WORKFLOW_SPEC", "WORKFLOW_MANIFEST"]
+produces = ["WORKFLOW_PACKAGE_DIR"]
+result_meta_key = "WORKFLOW_PACKAGE_DIR"
+
+# ============================================================================
+# Step 9: Step Completion
+# ============================================================================
+[[step]]
+name = "stepCompletion"
+action = "step_completion"

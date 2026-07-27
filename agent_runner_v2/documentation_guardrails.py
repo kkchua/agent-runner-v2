@@ -23,7 +23,6 @@ from .workflow_path_contracts import resolve_workflow_output_paths
 MASTER_BOOTSTRAP_WORKFLOWS: set[str] = {
     "00_layer1_governance_bootstrap_v1",
     "01_governance_foundation_v1",
-    "00_repo_master_docs_bootstrap_v1",
 }
 EXECUTION_SCAFFOLD_WORKFLOWS: set[str] = set()
 ARCHITECTURE_SITE_WORKFLOW = ""

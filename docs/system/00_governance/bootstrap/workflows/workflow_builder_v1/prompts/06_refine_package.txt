@@ -1,0 +1,65 @@
+Objective
+
+Fix all issues identified in the review document. Update the generated
+workflow package files in-place to resolve each finding.
+
+Reference Inputs
+
+- Read {REVIEW_FILE_SUGGESTED} for the list of issues to fix.
+- Read {WORKFLOW_MANIFEST} for the current workflow.toml content.
+- Read {WORKFLOW_EXTENSIONS} for the current context_extensions.py content.
+- Read {WORKFLOW_PROMPTS_INDEX} for the list of generated prompt files.
+- Read {WORKFLOW_README} for the current README.md content.
+- Read {WORKFLOW_ENV_SAMPLE} for the current .env.sample content (if it
+  exists).
+- Read {WORKFLOW_CONFIG_SAMPLE} for the current config.json.sample content
+  (if it exists).
+
+Refinement Rules
+
+1. Address every issue listed in the review document explicitly.
+2. Do not change content that was not flagged by the review.
+3. Maintain consistency across all files -- if you change an artifact key in
+   one file, update it in all files that reference it.
+4. Preserve the overall workflow structure. Do not add new steps, remove
+   existing steps, or restructure the routing unless the review specifically
+   requires it.
+5. Keep all content ASCII-only.
+6. If the review flagged backtick-wrapped placeholders, replace them with
+   bare {KEY} format.
+7. If the review flagged missing artifact keys, add them to both
+   workflow.toml and context_extensions.py.
+8. If the review flagged routing errors, correct the step references.
+9. If the review flagged README.md issues (missing sections, wrong step
+   table, incorrect artifact keys), update {WORKFLOW_README} in-place.
+10. If the review flagged .env.sample issues (missing variables, bad
+    comments, or file should not exist), update or remove
+    {WORKFLOW_ENV_SAMPLE} accordingly.
+11. If the review flagged config.json.sample issues (invalid JSON, missing
+    settings, or file should not exist), update or remove
+    {WORKFLOW_CONFIG_SAMPLE} accordingly.
+
+Output Instructions
+
+- Update {WORKFLOW_MANIFEST} in-place with fixes.
+- Update {WORKFLOW_EXTENSIONS} in-place with fixes.
+- Update any prompt files that were flagged, using the paths from
+  {WORKFLOW_PROMPTS_INDEX}.
+- Update {WORKFLOW_PROMPTS_INDEX} if prompt file listings changed.
+- Update {WORKFLOW_README} in-place with fixes.
+- Update {WORKFLOW_ENV_SAMPLE} in-place if flagged (or remove if the review
+  says it should not exist).
+- Update {WORKFLOW_CONFIG_SAMPLE} in-place if flagged (or remove if the
+  review says it should not exist).
+- Document each fix applied in a summary section at the top of each modified
+  file as a comment (for code files) or at the end of the document (for
+  markdown files).
+- Use ASCII-only characters in all output.
+
+Forbidden Content
+
+- Structural changes not justified by review findings
+- Adding new workflow steps
+- Removing existing workflow steps
+- Changing the workflow name or job_prefix
+- Non-ASCII characters

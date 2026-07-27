@@ -290,6 +290,10 @@ def handle_admin_command(*, args: Any, group_cfg: dict[str, Any], hooks: Any) ->
         return AdminCommandResolution(handled=True, exit_code=0)
 
     if args.cancel_run:
+        # DAEMON COMMAND: Actually terminate the running job now.
+        # Called by daemon when it detects a stop request (from operator console).
+        # This updates local job status to STOPPED and syncs to backend.
+        # Requires local job folder to exist (job must be running locally).
         if not args.job_id:
             raise ValueError("--cancel-run requires --job-id")
         state = hooks.ensure_backward_compatible_state(hooks.load_job(args.template_group, args.job_id))

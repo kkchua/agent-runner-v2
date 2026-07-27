@@ -117,7 +117,7 @@ def _initialize_state_from_backend(
     
     # Create base job state
     state = hooks.create_job(
-        template_group=run.get("workflow_name") or group_cfg.get("workflow_name", ""),
+        group_name=run.get("workflow_name") or group_cfg.get("workflow_name", ""),
         group_cfg=group_cfg,
         seed_artifacts=seed_artifacts,
         mode=mode,

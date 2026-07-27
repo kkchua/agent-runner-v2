@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from .artifact_keys import ARTIFACT_KEY_REVIEW
-from .path_catalog import known_artifact_paths
+from .constants import known_artifact_paths
 from .documentation_guardrails import (
     EXECUTION_SCAFFOLD_WORKFLOWS,
     MASTER_BOOTSTRAP_WORKFLOWS,

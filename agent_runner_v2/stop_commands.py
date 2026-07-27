@@ -1,13 +1,23 @@
-"""Request a graceful stop for a backend run.
+"""Request a graceful stop for a backend run (Operator Console command).
 
 Invoked via: ukbe-run-agent stop <run_id> [--reason "..."]
 
-Reads backend_url from ~/.ukbe-runner/config.json by default.
+This is the OPERATOR CONSOLE command for requesting a run to stop.
+It does NOT immediately terminate the running job — it sets a stop flag
+in the backend database. The daemon will pick up this flag and handle
+the actual termination.
 
-Performs a comprehensive cancel:
-  1. Query the run to get the active step_run_id.
-  2. Sync step-level cancelled status (if step_run_id available).
-  3. Set run-level stop flag via the stop endpoint.
+Flow:
+  1. Operator Console calls this CLI command with run_id
+  2. CLI queries backend for active step_run_id
+  3. CLI syncs step-level cancelled status to backend
+  4. CLI sets run-level stop flag in backend DB
+  5. Daemon (running the job) detects stop flag and calls --cancel-run
+
+This is a "request to stop" — the actual job termination happens when
+the daemon processes the stop request via --cancel-run.
+
+Reads backend_url from ~/.ukbe-runner/config.json by default.
 """
 from __future__ import annotations
 
@@ -26,10 +36,12 @@ def _load_config() -> dict:
 
 
 def main(argv: list[str] | None = None) -> int:
-    """Stop/cancel a backend run with comprehensive state cleanup.
+    """Request a backend run to stop (Operator Console command).
 
-    Queries the run for its active step_run_id, syncs a stopped/cancelled
-    status at the step level, then sets the run-level stop flag.
+    This sets a stop flag in the backend database. The daemon running
+    the job will detect this flag and terminate the job via --cancel-run.
+
+    This is a "request to stop" — not an immediate termination.
 
     Parameters
     ----------

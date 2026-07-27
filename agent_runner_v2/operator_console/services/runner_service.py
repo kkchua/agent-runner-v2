@@ -5,6 +5,63 @@ captured stdout/stderr. All operations go through the CLI — no direct
 backend API calls.
 
 Architecture: Console → CLI → Backend (CLI owns all backend communication).
+
+All operations are triggered from the operator console. There is no
+separate "local manual trigger" — the console is the single entry point
+for all workflow management operations.
+
+Method Categories:
+------------------
+
+OPERATOR CONSOLE ACTIONS (all triggered from console UI):
+
+  Pure Backend Operations (no local job folder needed):
+    These set flags/state in the backend DB. The daemon picks up changes
+    and acts on them.
+
+    - list_runs() / list_active_runs_for_worker() — Read runs from backend
+    - show_run() / get_run_detail_dict() — Read run details from backend
+    - submit_job() — Submit new workflow to backend queue
+    - stop_run() — Request stop (sets flag in backend DB)
+    - approve() — Approve/reject/resume/retry at backend level
+    - reset_step() — Reset step at backend level
+
+  Step-Level Interventions (require local job folder):
+    These are also triggered from the console. They load local job.json,
+    modify it, save it, then sync to backend. Used for step-level
+    interventions when the operator needs to manually approve/reject/
+    resume/retry a specific step.
+
+    - approve_step() — Approve a specific step
+    - reject_step() — Reject a specific step
+    - resume_step() — Resume a waiting step
+    - retry_step() — Retry a waiting step
+
+  Daemon Actions (called by daemon, not console):
+    - cancel_run() — Actually terminate a running job (daemon calls this
+      when it detects a stop request from the console)
+
+UTILITY ACTIONS (setup/admin operations, no daemon mapping):
+    - init_workspace() — Seed workflow bundles to global runner home
+    - bootstrap_publish() — Publish bootstrap bundles
+    - sync_workflow() — Sync workflow definitions to backend
+
+Console → Daemon Mapping:
+-------------------------
+Each console action that modifies state has a corresponding daemon
+behavior that processes the change:
+
+  Console Action          →  Backend DB          →  Daemon Behavior
+  ----------------------     ------------------      -------------------------
+  stop_run()             →  stop_requested flag  →  calls cancel_run()
+  approve()              →  step status update   →  picks up next step
+  reset_step()           →  current_step change  →  executes new step
+  submit_job()           →  new run record       →  claims and executes
+  approve_step()         →  step approved        →  continues execution
+  reject_step()          →  step rejected        →  triggers refine loop
+  resume_step()          →  step resumed         →  continues execution
+  retry_step()           →  step retry           →  re-executes step
+
 """
 from __future__ import annotations
 
@@ -82,8 +139,12 @@ class RunnerActionService:
         self, *, worker_id: str = "", status_group: str = "non_terminal",
         workflow_name: str = "",
     ) -> str:
-        """List workflow runs via CLI (backend API wrapper). Returns raw JSON."""
-        args = ["list-runs"]
+        """OPERATOR CONSOLE: List workflow runs from backend (read-only).
+
+        Calls the 'list-runs' CLI command to fetch runs from backend.
+        No state modification — pure read operation.
+        """
+        args = []
         if worker_id:
             args.extend(["--worker-id", worker_id])
         if status_group and status_group != "all":
@@ -93,18 +154,22 @@ class RunnerActionService:
         return self._invoke_from_anywhere(func=list_runs_commands.main, argv=args)
 
     def list_active_runs_for_worker(self, *, worker_id: str = "") -> list[ActiveRunSummary]:
-        """List active runs for a worker, returning ActiveRunSummary objects.
+        """OPERATOR CONSOLE: List active runs for a worker (read-only).
 
-        This is the direct replacement for BackendRunService.list_active_runs_for_worker().
-        Calls the CLI and parses the JSON output into ActiveRunSummary objects.
+        Calls the 'list-runs' CLI command to fetch runs from backend.
+        No state modification — pure read operation.
         """
         json_str = self.list_runs(worker_id=worker_id, status_group="non_terminal")
         return _extract_runs_from_json(json_str)
 
     def show_run(self, *, run_id: str) -> str:
-        """Show a single run's details via CLI (backend API wrapper). Returns raw JSON."""
+        """OPERATOR CONSOLE: Show a single run's details (read-only).
+
+        Calls the 'show-run' CLI command to fetch run details from backend.
+        No state modification — pure read operation.
+        """
         return self._invoke_from_anywhere(
-            func=show_run_commands.main, argv=["show-run", run_id],
+            func=show_run_commands.main, argv=[run_id],
         )
 
     def get_run_detail_dict(self, *, run_id: str) -> dict:
@@ -117,8 +182,15 @@ class RunnerActionService:
             return {}
 
     def stop_run(self, *, run_id: str, reason: str = "") -> str:
-        """Stop/cancel a run via CLI (comprehensive cancel)."""
-        args = ["stop", run_id]
+        """OPERATOR CONSOLE: Request a backend run to stop.
+
+        Calls the 'stop' CLI command which sets a stop flag in the backend DB.
+        The daemon will detect this flag and terminate the job via --cancel-run.
+
+        This is a "request to stop" — not an immediate termination.
+        No local job folder needed — pure backend operation.
+        """
+        args = [run_id]
         if reason:
             args.extend(["--reason", reason])
         return self._invoke_from_anywhere(func=stop_commands.main, argv=args)
@@ -127,8 +199,14 @@ class RunnerActionService:
         self, *, run_id: str, reject: bool = False, feedback: str = "",
         resume: bool = False, retry: bool = False,
     ) -> str:
-        """Approve, reject, resume, or retry a run via CLI."""
-        args = ["approve", run_id]
+        """OPERATOR CONSOLE: Approve/reject/resume/retry at backend level.
+
+        Calls the 'approve' CLI command which updates backend state directly.
+        No local job folder needed — pure backend operation.
+
+        The daemon will pick up the updated state and continue execution.
+        """
+        args = [run_id]
         if reject:
             args.append("--reject")
         if resume:
@@ -140,9 +218,15 @@ class RunnerActionService:
         return self._invoke_from_anywhere(func=approve_commands.main, argv=args)
 
     def reset_step(self, *, run_id: str, step_name: str) -> str:
-        """Reset a run's current step via CLI."""
+        """OPERATOR CONSOLE: Reset a run's current step at backend level.
+
+        Calls the 'reset-step' CLI command which updates backend state directly.
+        No local job folder needed — pure backend operation.
+
+        The daemon will pick up the updated step and execute it.
+        """
         return self._invoke_from_anywhere(
-            func=reset_step_commands.main, argv=["reset-step", run_id, step_name],
+            func=reset_step_commands.main, argv=[run_id, step_name],
         )
 
     # ------------------------------------------------------------------
@@ -159,22 +243,14 @@ class RunnerActionService:
         os_type: str = "",
         start_step: str = "",
     ) -> str:
-        """Submit a workflow run to the backend queue via CLI.
+        """OPERATOR CONSOLE: Submit a workflow run to the backend queue.
 
-        Parameters
-        ----------
-        repo_path :
-            Working directory for the invocation (becomes project_root).
-        workflow :
-            The workflow entry to submit.
-        input_artifacts :
-            Optional dict of ``{KEY: VALUE}`` pairs passed as ``--input`` flags.
-        worker_id :
-            Override worker ID. Falls back to global settings if not provided.
-        os_type :
-            Repo OS type (unused — CLI handles all paths natively).
-        start_step :
-            Override the starting step for a new job (skip earlier steps).
+        Calls the 'submit' CLI command which:
+        1. Creates a new run record in backend DB
+        2. Returns run_id and run_code for tracking
+
+        The daemon will pick up the submitted job and execute it.
+        No local job folder created until daemon starts execution.
         """
         args = ["--workflow-name", workflow.workflow_name]
         effective_worker_id = worker_id or self._settings.worker_id
@@ -197,7 +273,12 @@ class RunnerActionService:
         bundle_domain: str = "general",
         bundle_profile: str = "core+workflow",
     ) -> str:
-        """Run ``ukbe-run-agent init`` to seed workflow bundles."""
+        """UTILITY: Run ``ukbe-run-agent init`` to seed workflow bundles.
+
+        Initializes the global runner home (~/.ukbe-runner) with workflow
+        bundles, bootstrap docs, and configuration. No daemon mapping —
+        this is a setup/admin operation.
+        """
         args = [
             "init", "--workflow", workflow_name,
             "--bundle-domain", bundle_domain,
@@ -206,27 +287,43 @@ class RunnerActionService:
         return self._invoke(repo_path=repo_path, func=run_agent.main, argv=args)
 
     def bootstrap_publish(self, *, repo_path: str) -> str:
-        """Run ``ukbe-run-agent bootstrap-publish`` to publish bootstrap bundles."""
+        """UTILITY: Run ``ukbe-run-agent bootstrap-publish`` to publish bootstrap bundles.
+
+        Publishes bootstrap documentation and workflow bundles to the
+        packaged location for distribution. No daemon mapping — this is
+        a build/publish operation.
+        """
         return self._invoke(repo_path=repo_path, func=run_agent.main, argv=["bootstrap-publish"])
 
     def sync_workflow(
         self, *, repo_path: str, workflow: WorkflowEntry | None = None,
     ) -> str:
-        """Sync workflow definitions to the backend."""
+        """UTILITY: Sync workflow definitions to the backend.
+
+        Uploads workflow TOML definitions to the backend database so
+        the daemon can execute them. No daemon mapping — this is an
+        admin/setup operation.
+        """
         args: list[str] = []
         if workflow is not None:
             args.append(workflow.workflow_name)
         return self._invoke(repo_path=repo_path, func=sync_workflows.main, argv=args)
 
     # ------------------------------------------------------------------
-    # Local CLI admin commands (need chdir to repo path, read job.json)
+    # Step-Level Interventions (triggered from console, require local job folder)
+    # These load local job.json, modify it, save it, then sync to backend.
     # ------------------------------------------------------------------
 
     def approve_step(
         self, *, repo_path: str, template_group: str,
         job_id: str, step_name: str,
     ) -> str:
-        """Approve a specific step in a running job (local runner invocation)."""
+        """OPERATOR CONSOLE: Approve a specific step in a running job.
+
+        Triggered from console UI. Loads local job.json, marks step as
+        human-approved, saves, and syncs to backend. Daemon continues
+        execution on next poll.
+        """
         args = [
             "run", "--template-group", template_group,
             "--job-id", job_id, "--approve-step", step_name,
@@ -237,7 +334,12 @@ class RunnerActionService:
         self, *, repo_path: str, template_group: str,
         job_id: str, step_name: str,
     ) -> str:
-        """Reject a specific step in a running job (local runner invocation)."""
+        """OPERATOR CONSOLE: Reject a specific step in a running job.
+
+        Triggered from console UI. Loads local job.json, marks step as
+        rejected (triggers refine loop if configured), saves, and syncs
+        to backend.
+        """
         args = [
             "run", "--template-group", template_group,
             "--job-id", job_id, "--reject-step", step_name,
@@ -248,7 +350,12 @@ class RunnerActionService:
         self, *, repo_path: str, template_group: str,
         job_id: str, step_name: str,
     ) -> str:
-        """Resume a step waiting for intervention or max-retried (force-approve, advance)."""
+        """OPERATOR CONSOLE: Resume a step waiting for intervention or max-retried.
+
+        Triggered from console UI. Loads local job.json, force-approves
+        the step (user investigated and fixed issue), advances to next
+        step, saves, and syncs to backend.
+        """
         args = [
             "run", "--template-group", template_group,
             "--job-id", job_id, "--resume-step", step_name,
@@ -259,7 +366,12 @@ class RunnerActionService:
         self, *, repo_path: str, template_group: str,
         job_id: str, step_name: str,
     ) -> str:
-        """Retry a step waiting for intervention or max-retried (reset counts, re-execute)."""
+        """OPERATOR CONSOLE: Retry a step waiting for intervention or max-retried.
+
+        Triggered from console UI. Loads local job.json, resets
+        reject/failure count, re-executes the same step, saves, and
+        syncs to backend.
+        """
         args = [
             "run", "--template-group", template_group,
             "--job-id", job_id, "--retry-step", step_name,
@@ -270,7 +382,13 @@ class RunnerActionService:
         self, *, repo_path: str, template_group: str,
         job_id: str,
     ) -> str:
-        """Cancel an entire run — set job status to STOPPED and sync to backend."""
+        """DAEMON: Actually terminate a running job now.
+
+        Called by daemon (not console) when it detects a stop request.
+        Loads local job.json, sets status to STOPPED, saves, and syncs
+        to backend. This is the actual termination — the console's
+        stop_run() only sets the flag that triggers this.
+        """
         args = [
             "run", "--template-group", template_group,
             "--job-id", job_id, "--cancel-run",

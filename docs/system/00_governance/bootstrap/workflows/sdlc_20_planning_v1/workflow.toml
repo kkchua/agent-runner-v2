@@ -1,0 +1,128 @@
+
+[workflow]
+name = "sdlc_20_planning_v1"
+version = "1.0.0"
+label = "SDLC Planning v1"
+job_prefix = "SDLC20PLN"
+description = "Generate solution architecture plan from approved requirement, producing approved PLAN document."
+visibility = "canonical"
+default_max_rejects = 2
+init_step = "generate_plan"
+
+# Layer 2 platform contract references
+layer = "layer3"
+platform = "agent-runner-v2"
+
+[workflow.governance]
+include_in_prompts = true
+prompt_targets = ["all"]
+
+# ============================================================================
+# Step 1: Generate Plan
+# ============================================================================
+[[step]]
+name = "generate_plan"
+prompt = "prompts/01_generate_plan.txt"
+enable_notifications = true
+onsuccess = "technical_critique"
+
+[step.artifacts]
+required_inputs = ["REQ_FILE"]
+produces = ["PLAN_FILE"]
+result_meta_key = "PLAN_FILE"
+
+[step.coder]
+role_policy = "architect_standard"
+
+# ============================================================================
+# Step 2: Technical Critique
+# ============================================================================
+[[step]]
+name = "technical_critique"
+prompt = "prompts/02_technical_critique.txt"
+enable_notifications = true
+onsuccess = "review_plan"
+
+[step.artifacts]
+required_inputs = ["PLAN_FILE"]
+produces = ["CRITIQUE_FILE_SUGGESTED"]
+result_meta_key = "CRITIQUE_FILE_SUGGESTED"
+
+[step.coder]
+role_policy = "reviewer_standard"
+
+[step.on_reject_refine]
+step = "generate_plan"
+artifact = "PLAN_FILE"
+max_iterations = 2
+exhausted_failure_code = "PLAN_CRITIQUE_EXHAUSTED"
+exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
+
+# ============================================================================
+# Step 3: Review Plan
+# ============================================================================
+[[step]]
+name = "review_plan"
+prompt = "prompts/03_review_plan.txt"
+enable_notifications = true
+requires_human_approval_after = true
+onsuccess = "promote_plan"
+
+[step.artifacts]
+required_inputs = ["PLAN_FILE"]
+produces = ["REVIEW_FILE_SUGGESTED"]
+result_meta_key = "REVIEW_FILE_SUGGESTED"
+
+[step.coder]
+role_policy = "reviewer_standard"
+
+[step.on_reject_refine]
+step = "refine_plan"
+artifact = "PLAN_FILE"
+max_iterations = 2
+exhausted_failure_code = "PLAN_REFINEMENT_EXHAUSTED"
+exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
+
+# ============================================================================
+# Step 4: Refine Plan (conditional)
+# ============================================================================
+[[step]]
+name = "refine_plan"
+prompt = "prompts/04_refine_plan.txt"
+enable_notifications = true
+
+[step.artifacts]
+required_inputs = ["PLAN_FILE", "REVIEW_FILE_SUGGESTED"]
+produces = ["PLAN_FILE"]
+target_artifact = "PLAN_FILE"
+edit_mode = "in_place"
+result_meta_key = "PLAN_FILE"
+
+loop_returns_to = "review_plan"
+
+[step.coder]
+role_policy = "architect_standard"
+
+# ============================================================================
+# Step 5: Promote Plan
+# ============================================================================
+[[step]]
+name = "promote_plan"
+action = "promote_artifact"
+promotes = "PLAN_FILE"
+enable_notifications = true
+onsuccess = "stepCompletion"
+
+[step.artifacts]
+required_inputs = ["PLAN_FILE"]
+source = "PLAN_FILE"
+dest = "PLAN_FILE"
+dest_dir = "docs/repo/agent_runner/sdlc/delivery/20_plans"
+result_meta_key = "PLAN_FILE"
+
+# ============================================================================
+# Step 6: Step Completion
+# ============================================================================
+[[step]]
+name = "stepCompletion"
+action = "step_completion"

@@ -1458,8 +1458,6 @@ def _set_master_docs_aliases(
 
     template_group = str(state.get("template_group") or "")
     if template_group not in {
-        "00_master_docs_bootstrap_v1",
-        "00_repo_master_docs_bootstrap_v1",
         "00_core_governance_bootstrap_v1",
         "00_layer1_governance_bootstrap_v1",
     }:
@@ -1512,31 +1510,6 @@ def _set_master_docs_aliases(
         if artifact_value:
             p = PurePath(resolved_str)
             ctx[f"{artifact_key}_METAJSON"] = step_dir_meta or str(p.parent / f"{p.stem}.meta.json")
-
-
-def _set_audience_site_aliases(*, ctx: dict[str, str], state: dict, step: str, artifacts: dict[str, Any], produces: list[str]) -> None:
-    """Set path aliases for audience site artifacts (markdown, HTML, PDF, manifest).
-
-    This ensures the prompts use the correct repo-relative paths for audience
-    documentation sites (41_*_doc_v1 and 51-55_*_docs_v1).
-    """
-    template_group = state.get("template_group", "")
-    # Apply to both 41_*_doc_v1 (markdown generation) and 51-55_*_docs_v1 (site generation)
-    if not any(template_group.startswith(f"{i}_") for i in [41, 51, 52, 53, 54, 55]):
-        return
-
-    from .constants import audience_site_artifacts
-    site_artifacts = audience_site_artifacts()
-
-    # Set path aliases for all audience site artifacts
-    for artifact_key, rel_path in site_artifacts.items():
-        artifact_value = artifacts.get(artifact_key) or rel_path
-        ctx[artifact_key] = str(artifact_value)
-        ctx[f"{artifact_key}_PATH"] = str(artifact_value)
-        # Only set METAJSON if not already set (action steps have their own METAJSON logic)
-        if artifact_value and not ctx.get(f"{artifact_key}_METAJSON"):
-            p = PurePath(str(artifact_value))
-            ctx[f"{artifact_key}_METAJSON"] = str(p.parent / f"{p.stem}.meta.json")
 
 
 def _validate_template_conformance(
@@ -2253,13 +2226,6 @@ def build_context(
         step_cfg=step_cfg,
     )
     _set_bug_fix_aliases(
-        ctx=ctx,
-        state=state,
-        step=step,
-        artifacts=artifacts,
-        produces=produces,
-    )
-    _set_audience_site_aliases(
         ctx=ctx,
         state=state,
         step=step,
