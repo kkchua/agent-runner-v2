@@ -5,6 +5,7 @@
 #   ./sync-workflows-to-backend.sh
 #   ./sync-workflows-to-backend.sh codebase_bootstrap_v1
 #   ./sync-workflows-to-backend.sh delivery_scaffold_v1 bug_fix_v1
+#   ./sync-workflows-to-backend.sh --changed-by "operator" --change-reason "Fixed prompt templates"
 
 set -euo pipefail
 
