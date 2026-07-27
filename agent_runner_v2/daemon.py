@@ -215,46 +215,42 @@ def _is_stop_requested(run: dict[str, Any]) -> bool:
 
 
 def _handle_stop_on_claim(client, claim: dict, logger) -> None:
-    """Mark run as stopped when stop_requested is detected on claim."""
-    from .daemon_runtime import build_job_sync_payload
+    """Log and skip when stop_requested is detected on claim.
+
+    The backend should have filtered this run already. If it didn't,
+    we just skip spawning — no sync needed since the run is already stopped.
+    """
     run = claim["run"]
-    step_run = claim["step_run"]
     run_code = run.get("run_code", "")
     logger.log(
         "info", "stop_requested_on_claim",
-        message=f"Stop requested for run {run_code}, marking as stopped",
+        message=f"Stop requested for run {run_code}, skipping (backend should have filtered this)",
         details={"run_id": run.get("id"), "run_code": run_code},
     )
-    try:
-        client.sync_job_state(
-            step_run_id=step_run["id"],
-            payload={
-                "run_status": "stopped",
-                "step_status": "cancelled",
-                "step_outcome": "cancelled",
-                "step_coder": None,
-                "step_duration_seconds": 0,
-                "next_step_name": None,
-                "output_payload": {},
-                "error_message": "Stopped by operator request",
-                "review": None,
-                "artifacts": [],
-                "events": [{"event_type": "RUN_STOPPED", "message": f"Run {run_code} stopped by operator request"}],
-            },
-        )
-    except Exception as exc:
-        logger.log("error", "stop_submit_failed", message=f"Failed to submit stop: {exc}")
 
 
 def _spawn_child(*, claim: dict[str, Any], runtime_root: Path, cli_pythonpath: str | None, logger: _DaemonLogger, backend_url: str, step_spec_source: str) -> ChildExecution:
     from .run_agent import _build_worker_request_payload
     from .job_state import job_dir
+    from .backend_client import BackendClient
 
     run = dict(claim['run'])
     step_run = dict(claim['step_run'])
     step_run_id = str(step_run['id'])
+    run_id = str(run['id'])
     child_dir = runtime_root / step_run_id
     child_dir.mkdir(parents=True, exist_ok=True)
+    
+    # Fetch full backend state before spawning CLI (pre-execution sync)
+    backend_state = None
+    try:
+        client = BackendClient(backend_url)
+        run_detail = client.get_run(run_id=run_id)
+        backend_state = run_detail
+        logger.log('info', 'backend_state_fetched', message=f'Fetched full backend state for run {run_id}', details={'run_id': run_id})
+    except Exception as exc:
+        logger.log('warning', 'backend_state_fetch_failed', message=f'Failed to fetch backend state: {exc}, proceeding with claim data only', details={'run_id': run_id, 'error': str(exc)})
+    
     request_payload = _build_worker_request_payload(
         run=run,
         step_run=step_run,
@@ -262,6 +258,11 @@ def _spawn_child(*, claim: dict[str, Any], runtime_root: Path, cli_pythonpath: s
         backend_url=backend_url,
         step_spec_source=step_spec_source,
     )
+
+    # Include full backend state in request_payload for CLI initialization
+    if backend_state:
+        request_payload['backend_state'] = backend_state
+
     request_path = child_dir / 'request.json'
     result_path = child_dir / 'result.json'
     combined_log_path = child_dir / 'child.log'
@@ -274,6 +275,12 @@ def _spawn_child(*, claim: dict[str, Any], runtime_root: Path, cli_pythonpath: s
     env['AGENT_RUNNER_WORKFLOW_RUN_ID'] = str(run.get('id') or '')
     env['AGENT_RUNNER_WORKFLOW_STEP_RUN_ID'] = str(step_run.get('id') or '')
     env['AGENT_RUNNER_BACKEND_URL'] = str(backend_url or '')
+    
+    # Write backend state to a separate file for CLI to read
+    if backend_state:
+        backend_state_path = child_dir / 'backend_state.json'
+        backend_state_path.write_text(json.dumps(backend_state, indent=2), encoding='utf-8')
+        env['AGENT_RUNNER_BACKEND_STATE_FILE'] = str(backend_state_path)
 
     log_handle = combined_log_path.open('ab')
     
@@ -473,98 +480,8 @@ def _run_supervisor(*, worker_id: str, worker_label: str, backend_url: str, poll
                 continue
 
             child.exit_code = proc_rc
-            if not child.submission_done:
-                result = _child_result(child)
-                try:
-                    # Read job.json for authoritative state (next_step, status, artifacts)
-                    job_state: dict[str, Any] | None = None
-                    template_group = child.request_payload.get("template_group", "")
-                    backend_run_code = child.request_payload.get("job_id", "")
-                    if template_group and backend_run_code:
-                        jpath = job_dir(template_group, backend_run_code) / "job.json"
-                        if jpath.exists():
-                            job_state = json.loads(jpath.read_text(encoding="utf-8"))
-                    if job_state is not None:
-                        job_state = _persist_backend_linkage_to_job_state(
-                            job_state=job_state,
-                            job_json_path=jpath,
-                            child=child,
-                            backend_url=backend_url,
-                        )
-                        # Re-check stop_requested from backend (may have been set mid-execution)
-                        run_status = None
-                        try:
-                            run_detail = client.get_run(run_id=child.run_id)
-                            run_ctx = (run_detail.get("run") or {}).get("context_payload") or {}
-                            if isinstance(run_ctx, dict):
-                                control = run_ctx.get("__run_control") or {}
-                                if isinstance(control, dict) and control.get("stop_requested"):
-                                    run_status = "stopped"
-                                    logger.log(
-                                        "info", "stop_requested_mid_execution",
-                                        message=f"Stop requested during execution for run {child.run_code}",
-                                        child=child,
-                                    )
-                        except Exception:
-                            pass  # If query fails, proceed with normal sync
-                        if run_status == "stopped":
-                            sync_payload = {
-                                "run_status": "stopped",
-                                "step_status": job_state.get("job_status", "IN_PROGRESS"),
-                                "step_outcome": "cancelled",
-                                "step_coder": None,
-                                "step_duration_seconds": 0,
-                                "next_step_name": None,
-                                "output_payload": {},
-                                "error_message": "Stopped by operator request",
-                                "review": None,
-                                "artifacts": [],
-                                "events": [{"event_type": "RUN_STOPPED", "message": f"Run {child.run_code} stopped by operator request"}],
-                            }
-                        else:
-                            sync_payload = build_job_sync_payload(
-                                job=job_state,
-                                step_result=result,
-                                step_run_id=child.step_run_id,
-                            )
-                        client.sync_job_state(step_run_id=child.step_run_id, payload=sync_payload)
-                        child.state = _submission_state_for_run_status(sync_payload.get('run_status'))
-                        child.submission_done = True
-                        logger.log(
-                            'info', 'job_state_synced',
-                            message='synced job state from job.json',
-                            child=child,
-                            details={
-                                'run_status': sync_payload.get('run_status'),
-                                'next_step': sync_payload.get('next_step_name'),
-                                'artifact_count': len(sync_payload.get('artifacts', [])),
-                            },
-                        )
-                    else:
-                        # Fallback: no job.json found, submit as-is via result
-                        logger.log(
-                            'warning', 'job_json_missing',
-                            message='job.json not found, using fallback result submission',
-                            child=child,
-                            details={'template_group': template_group, 'run_code': backend_run_code},
-                        )
-                        client.complete_step_run(
-                            step_run_id=child.step_run_id,
-                            payload={
-                                "status": result.get("status", "failed"),
-                                "outcome": result.get("outcome"),
-                                "output_payload": dict(result.get("artifacts") or {}),
-                                "error_message": (result.get("failure") or {}).get("failure_reason"),
-                            },
-                        )
-                        child.state = 'completed' if result.get('status') in ('completed', 'APPROVED') else 'failed'
-                        child.submission_done = True
-                        logger.log('info', 'result_submitted_fallback', message='submitted child result via fallback', child=child, details={'status': result.get('status')})
-                except Exception as exc:
-                    logger.log('error', 'result_submit_failed', message='failed to submit child result; discarding', child=child, details={'error': str(exc)})
-                    del children[step_run_id]
-                    continue
-                _send_child_heartbeat(client, worker_id, child, status='busy')
+            # CLI subprocess handles result syncing to backend directly (Phase 1+).
+            # Daemon only monitors liveness and logs exit.
             logger.log('info', 'child_exited', message='child finished', child=child, details={'exit_code': proc_rc})
             del children[step_run_id]
 

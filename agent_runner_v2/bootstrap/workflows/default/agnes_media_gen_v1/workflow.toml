@@ -23,7 +23,7 @@ prompt_targets = ["all"]
 name = "extract_descriptions"
 prompt = "prompts/01_extract_descriptions.txt"
 enable_notifications = true
-requires_human_approval_after = true
+requires_human_approval_after = false
 onsuccess = "generate_prompts"
 
 [step.artifacts]
@@ -47,7 +47,7 @@ exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
 name = "generate_prompts"
 prompt = "prompts/02_generate_prompts.txt"
 enable_notifications = true
-requires_human_approval_after = true
+requires_human_approval_after = false
 onsuccess = "generate_images"
 
 [step.artifacts]
@@ -73,7 +73,7 @@ exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
 name = "generate_images"
 action = "generate_images"
 enable_notifications = true
-requires_human_approval_after = true
+requires_human_approval_after = false
 onsuccess = "archive_step_02"
 
 [step.artifacts]
@@ -102,7 +102,7 @@ result_meta_key = "ARCHIVE_STEP_02"
 name = "generate_videos"
 action = "generate_videos"
 enable_notifications = true
-requires_human_approval_after = true
+requires_human_approval_after = false
 onsuccess = "archive_step_03"
 
 [step.artifacts]

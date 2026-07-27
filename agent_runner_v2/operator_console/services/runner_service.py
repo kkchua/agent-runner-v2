@@ -1,14 +1,15 @@
 """Runner action service for the operator console.
 
-Wraps the CLI entry points (``run_agent.main``, ``submit_commands.main``,
-``sync_workflows.main``) so the console can invoke them in-process with
-captured stdout/stderr.
+Wraps CLI entry points so the console can invoke them in-process with
+captured stdout/stderr. All operations go through the CLI — no direct
+backend API calls.
+
+Architecture: Console → CLI → Backend (CLI owns all backend communication).
 """
 from __future__ import annotations
 
 import contextlib
 import io
-import json
 import logging
 import os
 import sys
@@ -16,8 +17,12 @@ from pathlib import Path
 from typing import Callable
 
 from ... import run_agent, submit_commands, sync_workflows
-from ...backend_client import BackendClient
-from ..models import GlobalSettings, WorkflowEntry
+from ... import list_runs_commands
+from ... import show_run_commands
+from ... import stop_commands
+from ... import approve_commands
+from ... import reset_step_commands
+from ..models import ActiveRunSummary, GlobalSettings, WorkflowEntry
 
 _log = logging.getLogger(__name__)
 
@@ -26,16 +31,123 @@ class ActionExecutionError(RuntimeError):
     """Raised when a runner action fails or produces a non-zero exit code."""
 
 
+def _extract_runs_from_json(json_str: str) -> list[ActiveRunSummary]:
+    """Parse CLI list-runs JSON output into ActiveRunSummary objects."""
+    import json as _json
+    try:
+        payload = _json.loads(json_str)
+    except (ValueError, TypeError):
+        return []
+    items = payload if isinstance(payload, list) else payload.get("runs") or payload.get("items") or payload.get("data") or []
+    results: list[ActiveRunSummary] = []
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        current_step = (
+            str(item.get("current_step") or "").strip()
+            or str(item.get("current_step_name") or "").strip()
+        )
+        results.append(ActiveRunSummary(
+            run_id=str(item.get("id") or item.get("run_id") or "").strip(),
+            run_code=str(item.get("run_code") or item.get("job_id") or "").strip(),
+            workflow_name=str(item.get("workflow_name") or item.get("template_group") or "").strip(),
+            status=str(item.get("status") or item.get("job_status") or item.get("run_status") or "").strip(),
+            current_step=current_step,
+            updated_at=str(item.get("updated_at") or item.get("modified_at") or "").strip(),
+            worker_id=str(item.get("worker_id") or item.get("target_worker_id") or "").strip(),
+            project_root=str(item.get("project_root") or item.get("target_project_root") or "").strip(),
+        ))
+    return results
+
+
 class RunnerActionService:
     """Invoke runner CLI commands in-process for the operator console.
 
-    Each method builds an argument list and delegates to ``_invoke()``, which
-    redirects stdout/stderr, runs the CLI function, and returns the captured
-    output as a string.
+    Each method builds an argument list and delegates to ``_invoke()`` or
+    ``_invoke_from_anywhere()``, which redirects stdout/stderr, runs the CLI
+    function, and returns the captured output as a string.
+
+    All backend communication goes through the CLI — this service never
+    imports or uses BackendClient directly.
     """
 
     def __init__(self, settings: GlobalSettings):
         self._settings = settings
+
+    # ------------------------------------------------------------------
+    # Backend API wrapper commands (no chdir needed, run from anywhere)
+    # ------------------------------------------------------------------
+
+    def list_runs(
+        self, *, worker_id: str = "", status_group: str = "non_terminal",
+        workflow_name: str = "",
+    ) -> str:
+        """List workflow runs via CLI (backend API wrapper). Returns raw JSON."""
+        args = ["list-runs"]
+        if worker_id:
+            args.extend(["--worker-id", worker_id])
+        if status_group and status_group != "all":
+            args.extend(["--status-group", status_group])
+        if workflow_name:
+            args.extend(["--workflow-name", workflow_name])
+        return self._invoke_from_anywhere(func=list_runs_commands.main, argv=args)
+
+    def list_active_runs_for_worker(self, *, worker_id: str = "") -> list[ActiveRunSummary]:
+        """List active runs for a worker, returning ActiveRunSummary objects.
+
+        This is the direct replacement for BackendRunService.list_active_runs_for_worker().
+        Calls the CLI and parses the JSON output into ActiveRunSummary objects.
+        """
+        json_str = self.list_runs(worker_id=worker_id, status_group="non_terminal")
+        return _extract_runs_from_json(json_str)
+
+    def show_run(self, *, run_id: str) -> str:
+        """Show a single run's details via CLI (backend API wrapper). Returns raw JSON."""
+        return self._invoke_from_anywhere(
+            func=show_run_commands.main, argv=["show-run", run_id],
+        )
+
+    def get_run_detail_dict(self, *, run_id: str) -> dict:
+        """Show run detail and return parsed dict (replaces backend_service.get_run_detail)."""
+        import json as _json
+        json_str = self.show_run(run_id=run_id)
+        try:
+            return _json.loads(json_str)
+        except (ValueError, TypeError):
+            return {}
+
+    def stop_run(self, *, run_id: str, reason: str = "") -> str:
+        """Stop/cancel a run via CLI (comprehensive cancel)."""
+        args = ["stop", run_id]
+        if reason:
+            args.extend(["--reason", reason])
+        return self._invoke_from_anywhere(func=stop_commands.main, argv=args)
+
+    def approve(
+        self, *, run_id: str, reject: bool = False, feedback: str = "",
+        resume: bool = False, retry: bool = False,
+    ) -> str:
+        """Approve, reject, resume, or retry a run via CLI."""
+        args = ["approve", run_id]
+        if reject:
+            args.append("--reject")
+        if resume:
+            args.append("--resume")
+        if retry:
+            args.append("--retry")
+        if feedback:
+            args.extend(["--feedback", feedback])
+        return self._invoke_from_anywhere(func=approve_commands.main, argv=args)
+
+    def reset_step(self, *, run_id: str, step_name: str) -> str:
+        """Reset a run's current step via CLI."""
+        return self._invoke_from_anywhere(
+            func=reset_step_commands.main, argv=["reset-step", run_id, step_name],
+        )
+
+    # ------------------------------------------------------------------
+    # Execution commands (need chdir to repo path)
+    # ------------------------------------------------------------------
 
     def submit_job(
         self,
@@ -47,12 +159,12 @@ class RunnerActionService:
         os_type: str = "",
         start_step: str = "",
     ) -> str:
-        """Submit a workflow run to the backend queue.
+        """Submit a workflow run to the backend queue via CLI.
 
         Parameters
         ----------
         repo_path :
-            Working directory for the invocation.
+            Working directory for the invocation (becomes project_root).
         workflow :
             The workflow entry to submit.
         input_artifacts :
@@ -60,22 +172,11 @@ class RunnerActionService:
         worker_id :
             Override worker ID. Falls back to global settings if not provided.
         os_type :
-            Repo OS type (e.g. "linux", "wsl"). When it differs from the
-            console's OS, submit directly via the backend API instead of
-            invoking the local CLI (which requires the path to exist locally).
+            Repo OS type (unused — CLI handles all paths natively).
         start_step :
             Override the starting step for a new job (skip earlier steps).
         """
-        if _is_cross_os(os_type):
-            return self._submit_via_backend(
-                repo_path=repo_path,
-                workflow=workflow,
-                input_artifacts=input_artifacts,
-                worker_id=worker_id,
-                start_step=start_step,
-            )
         args = ["--workflow-name", workflow.workflow_name]
-        args.extend(["--backend-url", self._settings.backend_url])
         effective_worker_id = worker_id or self._settings.worker_id
         if effective_worker_id:
             args.extend(["--worker-id", effective_worker_id])
@@ -87,45 +188,6 @@ class RunnerActionService:
         if start_step:
             args.extend(["--start-step", start_step])
         return self._invoke(repo_path=repo_path, func=submit_commands.main, argv=args)
-
-    def _submit_via_backend(
-        self,
-        *,
-        repo_path: str,
-        workflow: WorkflowEntry,
-        input_artifacts: dict[str, str] | None = None,
-        worker_id: str | None = None,
-        start_step: str = "",
-    ) -> str:
-        """Submit directly via the backend API for cross-OS repos.
-
-        Used when the repo path lives on a different OS (e.g., WSL) and the
-        local CLI cannot ``chdir`` into it.  The backend/daemon on the target
-        OS resolves the path natively.
-        """
-        effective_worker_id = worker_id or self._settings.worker_id
-        _log.info(
-            "[console] _submit_via_backend workflow=%s worker=%s project_root=%s",
-            workflow.workflow_name, effective_worker_id, repo_path,
-        )
-        context_payload = {"start_step": start_step} if start_step else None
-        client = BackendClient(self._settings.backend_url)
-        result = client.submit_run(
-            workflow_name=workflow.workflow_name,
-            target_worker_id=effective_worker_id or None,
-            project_root=repo_path,
-            target_project_root=repo_path,
-            worker_label=self._settings.worker_label,
-            input_payload=input_artifacts,
-            context_payload=context_payload,
-        )
-        # If start_step specified, reset the run to the correct step
-        if start_step:
-            run_id = str((result.get("run") or {}).get("id") or "").strip()
-            if run_id:
-                reset_result = client.reset_run_step(run_id=run_id, step_name=start_step)
-                result["reset_step"] = reset_result
-        return json.dumps(result, indent=2, ensure_ascii=False)
 
     def init_workspace(
         self,
@@ -154,15 +216,11 @@ class RunnerActionService:
         args: list[str] = []
         if workflow is not None:
             args.append(workflow.workflow_name)
-        args.extend(["--backend-url", self._settings.backend_url])
         return self._invoke(repo_path=repo_path, func=sync_workflows.main, argv=args)
 
-    def cleanup_execution(self, *, workflow_name: str, dry_run: bool = False) -> str:
-        """Delete execution records from the backend."""
-        import json
-        client = BackendClient(self._settings.backend_url)
-        result = client.cleanup_execution(workflow_name=workflow_name, dry_run=dry_run)
-        return json.dumps(result, indent=2)
+    # ------------------------------------------------------------------
+    # Local CLI admin commands (need chdir to repo path, read job.json)
+    # ------------------------------------------------------------------
 
     def approve_step(
         self, *, repo_path: str, template_group: str,
@@ -239,11 +297,11 @@ class RunnerActionService:
         func: Callable[[list[str] | None], int] | Callable[[], int],
         argv: list[str],
     ) -> str:
-        """Execute a CLI function in-process with captured stdout/stderr.
+        """Execute a CLI function in-process with chdir to repo_path.
 
         Changes the working directory to *repo_path*, redirects stdout and
-        stderr, calls *func(argv)*, and returns the captured output.  Raises
-        ``ActionExecutionError`` on non-zero exit or exception.
+        stderr, calls *func(argv)*, and returns the captured output.
+        Raises ``ActionExecutionError`` on non-zero exit or exception.
         """
         workdir = Path(repo_path).resolve()
         func_name = getattr(func, "__name__", str(func))
@@ -265,6 +323,44 @@ class RunnerActionService:
             _log.error("[console] _invoke exception func=%s: %s", func_name, detail)
             raise ActionExecutionError(detail) from exc
 
+        return self._process_output(func_name, exit_code, stdout, stderr)
+
+    def _invoke_from_anywhere(
+        self, *,
+        func: Callable[[list[str] | None], int] | Callable[[], int],
+        argv: list[str],
+    ) -> str:
+        """Execute a CLI function without chdir (for backend API wrapper commands).
+
+        These commands read backend_url from config.json and make HTTP calls.
+        They don't need any repo context or working directory.
+        """
+        func_name = getattr(func, "__name__", str(func))
+        _log.info("[console] _invoke_from_anywhere func=%s argv=%s", func_name, argv)
+
+        stdout = io.StringIO()
+        stderr = io.StringIO()
+        exit_code = 1
+        try:
+            with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+                if argv:
+                    exit_code = func(argv)  # type: ignore[misc]
+                else:
+                    exit_code = func()  # type: ignore[misc]
+        except Exception as exc:
+            error_text = stderr.getvalue().strip()
+            rendered = stdout.getvalue().strip()
+            detail = error_text or rendered or str(exc)
+            _log.error("[console] _invoke_from_anywhere exception func=%s: %s", func_name, detail)
+            raise ActionExecutionError(detail) from exc
+
+        return self._process_output(func_name, exit_code, stdout, stderr)
+
+    def _process_output(
+        self, func_name: str, exit_code: int,
+        stdout: io.StringIO, stderr: io.StringIO,
+    ) -> str:
+        """Process captured stdout/stderr and raise on failure."""
         rendered = stdout.getvalue().strip()
         error_text = stderr.getvalue().strip()
         _log.info(
@@ -290,12 +386,3 @@ def _pushd(path: Path):
         yield
     finally:
         os.chdir(original)
-
-
-def _is_cross_os(os_type: str) -> bool:
-    """Return True when *os_type* indicates a different OS from the console."""
-    if not os_type:
-        return False
-    repo_is_windows = os_type.lower() == "windows"
-    console_is_windows = sys.platform == "win32"
-    return repo_is_windows != console_is_windows

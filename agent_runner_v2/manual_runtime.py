@@ -52,6 +52,103 @@ def _apply_daemon_backend_linkage(*, mode: str, state: dict[str, Any]) -> bool:
     return changed
 
 
+def _load_backend_state_file() -> dict[str, Any] | None:
+    """Load backend state from file if available (daemon mode only).
+    
+    The daemon writes the full backend run state to a file and sets
+    AGENT_RUNNER_BACKEND_STATE_FILE env var pointing to it. This allows
+    the CLI to initialize job.json from the latest backend state instead
+    of creating from scratch.
+    
+    Returns None if file doesn't exist or can't be read.
+    """
+    import json
+    from pathlib import Path
+    
+    backend_state_file = os.environ.get("AGENT_RUNNER_BACKEND_STATE_FILE", "").strip()
+    if not backend_state_file:
+        return None
+    
+    try:
+        path = Path(backend_state_file)
+        if not path.exists():
+            return None
+        data = json.loads(path.read_text(encoding="utf-8"))
+        return data
+    except Exception:
+        return None
+
+
+def _initialize_state_from_backend(
+    backend_state: dict[str, Any],
+    group_cfg: dict[str, Any],
+    seed_artifacts: dict[str, Any],
+    mode: str,
+    job_no: str,
+    hooks: Any,
+) -> dict[str, Any]:
+    """Initialize job state from backend run state (daemon mode only).
+    
+    Extracts relevant fields from the backend run detail and creates
+    a job.json state that reflects the current backend state. This ensures
+    the CLI operates on the latest data, not stale claim data.
+    
+    Parameters
+    ----------
+    backend_state :
+        Full backend run detail from get_run() API.
+    group_cfg :
+        Workflow group configuration.
+    seed_artifacts :
+        Input artifacts from --set flags.
+    mode :
+        Execution mode (should be "daemon").
+    job_no :
+        Backend run_code for folder naming.
+    hooks :
+        Runtime hooks for job state management.
+    
+    Returns
+    -------
+    dict
+        Initialized job state.
+    """
+    run = backend_state.get("run") or {}
+    
+    # Create base job state
+    state = hooks.create_job(
+        template_group=run.get("workflow_name") or group_cfg.get("workflow_name", ""),
+        group_cfg=group_cfg,
+        seed_artifacts=seed_artifacts,
+        mode=mode,
+        job_no=job_no or run.get("run_code", ""),
+    )
+    
+    # Merge backend state into job state
+    if run.get("id"):
+        state["workflow_run_id"] = str(run["id"])
+    if run.get("current_step_run_id"):
+        state["workflow_step_run_id"] = str(run["current_step_run_id"])
+    if run.get("backend_url"):
+        state["backend_url"] = str(run["backend_url"])
+    
+    # Merge artifacts from backend (if available)
+    backend_artifacts = run.get("output_payload") or {}
+    if backend_artifacts:
+        for key, value in backend_artifacts.items():
+            if value and key not in state.get("artifacts", {}):
+                state.setdefault("artifacts", {})[key] = value
+    
+    # Merge context from backend (if available)
+    context = run.get("context_payload") or {}
+    if context:
+        # Preserve __run_control for stop detection
+        if "__run_control" in context:
+            state.setdefault("context_payload", {})["__run_control"] = context["__run_control"]
+    
+    return state
+
+
 def resolve_manual_run(*, args: Any, group_cfg: dict[str, Any], hooks: Any, mode: str = "manual") -> ManualRunResolution:
     if not args.job_id:
         seed_artifacts = hooks._parse_key_value_pairs(args.set)
@@ -146,7 +243,20 @@ def resolve_manual_run(*, args: Any, group_cfg: dict[str, Any], hooks: Any, mode
                 },
             )
 
-        state = hooks.create_job(args.template_group, group_cfg, seed_artifacts, mode=mode, job_no=args.job_no)
+        # Initialize job state: use backend state if available (daemon mode), otherwise create from scratch
+        backend_state = _load_backend_state_file() if mode == "daemon" else None
+        if backend_state:
+            state = _initialize_state_from_backend(
+                backend_state=backend_state,
+                group_cfg=group_cfg,
+                seed_artifacts=seed_artifacts,
+                mode=mode,
+                job_no=args.job_no,
+                hooks=hooks,
+            )
+        else:
+            state = hooks.create_job(args.template_group, group_cfg, seed_artifacts, mode=mode, job_no=args.job_no)
+        
         if execution_binding is not None:
             hooks.apply_task_execution_binding(state, execution_binding)
             if not seed_artifacts.get("TASK_FILE"):
