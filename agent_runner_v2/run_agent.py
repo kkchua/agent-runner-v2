@@ -131,18 +131,34 @@ make_step_dir = create_step_dir
 # ---------------------------------------------------------------------------
 
 def _safe_relative_to(path: Path, base: Path) -> str:
+    """Return a safe relative path string from base to path.
+
+    Delegates to runtime_utils for consistent path formatting.
+    """
     return _runtime_utils.safe_relative_to(path, base)
 
 
 def _save_text(path: Path, content: str) -> None:
+    """Save text content to a file with UTF-8 encoding.
+
+    Delegates to runtime_utils for consistent file writing.
+    """
     _runtime_utils.save_text(path, content)
 
 
 def _save_json(path: Path, data: Any) -> None:
+    """Save JSON data to a file with UTF-8 encoding and indentation.
+
+    Delegates to runtime_utils for consistent JSON serialization.
+    """
     _runtime_utils.save_json(path, data)
 
 
 def _now_iso() -> str:
+    """Return current timestamp in ISO 8601 format.
+
+    Delegates to runtime_utils for consistent timestamp formatting.
+    """
     return _runtime_utils.now_iso()
 
 
@@ -157,7 +173,21 @@ def _print_failure(
     failure_code: str,
     failure_source: str,
 ) -> None:
-        _cli_runtime.print_failure(
+    """Print a structured failure message to stdout.
+
+    Delegates to cli_runtime for consistent failure formatting.
+
+    Args:
+        remark: Human-readable failure description.
+        state: Current job state dict, or None if not yet resolved.
+        template_group: Workflow template group name.
+        step: Current step name, or None if not yet resolved.
+        coder_used: Name of coder that executed, or None.
+        failure_class: Failure classification (e.g., TRANSIENT, FATAL).
+        failure_code: Specific failure code for diagnostics.
+        failure_source: Origin of failure (runner, coder, action).
+    """
+    _cli_runtime.print_failure(
         remark=remark,
         state=state,
         template_group=template_group,
@@ -171,18 +201,62 @@ def _print_failure(
 
 
 def _step_progress_parts(group_cfg: dict[str, Any], step: str | None) -> tuple[int | None, int]:
+    """Return step progress tuple (current_step_index, total_steps).
+
+    Delegates to cli_runtime for consistent progress calculation.
+
+    Args:
+        group_cfg: Template group configuration with step definitions.
+        step: Current step name, or None if not yet resolved.
+
+    Returns:
+        Tuple of (current_index, total_steps). current_index may be None
+        if step is not found in the workflow.
+    """
     return _cli_runtime.step_progress_parts(group_cfg, step)
 
 
 def _step_progress_label(group_cfg: dict[str, Any], step: str | None) -> str:
+    """Return a human-readable progress label like 'Step 2 of 5'.
+
+    Delegates to cli_runtime for consistent label formatting.
+
+    Args:
+        group_cfg: Template group configuration with step definitions.
+        step: Current step name, or None if not yet resolved.
+
+    Returns:
+        Progress label string like 'Step 2 of 5' or 'Step ? of 5'.
+    """
     return _cli_runtime.step_progress_label(group_cfg, step)
 
 
 def _format_job_status_summary(state: dict[str, Any], group_cfg: dict) -> str:
+    """Format a human-readable job status summary for CLI output.
+
+    Delegates to cli_runtime for consistent formatting.
+
+    Args:
+        state: Current job state dict.
+        group_cfg: Template group configuration.
+
+    Returns:
+        Multi-line status summary string.
+    """
     return _cli_runtime.format_job_status_summary(state, group_cfg, get_job_status=get_job_status)
 
 
 def _mark_review_started(state: dict[str, Any], *, step: str, step_cfg: dict, coder_used: str) -> None:
+    """Mark the review state as started in job.json.
+
+    Delegates to transition_runtime for consistent state mutation.
+
+    Args:
+        state: Job state dict to mutate in place.
+        step: Current step name.
+        step_cfg: Step configuration dict.
+        coder_used: Name of coder executing the step.
+    """
     _transition_runtime.mark_review_started(
         state=state,
         step=step,
@@ -202,6 +276,23 @@ def _worker_command(
     engine_root: str | None = None,
     worker_label: str = "live",
 ) -> int:
+    """Execute the daemon worker command with provided parameters.
+
+    Bridges CLI argument parsing to the daemon main function. Constructs
+    the appropriate argv list and invokes the daemon's main entry point.
+
+    Args:
+        backend_url: Backend base URL for polling (e.g., http://127.0.0.1:8100).
+        worker_id: Unique worker identifier for registration and claims.
+        host_name: Optional host name for worker registration.
+        poll_seconds: Polling interval in seconds when idle.
+        once: If True, claim and process at most one step then exit.
+        engine_root: Optional explicit version directory for PYTHONPATH.
+        worker_label: Worker queue label (e.g., 'live' or 'dev').
+
+    Returns:
+        Exit code from the daemon process.
+    """
     from .daemon import main as _daemon_main
 
     daemon_argv = [worker_id]
@@ -219,6 +310,19 @@ def _worker_command(
 
 
 def _execute_step_command(request_path: Path, result_path: Path | None = None) -> int:
+    """Handle the legacy execute-step command (now retired).
+
+    This command has been retired in favor of daemon -> run delegation.
+    All step execution now flows through the standard 'ukbe-run-agent run'
+    path when claimed by the daemon.
+
+    Args:
+        request_path: Path to the execution request JSON file.
+        result_path: Optional path to write execution result JSON.
+
+    Returns:
+        Always returns exit code 2 (command retired).
+    """
     payload = {
         "status": "failed",
         "outcome": "failed",
@@ -254,6 +358,26 @@ def _resolve_workflow_bundle_root(workspace_root: Path, workflow_name: str, conf
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
+    """Parse CLI arguments for all runner commands.
+
+    Supports multiple subcommands:
+    - run: Execute a workflow job (default if no command specified)
+    - init: Initialize runner home from bootstrap snapshot
+    - install: Install and sync workflow packages
+    - bootstrap-publish: Publish bootstrap bundle from current repo
+    - daemon: Run the backend-polling daemon
+    - worker: Backend-connected worker mode
+    - poll: Single-shot backend poll
+    - submit/approve/stop/list-runs/show-run/reset-step: Job management
+    - console: Launch operator console GUI
+    - codebase-init: Initialize codebase documentation
+
+    Args:
+        argv: Optional argument list. Defaults to sys.argv[1:].
+
+    Returns:
+        Namespace with parsed arguments including 'command' attribute.
+    """
     raw = list(argv if argv is not None else sys.argv[1:])
     if not raw or raw[0].startswith("-"):
         raw = ["run", *raw]
@@ -972,6 +1096,20 @@ def _build_worker_request_payload(
     backend_url: str = "",
     step_spec_source: str = "backend",
 ) -> dict[str, Any]:
+    """Build the worker request payload for daemon step execution.
+
+    Delegates to daemon_runtime for consistent payload construction.
+
+    Args:
+        run: Backend run dict with workflow metadata.
+        step_run: Backend step_run dict with step metadata.
+        step_execution_spec: Optional step execution spec override.
+        backend_url: Backend base URL for resolving paths.
+        step_spec_source: Source of step spec ('backend' or 'global').
+
+    Returns:
+        Dict payload for worker step execution request.
+    """
     return _daemon_runtime.build_worker_request_payload(
         run=run,
         step_run=step_run,
@@ -996,6 +1134,25 @@ def _prepare_step_execution(
     workflow_key_override: str = "",
     cli_coder: str | None = None,
 ) -> PreparedStepExecution:
+    """Prepare all context needed for step execution.
+
+    Delegates to step_execution_runtime for consistent preparation.
+    Includes resolving coder, building prompt context, creating step
+    directory, and assembling the PreparedStepExecution dataclass.
+
+    Args:
+        template_group: Workflow template group name.
+        group_cfg: Template group configuration dict.
+        state: Current job state dict.
+        step: Current step name to execute.
+        step_cfg: Step configuration dict.
+        project_root: Project workspace root path.
+        workflow_key_override: Optional ComfyUI workflow key override.
+        cli_coder: Optional coder name override from CLI.
+
+    Returns:
+        PreparedStepExecution dataclass with execution context.
+    """
     return _step_execution_runtime.prepare_step_execution(
         template_group=template_group,
         group_cfg=group_cfg,
@@ -1017,6 +1174,22 @@ def _augment_generated_doc_prompt(
     step_cfg: dict[str, Any],
     state: dict[str, Any],
 ) -> str:
+    """Augment a generated document prompt with workflow-specific context.
+
+    Delegates to step_execution_runtime for consistent augmentation.
+    Adds frontmatter contracts, traceability metadata, and output
+    path instructions to generated document prompts.
+
+    Args:
+        template_text: Original prompt template text.
+        template_group: Workflow template group name.
+        step: Current step name.
+        step_cfg: Step configuration dict.
+        state: Current job state dict.
+
+    Returns:
+        Augmented prompt text with added context sections.
+    """
     return _step_execution_runtime.augment_generated_doc_prompt(
         template_text,
         template_group=template_group,
@@ -1033,6 +1206,21 @@ def _generated_doc_frontmatter_contract(
     step_cfg: dict[str, Any],
     state: dict[str, Any],
 ) -> str:
+    """Generate YAML frontmatter contract for generated documents.
+
+    Delegates to step_execution_runtime for consistent frontmatter.
+    Includes document title, date, status, workflow metadata, and
+    traceability fields required by documentation standards.
+
+    Args:
+        template_group: Workflow template group name.
+        step: Current step name.
+        step_cfg: Step configuration dict.
+        state: Current job state dict.
+
+    Returns:
+        YAML frontmatter string block for document header.
+    """
     return _step_execution_runtime.generated_doc_frontmatter_contract(
         template_group=template_group,
         step=step,
@@ -1047,6 +1235,20 @@ def _master_bootstrap_frontmatter_rows(
     step_cfg: dict[str, Any],
     state: dict[str, Any],
 ) -> list[tuple[str, str, str]]:
+    """Generate frontmatter rows for master bootstrap governance documents.
+
+    Delegates to step_execution_runtime for consistent row generation.
+    Returns list of (key, value, comment) tuples for YAML frontmatter
+    specific to Layer 1/Layer 2 governance bootstrap workflows.
+
+    Args:
+        template_group: Workflow template group name.
+        step_cfg: Step configuration dict.
+        state: Current job state dict.
+
+    Returns:
+        List of (key, value, comment) tuples for frontmatter.
+    """
     return _step_execution_runtime.master_bootstrap_frontmatter_rows(
         template_group=template_group,
         step_cfg=step_cfg,
@@ -1064,6 +1266,24 @@ def _execute_prepared_step(
     step_cfg: dict[str, Any],
     effective_root: Path,
 ) -> StepResult:
+    """Execute a prepared step and return the result.
+
+    Delegates to step_execution_runtime for consistent execution.
+    Handles both prompt-driven (coder) and action-driven steps,
+    then returns structured StepResult with artifacts and metadata.
+
+    Args:
+        prepared: PreparedStepExecution with execution context.
+        template_group: Workflow template group name.
+        group_cfg: Template group configuration dict.
+        state: Current job state dict.
+        step: Current step name.
+        step_cfg: Step configuration dict.
+        effective_root: Effective project root path.
+
+    Returns:
+        StepResult dataclass with status, artifacts, and metadata.
+    """
     return _step_execution_runtime.execute_prepared_step(
         prepared=prepared,
         template_group=template_group,
@@ -1084,6 +1304,21 @@ def _resolve_step_coder(
     step_cfg: dict,
     cli_coder: str | None,
 ) -> tuple[str, str | None, str | None, dict | None]:
+    """Resolve the coder for a step execution.
+
+    Delegates to step_execution_runtime for consistent coder resolution.
+    Checks CLI override, then role policy, then fallback order.
+
+    Args:
+        group_cfg: Template group configuration dict.
+        state: Current job state dict.
+        step: Current step name.
+        step_cfg: Step configuration dict.
+        cli_coder: Optional coder name override from CLI.
+
+    Returns:
+        Tuple of (coder_name, coder_alias, coder_label, coder_config).
+    """
     return _step_execution_runtime.resolve_step_coder(
         group_cfg=group_cfg,
         state=state,
@@ -1094,6 +1329,15 @@ def _resolve_step_coder(
 
 
 def _ensure_delivery_folders(target_root: Path) -> None:
+    """Create delivery scaffold output directories if they don't exist.
+
+    Delegates to workflow_runtime for consistent folder creation.
+    Creates the docs/repo/delivery/ folder hierarchy required by
+    delivery scaffold and codebase documentation workflows.
+
+    Args:
+        target_root: Project root where delivery folders should be created.
+    """
     _workflow_runtime.ensure_delivery_folders(target_root)
 
 
@@ -1102,6 +1346,20 @@ def _load_group(
     workspace_root: Path | None = None,
     workflow_root: Path | None = None,
 ) -> dict:
+    """Load a template group configuration.
+
+    Delegates to workflow_runtime for consistent configuration loading.
+    Resolves workflow.toml and builds the group_cfg dict with step
+    configurations, artifact mappings, and routing rules.
+
+    Args:
+        group_name: Template group name to load.
+        workspace_root: Optional workspace root path.
+        workflow_root: Optional workflow bundle root path.
+
+    Returns:
+        Template group configuration dict.
+    """
     return _workflow_runtime.load_group(
         group_name,
         workspace_root=workspace_root,
@@ -1110,6 +1368,20 @@ def _load_group(
 
 
 def _validate_static_reference_files(workspace_root: Path, group_cfg: dict | None = None, template_group: str = "") -> None:
+    """Validate that all static reference files exist for a workflow.
+
+    Delegates to workflow_runtime for consistent validation. Checks that
+    required input artifacts referenced by the workflow exist on disk.
+    Raises PreflightBlockedError if any required files are missing.
+
+    Args:
+        workspace_root: Project workspace root path.
+        group_cfg: Optional template group configuration dict.
+        template_group: Template group name for error messages.
+
+    Raises:
+        PreflightBlockedError: If required reference files are missing.
+    """
     _workflow_runtime.validate_static_reference_files(
         workspace_root,
         group_cfg=group_cfg,
@@ -1118,10 +1390,32 @@ def _validate_static_reference_files(workspace_root: Path, group_cfg: dict | Non
 
 
 def _missing_artifacts(keys: list[str], state: dict) -> list[str]:
+    """Return list of artifact keys that are missing from job state.
+
+    Delegates to workflow_runtime for consistent artifact checking.
+
+    Args:
+        keys: List of artifact keys to check.
+        state: Current job state dict.
+
+    Returns:
+        List of keys that have no value in the job state.
+    """
     return _workflow_runtime.missing_artifacts(keys, state)
 
 
 def _parse_key_value_pairs(values: list[str]) -> dict[str, str]:
+    """Parse KEY=VALUE strings into a dictionary.
+
+    Delegates to workflow_runtime for consistent parsing. Used for
+    --set CLI arguments that seed artifact values for new jobs.
+
+    Args:
+        values: List of KEY=VALUE strings to parse.
+
+    Returns:
+        Dictionary mapping keys to values.
+    """
     return _workflow_runtime.parse_key_value_pairs(values)
 
 
