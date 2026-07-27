@@ -9,6 +9,7 @@ REM Usage:
 REM   sync-workflows-to-backend.bat
 REM   sync-workflows-to-backend.bat codebase_bootstrap_v1
 REM   sync-workflows-to-backend.bat delivery_scaffold_v1 bug_fix_v1
+REM   sync-workflows-to-backend.bat --changed-by "operator" --change-reason "Fixed prompt templates"
 
 setlocal enabledelayedexpansion
 

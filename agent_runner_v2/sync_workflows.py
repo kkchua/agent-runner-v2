@@ -77,6 +77,8 @@ def _post_sync(
     workflow_name: str,
     definition: dict,
     preserve_history: bool,
+    changed_by: str = "sync_script",
+    change_reason: str = "",
 ) -> dict:
     """POST a single workflow definition to the backend sync endpoint."""
     payload = json.dumps(
@@ -84,6 +86,8 @@ def _post_sync(
             "workflow_name": workflow_name,
             "definition": definition,
             "preserve_history": preserve_history,
+            "changed_by": changed_by,
+            "change_reason": change_reason,
         }
     ).encode("utf-8")
     req = request.Request(
@@ -145,6 +149,16 @@ def main(argv: list[str] | None = None) -> int:
         default=True,
         help="Keep existing execution history when definitions change.",
     )
+    parser.add_argument(
+        "--changed-by",
+        default="sync_script",
+        help="Who is making this change (default: sync_script).",
+    )
+    parser.add_argument(
+        "--change-reason",
+        default="",
+        help="Reason for the change (optional audit trail note).",
+    )
     args = parser.parse_args(argv)
     workflows_dir = _workflows_dir()
     if not workflows_dir.is_dir():
@@ -202,6 +216,8 @@ def main(argv: list[str] | None = None) -> int:
                 workflow_name,
                 definition,
                 args.preserve_history,
+                args.changed_by,
+                args.change_reason,
             )
         except error.HTTPError as exc:
             body = exc.read().decode("utf-8", errors="replace")
@@ -223,9 +239,14 @@ def main(argv: list[str] | None = None) -> int:
 
         status = response.get("status", "unknown")
         workflow = response.get("workflow", {})
+        revision = response.get("revision", {})
+        prev_rev = response.get("previous_revision")
+        rev_info = f"rev={revision.get('revision_number')}" if revision else ""
+        prev_info = f" (was {prev_rev})" if prev_rev else ""
         print(
             f"[{workflow_name}] {status} -> "
-            f"id={workflow.get('id')} name={workflow.get('name')}"
+            f"id={workflow.get('id')} name={workflow.get('name')} "
+            f"{rev_info}{prev_info}"
         )
         synced.append(workflow_name)
 
