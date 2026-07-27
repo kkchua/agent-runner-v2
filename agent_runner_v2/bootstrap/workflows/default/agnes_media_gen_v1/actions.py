@@ -24,7 +24,7 @@ from pathlib import Path
 import requests
 
 from agent_runner_v2.action_result import ActionResult
-from agent_runner_v2.api_key_pool import ApiKeyPool, load_env_from_project
+from agent_runner_v2.api_key_pool import ApiKeyPool, load_env_from_project, mask_api_key
 from agent_runner_v2.workflow_packages.actions import action
 
 logger = logging.getLogger(__name__)
@@ -255,8 +255,11 @@ def generate_images(*, context, state, step_cfg, project_root) -> ActionResult:
     # Prepare output directory
     step_03_dir.mkdir(parents=True, exist_ok=True)
 
-    # Scan for variant JSON files in step_02
-    variant_jsons = sorted(step_02_dir.glob("*.json"))
+    # Scan for variant JSON files in step_02 (skip index.json)
+    variant_jsons = sorted(
+        p for p in step_02_dir.glob("*.json")
+        if p.name != "index.json"
+    )
     logger.info(
         "generate_images: found %d variant JSON(s) in %s",
         len(variant_jsons), step_02_dir,
@@ -350,9 +353,10 @@ def generate_images(*, context, state, step_cfg, project_root) -> ActionResult:
                     "Authorization": f"Bearer {api_key}",
                     "Content-Type": "application/json",
                 }
-                logger.debug(
-                    "generate_images: %s[%d] using key index %d",
+                logger.info(
+                    "generate_images: %s[%d] using key %s (index %d)",
                     variant_json_path.name, var_idx,
+                    mask_api_key(api_key),
                     key_pool.current_index(),
                 )
 
@@ -699,9 +703,10 @@ def generate_videos(*, context, state, step_cfg, project_root):
                     "Authorization": f"Bearer {api_key}",
                     "Content-Type": "application/json",
                 }
-                logger.debug(
-                    "generate_videos: %s[%d] using key index %d",
+                logger.info(
+                    "generate_videos: %s[%d] using key %s (index %d)",
                     variant_json_path.name, var_idx,
+                    mask_api_key(api_key),
                     key_pool.current_index(),
                 )
 
