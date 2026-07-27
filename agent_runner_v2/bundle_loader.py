@@ -1,6 +1,24 @@
-from __future__ import annotations
+"""Workflow bundle loading and bootstrap management for agent_runner_v2.
 
-"""Workflow bundle loading and bootstrap helpers."""
+This module handles the bootstrap lifecycle: publishing, installing, and
+seeding workflow bundles to the global runner home (~/.ukbe-runner/).
+
+Key responsibilities:
+- Publish bootstrap bundles from repo to packaged distribution
+- Install bootstrap bundles (Layer 1 foundation, Layer 2 platform)
+- Seed workflow packages to global runner home
+- Load workflow modules for execution
+- Validate workflow bundles before publishing
+
+The module supports both repo-local development workflows and pip-installed
+production deployments, with fallback paths for each scenario.
+
+Primary entry points: publish_bootstrap_bundle(), install_bootstrap_bundle(),
+init_workspace()
+
+Related: IMPL-20260422-04
+"""
+from __future__ import annotations
 
 import datetime as dt
 import json
@@ -83,58 +101,72 @@ def resolve_engine_repo_root() -> Path:
 
 
 def bundles_root() -> Path:
+    """Return the global bundles root (~/.ukbe-runner/bundles/)."""
     return GLOBAL_RUNNER_HOME / "bundles"
 
 
 def core_bundles_root() -> Path:
+    """Return the core bundles root (~/.ukbe-runner/bundles/core/)."""
     return bundles_root() / "core"
 
 
 def domain_bundles_root() -> Path:
+    """Return the domain bundles root (~/.ukbe-runner/bundles/domains/)."""
     return bundles_root() / "domains"
 
 
 def workflow_bundles_root() -> Path:
+    """Return the workflow bundles root (~/.ukbe-runner/bundles/workflows/)."""
     return bundles_root() / "workflows"
 
 
 def config_path(workspace_root: Path) -> Path:
+    """Return the global config.json path (~/.ukbe-runner/config.json)."""
     return GLOBAL_RUNNER_HOME / "config.json"
 
 
 def workflows_root(workspace_root: Path) -> Path:
+    """Return the global workflows root (alias for global_workflows_root())."""
     return global_workflows_root()
 
 
 def workflow_root(workspace_root: Path, workflow_name: str) -> Path:
+    """Return the path to a specific workflow bundle directory."""
     return workflows_root(workspace_root) / workflow_name
 
 
 def global_workflows_root() -> Path:
+    """Return the global workflows root (~/.ukbe-runner/workflows/)."""
     return GLOBAL_RUNNER_HOME / "workflows"
 
 
 def global_workflow_root(workflow_name: str) -> Path:
+    """Return the path to a workflow bundle in the global runner home."""
     return global_workflows_root() / workflow_name
 
 
 def package_bootstrap_root() -> Path:
+    """Return the packaged bootstrap bundle root (from pip install)."""
     return PACKAGE_BOOTSTRAP_ROOT
 
 
 def global_bootstrap_root() -> Path:
+    """Return the installed bootstrap root in the global runner home."""
     return bundles_root() / CORE_BUNDLE_NAME / "current" / "foundation"
 
 
 def bootstrap_source_root(workspace_root: Path) -> Path:
+    """Return the bootstrap source root under docs/system/00_governance/bootstrap/."""
     return (workspace_root / BOOTSTRAP_SOURCE_ROOT).resolve()
 
 
 def published_workflows_root(workspace_root: Path) -> Path:
+    """Return the published workflows root under bootstrap/workflows/."""
     return bootstrap_source_root(workspace_root) / "workflows"
 
 
 def _replace_tree(source_root: Path, target_root: Path) -> None:
+    """Replace target directory with source directory contents."""
     if not source_root.exists():
         raise FileNotFoundError(f"Source tree does not exist: {source_root}")
     if target_root.exists():
@@ -144,18 +176,21 @@ def _replace_tree(source_root: Path, target_root: Path) -> None:
 
 
 def _reset_tree(target_root: Path) -> None:
+    """Delete and recreate a directory (empty it)."""
     if target_root.exists():
         shutil.rmtree(target_root)
     target_root.mkdir(parents=True, exist_ok=True)
 
 
 def _tree_has_files(root: Path) -> bool:
+    """Check if a directory contains any files (recursively)."""
     if not root.exists():
         return False
     return any(path.is_file() for path in root.rglob("*"))
 
 
 def _cleanup_packaged_bootstrap(root: Path) -> None:
+    """Remove generated validation docs and workflow packages from packaged bootstrap."""
     for pattern in PACKAGED_BOOTSTRAP_EXCLUDE_PATTERNS:
         for candidate in root.rglob(pattern):
             if candidate.is_file():
@@ -204,6 +239,7 @@ def _copy_plugin_workflows_to_bootstrap(
 
 
 def _discover_repo_workflow_bundle_dirs(plugin_root: Path) -> list[Path]:
+    """Discover workflow bundle directories containing workflow.toml."""
     if not plugin_root.is_dir():
         return []
     return [
@@ -214,6 +250,7 @@ def _discover_repo_workflow_bundle_dirs(plugin_root: Path) -> list[Path]:
 
 
 def _validate_repo_workflow_bundles(plugin_root: Path) -> list[WorkflowBundleValidationReport]:
+    """Validate all workflow bundles in the plugin root directory."""
     reports: list[WorkflowBundleValidationReport] = []
     for bundle_dir in _discover_repo_workflow_bundle_dirs(plugin_root):
         if bundle_dir.name in PACKAGED_BOOTSTRAP_EXCLUDED_WORKFLOWS:
@@ -223,6 +260,7 @@ def _validate_repo_workflow_bundles(plugin_root: Path) -> list[WorkflowBundleVal
 
 
 def _ensure_repo_workflow_bundles_valid(plugin_root: Path) -> list[WorkflowBundleValidationReport]:
+    """Validate all bundles and raise if any are invalid."""
     reports = _validate_repo_workflow_bundles(plugin_root)
     invalid = [report for report in reports if not report.valid]
     if invalid:
@@ -243,6 +281,7 @@ def _copy_shared_registry(
 
 
 def _discover_template_groups_from_packages(workflow_root: Path) -> dict[str, dict]:
+    """Scan a workflow root directory and build TEMPLATE_GROUPS dict from packages."""
     template_groups: dict[str, dict] = {}
     if not workflow_root.is_dir():
         return template_groups
@@ -266,6 +305,7 @@ def _build_workflow_module_from_packages(
     *,
     workspace_root: Path | None = None,
 ) -> ModuleType:
+    """Build a runtime workflow module from discovered workflow packages."""
     template_groups = _discover_template_groups_from_packages(workflow_root)
     repo_workflow_root = (workspace_root / "workflows").resolve() if workspace_root is not None else None
     if repo_workflow_root is not None and repo_workflow_root != workflow_root.resolve():
@@ -284,6 +324,7 @@ def _build_workflow_module_from_packages(
 
 
 def _generate_bundle_governance_docs(bundle_root: Path) -> dict[str, str]:
+    """Generate bundle governance docs (AGENTS.md, CLAUDE.md, QWEN.md) for a workflow bundle."""
     governance = load_bundle_governance(bundle_root)
     if governance is None:
         return {}
@@ -302,6 +343,13 @@ def publish_bootstrap_bundle(
     package_root: Path | None = None,
     plugin_workflows_root: Path | None = None,
 ) -> dict:
+    """Publish the repo's bootstrap bundle to docs/system/00_governance/bootstrap/.
+
+    This copies workflow packages from ./workflows/ into the bootstrap snapshot,
+    generates governance docs, and prepares the packaged bundle for pip install.
+
+    Returns a manifest dict with paths and validation results.
+    """
     workspace_root = workspace_root.resolve()
     source_root = (source_root or bootstrap_source_root(workspace_root)).resolve()
     package_root = (package_root or package_bootstrap_root()).resolve()
@@ -389,6 +437,10 @@ def install_bootstrap_bundle(
     *,
     runner_home: Path | None = None,
 ) -> dict:
+    """Install Layer 1 foundation docs to the global runner home.
+
+    Copies from either the repo bootstrap bundle or the packaged pip bundle.
+    """
     workspace_root = workspace_root.resolve()
     runner_home = (runner_home or GLOBAL_RUNNER_HOME).resolve()
     repo_root = resolve_engine_repo_root()
@@ -563,6 +615,7 @@ def install_workflow_plugins(
 
 
 def resolve_workflow_root(workspace_root: Path, workflow_name: str, *, config: dict | None = None) -> Path:
+    """Resolve the workflow bundle root, preferring global path over project-local."""
     global_root = global_workflow_root(workflow_name)
     if global_root.exists():
         return global_root.resolve()
@@ -571,6 +624,7 @@ def resolve_workflow_root(workspace_root: Path, workflow_name: str, *, config: d
 
 
 def load_project_config(workspace_root: Path) -> dict:
+    """Load the project config.json, returning defaults if not found."""
     path = config_path(workspace_root)
     if not path.exists():
         return {
@@ -581,6 +635,7 @@ def load_project_config(workspace_root: Path) -> dict:
 
 
 def save_project_config(workspace_root: Path, config: dict) -> None:
+    """Save the project config.json with formatted JSON."""
     path = config_path(workspace_root)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(config, indent=2, ensure_ascii=False), encoding="utf-8")
@@ -592,6 +647,7 @@ def load_workflow_module(
     *,
     config: dict | None = None,
 ) -> ModuleType:
+    """Load and build a workflow module from the resolved workflow root."""
     wf_root = resolve_workflow_root(workspace_root, workflow_name, config=config)
     return _build_workflow_module_from_packages(
         wf_root,
@@ -680,6 +736,13 @@ def init_workspace(
     domain: str = DEFAULT_DOMAIN_BUNDLE,
     bundle_profile: str = DEFAULT_BUNDLE_PROFILE,
 ) -> dict:
+    """Initialize the global runner home from the bootstrap bundle.
+
+    Creates directory structure, installs L1 foundation and L2 platform docs,
+    seeds workflow packages, and writes initial config files.
+
+    Returns a dict with installation details.
+    """
     workspace_root = workspace_root.resolve()
     runner_home = GLOBAL_RUNNER_HOME
     runner_home.mkdir(parents=True, exist_ok=True)
