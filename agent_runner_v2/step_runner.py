@@ -100,6 +100,7 @@ logger = logging.getLogger(__name__)
 
 
 def _path_for_report(path: Path, base: Path) -> str:
+    """Format a path for reporting (forward slashes, absolute)."""
     return str(path.resolve()).replace("\\", "/")
 
 
@@ -109,6 +110,10 @@ def _path_for_report(path: Path, base: Path) -> str:
 
 @dataclass
 class StepResult:
+    """Result of a step execution (run_step or run_action).
+
+    Contains the final status, artifacts, and metadata for routing decisions.
+    """
     status: str           # "APPROVED" | "REJECTED"
     remark: str
     artifacts: dict[str, str]
@@ -542,6 +547,14 @@ def _read_and_validate_meta_json(path: Path) -> dict:
 
 
 def _coerce_int(value: Any) -> int | None:
+    """Convert value to int, returning None on failure.
+
+    Args:
+        value: Any value to convert (typically str, int, or None).
+
+    Returns:
+        Integer value if conversion succeeds, None otherwise.
+    """
     if value is None:
         return None
     try:
@@ -551,6 +564,14 @@ def _coerce_int(value: Any) -> int | None:
 
 
 def _coerce_float(value: Any) -> float | None:
+    """Convert value to float, returning None on failure.
+
+    Args:
+        value: Any value to convert (typically str, float, int, or None).
+
+    Returns:
+        Float value if conversion succeeds, None otherwise.
+    """
     if value is None:
         return None
     try:
@@ -863,6 +884,17 @@ def _validate_artifacts_in_produces_list(
 
 
 def _normalize_artifact_contract_key(artifact_key: str) -> str:
+    """Remove _METAJSON or _PATH suffix from artifact key.
+
+    Used to normalize sidecar keys like REVIEW_FILE_SUGGESTED_METAJSON
+    back to their canonical artifact key REVIEW_FILE_SUGGESTED.
+
+    Args:
+        artifact_key: Artifact key that may have a suffix.
+
+    Returns:
+        Artifact key with suffix removed, or original key if no suffix.
+    """
     key = str(artifact_key or "").strip()
     for suffix in ("_METAJSON", "_PATH"):
         if key.endswith(suffix):
@@ -871,6 +903,17 @@ def _normalize_artifact_contract_key(artifact_key: str) -> str:
 
 
 def _declared_write_keys(step_cfg: dict[str, Any]) -> list[str]:
+    """Extract all declared write artifact keys from step config.
+
+    Combines 'produces', 'updates', and 'target_artifact' into a single
+    list of artifact keys that this step may write.
+
+    Args:
+        step_cfg: Step configuration dict with produces/updates/target_artifact.
+
+    Returns:
+        List of unique artifact keys that this step writes.
+    """
     keys: list[str] = []
     for raw_key in step_cfg.get("produces", []) or []:
         key = str(raw_key or "").strip()
@@ -887,6 +930,20 @@ def _declared_write_keys(step_cfg: dict[str, Any]) -> list[str]:
 
 
 def _step_requires_write_contract(step_cfg: dict[str, Any]) -> bool:
+    """Check if a step requires a write contract declaration.
+
+    Steps require write contracts if they:
+    - Have result_meta_key or result_meta_key_from_context (produces artifacts)
+    - Have declared produces/updates keys
+
+    Action steps never require write contracts (they manage their own I/O).
+
+    Args:
+        step_cfg: Step configuration dict.
+
+    Returns:
+        True if step requires write contract, False otherwise.
+    """
     if step_cfg.get("action"):
         return False
     if step_cfg.get("result_meta_key") or step_cfg.get("result_meta_key_from_context"):
@@ -897,6 +954,7 @@ def _step_requires_write_contract(step_cfg: dict[str, Any]) -> bool:
 
 
 def _validate_step_write_contract_config(*, step_cfg: dict[str, Any], step: str) -> None:
+    """Validate that write-capable steps declare their write contract."""
     if not _step_requires_write_contract(step_cfg):
         return
     declared = _declared_write_keys(step_cfg)
@@ -914,6 +972,21 @@ def _resolve_contract_path_from_context(
     context: dict[str, str],
     state: dict[str, Any],
 ) -> str:
+    """Resolve artifact path from context or state.
+
+    Tries multiple sources in order:
+    1. Direct context key (e.g., REVIEW_FILE_SUGGESTED)
+    2. _PATH suffix context key (e.g., REVIEW_FILE_SUGGESTED_PATH)
+    3. State artifacts dict
+
+    Args:
+        artifact_key: The artifact key to resolve.
+        context: Prompt rendering context dict.
+        state: Workflow state dict containing artifacts.
+
+    Returns:
+        Resolved path string, or empty string if not found.
+    """
     for candidate in (
         context.get(artifact_key, ""),
         context.get(f"{artifact_key}_PATH", ""),
@@ -933,6 +1006,7 @@ def _resolve_allowed_write_paths(
     project_root: Path,
     meta_path: Path,
 ) -> set[Path]:
+    """Resolve all allowed write paths from declared produces/updates keys."""
     allowed_paths: set[Path] = {meta_path.resolve()}
     for artifact_key in _declared_write_keys(step_cfg):
         path_str = _resolve_contract_path_from_context(
@@ -952,6 +1026,7 @@ def _resolve_allowed_write_paths(
 
 
 def _snapshot_allowed_write_roots(*, allowed_paths: set[Path], project_root: Path) -> dict[Path, str]:
+    """Snapshot file hashes before invocation for write verification."""
     snapshot: dict[Path, str] = {}
     for path in allowed_paths:
         resolved = path.resolve()
@@ -972,6 +1047,7 @@ def _verify_only_allowed_paths_changed(
     project_root: Path,
     step: str,
 ) -> list[str]:
+    """Compare before/after snapshots and return list of changed paths."""
     after = _snapshot_allowed_write_roots(allowed_paths=allowed_paths, project_root=project_root)
     changed_abs: list[Path] = []
     for path in sorted(allowed_paths):
@@ -981,6 +1057,7 @@ def _verify_only_allowed_paths_changed(
 
 
 def _hash_file(path: Path) -> str:
+    """Compute SHA-256 hash of file contents."""
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
@@ -990,6 +1067,7 @@ def _canonicalize_master_bootstrap_artifacts(
     project_root: Path,
     state: dict,
 ) -> dict[str, str]:
+    """Canonicalize artifacts for master bootstrap workflows (special handling)."""
     if state.get("template_group") not in MASTER_BOOTSTRAP_WORKFLOWS:
         return dict(artifacts)
 
@@ -1035,11 +1113,35 @@ def _canonicalize_master_bootstrap_artifacts(
 
 
 def _backend_artifact_rules(state: dict[str, Any]) -> dict[str, Any]:
+    """Extract backend artifact rules from workflow state.
+
+    Backend artifact rules define path templates for artifacts when running
+    in backend mode (vs local mode). Used to resolve working and final paths.
+
+    Args:
+        state: Workflow state dict with backend_artifact_rules key.
+
+    Returns:
+        Dict mapping artifact keys to rule dicts with path templates.
+    """
     rules = state.get("backend_artifact_rules") or {}
     return rules if isinstance(rules, dict) else {}
 
 
 def _normalize_backend_job_path(path_str: str) -> str:
+    """Normalize a backend job-relative path to an absolute path.
+
+    Handles special prefixes:
+    - ".ukbe-runner/jobs/..." → resolved under JOBS_ROOT
+    - "docs/", "archive/", "scripts/", "temp/" → kept relative (repo paths)
+    - Other relative paths → resolved under JOBS_ROOT
+
+    Args:
+        path_str: Path string to normalize.
+
+    Returns:
+        Normalized absolute path string.
+    """
     if not path_str:
         return path_str
     p = Path(path_str)
@@ -1057,6 +1159,21 @@ def _normalize_backend_job_path(path_str: str) -> str:
 
 
 def _resolve_backend_artifact_rule_path(*, state: dict, artifact_key: str, step: str, prefer_final: bool = False) -> str:
+    """Resolve artifact path from backend artifact rule template.
+
+    Uses path templates from backend_artifact_rules to compute the working
+    or final path for an artifact. Templates support placeholders like
+    {job_id}, {step_name}, {step_order}, {workflow_name}.
+
+    Args:
+        state: Workflow state dict with backend_artifact_rules.
+        artifact_key: Artifact key to resolve path for.
+        step: Current step name.
+        prefer_final: If True, prefer final_path_template over working_path_template.
+
+    Returns:
+        Resolved absolute path string, or empty string if no rule found.
+    """
     rules = _backend_artifact_rules(state)
     rule = rules.get(artifact_key) if isinstance(rules, dict) else None
     if not isinstance(rule, dict):
@@ -1089,6 +1206,21 @@ def _resolve_backend_artifact_rule_path(*, state: dict, artifact_key: str, step:
 
 
 def _set_backend_artifact_rule_aliases(*, ctx: dict[str, str], state: dict, step: str, artifacts: dict[str, Any], produces: list[str]) -> bool:
+    """Set context aliases from backend artifact rules.
+
+    For each artifact with a backend rule, sets {KEY}_PATH and {KEY}_METAJSON
+    context variables based on the rule's path template.
+
+    Args:
+        ctx: Context dict to update with aliases.
+        state: Workflow state dict with backend_artifact_rules.
+        step: Current step name.
+        artifacts: Current artifact values.
+        produces: List of artifact keys this step produces.
+
+    Returns:
+        True if backend rules were applied, False otherwise.
+    """
     rules = _backend_artifact_rules(state)
     if not rules:
         return False
@@ -1140,6 +1272,19 @@ BUG_FIX_OUTPUT_PATHS: dict[str, str] = {
 
 
 def _delivery_scaffold_output_path(*, state: dict, artifact_key: str, step: str) -> str:
+    """Resolve delivery scaffold artifact path from template.
+
+    Uses DELIVERY_SCAFFOLD_OUTPUT_PATHS templates to compute paths for
+    delivery scaffold workflow artifacts.
+
+    Args:
+        state: Workflow state dict with job_id and template_group.
+        artifact_key: Artifact key to resolve path for.
+        step: Current step name.
+
+    Returns:
+        Resolved path string, or empty string if no template found.
+    """
     template = DELIVERY_SCAFFOLD_OUTPUT_PATHS.get(artifact_key)
     if not template:
         return ""
@@ -1162,6 +1307,18 @@ def _delivery_scaffold_output_path(*, state: dict, artifact_key: str, step: str)
 
 
 def _set_delivery_scaffold_aliases(*, ctx: dict[str, str], state: dict, step: str, artifacts: dict[str, Any], produces: list[str]) -> None:
+    """Set context aliases for delivery scaffold workflow.
+
+    Delegates to backend artifact rules if available, otherwise uses
+    DELIVERY_SCAFFOLD_OUTPUT_PATHS templates for local CLI mode.
+
+    Args:
+        ctx: Context dict to update with aliases.
+        state: Workflow state dict.
+        step: Current step name.
+        artifacts: Current artifact values.
+        produces: List of artifact keys this step produces.
+    """
     if _set_backend_artifact_rule_aliases(ctx=ctx, state=state, step=step, artifacts=artifacts, produces=produces):
         return
     if not str(state.get("template_group") or "").startswith("delivery_scaffold"):
@@ -1211,6 +1368,18 @@ def _set_delivery_scaffold_aliases(*, ctx: dict[str, str], state: dict, step: st
 
 
 def _set_bug_fix_aliases(*, ctx: dict[str, str], state: dict, step: str, artifacts: dict[str, Any], produces: list[str]) -> None:
+    """Set context aliases for bug fix workflow.
+
+    Sets {KEY}_PATH and {KEY}_METAJSON aliases for BUG_REPORT_FILE,
+    REPRO_FILE, ROOT_CAUSE_FILE, and PATCH_FILE artifacts.
+
+    Args:
+        ctx: Context dict to update with aliases.
+        state: Workflow state dict.
+        step: Current step name.
+        artifacts: Current artifact values.
+        produces: List of artifact keys this step produces.
+    """
     # Determine if this step produces bug fix artifacts
     bug_fix_artifact_keys = {"BUG_REPORT_FILE", "REPRO_FILE", "ROOT_CAUSE_FILE", "PATCH_FILE"}
     if not any(key in produces for key in bug_fix_artifact_keys):
@@ -1269,6 +1438,20 @@ def _set_master_docs_aliases(
     project_root: Path,
     step_cfg: dict | None = None,
 ) -> None:
+    """Set context aliases for master docs bootstrap workflows.
+
+    Sets aliases for system documentation artifacts like README.md,
+    DOCUMENTATION_STANDARD.md, and validation outputs.
+
+    Args:
+        ctx: Context dict to update with aliases.
+        state: Workflow state dict.
+        step: Current step name.
+        artifacts: Current artifact values.
+        produces: List of artifact keys this step produces.
+        project_root: Project root path for resolving absolute paths.
+        step_cfg: Optional step configuration with workflow bundle.
+    """
     bundle = (step_cfg or {}).get("_workflow_bundle") if step_cfg else None
     if getattr(bundle, "context_extensions_path", None):
         return
@@ -1449,7 +1632,18 @@ def _validate_template_conformance(
 
 
 def _has_section(content: str, section: str) -> bool:
-    """Check if markdown content contains a section heading (case-insensitive)."""
+    """Check if markdown content contains a section heading.
+
+    Performs case-insensitive match for section heading (e.g., "## Overview"
+    matches section "Overview").
+
+    Args:
+        content: Markdown content to search.
+        section: Section name to find.
+
+    Returns:
+        True if section heading exists, False otherwise.
+    """
     import re as _re
     pattern = _re.compile(rf'^#+\s+.*{_re.escape(section)}', _re.MULTILINE | _re.IGNORECASE)
     return bool(pattern.search(content))
@@ -2268,6 +2462,21 @@ def build_context(
 
 
 def render_prompt(template_text: str, context: dict[str, str], step_cfg: dict | None = None) -> str:
+    """Render a prompt template by substituting context variables.
+
+    Replaces {KEY} placeholders with values from context dict. Also:
+    - Rewrites prompt literal substitutions (e.g., %DATE%, %UUID%)
+    - Injects sidecar instructions for artifact-producing steps
+    - Appends allowed write paths if configured
+
+    Args:
+        template_text: The prompt template with {KEY} placeholders.
+        context: Dict mapping placeholder keys to values.
+        step_cfg: Optional step configuration for sidecar injection.
+
+    Returns:
+        Rendered prompt text with all placeholders replaced.
+    """
     import os as _os
     from datetime import datetime as _datetime
     _src = _os.path.abspath(__file__)
@@ -2362,8 +2571,15 @@ def render_prompt(template_text: str, context: dict[str, str], step_cfg: dict | 
 
 def _rewrite_prompt_literals(template_text: str) -> str:
     """Replace artifact paths in template text with prompt placeholders.
-    
-    Uses ARTIFACT_PATH_* constants from constants module and placeholder() helper.
+
+    Uses prompt_literal_substitutions() from constants module to replace
+    known path literals with {PLACEHOLDER} tokens.
+
+    Args:
+        template_text: Template text containing path literals.
+
+    Returns:
+        Template with path literals replaced by placeholders.
     """
     rendered = template_text
     for literal, token in sorted(prompt_literal_substitutions().items(), key=lambda item: len(item[0]), reverse=True):
@@ -2372,7 +2588,14 @@ def _rewrite_prompt_literals(template_text: str) -> str:
 
 
 def _stringify_prompt_value(value: Any) -> str:
-    """Normalize prompt-context values so missing fields do not crash rendering."""
+    """Normalize prompt-context values to strings.
+
+    Args:
+        value: Any value to convert (None returns empty string).
+
+    Returns:
+        String representation of value, or empty string for None.
+    """
     if value is None:
         return ""
     if isinstance(value, str):
@@ -2383,7 +2606,14 @@ def _stringify_prompt_value(value: Any) -> str:
 def _normalize_prompt_context_paths(context: dict[str, Any]) -> dict[str, Any]:
     """Convert coder-facing path values to forward-slash form.
 
-    This is prompt-only normalization. Internal runtime state remains unchanged.
+    Ensures Windows backslashes are converted to forward slashes for
+    LLM readability. Internal runtime state remains unchanged.
+
+    Args:
+        context: Context dict with potential path values.
+
+    Returns:
+        Context dict with path values normalized to forward slashes.
     """
     normalized: dict[str, Any] = {}
     for key, value in context.items():
@@ -2395,6 +2625,15 @@ def _normalize_prompt_context_paths(context: dict[str, Any]) -> dict[str, Any]:
 
 
 def _prompt_safe_path_value(key: str, value: str) -> str:
+    """Convert path value to forward slashes if it looks like a path.
+
+    Args:
+        key: Context key name (used to detect path-like keys).
+        value: Value to potentially normalize.
+
+    Returns:
+        Value with backslashes replaced by forward slashes if path-like.
+    """
     raw = str(value or "")
     if not raw or "\n" in raw or "\r" in raw:
         return raw
@@ -2404,6 +2643,21 @@ def _prompt_safe_path_value(key: str, value: str) -> str:
 
 
 def _looks_like_prompt_path(key: str, value: str) -> bool:
+    """Detect if a key-value pair represents a file path.
+
+    Uses heuristics:
+    - Key ends with _PATH or _METAJSON
+    - Key is a known path artifact key
+    - Value starts with path-like prefixes (docs/, archive/, /, etc.)
+    - Value looks like a Windows or Unix path with file extension
+
+    Args:
+        key: Context key name.
+        value: Context value.
+
+    Returns:
+        True if the value appears to be a file path.
+    """
     upper_key = str(key or "").upper()
     if upper_key.endswith(("_PATH", "_METAJSON")):
         return True
@@ -2428,11 +2682,26 @@ def _looks_like_prompt_path(key: str, value: str) -> bool:
 
 
 def _python_string_literal(value: Any) -> str:
-    """Render a value as a Python string literal for inline `python -c` snippets."""
+    """Render a value as a Python string literal for inline `python -c` snippets.
+
+    Args:
+        value: Any value to render.
+
+    Returns:
+        Python string literal representation (quoted and escaped).
+    """
     return repr(_stringify_prompt_value(value))
 
 
 def prompt_checksum(prompt_text: str) -> str:
+    """Compute SHA-256 checksum of prompt text for integrity verification.
+
+    Args:
+        prompt_text: The prompt text to hash.
+
+    Returns:
+        Hexadecimal SHA-256 checksum string.
+    """
     return hashlib.sha256(prompt_text.encode("utf-8")).hexdigest()
 
 
@@ -2487,6 +2756,17 @@ def resolve_prompt_path(*, step_cfg: dict, coder: str, model_id: str | None = No
 # ---------------------------------------------------------------------------
 
 def _review_target_artifact_key(step_cfg: dict) -> str | None:
+    """Determine which artifact key is being reviewed.
+
+    Checks on_reject_refine.artifact first, then falls back to first
+    produces item if requires_human_approval_after is set.
+
+    Args:
+        step_cfg: Step configuration dict.
+
+    Returns:
+        Artifact key being reviewed, or None if not determinable.
+    """
     on_reject_refine = step_cfg.get("on_reject_refine") or {}
     if on_reject_refine.get("artifact"):
         return str(on_reject_refine["artifact"])
@@ -2497,10 +2777,26 @@ def _review_target_artifact_key(step_cfg: dict) -> str | None:
 
 
 def _review_filename_date_code() -> str:
+    """Generate date code for review filename (YYMMDD format).
+
+    Returns:
+        Current date as 6-digit string (e.g., "260727").
+    """
     return dt.datetime.now().strftime("%y%m%d")
 
 
 def _review_step_code(step: str) -> str:
+    """Generate short code for review step name.
+
+    Maps step names like "review_master_system_docs" to short codes like
+    "rmaster" for use in review filenames.
+
+    Args:
+        step: Step name (may have numeric prefix).
+
+    Returns:
+        Short code string, or empty string if no mapping found.
+    """
     # Strip numeric prefix (e.g., "05_" from "05_review_master_system_docs")
     step_base = re.sub(r"^\d+_", "", step)
     return {
@@ -2521,12 +2817,35 @@ def _review_step_code(step: str) -> str:
 
 
 def _normalize_review_slug(value: str, *, max_length: int = 40) -> str:
+    """Normalize a string into a URL-safe slug for review filenames.
+
+    Converts to lowercase, replaces non-alphanumeric chars with hyphens,
+    and truncates to max_length.
+
+    Args:
+        value: String to normalize.
+        max_length: Maximum slug length.
+
+    Returns:
+        Normalized slug string.
+    """
     slug = re.sub(r"[^a-z0-9-]+", "-", value.strip().lower().replace("_", "-").replace(" ", "-"))
     slug = re.sub(r"-{2,}", "-", slug).strip("-")
     return (slug[:max_length].rstrip("-") if len(slug) > max_length else slug) or "review"
 
 
 def _derive_review_slug_from_artifact_path(path_value: str) -> str:
+    """Extract a meaningful slug from an artifact filename.
+
+    Strips common prefixes like PRE-INIT-, INIT-, PLAN-, TASK-, IMPL-
+    from the artifact filename and normalizes the remainder.
+
+    Args:
+        path_value: Artifact file path.
+
+    Returns:
+        Normalized slug derived from the filename stem.
+    """
     stem = Path(path_value).stem
     for pattern in [
         r"^PRE-INIT-\d{8}-\d+[_-]?",
@@ -2542,6 +2861,18 @@ def _derive_review_slug_from_artifact_path(path_value: str) -> str:
 
 
 def _build_review_target_identifier(*, artifact_key: str, artifact_path: str) -> str:
+    """Build a short identifier for the review target.
+
+    Format: {prefix}-{MMDD}-{seq} where prefix is based on artifact type
+    (I=init, P=plan, G=task graph, T=task, M=impl, C=csv, R=other).
+
+    Args:
+        artifact_key: Type of artifact being reviewed.
+        artifact_path: Path to the artifact file.
+
+    Returns:
+        Short identifier string like "I-0727-01".
+    """
     name = Path(artifact_path).name
     matches = re.findall(r"(\d{8})-(\d+)", name)
     if matches:
@@ -2556,6 +2887,21 @@ def _build_review_target_identifier(*, artifact_key: str, artifact_path: str) ->
 
 
 def _build_new_review_file_path(*, state: dict, step: str, step_cfg: dict) -> str:
+    """Build path for a new review file.
+
+    Uses workflow-owned path if available, otherwise constructs from
+    template_group, job_id, step, and target artifact.
+
+    Filename format: REV-{date}-{seq}_{step_code}_{tid}_{slug}.md
+
+    Args:
+        state: Workflow state dict.
+        step: Current step name.
+        step_cfg: Step configuration dict.
+
+    Returns:
+        Repo-relative path for the new review file.
+    """
     template_group = str(state.get("template_group") or "").strip()
     job_id = str(state.get("job_id") or "").strip()
     mode = str((step_cfg or {}).get("mode") or state.get("current_mode") or "bootstrap").strip()
@@ -2608,6 +2954,19 @@ def _build_new_review_file_path(*, state: dict, step: str, step_cfg: dict) -> st
 def _suggested_review_file_path(
     *, state: dict, step: str, step_cfg: dict | None = None
 ) -> str:
+    """Determine the suggested review file path for review steps.
+
+    For refine loop iterations, appends _iter{N} to the source review path.
+    Otherwise, builds a new review file path.
+
+    Args:
+        state: Workflow state dict with loop_context.
+        step: Current step name.
+        step_cfg: Optional step configuration dict.
+
+    Returns:
+        Repo-relative path for the suggested review file.
+    """
     ctx = state.get("loop_context") or {}
     if not ctx.get("active") or step != ctx.get("loop_step") or not ctx.get("loop_source_review"):
         if step_cfg:
@@ -2625,6 +2984,19 @@ def _suggested_review_file_path(
 
 
 def _build_validation_file_path(*, state: dict, step: str, step_cfg: dict) -> str:
+    """Build path for a validation artifact.
+
+    Handles codebase workflows, delivery/task execution workflows,
+    and bug fix workflows with appropriate path patterns.
+
+    Args:
+        state: Workflow state dict.
+        step: Current step name.
+        step_cfg: Step configuration dict.
+
+    Returns:
+        Repo-relative path for the validation file.
+    """
     template_group = str(state.get("template_group") or "")
     
     # Handle codebase workflows
@@ -2810,6 +3182,19 @@ def _build_codebase_change_impact_path(*, state: dict) -> str:
 
 
 def _review_prompt_metadata_context(*, state: dict, step: str, step_cfg: dict) -> dict[str, str]:
+    """Extract metadata context from review target for prompt rendering.
+
+    Reads the target artifact and extracts status, review decision,
+    reviewer, and reviewed_at fields for use in review prompts.
+
+    Args:
+        state: Workflow state dict.
+        step: Current step name.
+        step_cfg: Step configuration dict.
+
+    Returns:
+        Dict with REVIEW_* context variables for prompt rendering.
+    """
     artifact_key = _review_target_artifact_key(step_cfg)
     if not artifact_key:
         return {}
@@ -2861,6 +3246,16 @@ def _review_prompt_metadata_context(*, state: dict, step: str, step_cfg: dict) -
 # ---------------------------------------------------------------------------
 
 def _build_file_fingerprint(path_value: str | None) -> dict:
+    """Build a fingerprint dict for a file.
+
+    Contains checksum (SHA-256), byte size, and modification time.
+
+    Args:
+        path_value: Repo-relative path to the file.
+
+    Returns:
+        Dict with checksum, bytes, and mtime fields.
+    """
     fp: dict = {"checksum": "", "bytes": None, "mtime": None}
     if not path_value:
         return fp
@@ -2898,6 +3293,19 @@ def _prompt_allowed_write_paths(
     state: dict[str, Any],
     context: dict[str, str],
 ) -> str:
+    """Format allowed write paths for prompt injection.
+
+    Lists all declared artifact paths and meta.json paths that the
+    coder is allowed to write for this step.
+
+    Args:
+        step_cfg: Step configuration dict.
+        state: Workflow state dict.
+        context: Prompt context dict.
+
+    Returns:
+        Newline-separated list of allowed paths.
+    """
     lines: list[str] = []
     for artifact_key in _declared_write_keys(step_cfg):
         path_value = _resolve_contract_path_from_context(
@@ -2927,6 +3335,18 @@ def _prompt_allowed_write_paths(
 
 
 def _resolve_progress_file_path(*, state: dict[str, Any], step: str) -> str:
+    """Resolve path to progress.jsonl for a step.
+
+    Uses backend_step_dir_rel if available (backend mode), otherwise
+    constructs path from template_group, job_id, and step sequence.
+
+    Args:
+        state: Workflow state dict.
+        step: Current step name.
+
+    Returns:
+        Absolute path to progress.jsonl file.
+    """
     step_dir_rel = str((state or {}).get("backend_step_dir_rel") or "").strip()
     if step_dir_rel:
         return _normalize_backend_job_path(str(PurePath(step_dir_rel) / "progress.jsonl"))
@@ -2958,6 +3378,17 @@ def _resolve_progress_file_path(*, state: dict[str, Any], step: str) -> str:
 # ---------------------------------------------------------------------------
 
 def _task_source_traceability_metadata(state: dict) -> dict[str, str | None]:
+    """Extract task traceability metadata from state for embedding in generated artifacts.
+
+    Returns Source Task Graph ID and Source Task Node ID from the current
+    task execution context.
+
+    Args:
+        state: Workflow state dict with task_execution_binding.
+
+    Returns:
+        Dict with traceability metadata keys.
+    """
     task_graph_file = str((state.get("artifacts") or {}).get("TASK_GRAPH_FILE") or "").strip()
     source_task_graph_id: str | None = None
     if task_graph_file:
@@ -2980,6 +3411,16 @@ def _task_source_traceability_metadata(state: dict) -> dict[str, str | None]:
 # ---------------------------------------------------------------------------
 
 def _extract_document_status(content: str) -> str | None:
+    """Extract Status field from document content.
+
+    Tries metadata block first, then falls back to "Status:" prefix line.
+
+    Args:
+        content: Document content to search.
+
+    Returns:
+        Status value string, or None if not found.
+    """
     val = _extract_metadata_value(content, "Status")
     if val is not None:
         return val
@@ -2991,6 +3432,17 @@ def _extract_document_status(content: str) -> str | None:
 
 
 def _extract_metadata_value(content: str, key: str) -> str | None:
+    """Extract a metadata field value from document content.
+
+    Matches bullet-point format: "- Key: value" or "- **Key**: value"
+
+    Args:
+        content: Document content to search.
+        key: Metadata field name to find.
+
+    Returns:
+        Field value string, or None if not found.
+    """
     pattern = re.compile(
         rf"^\s*[-*]\s*(?:\*\*)?{re.escape(key)}(?::(?:\*\*)?|\*\*:\s*|:)\s*(.+?)\s*$",
         re.IGNORECASE,
@@ -3007,19 +3459,23 @@ def _extract_metadata_value(content: str, key: str) -> str | None:
 # ---------------------------------------------------------------------------
 
 def _now_iso() -> str:
+    """Return current ISO timestamp (local timezone, seconds precision)."""
     return dt.datetime.now().isoformat(timespec="seconds")
 
 
 def _ensure_dir(path: Path) -> None:
+    """Create directory and parents if they don't exist."""
     path.mkdir(parents=True, exist_ok=True)
 
 
 def _save_text(path: Path, content: str) -> None:
+    """Write text content to a file, creating parent directories."""
     _ensure_dir(path.parent)
     path.write_text(content, encoding="utf-8")
 
 
 def _save_json_atomic(path: Path, data: Any) -> None:
+    """Write JSON atomically using temp file and replace."""
     _ensure_dir(path.parent)
     tmp_fd, tmp_path = tempfile.mkstemp(dir=path.parent, prefix=".tmp_", suffix=".json")
     try:
@@ -3041,6 +3497,7 @@ def _save_debug_failure(
     raw_events: list | None = None,
     error_message: str = "",
 ) -> None:
+    """Save coder invocation failure details for debugging."""
     _ensure_dir(step_dir)
     if stdout:
         _save_text(step_dir / "raw_output.txt", stdout)
@@ -3057,6 +3514,7 @@ def _save_debug_failure(
 
 
 def _write_raw_events_jsonl(path: Path, lines: list | None) -> None:
+    """Write raw event lines to a JSONL file."""
     if not lines:
         return
     _ensure_dir(path.parent)
