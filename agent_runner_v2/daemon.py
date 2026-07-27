@@ -23,22 +23,57 @@ from .runtime_context import GLOBAL_RUNNER_HOME
 
 
 def _utcnow_iso() -> str:
+    """Return current UTC timestamp in ISO 8601 format."""
     return datetime.now(timezone.utc).isoformat()
 
 
 def _load_config() -> dict:
+    """Load runner configuration from config.json."""
     return load_runner_config()
 
 
 def _setting(cfg: dict, env_key: str, config_key: str, default: str) -> str:
+    """Resolve a setting from env var, config, or default.
+
+    Priority: env var > config key > default.
+
+    Args:
+        cfg: Configuration dict from config.json.
+        env_key: Environment variable name to check first.
+        config_key: Key in configuration dict.
+        default: Fallback value if not found elsewhere.
+
+    Returns:
+        Resolved setting value as string.
+    """
     return os.environ.get(env_key) or str(cfg.get(config_key) or default)
 
 
 def _setting_int(cfg: dict, env_key: str, config_key: str, default: int) -> int:
+    """Resolve an integer setting from env var, config, or default.
+
+    Args:
+        cfg: Configuration dict from config.json.
+        env_key: Environment variable name to check first.
+        config_key: Key in configuration dict.
+        default: Fallback value if not found elsewhere.
+
+    Returns:
+        Resolved setting value as integer.
+    """
     return int(_setting(cfg, env_key, config_key, str(default)))
 
 
 def _step_spec_source(cfg: dict, cli_value: str) -> str:
+    """Resolve step spec source from CLI, env, or config.
+
+    Args:
+        cfg: Configuration dict from config.json.
+        cli_value: CLI argument value (highest priority).
+
+    Returns:
+        One of 'global', 'backend', or 'hybrid'. Defaults to 'backend'.
+    """
     value = (cli_value or os.environ.get('STEP_SPEC_SOURCE') or str(cfg.get('step_spec_source') or 'backend')).strip().lower()
     if value not in {'global', 'backend', 'hybrid'}:
         return 'backend'
@@ -46,6 +81,21 @@ def _step_spec_source(cfg: dict, cli_value: str) -> str:
 
 
 def _resolve_engine_pythonpath(cfg: dict, log) -> str | None:
+    """Resolve the PYTHONPATH for child process execution.
+
+    Priority:
+    1. AGENT_RUNNER_V2_SRC env var (live source override)
+    2. engine_version from config (versioned engine path)
+    3. repo_root from config (for SNAPSHOT mode)
+    4. Ambient PYTHONPATH (no override)
+
+    Args:
+        cfg: Configuration dict from config.json.
+        log: Logger function for diagnostics.
+
+    Returns:
+        PYTHONPATH value or None for ambient mode.
+    """
     src = os.environ.get('AGENT_RUNNER_V2_SRC', '').strip()
     if src:
         log('info', 'engine_override', message=f'engine live source override ({src})')
@@ -71,12 +121,29 @@ def _resolve_engine_pythonpath(cfg: dict, log) -> str | None:
 
 
 def _append_jsonl(path: Path, payload: dict[str, Any]) -> None:
+    """Append a JSON line to a JSONL log file.
+
+    Creates parent directories if needed.
+
+    Args:
+        path: Path to the JSONL file.
+        payload: Dict to serialize as JSON line.
+    """
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open('a', encoding='utf-8') as fh:
         fh.write(json.dumps(payload, ensure_ascii=True, sort_keys=True) + '\n')
 
 
 def _latest_mtime(paths: list[Path], fallback: float) -> float:
+    """Return the latest modification time among paths.
+
+    Args:
+        paths: List of paths to check.
+        fallback: Fallback timestamp if no paths exist.
+
+    Returns:
+        Latest mtime or fallback if no paths exist.
+    """
     latest = fallback
     for path in paths:
         if path.exists():
@@ -85,6 +152,17 @@ def _latest_mtime(paths: list[Path], fallback: float) -> float:
 
 
 def _failure_result(*, step_name: str, code: str, reason: str, diagnostics: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Build a failure result dict for daemon error cases.
+
+    Args:
+        step_name: Name of the failed step.
+        code: Failure code for diagnostics.
+        reason: Human-readable failure reason.
+        diagnostics: Optional additional diagnostic info.
+
+    Returns:
+        Dict with failure status and details.
+    """
     return {
         'status': 'failed',
         'outcome': 'failed',
@@ -107,6 +185,31 @@ def _failure_result(*, step_name: str, code: str, reason: str, diagnostics: dict
 
 @dataclass
 class ChildExecution:
+    """Tracks state for a spawned child process executing a workflow step.
+
+    Attributes:
+        run_id: Backend workflow run ID.
+        run_code: Human-readable run code (e.g., 'SDLC00CB-001').
+        step_run_id: Backend step run ID.
+        step_name: Step name being executed.
+        run_payload: Full run dict from backend claim.
+        step_run_payload: Full step_run dict from backend claim.
+        request_payload: Request dict passed to child CLI.
+        request_path: Path to request.json for child.
+        result_path: Path to result.json from child.
+        combined_log_path: Path to child.log output.
+        child_event_log_path: Path to child-events.jsonl.
+        process: The subprocess.Popen instance.
+        started_at_monotonic: Monotonic start time for timeout tracking.
+        started_at_iso: ISO timestamp of spawn time.
+        state: Current state (spawned, running, stalled, timed_out, killed).
+        watchdog_reason: Reason for watchdog intervention if any.
+        exit_code: Process exit code when available.
+        term_sent_at: Monotonic time when SIGTERM was sent.
+        last_heartbeat_at: Monotonic time of last heartbeat.
+        submission_done: Whether submission result was processed.
+        job_step_result_path: Path to job step result.json if available.
+    """
     run_id: str
     run_code: str
     step_run_id: str
@@ -131,11 +234,29 @@ class ChildExecution:
 
 
 class _DaemonLogger:
+    """JSONL logger for daemon events.
+
+    Writes to both a file and stdout for daemon monitoring.
+
+    Args:
+        path: Path to the JSONL log file.
+        worker_id: Worker identifier for log correlation.
+    """
+
     def __init__(self, path: Path, worker_id: str):
         self.path = path
         self.worker_id = worker_id
 
     def log(self, level: str, event: str, *, message: str = '', child: ChildExecution | None = None, details: dict[str, Any] | None = None) -> None:
+        """Log an event to JSONL file and stdout.
+
+        Args:
+            level: Log level (info, warning, error).
+            event: Event type identifier.
+            message: Human-readable message.
+            child: Optional child execution context to include.
+            details: Optional additional details dict.
+        """
         payload: dict[str, Any] = {
             'ts': _utcnow_iso(),
             'level': level,
@@ -160,6 +281,14 @@ class _DaemonLogger:
 
 
 def _submission_state_for_run_status(run_status: str) -> str:
+    """Map run_status to submission state.
+
+    Args:
+        run_status: Backend run_status value.
+
+    Returns:
+        'completed' for successful states, 'failed' otherwise.
+    """
     normalized = str(run_status or "").strip().lower()
     if normalized in {"completed", "pending", "awaiting_human"}:
         return "completed"
@@ -173,6 +302,20 @@ def _persist_backend_linkage_to_job_state(
     child: ChildExecution,
     backend_url: str,
 ) -> dict[str, Any]:
+    """Persist backend IDs to job.json for traceability.
+
+    Updates workflow_run_id, workflow_step_run_id, and backend_url
+    in job.json if changed.
+
+    Args:
+        job_state: Current job state dict.
+        job_json_path: Path to job.json file.
+        child: Child execution with backend IDs.
+        backend_url: Backend URL for persistence.
+
+    Returns:
+        Updated job state dict.
+    """
     changed = False
     if str(job_state.get("workflow_run_id") or "").strip() != str(child.run_id or "").strip():
         job_state["workflow_run_id"] = child.run_id
@@ -189,6 +332,14 @@ def _persist_backend_linkage_to_job_state(
 
 
 def _send_child_heartbeat(client, worker_id: str, child: ChildExecution, *, status: str) -> None:
+    """Send a heartbeat for an active child execution.
+
+    Args:
+        client: BackendClient instance.
+        worker_id: Worker identifier.
+        child: Child execution to report on.
+        status: Heartbeat status ('busy' for active children).
+    """
     client.heartbeat(
         worker_id=worker_id,
         status=status,
@@ -230,6 +381,22 @@ def _handle_stop_on_claim(client, claim: dict, logger) -> None:
 
 
 def _spawn_child(*, claim: dict[str, Any], runtime_root: Path, cli_pythonpath: str | None, logger: _DaemonLogger, backend_url: str, step_spec_source: str) -> ChildExecution:
+    """Spawn a child process to execute a claimed workflow step.
+
+    Creates a child directory with request.json, sets up environment,
+    and launches the CLI subprocess with proper PYTHONPATH and CWD.
+
+    Args:
+        claim: Backend claim response with run and step_run dicts.
+        runtime_root: Directory for child execution files.
+        cli_pythonpath: Optional PYTHONPATH override for engine version.
+        logger: Daemon logger instance.
+        backend_url: Backend URL for child communication.
+        step_spec_source: Step spec source mode.
+
+    Returns:
+        ChildExecution dataclass tracking the spawned process.
+    """
     from .run_agent import _build_worker_request_payload
     from .job_state import job_dir
     from .backend_client import BackendClient
@@ -366,6 +533,17 @@ def _spawn_child(*, claim: dict[str, Any], runtime_root: Path, cli_pythonpath: s
 
 
 def _resolve_subprocess_cwd(*, project_root: str | None, workspace_root: str | None) -> Path:
+    """Resolve the working directory for child subprocess.
+
+    Prefers project_root, then workspace_root, falls back to cwd.
+
+    Args:
+        project_root: Project root from request payload.
+        workspace_root: Workspace root from request payload.
+
+    Returns:
+        Resolved Path for subprocess CWD.
+    """
     candidates = [project_root, workspace_root]
     for candidate in candidates:
         if not candidate:
@@ -380,6 +558,17 @@ def _resolve_subprocess_cwd(*, project_root: str | None, workspace_root: str | N
 
 
 def _child_result(child: ChildExecution) -> dict[str, Any]:
+    """Read and return the child execution result.
+
+    Checks job step directory first (manual mode output), then falls
+    back to worker runtime directory.
+
+    Args:
+        child: ChildExecution to read result from.
+
+    Returns:
+        Result dict from result.json, or failure dict if missing.
+    """
     diagnostics = {
         'log_file': str(child.combined_log_path), 
         'request_path': str(child.request_path), 
@@ -408,6 +597,13 @@ def _child_result(child: ChildExecution) -> dict[str, Any]:
 
 
 def _terminate_child(child: ChildExecution, logger: _DaemonLogger, sigkill: bool = False) -> None:
+    """Terminate a child process gracefully or forcefully.
+
+    Args:
+        child: ChildExecution to terminate.
+        logger: Daemon logger instance.
+        sigkill: If True, send SIGKILL instead of SIGTERM.
+    """
     try:
         if sigkill:
             child.process.kill()
@@ -426,6 +622,31 @@ def _terminate_child(child: ChildExecution, logger: _DaemonLogger, sigkill: bool
 
 
 def _run_supervisor(*, worker_id: str, worker_label: str, backend_url: str, poll_seconds: int, max_parallel: int, stalled_seconds: int, step_timeout_seconds: int, kill_grace_seconds: int, runtime_dir: Path, log_file: Path, cli_pythonpath: str | None, step_spec_source: str, cli_version: str = "", engine_version: str = "", once: bool = False) -> int:
+    """Run the main daemon supervisor loop.
+
+    Polls backend for work, spawns children, monitors liveness,
+    and handles timeouts and shutdown signals.
+
+    Args:
+        worker_id: Unique worker identifier.
+        worker_label: Queue label for claim filtering.
+        backend_url: Backend base URL.
+        poll_seconds: Interval between polls when idle.
+        max_parallel: Maximum concurrent children.
+        stalled_seconds: Seconds without log activity before marking stalled.
+        step_timeout_seconds: Hard timeout for step execution.
+        kill_grace_seconds: Grace period between SIGTERM and SIGKILL.
+        runtime_dir: Directory for child execution files.
+        log_file: Path to daemon log file.
+        cli_pythonpath: Optional PYTHONPATH override.
+        step_spec_source: Step spec source mode.
+        cli_version: CLI version string.
+        engine_version: Engine version string.
+        once: If True, process one step and exit.
+
+    Returns:
+        Exit code (0 for normal shutdown).
+    """
     from .backend_client import BackendClient
     from .daemon_runtime import build_job_sync_payload
     from .job_state import job_dir
@@ -546,6 +767,16 @@ def _run_supervisor(*, worker_id: str, worker_label: str, backend_url: str, poll
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Daemon CLI entry point.
+
+    Parses arguments, resolves configuration, and starts supervisor.
+
+    Args:
+        argv: Optional argument list. Defaults to sys.argv.
+
+    Returns:
+        Exit code from supervisor.
+    """
     import argparse
 
     cfg = _load_config()
