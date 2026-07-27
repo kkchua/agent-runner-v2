@@ -1,0 +1,75 @@
+Objective
+
+Refine the validation report based on review findings.
+
+Layer Boundary
+
+- This workflow belongs to Layer 3 and operates on top of the Layer 2 platform contract.
+- Refine only the validation report, not review or closure artifacts.
+- Treat Layer 1 governance and Layer 2 platform constitution as read-only authority.
+
+Reference Inputs
+
+- Read `VAL_FILE` (the validation report to refine).
+- Read `REVIEW_FILE_SUGGESTED` (review findings with specific feedback).
+- Read `EXEC_FILE` (approved execution document for traceability verification).
+- Read codebase context from `docs/repo/codebase/current/` if needed for clarification.
+
+Refinement Rules
+
+1. **Address All Critical Findings**:
+   - Missing required sections must be added
+   - Metadata errors must be corrected
+   - Encoding violations must be fixed
+
+2. **Address All Major Findings**:
+   - Inaccurate validation results must be corrected
+   - Missing acceptance verification must be added
+   - Contradictory statements must be resolved
+
+3. **Address Minor Findings** (if time permits):
+   - Style issues should be improved
+   - Minor clarifications should be added
+
+4. **Preserve Original Intent**:
+   - Do not invent new validation checks not performed
+   - Do not add review documents or closure artifacts
+   - Do not add implementation details or code changes
+   - Maintain traceability to the source execution documents
+
+5. **Verify Technical Accuracy**:
+   - Verify API and SDK usage against the actual installed library version
+   - Check code snippets and file paths against the actual codebase
+   - Do not rely on training data for library APIs -- they may have changed
+
+6. **Update Traceability**:
+   - If content was refined, update the traceability section
+   - Record what was changed and why
+   - Reference the review findings
+
+Refinement Process
+
+1. Read the review findings carefully
+2. Identify all critical and major issues
+3. Address each issue systematically
+4. Update the document in place
+5. Verify all required sections are present
+6. Verify metadata is compliant
+7. Verify technical accuracy against actual codebase and installed library versions
+8. Verify encoding is ASCII-only
+
+Output Instructions
+
+- Update the validation report in place at `VAL_FILE` path.
+- Use ASCII-only characters.
+- Use plain text section headings.
+- Keep frontmatter fields present and consistent.
+- Do not change the document structure unless required by review findings.
+
+Forbidden Content
+
+- Layer 1 governance redefinition or contradiction
+- Layer 2 platform contract redefinition
+- Review documents or closure artifacts
+- Implementation details or code changes
+- Content not supported by the approved execution documents

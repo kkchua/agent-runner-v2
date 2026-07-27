@@ -187,7 +187,7 @@ def test_runner_service_stop_run(monkeypatch) -> None:
     result = service.stop_run(run_id="run-uuid-1", reason="Cancelled by operator")
 
     assert '"status": "ok"' in result
-    assert captured["argv"] == ["stop", "run-uuid-1", "--reason", "Cancelled by operator"]
+    assert captured["argv"] == ["run-uuid-1", "--reason", "Cancelled by operator"]
 
 
 def test_runner_service_approve(monkeypatch) -> None:
@@ -214,4 +214,4 @@ def test_runner_service_approve(monkeypatch) -> None:
     result = service.approve(run_id="run-uuid-1", resume=True)
 
     assert '"status": "ok"' in result
-    assert captured["argv"] == ["approve", "run-uuid-1", "--resume"]
+    assert captured["argv"] == ["run-uuid-1", "--resume"]

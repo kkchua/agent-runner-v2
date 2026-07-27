@@ -81,7 +81,6 @@ from .runtime_context import (
 )
 from .constants import RUN_AGENT_REQUIRED_DOC_DIRS, delivery_doc_rel
 from .doc_paths import repo_doc_rel
-from .path_catalog import get_master_docs_output_paths, known_artifact_paths, legacy_artifact_paths
 from .task_runtime import (
     build_task_execution_binding,
     build_task_execution_binding_from_ids,
@@ -544,7 +543,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument("--retry-step", default="",
                    help="Retry a step waiting for intervention or max-retried (reset counts, re-execute).")
     p.add_argument("--cancel-run", action="store_true",
-                   help="Cancel the entire run — set job status to STOPPED and sync to backend.")
+                   help="Daemon command: Actually terminate the running job now. "
+                        "Called by daemon when stop request is detected. "
+                        "Updates local job status to STOPPED and syncs to backend.")
     p.add_argument("--dry-run", action="store_true", help="Render prompt and save prompt.txt without invoking coder.")
     p.add_argument("--new-job", action="store_true", help="Force creation of a new job instead of auto-resuming.")
     p.add_argument("--max-rejects", type=int, default=-1, help="Override max rejects for this run.")

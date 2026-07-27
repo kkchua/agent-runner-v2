@@ -82,12 +82,15 @@ result_meta_key = "IMAGE_INDEX"
 
 # ============================================================================
 # Step 3b: Archive step_02 inputs (runs after generate_images approval)
+# Only archives files listed in step_03/index.json (processed by current job).
+# Deletes index.json files instead of archiving them.
 # ============================================================================
 [[step]]
 name = "archive_step_02"
 action = "archive_inputs"
 source_dir = "step_02"
 archive_dir = "step_02_archive"
+index_file = "step_03/index.json"
 onsuccess = "generate_videos"
 
 [step.artifacts]
@@ -111,12 +114,15 @@ result_meta_key = "VIDEO_INDEX"
 
 # ============================================================================
 # Step 4b: Archive step_03 inputs (runs after generate_videos approval)
+# Only archives files listed in step_04/index.json (processed by current job).
+# Deletes index.json files instead of archiving them.
 # ============================================================================
 [[step]]
 name = "archive_step_03"
 action = "archive_inputs"
 source_dir = "step_03"
 archive_dir = "step_03_archive"
+index_file = "step_04/index.json"
 onsuccess = "stepCompletion"
 
 [step.artifacts]

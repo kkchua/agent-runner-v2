@@ -1,0 +1,83 @@
+Objective
+
+Critique the review, memory, and closure documents for finding quality, knowledge value, and honest assessment before formal review.
+
+Layer Boundary
+
+- This workflow belongs to Layer 3 and operates on top of the Layer 2 platform contract.
+- Critique all three documents: REV, MEM, and CLOSE.
+- Treat Layer 1 governance and Layer 2 platform constitution as read-only reference inputs.
+
+Reference Inputs
+
+- Read `REV_FILE` (the review document to critique).
+- Read `MEM_FILE` (the memory document to critique).
+- Read `CLOSE_FILE` (the closure document to critique).
+- Read `VAL_FILE` (approved validation report for traceability verification).
+- Read codebase context from `docs/repo/codebase/current/` to validate results.
+- Read Layer 1 governance at `GOVERNANCE_RUNTIME_ROOT` for metadata requirements.
+- Read Layer 2 platform constitution at `PLATFORM_RUNTIME_ROOT` for platform contract.
+
+Critique Criteria
+
+Evaluate all three documents against these criteria:
+
+1. **Finding Quality (REV)**:
+   - Are review findings specific and evidence-based (not generic)?
+   - Does each finding cite concrete examples from the validation or execution?
+   - Is the approval/rejection decision justified by the evidence presented?
+   - Are findings actionable rather than vague observations?
+
+2. **Knowledge Value (MEM)**:
+   - Are memory items genuinely reusable (not just restating what is in the code)?
+   - Does the memory capture include test quality insights and lessons learned?
+   - Are lessons specific enough to guide future initiatives?
+   - Do technical insights go beyond obvious observations?
+
+3. **Closure Honesty (CLOSE)**:
+   - Is the closure assessment honest about remaining risks and limitations?
+   - Are outstanding items truthfully documented (not minimized or hidden)?
+   - Does the completion status accurately reflect the actual state?
+   - Are resource release claims consistent with actual usage?
+
+4. **Cross-Document Consistency**:
+   - Do all three documents tell a consistent story?
+   - Are findings in REV reflected in MEM lessons learned?
+   - Does CLOSE accurately summarize the outcomes described in REV and MEM?
+
+5. **Traceability**:
+   - Do all documents link back to VAL_FILE appropriately?
+   - Are references to prior artifacts accurate and complete?
+
+Critique Output
+
+Generate a critique document with:
+
+1. **Assessment**: PASS or FAIL
+2. **Summary**: Brief overview of critique findings across all three documents
+3. **Findings**: Detailed list of issues (if any), categorized as:
+   - **Critical**: Must fix (fabricated findings, dishonest closure assessment, missing key lessons)
+   - **Major**: Should fix (generic findings, low-value memory items, inconsistent documents)
+   - **Minor**: Nice to fix (style issues, minor clarifications)
+4. **Recommendations**: Specific actions to address findings
+
+If PASS:
+- Findings are specific and evidence-based
+- Memory items are genuinely reusable
+- Closure assessment is honest and complete
+- Documents are internally consistent
+
+If FAIL:
+- Provide specific, actionable feedback
+- Cite exact sections or claims that need improvement
+- Explain what must be fixed before formal review
+- Specify which document(s) need changes
+
+Output Instructions
+
+- Write the critique document to `CRITIQUE_FILE_SUGGESTED` path.
+- Use ASCII-only characters (no em-dashes, curly quotes, or Unicode).
+- Use plain text section headings (no backticks or formatting in headings).
+- Provide direct citations to specific findings or claims when failing.
+- Be specific and actionable in feedback.
+- Clearly indicate which document each finding applies to.

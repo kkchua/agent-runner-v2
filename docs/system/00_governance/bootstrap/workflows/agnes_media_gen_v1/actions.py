@@ -24,29 +24,10 @@ from pathlib import Path
 import requests
 
 from agent_runner_v2.action_result import ActionResult
+from agent_runner_v2.api_key_pool import ApiKeyPool, load_env_from_project
 from agent_runner_v2.workflow_packages.actions import action
 
 logger = logging.getLogger(__name__)
-
-
-def _load_env(project_root=None):
-    """Load environment variables from .env file.
-
-    Searches for .env in the project_root directory. Sets AGNES_API_KEY
-    and AGNES_BASE_URL into the process environment if found.
-
-    Args:
-        project_root: Root path of the target repository. If None, uses
-            current working directory.
-    """
-    from dotenv import load_dotenv
-
-    root = Path(project_root) if project_root else Path.cwd()
-    env_path = root / ".env"
-    if env_path.exists():
-        load_dotenv(env_path)
-    else:
-        load_dotenv()
 
 
 def _load_config(config_path):
@@ -205,17 +186,17 @@ def generate_images(*, context, state, step_cfg, project_root) -> ActionResult:
     Returns:
         ActionResult with APPROVED on full success, REJECTED on any failure.
     """
-    _load_env(project_root)
-
-    api_key = os.environ.get("AGNES_API_KEY", "")
+    # Load .env and create API key pool for round-robin rotation
+    load_env_from_project(project_root)
+    key_pool = ApiKeyPool("AGNES_API_KEY", load_env=False)
     base_url = os.environ.get(
         "AGNES_BASE_URL", "https://apihub.agnes-ai.com"
     )
     logger.info(
-        "generate_images: starting (base_url=%s, api_key=%s)",
-        base_url, "present" if api_key else "MISSING",
+        "generate_images: starting (base_url=%s, keys=%d)",
+        base_url, len(key_pool),
     )
-    if not api_key:
+    if not key_pool:
         return ActionResult(
             status="REJECTED",
             remark="AGNES_API_KEY not found in environment.",
@@ -290,10 +271,6 @@ def generate_images(*, context, state, step_cfg, project_root) -> ActionResult:
 
     # API endpoint
     image_endpoint = f"{base_url.rstrip('/')}/v1/images/generations"
-    headers = {
-        "Authorization": f"Bearer {api_key}",
-        "Content-Type": "application/json",
-    }
 
     successes = []
     failures = []
@@ -367,6 +344,18 @@ def generate_images(*, context, state, step_cfg, project_root) -> ActionResult:
             )
 
             try:
+                # Get next API key from rotation pool
+                api_key = key_pool.next_key()
+                headers = {
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": "application/json",
+                }
+                logger.debug(
+                    "generate_images: %s[%d] using key index %d",
+                    variant_json_path.name, var_idx,
+                    key_pool.current_index(),
+                )
+
                 resp = _api_request_with_retry(
                     "POST",
                     image_endpoint,
@@ -525,17 +514,17 @@ def generate_videos(*, context, state, step_cfg, project_root):
     Returns:
         ActionResult with APPROVED on full success, REJECTED on any failure.
     """
-    _load_env(project_root)
-
-    api_key = os.environ.get("AGNES_API_KEY", "")
+    # Load .env and create API key pool for round-robin rotation
+    load_env_from_project(project_root)
+    key_pool = ApiKeyPool("AGNES_API_KEY", load_env=False)
     base_url = os.environ.get(
         "AGNES_BASE_URL", "https://apihub.agnes-ai.com"
     )
     logger.info(
-        "generate_videos: starting (base_url=%s, api_key=%s)",
-        base_url, "present" if api_key else "MISSING",
+        "generate_videos: starting (base_url=%s, keys=%d)",
+        base_url, len(key_pool),
     )
-    if not api_key:
+    if not key_pool:
         return ActionResult(
             status="REJECTED",
             remark="AGNES_API_KEY not found in environment.",
@@ -617,10 +606,6 @@ def generate_videos(*, context, state, step_cfg, project_root):
     # API endpoints
     video_submit_endpoint = f"{base_url.rstrip('/')}/v1/videos"
     video_status_endpoint = f"{base_url.rstrip('/')}/agnesapi"
-    headers = {
-        "Authorization": f"Bearer {api_key}",
-        "Content-Type": "application/json",
-    }
 
     successes = []
     failures = []
@@ -708,6 +693,18 @@ def generate_videos(*, context, state, step_cfg, project_root):
             )
 
             try:
+                # Get next API key from rotation pool
+                api_key = key_pool.next_key()
+                headers = {
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": "application/json",
+                }
+                logger.debug(
+                    "generate_videos: %s[%d] using key index %d",
+                    variant_json_path.name, var_idx,
+                    key_pool.current_index(),
+                )
+
                 submit_resp = _api_request_with_retry(
                     "POST",
                     video_submit_endpoint,

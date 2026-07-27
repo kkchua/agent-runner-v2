@@ -461,6 +461,22 @@ def _spawn_child(*, claim: dict[str, Any], runtime_root: Path, cli_pythonpath: s
     # Check if job folder already exists (for multi-step workflows)
     backend_run_code = request_payload.get("job_id", "")
     template_group = request_payload.get("template_group", "")
+    
+    # Validate template_group is present (required for job folder creation)
+    if not template_group:
+        error_msg = (
+            f"template_group is missing from request payload. "
+            f"Backend run.workflow_name={run.get('workflow_name')!r}, "
+            f"step_execution_spec.template_group={claim.get('step_execution_spec', {}).get('template_group')!r}. "
+            f"Cannot create job folder without workflow name."
+        )
+        logger.log('error', 'missing_template_group', message=error_msg, details={
+            'run_id': run_id,
+            'workflow_name': run.get('workflow_name'),
+            'step_execution_spec': claim.get('step_execution_spec'),
+        })
+        raise ValueError(error_msg)
+    
     job_id_to_pass = ""  # Default: empty, will create new job
 
     if backend_run_code and template_group:

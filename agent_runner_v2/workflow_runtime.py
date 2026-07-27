@@ -4,8 +4,7 @@ from pathlib import Path
 from typing import Any
 
 from .bundle_loader import core_bundles_root
-from .constants import RUN_AGENT_REQUIRED_DOC_DIRS
-from .path_catalog import known_artifact_paths, legacy_artifact_paths
+from .constants import RUN_AGENT_REQUIRED_DOC_DIRS, known_artifact_paths, legacy_artifact_paths
 from .runtime_context import ARTIFACT_ROOT
 from .workflow_packages.loader import bundle_to_template_group_dict, load_workflow_package
 
