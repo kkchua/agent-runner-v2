@@ -1,3 +1,22 @@
+"""Coder invocation adapters for agent_runner_v2.
+
+This module provides the abstraction layer between the runner's step execution
+and various LLM coder backends (Qwen, Claude, Codex, OpenCode, etc.).
+
+Key responsibilities:
+- Invoke coder processes with prompt text and sidecar polling
+- Manage process lifecycle (timeout, early-exit detection, cleanup)
+- Extract usage data from stdout or meta.json sidecar
+- Track active coder processes for graceful shutdown
+
+The module uses a sidecar polling pattern: while the coder process runs, the
+adapter polls for a valid meta.json file. When the sidecar appears with valid
+schema, the process can be terminated early without waiting for full timeout.
+
+Primary entry point: invoke_coder()
+
+Related: IMPL-20260422-04
+"""
 from __future__ import annotations
 
 import json
@@ -17,6 +36,11 @@ from .runtime_context import PROJECT_ROOT, RUNNER_ROOT
 
 @dataclass
 class CoderInvocationError(Exception):
+    """Exception raised when a coder subprocess fails.
+
+    Captures full invocation context for debugging: command, return code,
+    stdout/stderr output, and any raw events from the coder process.
+    """
     message: str
     command: list[str]
     return_code: int
@@ -30,6 +54,11 @@ class CoderInvocationError(Exception):
 
 @dataclass
 class UsageData:
+    """Token usage and cost metrics from a coder invocation.
+
+    Sources: meta.json (LLM self-reported), CLI stdout parsing, or unavailable.
+    Duration is wall-clock time measured by the adapter.
+    """
     step: str
     coder_used: str
     usage_source: str
@@ -44,6 +73,10 @@ class UsageData:
 
 @dataclass
 class InvocationManifest:
+    """Metadata record for a single coder invocation.
+
+    Written to step_manifest.json for audit and replay purposes.
+    """
     step_name: str
     coder_used: str
     command: list[str]
@@ -56,6 +89,11 @@ class InvocationManifest:
 
 @dataclass
 class InvocationResult:
+    """Complete result from invoke_coder() including output, usage, and manifest.
+
+    Primary return type for the coder adapter layer. Contains everything
+    needed to validate the invocation and extract artifacts.
+    """
     return_code: int
     stdout: str
     stderr: str
@@ -140,6 +178,7 @@ def _sidecar_post_complete_grace_seconds() -> float:
 
 
 def _coerce_timeout_output(value: Any) -> str:
+    """Convert timeout output (bytes, str, or None) to string."""
     if value is None:
         return ""
     if isinstance(value, bytes):
@@ -148,6 +187,7 @@ def _coerce_timeout_output(value: Any) -> str:
 
 
 def dataclass_dict(value: UsageData | InvocationManifest) -> dict[str, Any]:
+    """Convert a dataclass instance to a dictionary for JSON serialization."""
     return asdict(value)
 
 
@@ -268,11 +308,13 @@ def _terminate_process_tree(proc: subprocess.Popen[Any]) -> None:
 
 
 def _register_active_coder_proc(proc: subprocess.Popen[Any]) -> None:
+    """Add a coder process to the active tracking set for graceful shutdown."""
     with _ACTIVE_CODER_PROCS_LOCK:
         _ACTIVE_CODER_PROCS.add(proc)
 
 
 def _unregister_active_coder_proc(proc: subprocess.Popen[Any]) -> None:
+    """Remove a coder process from the active tracking set."""
     with _ACTIVE_CODER_PROCS_LOCK:
         _ACTIVE_CODER_PROCS.discard(proc)
 
@@ -486,6 +528,7 @@ from .coder_registry import get_api_key
 
 
 def _mask_api_key(key: str) -> str:
+    """Mask an API key for safe logging (show first/last 4 chars only)."""
     if len(key) <= 8:
         return "****"
     return key[:4] + "****" + key[-4:]
@@ -545,6 +588,7 @@ _env_loaded = False
 
 
 def _ensure_env_loaded() -> None:
+    """Load .env files on first call; subsequent calls are no-ops."""
     global _env_loaded
     if not _env_loaded:
         _load_env_files()
@@ -563,6 +607,28 @@ def invoke_coder(
     sidecar_path: Path | None = None,
     timeout_seconds_override: int | None = None,
 ) -> InvocationResult:
+    """Invoke a coder process with the given prompt and return the result.
+
+    This is the primary entry point for the coder adapter layer. It dispatches
+    to the appropriate backend-specific invocation function based on the coder name.
+
+    Args:
+        coder: Coder backend name (qwen, claude, codex, opencode, or a custom CLI).
+        step: Step name for logging and manifest.
+        prompt_text: Full prompt text to send to the coder.
+        cwd: Working directory for the coder process.
+        prompt_checksum: SHA-256 checksum of the prompt for audit.
+        now_iso_fn: Function returning current ISO timestamp.
+        coder_config: Resolved coder configuration (model, connection, auth).
+        sidecar_path: Path to meta.json for early-exit polling.
+        timeout_seconds_override: Override timeout for this invocation.
+
+    Returns:
+        InvocationResult with return_code, stdout, stderr, usage, and manifest.
+
+    Raises:
+        CoderInvocationError: If the coder process fails or times out.
+    """
     _ensure_env_loaded()
     cc = coder_config or {}
     model_name = cc.get("model", "")
@@ -633,6 +699,7 @@ def invoke_coder(
 
 
 def _invoke_plain(*, coder: str, step: str, prompt_text: str, cwd: Path, sidecar_path: Path | None = None, timeout_seconds_override: int | None = None) -> dict[str, Any]:
+    """Invoke a plain CLI coder (passing prompt on stdin, expecting JSON on stdout)."""
     command = [coder]
     timeout_seconds = _coder_timeout_seconds(timeout_seconds_override)
     try:
@@ -677,6 +744,7 @@ def _invoke_plain(*, coder: str, step: str, prompt_text: str, cwd: Path, sidecar
 
 
 def _invoke_codex(*, step: str, prompt_text: str, cwd: Path, sidecar_path: Path | None = None, timeout_seconds_override: int | None = None) -> dict[str, Any]:
+    """Invoke OpenAI Codex CLI with sandbox mode and JSON output parsing."""
     with tempfile.NamedTemporaryFile("w+", encoding="utf-8", delete=False) as temp_output:
         output_path = Path(temp_output.name)
     command = [
@@ -752,6 +820,7 @@ def _invoke_codex(*, step: str, prompt_text: str, cwd: Path, sidecar_path: Path 
 
 
 def _extract_codex_error_from_events(lines: list[str]) -> str | None:
+    """Extract the last error message from Codex JSON event lines."""
     last_error: str | None = None
     for line in lines:
         try:
@@ -769,6 +838,7 @@ def _extract_codex_error_from_events(lines: list[str]) -> str | None:
 
 
 def _invoke_claude(*, step: str, prompt_text: str, cwd: Path, sidecar_path: Path | None = None, coder_config: dict[str, Any] | None = None, timeout_seconds_override: int | None = None) -> dict[str, Any]:
+    """Invoke Claude CLI with JSON output format and optional model selection."""
     cc = coder_config or {}
     command = ["claude"]
     # Inject model flag when provided via resolved coder config
@@ -813,6 +883,7 @@ def _invoke_claude(*, step: str, prompt_text: str, cwd: Path, sidecar_path: Path
 
 
 def _invoke_qwen(*, step: str, prompt_text: str, cwd: Path, coder_config: dict[str, Any] | None = None, sidecar_path: Path | None = None, timeout_seconds_override: int | None = None) -> dict[str, Any]:
+    """Invoke Qwen CLI with optional model, auth, and base URL configuration."""
     cc = coder_config or {}
     command = ["qwen", "-y"]
 
@@ -910,6 +981,7 @@ def _invoke_qwen(*, step: str, prompt_text: str, cwd: Path, coder_config: dict[s
 
 
 def _validate_opencode_model(model_name: str) -> str:
+    """Validate and return an OpenCode model name in '{provider}/{model-id}' format."""
     model_value = str(model_name or "").strip()
     if not model_value:
         raise ValueError("OpenCode requires a model in the form '{provider}/{model-id}'.")
@@ -923,6 +995,7 @@ def _validate_opencode_model(model_name: str) -> str:
 
 
 def _opencode_model_from_config(coder_config: dict[str, Any]) -> str:
+    """Resolve OpenCode model from coder_config or connection_profile."""
     model_name = str(coder_config.get("model") or "").strip()
     if model_name:
         return _validate_opencode_model(model_name)
@@ -936,6 +1009,7 @@ def _opencode_model_from_config(coder_config: dict[str, Any]) -> str:
 
 
 def _invoke_opencode(*, step: str, prompt_text: str, cwd: Path, coder_config: dict[str, Any] | None = None, sidecar_path: Path | None = None, timeout_seconds_override: int | None = None) -> dict[str, Any]:
+    """Invoke OpenCode CLI with model and optional agent configuration."""
     cc = coder_config or {}
     model_name = _opencode_model_from_config(cc)
     command = ["opencode", "run", "--model", model_name]
@@ -1016,6 +1090,7 @@ def _invoke_opencode(*, step: str, prompt_text: str, cwd: Path, coder_config: di
 
 
 def _parse_single_json_payload(text: str) -> dict[str, Any] | None:
+    """Parse a single JSON object from text, returning None if invalid."""
     candidate = text.strip()
     if not candidate:
         return None
@@ -1027,6 +1102,7 @@ def _parse_single_json_payload(text: str) -> dict[str, Any] | None:
 
 
 def _extract_result_from_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    """Extract the coder result object from various payload structures."""
     direct = payload.get("result")
     if isinstance(direct, dict):
         return direct
@@ -1049,6 +1125,7 @@ def _extract_result_from_payload(payload: dict[str, Any]) -> dict[str, Any]:
 
 
 def _parse_json_payload(text: str) -> Any | None:
+    """Parse JSON from text, returning None on parse failure."""
     candidate = text.strip()
     if not candidate:
         return None
@@ -1059,6 +1136,7 @@ def _parse_json_payload(text: str) -> Any | None:
 
 
 def _payload_to_raw_events(payload: Any, stdout: str) -> list[str]:
+    """Convert a parsed payload to a list of JSON event strings for raw_events."""
     if isinstance(payload, list):
         return [json.dumps(item) for item in payload if isinstance(item, (dict, list))]
     if isinstance(payload, dict):
@@ -1067,6 +1145,7 @@ def _payload_to_raw_events(payload: Any, stdout: str) -> list[str]:
 
 
 def _extract_result_from_qwen_payload(payload: Any) -> dict[str, Any]:
+    """Extract the coder result from a Qwen payload (object or event list)."""
     if isinstance(payload, dict):
         return _extract_result_from_payload(payload)
     if not isinstance(payload, list):
@@ -1108,6 +1187,7 @@ def _extract_result_from_qwen_payload(payload: Any) -> dict[str, Any]:
 
 
 def _looks_like_qwen_error_text(text: str) -> bool:
+    """Check if text looks like a Qwen/API error message."""
     candidate = text.strip()
     if not candidate:
         return False
@@ -1121,6 +1201,7 @@ def _looks_like_qwen_error_text(text: str) -> bool:
 
 
 def _usage_from_json_events(lines: list[str], *, step: str, coder: str) -> UsageData:
+    """Extract usage metrics from a list of JSON event lines."""
     payloads: list[dict[str, Any]] = []
     for line in lines:
         try:
@@ -1133,6 +1214,7 @@ def _usage_from_json_events(lines: list[str], *, step: str, coder: str) -> Usage
 
 
 def _usage_from_payload(payload: dict[str, Any] | None, *, step: str, coder: str) -> UsageData:
+    """Build UsageData from a parsed payload by collecting nested usage metrics."""
     metrics = _collect_usage_metrics(payload or {})
     usage_source = "cli_reported" if metrics else "not_available"
     input_tokens = _coerce_int(metrics.get("input_tokens"))
@@ -1156,6 +1238,7 @@ def _usage_from_payload(payload: dict[str, Any] | None, *, step: str, coder: str
 
 
 def _collect_usage_metrics(payload: Any) -> dict[str, Any]:
+    """Recursively collect usage metrics from a payload structure."""
     metrics: dict[str, Any] = {}
 
     def visit(node: Any) -> None:
@@ -1174,6 +1257,7 @@ def _collect_usage_metrics(payload: Any) -> dict[str, Any]:
 
 
 def merge_usage(target: dict[str, Any], source: dict[str, Any]) -> None:
+    """Merge usage metrics from source into target using canonical aliases."""
     alias_groups = {
         "input_tokens": ("input_tokens", "inputTokens", "prompt_tokens", "promptTokens"),
         "output_tokens": ("output_tokens", "outputTokens", "completion_tokens", "completionTokens"),
@@ -1208,6 +1292,7 @@ def _coerce_float(value: Any) -> float | None:
 
 
 def _extract_json_object(text: str) -> dict[str, Any]:
+    """Extract a JSON object from text, handling fenced code blocks and embedded objects."""
     candidate = text.strip()
     if not candidate:
         raise ValueError("Coder output is empty")
