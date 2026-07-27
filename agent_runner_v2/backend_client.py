@@ -1,3 +1,23 @@
+"""Backend API client for agent_runner_v2.
+
+Provides a thin HTTP client wrapper for communicating with the agent-runner
+backend service. All state persistence and workflow coordination happens
+through this client.
+
+Key responsibilities:
+- Submit and manage workflow runs
+- Register workers and claim steps
+- Sync job state and artifacts
+- Approve/reject workflow steps
+- Heartbeat and liveness tracking
+
+The client uses urllib (no external HTTP dependencies) and raises RuntimeError
+on HTTP errors with response body context for debugging.
+
+Primary usage: BackendClient(base_url) instance with method calls.
+
+Related: IMPL-20260422-04
+"""
 from __future__ import annotations
 
 import json
