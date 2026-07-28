@@ -673,6 +673,7 @@ def _run_supervisor(*, worker_id: str, worker_label: str, backend_url: str, poll
     logger.log('info', 'daemon_started', message='worker daemon started', details={'backend_url': backend_url, 'worker_label': worker_label, 'max_parallel': max_parallel, 'runtime_dir': str(runtime_dir), 'step_spec_source': step_spec_source, 'cli_version': cli_version, 'engine_version': engine_version, 'engine_pythonpath': cli_pythonpath or '(ambient)'})
 
     children: dict[str, ChildExecution] = {}
+    terminal_run_ids: set[str] = set()
     running = True
 
     def _handle_signal(_sig, _frame):
@@ -720,6 +721,8 @@ def _run_supervisor(*, worker_id: str, worker_label: str, backend_url: str, poll
             # CLI subprocess handles result syncing to backend directly (Phase 1+).
             # Daemon only monitors liveness and logs exit.
             logger.log('info', 'child_exited', message='child finished', child=child, details={'exit_code': proc_rc})
+            if proc_rc != 0:
+                terminal_run_ids.add(child.run_id)
             del children[step_run_id]
 
         if running:
@@ -733,6 +736,13 @@ def _run_supervisor(*, worker_id: str, worker_label: str, backend_url: str, poll
                 # Check if a stop was requested — agent-runner-v2 owns this decision
                 if _is_stop_requested(claim['run']):
                     _handle_stop_on_claim(client, claim, logger)
+                    continue
+                # Skip runs this daemon already processed as failed (safety net
+                # against backend re-serving a run whose sync didn't stick).
+                claim_run_id = str(claim['run'].get('id') or '')
+                if claim_run_id in terminal_run_ids:
+                    run_code = str(claim['run'].get('run_code') or '')
+                    logger.log('info', 'skip_terminal_run', message=f'run {run_code} already failed in this daemon session, skipping', details={'run_id': claim_run_id, 'run_code': run_code})
                     continue
                 try:
                     child = _spawn_child(claim=claim, runtime_root=runtime_dir, cli_pythonpath=cli_pythonpath, logger=logger, backend_url=backend_url, step_spec_source=step_spec_source)
