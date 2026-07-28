@@ -1,0 +1,14 @@
+{
+  "video": {
+    "model": "agnes-video-v2.0",
+    "width": 1024,
+    "height": 576,
+    "num_frames": 72,
+    "frame_rate": 24
+  },
+  "max_concurrent": 2,
+  "process_delay": 15,
+  "api_timeout": 500,
+  "api_max_retries": 5,
+  "retry_base_wait": 5
+}

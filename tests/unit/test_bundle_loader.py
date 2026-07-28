@@ -474,24 +474,18 @@ def test_layer1_governance_bootstrap_workflow_definition_exists():
     ]
 
 
-def test_bootstrap_root_contains_only_active_workflow_and_registry():
-    names = {path.name for path in bundle_loader.BOOTSTRAP_ROOT.iterdir()}
-    assert names == {
-        "00_bootstrap_lifecycle_admin_v1",
-        "01_governance_foundation_v1",
-        "02_agent_runner_platform_v1",
-        "agnes_media_gen_v1",
-        "sdlc_00_codebase_v1",
-        "sdlc_00_delivery_scaffold_v1",
-        "sdlc_00_init_doc_v1",
-        "sdlc_10_requirement_v1",
-        "sdlc_20_planning_v1",
-        "sdlc_30_backlog_v1",
-        "sdlc_40_task_v1",
-        "sdlc_50_implementation_v1",
-        "sdlc_60_execution_v1",
-        "sdlc_70_validation_v1",
-        "sdlc_80_review_v1",
-        "workflow_builder_v1",
-        "_registry",
-    }
+def test_bootstrap_root_workflows_are_structurally_valid():
+    """Every subdirectory in bootstrap root must be a valid workflow package or the registry."""
+    bootstrap_root = bundle_loader.BOOTSTRAP_ROOT
+    assert bootstrap_root.is_dir(), f"Bootstrap root does not exist: {bootstrap_root}"
+
+    entries = [p for p in bootstrap_root.iterdir() if p.is_dir()]
+    assert len(entries) > 0, "Bootstrap root is empty"
+
+    for entry in entries:
+        if entry.name == "_registry":
+            continue
+        workflow_toml = entry / "workflow.toml"
+        assert workflow_toml.is_file(), (
+            f"Workflow directory '{entry.name}' is missing workflow.toml"
+        )

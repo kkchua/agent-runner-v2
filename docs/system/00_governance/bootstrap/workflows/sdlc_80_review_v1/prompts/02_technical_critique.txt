@@ -51,9 +51,16 @@ Evaluate all three documents against these criteria:
 
 Critique Output
 
-Generate a critique document with:
+Generate a critique document with YAML frontmatter and the following sections:
 
-1. **Assessment**: PASS or FAIL
+YAML Frontmatter:
+  template_id: "SYS-03-CR"
+  version: "1.0.0"
+  doc_type: "review_artifact"
+  lifecycle_status: "draft"
+
+Document Sections:
+1. **Decision**: APPROVED or REJECTED
 2. **Summary**: Brief overview of critique findings across all three documents
 3. **Findings**: Detailed list of issues (if any), categorized as:
    - **Critical**: Must fix (fabricated findings, dishonest closure assessment, missing key lessons)
@@ -61,13 +68,13 @@ Generate a critique document with:
    - **Minor**: Nice to fix (style issues, minor clarifications)
 4. **Recommendations**: Specific actions to address findings
 
-If PASS:
+If APPROVED:
 - Findings are specific and evidence-based
 - Memory items are genuinely reusable
 - Closure assessment is honest and complete
 - Documents are internally consistent
 
-If FAIL:
+If REJECTED:
 - Provide specific, actionable feedback
 - Cite exact sections or claims that need improvement
 - Explain what must be fixed before formal review
@@ -77,7 +84,8 @@ Output Instructions
 
 - Write the critique document to `CRITIQUE_FILE_SUGGESTED` path.
 - Use ASCII-only characters (no em-dashes, curly quotes, or Unicode).
+- Include YAML frontmatter with the fields specified above.
 - Use plain text section headings (no backticks or formatting in headings).
-- Provide direct citations to specific findings or claims when failing.
+- Provide direct citations to specific findings or claims when rejected.
 - Be specific and actionable in feedback.
 - Clearly indicate which document each finding applies to.

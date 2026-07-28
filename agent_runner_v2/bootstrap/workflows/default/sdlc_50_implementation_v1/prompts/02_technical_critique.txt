@@ -64,9 +64,16 @@ Evaluate the implementation plan against these criteria:
 
 Critique Output
 
-Generate a critique document with:
+Generate a critique document with YAML frontmatter and the following sections:
 
-1. **Decision**: PASS or FAIL
+YAML Frontmatter:
+  template_id: "SYS-03-CR"
+  version: "1.0.0"
+  doc_type: "review_artifact"
+  lifecycle_status: "draft"
+
+Document Sections:
+1. **Decision**: APPROVED or REJECTED
 2. **Summary**: Brief overview of critique findings
 3. **Findings**: Detailed list of issues (if any), categorized as:
    - **Critical**: Must fix (tests do not cover acceptance criteria, code changes target wrong locations, missing implementation steps)
@@ -74,21 +81,22 @@ Generate a critique document with:
    - **Minor**: Nice to fix (style issues, minor documentation gaps)
 4. **Recommendations**: Specific actions to address findings
 
-If PASS:
+If APPROVED:
    - Tests correctly implement the test scope from TASK
    - Code changes target verified locations in the codebase
    - Implementation is complete with no missing steps
    - Naming and patterns are consistent with the codebase
 
-If FAIL:
+If REJECTED:
    - Provide specific, actionable feedback
    - Cite exact code locations, test cases, or steps that are incorrect
-   - Explain what must be fixed for the critique to pass
+   - Explain what must be fixed for the critique to be approved
 
 Output Instructions
 
 - Write the critique document to `CRITIQUE_FILE_SUGGESTED` path.
 - Use ASCII-only characters.
+- Include YAML frontmatter with the fields specified above.
 - Use plain text section headings.
-- Provide direct citations to offending text when failing.
+- Provide direct citations to offending text when rejected.
 - Be specific and actionable in feedback.

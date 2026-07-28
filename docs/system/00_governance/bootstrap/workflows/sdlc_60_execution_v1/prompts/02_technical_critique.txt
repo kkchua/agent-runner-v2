@@ -48,9 +48,16 @@ Evaluate the execution against these criteria:
 
 Critique Output
 
-Generate a critique document with:
+Generate a critique document with YAML frontmatter and the following sections:
 
-1. **Assessment**: PASS or FAIL
+YAML Frontmatter:
+  template_id: "SYS-03-CR"
+  version: "1.0.0"
+  doc_type: "review_artifact"
+  lifecycle_status: "draft"
+
+Document Sections:
+1. **Decision**: APPROVED or REJECTED
 2. **Summary**: Brief overview of critique findings
 3. **Findings**: Detailed list of issues (if any), categorized as:
    - **Critical**: Must fix (code does not match IMPL, runtime errors, fabricated results)
@@ -58,13 +65,13 @@ Generate a critique document with:
    - **Minor**: Nice to fix (style issues, minor clarifications)
 4. **Recommendations**: Specific actions to address findings
 
-If PASS:
+If APPROVED:
 - Code changes match the implementation plan
 - Runtime verification succeeded
 - All tests executed and results are accurate
 - No regressions detected
 
-If FAIL:
+If REJECTED:
 - Provide specific, actionable feedback
 - Cite exact files, functions, or test cases that need attention
 - Explain what must be fixed before formal review
@@ -73,6 +80,7 @@ Output Instructions
 
 - Write the critique document to `CRITIQUE_FILE_SUGGESTED` path.
 - Use ASCII-only characters (no em-dashes, curly quotes, or Unicode).
+- Include YAML frontmatter with the fields specified above.
 - Use plain text section headings (no backticks or formatting in headings).
-- Provide direct citations to offending code or test output when failing.
+- Provide direct citations to offending code or test output when rejected.
 - Be specific and actionable in feedback.
