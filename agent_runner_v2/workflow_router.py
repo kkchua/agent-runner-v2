@@ -644,16 +644,18 @@ def _classify_exception_v2(exc: Exception) -> tuple[str, str, str]:
 
 def _looks_like_transient_error(message: str) -> bool:
     lowered = message.lower()
-    # If retries have been exhausted, this is NOT transient — it's a final failure
+    # If retries have been exhausted or this is an aggregate partial result,
+    # the action already consumed its internal retry budget — NOT transient.
     exhausted_indicators = (
         "max retries", "retries exhausted", "max attempts", "attempts exhausted",
         "retry limit", "retry quota",
+        "partial failure", "partial success",
     )
     if any(indicator in lowered for indicator in exhausted_indicators):
         return False
     hints = (
         "connection error", "fetch failed", "timed out", "timeout", "temporar",
-        "rate limit", "429", "service unavailable", "api error", "network error",
+        "rate limit", "429", "service unavailable", "network error",
     )
     return any(hint in lowered for hint in hints)
 
