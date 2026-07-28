@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import importlib.util
 import logging
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -55,6 +56,7 @@ def _load_extension_module(ext_path: Path, cache_key: str) -> Any | None:
             _MOD_CACHE[cache_key] = None
             return None
         mod = importlib.util.module_from_spec(spec)
+        sys.modules[mod.__name__] = mod
         spec.loader.exec_module(mod)
         _MOD_CACHE[cache_key] = mod
         return mod

@@ -1973,6 +1973,7 @@ def _load_context_extensions_module(
         if spec is None or spec.loader is None:
             return None
         mod = importlib.util.module_from_spec(spec)
+        sys.modules[mod.__name__] = mod
         spec.loader.exec_module(mod)
 
         return getattr(mod, "build_context_extensions", None)

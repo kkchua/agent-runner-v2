@@ -359,6 +359,7 @@ def _load_package_actions(bundle_root: Path) -> dict[str, Any]:
         if spec is None or spec.loader is None:
             return {}
         mod = importlib.util.module_from_spec(spec)
+        sys.modules[mod.__name__] = mod
         # Execute the module — this runs the @action() decorators
         spec.loader.exec_module(mod)
 

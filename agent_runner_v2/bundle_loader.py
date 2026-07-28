@@ -582,6 +582,7 @@ def install_workflow_plugins(
                 install_script,
             )
             module = importlib.util.module_from_spec(spec)
+            sys.modules[module.__name__] = module
             spec.loader.exec_module(module)
 
             if hasattr(module, "install_workflow"):
