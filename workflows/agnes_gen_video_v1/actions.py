@@ -21,12 +21,14 @@ import logging
 import os
 import struct
 import time
+from dataclasses import dataclass
 from pathlib import Path
 
 import requests
 
 from agent_runner_v2.action_result import ActionResult
 from agent_runner_v2.api_key_pool import ApiKeyPool, load_env_from_project, mask_api_key
+from agent_runner_v2.concurrent_api import ConcurrentApiRunner
 from agent_runner_v2.workflow_packages.actions import action
 
 logger = logging.getLogger(__name__)
@@ -172,6 +174,166 @@ def _write_index(index_path, step_name, file_mappings):
         json.dump(index_data, f, indent=2, ensure_ascii=False)
 
 
+@dataclass
+class _VideoFromImageWorkItem:
+    """Single video-from-image work item for concurrent processing."""
+
+    png_path: Path
+    t2i_prompt1: str
+    video_submit_endpoint: str
+    video_status_endpoint: str
+    vid_model: str
+    vid_width: int
+    vid_height: int
+    vid_num_frames: int
+    vid_frame_rate: int
+    api_timeout: int
+    api_max_retries: int
+    retry_base_wait: int
+    process_delay: int
+    step_04_dir: Path
+    key_pool: ApiKeyPool
+
+
+def _process_single_video_from_image(item: _VideoFromImageWorkItem) -> dict:
+    """Worker function for concurrent video-from-image generation.
+
+    Returns a dict with:
+        video_filename: output filename
+        file_mapping: dict for index.json
+    """
+    video_filename = item.png_path.stem + ".mp4"
+
+    # Base64-encode image for API (expects data URI, not local path)
+    image_b64 = base64.b64encode(item.png_path.read_bytes()).decode("utf-8")
+
+    payload = {
+        "model": item.vid_model,
+        "prompt": item.t2i_prompt1,
+        "image": f"data:image/png;base64,{image_b64}",
+        "width": item.vid_width,
+        "height": item.vid_height,
+        "num_frames": item.vid_num_frames,
+        "frame_rate": item.vid_frame_rate,
+    }
+    logger.info(
+        "generate_videos_from_images: %s submitting video "
+        "(model=%s, %dx%d, frames=%d, fps=%d)",
+        item.png_path.name, item.vid_model, item.vid_width, item.vid_height,
+        item.vid_num_frames, item.vid_frame_rate,
+    )
+
+    if item.process_delay > 0:
+        logger.debug(
+            "generate_videos_from_images: process delay %ds before API call",
+            item.process_delay,
+        )
+        time.sleep(item.process_delay)
+
+    api_key = item.key_pool.next_key()
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+    }
+    logger.info(
+        "generate_videos_from_images: %s using key %s (index %d)",
+        item.png_path.name, mask_api_key(api_key), item.key_pool.current_index(),
+    )
+
+    submit_resp = _api_request_with_retry(
+        "POST",
+        item.video_submit_endpoint,
+        headers=headers,
+        json_payload=payload,
+        timeout=item.api_timeout,
+        max_retries=item.api_max_retries,
+        retry_base_wait=item.retry_base_wait,
+    )
+    submit_data = submit_resp.json()
+
+    video_id = submit_data.get("video_id", "")
+    if not video_id:
+        video_id = submit_data.get("id", "")
+    if not video_id:
+        raise ValueError(f"{item.png_path.name}: no video_id in submit response")
+
+    logger.info(
+        "generate_videos_from_images: %s submitted — video_id=%s",
+        item.png_path.name, video_id,
+    )
+
+    # Poll for video completion
+    status_url = f"{item.video_status_endpoint}?video_id={video_id}"
+    video_download_url = ""
+    max_poll_attempts = 120
+    poll_interval = 10
+    logger.info(
+        "generate_videos_from_images: %s polling %s "
+        "(interval=%ds, max=%d)",
+        item.png_path.name, video_id, poll_interval, max_poll_attempts,
+    )
+
+    for poll_attempt in range(max_poll_attempts):
+        time.sleep(poll_interval)
+
+        try:
+            status_resp = requests.get(
+                status_url, headers=headers, timeout=item.api_timeout
+            )
+            status_resp.raise_for_status()
+            status_data = status_resp.json()
+
+            vid_status = status_data.get("status", "")
+            logger.debug(
+                "generate_videos_from_images: poll %d/%d — "
+                "video_id=%s status=%s",
+                poll_attempt + 1, max_poll_attempts, video_id, vid_status,
+            )
+
+            if vid_status == "completed":
+                video_download_url = status_data.get("url", "")
+                if not video_download_url:
+                    video_download_url = status_data.get("video_url", "")
+                logger.info(
+                    "generate_videos_from_images: video_id=%s "
+                    "completed after %d poll(s)",
+                    video_id, poll_attempt + 1,
+                )
+                break
+            elif vid_status in ("failed", "error", "cancelled"):
+                raise RuntimeError(
+                    f"Video generation failed with status: {vid_status}"
+                )
+        except requests.exceptions.RequestException:
+            if poll_attempt >= max_poll_attempts - 1:
+                raise RuntimeError(
+                    f"Polling timed out after {max_poll_attempts} attempts"
+                )
+            continue
+
+    if not video_download_url:
+        raise ValueError(f"{item.png_path.name}: no download URL after completion")
+
+    vid_resp = requests.get(video_download_url, timeout=item.api_timeout)
+    vid_resp.raise_for_status()
+
+    vid_output_path = item.step_04_dir / video_filename
+    with open(vid_output_path, "wb") as vid_f:
+        vid_f.write(vid_resp.content)
+    logger.info(
+        "generate_videos_from_images: %s saved %s (%d bytes)",
+        item.png_path.name, video_filename, len(vid_resp.content),
+    )
+
+    return {
+        "video_filename": video_filename,
+        "file_mapping": {
+            "input": f"step_03/{item.png_path.name}",
+            "output": f"step_04/{video_filename}",
+        },
+    }
+
+
 @action("generate_videos_from_images")
 def generate_videos_from_images(
     *, context, state, step_cfg, project_root
@@ -255,13 +417,14 @@ def generate_videos_from_images(
     api_timeout = config.get("api_timeout", 500)
     api_max_retries = config.get("api_max_retries", 5)
     retry_base_wait = config.get("retry_base_wait", 5)
+    max_concurrent = config.get("max_concurrent", 2)
     logger.info(
         "generate_videos_from_images: config — model=%s, %dx%d, "
         "frames=%d, fps=%d, delay=%ds, timeout=%ds, "
-        "max_retries=%d, retry_base_wait=%ds",
+        "max_retries=%d, retry_base_wait=%ds, max_concurrent=%d",
         vid_model, vid_width, vid_height, vid_num_frames,
         vid_frame_rate, process_delay, api_timeout,
-        api_max_retries, retry_base_wait,
+        api_max_retries, retry_base_wait, max_concurrent,
     )
 
     # Prepare output directory
@@ -285,16 +448,11 @@ def generate_videos_from_images(
     video_submit_endpoint = f"{base_url.rstrip('/')}/v1/videos"
     video_status_endpoint = f"{base_url.rstrip('/')}/agnesapi"
 
-    successes = []
-    failures = []
-    file_mappings = []
+    # Build work items from PNG files
+    work_items: list[_VideoFromImageWorkItem] = []
+    pre_failures: list[str] = []
 
     for png_path in png_files:
-        logger.info(
-            "generate_videos_from_images: processing %s", png_path.name
-        )
-
-        # Extract prompts from PNG metadata
         prompts = _extract_prompts_from_png(png_path)
         t2i_prompt1 = prompts["t2i_prompt1"]
         t2i_prompt2 = prompts["t2i_prompt2"]
@@ -304,7 +462,7 @@ def generate_videos_from_images(
                 "generate_videos_from_images: %s has no t2i_prompt1 in metadata",
                 png_path.name,
             )
-            failures.append(f"{png_path.name}: no t2i_prompt1 in metadata")
+            pre_failures.append(f"{png_path.name}: no t2i_prompt1 in metadata")
             continue
 
         logger.info(
@@ -313,158 +471,60 @@ def generate_videos_from_images(
             png_path.name, len(t2i_prompt1), len(t2i_prompt2),
         )
 
-        # Determine output filename
-        video_filename = png_path.stem + ".mp4"
-        vid_output_path = step_04_dir / video_filename
+        work_items.append(_VideoFromImageWorkItem(
+            png_path=png_path,
+            t2i_prompt1=t2i_prompt1,
+            video_submit_endpoint=video_submit_endpoint,
+            video_status_endpoint=video_status_endpoint,
+            vid_model=vid_model,
+            vid_width=vid_width,
+            vid_height=vid_height,
+            vid_num_frames=vid_num_frames,
+            vid_frame_rate=vid_frame_rate,
+            api_timeout=api_timeout,
+            api_max_retries=api_max_retries,
+            retry_base_wait=retry_base_wait,
+            process_delay=process_delay,
+            step_04_dir=step_04_dir,
+            key_pool=key_pool,
+        ))
 
-        # Base64-encode image for API (expects data URI, not local path)
-        image_b64 = base64.b64encode(png_path.read_bytes()).decode("utf-8")
+    total_items = len(work_items)
+    logger.info(
+        "generate_videos_from_images: %d work item(s) to process concurrently "
+        "(max_workers=%d)",
+        total_items, max_concurrent,
+    )
 
-        # Submit video generation request
-        payload = {
-            "model": vid_model,
-            "prompt": t2i_prompt1,
-            "image": f"data:image/png;base64,{image_b64}",
-            "width": vid_width,
-            "height": vid_height,
-            "num_frames": vid_num_frames,
-            "frame_rate": vid_frame_rate,
-        }
-        logger.info(
-            "generate_videos_from_images: %s submitting video "
-            "(model=%s, %dx%d, frames=%d, fps=%d)",
-            png_path.name, vid_model, vid_width, vid_height,
-            vid_num_frames, vid_frame_rate,
+    if total_items == 0:
+        return ActionResult(
+            status="REJECTED",
+            remark="No work items to process. " + "; ".join(pre_failures),
+            artifacts={},
+            reject_code="NO_INPUTS",
         )
 
-        try:
-            # Get next API key from rotation pool
-            api_key = key_pool.next_key()
-            headers = {
-                "Authorization": f"Bearer {api_key}",
-                "Content-Type": "application/json",
-            }
-            logger.info(
-                "generate_videos_from_images: %s using key %s (index %d)",
-                png_path.name, mask_api_key(api_key), key_pool.current_index(),
-            )
+    # Run concurrent video generation
+    runner = ConcurrentApiRunner(max_workers=max_concurrent)
+    results = runner.run(
+        work_items, _process_single_video_from_image,
+        desc="generate_videos_from_images",
+    )
 
-            submit_resp = _api_request_with_retry(
-                "POST",
-                video_submit_endpoint,
-                headers=headers,
-                json_payload=payload,
-                timeout=api_timeout,
-                max_retries=api_max_retries,
-                retry_base_wait=retry_base_wait,
-            )
-            submit_data = submit_resp.json()
+    # Collect results
+    successes = []
+    failures = list(pre_failures)
+    file_mappings = []
 
-            # Extract video ID from response
-            video_id = submit_data.get("video_id", "")
-            if not video_id:
-                video_id = submit_data.get("id", "")
-            if not video_id:
-                logger.warning(
-                    "generate_videos_from_images: %s no video_id in submit response",
-                    png_path.name,
-                )
-                failures.append(f"{png_path.name}: no video_id in submit response")
-                continue
-
-            logger.info(
-                "generate_videos_from_images: %s submitted — video_id=%s",
-                png_path.name, video_id,
-            )
-
-            # Poll for video completion
-            status_url = f"{video_status_endpoint}?video_id={video_id}"
-            video_download_url = ""
-            max_poll_attempts = 120
-            poll_interval = 10
-            logger.info(
-                "generate_videos_from_images: %s polling %s "
-                "(interval=%ds, max=%d)",
-                png_path.name, video_id, poll_interval, max_poll_attempts,
-            )
-
-            for poll_attempt in range(max_poll_attempts):
-                time.sleep(poll_interval)
-
-                try:
-                    status_resp = requests.get(
-                        status_url, headers=headers, timeout=api_timeout
-                    )
-                    status_resp.raise_for_status()
-                    status_data = status_resp.json()
-
-                    vid_status = status_data.get("status", "")
-                    logger.debug(
-                        "generate_videos_from_images: poll %d/%d — "
-                        "video_id=%s status=%s",
-                        poll_attempt + 1, max_poll_attempts, video_id, vid_status,
-                    )
-
-                    if vid_status == "completed":
-                        video_download_url = status_data.get("url", "")
-                        if not video_download_url:
-                            video_download_url = status_data.get("video_url", "")
-                        logger.info(
-                            "generate_videos_from_images: video_id=%s "
-                            "completed after %d poll(s)",
-                            video_id, poll_attempt + 1,
-                        )
-                        break
-                    elif vid_status in ("failed", "error", "cancelled"):
-                        raise RuntimeError(
-                            f"Video generation failed with status: {vid_status}"
-                        )
-                except requests.exceptions.RequestException:
-                    if poll_attempt >= max_poll_attempts - 1:
-                        raise RuntimeError(
-                            f"Polling timed out after {max_poll_attempts} attempts"
-                        )
-                    continue
-
-            if not video_download_url:
-                logger.warning(
-                    "generate_videos_from_images: %s no download URL after completion",
-                    png_path.name,
-                )
-                failures.append(f"{png_path.name}: no download URL after completion")
-                continue
-
-            # Download the completed video
-            vid_resp = requests.get(video_download_url, timeout=api_timeout)
-            vid_resp.raise_for_status()
-
-            with open(vid_output_path, "wb") as vid_f:
-                vid_f.write(vid_resp.content)
-            logger.info(
-                "generate_videos_from_images: %s saved %s (%d bytes)",
-                png_path.name, video_filename, len(vid_resp.content),
-            )
-
-            file_mappings.append({
-                "input": f"step_03/{png_path.name}",
-                "output": f"step_04/{video_filename}",
-            })
-            successes.append(png_path.name)
-
-            # Process delay before next API call
-            if png_files.index(png_path) < len(png_files) - 1:
-                logger.debug(
-                    "generate_videos_from_images: process delay %ds before next API call",
-                    process_delay,
-                )
-                time.sleep(process_delay)
-
-        except Exception as exc:
-            logger.error(
-                "generate_videos_from_images: %s API error: %s",
-                png_path.name, exc,
-            )
-            failures.append(f"{png_path.name}: API error - {exc}")
+    for r in results:
+        item: _VideoFromImageWorkItem = r.item
+        if r.success:
+            data = r.data
+            file_mappings.append(data["file_mapping"])
+            successes.append(item.png_path.name)
+        else:
+            error_msg = str(r.error) if r.error else "unknown error"
+            failures.append(f"{item.png_path.name}: {error_msg}")
 
     # Write index.json to step_04
     index_path = step_04_dir / "index.json"

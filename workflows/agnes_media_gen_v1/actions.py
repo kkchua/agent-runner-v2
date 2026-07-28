@@ -19,12 +19,14 @@ import json
 import logging
 import os
 import time
+from dataclasses import dataclass
 from pathlib import Path
 
 import requests
 
 from agent_runner_v2.action_result import ActionResult
 from agent_runner_v2.api_key_pool import ApiKeyPool, load_env_from_project, mask_api_key
+from agent_runner_v2.concurrent_api import ConcurrentApiRunner
 from agent_runner_v2.workflow_packages.actions import action
 
 logger = logging.getLogger(__name__)
@@ -161,6 +163,310 @@ def _write_index(index_path, step_name, file_mappings):
         json.dump(index_data, f, indent=2, ensure_ascii=False)
 
 
+@dataclass
+class _ImageWorkItem:
+    """Single image generation work item for concurrent processing."""
+
+    variation: dict
+    variant_json_path: Path
+    var_idx: int
+    image_endpoint: str
+    img_model: str
+    img_size: str
+    api_timeout: int
+    api_max_retries: int
+    retry_base_wait: int
+    process_delay: int
+    step_03_dir: Path
+    key_pool: ApiKeyPool
+
+
+def _process_single_image(item: _ImageWorkItem) -> dict:
+    """Worker function for concurrent image generation.
+
+    Returns a dict with:
+        updated_variation: variation dict with image_url added
+        image_filename: output filename
+        file_mapping: dict for index.json
+    """
+    t2i_prompt = item.variation.get("t2i_prompt1", "")
+    image_filename = item.variation.get("image_filename", "")
+
+    if not t2i_prompt:
+        raise ValueError(
+            f"{item.variant_json_path.name}[{item.var_idx}]: empty t2i_prompt1"
+        )
+
+    payload = {
+        "model": item.img_model,
+        "prompt": t2i_prompt,
+        "size": item.img_size,
+    }
+    logger.info(
+        "generate_images: %s[%d] requesting image "
+        "(model=%s, size=%s, prompt=%.80s...)",
+        item.variant_json_path.name, item.var_idx,
+        item.img_model, item.img_size, t2i_prompt,
+    )
+
+    if item.process_delay > 0:
+        logger.debug(
+            "generate_images: process delay %ds before API call",
+            item.process_delay,
+        )
+        time.sleep(item.process_delay)
+
+    api_key = item.key_pool.next_key()
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+    }
+    logger.info(
+        "generate_images: %s[%d] using key %s (index %d)",
+        item.variant_json_path.name, item.var_idx,
+        mask_api_key(api_key),
+        item.key_pool.current_index(),
+    )
+
+    resp = _api_request_with_retry(
+        "POST",
+        item.image_endpoint,
+        headers=headers,
+        json_payload=payload,
+        timeout=item.api_timeout,
+        max_retries=item.api_max_retries,
+        retry_base_wait=item.retry_base_wait,
+    )
+    resp_data = resp.json()
+
+    image_url = ""
+    data_array = resp_data.get("data", [])
+    if data_array:
+        image_url = data_array[0].get("url", "")
+
+    if not image_url:
+        raise ValueError(
+            f"{item.variant_json_path.name}[{item.var_idx}]: "
+            f"no image URL in API response"
+        )
+
+    img_resp = requests.get(image_url, timeout=item.api_timeout)
+    img_resp.raise_for_status()
+
+    if not image_filename:
+        stem = item.variant_json_path.stem
+        image_filename = f"{stem}_{item.var_idx + 1:02d}.png"
+
+    img_output_path = item.step_03_dir / image_filename
+    with open(img_output_path, "wb") as img_f:
+        img_f.write(img_resp.content)
+    logger.info(
+        "generate_images: %s[%d] saved %s (%d bytes)",
+        item.variant_json_path.name, item.var_idx,
+        image_filename, len(img_resp.content),
+    )
+
+    updated_var = dict(item.variation)
+    updated_var["image_url"] = image_url
+
+    return {
+        "updated_variation": updated_var,
+        "image_filename": image_filename,
+        "file_mapping": {
+            "input": f"step_02/{item.variant_json_path.name}",
+            "output": f"step_03/{image_filename}",
+            "updated_json": f"step_03/{item.variant_json_path.name}",
+        },
+    }
+
+
+@dataclass
+class _VideoWorkItem:
+    """Single video generation work item for concurrent processing."""
+
+    variation: dict
+    variant_json_path: Path
+    var_idx: int
+    video_submit_endpoint: str
+    video_status_endpoint: str
+    vid_model: str
+    vid_width: int
+    vid_height: int
+    vid_num_frames: int
+    vid_frame_rate: int
+    final_video_prompt: str
+    api_timeout: int
+    api_max_retries: int
+    retry_base_wait: int
+    process_delay: int
+    step_04_dir: Path
+    key_pool: ApiKeyPool
+
+
+def _process_single_video(item: _VideoWorkItem) -> dict:
+    """Worker function for concurrent video generation.
+
+    Returns a dict with:
+        video_filename: output filename
+        file_mapping: dict for index.json
+    """
+    video_prompt = item.final_video_prompt
+    image_url = item.variation.get("image_url", "")
+
+    if not video_prompt or not image_url:
+        raise ValueError(
+            f"{item.variant_json_path.name}[{item.var_idx}]: "
+            f"missing video prompt or image_url"
+        )
+
+    payload = {
+        "model": item.vid_model,
+        "prompt": video_prompt,
+        "image": image_url,
+        "width": item.vid_width,
+        "height": item.vid_height,
+        "num_frames": item.vid_num_frames,
+        "frame_rate": item.vid_frame_rate,
+    }
+    logger.info(
+        "generate_videos: %s[%d] submitting video "
+        "(model=%s, %dx%d, frames=%d, fps=%d)",
+        item.variant_json_path.name, item.var_idx,
+        item.vid_model, item.vid_width, item.vid_height,
+        item.vid_num_frames, item.vid_frame_rate,
+    )
+
+    if item.process_delay > 0:
+        logger.debug(
+            "generate_videos: process delay %ds before API call",
+            item.process_delay,
+        )
+        time.sleep(item.process_delay)
+
+    api_key = item.key_pool.next_key()
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+    }
+    logger.info(
+        "generate_videos: %s[%d] using key %s (index %d)",
+        item.variant_json_path.name, item.var_idx,
+        mask_api_key(api_key),
+        item.key_pool.current_index(),
+    )
+
+    submit_resp = _api_request_with_retry(
+        "POST",
+        item.video_submit_endpoint,
+        headers=headers,
+        json_payload=payload,
+        timeout=item.api_timeout,
+        max_retries=item.api_max_retries,
+        retry_base_wait=item.retry_base_wait,
+    )
+    submit_data = submit_resp.json()
+
+    video_id = submit_data.get("video_id", "")
+    if not video_id:
+        video_id = submit_data.get("id", "")
+    if not video_id:
+        raise ValueError(
+            f"{item.variant_json_path.name}[{item.var_idx}]: "
+            f"no video_id in submit response"
+        )
+
+    logger.info(
+        "generate_videos: %s[%d] submitted — video_id=%s",
+        item.variant_json_path.name, item.var_idx, video_id,
+    )
+
+    status_url = f"{item.video_status_endpoint}?video_id={video_id}"
+    video_download_url = ""
+    max_poll_attempts = 120
+    poll_interval = 10
+    logger.info(
+        "generate_videos: %s[%d] polling %s "
+        "(interval=%ds, max=%d)",
+        item.variant_json_path.name, item.var_idx,
+        video_id, poll_interval, max_poll_attempts,
+    )
+
+    for poll_attempt in range(max_poll_attempts):
+        time.sleep(poll_interval)
+
+        try:
+            status_resp = requests.get(
+                status_url, headers=headers, timeout=item.api_timeout,
+            )
+            status_resp.raise_for_status()
+            status_data = status_resp.json()
+
+            vid_status = status_data.get("status", "")
+            logger.debug(
+                "generate_videos: poll %d/%d — "
+                "video_id=%s status=%s",
+                poll_attempt + 1, max_poll_attempts, video_id, vid_status,
+            )
+
+            if vid_status == "completed":
+                video_download_url = status_data.get("url", "")
+                if not video_download_url:
+                    video_download_url = status_data.get("video_url", "")
+                logger.info(
+                    "generate_videos: video_id=%s "
+                    "completed after %d poll(s)",
+                    video_id, poll_attempt + 1,
+                )
+                break
+            elif vid_status in ("failed", "error", "cancelled"):
+                raise RuntimeError(
+                    f"Video generation failed with status: {vid_status}"
+                )
+        except requests.exceptions.RequestException:
+            if poll_attempt >= max_poll_attempts - 1:
+                raise RuntimeError(
+                    f"Polling timed out after {max_poll_attempts} attempts"
+                )
+            continue
+
+    if not video_download_url:
+        raise ValueError(
+            f"{item.variant_json_path.name}[{item.var_idx}]: "
+            f"no download URL after completion"
+        )
+
+    vid_resp = requests.get(video_download_url, timeout=item.api_timeout)
+    vid_resp.raise_for_status()
+
+    image_filename = item.variation.get("image_filename", "")
+    if image_filename:
+        video_filename = Path(image_filename).stem + ".mp4"
+    else:
+        stem = item.variant_json_path.stem
+        video_filename = f"{stem}_{item.var_idx + 1:02d}.mp4"
+
+    vid_output_path = item.step_04_dir / video_filename
+    with open(vid_output_path, "wb") as vid_f:
+        vid_f.write(vid_resp.content)
+    logger.info(
+        "generate_videos: %s[%d] saved %s (%d bytes)",
+        item.variant_json_path.name, item.var_idx,
+        video_filename, len(vid_resp.content),
+    )
+
+    return {
+        "video_filename": video_filename,
+        "file_mapping": {
+            "input": (
+                f"step_03/{image_filename}"
+                if image_filename
+                else f"step_03/{item.variant_json_path.name}"
+            ),
+            "output": f"step_04/{video_filename}",
+        },
+    }
+
+
 @action("generate_images")
 def generate_images(*, context, state, step_cfg, project_root) -> ActionResult:
     """Generate images from prompt variants using Agnes Image 2.1 Flash API.
@@ -245,11 +551,13 @@ def generate_images(*, context, state, step_cfg, project_root) -> ActionResult:
     api_timeout = config.get("api_timeout", 500)
     api_max_retries = config.get("api_max_retries", 5)
     retry_base_wait = config.get("retry_base_wait", 5)
+    max_concurrent = config.get("max_concurrent", 2)
     logger.info(
         "generate_images: config — model=%s, size=%s, "
-        "delay=%ds, timeout=%ds, max_retries=%d, retry_base_wait=%ds",
+        "delay=%ds, timeout=%ds, max_retries=%d, retry_base_wait=%ds, "
+        "max_concurrent=%d",
         img_model, img_size, process_delay,
-        api_timeout, api_max_retries, retry_base_wait,
+        api_timeout, api_max_retries, retry_base_wait, max_concurrent,
     )
 
     # Prepare output directory
@@ -275,14 +583,12 @@ def generate_images(*, context, state, step_cfg, project_root) -> ActionResult:
     # API endpoint
     image_endpoint = f"{base_url.rstrip('/')}/v1/images/generations"
 
-    successes = []
-    failures = []
-    file_mappings = []
+    # Read all variant JSONs and build flat work-item list
+    variant_data_map: dict[str, dict] = {}
+    work_items: list[_ImageWorkItem] = []
+    read_failures: list[str] = []
 
     for variant_json_path in variant_jsons:
-        logger.info(
-            "generate_images: processing %s", variant_json_path.name,
-        )
         try:
             with open(variant_json_path, "r", encoding="utf-8") as f:
                 variant_data = json.load(f)
@@ -291,9 +597,7 @@ def generate_images(*, context, state, step_cfg, project_root) -> ActionResult:
                 "generate_images: failed to read %s: %s",
                 variant_json_path.name, exc,
             )
-            failures.append(
-                f"{variant_json_path.name}: read error - {exc}"
-            )
+            read_failures.append(f"{variant_json_path.name}: read error - {exc}")
             continue
 
         variations = variant_data.get("variations", [])
@@ -302,153 +606,103 @@ def generate_images(*, context, state, step_cfg, project_root) -> ActionResult:
             variant_json_path.name, len(variations),
         )
         if not variations:
-            failures.append(
-                f"{variant_json_path.name}: no variations found"
-            )
+            read_failures.append(f"{variant_json_path.name}: no variations found")
             continue
 
-        updated_variations = []
-        variant_success = True
+        variant_data_map[variant_json_path.name] = variant_data
 
         for var_idx, variation in enumerate(variations):
-            # Process delay before each API call
-            if var_idx > 0 or variant_jsons.index(variant_json_path) > 0:
-                logger.debug(
-                    "generate_images: process delay %ds before API call",
-                    process_delay,
-                )
-                time.sleep(process_delay)
+            work_items.append(_ImageWorkItem(
+                variation=variation,
+                variant_json_path=variant_json_path,
+                var_idx=var_idx,
+                image_endpoint=image_endpoint,
+                img_model=img_model,
+                img_size=img_size,
+                api_timeout=api_timeout,
+                api_max_retries=api_max_retries,
+                retry_base_wait=retry_base_wait,
+                process_delay=process_delay,
+                step_03_dir=step_03_dir,
+                key_pool=key_pool,
+            ))
 
-            t2i_prompt = variation.get("t2i_prompt1", "")
-            image_filename = variation.get("image_filename", "")
+    total_items = len(work_items)
+    logger.info(
+        "generate_images: %d work item(s) to process concurrently "
+        "(max_workers=%d)",
+        total_items, max_concurrent,
+    )
 
-            if not t2i_prompt:
-                logger.warning(
-                    "generate_images: %s[%d] empty t2i_prompt1",
-                    variant_json_path.name, var_idx,
-                )
-                failures.append(
-                    f"{variant_json_path.name}[{var_idx}]: "
-                    f"empty t2i_prompt1"
-                )
-                variant_success = False
-                continue
+    if total_items == 0:
+        return ActionResult(
+            status="REJECTED",
+            remark="No work items to process. " + "; ".join(read_failures),
+            artifacts={},
+            reject_code="NO_INPUTS",
+        )
 
-            payload = {
-                "model": img_model,
-                "prompt": t2i_prompt,
-                "size": img_size,
-            }
-            logger.info(
-                "generate_images: %s[%d] requesting image "
-                "(model=%s, size=%s, prompt=%.80s...)",
-                variant_json_path.name, var_idx,
-                img_model, img_size, t2i_prompt,
+    # Run concurrent image generation
+    runner = ConcurrentApiRunner(max_workers=max_concurrent)
+    results = runner.run(work_items, _process_single_image, desc="generate_images")
+
+    # Collect results grouped by variant JSON for JSON updates
+    successes = []
+    failures = list(read_failures)
+    file_mappings = []
+    results_by_json: dict[str, list] = {}
+
+    for r in results:
+        item: _ImageWorkItem = r.item
+        json_name = item.variant_json_path.name
+
+        if r.success:
+            data = r.data
+            file_mappings.append(data["file_mapping"])
+            results_by_json.setdefault(json_name, []).append(data)
+        else:
+            error_msg = str(r.error) if r.error else "unknown error"
+            failures.append(
+                f"{item.variant_json_path.name}[{item.var_idx}]: {error_msg}"
             )
 
-            try:
-                # Get next API key from rotation pool
-                api_key = key_pool.next_key()
-                headers = {
-                    "Authorization": f"Bearer {api_key}",
-                    "Content-Type": "application/json",
-                }
-                logger.info(
-                    "generate_images: %s[%d] using key %s (index %d)",
-                    variant_json_path.name, var_idx,
-                    mask_api_key(api_key),
-                    key_pool.current_index(),
-                )
+    # Write updated JSONs after all workers complete
+    for variant_json_path in variant_jsons:
+        json_name = variant_json_path.name
+        if json_name not in variant_data_map:
+            continue
 
-                resp = _api_request_with_retry(
-                    "POST",
-                    image_endpoint,
-                    headers=headers,
-                    json_payload=payload,
-                    timeout=api_timeout,
-                    max_retries=api_max_retries,
-                    retry_base_wait=retry_base_wait,
-                )
-                resp_data = resp.json()
+        original_data = variant_data_map[json_name]
+        json_results = results_by_json.get(json_name, [])
 
-                # Extract image URL from response
-                image_url = ""
-                data_array = resp_data.get("data", [])
-                if data_array:
-                    image_url = data_array[0].get("url", "")
+        # Build updated variations list: preserve order, add image_url for successes
+        success_indices = {
+            r.item.var_idx: r.data["updated_variation"]
+            for r in results
+            if r.success and r.item.variant_json_path.name == json_name
+        }
 
-                if not image_url:
-                    logger.warning(
-                        "generate_images: %s[%d] no image URL "
-                        "in API response",
-                        variant_json_path.name, var_idx,
-                    )
-                    failures.append(
-                        f"{variant_json_path.name}[{var_idx}]: "
-                        f"no image URL in API response"
-                    )
-                    variant_success = False
-                    continue
+        updated_variations = []
+        all_succeeded = True
+        for var_idx, variation in enumerate(original_data.get("variations", [])):
+            if var_idx in success_indices:
+                updated_variations.append(success_indices[var_idx])
+            else:
+                all_succeeded = False
 
-                # Download the generated image
-                img_resp = requests.get(
-                    image_url, timeout=api_timeout
-                )
-                img_resp.raise_for_status()
+        if updated_variations:
+            updated_data = dict(original_data)
+            updated_data["variations"] = updated_variations
+            updated_json_path = step_03_dir / json_name
+            with open(updated_json_path, "w", encoding="utf-8") as f:
+                json.dump(updated_data, f, indent=2, ensure_ascii=False)
+            logger.info(
+                "generate_images: wrote updated JSON %s (%d variation(s))",
+                json_name, len(updated_variations),
+            )
 
-                # Determine output filename
-                if not image_filename:
-                    stem = variant_json_path.stem
-                    image_filename = f"{stem}_{var_idx + 1:02d}.png"
-
-                img_output_path = step_03_dir / image_filename
-                with open(img_output_path, "wb") as img_f:
-                    img_f.write(img_resp.content)
-                logger.info(
-                    "generate_images: %s[%d] saved %s (%d bytes)",
-                    variant_json_path.name, var_idx,
-                    image_filename, len(img_resp.content),
-                )
-
-                # Update variation with image_url
-                updated_var = dict(variation)
-                updated_var["image_url"] = image_url
-                updated_variations.append(updated_var)
-
-                file_mappings.append({
-                    "input": f"step_02/{variant_json_path.name}",
-                    "output": f"step_03/{image_filename}",
-                    "updated_json": f"step_03/{variant_json_path.name}",
-                })
-
-                # Write updated JSON immediately after each image
-                updated_data = dict(variant_data)
-                updated_data["variations"] = updated_variations
-                updated_json_path = step_03_dir / variant_json_path.name
-                with open(updated_json_path, "w", encoding="utf-8") as f:
-                    json.dump(
-                        updated_data, f, indent=2, ensure_ascii=False
-                    )
-                logger.info(
-                    "generate_images: %s[%d] updated JSON %s "
-                    "(%d variation(s) so far)",
-                    variant_json_path.name, var_idx,
-                    updated_json_path.name, len(updated_variations),
-                )
-
-            except Exception as exc:
-                logger.error(
-                    "generate_images: %s[%d] API error: %s",
-                    variant_json_path.name, var_idx, exc,
-                )
-                failures.append(
-                    f"{variant_json_path.name}[{var_idx}]: "
-                    f"API error - {exc}"
-                )
-                variant_success = False
-
-        if variant_success:
-            successes.append(variant_json_path.name)
+        if all_succeeded and json_results:
+            successes.append(json_name)
 
     # Write index.json to step_03
     index_path = step_03_dir / "index.json"
@@ -578,13 +832,16 @@ def generate_videos(*, context, state, step_cfg, project_root):
     api_timeout = config.get("api_timeout", 500)
     api_max_retries = config.get("api_max_retries", 5)
     retry_base_wait = config.get("retry_base_wait", 5)
+    max_concurrent = config.get("max_concurrent", 2)
     logger.info(
         "generate_videos: config — model=%s, %dx%d, "
         "frames=%d, fps=%d, delay=%ds, timeout=%ds, "
-        "max_retries=%d, retry_base_wait=%ds, video_prompt_field=%s",
+        "max_retries=%d, retry_base_wait=%ds, video_prompt_field=%s, "
+        "max_concurrent=%d",
         vid_model, vid_width, vid_height, vid_num_frames,
         vid_frame_rate, process_delay, api_timeout,
         api_max_retries, retry_base_wait, vid_prompt_field,
+        max_concurrent,
     )
 
     # Prepare output directory
@@ -611,15 +868,12 @@ def generate_videos(*, context, state, step_cfg, project_root):
     video_submit_endpoint = f"{base_url.rstrip('/')}/v1/videos"
     video_status_endpoint = f"{base_url.rstrip('/')}/agnesapi"
 
-    successes = []
-    failures = []
-    file_mappings = []
+    # Read all variant JSONs and build flat work-item list
+    work_items: list[_VideoWorkItem] = []
+    read_failures: list[str] = []
+    variant_json_names: list[str] = []
 
     for variant_json_path in variant_jsons:
-        logger.info(
-            "generate_videos: processing %s",
-            variant_json_path.name,
-        )
         try:
             with open(variant_json_path, "r", encoding="utf-8") as f:
                 variant_data = json.load(f)
@@ -628,9 +882,7 @@ def generate_videos(*, context, state, step_cfg, project_root):
                 "generate_videos: failed to read %s: %s",
                 variant_json_path.name, exc,
             )
-            failures.append(
-                f"{variant_json_path.name}: read error - {exc}"
-            )
+            read_failures.append(f"{variant_json_path.name}: read error - {exc}")
             continue
 
         variations = variant_data.get("variations", [])
@@ -639,23 +891,12 @@ def generate_videos(*, context, state, step_cfg, project_root):
             variant_json_path.name, len(variations),
         )
         if not variations:
-            failures.append(
-                f"{variant_json_path.name}: no variations found"
-            )
+            read_failures.append(f"{variant_json_path.name}: no variations found")
             continue
 
-        file_success = True
+        variant_json_names.append(variant_json_path.name)
 
         for var_idx, variation in enumerate(variations):
-            # Process delay before each API call
-            if var_idx > 0 or variant_jsons.index(variant_json_path) > 0:
-                logger.debug(
-                    "generate_videos: process delay %ds before API call",
-                    process_delay,
-                )
-                time.sleep(process_delay)
-
-            # Resolve video prompt: use configured field, fallback to t2i_prompt1
             video_prompt = variation.get(vid_prompt_field, "")
             if not video_prompt:
                 video_prompt = variation.get("t2i_prompt1", "")
@@ -663,220 +904,81 @@ def generate_videos(*, context, state, step_cfg, project_root):
 
             if not video_prompt or not image_url:
                 logger.warning(
-                    "generate_videos: %s[%d] missing "
-                    "%s/image_url",
-                    variant_json_path.name, var_idx,
-                    vid_prompt_field,
+                    "generate_videos: %s[%d] missing %s/image_url",
+                    variant_json_path.name, var_idx, vid_prompt_field,
                 )
-                failures.append(
+                read_failures.append(
                     f"{variant_json_path.name}[{var_idx}]: "
                     f"missing {vid_prompt_field}/image_url"
                 )
-                file_success = False
                 continue
 
-            # Construct final video prompt with prefix/postfix
             final_video_prompt = vid_prompt_prefix + video_prompt + vid_prompt_postfix
 
-            # Submit video generation request
-            payload = {
-                "model": vid_model,
-                "prompt": final_video_prompt,
-                "image": image_url,
-                "width": vid_width,
-                "height": vid_height,
-                "num_frames": vid_num_frames,
-                "frame_rate": vid_frame_rate,
-            }
-            logger.info(
-                "generate_videos: %s[%d] submitting video "
-                "(model=%s, %dx%d, frames=%d, fps=%d)",
-                variant_json_path.name, var_idx,
-                vid_model, vid_width, vid_height,
-                vid_num_frames, vid_frame_rate,
+            work_items.append(_VideoWorkItem(
+                variation=variation,
+                variant_json_path=variant_json_path,
+                var_idx=var_idx,
+                video_submit_endpoint=video_submit_endpoint,
+                video_status_endpoint=video_status_endpoint,
+                vid_model=vid_model,
+                vid_width=vid_width,
+                vid_height=vid_height,
+                vid_num_frames=vid_num_frames,
+                vid_frame_rate=vid_frame_rate,
+                final_video_prompt=final_video_prompt,
+                api_timeout=api_timeout,
+                api_max_retries=api_max_retries,
+                retry_base_wait=retry_base_wait,
+                process_delay=process_delay,
+                step_04_dir=step_04_dir,
+                key_pool=key_pool,
+            ))
+
+    total_items = len(work_items)
+    logger.info(
+        "generate_videos: %d work item(s) to process concurrently "
+        "(max_workers=%d)",
+        total_items, max_concurrent,
+    )
+
+    if total_items == 0:
+        return ActionResult(
+            status="REJECTED",
+            remark="No work items to process. " + "; ".join(read_failures),
+            artifacts={},
+            reject_code="NO_INPUTS",
+        )
+
+    # Run concurrent video generation
+    runner = ConcurrentApiRunner(max_workers=max_concurrent)
+    results = runner.run(work_items, _process_single_video, desc="generate_videos")
+
+    # Collect results
+    successes = []
+    failures = list(read_failures)
+    file_mappings = []
+    success_json_names: set[str] = set()
+
+    for r in results:
+        item: _VideoWorkItem = r.item
+        if r.success:
+            data = r.data
+            file_mappings.append(data["file_mapping"])
+            success_json_names.add(item.variant_json_path.name)
+        else:
+            error_msg = str(r.error) if r.error else "unknown error"
+            failures.append(
+                f"{item.variant_json_path.name}[{item.var_idx}]: {error_msg}"
             )
 
-            try:
-                # Get next API key from rotation pool
-                api_key = key_pool.next_key()
-                headers = {
-                    "Authorization": f"Bearer {api_key}",
-                    "Content-Type": "application/json",
-                }
-                logger.info(
-                    "generate_videos: %s[%d] using key %s (index %d)",
-                    variant_json_path.name, var_idx,
-                    mask_api_key(api_key),
-                    key_pool.current_index(),
-                )
-
-                submit_resp = _api_request_with_retry(
-                    "POST",
-                    video_submit_endpoint,
-                    headers=headers,
-                    json_payload=payload,
-                    timeout=api_timeout,
-                    max_retries=api_max_retries,
-                    retry_base_wait=retry_base_wait,
-                )
-                submit_data = submit_resp.json()
-
-                # Extract video ID from response
-                video_id = submit_data.get("video_id", "")
-                if not video_id:
-                    video_id = submit_data.get("id", "")
-                if not video_id:
-                    logger.warning(
-                        "generate_videos: %s[%d] no video_id "
-                        "in submit response",
-                        variant_json_path.name, var_idx,
-                    )
-                    failures.append(
-                        f"{variant_json_path.name}[{var_idx}]: "
-                        f"no video_id in submit response"
-                    )
-                    file_success = False
-                    continue
-
-                logger.info(
-                    "generate_videos: %s[%d] submitted — "
-                    "video_id=%s",
-                    variant_json_path.name, var_idx, video_id,
-                )
-
-                # Poll for video completion
-                status_url = (
-                    f"{video_status_endpoint}?video_id={video_id}"
-                )
-                video_download_url = ""
-                max_poll_attempts = 120
-                poll_interval = 10
-                logger.info(
-                    "generate_videos: %s[%d] polling %s "
-                    "(interval=%ds, max=%d)",
-                    variant_json_path.name, var_idx,
-                    video_id, poll_interval, max_poll_attempts,
-                )
-
-                for poll_attempt in range(max_poll_attempts):
-                    time.sleep(poll_interval)
-
-                    try:
-                        status_resp = requests.get(
-                            status_url,
-                            headers=headers,
-                            timeout=api_timeout,
-                        )
-                        status_resp.raise_for_status()
-                        status_data = status_resp.json()
-
-                        vid_status = status_data.get(
-                            "status", ""
-                        )
-                        logger.debug(
-                            "generate_videos: poll %d/%d — "
-                            "video_id=%s status=%s",
-                            poll_attempt + 1,
-                            max_poll_attempts,
-                            video_id, vid_status,
-                        )
-
-                        if vid_status == "completed":
-                            video_download_url = status_data.get(
-                                "url", ""
-                            )
-                            if not video_download_url:
-                                video_download_url = (
-                                    status_data.get(
-                                        "video_url", ""
-                                    )
-                                )
-                            logger.info(
-                                "generate_videos: video_id=%s "
-                                "completed after %d poll(s)",
-                                video_id, poll_attempt + 1,
-                            )
-                            break
-                        elif vid_status in (
-                            "failed", "error", "cancelled"
-                        ):
-                            raise RuntimeError(
-                                f"Video generation failed with "
-                                f"status: {vid_status}"
-                            )
-                    except requests.exceptions.RequestException:
-                        if poll_attempt >= max_poll_attempts - 1:
-                            raise RuntimeError(
-                                "Polling timed out after "
-                                f"{max_poll_attempts} attempts"
-                            )
-                        continue
-
-                if not video_download_url:
-                    logger.warning(
-                        "generate_videos: %s[%d] no download "
-                        "URL after completion",
-                        variant_json_path.name, var_idx,
-                    )
-                    failures.append(
-                        f"{variant_json_path.name}[{var_idx}]: "
-                        f"no download URL after completion"
-                    )
-                    file_success = False
-                    continue
-
-                # Download the completed video
-                vid_resp = requests.get(
-                    video_download_url, timeout=api_timeout
-                )
-                vid_resp.raise_for_status()
-
-                # Determine output filename
-                image_filename = variation.get(
-                    "image_filename", ""
-                )
-                if image_filename:
-                    video_filename = (
-                        Path(image_filename).stem + ".mp4"
-                    )
-                else:
-                    stem = variant_json_path.stem
-                    video_filename = (
-                        f"{stem}_{var_idx + 1:02d}.mp4"
-                    )
-
-                vid_output_path = step_04_dir / video_filename
-                with open(vid_output_path, "wb") as vid_f:
-                    vid_f.write(vid_resp.content)
-                logger.info(
-                    "generate_videos: %s[%d] saved %s "
-                    "(%d bytes)",
-                    variant_json_path.name, var_idx,
-                    video_filename, len(vid_resp.content),
-                )
-
-                file_mappings.append({
-                    "input": (
-                        f"step_03/{image_filename}"
-                        if image_filename
-                        else f"step_03/{variant_json_path.name}"
-                    ),
-                    "output": f"step_04/{video_filename}",
-                })
-
-            except Exception as exc:
-                logger.error(
-                    "generate_videos: %s[%d] API error: %s",
-                    variant_json_path.name, var_idx, exc,
-                )
-                failures.append(
-                    f"{variant_json_path.name}[{var_idx}]: "
-                    f"API error - {exc}"
-                )
-                file_success = False
-
-        if file_success:
-            successes.append(variant_json_path.name)
+    # A variant JSON succeeds if all its work items succeeded
+    failed_json_names = {
+        f.split("]")[0] + "]" for f in failures if "[" in f
+    }
+    for name in variant_json_names:
+        if name not in failed_json_names and name in success_json_names:
+            successes.append(name)
 
     # Write index.json to step_04
     index_path = step_04_dir / "index.json"

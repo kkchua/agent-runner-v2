@@ -45,8 +45,15 @@ Evaluate the requirements against these criteria:
 
 Critique Output
 
-Generate a critique document with:
+Generate a critique document with YAML frontmatter and the following sections:
 
+YAML Frontmatter:
+  template_id: "SYS-03-CR"
+  version: "1.0.0"
+  doc_type: "review_artifact"
+  lifecycle_status: "draft"
+
+Document Sections:
 1. **Decision**: APPROVED or REJECTED
 2. **Summary**: Brief overview of critique findings
 3. **Completeness Findings**: Missing or incomplete requirements
@@ -58,5 +65,6 @@ Output Instructions
 
 - Write the critique document to `CRITIQUE_FILE_SUGGESTED` path.
 - Use ASCII-only characters.
+- Include YAML frontmatter with the fields specified above.
 - Use plain text section headings.
 - Be specific and actionable in findings.

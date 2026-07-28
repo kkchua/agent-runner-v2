@@ -8,7 +8,7 @@
       ]
     },
     "architect_standard": {
-      "default_role": "bailian_qwen3.7-plus",
+      "default_role": "zen_go_deepseek-v4-pro",
 	  "agent": "arv_architect",
       "allowed_roles": [
         "bailian_qwen3.7-plus",

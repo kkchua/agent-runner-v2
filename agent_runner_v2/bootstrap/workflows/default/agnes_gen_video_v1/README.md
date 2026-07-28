@@ -46,6 +46,7 @@ The workflow uses `t2i_prompt1` as the video generation prompt.
     "num_frames": 72,
     "frame_rate": 24
   },
+  "max_concurrent": 2,
   "process_delay": 15,
   "api_timeout": 500,
   "api_max_retries": 5,
