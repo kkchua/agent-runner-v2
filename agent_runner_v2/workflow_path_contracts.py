@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import sys
 from functools import lru_cache
 from pathlib import Path
 from types import ModuleType
@@ -67,6 +68,7 @@ def _load_output_paths_module(template_group: str) -> ModuleType | None:
         if spec is None or spec.loader is None:
             continue
         module = importlib.util.module_from_spec(spec)
+        sys.modules[module.__name__] = module
         spec.loader.exec_module(module)
         return module
     return None
