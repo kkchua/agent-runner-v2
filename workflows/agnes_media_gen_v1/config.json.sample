@@ -12,7 +12,8 @@
     "frame_rate": 24,
     "video_prompt": "t2v_prompt1",
     "video_prompt_prefix": "",
-    "video_prompt_postfix": ""
+    "video_prompt_postfix": "",
+    "negative_prompt_video_postfix": ""
   },
   "num_variants": 4,
   "max_concurrent": 2,

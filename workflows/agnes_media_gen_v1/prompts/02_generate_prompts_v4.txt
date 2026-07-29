@@ -1,0 +1,581 @@
+# STEP 02 - Generate Image & Video Prompts (Enhanced Reconstruction)
+
+---
+
+# Mission
+
+Your mission is to convert every individual image description JSON generated in STEP 01 into a high-quality Image Prompt JSON and Video Prompt.
+This step is a **thematic variance task** — create multiple creative interpretations that share the same CONCEPT but vary the SPECIFIC SUBJECTS.
+The objective is to generate diverse visual interpretations within the same thematic category, exploring different subjects, styles, environments, and moods while maintaining conceptual coherence.
+
+---
+
+# Workflow Rules (CRITICAL)
+
+The STEP 01 output directory contains:
+
+- index.json
+- one or more image description JSON files
+
+Example:
+
+step_01/
+    index.json
+    image_001.json
+    image_002.json
+    image_003.json
+
+## IMPORTANT
+
+index.json is ONLY a manifest.
+
+It is NOT an image description.
+
+Never generate prompts directly from index.json.
+
+Never merge multiple image prompts into index.json.
+
+Its purpose is ONLY to:
+
+- discover all image description files
+- validate processing completeness
+- generate the final output index.json required by this workflow
+
+---
+
+# Processing Rules
+Process ONE image description JSON at a time.
+Relationship:
+
+1 Image Description JSON
+↓
+
+1 Image Prompt JSON
+
+Never combine multiple image descriptions into a single output.
+
+Repeat until every image listed in index.json has been processed.
+
+Variant JSON structure:
+{
+  "subject": "<image_stem from input description>",
+  "image_filename": "download (3).jpg",
+  "image_stem": "download (3)",
+  "source_file": "step_01/download (3).json",
+  "aspect_ratio": "9:16",          // Copy from input description JSON
+  "image_size": "540x1080",        // Copy from input description JSON
+  "variations": [
+    {
+      "t2i_prompt1": "<detailed English text-to-image prompt>",
+      "t2v_prompt1": "<detailed English text-to-video motion prompt>",
+      "negative_prompt_video": "<negative prompt for video generation>",
+      "image_filename": "<image_stem>_01.png",
+      "image_url": ""
+    },
+    {
+      "t2i_prompt1": "<detailed English text-to-image prompt>",
+      "t2v_prompt1": "<detailed English text-to-video motion prompt>",
+      "negative_prompt_video": "<negative prompt for video generation>",
+      "image_filename": "<image_stem>_02.png",
+      "image_url": ""
+    },
+    {
+      "t2i_prompt1": "<detailed English text-to-image prompt>",
+      "t2v_prompt1": "<detailed English text-to-video motion prompt>",
+      "negative_prompt_video": "<negative prompt for video generation>",
+      "image_filename": "<image_stem>_03.png",
+      "image_url": ""
+    },
+    {
+      "t2i_prompt1": "<detailed English text-to-image prompt>",
+      "t2v_prompt1": "<detailed English text-to-video motion prompt>",
+      "negative_prompt_video": "<negative prompt for video generation>",
+      "image_filename": "<image_stem>_04.png",
+      "image_url": ""
+    }
+  ]
+}
+
+After every image has been processed:
+
+- generate the new index.json
+- preserve the existing workflow
+- preserve filenames
+- preserve archive process
+- preserve output schema
+- preserve all existing output requirements
+
+---
+
+# Thematic Variance Objective
+
+Use the description JSON as inspiration for the CONCEPT category.
+Your objective is to generate creative variations that share the same thematic concept but explore different specific subjects, styles, and environments.
+
+Example transformations:
+- Fish in murky pond → koi in crystal pool → salmon in mountain river → jellyfish in deep ocean
+- Tropical hillside → autumn forest → snowy mountain → desert dunes → urban garden
+- Sunrise beach → sunset cliffs → moonlit lake → dawn mist → twilight cityscape
+
+Vary freely across:
+- Specific subject types within the same category
+- Environmental settings and conditions
+- Artistic styles (photography, painting, digital art, anime, etc.)
+- Lighting, mood, atmosphere
+- Weather and seasons
+
+Keep the core concept category consistent while exploring creative variety.
+
+---
+
+# Thematic Variance Rules
+
+The CONCEPT category MUST remain consistent across every variant.
+
+## Concept Category (KEEP)
+
+- Core subject type (e.g., aquatic life, landscape, wildlife, architecture)
+- Overall thematic family (e.g., nature, urban, people, objects)
+- General mood direction (e.g., serene, dynamic, mysterious)
+
+## Subject Variation (ALLOW)
+
+- Specific subject identity CAN vary within category
+- Number of subjects CAN vary
+- Subject species/type CAN vary (e.g., different fish breeds, different tree types)
+- Subject presence CAN vary (some variants may omit secondary subjects)
+
+## Scene Variation (ALLOW)
+
+- Environment CAN vary (e.g., pond → river → ocean → aquarium)
+- Location CAN vary (e.g., park → forest → garden → urban)
+- Weather CAN vary (e.g., sunny → rainy → foggy → snowy)
+- Time of day CAN vary (e.g., dawn → midday → sunset → night)
+- Season CAN vary (e.g., spring → summer → autumn → winter)
+
+## Composition Variation (ALLOW)
+
+- Framing CAN vary (e.g., close-up → wide shot → aerial)
+- Camera angle CAN vary (e.g., eye-level → low angle → overhead)
+- Depth layers CAN vary based on scene needs
+
+---
+
+# Permitted Photographic Inference
+
+The following MAY be inferred when not explicitly described.
+
+- focal length
+- lens selection
+- aperture
+- depth of field
+- exposure
+- camera height
+- camera distance
+- camera angle
+- lighting direction
+- lighting softness
+- atmospheric haze
+- material appearance
+- shadow behavior
+- photographic color grading
+
+Only infer what naturally supports the existing scene.
+
+Never change the semantic meaning.
+
+---
+
+# Prompt Priorities
+
+Highest priority
+
+1 Subject identity
+2 Scene fidelity
+3 Object relationships
+4 Environment
+
+Then
+
+5 Composition
+6 Camera placement
+7 Lens
+8 Lighting
+9 Color palette
+10 Mood
+11 Photography style
+12 Technical quality
+13 Fine details
+
+---
+
+# Image Prompt Structure
+
+Generate prompts in natural English.
+
+Structure:
+
+Subject
+
+↓
+
+Appearance
+
+↓
+
+Action / Pose
+
+↓
+
+Environment
+
+↓
+
+Composition
+
+↓
+
+Camera Position
+
+↓
+
+Camera Height
+
+↓
+
+Viewing Angle
+
+↓
+
+Lens
+
+↓
+
+Focal Length
+
+↓
+
+Depth of Field
+
+↓
+
+Lighting
+
+↓
+
+Color Palette
+
+↓
+
+Atmosphere
+
+↓
+
+Photography Style
+
+↓
+
+Technical Quality
+
+↓
+
+Fine Details
+
+Avoid keyword dumping.
+
+Write like a professional photography prompt.
+
+---
+
+# Variant Generation
+
+Generate N variants where N is determined by the num_variants field in {MEDIA_CONFIG} (default 4).
+
+Each variant explores the SAME concept with DIFFERENT specific subjects.
+
+Variant 1
+
+Thematic Anchor
+
+Original concept with similar subject matter. Maintains connection to source.
+Example: Fish and turtles in natural pond habitat.
+
+Variant 2
+
+Environment Shift
+
+Same concept category, different environment and subject type.
+Example: Colorful koi in crystal clear Japanese garden pool.
+
+Variant 3
+
+Wild Alternative
+
+Same concept, wild/nature interpretation with different subjects.
+Example: Salmon jumping in rushing mountain river rapids.
+
+Variant 4
+
+Unexpected Setting
+
+Same concept, unusual or contrasting environment.
+Example: Large carp in urban concrete fountain with city reflections.
+
+If num_variants > 4, continue exploring:
+- Different weather conditions (rain, snow, fog, storm)
+- Different times of day (dawn, midday, sunset, night, twilight)
+- Different seasons (spring, summer, autumn, winter)
+- Different artistic styles (painting, anime, digital art)
+- Maintain core concept while maximizing creative variety
+
+---
+
+# Variant Diversity Rules
+
+Every variant must preserve the core CONCEPT category.
+
+Each variant should maximize creative diversity across:
+
+- Specific subject types (different species, different objects)
+- Environment and setting (different locations, different contexts)
+- Artistic style (photography, painting, digital art, anime)
+- Camera position, height, distance, framing, perspective
+- Lighting direction, intensity, atmosphere, color grading
+- Weather and season (free to vary)
+- Mood and emotional tone
+
+Do NOT create variants by changing only one parameter.
+
+Each variant should explore a different creative interpretation.
+
+Every variant should feel visually distinct while maintaining thematic coherence.
+
+Do not reuse the same sentence structure between variants.
+
+Rewrite each prompt independently.
+
+---
+
+# Visual Style Rules
+
+Each variant should use a DIFFERENT visual style.
+
+## Allowed Styles
+
+- Photorealistic photography
+- Oil painting (classical, textured, impressionist)
+- Watercolor (soft, flowing, translucent)
+- Digital painting / concept art
+- Anime / cartoon style
+- Illustration (pen and ink, graphic)
+
+## Styles to Avoid (Video-Unfriendly)
+
+- Sketch / charcoal / pencil art (stroke inconsistency across frames)
+- Impasto / thick paint texture (morphs unnaturally in video)
+- Pointillism (dots flicker and swim)
+
+## Style Assignment by Variant
+
+- Variant 1: Photorealistic photography (faithful to concept)
+- Variant 2: Cinematic / dramatic interpretation
+- Variant 3: Fine art style (oil painting or watercolor)
+- Variant 4: Digital art / concept art style
+- Variant 5: Anime / stylized interpretation
+
+Use style-appropriate terminology for each variant.
+
+---
+
+# Video Prompt Rules
+
+Assume the generated image is Frame 1.
+
+Describe only plausible motion.
+
+Allowed:
+
+Camera motion
+
+- dolly
+- pan
+- tilt
+- crane
+- orbit
+- push-in
+- pull-back
+
+Subject motion
+
+Environmental motion
+
+Lighting evolution
+
+Cloud movement
+
+Water movement
+
+Wind
+
+Particles
+
+Never introduce:
+
+- new people
+- new objects
+- scene transitions
+- explosions
+- morphing
+- teleportation
+- impossible movement
+
+The video should feel like a natural continuation of the still image.
+
+---
+
+# Negative Prompt
+
+Include a comprehensive negative prompt.
+
+Identity
+
+- identity drift
+- face distortion
+- age drift
+- hairstyle drift
+
+Geometry
+
+- extra limbs
+- extra fingers
+- malformed hands
+- duplicate people
+- duplicate objects
+- warped anatomy
+
+Composition
+
+- cropped subject
+- floating objects
+- incorrect perspective
+
+Image Quality
+
+- blur
+- motion blur
+- noise
+- compression artifacts
+- chromatic aberration
+- oversaturation
+- underexposure
+- overexposure
+
+Text
+
+- watermark
+- logo
+- signature
+- subtitles
+- captions
+- text
+
+Style
+
+- painting
+- illustration
+- anime
+- CGI
+- 3D render
+
+---
+
+# Output Rules
+
+Output ONLY the required JSON files to disk.
+
+Do NOT explain your reasoning.
+
+Do NOT summarize the description JSON.
+
+Do NOT mention inferred details.
+
+Preserve the required JSON schema.
+
+Preserve all filenames.
+
+Preserve existing workflow.
+
+Preserve archive generation.
+
+Preserve index.json generation.
+
+## Output Filename Convention
+
+For each input description JSON, create an output file with `_prompts` suffix:
+
+Input:  step_01/image_001.json  →  Output: step_02/image_001_prompts.json
+Input:  step_01/beach_sunset.json  →  Output: step_02/beach_sunset_prompts.json
+
+The output JSON filename must be: `<input_stem>_prompts.json`
+
+## Index.json Structure
+
+After processing all images, generate an index.json in step_02/ with this structure:
+
+```json
+{
+  "step": "generate_prompts",
+  "files": [
+    {"input": "step_01/image_001.json", "output": "step_02/image_001_prompts.json"},
+    {"input": "step_01/image_002.json", "output": "step_02/image_002_prompts.json"}
+  ]
+}
+```
+
+---
+
+# CRITICAL: Output Mechanism
+
+You MUST use your file-writing tools to create actual files on disk. Do NOT put artifact data in the meta.json result field -- the result field is for status and summary information ONLY.
+
+Required file outputs:
+1. Individual variant JSONs: {STEP_02_DIR}/<image_stem>_prompts.json for each input description
+2. Index file: {STEP_02_DIR}/index.json listing all input-to-output mappings
+
+Your meta.json result field should contain only:
+- status: "complete" or "error"
+- remark: brief summary (e.g., "Generated 4 variants each for 5 descriptions, wrote 5 JSONs + index")
+- Do NOT include the full JSON data in the result field
+
+In the artifacts field of meta.json, you MUST report:
+- PROMPT_VARIANTS: the absolute path to the index.json file you wrote
+
+---
+
+# Self Validation
+
+Before finalizing each image:
+
+✓ Core concept category preserved across variants
+
+✓ Specific subjects vary within concept (not identical)
+
+✓ Environments vary (different locations/settings)
+
+✓ Artistic styles vary (photography, painting, digital, anime)
+
+✓ Camera information included
+
+✓ Video prompt starts from Frame 1
+
+✓ All variants are genuinely different from each other
+
+✓ Variants explore different creative interpretations
+
+✓ One input JSON produced one output JSON
+
+✓ index.json was NOT treated as an image description
+
+✓ Output schema unchanged
+
+✓ Output JSON filename follows pattern: <input_stem>_prompts.json

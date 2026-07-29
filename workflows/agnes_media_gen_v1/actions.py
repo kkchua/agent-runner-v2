@@ -227,6 +227,11 @@ def _process_single_image(item: _ImageWorkItem) -> dict:
         mask_api_key(api_key),
         item.key_pool.current_index(),
     )
+    logger.info(
+        "generate_images: %s[%d] API PAYLOAD:\n%s",
+        item.variant_json_path.name, item.var_idx,
+        json.dumps(payload, indent=2, ensure_ascii=False),
+    )
 
     resp = _api_request_with_retry(
         "POST",
@@ -295,6 +300,7 @@ class _VideoWorkItem:
     vid_num_frames: int
     vid_frame_rate: int
     final_video_prompt: str
+    negative_prompt: str
     api_timeout: int
     api_max_retries: int
     retry_base_wait: int
@@ -328,6 +334,8 @@ def _process_single_video(item: _VideoWorkItem) -> dict:
         "num_frames": item.vid_num_frames,
         "frame_rate": item.vid_frame_rate,
     }
+    if item.negative_prompt:
+        payload["negative_prompt"] = item.negative_prompt
     logger.info(
         "generate_videos: %s[%d] submitting video "
         "(model=%s, %dx%d, frames=%d, fps=%d)",
@@ -353,6 +361,14 @@ def _process_single_video(item: _VideoWorkItem) -> dict:
         item.variant_json_path.name, item.var_idx,
         mask_api_key(api_key),
         item.key_pool.current_index(),
+    )
+    # Log the actual API payload (exclude base64 image data)
+    api_payload_log = {k: v for k, v in payload.items() if k != "image"}
+    api_payload_log["image"] = f"<base64, {len(payload.get('image', ''))} chars>"
+    logger.info(
+        "generate_videos: %s[%d] API PAYLOAD:\n%s",
+        item.variant_json_path.name, item.var_idx,
+        json.dumps(api_payload_log, indent=2, ensure_ascii=False),
     )
 
     submit_resp = _api_request_with_retry(
@@ -828,6 +844,15 @@ def generate_videos(*, context, state, step_cfg, project_root):
     vid_prompt_field = vid_config.get("video_prompt", "t2v_prompt1")
     vid_prompt_prefix = vid_config.get("video_prompt_prefix", "")
     vid_prompt_postfix = vid_config.get("video_prompt_postfix", "")
+    vid_negative_prompt_postfix = vid_config.get("negative_prompt_video_postfix", "")
+    logger.info(
+        "generate_videos: prompt config — field=%s, prefix=%d chars, postfix=%d chars",
+        vid_prompt_field, len(vid_prompt_prefix), len(vid_prompt_postfix),
+    )
+    if vid_prompt_prefix:
+        logger.info("generate_videos: video_prompt_prefix:\n%s", vid_prompt_prefix)
+    if vid_prompt_postfix:
+        logger.info("generate_videos: video_prompt_postfix:\n%s", vid_prompt_postfix)
     process_delay = config.get("process_delay", 15)
     api_timeout = config.get("api_timeout", 500)
     api_max_retries = config.get("api_max_retries", 5)
@@ -915,6 +940,15 @@ def generate_videos(*, context, state, step_cfg, project_root):
 
             final_video_prompt = vid_prompt_prefix + video_prompt + vid_prompt_postfix
 
+            # Build negative prompt: variation's negative_prompt_video + postfix from config
+            neg_prompt_video = variation.get("negative_prompt_video", "")
+            negative_prompt = neg_prompt_video
+            if vid_negative_prompt_postfix:
+                if negative_prompt:
+                    negative_prompt = negative_prompt + " " + vid_negative_prompt_postfix
+                else:
+                    negative_prompt = vid_negative_prompt_postfix
+
             work_items.append(_VideoWorkItem(
                 variation=variation,
                 variant_json_path=variant_json_path,
@@ -927,6 +961,7 @@ def generate_videos(*, context, state, step_cfg, project_root):
                 vid_num_frames=vid_num_frames,
                 vid_frame_rate=vid_frame_rate,
                 final_video_prompt=final_video_prompt,
+                negative_prompt=negative_prompt,
                 api_timeout=api_timeout,
                 api_max_retries=api_max_retries,
                 retry_base_wait=retry_base_wait,

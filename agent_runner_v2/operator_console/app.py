@@ -602,9 +602,10 @@ def main(argv: list[str] | None = None) -> int:
             """
             nonlocal active_runs, selected_run_id
             try:
+                # Preserve current selection before refresh
+                previous_selection = selected_run_id
                 active_runs = runner_service.list_active_runs_for_worker(worker_id=selected_worker_id())
                 if active_runs:
-                    selected_run_id = active_runs[0].run_id
                     # Build display text with: repo_name, workflow_name, run_code, status, current_step
                     # We look up the repo for each run based on workflow_name
                     display_options = []
@@ -618,7 +619,13 @@ def main(argv: list[str] | None = None) -> int:
                         display_text = f"[{run.worker_id or '-'}] [{repo_name}] [{workflow_display}] {run.run_code or run.run_id} | {_STATUS_ICONS.get(run.status, '⚪')} {run.status} | {run.current_step or '-'}"
                         display_options.append(ft.dropdown.Option(key=run.run_id, text=display_text))
                     active_runs_dd.options = display_options
-                    active_runs_dd.value = active_runs[0].run_id
+                    # Preserve selection if it still exists, otherwise default to first
+                    if previous_selection and any(r.run_id == previous_selection for r in active_runs):
+                        selected_run_id = previous_selection
+                        active_runs_dd.value = previous_selection
+                    else:
+                        selected_run_id = active_runs[0].run_id
+                        active_runs_dd.value = active_runs[0].run_id
                 else:
                     selected_run_id = ""
                     active_runs_dd.options = []
@@ -636,7 +643,9 @@ def main(argv: list[str] | None = None) -> int:
         def _on_active_run_selected(_event=None) -> None:
             """Track which active run is selected and auto-populate repo/workflow dropdowns."""
             nonlocal selected_run_id
+            old_id = selected_run_id
             selected_run_id = active_runs_dd.value or ""
+            _log.info("[console] _on_active_run_selected: dropdown_value=%r old_selected=%r new_selected=%r", active_runs_dd.value, old_id, selected_run_id)
 
             # Auto-populate repo and workflow dropdowns based on the selected run
             if not selected_run_id:
@@ -707,16 +716,88 @@ def main(argv: list[str] | None = None) -> int:
             start_step_dd.visible = action == "Submit"
 
             page.update()
+            # Note: Do NOT call refresh_active_runs() here
+            # Refresh only happens via:
+            # 1. "Refresh Active Runs" button click
+            # 2. Auto-refresh checkbox enabled
 
-            if needs_active:
-                refresh_active_runs()
+        # ==================================================================
+        # Action confirmation dialog
+        # ==================================================================
+
+        async def _confirm_action(
+            action: str,
+            run: ActiveRunSummary | None = None,
+            submit_details: dict | None = None,
+        ) -> bool:
+            """Show confirmation dialog for actions.
+
+            For existing run actions: pass run=ActiveRunSummary
+            For Submit action: pass submit_details={"repo_name", "workflow_name", "worker_id", "input_count"}
+
+            Returns True if user confirms, False otherwise.
+            """
+            # Track dialog result via mutable container
+            result_container = {"confirmed": False}
+
+            def _on_confirm(e):
+                result_container["confirmed"] = True
+                page.pop_dialog()
+
+            def _on_cancel(e):
+                result_container["confirmed"] = False
+                page.pop_dialog()
+
+            # Build dialog content based on action type
+            if action == "Submit" and submit_details:
+                content = ft.Column([
+                    ft.Text("You are about to submit a new job:"),
+                    ft.Divider(),
+                    ft.Text(f"Repo: {submit_details.get('repo_name', 'N/A')}"),
+                    ft.Text(f"Workflow: {submit_details.get('workflow_name', 'N/A')}", weight=ft.FontWeight.BOLD),
+                    ft.Text(f"Worker: {submit_details.get('worker_id', 'N/A')}"),
+                    ft.Text(f"Input artifacts: {submit_details.get('input_count', 0)}"),
+                ], tight=True, spacing=8)
+            elif run:
+                content = ft.Column([
+                    ft.Text(f"You are about to {action.lower()} the following run:"),
+                    ft.Divider(),
+                    ft.Text(f"Run Code: {run.run_code or 'N/A'}", weight=ft.FontWeight.BOLD),
+                    ft.Text(f"Workflow: {run.workflow_name}"),
+                    ft.Text(f"Status: {run.status}"),
+                    ft.Text(f"Current Step: {run.current_step or 'N/A'}"),
+                ], tight=True, spacing=8)
+            else:
+                return False
+
+            dialog = ft.AlertDialog(
+                modal=True,
+                title=ft.Text(f"Confirm {action}", weight=ft.FontWeight.BOLD),
+                content=content,
+                actions=[
+                    ft.TextButton("No", on_click=_on_cancel),
+                    ft.ElevatedButton(
+                        f"Yes, {action}",
+                        on_click=_on_confirm,
+                        bgcolor=ft.Colors.BLUE,
+                        color=ft.Colors.WHITE,
+                    ),
+                ],
+            )
+
+            page.show_dialog(dialog)
+            # Wait for dialog to close (dialog.open becomes False)
+            while dialog.open:
+                await asyncio.sleep(0.05)
+            return result_container["confirmed"]
 
         # ==================================================================
         # Execute action
         # ==================================================================
 
-        def execute_action(_event) -> None:
+        async def execute_action(_event) -> None:
             """Dispatch the selected action to the appropriate service method."""
+            nonlocal selected_run_id
             try:
                 action = action_dd.value or ""
                 repo = selected_repo()
@@ -726,6 +807,23 @@ def main(argv: list[str] | None = None) -> int:
                 input_artifacts = collect_input_artifacts(Path(repo_path), os_type=os_type)
 
                 if action == "Submit":
+                    # Show confirmation dialog for submit
+                    repo_name = repo.name if repo else "N/A"
+                    wf_name = workflow.name if workflow else "N/A"
+                    confirmed = await _confirm_action(
+                        "Submit",
+                        submit_details={
+                            "repo_name": repo_name,
+                            "workflow_name": wf_name,
+                            "worker_id": selected_worker_id(),
+                            "input_count": len(input_artifacts),
+                        },
+                    )
+                    if not confirmed:
+                        output.value = "Submit cancelled by user."
+                        page.update()
+                        return
+
                     rendered = runner_service.submit_job(
                         repo_path=repo_path,
                         workflow=workflow,
@@ -739,6 +837,23 @@ def main(argv: list[str] | None = None) -> int:
                     run_id = str(selected_run_id or "").strip()
                     if not run_id:
                         raise ActionExecutionError("Select an active run to approve.")
+
+                    # Validate run is still in active list
+                    selected_run = next((r for r in active_runs if r.run_id == run_id), None)
+                    if selected_run is None:
+                        selected_run_id = ""  # Clear stale selection
+                        raise ActionExecutionError(
+                            "Selected run is no longer active. "
+                            "The list may have refreshed. Please select again."
+                        )
+
+                    # Show confirmation dialog
+                    confirmed = await _confirm_action("Approve", selected_run)
+                    if not confirmed:
+                        output.value = "Action cancelled by user."
+                        page.update()
+                        return
+
                     detail = runner_service.get_run_detail_dict(run_id=run_id)
                     run_payload = detail.get("run") or {}
                     step_name = str(run_payload.get("awaiting_human_step") or "").strip()
@@ -763,6 +878,23 @@ def main(argv: list[str] | None = None) -> int:
                     run_id = str(selected_run_id or "").strip()
                     if not run_id:
                         raise ActionExecutionError("Select an active run to reject.")
+
+                    # Validate run is still in active list
+                    selected_run = next((r for r in active_runs if r.run_id == run_id), None)
+                    if selected_run is None:
+                        selected_run_id = ""  # Clear stale selection
+                        raise ActionExecutionError(
+                            "Selected run is no longer active. "
+                            "The list may have refreshed. Please select again."
+                        )
+
+                    # Show confirmation dialog
+                    confirmed = await _confirm_action("Reject", selected_run)
+                    if not confirmed:
+                        output.value = "Action cancelled by user."
+                        page.update()
+                        return
+
                     detail = runner_service.get_run_detail_dict(run_id=run_id)
                     run_payload = detail.get("run") or {}
                     step_name = str(run_payload.get("awaiting_human_step") or "").strip()
@@ -787,6 +919,23 @@ def main(argv: list[str] | None = None) -> int:
                     run_id = str(selected_run_id or "").strip()
                     if not run_id:
                         raise ActionExecutionError("Select an active run to resume.")
+
+                    # Validate run is still in active list
+                    selected_run = next((r for r in active_runs if r.run_id == run_id), None)
+                    if selected_run is None:
+                        selected_run_id = ""  # Clear stale selection
+                        raise ActionExecutionError(
+                            "Selected run is no longer active. "
+                            "The list may have refreshed. Please select again."
+                        )
+
+                    # Show confirmation dialog
+                    confirmed = await _confirm_action("Resume", selected_run)
+                    if not confirmed:
+                        output.value = "Action cancelled by user."
+                        page.update()
+                        return
+
                     detail = runner_service.get_run_detail_dict(run_id=run_id)
                     run_payload = detail.get("run") or {}
                     step_name = str(run_payload.get("awaiting_human_step") or "").strip()
@@ -811,6 +960,23 @@ def main(argv: list[str] | None = None) -> int:
                     run_id = str(selected_run_id or "").strip()
                     if not run_id:
                         raise ActionExecutionError("Select an active run to retry.")
+
+                    # Validate run is still in active list
+                    selected_run = next((r for r in active_runs if r.run_id == run_id), None)
+                    if selected_run is None:
+                        selected_run_id = ""  # Clear stale selection
+                        raise ActionExecutionError(
+                            "Selected run is no longer active. "
+                            "The list may have refreshed. Please select again."
+                        )
+
+                    # Show confirmation dialog
+                    confirmed = await _confirm_action("Retry", selected_run)
+                    if not confirmed:
+                        output.value = "Action cancelled by user."
+                        page.update()
+                        return
+
                     detail = runner_service.get_run_detail_dict(run_id=run_id)
                     run_payload = detail.get("run") or {}
                     step_name = str(run_payload.get("awaiting_human_step") or "").strip()
@@ -833,8 +999,34 @@ def main(argv: list[str] | None = None) -> int:
 
                 elif action == "Cancel":
                     run_id = str(selected_run_id or "").strip()
+                    _log.info("[console] Cancel action: selected_run_id=%r, run_id=%r", selected_run_id, run_id)
+                    _log.info("[console] Cancel action: active_runs count=%d", len(active_runs))
+                    for r in active_runs:
+                        _log.info("[console]   active_run: run_id=%r run_code=%r", r.run_id, r.run_code)
                     if not run_id:
                         raise ActionExecutionError("Select an active run to cancel.")
+
+                    # Validate run is still in active list
+                    selected_run = next((r for r in active_runs if r.run_id == run_id), None)
+                    _log.info("[console] Cancel action: selected_run lookup result=%s", selected_run)
+                    if selected_run:
+                        _log.info("[console] Cancel action: selected_run.run_id=%r selected_run.run_code=%r", selected_run.run_id, selected_run.run_code)
+                    if selected_run is None:
+                        selected_run_id = ""  # Clear stale selection
+                        raise ActionExecutionError(
+                            "Selected run is no longer active. "
+                            "The list may have refreshed. Please select again."
+                        )
+
+                    # Show confirmation dialog
+                    _log.info("[console] Showing Cancel confirmation dialog for run %s", run_id)
+                    confirmed = await _confirm_action("Cancel", selected_run)
+                    _log.info("[console] Cancel confirmation result: %s", confirmed)
+                    if not confirmed:
+                        output.value = "Action cancelled by user."
+                        page.update()
+                        return
+
                     detail = runner_service.get_run_detail_dict(run_id=run_id)
                     run_payload = detail.get("run") or {}
                     job_id = str(run_payload.get("run_code") or "").strip()
@@ -848,10 +1040,12 @@ def main(argv: list[str] | None = None) -> int:
                         raise ActionExecutionError(
                             f"Unable to find workflow '{workflow_name}' in configured repos."
                         )
+                    _log.info("[console] Calling stop_run for run_id=%s", run_id)
                     rendered = runner_service.stop_run(
                         run_id=run_id,
                         reason="Cancelled by operator",
                     )
+                    _log.info("[console] stop_run returned: %s", rendered[:100] if rendered else "empty")
 
                 elif action == "Reset":
                     step_name = str(reset_step_dd.value or "").strip()
@@ -862,9 +1056,21 @@ def main(argv: list[str] | None = None) -> int:
                         raise ActionExecutionError("Select an active run.")
                     target_run = next((r for r in active_runs if r.run_id == run_id), None)
                     if target_run is None:
-                        raise ActionExecutionError("Selected run not found in active list.")
+                        selected_run_id = ""  # Clear stale selection
+                        raise ActionExecutionError(
+                            "Selected run is no longer active. "
+                            "The list may have refreshed. Please select again."
+                        )
                     if not target_run.run_code:
                         raise ActionExecutionError("Selected run has no run_code.")
+
+                    # Show confirmation dialog
+                    confirmed = await _confirm_action("Reset", target_run)
+                    if not confirmed:
+                        output.value = "Action cancelled by user."
+                        page.update()
+                        return
+
                     resolved_repo_path, resolved_workflow = _resolve_repo_and_workflow(target_run.workflow_name)
                     if resolved_workflow is None:
                         raise ActionExecutionError(
@@ -880,9 +1086,13 @@ def main(argv: list[str] | None = None) -> int:
                     raise ActionExecutionError(f"Unsupported action: {action}")
 
                 output.value = rendered
+                _log.info("[console] Action completed successfully")
             except Exception as exc:
-                output.value = str(exc)
+                error_msg = str(exc)
+                _log.error("[console] Action failed: %s", error_msg)
+                output.value = f"ERROR: {error_msg}"
             page.update()
+            _log.info("[console] Output field updated, length=%d", len(output.value or ""))
 
         # ==================================================================
         # Button controls
@@ -890,7 +1100,8 @@ def main(argv: list[str] | None = None) -> int:
 
         refresh_button = ft.ElevatedButton("Refresh Active Runs", on_click=refresh_active_runs)
         execute_button = ft.ElevatedButton(
-            "Run Action", on_click=execute_action,
+            "Run Action",
+            on_click=lambda e: page.run_task(execute_action, e),
             bgcolor=ft.Colors.BLUE, color=ft.Colors.WHITE,
             style=ft.ButtonStyle(text_style=ft.TextStyle(weight=ft.FontWeight.BOLD)),
         )
@@ -915,7 +1126,7 @@ def main(argv: list[str] | None = None) -> int:
         worker_id_dd.on_select = on_worker_id_changed
         repo_dd.on_select = on_repo_changed
         workflow_dd.on_select = on_workflow_changed
-        active_runs_dd.on_change = _on_active_run_selected
+        active_runs_dd.on_select = _on_active_run_selected
         auto_refresh_cb.on_change = _on_auto_refresh_changed
 
         page.services.append(file_picker)

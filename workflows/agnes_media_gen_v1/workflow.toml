@@ -45,7 +45,7 @@ exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
 # ============================================================================
 [[step]]
 name = "generate_prompts"
-prompt = "prompts/02_generate_prompts.txt"
+prompt = "prompts/02_generate_prompts_v4.txt"
 enable_notifications = true
 requires_human_approval_after = false
 onsuccess = "generate_images"
@@ -73,7 +73,7 @@ exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
 name = "generate_images"
 action = "generate_images"
 enable_notifications = true
-requires_human_approval_after = false
+requires_human_approval_after = true
 onsuccess = "archive_step_02"
 
 [step.artifacts]

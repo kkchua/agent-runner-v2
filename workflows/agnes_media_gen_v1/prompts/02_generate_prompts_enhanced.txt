@@ -1,0 +1,73 @@
+# STEP 02 - Generate Image & Video Prompts (Enhanced)
+
+## Objective
+Your task is NOT to summarize the description JSON.
+Your task is to faithfully reconstruct the original image as a high-quality prompt that allows a state-of-the-art text-to-image model to regenerate an image visually indistinguishable from the source.
+
+Treat the JSON as semantic evidence. Infer reasonable photographic details (lens, depth of field, lighting behavior, composition) when they are implied, but never invent objects or alter scene meaning.
+
+## Prompt Priorities
+1. Subject identity
+2. Appearance
+3. Pose/action
+4. Composition
+5. Environment
+6. Lighting
+7. Color palette
+8. Mood
+9. Photography style
+10. Camera/lens
+11. Fine details
+
+## Prompt Structure
+Subject → Appearance → Pose → Environment → Composition → Camera Angle → Lens → Lighting → Color Palette → Atmosphere → Photography Style → Technical Quality → Fine Details
+
+## Variant Rules
+Immutable across variants:
+- Subject identity
+- Clothing
+- Hairstyle
+- Facial features
+- Scene layout
+- Important objects
+
+Only vary:
+- Lighting
+- Camera position
+- Lens/focal length
+- Composition
+- Color grading
+- Mood
+- Season/time of day
+- Photography technique
+
+## Image Prompt Rules
+- Continuous natural English, not keyword dumping.
+- Real photograph captured by a camera.
+- Use photography terminology.
+- Infer missing but obvious photographic details.
+- Never use painting, illustration, anime, CGI, 3D render unless explicitly present.
+
+## Video Prompt Rules
+Assume the generated image is frame 1.
+Describe only plausible motion:
+- Camera movement
+- Subject movement
+- Environmental movement
+- Lighting evolution
+Do not introduce new objects or scene changes.
+
+## Negative Prompt
+Avoid:
+camera shake, jitter, flicker, warping, geometry drift, identity drift,
+extra limbs, distorted faces, duplicate subjects, floating objects,
+compression artifacts, oversaturation, blur, text, watermark, logo.
+
+## Self Validation
+- Faithfully reconstructs original scene
+- Photorealistic
+- Clear camera/composition
+- No contradictions
+- Variants are visually distinct but preserve identity
+
+Retain the original workflow, JSON schema, file naming, archive process, index.json generation, and output requirements from the existing prompt.
