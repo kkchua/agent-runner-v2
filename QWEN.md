@@ -23,7 +23,8 @@ agent_runner_v2/
 ├── workflow_packages/        # Plugin-based workflow package system
 │   ├── base.py               #   StepConfig, WorkflowBundle, BundleGovernance dataclasses
 │   ├── loader.py             #   TOML → WorkflowBundle → TEMPLATE_GROUPS dict adapter
-│   └── registry.py           #   WorkflowRegistry discovery and lookup
+│   ├── registry.py           #   WorkflowRegistry discovery and lookup
+│   └── hooks.py              #   WorkflowExtensions lifecycle hooks
 │
 ├── actions/                  # 30 action modules (copy, validate, scan, publish, assemble, …)
 │
@@ -33,6 +34,9 @@ agent_runner_v2/
 ├── doc_paths.py              # Re-exports all path constants from primitives + catalog
 ├── path_catalog.py           # known_artifact_paths(), legacy_artifact_paths(), site page maps
 ├── workflow_path_contracts.py # Workflow-owned output path contracts
+│
+├── hooks_protocols.py        # Protocol definitions for type-safe dependency injection
+├── runtime_hooks.py          # RuntimeHooks class with lazy module loading
 │
 ├── bootstrap/
 │   ├── bundles/core/current/ # Packaged bootstrap docs (installed via `init`)
@@ -44,6 +48,9 @@ agent_runner_v2/
 │
 ├── operator_console/         # Flet-based desktop operator GUI
 │   ├── app.py                #   Desktop console window (ukbe-run-agent console)
+│   ├── state.py              #   ConsoleState dataclass (extracted from closures)
+│   ├── handlers.py           #   EventHandlers class (extracted from closures)
+│   ├── builders.py           #   UIBuilder class (extracted from closures)
 │   ├── config.py             #   Console config loader (repos + workflows)
 │   ├── models.py             #   ConsoleConfig, GlobalSettings, ActiveRunSummary dataclasses
 │   └── services/
@@ -55,7 +62,7 @@ agent_runner_v2/
 ├── execution_core.py         # execute_routed_step, invoke_prepared_step
 ├── execution_request.py      # ExecutionRequest dataclass
 ├── execution_result.py       # ExecutionResult, ExecutionFailure dataclasses
-├── exceptions.py             # ArtifactMissingError, MetaJsonMissingError, PreflightBlockedError
+├── exceptions.py             # ArtifactMissingError, MetaJsonMissingError, PreflightBlockedError, ConfigurationError, NotFoundError
 ├── workflow_specs.py         # Step execution spec resolution (global/backend/hybrid)
 ├── workflow_bundle_validator.py # Preflight validation for workflow bundles
 └── sync_workflows.py         # Workflow bundle sync to backend
@@ -116,6 +123,120 @@ Post-step routing: `onsuccess` → next step, `on_reject_refine` → refinement 
 
 ### Coder Roles
 Role policies (e.g., `architect_standard`, `reviewer_standard`, `refine_standard`, `validation_standard`) map to coder configurations resolved by `coder_registry.py`.
+
+## Pattern Standardization (v0.3.0+)
+
+### Coder Dispatch Pattern
+**Location:** `coder_adapters.py`
+
+Uses a registry-based dispatch table instead of if/elif chains:
+
+```python
+CoderInvoker = Callable[..., CoderResult]
+CODER_REGISTRY: dict[str, CoderInvoker] = {
+    "opencode": _invoke_opencode,
+    "claude": _invoke_claude,
+    "qwen": _invoke_qwen,
+    "codex": _invoke_codex,
+    "local": _invoke_local,
+}
+
+def resolve_coder_invoker(coder: str) -> CoderInvoker:
+    invoker = CODER_REGISTRY.get(coder)
+    if invoker is None:
+        raise ValueError(f"Unknown coder: {coder}")
+    return invoker
+```
+
+**Benefits:** O(1) lookup, extensible without modifying core logic, type-safe.
+
+### Config Dataclass Pattern
+**Location:** `daemon.py`
+
+Uses dataclass configuration objects instead of long parameter lists:
+
+```python
+@dataclass
+class SupervisorConfig:
+    project_root: Path
+    workflow_root: Path
+    artifact_root: Path
+    jobs_root: Path
+    # ... 13 more fields with defaults
+
+def _run_supervisor(cfg: SupervisorConfig) -> None:
+    # Access via cfg.project_root, etc.
+```
+
+**Benefits:** Named parameters, default values, extensible, self-documenting.
+
+### Exception-Based Error Handling
+**Location:** `exceptions.py`, `coder_registry.py`
+
+Uses explicit exceptions instead of returning None:
+
+```python
+class ConfigurationError(RuntimeError):
+    """Raised when configuration is invalid or missing."""
+
+class NotFoundError(RuntimeError):
+    """Raised when a required resource is not found."""
+
+# Usage:
+def coder_roles_path(...) -> Path:
+    if not path.exists():
+        raise NotFoundError(f"coder_roles.json not found")
+    return path
+```
+
+**Benefits:** Explicit error conditions, better stack traces, type safety (no Optional[Path] returns).
+
+## Architecture Improvements (v0.3.0+)
+
+### Protocol-Based Dependency Injection
+**Location:** `hooks_protocols.py`, `runtime_hooks.py`
+
+Replaces deferred imports (`from . import module as _module`) with type-safe Protocols:
+
+```python
+# hooks_protocols.py
+@runtime_checkable
+class StepExecutionHooks(Protocol):
+    def missing_artifacts(self, keys: list[str], state: dict) -> list[str]: ...
+    def build_group_cfg_from_execution_spec(self, spec: dict, ...) -> tuple: ...
+    def resolve_step_coder(self, *, group_cfg: dict, ...) -> tuple: ...
+
+# runtime_hooks.py
+class RuntimeHooks:
+    """Lazy module loading via properties."""
+    _workflow_runtime: Any = None
+    
+    @property
+    def _workflow_rt(self):
+        if self._workflow_runtime is None:
+            from . import workflow_runtime
+            self._workflow_runtime = workflow_runtime
+        return self._workflow_runtime
+    
+    def missing_artifacts(self, keys, state):
+        return self._workflow_rt.missing_artifacts(keys, state)
+```
+
+**Benefits:** Type-safe hook interfaces, clear dependencies, testable, no circular imports.
+
+### Operator Console Architecture
+**Location:** `operator_console/state.py`, `operator_console/handlers.py`, `operator_console/builders.py`
+
+Extracted from deeply nested closures in `app.py`:
+
+- **`state.py`** — `ConsoleState` dataclass holds all mutable state (replaces closures)
+- **`handlers.py`** — `EventHandlers` class with methods for each event type
+- **`builders.py`** — `UIBuilder` class for view construction
+
+**Before:** Deeply nested functions (4+ levels), implicit closure state  
+**After:** Explicit classes with clear interfaces (2 levels max), explicit state management
+
+**Benefits:** Reduced nesting, explicit dependencies, testable handlers, separated concerns.
 
 ## Directory Layout (Runtime)
 
@@ -191,6 +312,14 @@ Always use `.venv\Scripts\python` (Windows) for Python and pytest commands in th
 7. **Workflow-owned path contracts** — `workflow_path_contracts.py` defines output path mappings for each workflow. Bootstrap workflows use `resolve_workflow_output_paths()`.
 
 8. **Runtime context** — `PROJECT_ROOT`, `RUNNER_ROOT`, `JOBS_ROOT`, `ARTIFACT_ROOT` are resolved at import time from `runtime_context.py`. Use `set_context()` to override in tests.
+
+9. **Coder dispatch via registry** — Use `CODER_REGISTRY` dispatch table in `coder_adapters.py` instead of if/elif chains. Register new coder implementations in the registry for O(1) lookup.
+
+10. **Config dataclasses** — Replace long parameter lists with dataclass config objects (e.g., `SupervisorConfig` in `daemon.py`). Self-documenting, extensible, supports defaults.
+
+11. **Exception-based errors** — Raise explicit exceptions (`ConfigurationError`, `NotFoundError`) instead of returning `None`. Better stack traces, type safety, clearer error conditions.
+
+12. **Protocol-based hooks** — Use `hooks_protocols.py` for type-safe dependency injection. Replaces deferred imports with explicit Protocol interfaces. `runtime_hooks.py` provides lazy-loading implementation.
 
 ## Operator Console
 
