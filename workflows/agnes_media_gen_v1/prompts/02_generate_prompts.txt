@@ -37,6 +37,38 @@ Each variant must contain:
   from the description data. Prompts must be in English. Prompts
   should be rich enough to guide an image generation model to produce
   visually similar results to the source image.
+
+  CRITICAL STYLE REQUIREMENT: All prompts MUST be photorealistic
+  photography style. These images will be used for video generation,
+  so they must look like real photographs, NOT paintings or artwork.
+
+  FORBIDDEN STYLES (do NOT use these):
+  - painting, oil painting, watercolor, acrylic, gouache
+  - illustration, digital art, concept art, anime, cartoon
+  - sketch, drawing, charcoal, pencil art
+  - abstract, surreal, fantasy art, sci-fi art
+  - Any non-photographic artistic rendering
+
+  REQUIRED STYLE: Photorealistic photography — must look like a real
+  photo taken with a camera. Use photography terminology and styles.
+
+  CRITICAL VARIANCE REQUIREMENT: Each variant MUST be visually distinct
+  from the others. Vary these PHOTOGRAPHY dimensions across variants:
+  • Photography style: portrait, landscape, macro, street, documentary,
+    fashion, architectural, product photography, etc.
+  • Lighting: golden hour, dramatic chiaroscuro, soft diffused, neon,
+    backlight, rim light, studio lighting, natural light, etc.
+  • Color palette: warm tones, cool tones, monochrome, vibrant saturated,
+    muted pastel, high contrast, etc.
+  • Composition: close-up macro, wide establishing shot, bird's eye view,
+    low angle, dutch angle, rule of thirds, centered, etc.
+  • Mood/atmosphere: ethereal, gritty, serene, dynamic, mysterious,
+    nostalgic, futuristic, etc.
+  • Time/season: dawn, midday, dusk, night; spring, summer, autumn, winter
+  • Camera technique: shallow depth of field (bokeh), tilt-shift, motion
+    blur, long exposure, HDR, specific lens (50mm, 85mm, 24mm wide), etc.
+
+  
 - t2v_prompt1: A detailed English text-to-video prompt optimized for
   image-to-video animation. This prompt should describe the motion,
   camera movement, and dynamic elements of the scene. Focus on how
@@ -44,33 +76,52 @@ Each variant must contain:
   (pan, zoom, tilt, dolly), subject motion (walking, flowing,
   rotating), and atmospheric dynamics (wind, particles, lighting
   changes). Keep the prompt concise and motion-focused.
+- negative_prompt_video: A negative prompt for video generation describing
+  what to AVOID in the output video. Include unwanted motion artifacts
+  (jitter, flicker, warping, morphing), unwanted camera movements (shaky
+  cam, erratic zoom), unwanted visual elements (blurry, low quality,
+  distorted faces, extra limbs), and style mismatches. Keep it concise
+  and focused on video-specific artifacts.
+  
+  VARIANCE REQUIREMENT: Each variant's video prompt should match the
+  visual style of its corresponding t2i_prompt1 and describe motion
+  appropriate to that style (e.g., gentle camera drift for serene mood,
+  dynamic tracking shot for action mood).
 
 Variant JSON structure:
 {
-  "mode": "BASE",
   "subject": "<image_stem from input description>",
+  "image_filename": "download (3).jpg",
+  "image_stem": "download (3)",
+  "source_file": "step_01/download (3).json",
+  "aspect_ratio": "9:16",
+  "image_size": "540x1080",
   "variations": [
     {
       "t2i_prompt1": "<detailed English text-to-image prompt>",
       "t2v_prompt1": "<detailed English text-to-video motion prompt>",
+      "negative_prompt_video": "<negative prompt for video generation>",
       "image_filename": "<image_stem>_01.png",
       "image_url": ""
     },
     {
       "t2i_prompt1": "<detailed English text-to-image prompt>",
       "t2v_prompt1": "<detailed English text-to-video motion prompt>",
+      "negative_prompt_video": "<negative prompt for video generation>",
       "image_filename": "<image_stem>_02.png",
       "image_url": ""
     },
     {
       "t2i_prompt1": "<detailed English text-to-image prompt>",
       "t2v_prompt1": "<detailed English text-to-video motion prompt>",
+      "negative_prompt_video": "<negative prompt for video generation>",
       "image_filename": "<image_stem>_03.png",
       "image_url": ""
     },
     {
       "t2i_prompt1": "<detailed English text-to-image prompt>",
       "t2v_prompt1": "<detailed English text-to-video motion prompt>",
+      "negative_prompt_video": "<negative prompt for video generation>",
       "image_filename": "<image_stem>_04.png",
       "image_url": ""
     }
@@ -79,11 +130,20 @@ Variant JSON structure:
 
 Each variant within the variations array must have:
 - t2i_prompt1: A detailed English text prompt for image generation.
-  Each variant should offer a different creative interpretation or
-  emphasis while staying faithful to the source image description.
+  CRITICAL: Each variant MUST be visually distinct — vary photography
+  style, lighting, color palette, composition, mood, time/season, and
+  camera technique across variants. Do NOT generate similar prompts
+  with minor word changes. Each variant should look like it was taken
+  by a different photographer with a unique vision. ALL variants must
+  be photorealistic — NO painting, illustration, or artistic styles.
 - t2v_prompt1: A detailed English text prompt for video generation.
-  Each variant should describe motion and camera dynamics that bring
-  the scene to life. Focus on movement, not static appearance.
+  Each variant should describe motion and camera dynamics that match the
+  visual style of its corresponding t2i_prompt1. Focus on movement, not
+  static appearance.
+- negative_prompt_video: A negative prompt describing what to avoid
+  in the video output (motion artifacts, unwanted elements, style
+  mismatches). This will be combined with negative_prompt_video_postfix
+  from config.json before sending to the API.
 - image_filename: Output image filename following the pattern
   {stem}_NN.png where NN is two-digit zero-padded (01, 02, 03, etc.).
 - image_url: Empty string (this field will be populated by the
@@ -101,6 +161,17 @@ After writing all variant JSONs to {STEP_02_DIR}:
        {"input": "step_01/image001.json", "output": "step_02/image001.json"}
      ]
    }
+
+PRE-WRITE SELF-CHECK (mandatory before writing each variant JSON):
+Before writing each variant JSON file, verify:
+-ALL prompts are photorealistic photography style (NO painting, illustration, or artistic styles)
+- No forbidden styles appear (painting, watercolor, anime, cartoon, sketch, etc.)
+- Photography style varies across variants (portrait, landscape, macro, etc.)
+- Lighting conditions vary across variants (e.g., golden hour vs. dramatic vs. soft)
+- Color palettes differ (e.g., warm vs. cool vs. monochrome)
+- Composition angles vary (e.g., close-up vs. wide shot vs. aerial)
+- Mood/atmosphere is different for each variant
+- Each t2v_prompt1 matches the visual style of its corresponding t2i_prompt1
 
 All output must be ASCII-only JSON with UTF-8 encoding.
 
