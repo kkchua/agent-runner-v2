@@ -153,19 +153,6 @@ def generate_bundle_governance_adapters(
     return written
 
 
-def bundle_governance_summary(governance: BundleGovernance) -> dict[str, Any]:
-    return {
-        "manifest_path": str(governance.manifest_path),
-        "canonical_source_path": str(governance.canonical_source_path),
-        "generated_dir": str(governance.generated_dir),
-        "adapter_targets": list(governance.adapter_targets),
-        "include_in_prompts": governance.include_in_prompts,
-        "prompt_targets": list(governance.prompt_targets),
-        "extensions": [asdict(item) for item in governance.extensions],
-        "artifact_registry": [asdict(item) for item in governance.artifact_registry],
-    }
-
-
 def _render_extension_blocks(governance: BundleGovernance, *, target: str) -> list[str]:
     lines: list[str] = []
     for extension in governance.extensions:

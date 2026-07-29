@@ -306,36 +306,3 @@ DELIVERY_STATUS_RULES_REQUIRED_SECTIONS = [
     "Document-First",
     "Traceability",
 ]
-
-
-def get_required_sections(doc_path: str) -> list[str]:
-    """Get required sections for a document by path or name.
-    
-    Args:
-        doc_path: Full path or just filename (e.g., "PROJECT_ANALYSIS.md")
-    
-    Returns:
-        List of required section headings
-    
-    Raises:
-        ValueError: If document has no defined section requirements
-    """
-    doc_name = Path(doc_path).name
-    
-    # Check system docs
-    if doc_name in SYSTEM_DOC_SECTIONS:
-        return SYSTEM_DOC_SECTIONS[doc_name]
-    
-    # Check codebase docs
-    if doc_name in CODEBASE_DOC_SECTIONS:
-        return CODEBASE_DOC_SECTIONS[doc_name]
-    
-    raise ValueError(
-        f"No section requirements defined for {doc_name}. "
-        f"Add it to agent_runner_v2/config/section_requirements.py"
-    )
-
-
-def list_all_documented_files() -> list[str]:
-    """List all documents with defined section requirements."""
-    return sorted(set(SYSTEM_DOC_SECTIONS.keys()) | set(CODEBASE_DOC_SECTIONS.keys()))

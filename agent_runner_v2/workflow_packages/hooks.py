@@ -94,7 +94,6 @@ def get_extension(template_group: str) -> WorkflowExtensions | None:
         A ``WorkflowExtensions`` instance, or ``None``.
     """
     if template_group in _EXT_CACHE:
-        print(f"[get_extension] cache hit for {template_group!r}", flush=True)
         return _EXT_CACHE[template_group]
 
     # Workflows live at the global runner home — no fallbacks.
@@ -102,7 +101,6 @@ def get_extension(template_group: str) -> WorkflowExtensions | None:
 
     global_wf = Path(get_runner_home()) / "workflows" / "default" / template_group
     candidate = global_wf / "context_extensions.py"
-    print(f"[get_extension] looking up {template_group!r}: path={candidate}, exists={candidate.is_file()}", flush=True)
     ext_path: Path | None = candidate if candidate.is_file() else None
 
     if ext_path is None:
@@ -111,19 +109,16 @@ def get_extension(template_group: str) -> WorkflowExtensions | None:
 
     mod = _load_extension_module(ext_path, str(ext_path))
     if mod is None:
-        print(f"[get_extension] failed to load module from {ext_path}", flush=True)
         _EXT_CACHE[template_group] = None
         return None
 
     cls = _find_extension_class(mod)
     if cls is None:
-        print(f"[get_extension] no WorkflowExtensions subclass found in {ext_path}", flush=True)
         _EXT_CACHE[template_group] = None
         return None
 
     instance = cls()
     _EXT_CACHE[template_group] = instance
-    print(f"[get_extension] loaded {cls.__name__} for {template_group!r}", flush=True)
     return instance
 
 

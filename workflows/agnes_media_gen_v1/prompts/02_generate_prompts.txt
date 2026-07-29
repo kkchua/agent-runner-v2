@@ -37,28 +37,6 @@ Each variant must contain:
   from the description data. Prompts must be in English. Prompts
   should be rich enough to guide an image generation model to produce
   visually similar results to the source image.
-
-  CRITICAL VARIANCE REQUIREMENT: Each variant MUST be visually distinct
-  from the others. Vary these dimensions across variants:
-  • Artistic style: photorealistic, cinematic, painterly, illustration,
-    watercolor, digital art, sketch, etc.
-  • Lighting: golden hour, dramatic chiaroscuro, soft diffused, neon,
-    backlight, rim light, etc.
-  • Color palette: warm tones, cool tones, monochrome, vibrant saturated,
-    muted pastel, high contrast, etc.
-  • Composition: close-up macro, wide establishing shot, bird's eye view,
-    low angle, dutch angle, rule of thirds, centered, etc.
-  • Mood/atmosphere: ethereal, gritty, serene, dynamic, mysterious,
-    nostalgic, futuristic, etc.
-  • Time/season: dawn, midday, dusk, night; spring, summer, autumn, winter
-  • Camera technique: shallow depth of field (bokeh), tilt-shift, motion
-    blur, long exposure, HDR, etc.
-
-  Example: For a nature scene, variant 1 could be "photorealistic macro
-  photography with golden hour lighting and warm tones", variant 2 could
-  be "cinematic wide shot with dramatic fog and cool blue tones", variant
-  3 could be "watercolor illustration style with soft pastel colors", etc.
-
 - t2v_prompt1: A detailed English text-to-video prompt optimized for
   image-to-video animation. This prompt should describe the motion,
   camera movement, and dynamic elements of the scene. Focus on how
@@ -66,11 +44,6 @@ Each variant must contain:
   (pan, zoom, tilt, dolly), subject motion (walking, flowing,
   rotating), and atmospheric dynamics (wind, particles, lighting
   changes). Keep the prompt concise and motion-focused.
-
-  VARIANCE REQUIREMENT: Each variant's video prompt should match the
-  visual style of its corresponding t2i_prompt1 and describe motion
-  appropriate to that style (e.g., gentle camera drift for serene mood,
-  dynamic tracking shot for action mood).
 
 Variant JSON structure:
 {
@@ -106,15 +79,11 @@ Variant JSON structure:
 
 Each variant within the variations array must have:
 - t2i_prompt1: A detailed English text prompt for image generation.
-  CRITICAL: Each variant MUST be visually distinct — vary artistic style,
-  lighting, color palette, composition, mood, time/season, and camera
-  technique across variants. Do NOT generate similar prompts with minor
-  word changes. Each variant should look like it was created by a different
-  artist or photographer with a unique vision.
+  Each variant should offer a different creative interpretation or
+  emphasis while staying faithful to the source image description.
 - t2v_prompt1: A detailed English text prompt for video generation.
-  Each variant should describe motion and camera dynamics that match the
-  visual style of its corresponding t2i_prompt1. Focus on movement, not
-  static appearance.
+  Each variant should describe motion and camera dynamics that bring
+  the scene to life. Focus on movement, not static appearance.
 - image_filename: Output image filename following the pattern
   {stem}_NN.png where NN is two-digit zero-padded (01, 02, 03, etc.).
 - image_url: Empty string (this field will be populated by the
@@ -132,17 +101,6 @@ After writing all variant JSONs to {STEP_02_DIR}:
        {"input": "step_01/image001.json", "output": "step_02/image001.json"}
      ]
    }
-
-PRE-WRITE SELF-CHECK (mandatory before writing each variant JSON):
-Before writing each variant JSON file, verify:
-□ Each of the N variants has a DISTINCT artistic style (not just word changes)
-□ Lighting conditions vary across variants (e.g., golden hour vs. dramatic vs. soft)
-□ Color palettes differ (e.g., warm vs. cool vs. monochrome)
-□ Composition angles vary (e.g., close-up vs. wide shot vs. aerial)
-□ Mood/atmosphere is different for each variant
-□ Each t2v_prompt1 matches the visual style of its corresponding t2i_prompt1
-
-If any two variants are too similar, revise them to increase diversity before writing.
 
 All output must be ASCII-only JSON with UTF-8 encoding.
 

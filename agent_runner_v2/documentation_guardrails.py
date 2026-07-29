@@ -49,19 +49,6 @@ def master_bootstrap_doc_paths(*, job_id: str, mode: str) -> list[str]:
     )
 
 
-def legacy_master_bootstrap_doc_paths(*, job_id: str, mode: str) -> list[str]:
-    """Get legacy master bootstrap document paths (subset without dynamic filenames)."""
-    all_paths = _master_bootstrap_doc_paths(
-        template_group="00_layer1_governance_bootstrap_v1",
-        job_id=job_id,
-        mode=mode,
-    )
-    return [
-        path for key, path in all_paths.items()
-        if key not in ["SYSTEM_DOCS_VALIDATION", "REVIEW_FILE_SUGGESTED"]
-    ]
-
-
 def _unique_paths(paths: Iterable[str]) -> list[str]:
     seen: set[str] = set()
     out: list[str] = []

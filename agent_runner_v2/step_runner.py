@@ -2388,7 +2388,8 @@ def build_context(
     ctx["PROGRESS_FILE"] = _resolve_progress_file_path(state=state, step=step)
 
     try:
-        _tools_dir = str((PACKAGE_ROOT / "tools").resolve())
+        import os as _os
+        _tools_dir = _os.path.normpath(str((PACKAGE_ROOT / "tools").resolve()))
         ctx["TOOLS_DIR"] = _tools_dir
     except Exception:
         ctx["TOOLS_DIR"] = ""

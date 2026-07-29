@@ -35,3 +35,19 @@ class ArtifactMissingError(Exception):
     def __init__(self, message: str, missing: list[str]) -> None:
         super().__init__(message)
         self.missing = missing
+
+
+class ConfigurationError(Exception):
+    """Raised when configuration is invalid, missing, or inconsistent.
+
+    Used for cases where required configuration values are not provided
+    or configuration files are malformed.
+    """
+
+
+class NotFoundError(Exception):
+    """Raised when a required resource (file, directory, registry entry) is not found.
+
+    Distinct from ArtifactMissingError which is specific to coder-produced artifacts.
+    Used for configuration files, registry entries, and other infrastructure resources.
+    """
