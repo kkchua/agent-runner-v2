@@ -321,6 +321,8 @@ Always use `.venv\Scripts\python` (Windows) for Python and pytest commands in th
 
 12. **Protocol-based hooks** — Use `hooks_protocols.py` for type-safe dependency injection. Replaces deferred imports with explicit Protocol interfaces. `runtime_hooks.py` provides lazy-loading implementation.
 
+**Pattern Compliance:** See `docs/developer/CODER_IMPLEMENTATION_SOP.md` for mandatory pattern compliance rules, quick reference examples, and verification checklist when modifying code.
+
 ## Operator Console
 
 A Flet-based desktop GUI (`ukbe-run-agent console`) for monitoring and managing workflow runs without a terminal.

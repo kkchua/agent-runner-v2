@@ -101,6 +101,19 @@ Example pattern:
 
 `Layer 1 governance is in docs/system/00_governance/foundation/current/. If you need the active published version record, also check docs/system/00_governance/foundation/current/governance_set_manifest.json.`
 
+## Pattern Quick Reference
+
+When modifying code in these modules, follow the established patterns (v0.3.0+):
+
+| Module | Pattern | Implementation |
+|--------|---------|----------------|
+| `coder_adapters.py` | Registry dispatch | Add to `CODER_REGISTRY` dict, no if/elif |
+| `daemon.py` | Config dataclass | Extend `SupervisorConfig` with defaults |
+| `exceptions.py` | Exception-based errors | Raise `ConfigurationError`/`NotFoundError` |
+| `hooks_protocols.py` | Protocol hooks | Define Protocol → lazy-load in `runtime_hooks.py` |
+
+**Reference:** `docs/developer/CODER_IMPLEMENTATION_SOP.md` — Pattern Compliance Rules section has copy-paste examples and verification checklist.
+
 ## Maintenance
 
 If repository structure changes:

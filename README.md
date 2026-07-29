@@ -41,6 +41,8 @@ This is the master index for agent-runner-v2 documentation. Use this page to fin
 7. Use `.venv\Scripts\python` for Python/pytest commands
 8. All code must include PEP 257 docstrings
 
+**Pattern Compliance:** CODER_IMPLEMENTATION_SOP.md also defines mandatory patterns (v0.3.0+) for coder dispatch, config dataclasses, exception-based errors, and protocol-based hooks. See the "Pattern Compliance Rules" section.
+
 ---
 
 ### Architecture & Design
