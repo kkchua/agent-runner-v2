@@ -3,7 +3,7 @@ from __future__ import annotations
 import shutil
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from .artifact_keys import ARTIFACT_KEY_REVIEW
 from .constants import known_artifact_paths
@@ -17,6 +17,9 @@ from .coder_registry import resolve_effective_coder, resolve_role_policy
 from .runner_logger import log_resolver
 from .step_runner import StepResult
 from .workflow_path_contracts import resolve_workflow_output_paths
+
+if TYPE_CHECKING:
+    from .hooks_protocols import StepExecutionHooks
 
 
 @dataclass
@@ -44,7 +47,7 @@ def prepare_step_execution(
     project_root: Path,
     workflow_key_override: str = "",
     cli_coder: str | None = None,
-    hooks: Any,
+    hooks: "StepExecutionHooks",
 ) -> PreparedStepExecution:
     missing_required = hooks._missing_artifacts(step_cfg.get("required_inputs", []), state)
     if missing_required:
@@ -283,7 +286,7 @@ def execute_prepared_step(
     step: str,
     step_cfg: dict[str, Any],
     effective_root: Path,
-    hooks: Any,
+    hooks: "StepExecutionHooks",
 ) -> StepResult:
     if prepared.action_name:
         return hooks.run_action(

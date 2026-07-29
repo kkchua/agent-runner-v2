@@ -280,21 +280,6 @@ class _DaemonLogger:
             _append_jsonl(child.child_event_log_path, payload)
 
 
-def _submission_state_for_run_status(run_status: str) -> str:
-    """Map run_status to submission state.
-
-    Args:
-        run_status: Backend run_status value.
-
-    Returns:
-        'completed' for successful states, 'failed' otherwise.
-    """
-    normalized = str(run_status or "").strip().lower()
-    if normalized in {"completed", "pending", "awaiting_human"}:
-        return "completed"
-    return "failed"
-
-
 def _persist_backend_linkage_to_job_state(
     *,
     job_state: dict[str, Any],
@@ -637,28 +622,38 @@ def _terminate_child(child: ChildExecution, logger: _DaemonLogger, sigkill: bool
         return
 
 
-def _run_supervisor(*, worker_id: str, worker_label: str, backend_url: str, poll_seconds: int, max_parallel: int, stalled_seconds: int, step_timeout_seconds: int, kill_grace_seconds: int, runtime_dir: Path, log_file: Path, cli_pythonpath: str | None, step_spec_source: str, cli_version: str = "", engine_version: str = "", once: bool = False) -> int:
+@dataclass
+class SupervisorConfig:
+    """Configuration for the daemon supervisor.
+
+    Encapsulates all parameters needed to run the supervisor loop,
+    replacing the previous 17-parameter function signature.
+    """
+    worker_id: str
+    worker_label: str
+    backend_url: str
+    poll_seconds: int
+    max_parallel: int
+    stalled_seconds: int
+    step_timeout_seconds: int
+    kill_grace_seconds: int
+    runtime_dir: Path
+    log_file: Path
+    cli_pythonpath: str | None
+    step_spec_source: str
+    cli_version: str = ""
+    engine_version: str = ""
+    once: bool = False
+
+
+def _run_supervisor(*, config: SupervisorConfig) -> int:
     """Run the main daemon supervisor loop.
 
     Polls backend for work, spawns children, monitors liveness,
     and handles timeouts and shutdown signals.
 
     Args:
-        worker_id: Unique worker identifier.
-        worker_label: Queue label for claim filtering.
-        backend_url: Backend base URL.
-        poll_seconds: Interval between polls when idle.
-        max_parallel: Maximum concurrent children.
-        stalled_seconds: Seconds without log activity before marking stalled.
-        step_timeout_seconds: Hard timeout for step execution.
-        kill_grace_seconds: Grace period between SIGTERM and SIGKILL.
-        runtime_dir: Directory for child execution files.
-        log_file: Path to daemon log file.
-        cli_pythonpath: Optional PYTHONPATH override.
-        step_spec_source: Step spec source mode.
-        cli_version: CLI version string.
-        engine_version: Engine version string.
-        once: If True, process one step and exit.
+        config: Supervisor configuration dataclass containing all parameters.
 
     Returns:
         Exit code (0 for normal shutdown).
@@ -667,10 +662,10 @@ def _run_supervisor(*, worker_id: str, worker_label: str, backend_url: str, poll
     from .daemon_runtime import build_job_sync_payload
     from .job_state import job_dir
 
-    logger = _DaemonLogger(log_file, worker_id)
-    client = BackendClient(backend_url)
-    client.register_worker(worker_id=worker_id, host_name=None, capabilities={'mode': ['execute-step-daemon'], 'max_parallel': max_parallel}, worker_label=worker_label)
-    logger.log('info', 'daemon_started', message='worker daemon started', details={'backend_url': backend_url, 'worker_label': worker_label, 'max_parallel': max_parallel, 'runtime_dir': str(runtime_dir), 'step_spec_source': step_spec_source, 'cli_version': cli_version, 'engine_version': engine_version, 'engine_pythonpath': cli_pythonpath or '(ambient)'})
+    logger = _DaemonLogger(config.log_file, config.worker_id)
+    client = BackendClient(config.backend_url)
+    client.register_worker(worker_id=config.worker_id, host_name=None, capabilities={'mode': ['execute-step-daemon'], 'max_parallel': config.max_parallel}, worker_label=config.worker_label)
+    logger.log('info', 'daemon_started', message='worker daemon started', details={'backend_url': config.backend_url, 'worker_label': config.worker_label, 'max_parallel': config.max_parallel, 'runtime_dir': str(config.runtime_dir), 'step_spec_source': config.step_spec_source, 'cli_version': config.cli_version, 'engine_version': config.engine_version, 'engine_pythonpath': config.cli_pythonpath or '(ambient)'})
 
     children: dict[str, ChildExecution] = {}
     terminal_run_ids: set[str] = set()
@@ -694,26 +689,26 @@ def _run_supervisor(*, worker_id: str, worker_label: str, backend_url: str, poll
             last_activity = _latest_mtime([child.combined_log_path, child.result_path], child.started_at_monotonic)
             if proc_rc is None:
                 active += 1
-                if child.term_sent_at is not None and now - child.term_sent_at >= kill_grace_seconds:
+                if child.term_sent_at is not None and now - child.term_sent_at >= config.kill_grace_seconds:
                     child.state = 'killed'
                     child.watchdog_reason = 'kill_grace_exceeded'
                     _terminate_child(child, logger, sigkill=True)
-                elif step_timeout_seconds > 0 and child.term_sent_at is None and now - child.started_at_monotonic >= step_timeout_seconds:
+                elif config.step_timeout_seconds > 0 and child.term_sent_at is None and now - child.started_at_monotonic >= config.step_timeout_seconds:
                     child.state = 'timed_out'
                     child.watchdog_reason = 'step_timeout_exceeded'
                     child.term_sent_at = now
-                    logger.log('error', 'child_timeout', message='child exceeded timeout', child=child, details={'timeout_seconds': step_timeout_seconds})
+                    logger.log('error', 'child_timeout', message='child exceeded timeout', child=child, details={'timeout_seconds': config.step_timeout_seconds})
                     _terminate_child(child, logger, sigkill=False)
-                elif child.term_sent_at is None and now - last_activity >= stalled_seconds and child.state != 'stalled':
+                elif child.term_sent_at is None and now - last_activity >= config.stalled_seconds and child.state != 'stalled':
                     child.state = 'stalled'
                     child.watchdog_reason = 'log_inactive'
-                    logger.log('warning', 'child_stalled', message='child appears stalled', child=child, details={'stalled_seconds': stalled_seconds})
+                    logger.log('warning', 'child_stalled', message='child appears stalled', child=child, details={'stalled_seconds': config.stalled_seconds})
                 elif child.term_sent_at is None and child.state != 'running':
                     child.state = 'running'
                     child.watchdog_reason = ''
                     logger.log('info', 'child_running', message='child is running', child=child)
-                if now - child.last_heartbeat_at >= max(5, poll_seconds):
-                    _send_child_heartbeat(client, worker_id, child, status='busy')
+                if now - child.last_heartbeat_at >= max(5, config.poll_seconds):
+                    _send_child_heartbeat(client, config.worker_id, child, status='busy')
                     child.last_heartbeat_at = now
                 continue
 
@@ -726,10 +721,10 @@ def _run_supervisor(*, worker_id: str, worker_label: str, backend_url: str, poll
             del children[step_run_id]
 
         if running:
-            while len(children) < max_parallel:
-                client.heartbeat(worker_id=worker_id, status='polling', current_step_run_id=None)
+            while len(children) < config.max_parallel:
+                client.heartbeat(worker_id=config.worker_id, status='polling', current_step_run_id=None)
                 logger.log('info', 'poll_started', message='polling for work', details={'active_children': len(children)})
-                claim = client.claim_step(worker_id=worker_id)
+                claim = client.claim_step(worker_id=config.worker_id)
                 if not claim.get('step_run') or not claim.get('run'):
                     logger.log('info', 'poll_no_work', message='no work available', details={'active_children': len(children)})
                     break
@@ -745,7 +740,7 @@ def _run_supervisor(*, worker_id: str, worker_label: str, backend_url: str, poll
                     logger.log('info', 'skip_terminal_run', message=f'run {run_code} already failed in this daemon session, skipping', details={'run_id': claim_run_id, 'run_code': run_code})
                     continue
                 try:
-                    child = _spawn_child(claim=claim, runtime_root=runtime_dir, cli_pythonpath=cli_pythonpath, logger=logger, backend_url=backend_url, step_spec_source=step_spec_source)
+                    child = _spawn_child(claim=claim, runtime_root=config.runtime_dir, cli_pythonpath=config.cli_pythonpath, logger=logger, backend_url=config.backend_url, step_spec_source=config.step_spec_source)
                 except Exception as exc:
                     step_run_id = str(claim.get('step_run', {}).get('id') or '')
                     run_code = str(claim.get('run', {}).get('run_code') or '')
@@ -771,23 +766,23 @@ def _run_supervisor(*, worker_id: str, worker_label: str, backend_url: str, poll
                         pass
                     continue
                 children[child.step_run_id] = child
-                _send_child_heartbeat(client, worker_id, child, status='busy')
+                _send_child_heartbeat(client, config.worker_id, child, status='busy')
                 child.last_heartbeat_at = time.monotonic()
                 active = len(children)
-                if once:
+                if config.once:
                     running = False
                     break
 
         if not children:
-            client.heartbeat(worker_id=worker_id, status='idle', current_step_run_id=None)
-            if once and not running:
+            client.heartbeat(worker_id=config.worker_id, status='idle', current_step_run_id=None)
+            if config.once and not running:
                 break
-        time.sleep(max(poll_seconds, 1))
+        time.sleep(max(config.poll_seconds, 1))
 
     if children:
         for child in children.values():
             _terminate_child(child, logger, sigkill=False)
-    client.heartbeat(worker_id=worker_id, status='idle', current_step_run_id=None)
+    client.heartbeat(worker_id=config.worker_id, status='idle', current_step_run_id=None)
     logger.log('info', 'daemon_shutdown', message='worker daemon stopped')
     return 0
 
@@ -850,7 +845,7 @@ def main(argv: list[str] | None = None) -> int:
     cli_pythonpath = args.engine_root or _resolve_engine_pythonpath(cfg, bootstrap_logger.log)
     runtime_dir.mkdir(parents=True, exist_ok=True)
 
-    return _run_supervisor(
+    config = SupervisorConfig(
         worker_id=worker_id,
         worker_label=worker_label,
         backend_url=backend_url,
@@ -867,3 +862,5 @@ def main(argv: list[str] | None = None) -> int:
         engine_version=engine_version,
         once=args.once,
     )
+
+    return _run_supervisor(config=config)

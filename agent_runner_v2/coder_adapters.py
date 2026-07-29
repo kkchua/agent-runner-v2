@@ -29,9 +29,12 @@ import time
 import uuid
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 from .runtime_context import PROJECT_ROOT, RUNNER_ROOT
+
+# Type alias for coder invoker functions
+CoderInvoker = Callable[..., dict[str, Any]]
 
 
 @dataclass
@@ -595,6 +598,59 @@ def _ensure_env_loaded() -> None:
         _env_loaded = True
 
 
+# -----------------------------------------------------------------------------
+# Coder Registry Dispatch Pattern
+# -----------------------------------------------------------------------------
+# Registry mapping coder names to their invoker functions.
+# This replaces the large if/elif chain with a dictionary lookup.
+
+
+def _invoke_codex_wrapper(
+    *,
+    step: str,
+    prompt_text: str,
+    cwd: Path,
+    coder_config: dict[str, Any] | None = None,  # noqa: ARG001
+    sidecar_path: Path | None = None,
+    timeout_seconds_override: int | None = None,
+) -> dict[str, Any]:
+    """Wrapper to normalize _invoke_codex signature (ignores coder_config)."""
+    return _invoke_codex(
+        step=step,
+        prompt_text=prompt_text,
+        cwd=cwd,
+        sidecar_path=sidecar_path,
+        timeout_seconds_override=timeout_seconds_override,
+    )
+
+
+def _invoke_plain_wrapper(
+    *,
+    step: str,
+    prompt_text: str,
+    cwd: Path,
+    coder_config: dict[str, Any] | None = None,  # noqa: ARG001
+    sidecar_path: Path | None = None,
+    timeout_seconds_override: int | None = None,
+) -> dict[str, Any]:
+    """Wrapper to normalize _invoke_plain signature.
+
+    Extracts the actual coder name from the first positional argument pattern.
+    For plain invocation, we pass the coder name from the outer invoke_coder context.
+    """
+    # This wrapper should only be used for the fallback "plain" case
+    # The actual coder name needs to be captured from the outer scope
+    # We use a sentinel value that invoke_coder will replace
+    raise NotImplementedError(
+        "Plain coder invocation requires the coder name from outer scope. "
+        "Use direct _invoke_plain call instead of registry for custom coders."
+    )
+
+
+# CODER_REGISTRY will be populated after all invoker functions are defined
+CODER_REGISTRY: dict[str, CoderInvoker] = {}
+
+
 def invoke_coder(
     *,
     coder: str,
@@ -647,16 +703,29 @@ def invoke_coder(
 
     started_at = now_iso_fn()
     started_monotonic = time.monotonic()
-    if coder == "codex":
-        result = _invoke_codex(step=step, prompt_text=prompt_text, cwd=cwd, sidecar_path=sidecar_path, timeout_seconds_override=timeout_seconds_override)
-    elif coder == "claude":
-        result = _invoke_claude(step=step, prompt_text=prompt_text, cwd=cwd, sidecar_path=sidecar_path, coder_config=cc, timeout_seconds_override=timeout_seconds_override)
-    elif coder == "qwen":
-        result = _invoke_qwen(step=step, prompt_text=prompt_text, cwd=cwd, coder_config=cc, sidecar_path=sidecar_path, timeout_seconds_override=timeout_seconds_override)
-    elif coder == "opencode":
-        result = _invoke_opencode(step=step, prompt_text=prompt_text, cwd=cwd, coder_config=cc, sidecar_path=sidecar_path, timeout_seconds_override=timeout_seconds_override)
+
+    # Dispatch via registry lookup (replaces large if/elif chain)
+    invoker = CODER_REGISTRY.get(coder)
+    if invoker is not None:
+        result = invoker(
+            step=step,
+            prompt_text=prompt_text,
+            cwd=cwd,
+            coder_config=cc,
+            sidecar_path=sidecar_path,
+            timeout_seconds_override=timeout_seconds_override,
+        )
     else:
-        result = _invoke_plain(coder=coder, step=step, prompt_text=prompt_text, cwd=cwd, sidecar_path=sidecar_path, timeout_seconds_override=timeout_seconds_override)
+        # Fallback for custom/unknown coders
+        result = _invoke_plain(
+            coder=coder,
+            step=step,
+            prompt_text=prompt_text,
+            cwd=cwd,
+            sidecar_path=sidecar_path,
+            timeout_seconds_override=timeout_seconds_override,
+        )
+
     finished_at = now_iso_fn()
     duration_ms = int((time.monotonic() - started_monotonic) * 1000)
 
@@ -1087,6 +1156,15 @@ def _invoke_opencode(*, step: str, prompt_text: str, cwd: Path, coder_config: di
         "usage": usage,
         "raw_events": raw_events,
     }
+
+
+# Populate CODER_REGISTRY after all invoker functions are defined
+CODER_REGISTRY.update({
+    "codex": _invoke_codex_wrapper,
+    "claude": _invoke_claude,
+    "qwen": _invoke_qwen,
+    "opencode": _invoke_opencode,
+})
 
 
 def _parse_single_json_payload(text: str) -> dict[str, Any] | None:

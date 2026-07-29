@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit, urlunsplit
 
+from .exceptions import ConfigurationError, NotFoundError
 from .runtime_context import RUNNER_ROOT
 
 
@@ -18,18 +19,21 @@ def _runner_root() -> Path:
     return Path(RUNNER_ROOT)
 
 
-def _workflow_registry_root(bundle_root: Path | str | None = None) -> Path | None:
+def _workflow_registry_root(bundle_root: Path | str | None = None) -> Path:
     """Return the workflow registry root path.
 
     Args:
-        bundle_root: Optional bundle root path to derive registry from.
+        bundle_root: Bundle root path to derive registry from.
 
     Returns:
-        Path to workflow _registry directory, or None if no bundle_root.
+        Path to workflow _registry directory.
+
+    Raises:
+        ConfigurationError: If bundle_root is not provided.
     """
-    if bundle_root:
-        return Path(bundle_root).resolve().parent / "_registry"
-    return None
+    if not bundle_root:
+        raise ConfigurationError("bundle_root is required to resolve workflow registry root")
+    return Path(bundle_root).resolve().parent / "_registry"
 
 
 def _runtime_registry_root() -> Path:
@@ -73,9 +77,11 @@ def _registry_file(
         Path to registry file (existing file or fallback).
     """
     candidates: list[Path] = []
-    workflow_registry = _workflow_registry_root(bundle_root)
-    if workflow_registry is not None:
+    try:
+        workflow_registry = _workflow_registry_root(bundle_root)
         candidates.append(workflow_registry / filename)
+    except ConfigurationError:
+        pass  # No bundle_root provided, skip workflow registry
     candidates.append(_runtime_registry_root() / filename)
 
     for candidate in candidates:
@@ -114,7 +120,7 @@ def load_role_policies(bundle_root: Path | str | None = None) -> dict[str, dict[
     return dict(payload.get("role_policies", {}))
 
 
-def coder_roles_path(bundle_root: Path | str | None = None) -> Path | None:
+def coder_roles_path(bundle_root: Path | str | None = None) -> Path:
     """Return the path to coder_roles.json registry file.
 
     Args:
@@ -122,8 +128,14 @@ def coder_roles_path(bundle_root: Path | str | None = None) -> Path | None:
 
     Returns:
         Path to coder_roles.json file.
+
+    Raises:
+        NotFoundError: If coder_roles.json is not found in any registry.
     """
-    return _registry_file("coder_roles.json", bundle_root=bundle_root)
+    path = _registry_file("coder_roles.json", bundle_root=bundle_root)
+    if not path.exists():
+        raise NotFoundError(f"coder_roles.json not found in registry (checked bundle: {bundle_root})")
+    return path
 
 
 def load_coder_roles(bundle_root: Path | str | None = None) -> dict[str, dict[str, Any]]:
