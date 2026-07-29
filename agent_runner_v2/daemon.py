@@ -708,8 +708,13 @@ def _run_supervisor(*, config: SupervisorConfig) -> int:
                     child.watchdog_reason = ''
                     logger.log('info', 'child_running', message='child is running', child=child)
                 if now - child.last_heartbeat_at >= max(5, config.poll_seconds):
-                    _send_child_heartbeat(client, config.worker_id, child, status='busy')
-                    child.last_heartbeat_at = now
+                    try:
+                        _send_child_heartbeat(client, config.worker_id, child, status='busy')
+                        child.last_heartbeat_at = now
+                    except RuntimeError as hb_err:
+                        # Backend temporarily unavailable (e.g., during sync)
+                        logger.log('warning', 'heartbeat_failed', message=f'child heartbeat failed: {hb_err}', child=child)
+                        # Don't update last_heartbeat_at, will retry next cycle
                 continue
 
             child.exit_code = proc_rc
@@ -721,10 +726,24 @@ def _run_supervisor(*, config: SupervisorConfig) -> int:
             del children[step_run_id]
 
         if running:
-            while len(children) < config.max_parallel:
+            # Check backend health before polling
+            try:
                 client.heartbeat(worker_id=config.worker_id, status='polling', current_step_run_id=None)
+            except RuntimeError as hb_err:
+                # Backend temporarily unavailable (e.g., during sync)
+                logger.log('warning', 'poll_heartbeat_failed', message=f'poll heartbeat failed: {hb_err}', details={'active_children': len(children)})
+                time.sleep(config.poll_seconds)
+                continue
+
+            while len(children) < config.max_parallel:
                 logger.log('info', 'poll_started', message='polling for work', details={'active_children': len(children)})
-                claim = client.claim_step(worker_id=config.worker_id)
+                try:
+                    claim = client.claim_step(worker_id=config.worker_id)
+                except RuntimeError as claim_err:
+                    # Backend temporarily unavailable
+                    logger.log('warning', 'claim_step_failed', message=f'claim_step failed: {claim_err}', details={'active_children': len(children)})
+                    break
+
                 if not claim.get('step_run') or not claim.get('run'):
                     logger.log('info', 'poll_no_work', message='no work available', details={'active_children': len(children)})
                     break
@@ -774,7 +793,10 @@ def _run_supervisor(*, config: SupervisorConfig) -> int:
                     break
 
         if not children:
-            client.heartbeat(worker_id=config.worker_id, status='idle', current_step_run_id=None)
+            try:
+                client.heartbeat(worker_id=config.worker_id, status='idle', current_step_run_id=None)
+            except RuntimeError as hb_err:
+                logger.log('warning', 'idle_heartbeat_failed', message=f'idle heartbeat failed: {hb_err}')
             if config.once and not running:
                 break
         time.sleep(max(config.poll_seconds, 1))

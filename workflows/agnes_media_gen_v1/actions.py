@@ -163,6 +163,39 @@ def _write_index(index_path, step_name, file_mappings):
         json.dump(index_data, f, indent=2, ensure_ascii=False)
 
 
+def _get_next_sequence_filename(output_dir: Path, base_name: str, ext: str) -> str:
+    """Find the next available filename with auto-incrementing sequence number.
+
+    If base_name.ext exists, find the next available sequence number:
+    - base_name_001.ext, base_name_002.ext, etc.
+
+    Args:
+        output_dir: Directory where the file will be saved.
+        base_name: Base filename without extension (e.g., 'image_01').
+        ext: File extension without dot (e.g., 'png').
+
+    Returns:
+        A filename string with the next available sequence number.
+    """
+    ext = ext.lstrip(".")
+    base_path = output_dir / f"{base_name}.{ext}"
+
+    # If base file doesn't exist, use it
+    if not base_path.exists():
+        return f"{base_name}.{ext}"
+
+    # Find next available sequence number
+    seq = 1
+    while True:
+        candidate = output_dir / f"{base_name}_{seq:03d}.{ext}"
+        if not candidate.exists():
+            return f"{base_name}_{seq:03d}.{ext}"
+        seq += 1
+        # Safety limit to prevent infinite loops
+        if seq > 9999:
+            return f"{base_name}_{seq:04d}.{ext}"
+
+
 @dataclass
 class _ImageWorkItem:
     """Single image generation work item for concurrent processing."""
@@ -262,7 +295,11 @@ def _process_single_image(item: _ImageWorkItem) -> dict:
         stem = item.variant_json_path.stem
         image_filename = f"{stem}_{item.var_idx + 1:02d}.png"
 
+    # Use auto-incrementing filename to prevent overwrites on retry
+    base_name = Path(image_filename).stem
+    image_filename = _get_next_sequence_filename(item.step_03_dir, base_name, "png")
     img_output_path = item.step_03_dir / image_filename
+
     with open(img_output_path, "wb") as img_f:
         img_f.write(img_resp.content)
     logger.info(
@@ -456,12 +493,15 @@ def _process_single_video(item: _VideoWorkItem) -> dict:
 
     image_filename = item.variation.get("image_filename", "")
     if image_filename:
-        video_filename = Path(image_filename).stem + ".mp4"
+        video_base = Path(image_filename).stem
     else:
         stem = item.variant_json_path.stem
-        video_filename = f"{stem}_{item.var_idx + 1:02d}.mp4"
+        video_base = f"{stem}_{item.var_idx + 1:02d}"
 
+    # Use auto-incrementing filename to prevent overwrites on retry
+    video_filename = _get_next_sequence_filename(item.step_04_dir, video_base, "mp4")
     vid_output_path = item.step_04_dir / video_filename
+
     with open(vid_output_path, "wb") as vid_f:
         vid_f.write(vid_resp.content)
     logger.info(
