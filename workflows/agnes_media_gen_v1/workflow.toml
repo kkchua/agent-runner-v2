@@ -73,7 +73,7 @@ exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
 name = "generate_images"
 action = "generate_images"
 enable_notifications = true
-requires_human_approval_after = true
+requires_human_approval_after = false
 onsuccess = "archive_step_02"
 
 [step.artifacts]

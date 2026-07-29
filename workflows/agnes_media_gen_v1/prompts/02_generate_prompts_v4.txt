@@ -393,43 +393,103 @@ Assume the generated image is Frame 1.
 
 Describe only plausible motion.
 
+## Allowed Camera Motion (Smooth Professional Movement)
+
+- dolly (smooth horizontal movement on track)
+- pan (horizontal rotation, smooth)
+- tilt (vertical rotation, smooth)
+- crane (elevated sweeping movement, stable)
+- orbit (circular movement around subject, smooth)
+- push-in (smooth forward movement)
+- pull-back (smooth backward movement)
+- static (no camera movement, only environmental motion)
+
+## Forbidden Camera Motion (Avoid Shaky/Unstable Footage)
+
+- walking / handheld walking
+- footstep motion / step-induced shake
+- running / jogging camera
+- body-mounted camera movement
+- POV walking
+- follow-cam with footstep bounce
+- any motion implying human gait or steps
+- shaky cam / intentional shake
+- documentary-style handheld
+- selfie-style movement
+
+## Subject Motion
+
+## Temporal Consistency Rules (CRITICAL)
+
+Frame 1 contains ALL objects and subjects that exist in the video.
+
+### Objects That EXIST in Frame 1 (PRESERVE)
+
+Every object visible in Frame 1 MUST remain present throughout the video:
+- All animals, people, creatures in Frame 1 must stay in scene
+- All objects, props, structures in Frame 1 must remain visible
+- No sudden disappearance of existing subjects
+- No objects fading out or vanishing mid-video
+- Maintain spatial relationships between existing objects
+
+### Objects That Do NOT EXIST in Frame 1 (FORBIDDEN)
+
+Never introduce objects not present in Frame 1:
+- No animals suddenly entering the scene
+- No people walking into frame
+- No objects appearing out of nowhere
+- No new vehicles, buildings, or structures materializing
+- No weather elements (rain, snow) suddenly starting
+
+### Movement Constraints
+
 Allowed:
+- Existing subjects moving WITHIN the frame (walking, swimming, flying)
+- Existing subjects partially occluded by other objects
+- Camera movement revealing more of existing scene
+- Subjects moving out of frame at edges (with clear exit)
 
-Camera motion
+Forbidden:
+- New subjects entering from frame edges
+- Objects popping into existence
+- Objects vanishing without reason
+- Subjects teleporting within frame
 
-- dolly
-- pan
-- tilt
-- crane
-- orbit
-- push-in
-- pull-back
+## Environmental Motion
 
-Subject motion
+- natural element movement (water, clouds, leaves, particles)
+- wind effects on hair, clothing, vegetation
+- light rays shifting
+- atmospheric haze movement
+- weather that already exists in Frame 1 (rain falling, snow drifting)
 
-Environmental motion
+## Lighting Evolution
 
-Lighting evolution
-
-Cloud movement
-
-Water movement
-
-Wind
-
-Particles
-
-Never introduce:
+## Never introduce:
 
 - new people
+- new animals
 - new objects
+- new buildings or structures
+- new vehicles
 - scene transitions
 - explosions
 - morphing
 - teleportation
 - impossible movement
+- walking through the scene
+- objects suddenly appearing
+- objects suddenly disappearing
+- subjects entering from off-screen
 
-The video should feel like a natural continuation of the still image.
+## Camera Motion Style
+
+Camera motion must be:
+- SMOOTH and STABLE (as if on professional rig, dolly, crane, or stabilized gimbal)
+- CINEMATIC (slow, deliberate, controlled)
+- NO FOOTSTEP INDUCED MOTION (no bobbing, no bounce, no rhythm of walking)
+
+The video should feel like a natural continuation of the still image with cinematic, professional camera work.
 
 ---
 
@@ -486,6 +546,21 @@ Style
 - anime
 - CGI
 - 3D render
+
+Temporal Consistency (Video)
+
+- objects appearing mid-video
+- objects disappearing mid-video
+- subjects entering frame
+- subjects exiting frame
+- new animals appearing
+- new people appearing
+- objects vanishing
+- temporal flicker
+- popping objects
+- sudden appearance
+- sudden disappearance
+- teleportation
 
 ---
 
@@ -567,6 +642,18 @@ Before finalizing each image:
 ✓ Camera information included
 
 ✓ Video prompt starts from Frame 1
+
+✓ Video camera motion is SMOOTH and STABLE (no walking, no handheld shake, no footstep motion)
+
+✓ NO forbidden camera motion: walking, handheld, POV walking, footstep-induced shake
+
+✓ TEMPORAL CONSISTENCY: All objects from Frame 1 remain throughout video
+
+✓ NO objects suddenly appearing in video
+
+✓ NO objects suddenly disappearing from video
+
+✓ NO new animals/people entering from off-screen
 
 ✓ All variants are genuinely different from each other
 
