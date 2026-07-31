@@ -654,6 +654,109 @@ adds an extra validation layer but is not required for basic operation.
 
 ---
 
+### C.6: Self-Validation
+
+**Recommended for:** All prompt-driven producer steps (generate, define,
+design, analyze).
+
+Self-Validation is a pattern where the LLM checks its own output against
+criteria BEFORE reporting APPROVED. This catches errors early and improves
+quality without waiting for external review.
+
+#### When to use
+
+- Steps that produce design documents (REQUIREMENTS, ARTIFACTS, STEPS)
+- Steps where downstream steps will fail if the output is incomplete
+- Complex workflows where reviewer time is limited
+
+#### How to implement
+
+Add a "Self-Validation" section to the prompt:
+
+```text
+## Self-Validation
+
+Before reporting APPROVED, validate your output against these criteria:
+
+1. Completeness Check: Does the output include ALL required elements?
+2. Consistency Check: Are there internal contradictions?
+3. Traceability Check: Can every element be traced to the input spec?
+4. Feasibility Check: Is the design implementable?
+
+If any check fails:
+- Revise the output to fix the issue
+- Re-run the validation
+- Only report APPROVED when all checks pass
+
+Include a "Self-Validation Results" section in the output documenting
+which checks passed/failed and any revisions made.
+```
+
+#### Benefits
+
+- Catches errors before they propagate downstream
+- Reduces reviewer burden (catches obvious issues)
+- Encourages higher quality output through self-correction
+- Provides transparency via documented validation results
+
+---
+
+### C.7: Principles-Based Generation
+
+**Recommended for:** Complex generation steps where the exact file list
+cannot be known in advance.
+
+Principles-based generation is an alternative to fixed task lists. Instead
+of listing "generate these 6 files", the prompt instructs the LLM to
+"infer the required files from the design documents."
+
+#### Fixed task list (traditional)
+
+```text
+Generate these 6 files:
+1. workflow.toml
+2. context_extensions.py
+3. prompts/index.txt
+4. README.md
+5. .env.sample
+6. config.json.sample
+```
+
+**Problem:** If the design changes (e.g., needs actions.py), the prompt
+must be updated.
+
+#### Principles-based (recommended)
+
+```text
+Generate ALL files the design requires. From the STEP_ARCHITECTURE and
+ARTIFACT_CONTRACT, determine:
+
+- workflow.toml (always required)
+- context_extensions.py (always required)
+- prompts/ (if prompt-driven steps exist)
+- actions.py (if action-driven steps exist)
+- README.md (always required)
+- .env.sample (if environment variables needed)
+- config.json.sample (if runtime config needed)
+
+Principle: Include a file ONLY if the design calls for it.
+```
+
+**Benefits:**
+- Adapts to design changes without prompt updates
+- Prevents missing files (e.g., actions.py for action steps)
+- Prevents unnecessary files (e.g., empty .env.sample)
+- Aligns with the Single Responsibility Principle
+
+#### When to use each approach
+
+| Approach | Use When |
+|----------|----------|
+| Fixed list | Simple workflows with predictable structure |
+| Principles-based | Complex workflows where design determines files |
+
+---
+
 ## Part D: Workflow Patterns
 
 ### Pattern 1: Action-Only Pipeline
@@ -720,6 +823,110 @@ generate → review → refine → validate → audit → promote → stepComple
   review/audit steps
 - Has legacy `output_paths.py` (should be migrated to `context_extensions.py`)
 - Uses `[workflow.init]` sub-table style
+
+---
+
+### Pattern 4: Gatekeeper QC Pipeline
+
+**Used by:** `workflow_builder_v1`
+
+Quality control pattern with validation checkpoints between each major
+phase. Gatekeepers validate the output of the preceding step before
+downstream steps consume it.
+
+```
+generate_test_criteria → review_test_criteria → analyze_spec → gatekeep_requirements
+  → resolve_questions → define_artifacts → gatekeep_artifacts → design_steps
+  → gatekeep_steps → generate_package → gatekeep_package → validate_bundle
+  → review_package → [refine_package → review_package] → promote_package → stepCompletion
+```
+
+**Full 8-step sequence with 4 gatekeepers:**
+
+| Phase | Step | Type | Purpose |
+|-------|------|------|---------|
+| 1 | analyze_spec | prompt | Generate requirements from spec |
+| 1a | gatekeep_requirements | prompt | QC: Validate requirements completeness |
+| 2 | resolve_questions | prompt | Fill gaps, resolve ambiguities |
+| 3 | define_artifacts | prompt | Define artifact contract |
+| 3a | gatekeep_artifacts | prompt | QC: Validate artifact coverage |
+| 4 | design_steps | prompt | Design step sequence and routing |
+| 4a | gatekeep_steps | prompt | QC: Validate step flow and data chains |
+| 5 | generate_package | prompt | Generate ALL workflow files |
+| 5a | gatekeep_package | prompt | QC: Validate files match design |
+| 6 | validate_bundle | action | Structural + semantic validation |
+| 7 | review_package | prompt | Final quality review |
+| 8 | promote_package | action | Copy to workflows/{slug}/ |
+
+**Characteristics:**
+- Every producer step (analyze, define, design, generate) followed by QC
+- Gatekeepers ask: "Will this solution actually work? Are there gaps?"
+- Gatekeepers have `on_reject_refine` routing back to producer step
+- Uses `validation_standard` role policy for gatekeepers
+- Producer steps include **Self-Validation** section in prompts
+- Uses **principles-based generation** (infers files from design, not fixed list)
+- Validates that action-driven steps have corresponding `actions.py`
+
+#### Gatekeeper step syntax
+
+```toml
+[[step]]
+name = "gatekeep_requirements"
+prompt = "prompts/01c_gatekeep_requirements.txt"
+onsuccess = "resolve_questions"
+
+[step.artifacts]
+required_inputs = ["WORKFLOW_REQUIREMENTS", "WORKFLOW_SPEC"]
+produces = ["GATEKEEP_REQUIREMENTS"]
+result_meta_key = "GATEKEEP_REQUIREMENTS"
+
+[step.coder]
+role_policy = "validation_standard"
+
+[step.on_reject_refine]
+step = "analyze_spec"
+artifact = "WORKFLOW_REQUIREMENTS"
+max_iterations = 2
+```
+
+#### Gatekeeper prompt template (adaptable)
+
+Gatekeeper prompts follow a standard structure:
+
+```text
+Objective
+
+Validate that the [ARTIFACT] is complete, technically sound, and will
+achieve all objectives. This is a QC checkpoint before downstream steps
+consume this artifact.
+
+Reference Inputs
+
+- Read {ORIGINAL_SPEC} for the source requirements.
+- Read {GENERATED_ARTIFACT} for the artifact to validate.
+
+Validation Questions
+
+Answer each question with specific evidence:
+
+1. Completeness: Does the artifact define ALL elements needed?
+2. Technical Soundness: Is the approach technically valid?
+3. Downstream Feasibility: Can the next step consume this output?
+4. Constraint Satisfaction: Does it respect all declared constraints?
+
+Decision Rules
+
+- APPROVED: The artifact is complete and will achieve objectives.
+- REJECTED: The artifact has gaps or needs significant revision.
+
+Output Instructions
+
+- Write the gatekeeper report to {GATEKEEP_ARTIFACT}.
+- Include YAML frontmatter with doc_type: "gatekeep_report".
+- Structure: Summary, Validation Results table, Issues, Recommendations, Verdict.
+- Verdict: APPROVED or REJECTED on its own line.
+- The result field in meta.json must match the verdict exactly.
+```
 
 ---
 
@@ -846,6 +1053,90 @@ validation and backend sync benefits but is not a hard requirement.
 The `_extract_slug_from_path()` function is currently copy-pasted across
 8 workflow files. When creating a new workflow, consider whether a shared
 utility would be more appropriate than another copy.
+
+### E.11: Missing gatekeeper after producer steps
+
+When using the gatekeeper pattern, EVERY producer step must be followed
+by a gatekeeper. Missing a gatekeeper allows bad output to propagate.
+
+```toml
+# WRONG — no gatekeeper between analyze and define
+[[step]]
+name = "analyze"
+onsuccess = "define"     # ❌ Missing gatekeeper!
+
+[[step]]
+name = "define"
+
+# CORRECT — gatekeeper validates output before downstream consumption
+[[step]]
+name = "analyze"
+onsuccess = "gatekeep_analyze"
+
+[[step]]
+name = "gatekeep_analyze"
+onsuccess = "define"
+[step.on_reject_refine]
+step = "analyze"          # ❌ Routes back if validation fails
+
+[[step]]
+name = "define"
+```
+
+### E.12: Gatekeeper without on_reject_refine
+
+A gatekeeper that REJECTS must route back to the producer step for
+refinement. Without `on_reject_refine`, a rejection has nowhere to go.
+
+```toml
+# WRONG — rejection leads to failure, not refinement
+[[step]]
+name = "gatekeep_requirements"
+onsuccess = "next_step"
+# ❌ Missing [step.on_reject_refine] — rejections fail the workflow
+
+# CORRECT — rejections route back for refinement
+[[step]]
+name = "gatekeep_requirements"
+onsuccess = "next_step"
+
+[step.on_reject_refine]
+step = "analyze_spec"     # ✅ Back to producer step
+artifact = "WORKFLOW_REQUIREMENTS"
+max_iterations = 2
+```
+
+### E.13: Self-Validation declared but not implemented
+
+Declaring "This step includes Self-Validation" in the prompt header
+is not enough. The LLM must actually perform the validation.
+
+```text
+# WRONG — just mentions Self-Validation exists
+## Self-Validation
+This step includes Self-Validation.
+
+# WRONG — criteria listed but not applied
+## Self-Validation
+Validate against these criteria:
+1. Completeness
+2. Consistency
+
+# CORRECT — explicit instruction to validate AND revise
+## Self-Validation
+
+Before reporting APPROVED, validate your output:
+
+1. Completeness: Does it include ALL required elements?
+2. Consistency: Are there contradictions?
+
+If ANY check fails:
+- Revise the output to fix the issue
+- Re-run validation
+- Only report APPROVED when all checks pass
+
+Include "Self-Validation Results" section showing which checks passed.
+```
 
 ---
 

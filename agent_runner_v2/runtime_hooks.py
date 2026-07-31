@@ -6,12 +6,15 @@ the protocols defined in hooks_protocols.py using lazy module loading to
 avoid circular imports.
 
 Usage:
-    from .runtime_hooks import RuntimeHooks
+    from .runtime_hooks import RuntimeHooks, get_workflow_guardrails
     hooks = RuntimeHooks()
     missing = hooks.missing_artifacts(keys, state)
 """
 from __future__ import annotations
 
+import importlib.util
+import logging
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -23,8 +26,14 @@ from .hooks_protocols import (
     ExecutionHooks,
     JobHooks,
     StepExecutionHooks,
+    StepGuardrails,
     WorkflowHooks,
 )
+
+logger = logging.getLogger(__name__)
+
+# Cache for guardrail modules: workflow_name -> module|None
+_GUARDRAIL_CACHE: dict[str, Any] = {}
 
 
 class RuntimeHooks:
@@ -397,3 +406,81 @@ class ManualHooks:
     def default_replan_context(self) -> dict:
         """Return default replan context."""
         return self._get_state_defaults().default_replan_context()
+
+
+# =================================================================
+# Guardrail Discovery
+# =================================================================
+
+
+def get_workflow_guardrails(workflow_name: str) -> StepGuardrails | None:
+    """Discover and return guardrail module for a workflow.
+
+    Searches for guardrails.py in the workflow package directory.
+    The module may implement pre_check() and post_check() functions
+    for step validation.
+
+    Args:
+        workflow_name: Template group name (e.g., "agnes_media_gen_v1").
+
+    Returns:
+        Guardrail module with pre_check/post_check functions, or None
+        if the workflow has no guardrails.py.
+    """
+    if workflow_name in _GUARDRAIL_CACHE:
+        return _GUARDRAIL_CACHE[workflow_name]
+
+    from .workflow_packages.registry import get_global_registry
+
+    registry = get_global_registry()
+
+    # Find the workflow package path
+    pkg = registry.get(workflow_name)
+    if pkg is None:
+        _GUARDRAIL_CACHE[workflow_name] = None
+        return None
+
+    guardrail_path = pkg.bundle_root / "guardrails.py"
+    if not guardrail_path.is_file():
+        _GUARDRAIL_CACHE[workflow_name] = None
+        return None
+
+    try:
+        spec = importlib.util.spec_from_file_location(
+            f"guardrails_{workflow_name}", guardrail_path
+        )
+        if spec is None or spec.loader is None:
+            _GUARDRAIL_CACHE[workflow_name] = None
+            return None
+
+        mod = importlib.util.module_from_spec(spec)
+        sys.modules[spec.name] = mod
+        spec.loader.exec_module(mod)
+
+        # Validate that module has expected functions
+        has_pre = callable(getattr(mod, "pre_check", None))
+        has_post = callable(getattr(mod, "post_check", None))
+
+        if not has_pre and not has_post:
+            logger.debug(
+                "guardrails.py for %s has no pre_check or post_check functions",
+                workflow_name,
+            )
+            _GUARDRAIL_CACHE[workflow_name] = None
+            return None
+
+        _GUARDRAIL_CACHE[workflow_name] = mod
+        logger.debug(
+            "Loaded guardrails for %s (pre_check=%s, post_check=%s)",
+            workflow_name,
+            has_pre,
+            has_post,
+        )
+        return mod
+
+    except Exception as exc:
+        logger.warning(
+            "Failed to load guardrails.py for %s: %s", workflow_name, exc
+        )
+        _GUARDRAIL_CACHE[workflow_name] = None
+        return None

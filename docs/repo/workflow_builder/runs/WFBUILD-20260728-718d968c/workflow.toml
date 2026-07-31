@@ -1,0 +1,177 @@
+
+[workflow]
+name = "product_master_gen_v1"
+version = "1.0.0"
+label = "Product Master Generator v1"
+job_prefix = "PRDM"
+description = "Consolidate product knowledge from diverse source materials into a structured Product Master document."
+visibility = "canonical"
+default_max_rejects = 3
+init_step = "scan_product_inputs"
+
+# ============================================================================
+# Step 1: Scan Product Inputs (action-driven)
+# ============================================================================
+[[step]]
+name = "scan_product_inputs"
+action = "scan_product_inputs"
+enable_notifications = true
+onsuccess = "generate_product_info"
+
+[step.artifacts]
+produces = ["SCAN_REPORT_FILE"]
+result_meta_key = "SCAN_REPORT_FILE"
+
+# ============================================================================
+# Step 2: Generate Product Information (prompt-driven)
+# ============================================================================
+[[step]]
+name = "generate_product_info"
+prompt = "prompts/02_generate_product_info.txt"
+enable_notifications = true
+onsuccess = "generate_target_audience"
+
+[step.artifacts]
+required_inputs = ["SCAN_REPORT_FILE"]
+produces = ["PRODUCT_INFO_FILE"]
+result_meta_key = "PRODUCT_INFO_FILE"
+
+[step.coder]
+role_policy = "architect_standard"
+
+# ============================================================================
+# Step 3: Generate Target Audience (prompt-driven)
+# ============================================================================
+[[step]]
+name = "generate_target_audience"
+prompt = "prompts/03_generate_target_audience.txt"
+enable_notifications = true
+onsuccess = "generate_product_benefits"
+
+[step.artifacts]
+required_inputs = ["SCAN_REPORT_FILE"]
+produces = ["TARGET_AUDIENCE_FILE"]
+result_meta_key = "TARGET_AUDIENCE_FILE"
+
+[step.coder]
+role_policy = "architect_standard"
+
+# ============================================================================
+# Step 4: Generate Product Benefits (prompt-driven)
+# ============================================================================
+[[step]]
+name = "generate_product_benefits"
+prompt = "prompts/04_generate_product_benefits.txt"
+enable_notifications = true
+onsuccess = "generate_marketing_assets"
+
+[step.artifacts]
+required_inputs = ["SCAN_REPORT_FILE"]
+produces = ["PRODUCT_BENEFITS_FILE"]
+result_meta_key = "PRODUCT_BENEFITS_FILE"
+
+[step.coder]
+role_policy = "architect_standard"
+
+# ============================================================================
+# Step 5: Generate Marketing Assets (prompt-driven)
+# ============================================================================
+[[step]]
+name = "generate_marketing_assets"
+prompt = "prompts/05_generate_marketing_assets.txt"
+enable_notifications = true
+onsuccess = "generate_additional_sections"
+
+[step.artifacts]
+required_inputs = ["SCAN_REPORT_FILE"]
+produces = ["MARKETING_ASSETS_FILE"]
+result_meta_key = "MARKETING_ASSETS_FILE"
+
+[step.coder]
+role_policy = "architect_standard"
+
+# ============================================================================
+# Step 6: Generate Additional Sections (prompt-driven)
+# ============================================================================
+[[step]]
+name = "generate_additional_sections"
+prompt = "prompts/06_generate_additional_sections.txt"
+enable_notifications = true
+onsuccess = "assemble_product_master"
+
+[step.artifacts]
+required_inputs = ["SCAN_REPORT_FILE"]
+produces = ["ADDITIONAL_SECTIONS_FILE"]
+result_meta_key = "ADDITIONAL_SECTIONS_FILE"
+
+[step.coder]
+role_policy = "architect_standard"
+
+# ============================================================================
+# Step 7: Assemble Product Master (prompt-driven)
+# ============================================================================
+[[step]]
+name = "assemble_product_master"
+prompt = "prompts/07_assemble_product_master.txt"
+enable_notifications = true
+onsuccess = "review_product_master"
+
+[step.artifacts]
+required_inputs = ["PRODUCT_INFO_FILE", "TARGET_AUDIENCE_FILE", "PRODUCT_BENEFITS_FILE", "MARKETING_ASSETS_FILE", "ADDITIONAL_SECTIONS_FILE"]
+optional_inputs = ["PRODUCT_MASTER_FILE"]
+produces = ["PRODUCT_MASTER_FILE"]
+result_meta_key = "PRODUCT_MASTER_FILE"
+
+[step.coder]
+role_policy = "architect_standard"
+
+# ============================================================================
+# Step 8: Review Product Master (prompt-driven, human gate)
+# ============================================================================
+[[step]]
+name = "review_product_master"
+prompt = "prompts/08_review_product_master.txt"
+enable_notifications = true
+requires_human_approval_after = true
+onsuccess = "stepCompletion"
+
+[step.artifacts]
+required_inputs = ["PRODUCT_MASTER_FILE"]
+produces = ["REVIEW_FILE_SUGGESTED"]
+result_meta_key = "REVIEW_FILE_SUGGESTED"
+
+[step.coder]
+role_policy = "reviewer_standard"
+
+[step.on_reject_refine]
+step = "refine_product_master"
+artifact = "PRODUCT_MASTER_FILE"
+max_iterations = 2
+exhausted_failure_code = "REFINE_EXHAUSTED"
+exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
+
+# ============================================================================
+# Step 9: Refine Product Master (prompt-driven, in-place edit)
+# ============================================================================
+[[step]]
+name = "refine_product_master"
+prompt = "prompts/09_refine_product_master.txt"
+enable_notifications = true
+loop_returns_to = "review_product_master"
+
+[step.artifacts]
+required_inputs = ["PRODUCT_MASTER_FILE", "REVIEW_FILE_SUGGESTED"]
+produces = ["PRODUCT_MASTER_FILE"]
+target_artifact = "PRODUCT_MASTER_FILE"
+edit_mode = "in_place"
+result_meta_key = "PRODUCT_MASTER_FILE"
+
+[step.coder]
+role_policy = "architect_standard"
+
+# ============================================================================
+# Step 10: Step Completion (terminal)
+# ============================================================================
+[[step]]
+name = "stepCompletion"
+action = "step_completion"

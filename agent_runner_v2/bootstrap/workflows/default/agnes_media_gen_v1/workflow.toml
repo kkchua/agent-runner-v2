@@ -24,7 +24,7 @@ name = "extract_descriptions"
 prompt = "prompts/01_extract_descriptions.txt"
 enable_notifications = true
 requires_human_approval_after = false
-onsuccess = "generate_prompts"
+onsuccess = "archive_step_00"
 
 [step.artifacts]
 produces = ["IMAGE_DESCRIPTIONS"]
@@ -41,21 +41,37 @@ exhausted_failure_code = "DESCRIPTION_EXTRACT_EXHAUSTED"
 exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
 
 # ============================================================================
+# Step 1b: Archive step_00_inputimage inputs (runs after extract_descriptions)
+# Only archives files listed in step_01_imagedesc/index.json (processed by current job).
+# Deletes index.json files instead of archiving them.
+# ============================================================================
+[[step]]
+name = "archive_step_00"
+action = "archive_inputs"
+source_dir = "step_00_inputimage"
+archive_dir = "step_00_inputimage_archive"
+index_file = "step_01_imagedesc/index.json"
+onsuccess = "generate_prompts"
+
+[step.artifacts]
+result_meta_key = "ARCHIVE_STEP_00"
+
+# ============================================================================
 # Step 2: Generate Prompts (prompt-driven, LLM text generation)
 # ============================================================================
 [[step]]
 name = "generate_prompts"
-prompt = "prompts/02_generate_prompts.txt"
+prompt = "prompts/02_generate_prompts_v3.txt"
 enable_notifications = true
 requires_human_approval_after = false
-onsuccess = "generate_images"
+onsuccess = "archive_step_01"
 
 [step.artifacts]
 produces = ["PROMPT_VARIANTS"]
 result_meta_key = "PROMPT_VARIANTS"
 
 [step.coder]
-role_policy = "architect_standard"
+role_policy = "image_video"
 
 [step.on_reject_refine]
 step = "generate_prompts"
@@ -63,6 +79,22 @@ artifact = "PROMPT_VARIANTS"
 max_iterations = 1
 exhausted_failure_code = "PROMPT_GENERATION_EXHAUSTED"
 exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
+
+# ============================================================================
+# Step 2b: Archive step_01_imagedesc inputs (runs after generate_prompts)
+# Archives ALL files in step_01_imagedesc/ (the index contains input image
+# filenames, not description filenames, so we cannot filter by index).
+# Deletes index.json files instead of archiving them.
+# ============================================================================
+[[step]]
+name = "archive_step_01"
+action = "archive_inputs"
+source_dir = "step_01_imagedesc"
+archive_dir = "step_01_imagedesc_archive"
+onsuccess = "generate_images"
+
+[step.artifacts]
+result_meta_key = "ARCHIVE_STEP_01"
 
 # ============================================================================
 # Step 3: Generate Images (action-driven, Agnes Image 2.1 Flash API)
@@ -81,16 +113,16 @@ produces = ["IMAGE_INDEX"]
 result_meta_key = "IMAGE_INDEX"
 
 # ============================================================================
-# Step 3b: Archive step_02 inputs (runs after generate_images approval)
-# Only archives files listed in step_03/index.json (processed by current job).
+# Step 3b: Archive step_02_promptvariant inputs (runs after generate_images approval)
+# Only archives files listed in step_03_generatedimage/index.json (processed by current job).
 # Deletes index.json files instead of archiving them.
 # ============================================================================
 [[step]]
 name = "archive_step_02"
 action = "archive_inputs"
-source_dir = "step_02"
-archive_dir = "step_02_archive"
-index_file = "step_03/index.json"
+source_dir = "step_02_promptvariant"
+archive_dir = "step_02_promptvariant_archive"
+index_file = "step_03_generatedimage/index.json"
 onsuccess = "generate_videos"
 
 [step.artifacts]
@@ -113,16 +145,17 @@ produces = ["VIDEO_INDEX"]
 result_meta_key = "VIDEO_INDEX"
 
 # ============================================================================
-# Step 4b: Archive step_03 inputs (runs after generate_videos approval)
-# Only archives files listed in step_04/index.json (processed by current job).
+# Step 4b: Archive step_03_generatedimage inputs (runs after generate_videos approval)
+# Archives ALL files in step_03_generatedimage/ (images + updated JSONs).
+# The step_04 index may not list all files if some video generations failed,
+# so we archive everything to avoid leftover files.
 # Deletes index.json files instead of archiving them.
 # ============================================================================
 [[step]]
 name = "archive_step_03"
 action = "archive_inputs"
-source_dir = "step_03"
-archive_dir = "step_03_archive"
-index_file = "step_04/index.json"
+source_dir = "step_03_generatedimage"
+archive_dir = "step_03_generatedimage_archive"
 onsuccess = "stepCompletion"
 
 [step.artifacts]

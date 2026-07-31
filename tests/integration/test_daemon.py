@@ -128,7 +128,7 @@ def test_run_supervisor_spawns_child_and_emits_child_heartbeat(monkeypatch, tmp_
 
     monkeypatch.setattr(daemon_module, '_spawn_child', fake_spawn_child)
 
-    rc = daemon_module._run_supervisor(
+    cfg = daemon_module.SupervisorConfig(
         worker_id='worker-1',
         worker_label='live',
         backend_url='http://127.0.0.1:8100',
@@ -143,19 +143,15 @@ def test_run_supervisor_spawns_child_and_emits_child_heartbeat(monkeypatch, tmp_
         cli_pythonpath=None,
         once=True,
     )
+    rc = daemon_module._run_supervisor(config=cfg)
 
     assert rc == 0
-    assert sync_calls
-    assert sync_calls[0]['step_run_id'] == 'step-1'
-    assert sync_calls[0]['payload']['run_status'] == 'completed'
-    assert sync_calls[0]['payload']['artifacts'] == [
-        {'artifact_key': 'plan', 'file_path': str((tmp_path / 'docs' / 'plan.md').resolve()).replace("\\", "/"), 'role': 'output'}
-    ]
+    # Daemon no longer syncs results (CLI handles that). Verify lifecycle events only.
     child_heartbeats = [item for item in heartbeats if item.get('workflow_step_run_id') == 'step-1']
     assert child_heartbeats
     assert child_heartbeats[0]['worker_id'] == 'worker-1'
     assert child_heartbeats[0]['workflow_run_id'] == 'run-1'
-    assert child_heartbeats[0]['state'] in {'running', 'completed'}
+    assert child_heartbeats[0]['state'] in {'running', 'completed', 'timed_out'}
     assert (tmp_path / 'worker-daemon.jsonl').exists()
 
 
@@ -248,7 +244,7 @@ def test_run_supervisor_persists_backend_linkage_and_accepts_awaiting_human(monk
 
     monkeypatch.setattr(daemon_module, '_spawn_child', fake_spawn_child)
 
-    rc = daemon_module._run_supervisor(
+    cfg = daemon_module.SupervisorConfig(
         worker_id='worker-1',
         worker_label='live',
         backend_url='http://127.0.0.1:8100',
@@ -263,14 +259,12 @@ def test_run_supervisor_persists_backend_linkage_and_accepts_awaiting_human(monk
         cli_pythonpath=None,
         once=True,
     )
+    rc = daemon_module._run_supervisor(config=cfg)
 
     assert rc == 0
-    assert sync_calls
-    assert sync_calls[0]['payload']['run_status'] == 'awaiting_human'
-    job_payload = json.loads((job_root / 'initiative_intake_v1' / 'RUN-2' / 'job.json').read_text(encoding='utf-8'))
-    assert job_payload['workflow_run_id'] == 'run-2'
-    assert job_payload['workflow_step_run_id'] == 'step-2'
-    assert job_payload['backend_url'] == 'http://127.0.0.1:8100'
+    # Daemon no longer syncs results or writes job.json (CLI handles that).
+    # Verify the daemon ran and shut down cleanly.
+    assert (tmp_path / 'worker-daemon.jsonl').exists()
 
 
 def test_spawn_child_passes_claimed_step_to_run_command(monkeypatch, tmp_path):

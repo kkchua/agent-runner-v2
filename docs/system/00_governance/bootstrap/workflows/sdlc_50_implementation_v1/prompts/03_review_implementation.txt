@@ -11,6 +11,7 @@ Layer Boundary
 Reference Inputs
 
 - Read `IMPL_FILE` (the implementation plan to review).
+- Read `CRITIQUE_FILE_SUGGESTED` (the technical critique findings).
 - Read `TASK_FILE` (approved task specification for traceability verification).
 - Read codebase context from `docs/repo/codebase/current/` to validate scope understanding.
 - Read Layer 1 governance at `GOVERNANCE_RUNTIME_ROOT` for metadata compliance.
@@ -67,6 +68,13 @@ Evaluate the implementation plan against these criteria:
    - No actual code implementation
    - No execution logs or validation results
 
+8. **Critique Resolution**:
+   - The document contains a "Critique Resolution" section
+   - Each finding from `CRITIQUE_FILE_SUGGESTED` has a corresponding resolution
+   - Resolutions are substantive (not just "acknowledged" without action)
+   - The resolutions actually address the technical concerns raised in the critique
+   - If a finding was not addressed, there is a valid justification for why
+
 Review Output
 
 Generate a review document with:
@@ -84,11 +92,13 @@ If APPROVED:
 - Metadata is compliant
 - Encoding is ASCII-only
 - No governance violations
+- Critique Resolution section is present and addresses all findings from the critique
 
 If REJECTED:
 - Provide specific, actionable feedback
 - Cite exact sections or text that need changes
 - Explain what must be fixed for approval
+- Reject if Critique Resolution section is missing or does not address the critique findings
 
 Output Instructions
 

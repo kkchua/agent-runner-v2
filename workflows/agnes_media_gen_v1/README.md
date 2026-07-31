@@ -29,16 +29,16 @@ retries) is read from a config.json file in the target repository.
   - AGNES_BASE_URL: Base URL for the Agnes API (default: https://apihub.agnes-ai.com)
 - LLM with vision capability (for extract_descriptions step)
 - Target repository with the following folder structure:
-  - step_00/ - Input images (PNG, JPG, WEBP)
-  - step_00_archive/ - Archive for processed input images
-  - step_01/ - Structured description JSONs
-  - step_01_archive/ - Archive for processed descriptions
-  - step_02/ - Prompt variant JSONs
-  - step_02_archive/ - Archive for processed variants
-  - step_03/ - Generated images and updated JSONs
-  - step_03_archive/ - Archive for processed step_03 inputs
-  - step_04/ - Generated video files
-  - step_04_archive/ - Archive for processed step_04 inputs
+  - step_00_inputimage/ - Input images (PNG, JPG, WEBP)
+  - step_00_inputimage_archive/ - Archive for processed input images
+  - step_01_imagedesc/ - Structured description JSONs
+  - step_01_imagedesc_archive/ - Archive for processed descriptions
+  - step_02_promptvariant/ - Prompt variant JSONs
+  - step_02_promptvariant_archive/ - Archive for processed variants
+  - step_03_generatedimage/ - Generated images and updated JSONs
+  - step_03_generatedimage_archive/ - Archive for processed step_03_generatedimage inputs
+  - step_04_generatedvideo/ - Generated video files
+  - step_04_generatedvideo_archive/ - Archive for processed step_04_generatedvideo inputs
 - config.json in the target repository root with media generation parameters
 
 ## Installation
@@ -140,8 +140,8 @@ self-referencing on_reject_refine (rerun same step on reject).
 
 | Artifact Key | Path Pattern | Description |
 |---|---|---|
-| IMAGE_DESCRIPTIONS | step_01/index.json | Index manifest of structured image description JSONs |
-| PROMPT_VARIANTS | step_02/index.json | Index manifest of prompt variant JSONs |
-| IMAGE_INDEX | step_03/index.json | Index manifest of generated images and updated JSONs |
-| VIDEO_INDEX | step_04/index.json | Index manifest of generated video files |
+| IMAGE_DESCRIPTIONS | step_01_imagedesc/index.json | Index manifest of structured image description JSONs |
+| PROMPT_VARIANTS | step_02_promptvariant/index.json | Index manifest of prompt variant JSONs |
+| IMAGE_INDEX | step_03_generatedimage/index.json | Index manifest of generated images and updated JSONs |
+| VIDEO_INDEX | step_04_generatedvideo/index.json | Index manifest of generated video files |
 | MEDIA_CONFIG | config.json | Media generation configuration file (operator-provided) |

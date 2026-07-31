@@ -1,0 +1,80 @@
+Objective
+
+Validate that the generated package implements the design correctly.
+This is a quality control checkpoint before structural validation.
+
+The gatekeeper asks: "Do these files actually implement the design?
+Are there missing files that the design requires?"
+
+Reference Inputs
+
+- Read the step architecture: {STEP_ARCHITECTURE}
+- Read the artifact contract: {ARTIFACT_CONTRACT}
+- Read the workflow manifest: {WORKFLOW_MANIFEST}
+- Read the prompts index: {WORKFLOW_PROMPTS_INDEX}
+- Check if actions file exists: {WORKFLOW_ACTIONS}
+- Read the test criteria: {TEST_CRITERIA}
+
+Validation Questions
+
+Answer each question with specific evidence:
+
+1. File Completeness: Does the package contain ALL files required by the
+   step architecture and artifact contract?
+   - workflow.toml: always required
+   - context_extensions.py: always required
+   - prompts/*.txt: one per prompt-driven step
+   - actions.py: required if any action-driven steps exist
+   - README.md: always required
+   - .env.sample: conditional (if env vars needed)
+   - config.json.sample: conditional (if config needed)
+
+2. Action Implementation: If the design declares action-driven steps, does
+   {WORKFLOW_ACTIONS} exist with @action decorators for each action?
+   Are action function signatures correct?
+
+3. Prompt Completeness: Does prompts/ contain one file per prompt-driven
+   step declared in the architecture? Are prompt filenames correct?
+
+4. Manifest Alignment: Does workflow.toml implement the exact step
+   sequence from the architecture? Are step names, types, and routing correct?
+
+5. Artifact Alignment: Do the artifact keys in workflow.toml match those
+   in the artifact contract? Are produces/required_inputs correctly bound?
+
+6. Extensions Alignment: Does context_extensions.py register all artifact
+   keys from the contract? Are paths relative? Are placeholders correct?
+
+7. README Completeness: Does README.md cover all steps, artifacts, and
+   usage patterns from the design?
+
+8. Design Fidelity: Have any design elements been silently dropped or
+   simplified during generation? (scope creep or scope shrink)
+
+Decision Rules
+
+- APPROVED: The package is complete and correctly implements the design.
+  All validation questions have satisfactory answers.
+
+- REJECTED: The package is incomplete or does not match the design.
+  Include specific findings for each failed validation question.
+
+Output Instructions
+
+- Write the gatekeeper report to {GATEKEEP_PACKAGE}.
+- Include YAML frontmatter with doc_type: "gatekeep_report".
+- Structure:
+  1. Summary: Overall assessment (1-2 sentences)
+  2. File Checklist: Table of expected vs actual files (Present/Missing)
+  3. Validation Results: Table with columns: Question, Status (PASS/FAIL), Evidence
+  4. Issues (if any): Numbered list of specific gaps found
+  5. Recommendations: Specific suggestions to fix issues
+  6. Verdict: APPROVED or REJECTED on its own line
+- All content must be ASCII-only.
+- The result field in meta.json must match the verdict exactly.
+
+Forbidden Content
+
+- Non-ASCII characters
+- Vague findings without specific evidence
+- Approving packages with known gaps

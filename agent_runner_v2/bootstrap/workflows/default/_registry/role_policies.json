@@ -7,11 +7,46 @@
         "agnes-2.0-flash"
       ]
     },
-    "architect_standard": {
-      "default_role": "zen_go_deepseek-v4-pro",
+	"architect_vision": {
+      "default_role": "bailian_qwen3.7-plus",
 	  "agent": "arv_architect",
       "allowed_roles": [
         "bailian_qwen3.7-plus",
+		"bailian_kimi-k2.5",
+        "agnes-2.0-flash"
+      ]
+    },
+	"image_video": {
+      "default_role": "zen_go_deepseek-v4-pro",
+	  "agent": "arv_architect",
+      "allowed_roles": [
+	    "zen_go_deepseek-v4-pro",
+        "bailian_glm-5",
+		"bailian_qwen3.7-plus",
+		"bailian_kimi-k2.5",
+		"agnes-2.0-flash"
+      ]
+	},
+    "architect_kimi-k2.5": {
+      "default_role": "bailian_kimi-k2.5",
+	  "agent": "arv_architect",
+      "allowed_roles": [
+        "bailian_qwen3.7-plus",
+		"bailian_kimi-k2.5",
+        "bailian_glm-5",
+        "agnes-2.0-flash",
+		"zen_go_deepseek-v4-pro",
+		"zen_go_deepseek-v4-flash",
+		"zen_deepseek-v4-flash-free",
+		"zen_mimo-v2.5-free"
+      ]
+    },
+    "architect_standard": {
+      "default_role": "bailian_qwen3.7-plus",
+	  "agent": "arv_architect",
+      "allowed_roles": [
+        "bailian_qwen3.7-plus",
+		"bailian_kimi-k2.5",
         "bailian_glm-5",
         "agnes-2.0-flash",
 		"zen_go_deepseek-v4-pro",
@@ -21,9 +56,11 @@
       ]
     },
     "reviewer_standard": {
-      "default_role": "bailian_glm-5",
+      "default_role": "bailian_qwen3.7-plus",
       "agent": "arv_reviewer",
 	  "allowed_roles": [
+	    "bailian_qwen3.7-plus",
+		"bailian_kimi-k2.5",
         "zen_go_mimo-v2.5-pro",
 		"zen_go_deepseek-v4-pro",
 		"zen_go_deepseek-v4-flash",
@@ -36,6 +73,7 @@
       "default_role": "bailian_qwen3.7-plus",
       "agent": "arv_reviewer",
 	  "allowed_roles": [
+	    "bailian_kimi-k2.5",
        	"bailian_glm-5",
         "bailian_qwen3.7-plus",
         "zen_go_deepseek-v4-pro",
@@ -44,7 +82,7 @@
       ]
     },
     "plan_standard": {
-      "default_role": "bailian_glm-5",
+      "default_role": "bailian_qwen3.7-plus",
 	  "agent": "arv_architect",
       "allowed_roles": [
         "bailian_qwen3.7-plus",

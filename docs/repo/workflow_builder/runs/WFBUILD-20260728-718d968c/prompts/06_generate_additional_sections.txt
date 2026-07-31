@@ -1,0 +1,105 @@
+Objective
+
+Analyze the product and its source materials to identify any additional
+knowledge sections beyond the four standard ones (Product Information,
+Target Audience, Benefits/USP, Marketing Assets) that would be valuable
+for the Product Master. Propose and generate full content for each
+additional section. If no additional sections are warranted, produce a
+stub artifact stating so.
+
+Layer Boundary
+
+- This workflow belongs to Layer 3 and operates on top of the Layer 2
+  platform contract.
+- Generate only the Additional Sections content. Do not generate
+  Product Information, Target Audience, Benefits, or Marketing Assets.
+- Treat Layer 1 governance and Layer 2 platform constitution as read-only
+  reference inputs.
+
+Reference Inputs
+
+- Read the scan report to understand what source files are available:
+  {SCAN_REPORT_FILE}
+- Read the source directory for available product materials:
+  {PRODUCT_SOURCE_DIR}
+- Read Layer 1 governance documents for metadata standards:
+  {GOVERNANCE_RUNTIME_ROOT}
+
+Content Scope
+
+Analyze the product based on the available source materials to determine
+if additional knowledge sections would add value beyond the four standard
+sections. This section covers ONLY proposed additional sections. Do not
+duplicate content from Product Information, Target Audience, Benefits,
+or Marketing Assets.
+
+Decision Criteria for Additional Sections
+
+Consider whether the product domain warrants specialized sections.
+Examples:
+- A food product might need "Ingredients and Nutrition" and
+  "Storage and Handling"
+- A tech product might need "Compatibility" and "Warranty and Support"
+- A fashion product might need "Sizing Guide" and "Care Instructions"
+- A furniture product might need "Assembly Instructions" and
+  "Maintenance Guide"
+
+If additional sections are warranted:
+- Propose section titles
+- Generate full content for each proposed section within this single
+  artifact
+- Each proposed section should have clear source attribution
+
+If no additional sections are warranted:
+- Produce a stub document stating: "No additional sections are warranted
+  for this product based on the available source materials. The four
+  standard sections (Product Information, Target Audience, Benefits/USP,
+  Marketing Assets) provide comprehensive coverage."
+
+Source File Guidance
+
+Consult the scan report to determine which source files are available.
+Source types may include: images, manuals, brochures, specifications,
+documents, URL lists, and notes.
+
+For URL lists, use the webfetch tool to retrieve and read URL content.
+Manuals, specifications, and notes are particularly relevant for
+identifying domain-specific content needs. Not all source types will
+be present. Work only with the files that exist.
+
+Knowledge Gap Handling
+
+If information for a proposed additional section is not found in any
+source file, represent it explicitly as a knowledge gap. Use the format:
+
+  Not available from provided sources.
+
+Do not fabricate data for additional sections. Factual accuracy takes
+priority over completeness.
+
+Conflict Handling
+
+If conflicting information is found across different source files,
+explicitly note both sides with source attribution.
+
+Output Instructions
+
+- Write the generated content to the file at {ADDITIONAL_SECTIONS_FILE}.
+- Use markdown format with a section heading.
+- The output file must be ASCII-only (no em-dashes, curly quotes, or
+  other Unicode characters).
+- Use plain text section headings without formatting markup.
+- Use the product slug ({SLUG}) to identify the product context.
+- The result field in meta.json must contain a brief summary of what
+  was generated. All document content must be written to the artifact
+  file, not placed in the meta.json result field.
+
+Forbidden Content
+
+- Factual product specifications (belongs in Product Information)
+- Audience demographics or persona details (belongs in Target Audience)
+- Benefits or value proposition content (belongs in Benefits/USP)
+- Marketing asset inventory or trending topics (belongs in Marketing
+  Assets)
+- Campaign execution plans or marketing deployment strategies
+- Content not traceable to source files

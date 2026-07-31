@@ -29,6 +29,14 @@ Generate ALL of the following template files in the 01_templates/ output directo
 2. SDLC_WORKFLOW_SOP (WORKFLOW_SOP_v1.md)
    - Standard operating procedure for the SDLC delivery system
    - Workflow sequence, approval gates, naming conventions, audit trail rules
+   - MUST document the standard step pattern for all initiative workflows:
+     1. generate_<artifact> (prompt) -- Generate the document from input
+     2. technical_critique (prompt) -- Internal quality gate, evaluates feasibility and technical soundness
+     3. address_critique (prompt) -- Address findings from technical critique, update document in-place, add Critique Resolution section
+     4. review_<artifact> (prompt) -- Human approval gate, verifies critique was resolved and document meets standards
+     5. refine_<artifact> (prompt, conditional) -- Refine based on review feedback
+     6. promote_<artifact> (action) -- Promote document to approved status
+     7. step_completion (action) -- Finalize and notify
 
 3. SDLC_TEMPLATE_DRAFT_INIT (01_DRAFT_INIT_template.md)
    - Structure for user-authored draft initiative documents

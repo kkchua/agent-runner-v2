@@ -7,6 +7,7 @@ testing easier.
 """
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -15,6 +16,8 @@ import flet as ft
 
 from .config import ConsoleConfig
 from .models import RepoEntry, WorkflowEntry
+
+_log = logging.getLogger(__name__)
 
 
 @dataclass
@@ -31,15 +34,23 @@ class ConsoleState:
         selected_worker_id: Currently selected worker ID.
         selected_repo: Currently selected repository entry.
         selected_workflow: Currently selected workflow entry.
+        selected_run_id: Currently selected active run ID.
+        active_runs: List of currently active runs.
         input_fields: Map of artifact key to text field widget.
         file_picker: Shared file picker instance for file inputs.
         worker_id_dd: Worker ID dropdown widget.
         repo_dd: Repository dropdown widget.
         workflow_dd: Workflow dropdown widget.
+        action_dd: Action dropdown widget.
         reset_step_dd: Reset step dropdown widget.
         start_step_dd: Start step dropdown widget.
+        active_runs_dd: Active runs dropdown widget.
         dynamic_inputs_column: Column containing dynamic input fields.
         dynamic_inputs_container: Container for dynamic inputs section.
+        feedback_tf: Feedback/reason text field.
+        status_text: Status display text.
+        output: Output text field.
+        auto_refresh_cb: Auto-refresh checkbox.
     """
 
     page: ft.Page
@@ -49,19 +60,32 @@ class ConsoleState:
     selected_worker_id: str = ""
     selected_repo: RepoEntry | None = None
     selected_workflow: WorkflowEntry | None = None
+    selected_run_id: str = ""
+
+    # Runtime state
+    active_runs: list[Any] = field(default_factory=list)
 
     # Input state
     input_fields: dict[str, ft.TextField] = field(default_factory=dict)
+
+    # Service reference (set after construction, used by refresh handlers)
+    runner_service: Any = None
 
     # Widget references (initialized after UI construction)
     file_picker: ft.FilePicker | None = None
     worker_id_dd: ft.Dropdown | None = None
     repo_dd: ft.Dropdown | None = None
     workflow_dd: ft.Dropdown | None = None
+    action_dd: ft.Dropdown | None = None
     reset_step_dd: ft.Dropdown | None = None
     start_step_dd: ft.Dropdown | None = None
+    active_runs_dd: ft.Dropdown | None = None
     dynamic_inputs_column: ft.Column | None = None
     dynamic_inputs_container: ft.Container | None = None
+    feedback_tf: ft.TextField | None = None
+    status_text: ft.Text | None = None
+    output: ft.TextField | None = None
+    auto_refresh_cb: ft.Checkbox | None = None
 
     def update(self) -> None:
         """Trigger page update if page is available."""
@@ -74,8 +98,6 @@ class ConsoleState:
         Args:
             message: Error message to display.
         """
-        import logging
-
         _log = logging.getLogger(__name__)
         _log.error(message)
 
@@ -90,6 +112,14 @@ class ConsoleState:
                 actions=[ft.TextButton("Close", on_click=close_dialog)],
             )
         )
+
+    def all_worker_ids(self) -> list[str]:
+        """Return unique worker IDs from all repos.
+
+        Returns:
+            Sorted list of unique worker IDs.
+        """
+        return sorted({r.worker_id for r in self.config.repos if r.worker_id})
 
     def repos_for_worker(self, worker_id: str) -> list[RepoEntry]:
         """Return repos matching the given worker_id.
@@ -136,6 +166,8 @@ class ConsoleState:
 
     def create_workflow_options(self) -> list[ft.DropdownOption]:
         """Build dropdown options for workflows in selected repo.
+
+        Order matches the config file — user controls sort order there.
 
         Returns:
             List of dropdown options.

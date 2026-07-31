@@ -113,16 +113,17 @@ between 0.0 and 1.0 representing the confidence level of the extraction.
 
 After writing all description JSONs to {STEP_01_DIR}:
 
-1. Copy each processed image file from {STEP_00_DIR} to
-   {STEP_00_ARCHIVE}.
-2. Remove each processed image file from {STEP_00_DIR}.
-3. Write an index.json file to {STEP_01_DIR} with this structure:
+Write an index.json file to {STEP_01_DIR} with this structure:
    {
      "step": "extract_descriptions",
      "files": [
-       {"input": "step_00/image001.png", "output": "step_01/image001.json"}
+       {"input": "step_00_inputimage/image001.png", "output": "step_01_imagedesc/image001.json"}
      ]
    }
+
+Note: Archiving of processed input images from {STEP_00_DIR} is handled
+automatically by a subsequent archive step — do NOT archive or remove files
+from {STEP_00_DIR} yourself.
 
 Supported image formats: PNG, JPG (JPEG), WEBP.
 All output must be ASCII-only JSON with UTF-8 encoding.
@@ -135,7 +136,7 @@ status and summary information ONLY.
 
 Required file outputs:
 1. Individual description JSONs: {STEP_01_DIR}/<image_stem>.json for each
-   input image (e.g., step_00/image001.png -> step_01/image001.json)
+   input image (e.g., step_00_inputimage/image001.png -> step_01_imagedesc/image001.json)
 2. Index file: {STEP_01_DIR}/index.json listing all input-to-output mappings
    (this is the {IMAGE_DESCRIPTIONS} artifact)
 
@@ -146,7 +147,7 @@ Your meta.json result field should contain only:
 
 In the artifacts field of meta.json, you MUST report:
 - IMAGE_DESCRIPTIONS: the absolute path to the index.json file you wrote
-  (e.g., "D:/path/to/repo/step_01/index.json")
+  (e.g., "D:/path/to/repo/step_01_imagedesc/index.json")
 
 Artifacts
 
