@@ -16,16 +16,43 @@ Artifact Definition Tasks
    - Relative path pattern using {job_id}, {seq}, and {slug} placeholders
    - Human-readable description
    - Whether the artifact is required or optional
+
 2. For each input artifact, confirm the key name matches existing conventions
    in the codebase. If the input is a new key, define it here.
-3. Include shared artifacts that the workflow framework expects:
+
+3. Include WORKFLOW_ACTIONS artifact if requirements propose action-driven steps:
+   - Key: WORKFLOW_ACTIONS
+   - Path: actions.py (in workflow package root)
+   - Description: Python module with @action decorated functions
+   - Required: conditional (yes if action steps exist, no otherwise)
+
+4. Include shared artifacts that the workflow framework expects:
    - REVIEW_FILE_SUGGESTED for review output
-4. Ensure no key collisions with existing artifact keys in the codebase.
-5. Use consistent path patterns:
+
+5. Ensure no key collisions with existing artifact keys in the codebase.
+
+6. Use consistent path patterns:
    - All outputs under docs/repo/<workflow_name>/runs/{job_id}/
    - Filename prefix matches the artifact key name
    - Include {seq} for auto-incrementing sequence numbers
    - Include {slug} derived from the input specification filename
+
+Self-Validation (Before Output)
+
+Before reporting APPROVED, validate:
+
+1. Coverage: Does every artifact from {WORKFLOW_REQUIREMENTS} have a path
+   defined? Are there implied artifacts not declared?
+
+2. WORKFLOW_ACTIONS: If {WORKFLOW_REQUIREMENTS} declares action-driven steps,
+   is WORKFLOW_ACTIONS included in the contract?
+
+3. Placeholder Validity: Are {job_id}, {seq}, {slug}, {iter} used correctly?
+   Are all paths relative?
+
+4. Path Consistency: Do paths follow conventions from {WORKFLOW_CREATION_GUIDE}?
+
+If validation fails, report REJECTED with specific gaps found.
 
 Output Instructions
 

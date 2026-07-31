@@ -131,6 +131,18 @@ def archive_inputs(
             continue
 
         dest = archive_dir / item.name
+        # Handle filename conflicts — add sequence suffix if dest exists
+        if dest.exists():
+            stem = item.stem
+            suffix = item.suffix
+            seq = 1
+            while dest.exists():
+                dest = archive_dir / f"{stem}_{seq:03d}{suffix}"
+                seq += 1
+            logger.info(
+                "archive_inputs: conflict — %s already exists, renaming to %s",
+                item.name, dest.name,
+            )
         shutil.move(str(item), str(dest))
         files_archived.append(item.name)
         logger.info("archive_inputs: moved %s → %s", item.name, archive_dir.name)

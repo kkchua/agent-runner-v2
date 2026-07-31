@@ -78,7 +78,7 @@ name = "analyze_spec"
 prompt = "prompts/01_analyze_spec.txt"
 enable_notifications = true
 requires_human_approval_after = true
-onsuccess = "resolve_questions"
+onsuccess = "gatekeep_requirements"
 
 [step.artifacts]
 required_inputs = ["WORKFLOW_SPEC", "TEST_CRITERIA"]
@@ -87,6 +87,31 @@ result_meta_key = "WORKFLOW_REQUIREMENTS"
 
 [step.coder]
 role_policy = "architect_standard"
+
+# ============================================================================
+# Step 1c: Gatekeep Requirements
+# ============================================================================
+[[step]]
+name = "gatekeep_requirements"
+prompt = "prompts/01c_gatekeep_requirements.txt"
+enable_notifications = true
+requires_human_approval_after = true
+onsuccess = "resolve_questions"
+
+[step.artifacts]
+required_inputs = ["WORKFLOW_REQUIREMENTS", "WORKFLOW_SPEC"]
+produces = ["GATEKEEP_REQUIREMENTS"]
+result_meta_key = "GATEKEEP_REQUIREMENTS"
+
+[step.coder]
+role_policy = "validation_standard"
+
+[step.on_reject_refine]
+step = "analyze_spec"
+artifact = "WORKFLOW_REQUIREMENTS"
+max_iterations = 2
+exhausted_failure_code = "REQUIREMENTS_GATEKEEP_EXHAUSTED"
+exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
 
 # ============================================================================
 # Step 1b: Resolve Open Questions
@@ -114,7 +139,7 @@ name = "define_artifacts"
 prompt = "prompts/02_define_artifacts.txt"
 enable_notifications = true
 requires_human_approval_after = true
-onsuccess = "design_steps"
+onsuccess = "gatekeep_artifacts"
 
 [step.artifacts]
 required_inputs = ["WORKFLOW_REQUIREMENTS"]
@@ -125,6 +150,31 @@ result_meta_key = "ARTIFACT_CONTRACT"
 role_policy = "architect_standard"
 
 # ============================================================================
+# Step 2b: Gatekeep Artifacts
+# ============================================================================
+[[step]]
+name = "gatekeep_artifacts"
+prompt = "prompts/02b_gatekeep_artifacts.txt"
+enable_notifications = true
+requires_human_approval_after = true
+onsuccess = "design_steps"
+
+[step.artifacts]
+required_inputs = ["ARTIFACT_CONTRACT", "WORKFLOW_REQUIREMENTS"]
+produces = ["GATEKEEP_ARTIFACTS"]
+result_meta_key = "GATEKEEP_ARTIFACTS"
+
+[step.coder]
+role_policy = "validation_standard"
+
+[step.on_reject_refine]
+step = "define_artifacts"
+artifact = "ARTIFACT_CONTRACT"
+max_iterations = 2
+exhausted_failure_code = "ARTIFACTS_GATEKEEP_EXHAUSTED"
+exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
+
+# ============================================================================
 # Step 3: Design Steps
 # ============================================================================
 [[step]]
@@ -132,7 +182,7 @@ name = "design_steps"
 prompt = "prompts/03_design_steps.txt"
 enable_notifications = true
 requires_human_approval_after = true
-onsuccess = "generate_package"
+onsuccess = "gatekeep_steps"
 
 [step.artifacts]
 required_inputs = ["WORKFLOW_REQUIREMENTS", "ARTIFACT_CONTRACT"]
@@ -143,6 +193,31 @@ result_meta_key = "STEP_ARCHITECTURE"
 role_policy = "architect_standard"
 
 # ============================================================================
+# Step 3b: Gatekeep Steps
+# ============================================================================
+[[step]]
+name = "gatekeep_steps"
+prompt = "prompts/03b_gatekeep_steps.txt"
+enable_notifications = true
+requires_human_approval_after = true
+onsuccess = "generate_package"
+
+[step.artifacts]
+required_inputs = ["STEP_ARCHITECTURE", "ARTIFACT_CONTRACT", "WORKFLOW_REQUIREMENTS"]
+produces = ["GATEKEEP_STEPS"]
+result_meta_key = "GATEKEEP_STEPS"
+
+[step.coder]
+role_policy = "validation_standard"
+
+[step.on_reject_refine]
+step = "design_steps"
+artifact = "STEP_ARCHITECTURE"
+max_iterations = 2
+exhausted_failure_code = "STEPS_GATEKEEP_EXHAUSTED"
+exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
+
+# ============================================================================
 # Step 4: Generate Package
 # ============================================================================
 [[step]]
@@ -150,15 +225,41 @@ name = "generate_package"
 prompt = "prompts/04_generate_package.txt"
 enable_notifications = true
 requires_human_approval_after = true
-onsuccess = "validate_bundle"
+onsuccess = "gatekeep_package"
 
 [step.artifacts]
 required_inputs = ["WORKFLOW_REQUIREMENTS", "ARTIFACT_CONTRACT", "STEP_ARCHITECTURE", "TEST_CRITERIA"]
-produces = ["WORKFLOW_MANIFEST", "WORKFLOW_EXTENSIONS", "WORKFLOW_PROMPTS_INDEX", "WORKFLOW_README", "WORKFLOW_ENV_SAMPLE", "WORKFLOW_CONFIG_SAMPLE"]
+produces = ["WORKFLOW_MANIFEST", "WORKFLOW_EXTENSIONS", "WORKFLOW_ACTIONS", "WORKFLOW_PROMPTS_INDEX", "WORKFLOW_README", "WORKFLOW_ENV_SAMPLE", "WORKFLOW_CONFIG_SAMPLE"]
 result_meta_key = "WORKFLOW_PROMPTS_INDEX"
 
 [step.coder]
 role_policy = "architect_standard"
+
+# ============================================================================
+# Step 4b: Gatekeep Package
+# ============================================================================
+[[step]]
+name = "gatekeep_package"
+prompt = "prompts/04b_gatekeep_package.txt"
+enable_notifications = true
+requires_human_approval_after = true
+onsuccess = "validate_bundle"
+
+[step.artifacts]
+required_inputs = ["WORKFLOW_MANIFEST", "WORKFLOW_EXTENSIONS", "STEP_ARCHITECTURE", "ARTIFACT_CONTRACT"]
+optional_inputs = ["WORKFLOW_ACTIONS"]
+produces = ["GATEKEEP_PACKAGE"]
+result_meta_key = "GATEKEEP_PACKAGE"
+
+[step.coder]
+role_policy = "validation_standard"
+
+[step.on_reject_refine]
+step = "generate_package"
+artifact = "WORKFLOW_MANIFEST"
+max_iterations = 2
+exhausted_failure_code = "PACKAGE_GATEKEEP_EXHAUSTED"
+exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
 
 # ============================================================================
 # Step 5: Validate Bundle
@@ -211,7 +312,7 @@ requires_human_approval_after = true
 
 [step.artifacts]
 required_inputs = ["REVIEW_FILE_SUGGESTED", "WORKFLOW_MANIFEST", "WORKFLOW_EXTENSIONS", "WORKFLOW_PROMPTS_INDEX"]
-produces = ["WORKFLOW_MANIFEST", "WORKFLOW_EXTENSIONS", "WORKFLOW_PROMPTS_INDEX", "WORKFLOW_README", "WORKFLOW_ENV_SAMPLE", "WORKFLOW_CONFIG_SAMPLE"]
+produces = ["WORKFLOW_MANIFEST", "WORKFLOW_EXTENSIONS", "WORKFLOW_ACTIONS", "WORKFLOW_PROMPTS_INDEX", "WORKFLOW_README", "WORKFLOW_ENV_SAMPLE", "WORKFLOW_CONFIG_SAMPLE"]
 result_meta_key = "WORKFLOW_PROMPTS_INDEX"
 
 loop_returns_to = "review_package"

@@ -180,6 +180,7 @@ class _VideoFromImageWorkItem:
 
     png_path: Path
     t2i_prompt1: str
+    negative_prompt: str
     video_submit_endpoint: str
     video_status_endpoint: str
     vid_model: str
@@ -216,6 +217,8 @@ def _process_single_video_from_image(item: _VideoFromImageWorkItem) -> dict:
         "num_frames": item.vid_num_frames,
         "frame_rate": item.vid_frame_rate,
     }
+    if item.negative_prompt:
+        payload["negative_prompt"] = item.negative_prompt
     logger.info(
         "generate_videos_from_images: %s submitting video "
         "(model=%s, %dx%d, frames=%d, fps=%d)",
@@ -238,6 +241,14 @@ def _process_single_video_from_image(item: _VideoFromImageWorkItem) -> dict:
     logger.info(
         "generate_videos_from_images: %s using key %s (index %d)",
         item.png_path.name, mask_api_key(api_key), item.key_pool.current_index(),
+    )
+    # Log the actual API payload (exclude base64 image data)
+    api_payload_log = {k: v for k, v in payload.items() if k != "image"}
+    api_payload_log["image"] = f"<base64, {len(payload.get('image', ''))} chars>"
+    logger.info(
+        "generate_videos_from_images: %s API PAYLOAD:\n%s",
+        item.png_path.name,
+        json.dumps(api_payload_log, indent=2, ensure_ascii=False),
     )
 
     submit_resp = _api_request_with_retry(
@@ -413,6 +424,25 @@ def generate_videos_from_images(
     vid_height = vid_config.get("height", 576)
     vid_num_frames = vid_config.get("num_frames", 72)
     vid_frame_rate = vid_config.get("frame_rate", 24)
+    vid_prompt_prefix = vid_config.get("video_prompt_prefix", "")
+    vid_prompt_postfix = vid_config.get("video_prompt_postfix", "")
+    negative_prompt_video = vid_config.get("negative_prompt_video", "")
+    negative_prompt_video_postfix = vid_config.get("negative_prompt_video_postfix", "")
+    # Combine negative prompts from config
+    negative_prompt = negative_prompt_video
+    if negative_prompt_video_postfix:
+        if negative_prompt:
+            negative_prompt = negative_prompt + " " + negative_prompt_video_postfix
+        else:
+            negative_prompt = negative_prompt_video_postfix
+    logger.info(
+        "generate_videos_from_images: prompt config — prefix=%d chars, postfix=%d chars",
+        len(vid_prompt_prefix), len(vid_prompt_postfix),
+    )
+    if vid_prompt_prefix:
+        logger.info("generate_videos_from_images: video_prompt_prefix:\n%s", vid_prompt_prefix)
+    if vid_prompt_postfix:
+        logger.info("generate_videos_from_images: video_prompt_postfix:\n%s", vid_prompt_postfix)
     process_delay = config.get("process_delay", 15)
     api_timeout = config.get("api_timeout", 500)
     api_max_retries = config.get("api_max_retries", 5)
@@ -471,9 +501,20 @@ def generate_videos_from_images(
             png_path.name, len(t2i_prompt1), len(t2i_prompt2),
         )
 
+        # Apply prefix/postfix from config to build final video prompt
+        final_video_prompt = vid_prompt_prefix + t2i_prompt1 + vid_prompt_postfix
+        logger.info(
+            "generate_videos_from_images: %s final_video_prompt assembled "
+            "(prefix=%d + base=%d + postfix=%d = %d chars)",
+            png_path.name,
+            len(vid_prompt_prefix), len(t2i_prompt1), len(vid_prompt_postfix),
+            len(final_video_prompt),
+        )
+
         work_items.append(_VideoFromImageWorkItem(
             png_path=png_path,
-            t2i_prompt1=t2i_prompt1,
+            t2i_prompt1=final_video_prompt,
+            negative_prompt=negative_prompt,
             video_submit_endpoint=video_submit_endpoint,
             video_status_endpoint=video_status_endpoint,
             vid_model=vid_model,

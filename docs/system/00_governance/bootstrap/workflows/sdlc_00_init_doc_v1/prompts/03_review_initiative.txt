@@ -11,6 +11,7 @@ Layer Boundary
 Reference Inputs
 
 - Read {INIT_FILE} (the initiative document to review).
+- Read {CRITIQUE_FILE_SUGGESTED} (the technical critique findings).
 - Read {DRAFT_INIT_FILE} (original draft for traceability verification).
 - Read codebase context from {CODEBASE_DOC_ROOT} to validate scope understanding.
 - Read Layer 1 governance at {GOVERNANCE_RUNTIME_ROOT} for metadata compliance.
@@ -89,6 +90,13 @@ Evaluate the initiative document against these criteria ONLY:
    - No implementation details or technical solutions
    - No task breakdowns or scheduling
 
+8. Critique Resolution:
+   - The document contains a "Critique Resolution" section
+   - Each finding from {CRITIQUE_FILE_SUGGESTED} has a corresponding resolution
+   - Resolutions are substantive (not just "acknowledged" without action)
+   - The resolutions actually address the technical concerns raised in the critique
+   - If a finding was not addressed, there is a valid justification for why
+
 Review Output
 
 Generate a review document with:
@@ -107,6 +115,7 @@ APPROVED when:
 - Artifact keys use _FILE suffix (no _DOC suffix found)
 - Encoding is ASCII-only
 - No governance violations
+- Critique Resolution section is present and addresses all findings from the critique
 
 REJECTED when:
 - Any of the 9 required sections is missing or empty
@@ -114,6 +123,7 @@ REJECTED when:
 - Artifact keys use _DOC suffix instead of _FILE
 - Encoding violations found
 - Governance violations found
+- Critique Resolution section is missing or does not address the critique findings
 
 Output Instructions
 

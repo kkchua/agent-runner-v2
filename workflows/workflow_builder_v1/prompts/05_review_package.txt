@@ -14,12 +14,16 @@ Reference Inputs
   generated workflow actually implements what the spec describes.
 - Read {WORKFLOW_MANIFEST} for the generated workflow.toml.
 - Read {WORKFLOW_EXTENSIONS} for the generated context_extensions.py.
+- Read {WORKFLOW_ACTIONS} for the generated actions.py (if action steps
+  were declared).
 - Read {WORKFLOW_PROMPTS_INDEX} for the list of generated prompt files.
 - Read {VALIDATION_REPORT} for automated validation results.
 - Read {WORKFLOW_README} for the generated user guide.
 - Read {WORKFLOW_ENV_SAMPLE} for the generated env template (if it exists).
 - Read {WORKFLOW_CONFIG_SAMPLE} for the generated config template (if it
   exists).
+- Read {GATEKEEP_REQUIREMENTS}, {GATEKEEP_ARTIFACTS}, {GATEKEEP_STEPS},
+  {GATEKEEP_PACKAGE} to verify gatekeepers ran and their verdicts.
 - Read {WORKFLOW_CREATION_GUIDE} Part E (Common Pitfalls) for the review
   checklist.
 
@@ -111,7 +115,19 @@ Review Checklist
    - Verify ALL criteria in the "Criteria for review_package step" section
      of {TEST_CRITERIA} pass
 
-6b. Audit Verification (if TEST_CRITERIA includes audit criteria):
+7. Gatekeeper effectiveness (read gatekeeper reports):
+   - Did gatekeep_requirements run and approve? If it rejected, were issues
+     fixed before reaching this review?
+   - Did gatekeep_artifacts run and approve? Did it catch any missing
+     artifacts (e.g., WORKFLOW_ACTIONS) early?
+   - Did gatekeep_steps run and approve? Did it catch any routing or
+     data flow issues early?
+   - Did gatekeep_package run and approve? Did it catch any missing
+     files or design mismatches early?
+   - If any gatekeeper REJECTED but issues weren't fixed, note this as
+     a process failure (gatekeepers should have blocked progression)
+
+8. Audit Verification (if TEST_CRITERIA includes audit criteria):
    Read the "Audit Criteria (Conditional)" section of {TEST_CRITERIA} and
    verify the generated workflow addresses each audit concern:
    - Security Audit: Are API keys loaded from .env (not hardcoded)? Are
@@ -145,10 +161,11 @@ Output Instructions
      and config.json.sample checks with evidence.
   6. Cross-File Consistency: pass/fail for each check with evidence.
   7. Spec Fulfillment: pass/fail for each test criteria item with evidence.
-  7b. Audit Verification: if TEST_CRITERIA includes audit criteria, pass/fail
+  8. Gatekeeper Effectiveness: pass/fail for each gatekeeper check.
+  9. Audit Verification: if TEST_CRITERIA includes audit criteria, pass/fail
       for each audit item with evidence.
-  8. Issues: numbered list of specific issues to fix (if any).
-  9. Verdict: APPROVED or REJECTED on its own line at the end.
+  10. Issues: numbered list of specific issues to fix (if any).
+  11. Verdict: APPROVED or REJECTED on its own line at the end.
 - If REJECTED, each issue must include the file, location, and specific fix
   required.
 

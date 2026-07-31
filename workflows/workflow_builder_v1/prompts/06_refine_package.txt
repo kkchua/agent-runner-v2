@@ -39,6 +39,17 @@ Refinement Rules
     settings, or file should not exist), update or remove
     {WORKFLOW_CONFIG_SAMPLE} accordingly.
 
+12. If the review flagged missing actions.py, generate {WORKFLOW_ACTIONS}
+    with proper @action decorated functions per the action specifications
+    in {WORKFLOW_REQUIREMENTS}. Include error handling, input validation,
+    and ActionResult returns.
+
+13. If the review flagged incomplete action implementations (stubs instead
+    of actual logic), update {WORKFLOW_ACTIONS} with complete implementations.
+
+14. If actions.py is created or modified, update {WORKFLOW_PROMPTS_INDEX}
+    to reflect the new file.
+
 Output Instructions
 
 - Update {WORKFLOW_MANIFEST} in-place with fixes.

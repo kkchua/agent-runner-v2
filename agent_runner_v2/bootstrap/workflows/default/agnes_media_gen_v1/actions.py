@@ -4,10 +4,10 @@ This module provides the action functions for the Agnes Media Generation v1
 workflow. Two custom actions are defined:
 
 - generate_images: Calls the Agnes Image 2.1 Flash API to produce images
-  from prompt variants, downloads them to step_03/, and updates JSON files
+  from prompt variants, downloads them to step_03_generatedimage/, and updates JSON files
   with image_url fields.
 - generate_videos: Calls the Agnes Video V2.0 API to produce image-to-video
-  animations, polls for completion, and downloads videos to step_04/.
+  animations, polls for completion, and downloads videos to step_04_generatedvideo/.
 
 Both actions implement retry logic for HTTP 503 responses with exponential
 backoff, configurable timeouts, process delays between API calls, and
@@ -163,6 +163,39 @@ def _write_index(index_path, step_name, file_mappings):
         json.dump(index_data, f, indent=2, ensure_ascii=False)
 
 
+def _get_next_sequence_filename(output_dir: Path, base_name: str, ext: str) -> str:
+    """Find the next available filename with auto-incrementing sequence number.
+
+    If base_name.ext exists, find the next available sequence number:
+    - base_name_001.ext, base_name_002.ext, etc.
+
+    Args:
+        output_dir: Directory where the file will be saved.
+        base_name: Base filename without extension (e.g., 'image_01').
+        ext: File extension without dot (e.g., 'png').
+
+    Returns:
+        A filename string with the next available sequence number.
+    """
+    ext = ext.lstrip(".")
+    base_path = output_dir / f"{base_name}.{ext}"
+
+    # If base file doesn't exist, use it
+    if not base_path.exists():
+        return f"{base_name}.{ext}"
+
+    # Find next available sequence number
+    seq = 1
+    while True:
+        candidate = output_dir / f"{base_name}_{seq:03d}.{ext}"
+        if not candidate.exists():
+            return f"{base_name}_{seq:03d}.{ext}"
+        seq += 1
+        # Safety limit to prevent infinite loops
+        if seq > 9999:
+            return f"{base_name}_{seq:04d}.{ext}"
+
+
 @dataclass
 class _ImageWorkItem:
     """Single image generation work item for concurrent processing."""
@@ -227,6 +260,11 @@ def _process_single_image(item: _ImageWorkItem) -> dict:
         mask_api_key(api_key),
         item.key_pool.current_index(),
     )
+    logger.info(
+        "generate_images: %s[%d] API PAYLOAD:\n%s",
+        item.variant_json_path.name, item.var_idx,
+        json.dumps(payload, indent=2, ensure_ascii=False),
+    )
 
     resp = _api_request_with_retry(
         "POST",
@@ -257,7 +295,11 @@ def _process_single_image(item: _ImageWorkItem) -> dict:
         stem = item.variant_json_path.stem
         image_filename = f"{stem}_{item.var_idx + 1:02d}.png"
 
+    # Use auto-incrementing filename to prevent overwrites on retry
+    base_name = Path(image_filename).stem
+    image_filename = _get_next_sequence_filename(item.step_03_dir, base_name, "png")
     img_output_path = item.step_03_dir / image_filename
+
     with open(img_output_path, "wb") as img_f:
         img_f.write(img_resp.content)
     logger.info(
@@ -273,9 +315,9 @@ def _process_single_image(item: _ImageWorkItem) -> dict:
         "updated_variation": updated_var,
         "image_filename": image_filename,
         "file_mapping": {
-            "input": f"step_02/{item.variant_json_path.name}",
-            "output": f"step_03/{image_filename}",
-            "updated_json": f"step_03/{item.variant_json_path.name}",
+            "input": f"step_02_promptvariant/{item.variant_json_path.name}",
+            "output": f"step_03_generatedimage/{image_filename}",
+            "updated_json": f"step_03_generatedimage/{item.variant_json_path.name}",
         },
     }
 
@@ -295,6 +337,7 @@ class _VideoWorkItem:
     vid_num_frames: int
     vid_frame_rate: int
     final_video_prompt: str
+    negative_prompt: str
     api_timeout: int
     api_max_retries: int
     retry_base_wait: int
@@ -328,6 +371,8 @@ def _process_single_video(item: _VideoWorkItem) -> dict:
         "num_frames": item.vid_num_frames,
         "frame_rate": item.vid_frame_rate,
     }
+    if item.negative_prompt:
+        payload["negative_prompt"] = item.negative_prompt
     logger.info(
         "generate_videos: %s[%d] submitting video "
         "(model=%s, %dx%d, frames=%d, fps=%d)",
@@ -353,6 +398,11 @@ def _process_single_video(item: _VideoWorkItem) -> dict:
         item.variant_json_path.name, item.var_idx,
         mask_api_key(api_key),
         item.key_pool.current_index(),
+    )
+    logger.info(
+        "generate_videos: %s[%d] API PAYLOAD:\n%s",
+        item.variant_json_path.name, item.var_idx,
+        json.dumps(payload, indent=2, ensure_ascii=False),
     )
 
     submit_resp = _api_request_with_retry(
@@ -440,12 +490,15 @@ def _process_single_video(item: _VideoWorkItem) -> dict:
 
     image_filename = item.variation.get("image_filename", "")
     if image_filename:
-        video_filename = Path(image_filename).stem + ".mp4"
+        video_base = Path(image_filename).stem
     else:
         stem = item.variant_json_path.stem
-        video_filename = f"{stem}_{item.var_idx + 1:02d}.mp4"
+        video_base = f"{stem}_{item.var_idx + 1:02d}"
 
+    # Use auto-incrementing filename to prevent overwrites on retry
+    video_filename = _get_next_sequence_filename(item.step_04_dir, video_base, "mp4")
     vid_output_path = item.step_04_dir / video_filename
+
     with open(vid_output_path, "wb") as vid_f:
         vid_f.write(vid_resp.content)
     logger.info(
@@ -458,11 +511,11 @@ def _process_single_video(item: _VideoWorkItem) -> dict:
         "video_filename": video_filename,
         "file_mapping": {
             "input": (
-                f"step_03/{image_filename}"
+                f"step_03_generatedimage/{image_filename}"
                 if image_filename
-                else f"step_03/{item.variant_json_path.name}"
+                else f"step_03_generatedimage/{item.variant_json_path.name}"
             ),
-            "output": f"step_04/{video_filename}",
+            "output": f"step_04_generatedvideo/{video_filename}",
         },
     }
 
@@ -471,8 +524,8 @@ def _process_single_video(item: _VideoWorkItem) -> dict:
 def generate_images(*, context, state, step_cfg, project_root) -> ActionResult:
     """Generate images from prompt variants using Agnes Image 2.1 Flash API.
 
-    Scans step_02/ for variant JSON files, calls the image generation API
-    for each variant, downloads generated images to step_03/, updates the
+    Scans step_02_promptvariant/ for variant JSON files, calls the image generation API
+    for each variant, downloads generated images to step_03_generatedimage/, updates the
     JSON files with image_url fields, archives processed inputs, and
     produces an index.json manifest.
 
@@ -515,7 +568,7 @@ def generate_images(*, context, state, step_cfg, project_root) -> ActionResult:
     step_03_dir = Path(context.get("STEP_03_DIR", ""))
     config_path = Path(context.get("MEDIA_CONFIG", ""))
     logger.info(
-        "generate_images1: MEDIA_CONFIG=%r, config_path=%r",
+        "generate_images: MEDIA_CONFIG=%r, config_path=%r",
         context.get("MEDIA_CONFIG", "<MISSING>"),
         config_path,
     )
@@ -563,7 +616,7 @@ def generate_images(*, context, state, step_cfg, project_root) -> ActionResult:
     # Prepare output directory
     step_03_dir.mkdir(parents=True, exist_ok=True)
 
-    # Scan for variant JSON files in step_02 (skip index.json)
+    # Scan for variant JSON files in step_02_promptvariant (skip index.json)
     variant_jsons = sorted(
         p for p in step_02_dir.glob("*.json")
         if p.name != "index.json"
@@ -575,7 +628,7 @@ def generate_images(*, context, state, step_cfg, project_root) -> ActionResult:
     if not variant_jsons:
         return ActionResult(
             status="REJECTED",
-            remark="No variant JSON files found in step_02.",
+            remark="No variant JSON files found in step_02_promptvariant.",
             artifacts={},
             reject_code="NO_INPUTS",
         )
@@ -704,7 +757,7 @@ def generate_images(*, context, state, step_cfg, project_root) -> ActionResult:
         if all_succeeded and json_results:
             successes.append(json_name)
 
-    # Write index.json to step_03
+    # Write index.json to step_03_generatedimage
     index_path = step_03_dir / "index.json"
     _write_index(index_path, "generate_images", file_mappings)
 
@@ -722,7 +775,7 @@ def generate_images(*, context, state, step_cfg, project_root) -> ActionResult:
             status="APPROVED",
             remark=(
                 f"Generated images for {success_count}/{total} "
-                f"variant files. Index written to step_03/index.json."
+                f"variant files. Index written to step_03_generatedimage/index.json."
             ),
             artifacts={
                 "IMAGE_INDEX": str(index_path),
@@ -738,7 +791,7 @@ def generate_images(*, context, state, step_cfg, project_root) -> ActionResult:
                 f"Partial failure: {success_count}/{total} variant "
                 f"files succeeded, {fail_count} errors. "
                 f"Details: {failure_detail}. "
-                f"Partial results saved to step_03/."
+                f"Partial results saved to step_03_generatedimage/."
             ),
             artifacts={
                 "IMAGE_INDEX": str(index_path),
@@ -751,10 +804,10 @@ def generate_images(*, context, state, step_cfg, project_root) -> ActionResult:
 def generate_videos(*, context, state, step_cfg, project_root):
     """Generate videos from images using Agnes Video V2.0 API.
 
-    Scans step_03/ for updated JSON files containing image_url and
+    Scans step_03_generatedimage/ for updated JSON files containing image_url and
     t2i_prompt1 fields. For each variant, submits a video generation
     request, polls the status endpoint until completion, downloads
-    the video to step_04/, archives processed inputs, and produces
+    the video to step_04_generatedvideo/, archives processed inputs, and produces
     an index.json manifest.
 
     Configuration is read from config.json (MEDIA_CONFIG context variable).
@@ -828,6 +881,27 @@ def generate_videos(*, context, state, step_cfg, project_root):
     vid_prompt_field = vid_config.get("video_prompt", "t2v_prompt1")
     vid_prompt_prefix = vid_config.get("video_prompt_prefix", "")
     vid_prompt_postfix = vid_config.get("video_prompt_postfix", "")
+    vid_negative_prompt_postfix = vid_config.get("negative_prompt_video_postfix", "")
+
+    # Hardcoded negative prompt terms — always applied to prevent common
+    # video API hallucinations (birds in sea scenes, falling leaves, etc.)
+    _HARDCODED_NEGATIVE = (
+        "birds, seagulls, flying creatures, falling leaves, falling petals, "
+        "fish jumping, dolphins, butterflies, insects, debris falling, "
+        "objects appearing, objects disappearing, new animals, new people, "
+        "duplicate moon, double moon, duplicate sun, double sun, "
+        "multiple moons, multiple suns, duplicated objects, "
+        "shaky camera, handheld camera, walking camera, footstep motion, "
+        "camera bounce, camera jitter, footstep shake, unstable camera"
+    )
+    logger.info(
+        "generate_videos: prompt config — field=%s, prefix=%d chars, postfix=%d chars",
+        vid_prompt_field, len(vid_prompt_prefix), len(vid_prompt_postfix),
+    )
+    if vid_prompt_prefix:
+        logger.info("generate_videos: video_prompt_prefix:\n%s", vid_prompt_prefix)
+    if vid_prompt_postfix:
+        logger.info("generate_videos: video_prompt_postfix:\n%s", vid_prompt_postfix)
     process_delay = config.get("process_delay", 15)
     api_timeout = config.get("api_timeout", 500)
     api_max_retries = config.get("api_max_retries", 5)
@@ -847,7 +921,7 @@ def generate_videos(*, context, state, step_cfg, project_root):
     # Prepare output directory
     step_04_dir.mkdir(parents=True, exist_ok=True)
 
-    # Scan for JSON files in step_03 (skip index.json)
+    # Scan for JSON files in step_03_generatedimage (skip index.json)
     variant_jsons = sorted(
         p for p in step_03_dir.glob("*.json")
         if p.name != "index.json"
@@ -859,7 +933,7 @@ def generate_videos(*, context, state, step_cfg, project_root):
     if not variant_jsons:
         return ActionResult(
             status="REJECTED",
-            remark="No variant JSON files found in step_03.",
+            remark="No variant JSON files found in step_03_generatedimage.",
             artifacts={},
             reject_code="NO_INPUTS",
         )
@@ -915,6 +989,20 @@ def generate_videos(*, context, state, step_cfg, project_root):
 
             final_video_prompt = vid_prompt_prefix + video_prompt + vid_prompt_postfix
 
+            # Build negative prompt: variation's negative_prompt_video + config postfix + hardcoded terms
+            neg_prompt_video = variation.get("negative_prompt_video", "")
+            negative_prompt = neg_prompt_video
+            if vid_negative_prompt_postfix:
+                if negative_prompt:
+                    negative_prompt = negative_prompt + " " + vid_negative_prompt_postfix
+                else:
+                    negative_prompt = vid_negative_prompt_postfix
+            # Always append hardcoded negative terms (prevents API hallucinations)
+            if negative_prompt:
+                negative_prompt = negative_prompt + " " + _HARDCODED_NEGATIVE
+            else:
+                negative_prompt = _HARDCODED_NEGATIVE
+
             work_items.append(_VideoWorkItem(
                 variation=variation,
                 variant_json_path=variant_json_path,
@@ -927,6 +1015,7 @@ def generate_videos(*, context, state, step_cfg, project_root):
                 vid_num_frames=vid_num_frames,
                 vid_frame_rate=vid_frame_rate,
                 final_video_prompt=final_video_prompt,
+                negative_prompt=negative_prompt,
                 api_timeout=api_timeout,
                 api_max_retries=api_max_retries,
                 retry_base_wait=retry_base_wait,
@@ -980,7 +1069,7 @@ def generate_videos(*, context, state, step_cfg, project_root):
         if name not in failed_json_names and name in success_json_names:
             successes.append(name)
 
-    # Write index.json to step_04
+    # Write index.json to step_04_generatedvideo
     index_path = step_04_dir / "index.json"
     _write_index(index_path, "generate_videos", file_mappings)
 
@@ -1000,7 +1089,7 @@ def generate_videos(*, context, state, step_cfg, project_root):
             remark=(
                 f"Generated videos for {success_count}/{total} "
                 f"variant files. Index written to "
-                f"step_04/index.json."
+                f"step_04_generatedvideo/index.json."
             ),
             artifacts={
                 "VIDEO_INDEX": str(index_path),
@@ -1018,7 +1107,7 @@ def generate_videos(*, context, state, step_cfg, project_root):
                 f"Partial failure: {success_count}/{total} "
                 f"variant files succeeded, {fail_count} errors. "
                 f"Details: {failure_detail}. "
-                f"Partial results saved to step_04/."
+                f"Partial results saved to step_04_generatedvideo/."
             ),
             artifacts={
                 "VIDEO_INDEX": str(index_path),

@@ -34,12 +34,17 @@ class WorkflowBuilderExtensions(WorkflowExtensions):
             "STEP_ARCHITECTURE": f"{run_root}/STEPS-{date_str}-{{seq}}_{{slug}}.md",
             "WORKFLOW_MANIFEST": f"{run_root}/workflow.toml",
             "WORKFLOW_EXTENSIONS": f"{run_root}/context_extensions.py",
+            "WORKFLOW_ACTIONS": f"{run_root}/actions.py",
             "WORKFLOW_PROMPTS_INDEX": f"{run_root}/PROMPTS-{date_str}-{{seq}}_{{slug}}.md",
             "WORKFLOW_README": f"{run_root}/README.md",
             "WORKFLOW_ENV_SAMPLE": f"{run_root}/.env.sample",
             "WORKFLOW_CONFIG_SAMPLE": f"{run_root}/config.json.sample",
             "VALIDATION_REPORT": f"{run_root}/VALIDATION-{date_str}-{{seq}}_{{slug}}.md",
             "REVIEW_FILE_SUGGESTED": f"{run_root}/REVIEW-{date_str}-{{seq}}_{{slug}}.md",
+            "GATEKEEP_REQUIREMENTS": f"{run_root}/GATEKEEP-REQ-{date_str}-{{seq}}_{{slug}}.md",
+            "GATEKEEP_ARTIFACTS": f"{run_root}/GATEKEEP-ART-{date_str}-{{seq}}_{{slug}}.md",
+            "GATEKEEP_STEPS": f"{run_root}/GATEKEEP-STEPS-{date_str}-{{seq}}_{{slug}}.md",
+            "GATEKEEP_PACKAGE": f"{run_root}/GATEKEEP-PKG-{date_str}-{{seq}}_{{slug}}.md",
         }
 
     def build_context_extensions(

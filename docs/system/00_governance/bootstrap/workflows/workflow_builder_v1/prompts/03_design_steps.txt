@@ -35,6 +35,30 @@ Step Design Tasks
 7. Mark review steps with requires_human_approval_after if the workflow
   requires human gate.
 
+Self-Validation (Before Output)
+
+Before reporting APPROVED, validate:
+
+1. Coverage: Does the step sequence implement ALL requirements from
+   {WORKFLOW_REQUIREMENTS}? Are there requirement gaps?
+
+2. Artifact Flow: Can you trace a complete chain from initial inputs to
+   final outputs? Are all required_inputs satisfied by prior produces?
+
+3. Routing Validity: Does every step have a valid onsuccess target?
+   Is stepCompletion the final step? Are loop routes correct?
+
+4. Action Consistency: For action steps, are action names unique and
+   descriptive? Do they match action specifications from requirements?
+
+5. Prompt Consistency: For prompt steps, are role policies appropriate
+   for the task type?
+
+6. Review Loop Design: Do review steps have on_reject_refine? Do refine
+   steps have loop_returns_to? Are max_iterations appropriate?
+
+If validation fails, report REJECTED with specific gaps found.
+
 Output Instructions
 
 - Write the step architecture document to {STEP_ARCHITECTURE}.

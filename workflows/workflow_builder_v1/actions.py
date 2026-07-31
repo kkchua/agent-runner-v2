@@ -89,7 +89,7 @@ def _run_semantic_validation(bundle_root: Path, artifacts: dict, project_root: P
     """Run semantic validation checks beyond structural validity.
 
     Checks that action-driven steps have corresponding action code,
-    and that required files actually exist.
+    that required files actually exist, and that gatekeepers ran.
     """
     import tomllib
 
@@ -136,6 +136,35 @@ def _run_semantic_validation(bundle_root: Path, artifacts: dict, project_root: P
                             ),
                             "step": "validate_bundle",
                         })
+
+    # Check: gatekeeper artifacts should exist
+    gatekeep_artifacts = [
+        ("GATEKEEP_REQUIREMENTS", "gatekeep_requirements"),
+        ("GATEKEEP_ARTIFACTS", "gatekeep_artifacts"),
+        ("GATEKEEP_STEPS", "gatekeep_steps"),
+        ("GATEKEEP_PACKAGE", "gatekeep_package"),
+    ]
+    for key, step_name in gatekeep_artifacts:
+        artifact_path = artifacts.get(key, "")
+        if not artifact_path:
+            findings.append({
+                "level": "warning",
+                "code": f"MISSING_{key}",
+                "message": (
+                    f"Gatekeeper artifact {key} not found in state. "
+                    f"Step {step_name} may not have run."
+                ),
+                "step": "validate_bundle",
+            })
+        elif not Path(artifact_path).is_file():
+            findings.append({
+                "level": "warning",
+                "code": f"MISSING_{key}_FILE",
+                "message": (
+                    f"Gatekeeper artifact {key} path does not exist: {artifact_path}"
+                ),
+                "step": "validate_bundle",
+            })
 
     return findings
 
@@ -227,12 +256,18 @@ def promote_workflow_package(*, context, state, step_cfg, project_root):
 
     target_dir.mkdir(parents=True, exist_ok=True)
 
-    # Files to copy (always)
+    # Files to copy (always) - core workflow files only
     always_copy = ["workflow.toml", "context_extensions.py", "README.md"]
-    # Files to copy (if exist)
+    # Files to copy (if exist) - optional workflow files
     conditional_copy = ["actions.py", ".env.sample", "config.json.sample"]
     # Directories to copy (if exist)
     copy_dirs = ["prompts"]
+    # Files to NEVER copy (build-time artifacts, not runtime files)
+    exclude_files = [
+        "GATEKEEP-REQ", "GATEKEEP-ART", "GATEKEEP-STEPS", "GATEKEEP-PKG",
+        "REQUIREMENTS", "ARTIFACTS", "STEPS", "PROMPTS", "VALIDATION", "REVIEW",
+        "TEST_CRITERIA",
+    ]
 
     copied = []
 

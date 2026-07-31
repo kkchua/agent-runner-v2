@@ -1,0 +1,96 @@
+Objective
+
+Generate the Benefits/USP section artifact for the Product Master.
+This section covers the product value proposition, key benefits,
+and competitive differentiators derived from the available source
+materials.
+
+Layer Boundary
+
+- This workflow belongs to Layer 3 and operates on top of the Layer 2
+  platform contract.
+- Generate only the Benefits/USP section content. Do not generate
+  Product Information, Target Audience, Marketing Assets, or Additional
+  Sections.
+- Treat Layer 1 governance and Layer 2 platform constitution as read-only
+  reference inputs.
+
+Reference Inputs
+
+- Read the scan report to understand what source files are available:
+  {SCAN_REPORT_FILE}
+- Read the source directory for available product materials:
+  {PRODUCT_SOURCE_DIR}
+- Read Layer 1 governance documents for metadata standards:
+  {GOVERNANCE_RUNTIME_ROOT}
+
+Content Scope
+
+Identify and document the product value proposition and selling points
+based on the available source materials. This section covers ONLY
+benefits and competitive differentiation. Do not include factual product
+data, audience analysis, marketing asset inventories, or proposed
+additional sections.
+
+Required content domains:
+- Core value proposition (one-sentence summary of what makes the product
+  valuable)
+- Key benefits categorized by type:
+  - Functional benefits (what the product does for the user)
+  - Emotional benefits (how the product makes the user feel)
+  - Social benefits (how the product affects the user's social standing
+    or relationships)
+- Problems solved (specific pain points the product addresses)
+- Competitive differentiators (what sets this product apart from
+  alternatives, with source-traced evidence for each claim)
+
+Source File Guidance
+
+Consult the scan report to determine which source files are available.
+Source types may include: images, manuals, brochures, specifications,
+documents, URL lists, and notes.
+
+For URL lists, use the webfetch tool to retrieve and read URL content.
+Brochures, specifications, and marketing materials are particularly
+relevant for benefits analysis. Notes may contain competitive insights.
+Not all source types will be present. Work only with the files that exist.
+
+Knowledge Gap Handling
+
+If information for a required content domain is not found in any source
+file, represent it explicitly as a knowledge gap. Use the format:
+
+  Not available from provided sources.
+
+Do not fabricate benefits or make unsupported competitive claims.
+Every benefit claim must be traced to its source file. Factual accuracy
+takes priority over completeness.
+
+Conflict Handling
+
+If conflicting information is found across different source files,
+explicitly note both sides with source attribution. Example:
+
+  Primary benefit claim: "Longest battery life in class" (per marketing
+  brochure) vs "Battery life comparable to competitors" (per independent
+  review URL). Discrepancy unresolved.
+
+Output Instructions
+
+- Write the generated content to the file at {PRODUCT_BENEFITS_FILE}.
+- Use markdown format with a section heading.
+- The output file must be ASCII-only (no em-dashes, curly quotes, or
+  other Unicode characters).
+- Use plain text section headings without formatting markup.
+- Use the product slug ({SLUG}) to identify the product context.
+- The result field in meta.json must contain a brief summary of what
+  was generated. All document content must be written to the artifact
+  file, not placed in the meta.json result field.
+
+Forbidden Content
+
+- Factual product specifications or dimensions
+- Audience demographics or persona details
+- Marketing campaign execution plans or media buying
+- Additional section proposals
+- Content not traceable to source files

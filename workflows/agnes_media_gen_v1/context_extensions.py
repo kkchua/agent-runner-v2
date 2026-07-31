@@ -7,8 +7,9 @@ resolution.
 
 All runtime paths are resolved relative to the target repository root
 (workspace_root) at job start time. No user-provided inputs are required;
-the workflow defines its own folder structure (step_00/ through step_04/
-with corresponding _archive/ folders) in the target repository.
+the workflow defines its own folder structure (step_00_inputimage/ through
+step_04_generatedvideo/ with corresponding _archive/ folders) in the target
+repository.
 """
 from __future__ import annotations
 
@@ -54,10 +55,10 @@ class AgnesMediaGenExtensions(WorkflowExtensions):
 
         workspace_root = get_workspace_root() or "{workspace_root}"
         return {
-            "IMAGE_DESCRIPTIONS": f"{workspace_root}/step_01/index.json",
-            "PROMPT_VARIANTS": f"{workspace_root}/step_02/index.json",
-            "IMAGE_INDEX": f"{workspace_root}/step_03/index.json",
-            "VIDEO_INDEX": f"{workspace_root}/step_04/index.json",
+            "IMAGE_DESCRIPTIONS": f"{workspace_root}/step_01_imagedesc/index.json",
+            "PROMPT_VARIANTS": f"{workspace_root}/step_02_promptvariant/index.json",
+            "IMAGE_INDEX": f"{workspace_root}/step_03_generatedimage/index.json",
+            "VIDEO_INDEX": f"{workspace_root}/step_04_generatedvideo/index.json",
         }
 
     def build_context_extensions(
@@ -72,8 +73,9 @@ class AgnesMediaGenExtensions(WorkflowExtensions):
         """Build context extensions for agnes_media_gen_v1 workflow.
 
         Provides:
-        - Absolute paths for all step directories (step_00/ through step_04/)
-          and their corresponding archive directories.
+        - Absolute paths for all step directories (step_00_inputimage/
+          through step_04_generatedvideo/) and their corresponding archive
+          directories.
         - Absolute path for the media configuration file (config.json).
         - Layer 1 governance runtime root (global path).
         - Layer 2 platform runtime root (global path).
@@ -92,16 +94,16 @@ class AgnesMediaGenExtensions(WorkflowExtensions):
 
         # Step directories (absolute paths)
         step_dirs = [
-            ("STEP_00_DIR", "step_00"),
-            ("STEP_00_ARCHIVE", "step_00_archive"),
-            ("STEP_01_DIR", "step_01"),
-            ("STEP_01_ARCHIVE", "step_01_archive"),
-            ("STEP_02_DIR", "step_02"),
-            ("STEP_02_ARCHIVE", "step_02_archive"),
-            ("STEP_03_DIR", "step_03"),
-            ("STEP_03_ARCHIVE", "step_03_archive"),
-            ("STEP_04_DIR", "step_04"),
-            ("STEP_04_ARCHIVE", "step_04_archive"),
+            ("STEP_00_DIR", "step_00_inputimage"),
+            ("STEP_00_ARCHIVE", "step_00_inputimage_archive"),
+            ("STEP_01_DIR", "step_01_imagedesc"),
+            ("STEP_01_ARCHIVE", "step_01_imagedesc_archive"),
+            ("STEP_02_DIR", "step_02_promptvariant"),
+            ("STEP_02_ARCHIVE", "step_02_promptvariant_archive"),
+            ("STEP_03_DIR", "step_03_generatedimage"),
+            ("STEP_03_ARCHIVE", "step_03_generatedimage_archive"),
+            ("STEP_04_DIR", "step_04_generatedvideo"),
+            ("STEP_04_ARCHIVE", "step_04_generatedvideo_archive"),
         ]
         for key, dirname in step_dirs:
             result[key] = str(workspace_root / dirname)

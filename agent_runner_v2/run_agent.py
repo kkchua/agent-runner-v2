@@ -79,6 +79,7 @@ from .runtime_context import (
     get_workflow_module,
     set_context, set_workflow_module, set_delivery_root,
 )
+from .runtime_hooks import get_workflow_guardrails
 from .constants import RUN_AGENT_REQUIRED_DOC_DIRS, delivery_doc_rel
 from .doc_paths import repo_doc_rel
 from .task_runtime import (
@@ -483,6 +484,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         ns.stop_argv = raw[1:]
         return ns
 
+    if command == "status":
+        ns = argparse.Namespace()
+        ns.command = "status"
+        ns.status_argv = raw[1:]
+        return ns
+
     if command == "list-runs":
         ns = argparse.Namespace()
         ns.command = "list-runs"
@@ -511,6 +518,21 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         ns = argparse.Namespace()
         ns.command = "codebase-init"
         ns.codebase_init_argv = raw[1:]
+        return ns
+
+    if command == "cleanup":
+        p = argparse.ArgumentParser(description="Cleanup old job history and runtime files.")
+        p.add_argument("--confirm", action="store_true", help="Actually delete files (default: dry-run only shows what would be deleted)")
+        p.add_argument("--keep-days", type=int, default=0, help="Override config.json cleanup_keep_days setting")
+        p.add_argument("--target", choices=["jobs", "runtime", "all"], default="all", help="Which areas to clean (default: all)")
+        ns = p.parse_args(raw[1:])
+        ns.command = "cleanup"
+        return ns
+
+    if command == "daemon-quit":
+        ns = argparse.Namespace()
+        ns.command = "daemon-quit"
+        ns.daemon_quit_argv = raw[1:]
         return ns
 
     p = argparse.ArgumentParser(description="Run a job-based LLM workflow (v2).")
@@ -683,6 +705,10 @@ def main(argv: list[str] | None = None) -> int:
         from .stop_commands import main as _stop_main
         return _stop_main(args.stop_argv)
 
+    if args.command == "status":
+        from .status_commands import main as _status_main
+        return _status_main(args.status_argv)
+
     if args.command == "list-runs":
         from .list_runs_commands import main as _list_runs_main
         return _list_runs_main(args.list_runs_argv)
@@ -702,6 +728,21 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "codebase-init":
         from .codebase_init_commands import main as _codebase_init_main
         return _codebase_init_main(args.codebase_init_argv)
+
+    if args.command == "cleanup":
+        from .cleanup_commands import main as _cleanup_main
+        cleanup_argv: list[str] = []
+        if getattr(args, "confirm", False):
+            cleanup_argv.append("--confirm")
+        if getattr(args, "keep_days", 0):
+            cleanup_argv.extend(["--keep-days", str(args.keep_days)])
+        if getattr(args, "target", "all") != "all":
+            cleanup_argv.extend(["--target", args.target])
+        return _cleanup_main(cleanup_argv)
+
+    if args.command == "daemon-quit":
+        from .quit_daemon_commands import main as _quit_daemon_main
+        return _quit_daemon_main(args.daemon_quit_argv)
 
     # Only the "run" command defines --project-root / --target-project-root.
     # Use getattr so any subcommand that slips through (or is added in the
@@ -921,6 +962,77 @@ def main(argv: list[str] | None = None) -> int:
     _mark_review_started(state, step=step, step_cfg=step_cfg, coder_used=coder_used)
     save_job(args.template_group, state["job_id"], state)
 
+    # Guardrail pre-check: validate inputs before execution
+    guardrails = get_workflow_guardrails(args.template_group)
+    if guardrails and callable(getattr(guardrails, "pre_check", None)):
+        try:
+            is_valid, reject_reason, reject_code = guardrails.pre_check(
+                step=step,
+                step_cfg=step_cfg,
+                state=state,
+                prepared=prepared,
+            )
+            if not is_valid:
+                # Update job state with guardrail failure
+                set_job_status(state, "WAITING_FOR_HUMAN_INTERVENTION")
+                set_last_failure(
+                    state=state,
+                    failure_class="GUARDRAIL_VIOLATION",
+                    failure_code=reject_code or "GUARDRAIL_REJECTED",
+                    failure_reason=reject_reason or "Guardrail validation failed",
+                    failure_source="guardrail",
+                    step=step,
+                )
+                append_failure_history(
+                    state=state, step=step,
+                    failure_class="GUARDRAIL_VIOLATION",
+                    failure_code=reject_code or "GUARDRAIL_REJECTED",
+                    failure_source="guardrail",
+                )
+                save_job(args.template_group, state["job_id"], state)
+
+                actor = f"action={prepared.action_name}" if prepared.action_name else f"coder={coder_used}"
+                print(f"[{_now_iso()}] {actor} step={step} status=GUARDRAIL_REJECTED error={reject_code}", flush=True)
+                print(json.dumps({
+                    "status": "REJECTED",
+                    "remark": reject_reason or "Guardrail validation failed",
+                    "job_status": get_job_status(state),
+                    "job_id": state["job_id"],
+                    "template_group": state["template_group"],
+                    "step": step,
+                    "step_progress": _step_progress_label(group_cfg, step),
+                    "coder_used": coder_used,
+                    "last_failure_class": state.get("last_failure_class"),
+                    "last_failure_code": state.get("last_failure_code"),
+                    "last_failure_source": state.get("last_failure_source"),
+                    "reject_count": state.get("reject_counts", {}).get(step, 0),
+                    "max_rejects": max_rejects,
+                    "step_dir": _safe_relative_to(step_dir, JOBS_ROOT),
+                }, indent=2))
+
+                # Daemon mode: sync guardrail rejection to backend
+                if args.mode == "daemon" and state.get("workflow_step_run_id"):
+                    from .step_runner import StepResult
+                    guardrail_result = StepResult(
+                        status="REJECTED",
+                        remark=reject_reason or "Guardrail validation failed",
+                        artifacts={},
+                        reject_code=reject_code or "GUARDRAIL_REJECTED",
+                        meta_json_path="",
+                        usage_data=default_usage_summary(),
+                    )
+                    _sync_results_to_backend(
+                        state=state,
+                        step_result=guardrail_result,
+                        coder_used=coder_used,
+                        backend_url=os.environ.get("AGENT_RUNNER_BACKEND_URL") or "",
+                    )
+
+                return 1
+        except Exception as exc:
+            # Log guardrail error but continue execution (don't block on guardrail bugs)
+            logging.warning(f"Guardrail pre_check failed for {step}: {exc}", exc_info=True)
+
     routed = execute_routed_step(
         executor=_execute_prepared_step,
         failure_router=route_after_failure,
@@ -955,12 +1067,71 @@ def main(argv: list[str] | None = None) -> int:
             "max_rejects": max_rejects,
             "step_dir": _safe_relative_to(step_dir, JOBS_ROOT),
         }, indent=2))
+
+        # Daemon mode: sync failure to backend so backend shows failed status
+        if args.mode == "daemon" and state.get("workflow_step_run_id"):
+            failure_result = StepResult(
+                status="REJECTED",
+                remark=routed.failure.failure_reason,
+                artifacts={},
+                reject_code=routed.failure.failure_code,
+                meta_json_path="",
+                usage_data=default_usage_summary(),
+            )
+            _sync_results_to_backend(
+                state=state,
+                step_result=failure_result,
+                coder_used=coder_used,
+                backend_url=os.environ.get("AGENT_RUNNER_BACKEND_URL") or "",
+            )
+
         return routed.exit_code
 
     assert routed.step_result is not None
     step_result = routed.step_result
     state = routed.state
     exit_code = routed.exit_code
+
+    # Guardrail post-check: validate outputs after execution
+    if guardrails and callable(getattr(guardrails, "post_check", None)):
+        try:
+            is_valid, reject_reason, reject_code = guardrails.post_check(
+                step=step,
+                step_cfg=step_cfg,
+                state=state,
+                step_result=step_result,
+            )
+            if not is_valid:
+                # Override step result to REJECTED
+                step_result.status = "REJECTED"
+                step_result.reject_code = reject_code or "POST_GUARDRAIL_REJECTED"
+                step_result.remark = reject_reason or "Post-execution guardrail validation failed"
+
+                # Update job state
+                set_job_status(state, "WAITING_FOR_HUMAN_INTERVENTION")
+                set_last_failure(
+                    state=state,
+                    failure_class="GUARDRAIL_VIOLATION",
+                    failure_code=reject_code or "POST_GUARDRAIL_REJECTED",
+                    failure_reason=reject_reason or "Post-execution guardrail validation failed",
+                    failure_source="guardrail",
+                    step=step,
+                )
+                append_failure_history(
+                    state=state, step=step,
+                    failure_class="GUARDRAIL_VIOLATION",
+                    failure_code=reject_code or "POST_GUARDRAIL_REJECTED",
+                    failure_source="guardrail",
+                )
+                save_job(args.template_group, state["job_id"], state)
+
+                actor = f"action={prepared.action_name}" if prepared.action_name else f"coder={coder_used}"
+                print(f"[{_now_iso()}] {actor} step={step} status=POST_GUARDRAIL_REJECTED error={reject_code}", flush=True)
+                exit_code = 1
+        except Exception as exc:
+            # Log guardrail error but continue (don't block on guardrail bugs)
+            logging.warning(f"Guardrail post_check failed for {step}: {exc}", exc_info=True)
+
     report_artifacts = format_report_artifacts(
         step_result.artifacts,
         project_root=effective_root,

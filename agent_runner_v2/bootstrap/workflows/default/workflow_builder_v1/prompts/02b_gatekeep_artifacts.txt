@@ -1,0 +1,72 @@
+Objective
+
+Validate that the artifact contract is complete and supports the workflow design
+defined in the requirements. This is a quality control checkpoint before the step
+design phase.
+
+The gatekeeper asks: "Do these artifacts enable the solution? Are there missing
+pieces that will block downstream steps?"
+
+Reference Inputs
+
+- Read the requirements: {WORKFLOW_REQUIREMENTS}
+- Read the artifact contract: {ARTIFACT_CONTRACT}
+- Read the test criteria: {TEST_CRITERIA}
+
+Validation Questions
+
+Answer each question with specific evidence from the documents:
+
+1. Coverage: Does every input and output declared in the requirements have a
+   corresponding artifact key in the contract?
+
+2. Action Artifacts: If the requirements specify action-driven steps, is
+   WORKFLOW_ACTIONS declared as an artifact (even if conditional)?
+
+3. Placeholder Completeness: Do artifact paths use appropriate placeholders?
+   - {job_id} for run-scoped paths
+   - {slug} when slug extraction is used
+   - {seq} when auto-increment is needed
+   - {iter} for review/refine loop artifacts
+
+4. Path Validity: Are all paths relative (not absolute)? Do they follow the
+   conventions from {WORKFLOW_CREATION_GUIDE}?
+
+5. Input/Output Chain: Can you trace a complete chain from initial inputs to
+   final outputs through the artifact declarations?
+
+6. Review Loop Support: Are REVIEW_FILE_SUGGESTED and other loop artifacts
+   properly declared if review/refine loops are planned?
+
+7. Constraint Compliance: Does the contract respect naming conventions,
+   path patterns, and other constraints from the spec?
+
+8. Downstream Feasibility: Can the step design phase consume these artifacts
+   and define valid step bindings?
+
+Decision Rules
+
+- APPROVED: The artifact contract is complete and supports the solution.
+  All validation questions have satisfactory answers.
+
+- REJECTED: The contract has gaps, missing artifacts, or incorrect paths.
+  Include specific findings for each failed validation question.
+
+Output Instructions
+
+- Write the gatekeeper report to {GATEKEEP_ARTIFACTS}.
+- Include YAML frontmatter with doc_type: "gatekeep_report".
+- Structure:
+  1. Summary: Overall assessment (1-2 sentences)
+  2. Validation Results: Table with columns: Question, Status (PASS/FAIL), Evidence
+  3. Issues (if any): Numbered list of specific gaps found
+  4. Recommendations: Specific suggestions to fix issues
+  5. Verdict: APPROVED or REJECTED on its own line
+- All content must be ASCII-only.
+- The result field in meta.json must match the verdict exactly.
+
+Forbidden Content
+
+- Non-ASCII characters
+- Vague findings without specific evidence
+- Approving contracts with known gaps

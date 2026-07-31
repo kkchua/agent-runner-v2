@@ -309,6 +309,25 @@ class RunnerActionService:
             args.append(workflow.workflow_name)
         return self._invoke(repo_path=repo_path, func=sync_workflows.main, argv=args)
 
+    def quit_daemon(self, *, repo_path: str, worker_id: str | None = None, reason: str = "") -> str:
+        """OPERATOR CONSOLE: Submit a quit command for the daemon.
+
+        Submits a special control job to the backend. The daemon will
+        claim this job and gracefully shut down after completing current work.
+
+        This is a "request to quit" — not an immediate termination.
+        No local job folder needed — pure backend operation.
+        """
+        args = ["daemon-quit"]
+        effective_worker_id = worker_id or self._settings.worker_id
+        if effective_worker_id:
+            args.extend(["--worker-id", effective_worker_id])
+        if self._settings.worker_label:
+            args.extend(["--worker-label", self._settings.worker_label])
+        if reason:
+            args.extend(["--reason", reason])
+        return self._invoke(repo_path=repo_path, func=run_agent.main, argv=args)
+
     # ------------------------------------------------------------------
     # Step-Level Interventions (triggered from console, require local job folder)
     # These load local job.json, modify it, save it, then sync to backend.

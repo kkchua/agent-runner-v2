@@ -17,14 +17,19 @@ docs/repo/workflow_builder/
 ├── specs/                                    ← User-provided input specs (permanent)
 │   └── {slug}.md
 ├── runs/{job_id}/                            ← Per-run working documents
-│   ├── REQUIREMENTS-{date}-{seq}_{slug}.md
-│   ├── ARTIFACTS-{date}-{seq}_{slug}.md
-│   ├── STEPS-{date}-{seq}_{slug}.md
-│   ├── PROMPTS-{date}-{seq}_{slug}.md
-│   ├── VALIDATION-{date}-{seq}_{slug}.md
-│   ├── REVIEW-{date}-{seq}_{slug}.md
+│   ├── REQUIREMENTS-{date}-{seq}_{slug}.md   ← Requirements document
+│   ├── ARTIFACTS-{date}-{seq}_{slug}.md      ← Artifact contract
+│   ├── STEPS-{date}-{seq}_{slug}.md          ← Step architecture
+│   ├── PROMPTS-{date}-{seq}_{slug}.md        ← Prompt index
+│   ├── VALIDATION-{date}-{seq}_{slug}.md     ← Validation report
+│   ├── REVIEW-{date}-{seq}_{slug}.md         ← Quality review
+│   ├── GATEKEEP-REQ-{date}-{seq}_{slug}.md   ← QC: Requirements validation
+│   ├── GATEKEEP-ART-{date}-{seq}_{slug}.md   ← QC: Artifacts validation
+│   ├── GATEKEEP-STEPS-{date}-{seq}_{slug}.md ← QC: Steps validation
+│   ├── GATEKEEP-PKG-{date}-{seq}_{slug}.md   ← QC: Package validation
 │   ├── workflow.toml                         ← Generated manifest
 │   ├── context_extensions.py                 ← Generated extensions
+│   ├── actions.py                            ← Generated custom actions (conditional)
 │   ├── README.md                             ← Generated user guide
 │   ├── .env.sample                           ← Generated env template (conditional)
 │   ├── config.json.sample                    ← Generated config template (conditional)
@@ -49,6 +54,7 @@ docs/repo/workflow_builder/
 - Location: `docs/repo/workflow_builder/runs/{job_id}/`
 - Prefix pattern: `{TYPE}-{YYYYMMDD}-{3-digit-seq}_{slug}.md`
 - Types: REQUIREMENTS, ARTIFACTS, STEPS, PROMPTS, VALIDATION, REVIEW
+- Gatekeeper types: GATEKEEP-REQ, GATEKEEP-ART, GATEKEEP-STEPS, GATEKEEP-PKG
 - Sequence numbers auto-increment via `resolve_next_seq()`
 
 ### Generated Workflow Package
@@ -111,16 +117,21 @@ Target:  workflows/{workflow_name}/
 |------|-----------|
 | `workflow.toml` | Always |
 | `context_extensions.py` | Always |
-| `actions.py` | If exists |
-| `prompts/` | If exists |
+| `actions.py` | If exists (action-driven steps) |
+| `prompts/` | If exists (prompt-driven steps) |
 | `README.md` | Always |
 | `.env.sample` | If exists |
 | `config.json.sample` | If exists |
 
+Note: Gatekeeper reports (GATEKEEP-*) and design documents
+(REQUIREMENTS, ARTIFACTS, STEPS, etc.) are NOT copied — they remain in
+the run directory as build-time audit artifacts.
+
 ### Files NOT copied
 
 Design docs (REQUIREMENTS, ARTIFACTS, STEPS, PROMPTS index, VALIDATION,
-REVIEW), meta.json sidecars, and validation reports stay in the run
+REVIEW), gatekeeper QC reports (GATEKEEP-REQ, GATEKEEP-ART, GATEKEEP-STEPS,
+GATEKEEP-PKG), meta.json sidecars, and validation reports stay in the run
 directory for the audit trail.
 
 ### Backup behavior

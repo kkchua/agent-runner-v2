@@ -365,6 +365,73 @@ def _handle_stop_on_claim(client, claim: dict, logger) -> None:
     )
 
 
+def _is_quit_daemon_requested(run: dict[str, Any]) -> bool:
+    """Check if quit_daemon was requested via context_payload flag.
+
+    This is signaled via context_payload.__run_control.quit_daemon = True
+    """
+    context = run.get("context_payload") or {}
+    if isinstance(context, dict):
+        control = context.get("__run_control") or {}
+        if isinstance(control, dict) and control.get("quit_daemon"):
+            return True
+    return False
+
+
+def _handle_quit_daemon(client, claim: dict, logger) -> bool:
+    """Handle quit daemon command.
+
+    Acknowledges the quit, stops the run, and signals shutdown.
+
+    Args:
+        client: BackendClient instance
+        claim: The claimed run/step
+        logger: Daemon logger
+
+    Returns:
+        True if daemon should shut down, False otherwise
+    """
+    run = claim["run"]
+    step_run = claim["step_run"]
+    step_run_id = str(step_run.get("id") or "")
+    run_id = str(run.get("id") or "")
+
+    logger.log(
+        "info", "daemon_quit_requested",
+        message="Received quit command from console, shutting down",
+        details={"run_id": run_id, "run_code": run.get("run_code")},
+    )
+
+    # Sync the step as completed
+    try:
+        client.sync_job_state(
+            step_run_id=step_run_id,
+            payload={
+                "run_status": "completed",
+                "step_status": "completed",
+                "step_outcome": "completed",
+                "step_coder": "system",
+                "step_duration_seconds": 0,
+                "next_step_name": None,
+                "output_payload": {},
+                "error_message": None,
+                "review": None,
+                "artifacts": [],
+                "events": [{"event_type": "DAEMON_QUIT_ACK", "message": "Daemon acknowledged quit command"}],
+            },
+        )
+    except Exception as exc:
+        logger.log("warning", "daemon_quit_sync_failed", message=f"Failed to sync quit acknowledgment: {exc}")
+
+    # Also stop the run to prevent re-claiming on daemon restart
+    try:
+        client.stop_run(run_id=run_id, reason="Daemon quit acknowledged")
+    except Exception as exc:
+        logger.log("warning", "daemon_quit_stop_failed", message=f"Failed to stop quit run: {exc}")
+
+    return True
+
+
 def _spawn_child(*, claim: dict[str, Any], runtime_root: Path, cli_pythonpath: str | None, logger: _DaemonLogger, backend_url: str, step_spec_source: str) -> ChildExecution:
     """Spawn a child process to execute a claimed workflow step.
 
@@ -751,6 +818,13 @@ def _run_supervisor(*, config: SupervisorConfig) -> int:
                 if _is_stop_requested(claim['run']):
                     _handle_stop_on_claim(client, claim, logger)
                     continue
+                # Check if quit_daemon was requested via context_payload
+                if _is_quit_daemon_requested(claim['run']):
+                    should_quit = _handle_quit_daemon(client, claim, logger)
+                    if should_quit:
+                        running = False
+                        break
+                    continue
                 # Skip runs this daemon already processed as failed (safety net
                 # against backend re-serving a run whose sync didn't stick).
                 claim_run_id = str(claim['run'].get('id') or '')
@@ -842,6 +916,13 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument('--engine-root', default='', help='Explicit engine root to prepend to PYTHONPATH for child runs.')
     p.add_argument('--once', action='store_true', help='Claim and process at most one step, then exit.')
     args = p.parse_args(argv)
+
+    # Single instance enforcement - only one daemon can run
+    from .single_instance import check_single_instance
+    check_single_instance(
+        "ukbe-runner-daemon",
+        "Daemon is already running. Use 'taskkill /F /IM python.exe' to stop it."
+    )
 
     worker_id = args.worker_id or _setting(cfg, 'WORKER_ID', 'worker_id', 'kode-worker-01')
     worker_label = args.worker_label or _setting(cfg, 'WORKER_LABEL', 'worker_label', 'live')

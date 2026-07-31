@@ -17,11 +17,15 @@ expected outcome?
 
 ## Workflow Type
 
-Pick one:
+Pick one, or leave blank for the builder to infer from step descriptions:
 
 - [ ] **Prompt-driven** — LLM generates documents with review/refine loops
 - [ ] **Action-only** — Python actions only, no LLM invocations
 - [ ] **Mixed** — Combination of prompt-driven and action steps
+
+The builder will infer the workflow type from your step descriptions if
+not explicitly declared. For mixed workflows, specify which steps are
+prompt-driven and which are action-driven.
 
 ## Input Artifacts
 
@@ -105,6 +109,45 @@ Action: validate_output
 Purpose: Check that the generated output meets quality criteria.
 Returns: APPROVED or REJECTED with reject_code
 ```
+
+## Gatekeeper Requirements (Optional)
+
+For complex multi-step workflows, consider adding quality control (QC)
+gatekeepers between major phases. Each gatekeeper validates the output
+of the preceding step before downstream steps consume it.
+
+- [ ] **1 gatekeeper** — After requirements (validate requirements completeness)
+- [ ] **2 gatekeepers** — After requirements + after steps design
+- [ ] **4 gatekeepers** — Full pipeline: requirements → artifacts → steps → package
+
+Gatekeepers ask: "Will this solution actually work? Are there gaps that
+will cause downstream failures?"
+
+## Self-Validation (Optional)
+
+Require each producer step (generate, define, design) to self-check its
+output before reporting APPROVED. The LLM validates its own work against
+criteria before submission.
+
+- [ ] **Enable Self-Validation** — Producer steps include self-check section
+
+Benefits: Catches errors early, reduces reviewer burden, improves output
+quality through self-correction.
+
+## Principles-Based Generation (Optional)
+
+Choose how the generate_package step should determine what files to create:
+
+- [ ] **Principles-based** (recommended) — Infer required files from the design
+documents (REQUIREMENTS, ARTIFACTS, STEPS). The LLM determines what files
+are needed based on principles, not a fixed list.
+
+- [ ] **Fixed task list** — Explicitly list the 6 files to generate
+(workflow.toml, context_extensions.py, prompts, README.md, .env.sample,
+config.json.sample). Use for simple workflows with predictable structure.
+
+Principles-based generation adapts to the specific needs of your workflow
+(e.g., includes actions.py only if action steps are declared).
 
 ## Notes
 

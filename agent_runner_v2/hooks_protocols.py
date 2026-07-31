@@ -279,6 +279,63 @@ class JobHooks(Protocol):
 
 
 @runtime_checkable
+class StepGuardrails(Protocol):
+    """Protocol for step guardrail validation hooks.
+
+    Workflows may optionally implement guardrails.py with pre_check and post_check
+    functions to validate inputs before execution and outputs after execution.
+
+    Both methods return a tuple of (is_valid, reject_reason, reject_code).
+    When is_valid is False, the step is rejected immediately with the provided
+    reason and code.
+    """
+
+    def pre_check(
+        self,
+        *,
+        step: str,
+        step_cfg: dict[str, Any],
+        state: dict[str, Any],
+        prepared: Any,
+    ) -> tuple[bool, str | None, str | None]:
+        """Validate inputs before step execution.
+
+        Args:
+            step: Current step name.
+            step_cfg: Step configuration dict from workflow.toml.
+            state: Current job state dict.
+            prepared: PreparedStepExecution dataclass with execution context.
+
+        Returns:
+            Tuple of (is_valid, reject_reason_or_none, reject_code_or_none).
+            If is_valid is False, reject_reason and reject_code must be provided.
+        """
+        ...
+
+    def post_check(
+        self,
+        *,
+        step: str,
+        step_cfg: dict[str, Any],
+        state: dict[str, Any],
+        step_result: Any,
+    ) -> tuple[bool, str | None, str | None]:
+        """Validate outputs after step execution.
+
+        Args:
+            step: Current step name.
+            step_cfg: Step configuration dict from workflow.toml.
+            state: Current job state dict.
+            step_result: StepResult dataclass with execution results.
+
+        Returns:
+            Tuple of (is_valid, reject_reason_or_none, reject_code_or_none).
+            If is_valid is False, reject_reason and reject_code must be provided.
+        """
+        ...
+
+
+@runtime_checkable
 class BundleHooks(Protocol):
     """Protocol for bundle loading operations."""
 

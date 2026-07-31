@@ -40,7 +40,7 @@ role_policy = "architect_standard"
 name = "technical_critique"
 prompt = "prompts/02_technical_critique.txt"
 enable_notifications = true
-onsuccess = "review_implementation"
+onsuccess = "address_critique"
 
 [step.artifacts]
 required_inputs = ["IMPL_FILE"]
@@ -58,6 +58,25 @@ exhausted_failure_code = "IMPL_CRITIQUE_EXHAUSTED"
 exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
 
 # ============================================================================
+# Step 2b: Address Critique
+# ============================================================================
+[[step]]
+name = "address_critique"
+prompt = "prompts/02b_address_critique.txt"
+enable_notifications = true
+onsuccess = "review_implementation"
+
+[step.artifacts]
+required_inputs = ["IMPL_FILE", "CRITIQUE_FILE_SUGGESTED"]
+produces = ["IMPL_FILE"]
+target_artifact = "IMPL_FILE"
+edit_mode = "in_place"
+result_meta_key = "IMPL_FILE"
+
+[step.coder]
+role_policy = "architect_standard"
+
+# ============================================================================
 # Step 3: Review Implementation
 # ============================================================================
 [[step]]
@@ -68,7 +87,7 @@ requires_human_approval_after = true
 onsuccess = "promote_implementation"
 
 [step.artifacts]
-required_inputs = ["IMPL_FILE"]
+required_inputs = ["IMPL_FILE", "CRITIQUE_FILE_SUGGESTED"]
 produces = ["REVIEW_FILE_SUGGESTED"]
 result_meta_key = "REVIEW_FILE_SUGGESTED"
 
