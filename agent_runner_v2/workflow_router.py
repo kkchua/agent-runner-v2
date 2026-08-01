@@ -1,6 +1,13 @@
 #!/usr/bin/env python3
 """
-workflow_router.py — Post-step routing for agent_runner_v2.
+[V1 DEPRECATED] workflow_router.py — Post-step routing for agent_runner_v2.
+
+→ Replaced by: Backend state machine (agent-runner-backend-v2/services/state_machine.py)
+→ Architecture: docs/repo/agent_runner/sdlc/delivery/00_initiatives/INIT-20260801-002_platform-v2-architecture-redesign.md
+
+V1 routing logic (route_after_step, route_after_failure) now lives in the
+backend state machine engine. The CLI only classifies outcomes; the backend
+decides what happens next.
 
 Replaces the monolithic update_job_state_after_result() from v1.
 

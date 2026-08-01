@@ -1,4 +1,7 @@
-"""Request approval for a backend run (Operator Console command).
+"""[V1 DEPRECATED] Request approval for a backend run (Operator Console command).
+
+→ Replaced by: Console calls POST /api/runs/{id}/action directly to backend
+→ Architecture: docs/repo/agent_runner/sdlc/delivery/00_initiatives/INIT-20260801-002_platform-v2-architecture-redesign.md
 
 Invoked via:
   ukbe-run-agent approve <run_id> [--reject] [--resume] [--retry] [--feedback "..."]

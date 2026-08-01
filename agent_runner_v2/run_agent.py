@@ -1218,7 +1218,7 @@ def _sync_results_to_backend(
     run_id = str(state.get("workflow_run_id") or "").strip()
 
     # V2 mode: outcome-only sync via state machine backend
-    from .v2_sync import resolve_v2_backend_url, sync_outcome_v2
+    from .v2.sync import resolve_v2_backend_url, sync_outcome_v2
     v2_url = resolve_v2_backend_url()
     if v2_url:
         if not step_run_id:

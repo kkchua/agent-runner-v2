@@ -1,3 +1,8 @@
+"""[V1 DEPRECATED] Transition runtime — state transition logic.
+
+→ Replaced by: Backend state machine (agent-runner-backend-v2/services/state_machine.py)
+→ Architecture: docs/repo/agent_runner/sdlc/delivery/00_initiatives/INIT-20260801-002_platform-v2-architecture-redesign.md
+"""
 from __future__ import annotations
 
 from pathlib import Path

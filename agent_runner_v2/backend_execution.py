@@ -1,8 +1,9 @@
-from __future__ import annotations
+"""[V1 DEPRECATED] Backend execution — V1 sync and execution logic.
 
-import json
-import os
-import shutil
+→ Replaced by: agent_runner_v2/v2/sync.py (outcome-only sync)
+→ Architecture: docs/repo/agent_runner/sdlc/delivery/00_initiatives/INIT-20260801-002_platform-v2-architecture-redesign.md
+"""
+from __future__ import annotations
 from pathlib import Path
 from typing import Any
 

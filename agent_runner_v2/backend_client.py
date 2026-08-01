@@ -1,4 +1,7 @@
-"""Backend API client for agent_runner_v2.
+"""[V1 DEPRECATED] Backend API client for agent_runner_v2.
+
+→ Replaced by: agent_runner_v2/v2/backend_client.py
+→ Architecture: docs/repo/agent_runner/sdlc/delivery/00_initiatives/INIT-20260801-002_platform-v2-architecture-redesign.md
 
 Provides a thin HTTP client wrapper for communicating with the agent-runner
 backend service. All state persistence and workflow coordination happens

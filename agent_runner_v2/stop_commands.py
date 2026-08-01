@@ -1,4 +1,7 @@
-"""Request a stop for a backend run (Operator Console command).
+"""[V1 DEPRECATED] Request a stop for a backend run (Operator Console command).
+
+→ Replaced by: Console calls POST /api/runs/{id}/action with CANCEL directly to backend
+→ Architecture: docs/repo/agent_runner/sdlc/delivery/00_initiatives/INIT-20260801-002_platform-v2-architecture-redesign.md
 
 Invoked via:
   ukbe-run-agent stop <run_id> [--reason "..."]          # Graceful stop

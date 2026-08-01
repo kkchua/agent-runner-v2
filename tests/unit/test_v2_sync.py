@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from agent_runner_v2.v2_sync import (
+from agent_runner_v2.v2.sync import (
     build_v2_outcome_payload,
     is_v2_enabled,
     resolve_v2_backend_url,
@@ -18,7 +18,7 @@ from agent_runner_v2.v2_sync import (
 class TestResolveV2BackendUrl:
     def test_returns_none_when_not_configured(self):
         with patch.dict(os.environ, {}, clear=True):
-            with patch("agent_runner_v2.v2_sync.load_runner_config", return_value={}):
+            with patch("agent_runner_v2.v2.sync.load_runner_config", return_value={}):
                 os.environ.pop("AGENT_RUNNER_V2_BACKEND_URL", None)
                 assert resolve_v2_backend_url() is None
 
@@ -29,14 +29,14 @@ class TestResolveV2BackendUrl:
     def test_returns_url_from_config(self):
         with patch.dict(os.environ, {}, clear=True):
             os.environ.pop("AGENT_RUNNER_V2_BACKEND_URL", None)
-            with patch("agent_runner_v2.v2_sync.load_runner_config", return_value={
+            with patch("agent_runner_v2.v2.sync.load_runner_config", return_value={
                 "v2_backend_url": "http://localhost:8200",
             }):
                 assert resolve_v2_backend_url() == "http://localhost:8200"
 
     def test_env_var_takes_priority_over_config(self):
         with patch.dict(os.environ, {"AGENT_RUNNER_V2_BACKEND_URL": "http://env:8200"}):
-            with patch("agent_runner_v2.v2_sync.load_runner_config", return_value={
+            with patch("agent_runner_v2.v2.sync.load_runner_config", return_value={
                 "v2_backend_url": "http://config:8200",
             }):
                 assert resolve_v2_backend_url() == "http://env:8200"
@@ -44,7 +44,7 @@ class TestResolveV2BackendUrl:
     def test_empty_string_treated_as_none(self):
         with patch.dict(os.environ, {}, clear=True):
             os.environ.pop("AGENT_RUNNER_V2_BACKEND_URL", None)
-            with patch("agent_runner_v2.v2_sync.load_runner_config", return_value={
+            with patch("agent_runner_v2.v2.sync.load_runner_config", return_value={
                 "v2_backend_url": "",
             }):
                 assert resolve_v2_backend_url() is None
@@ -52,7 +52,7 @@ class TestResolveV2BackendUrl:
     def test_is_v2_enabled_false_by_default(self):
         with patch.dict(os.environ, {}, clear=True):
             os.environ.pop("AGENT_RUNNER_V2_BACKEND_URL", None)
-            with patch("agent_runner_v2.v2_sync.load_runner_config", return_value={}):
+            with patch("agent_runner_v2.v2.sync.load_runner_config", return_value={}):
                 assert is_v2_enabled() is False
 
     def test_is_v2_enabled_true_when_configured(self):

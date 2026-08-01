@@ -1,3 +1,11 @@
+"""[V1 DEPRECATED] Daemon runtime — job sync payload builder.
+
+→ Replaced by: agent_runner_v2/v2/sync.py
+→ Architecture: docs/repo/agent_runner/sdlc/delivery/00_initiatives/INIT-20260801-002_platform-v2-architecture-redesign.md
+
+V1 built full sync payloads with CLI-computed routing (run_status, next_step).
+V2 sends outcome-only payloads; the backend state machine computes routing.
+"""
 from __future__ import annotations
 
 import json

@@ -1,4 +1,7 @@
-"""Submit a quit command for the daemon.
+"""[V1 DEPRECATED] Submit a quit command for the daemon.
+
+→ Replaced by: Backend heartbeat response commands: ["shutdown"]
+→ Architecture: docs/repo/agent_runner/sdlc/delivery/00_initiatives/INIT-20260801-002_platform-v2-architecture-redesign.md
 
 Invoked via: ukbe-run-agent daemon-quit [options]
 
