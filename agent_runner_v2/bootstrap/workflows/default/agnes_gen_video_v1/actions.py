@@ -3,10 +3,10 @@
 This module provides the action function for generating videos from images
 using the Agnes Video V2.0 API. The action:
 
-- Scans step_03/ for PNG images
+- Scans step_03_generatedimage/ for PNG images
 - Extracts t2i_prompt1 and t2i_prompt2 from PNG metadata (ComfyUI tEXt chunks)
 - Calls the video generation API with t2i_prompt1 as the prompt
-- Polls for completion and downloads videos to step_04/
+- Polls for completion and downloads videos to step_04_generatedvideo/
 - Produces an index.json manifest
 
 The action implements retry logic for HTTP 503 responses with exponential
@@ -339,8 +339,8 @@ def _process_single_video_from_image(item: _VideoFromImageWorkItem) -> dict:
     return {
         "video_filename": video_filename,
         "file_mapping": {
-            "input": f"step_03/{item.png_path.name}",
-            "output": f"step_04/{video_filename}",
+            "input": f"step_03_generatedimage/{item.png_path.name}",
+            "output": f"step_04_generatedvideo/{video_filename}",
         },
     }
 
@@ -351,10 +351,10 @@ def generate_videos_from_images(
 ) -> ActionResult:
     """Generate videos from images using Agnes Video V2.0 API.
 
-    Scans step_03/ for PNG images, extracts t2i_prompt1 and t2i_prompt2
+    Scans step_03_generatedimage/ for PNG images, extracts t2i_prompt1 and t2i_prompt2
     from PNG metadata (ComfyUI tEXt chunks), calls the video generation
     API with t2i_prompt1 as the prompt, polls for completion, downloads
-    videos to step_04/, and produces an index.json manifest.
+    videos to step_04_generatedvideo/, and produces an index.json manifest.
 
     Configuration is read from config.json (MEDIA_CONFIG context variable).
     API credentials are loaded from .env (AGNES_API_KEY, AGNES_BASE_URL).
@@ -460,7 +460,7 @@ def generate_videos_from_images(
     # Prepare output directory
     step_04_dir.mkdir(parents=True, exist_ok=True)
 
-    # Scan for PNG files in step_03 (skip non-image files)
+    # Scan for PNG files in step_03_generatedimage (skip non-image files)
     png_files = sorted(step_03_dir.glob("*.png"))
     logger.info(
         "generate_videos_from_images: found %d PNG file(s) in %s",
@@ -469,7 +469,7 @@ def generate_videos_from_images(
     if not png_files:
         return ActionResult(
             status="REJECTED",
-            remark="No PNG files found in step_03.",
+            remark="No PNG files found in step_03_generatedimage.",
             artifacts={},
             reject_code="NO_INPUTS",
         )
@@ -567,7 +567,7 @@ def generate_videos_from_images(
             error_msg = str(r.error) if r.error else "unknown error"
             failures.append(f"{item.png_path.name}: {error_msg}")
 
-    # Write index.json to step_04
+    # Write index.json to step_04_generatedvideo
     index_path = step_04_dir / "index.json"
     _write_index(index_path, "generate_videos_from_images", file_mappings)
 
@@ -585,7 +585,7 @@ def generate_videos_from_images(
             status="APPROVED",
             remark=(
                 f"Generated videos for {success_count}/{total} "
-                f"PNG files. Index written to step_04/index.json."
+                f"PNG files. Index written to step_04_generatedvideo/index.json."
             ),
             artifacts={
                 "VIDEO_INDEX": str(index_path),
@@ -601,7 +601,7 @@ def generate_videos_from_images(
                 f"Partial failure: {success_count}/{total} PNG "
                 f"files succeeded, {fail_count} errors. "
                 f"Details: {failure_detail}. "
-                f"Partial results saved to step_04/."
+                f"Partial results saved to step_04_generatedvideo/."
             ),
             artifacts={
                 "VIDEO_INDEX": str(index_path),

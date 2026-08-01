@@ -361,6 +361,23 @@ def build_job_sync_payload(*, job: dict[str, Any], step_result: dict[str, Any], 
     # Usage summary for backend token/cost tracking
     usage_summary = job.get("usage_summary")
 
+    # Clear one-shot run control flags after daemon consumption so a stale
+    # backend flag cannot replay approve/reject/resume/retry on the next poll.
+    context_payload = dict(job.get("context_payload") or {})
+    run_control = dict(context_payload.get("__run_control") or {})
+    if run_control:
+        for key in (
+            "approve_requested",
+            "reject_requested",
+            "resume_requested",
+            "retry_requested",
+            "stop_requested",
+        ):
+            run_control[key] = False
+        run_control["action_step"] = None
+        run_control["feedback"] = None
+        context_payload["__run_control"] = run_control
+
     return {
         "step_status": step_result.get("status", "completed").lower(),
         "step_outcome": step_result.get("outcome"),
@@ -373,6 +390,7 @@ def build_job_sync_payload(*, job: dict[str, Any], step_result: dict[str, Any], 
         "review": review,
         "artifacts": artifacts_list,
         "events": events,
+        "context_payload": context_payload,
         "usage_summary": usage_summary if isinstance(usage_summary, dict) else None,
     }
 

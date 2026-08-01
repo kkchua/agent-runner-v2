@@ -486,12 +486,40 @@ class TestRefreshActiveRuns:
         assert "JOB-001" in state.active_runs_dd.options[0].text
         assert "wf_a" in state.active_runs_dd.options[0].text
 
-    def test_auto_selects_first_run(self):
+    def test_auto_selects_first_run_when_selection_empty(self):
         service = MagicMock()
         runs = [_make_run("r1"), _make_run("r2")]
         service.list_active_runs_for_worker.return_value = runs
         state = _make_state()
         state.runner_service = service
+        handlers = EventHandlers(state)
+
+        handlers.refresh_active_runs()
+
+        assert state.selected_run_id == "r1"
+        assert state.active_runs_dd.value == "r1"
+
+    def test_preserves_existing_selection_when_run_still_present(self):
+        service = MagicMock()
+        runs = [_make_run("r1"), _make_run("r2")]
+        service.list_active_runs_for_worker.return_value = runs
+        state = _make_state(selected_run_id="r2")
+        state.runner_service = service
+        state.active_runs_dd.value = "r2"
+        handlers = EventHandlers(state)
+
+        handlers.refresh_active_runs()
+
+        assert state.selected_run_id == "r2"
+        assert state.active_runs_dd.value == "r2"
+
+    def test_falls_back_to_first_run_when_selection_missing(self):
+        service = MagicMock()
+        runs = [_make_run("r1"), _make_run("r2")]
+        service.list_active_runs_for_worker.return_value = runs
+        state = _make_state(selected_run_id="r9")
+        state.runner_service = service
+        state.active_runs_dd.value = "r9"
         handlers = EventHandlers(state)
 
         handlers.refresh_active_runs()
@@ -546,6 +574,8 @@ class TestRefreshStepOptions:
 
         assert state.reset_step_dd.options == []
         assert state.reset_step_dd.value is None
+        assert state.start_step_dd.options == []
+        assert state.start_step_dd.value is None
 
     def test_clears_when_no_repo(self):
         state = _make_state()
@@ -556,6 +586,29 @@ class TestRefreshStepOptions:
         handlers.refresh_step_options()
 
         assert state.reset_step_dd.options == []
+        assert state.start_step_dd.options == []
+
+    def test_populates_both_dropdowns_when_bundle_loaded(self):
+        state = _make_state()
+        state.workflow_dd.value = "wf1"
+        wf_entry = MagicMock()
+        wf_entry.name = "wf1"
+        state.selected_repo = MagicMock()
+        state.selected_repo.workflows = [wf_entry]
+        handlers = EventHandlers(state)
+
+        bundle = MagicMock()
+        bundle.steps = {"step_a": MagicMock(), "step_b": MagicMock(), "step_c": MagicMock()}
+        handlers._load_workflow_bundle = MagicMock(return_value=bundle)
+
+        handlers.refresh_step_options()
+
+        reset_keys = [opt.key for opt in state.reset_step_dd.options]
+        start_keys = [opt.key for opt in state.start_step_dd.options]
+        assert reset_keys == ["step_a", "step_b", "step_c"]
+        assert start_keys == ["step_a", "step_b", "step_c"]
+        assert state.reset_step_dd.value is None
+        assert state.start_step_dd.value is None
 
 
 # ---------------------------------------------------------------------------
@@ -730,3 +783,105 @@ class TestConfirmAction:
         result = asyncio.run(handlers._confirm_action("Cancel", run=run))
         assert result is True
         state.page.show_dialog.assert_called_once()
+
+
+# ---------------------------------------------------------------------------
+# Approve/Reject/Resume/Retry handler pairing tests
+# ---------------------------------------------------------------------------
+
+class TestApproveHandlerPairing:
+    """Test that handlers call runner_service.approve() correctly.
+
+    This verifies the pairing: Console handler → runner_service.approve()
+    which calls approve_commands.main → BackendClient.approve_run().
+    """
+
+    def _setup_for_action(self, action: str):
+        """Set up state with a selected run and mock runner_service."""
+        run = _make_run("run-123", "JOB-001", "test_wf", "running", "step_a")
+        state = _make_state(
+            active_runs=[run],
+            selected_run_id="run-123",
+            active_runs_dd=MagicMock(value="run-123"),
+        )
+        runner_service = MagicMock()
+        runner_service.approve.return_value = '{"status": "ok"}'
+        output_callback = MagicMock()
+
+        # Auto-confirm dialogs
+        def fake_show_dialog(dialog):
+            confirm_btn = dialog.actions[1]
+            confirm_btn.on_click(None)
+        state.page.show_dialog.side_effect = fake_show_dialog
+
+        handlers = EventHandlers(state)
+        return handlers, runner_service, output_callback, state
+
+    def test_approve_calls_runner_service_approve(self):
+        """_execute_approve calls runner_service.approve(run_id=...)."""
+        handlers, runner_service, output_callback, state = self._setup_for_action("Approve")
+
+        asyncio.run(handlers._execute_approve(runner_service, output_callback))
+
+        runner_service.approve.assert_called_once_with(run_id="run-123")
+
+    def test_reject_calls_runner_service_approve_with_reject(self):
+        """_execute_reject calls runner_service.approve(run_id=..., reject=True)."""
+        handlers, runner_service, output_callback, state = self._setup_for_action("Reject")
+        state.feedback_tf.value = "Needs work"
+
+        asyncio.run(handlers._execute_reject(runner_service, output_callback))
+
+        runner_service.approve.assert_called_once_with(
+            run_id="run-123", reject=True, feedback="Needs work"
+        )
+
+    def test_resume_calls_runner_service_approve_with_resume(self):
+        """_execute_resume calls runner_service.approve(run_id=..., resume=True)."""
+        handlers, runner_service, output_callback, state = self._setup_for_action("Resume")
+
+        asyncio.run(handlers._execute_resume(runner_service, output_callback))
+
+        runner_service.approve.assert_called_once_with(run_id="run-123", resume=True)
+
+    def test_retry_calls_runner_service_approve_with_retry(self):
+        """_execute_retry calls runner_service.approve(run_id=..., retry=True)."""
+        handlers, runner_service, output_callback, state = self._setup_for_action("Retry")
+
+        asyncio.run(handlers._execute_retry(runner_service, output_callback))
+
+        runner_service.approve.assert_called_once_with(run_id="run-123", retry=True)
+
+    def test_approve_error_no_run_selected(self):
+        """_execute_approve shows error when no run is selected."""
+        state = _make_state(active_runs=[], selected_run_id="")
+        runner_service = MagicMock()
+        output_callback = MagicMock()
+        handlers = EventHandlers(state)
+
+        asyncio.run(handlers._execute_approve(runner_service, output_callback))
+
+        runner_service.approve.assert_not_called()
+        output_callback.assert_any_call("Error: Select an active run to approve.")
+
+    def test_approve_cancelled_does_not_call_service(self):
+        """_execute_approve does not call service when dialog is cancelled."""
+        state = _make_state(
+            active_runs=[_make_run("run-123")],
+            selected_run_id="run-123",
+            active_runs_dd=MagicMock(value="run-123"),
+        )
+        runner_service = MagicMock()
+        output_callback = MagicMock()
+
+        # Auto-cancel dialogs (click first action = "No")
+        def fake_show_dialog(dialog):
+            cancel_btn = dialog.actions[0]
+            cancel_btn.on_click(None)
+        state.page.show_dialog.side_effect = fake_show_dialog
+
+        handlers = EventHandlers(state)
+        asyncio.run(handlers._execute_approve(runner_service, output_callback))
+
+        runner_service.approve.assert_not_called()
+        output_callback.assert_any_call("Approve cancelled.")
