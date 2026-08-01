@@ -1216,13 +1216,14 @@ def _sync_results_to_backend(
     """
     step_run_id = str(state.get("workflow_step_run_id") or "").strip()
     run_id = str(state.get("workflow_run_id") or "").strip()
-    if not backend_url or not step_run_id:
-        return
 
     # V2 mode: outcome-only sync via state machine backend
     from .v2_sync import resolve_v2_backend_url, sync_outcome_v2
     v2_url = resolve_v2_backend_url()
     if v2_url:
+        if not step_run_id:
+            print("[daemon-sync-v2] no step_run_id in state, skipping sync", file=sys.stderr)
+            return
         try:
             result_dict = {
                 "status": step_result.status,
@@ -1254,6 +1255,8 @@ def _sync_results_to_backend(
         return
 
     # V1 mode: full sync payload with CLI-computed routing
+    if not backend_url or not step_run_id:
+        return
     try:
         from .daemon_runtime import build_job_sync_payload
         from .backend_client import BackendClient

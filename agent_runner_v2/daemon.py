@@ -858,6 +858,109 @@ class SupervisorConfig:
     once: bool = False
 
 
+def _spawn_child_v2(
+    *,
+    claim: dict,
+    runtime_root: Path,
+    cli_pythonpath: str | None,
+    logger: "_DaemonLogger",
+    v2_backend_url: str,
+) -> "ChildExecution":
+    """Spawn a child process for V2 daemon mode.
+
+    Simpler than V1 _spawn_child: no V1 BackendClient fetch, no
+    step_execution_spec. Builds CLI args directly from V2 claim data.
+    The child process reports its own outcome to V2 backend via
+    run_agent.py's V2 sync path.
+    """
+    from .job_state import job_dir
+
+    run = claim["run"]
+    step_run = claim["step_run"]
+    step_run_id = str(step_run["id"])
+    run_id = str(run["id"])
+    run_code = str(run.get("run_code", ""))
+    workflow_name = str(run.get("workflow_name", ""))
+    step_name = str(step_run.get("step_name", ""))
+    project_root = str(run.get("project_root") or ".")
+
+    child_dir = runtime_root / step_run_id
+    child_dir.mkdir(parents=True, exist_ok=True)
+
+    # Build CLI args
+    cli_args = [
+        sys.executable, "-m", "agent_runner_v2.run_agent", "run",
+        "--project-root", project_root,
+        "--template-group", workflow_name,
+        "--mode", "daemon",
+        "--job-id", "",
+        "--job-no", run_code,
+        "--job", step_name,
+    ]
+
+    # For PROCESS_ACTION, add the action flag
+    action_flag = claim.get("_v2_action_flag")
+    if action_flag:
+        action_step = claim.get("_v2_action_step", step_name)
+        cli_args.extend([action_flag, action_step])
+        feedback = claim.get("_v2_feedback", "")
+        if feedback:
+            cli_args.extend(["--feedback", feedback])
+
+    env = os.environ.copy()
+    if cli_pythonpath:
+        env["PYTHONPATH"] = cli_pythonpath + os.pathsep + env.get("PYTHONPATH", "")
+    env["AGENT_RUNNER_WORKFLOW_RUN_ID"] = run_id
+    env["AGENT_RUNNER_WORKFLOW_STEP_RUN_ID"] = step_run_id
+    env["AGENT_RUNNER_V2_BACKEND_URL"] = v2_backend_url
+
+    # Set working directory to project_root so subprocess can find .env
+    subprocess_cwd = _resolve_subprocess_cwd(
+        project_root=project_root, workspace_root=None,
+    )
+
+    logger.log("info", "subprocess_cwd", message=f"Setting subprocess cwd to {subprocess_cwd}", details={
+        "project_root": project_root, "subprocess_cwd": str(subprocess_cwd),
+    })
+
+    combined_log_path = child_dir / "child.log"
+    log_handle = combined_log_path.open("ab")
+
+    try:
+        proc = subprocess.Popen(
+            cli_args,
+            stdout=log_handle,
+            stderr=subprocess.STDOUT,
+            env=env,
+            cwd=subprocess_cwd,
+        )
+    except Exception:
+        log_handle.close()
+        raise
+
+    logger.log("info", "daemon_v2_child_spawned", message=f"spawned child pid={proc.pid}", details={
+        "step_run_id": step_run_id, "step_name": step_name,
+        "run_code": run_code, "cli_args": " ".join(cli_args),
+    })
+
+    return ChildExecution(
+        run_id=run_id,
+        run_code=run_code,
+        step_run_id=step_run_id,
+        step_name=step_name,
+        run_payload=run,
+        step_run_payload=step_run,
+        request_payload={"cli_args": cli_args, "project_root": project_root},
+        request_path=child_dir / "request.json",
+        result_path=child_dir / "result.json",
+        combined_log_path=combined_log_path,
+        child_event_log_path=child_dir / "child-events.jsonl",
+        process=proc,
+        started_at_monotonic=time.monotonic(),
+        started_at_iso=datetime.now(timezone.utc).isoformat(),
+    )
+
+
 def _run_supervisor_v2(*, config: SupervisorConfig, v2_url: str) -> int:
     """V2 supervisor — simplified claim loop using state machine backend.
 
@@ -942,10 +1045,6 @@ def _run_supervisor_v2(*, config: SupervisorConfig, v2_url: str) -> int:
                         "id": step_run_id,
                         "step_name": step_name,
                     },
-                    "run": {
-                        "id": run_id,
-                        "run_code": run_code,
-                    },
                 }
 
                 # For PROCESS_ACTION, add action info to claim
@@ -963,13 +1062,12 @@ def _run_supervisor_v2(*, config: SupervisorConfig, v2_url: str) -> int:
                     claim["_v2_feedback"] = work.get("feedback", "")
 
                 try:
-                    child = _spawn_child(
+                    child = _spawn_child_v2(
                         claim=claim,
                         runtime_root=config.runtime_dir,
                         cli_pythonpath=config.cli_pythonpath,
                         logger=logger,
-                        backend_url=config.backend_url,
-                        step_spec_source=config.step_spec_source,
+                        v2_backend_url=v2_url,
                     )
                     children[child.step_run_id] = child
                 except Exception as exc:
@@ -997,6 +1095,19 @@ def _run_supervisor_v2(*, config: SupervisorConfig, v2_url: str) -> int:
                 logger.log("info", "daemon_v2_child_done", message=f"child done: {child.state}", details={
                     "step_run_id": step_run_id, "exit_code": child.exit_code,
                 })
+                # If child crashed without reporting outcome, report failure to V2 backend
+                if child.exit_code and child.exit_code != 0:
+                    try:
+                        client.report_outcome(
+                            step_run_id=step_run_id,
+                            outcome="failed",
+                            failure_class="HUMAN_RETRY_REQUIRED",
+                            error_message=f"Child process exited with code {child.exit_code}",
+                        )
+                    except Exception as sync_err:
+                        logger.log("warning", "daemon_v2_outcome_report_failed", message=str(sync_err), details={
+                            "step_run_id": step_run_id,
+                        })
                 del children[step_run_id]
 
         time.sleep(config.poll_seconds)
