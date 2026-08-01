@@ -267,7 +267,7 @@ def test_run_supervisor_persists_backend_linkage_and_accepts_awaiting_human(monk
     assert (tmp_path / 'worker-daemon.jsonl').exists()
 
 
-def test_spawn_child_passes_claimed_step_to_run_command(monkeypatch, tmp_path):
+def test_spawn_child_reuses_existing_job_for_later_claimed_step(monkeypatch, tmp_path):
     captured: dict[str, object] = {}
 
     monkeypatch.setattr(
@@ -279,6 +279,12 @@ def test_spawn_child_passes_claimed_step_to_run_command(monkeypatch, tmp_path):
         },
     )
     monkeypatch.setattr(daemon_module.time, 'monotonic', lambda: 123.0)
+
+    def fake_job_dir(group_name: str, job_id: str):
+        return tmp_path / "jobs" / group_name / job_id
+
+    monkeypatch.setattr('agent_runner_v2.job_state.job_dir', fake_job_dir)
+    fake_job_dir("initiative_intake_v1", "RUN-1").mkdir(parents=True)
 
     class FakeProc:
         def __init__(self):
@@ -315,7 +321,137 @@ def test_spawn_child_passes_claimed_step_to_run_command(monkeypatch, tmp_path):
         '--project-root', str(tmp_path),
         '--template-group', 'initiative_intake_v1',
         '--mode', 'daemon',
-        '--job-id', '',
+        '--job-id', 'RUN-1',
         '--job-no', 'RUN-1',
         '--job', 'review_core_governance_docs',
     ]
+
+
+def test_spawn_child_rejects_missing_local_job_for_later_claimed_step(monkeypatch, tmp_path):
+    monkeypatch.setattr(
+        'agent_runner_v2.run_agent._build_worker_request_payload',
+        lambda **kwargs: {
+            'project_root': str(tmp_path),
+            'job_id': 'RUN-1',
+            'template_group': 'initiative_intake_v1',
+        },
+    )
+    monkeypatch.setattr(
+        'agent_runner_v2.job_state.job_dir',
+        lambda group_name, job_id: tmp_path / "jobs" / group_name / job_id,
+    )
+
+    logger = SimpleNamespace(log=lambda *args, **kwargs: None)
+
+    try:
+        daemon_module._spawn_child(
+            claim={
+                'run': {'id': 'run-1', 'run_code': 'RUN-1'},
+                'step_run': {'id': 'step-1', 'step_name': 'review_core_governance_docs'},
+                'step_execution_spec': {'step_sequence_no': 2},
+            },
+            runtime_root=tmp_path / 'runtime',
+            cli_pythonpath=None,
+            logger=logger,
+            backend_url='http://127.0.0.1:8100',
+            step_spec_source='backend',
+        )
+    except FileNotFoundError as exc:
+        assert "Local job state missing" in str(exc)
+    else:
+        raise AssertionError("Expected FileNotFoundError for missing local job state")
+
+
+def test_run_supervisor_deduplicates_repeated_approval_request(monkeypatch, tmp_path):
+    approval_spawns: list[tuple[str, str, str]] = []
+    heartbeats: list[dict] = []
+    claims = [{'step_run': None}]
+    runs_response = [
+        {
+            'id': 'run-1',
+            'run_code': 'RUN-1',
+            'context_payload': {
+                '__run_control': {
+                    'approve_requested': True,
+                    'action_step': 'review_step',
+                }
+            },
+        }
+    ]
+
+    class FakeClient:
+        def __init__(self, base_url: str):
+            self.base_url = base_url
+
+        def register_worker(self, **kwargs):
+            return {'ok': True}
+
+        def heartbeat(self, **kwargs):
+            heartbeats.append(kwargs)
+            return {'ok': True}
+
+        def claim_step(self, *, worker_id: str):
+            if claims:
+                return claims.pop(0)
+            return {'step_run': None}
+
+        def list_runs(self, **kwargs):
+            return {'runs': runs_response}
+
+    monkeypatch.setattr('agent_runner_v2.backend_client.BackendClient', FakeClient)
+
+    def fake_spawn_approval_child(*, run, approval_request, runtime_root, cli_pythonpath, logger, backend_url):
+        approval_spawns.append((str(run.get('id')), approval_request['action_type'], approval_request['action_step']))
+        child_dir = runtime_root / 'approval-run-1'
+        child_dir.mkdir(parents=True, exist_ok=True)
+        return daemon_module.ChildExecution(
+            run_id='run-1',
+            run_code='RUN-1',
+            step_run_id='approval-run-1',
+            step_name='review_step',
+            run_payload=run,
+            step_run_payload={},
+            request_payload={},
+            request_path=child_dir / 'request.json',
+            result_path=child_dir / 'result.json',
+            combined_log_path=child_dir / 'child.log',
+            child_event_log_path=child_dir / 'child-events.jsonl',
+            process=DummyProc([0]),
+            started_at_monotonic=0.0,
+            started_at_iso='2026-07-31T00:00:00+00:00',
+            state='running',
+        )
+
+    monkeypatch.setattr(daemon_module, '_spawn_approval_child', fake_spawn_approval_child)
+
+    cfg = daemon_module.SupervisorConfig(
+        worker_id='worker-1',
+        worker_label='live',
+        backend_url='http://127.0.0.1:8100',
+        step_spec_source='backend',
+        poll_seconds=1,
+        max_parallel=1,
+        stalled_seconds=30,
+        step_timeout_seconds=60,
+        kill_grace_seconds=5,
+        runtime_dir=tmp_path / 'runtime',
+        log_file=tmp_path / 'worker-daemon.jsonl',
+        cli_pythonpath=None,
+        once=False,
+    )
+
+    sleep_calls = {'count': 0}
+
+    def fake_sleep(_seconds: int) -> None:
+        sleep_calls['count'] += 1
+        if sleep_calls['count'] >= 2:
+            raise KeyboardInterrupt()
+
+    monkeypatch.setattr(daemon_module.time, 'sleep', fake_sleep)
+
+    try:
+        daemon_module._run_supervisor(config=cfg)
+    except KeyboardInterrupt:
+        pass
+
+    assert approval_spawns == [('run-1', 'approve_requested', 'review_step')]

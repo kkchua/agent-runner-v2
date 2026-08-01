@@ -240,6 +240,7 @@ class EventHandlers:
         if not workflow_name or not self.state.selected_repo:
             self.state.selected_workflow = None
             self._clear_dynamic_inputs()
+            self._clear_step_options()
             self.state.update()
             return
 
@@ -253,7 +254,7 @@ class EventHandlers:
         else:
             self._clear_dynamic_inputs()
 
-        self.state.update()
+        self.refresh_step_options()
 
     # ==================================================================
     # Helper Methods
@@ -266,6 +267,15 @@ class EventHandlers:
             self.state.dynamic_inputs_column.controls.clear()
         if self.state.dynamic_inputs_container:
             self.state.dynamic_inputs_container.visible = False
+
+    def _clear_step_options(self) -> None:
+        """Clear options and values in both step dropdowns."""
+        if self.state.reset_step_dd is not None:
+            self.state.reset_step_dd.options = []
+            self.state.reset_step_dd.value = None
+        if self.state.start_step_dd is not None:
+            self.state.start_step_dd.options = []
+            self.state.start_step_dd.value = None
 
     def _build_dynamic_inputs(self, workflow: WorkflowEntry) -> None:
         """Build dynamic input controls for the selected workflow.
@@ -461,17 +471,16 @@ class EventHandlers:
     # ==================================================================
 
     def refresh_step_options(self, _event: ft.ControlEvent | None = None) -> None:
-        """Populate step dropdown for Reset action.
+        """Populate reset-step and start-step dropdowns.
 
-        Loads workflow bundle and extracts step names.
+        Loads workflow bundle and extracts step names for both dropdowns.
         """
         if self.state.reset_step_dd is None or self.state.workflow_dd is None:
             return
 
         workflow_name = self.state.workflow_dd.value
         if not workflow_name or not self.state.selected_repo:
-            self.state.reset_step_dd.options = []
-            self.state.reset_step_dd.value = None
+            self._clear_step_options()
             self.state.update()
             return
 
@@ -480,8 +489,7 @@ class EventHandlers:
             None,
         )
         if not workflow:
-            self.state.reset_step_dd.options = []
-            self.state.reset_step_dd.value = None
+            self._clear_step_options()
             self.state.update()
             return
 
@@ -489,16 +497,19 @@ class EventHandlers:
             bundle = self._load_workflow_bundle(workflow)
             if bundle:
                 step_names = list(bundle.steps.keys())
-                self.state.reset_step_dd.options = [
-                    ft.DropdownOption(key=s, text=s) for s in step_names
-                ]
+                options = [ft.DropdownOption(key=s, text=s) for s in step_names]
+                self.state.reset_step_dd.options = options
+                if self.state.start_step_dd is not None:
+                    self.state.start_step_dd.options = options
             else:
-                self.state.reset_step_dd.options = []
+                self._clear_step_options()
         except Exception as err:
             _log.error("Failed to load steps: %s", err)
-            self.state.reset_step_dd.options = []
+            self._clear_step_options()
 
         self.state.reset_step_dd.value = None
+        if self.state.start_step_dd is not None:
+            self.state.start_step_dd.value = None
         self.state.update()
 
     def refresh_active_runs(
@@ -520,6 +531,10 @@ class EventHandlers:
             _log.error("Failed to fetch active runs: %s", err)
             runs = []
 
+        previous_run_id = self.state.selected_run_id or (
+            self.state.active_runs_dd.value if self.state.active_runs_dd else ""
+        )
+
         self.state.active_runs = runs
         self.state.active_runs_dd.options = [
             ft.DropdownOption(
@@ -528,7 +543,11 @@ class EventHandlers:
             )
             for run in runs
         ]
-        self.state.selected_run_id = runs[0].run_id if runs else ""
+        run_ids = {run.run_id for run in runs}
+        if previous_run_id and previous_run_id in run_ids:
+            self.state.selected_run_id = previous_run_id
+        else:
+            self.state.selected_run_id = runs[0].run_id if runs else ""
         self.state.active_runs_dd.value = self.state.selected_run_id
         self.state.active_runs_dd.update()
 
@@ -655,70 +674,96 @@ class EventHandlers:
         runner_service: RunnerActionService,
         output_callback: Callable[[str], None],
     ) -> None:
-        """Execute Approve action."""
-        await self._execute_step_action(
-            "Approve", runner_service.approve_step, runner_service, output_callback
-        )
+        """Execute Approve action via backend API (no local job state needed).
+
+        Uses approve_commands.main which sends request to backend.
+        Daemon picks up the approval and continues execution.
+        """
+        run = self._get_selected_run()
+        if not run:
+            output_callback("Error: Select an active run to approve.")
+            return
+
+        confirmed = await self._confirm_action("Approve", run=run)
+        if not confirmed:
+            output_callback("Approve cancelled.")
+            return
+
+        output_callback(f"Approving run {run.run_code}...")
+        result = runner_service.approve(run_id=run.run_id)
+        output_callback(result)
 
     async def _execute_reject(
         self,
         runner_service: RunnerActionService,
         output_callback: Callable[[str], None],
     ) -> None:
-        """Execute Reject action."""
-        await self._execute_step_action(
-            "Reject", runner_service.reject_step, runner_service, output_callback
-        )
+        """Execute Reject action via backend API (no local job state needed).
+
+        Uses approve_commands.main --reject which sends request to backend.
+        Daemon picks up the rejection and triggers refine loop.
+        """
+        run = self._get_selected_run()
+        if not run:
+            output_callback("Error: Select an active run to reject.")
+            return
+
+        confirmed = await self._confirm_action("Reject", run=run)
+        if not confirmed:
+            output_callback("Reject cancelled.")
+            return
+
+        feedback = self.state.feedback_tf.value if self.state.feedback_tf else ""
+        output_callback(f"Rejecting run {run.run_code}...")
+        result = runner_service.approve(run_id=run.run_id, reject=True, feedback=feedback)
+        output_callback(result)
 
     async def _execute_resume(
         self,
         runner_service: RunnerActionService,
         output_callback: Callable[[str], None],
     ) -> None:
-        """Execute Resume action."""
-        await self._execute_step_action(
-            "Resume", runner_service.resume_step, runner_service, output_callback
-        )
+        """Execute Resume action via backend API (no local job state needed).
+
+        Uses approve_commands.main --resume which sends request to backend.
+        Daemon picks up the resume and continues to next step.
+        """
+        run = self._get_selected_run()
+        if not run:
+            output_callback("Error: Select an active run to resume.")
+            return
+
+        confirmed = await self._confirm_action("Resume", run=run)
+        if not confirmed:
+            output_callback("Resume cancelled.")
+            return
+
+        output_callback(f"Resuming run {run.run_code}...")
+        result = runner_service.approve(run_id=run.run_id, resume=True)
+        output_callback(result)
 
     async def _execute_retry(
         self,
         runner_service: RunnerActionService,
         output_callback: Callable[[str], None],
     ) -> None:
-        """Execute Retry action."""
-        await self._execute_step_action(
-            "Retry", runner_service.retry_step, runner_service, output_callback
-        )
+        """Execute Retry action via backend API (no local job state needed).
 
-    async def _execute_step_action(
-        self,
-        action_name: str,
-        action_func: Any,
-        runner_service: RunnerActionService,
-        output_callback: Callable[[str], None],
-    ) -> None:
-        """Execute a step-level action (Approve/Reject/Resume/Retry)."""
+        Uses approve_commands.main --retry which sends request to backend.
+        Daemon picks up the retry and re-executes the same step.
+        """
         run = self._get_selected_run()
         if not run:
-            output_callback(f"Error: Select an active run to {action_name.lower()}.")
+            output_callback("Error: Select an active run to retry.")
             return
 
-        confirmed = await self._confirm_action(
-            action_name,
-            run=run,
-        )
+        confirmed = await self._confirm_action("Retry", run=run)
         if not confirmed:
-            output_callback(f"{action_name} cancelled.")
+            output_callback("Retry cancelled.")
             return
 
-        output_callback(f"{action_name} run {run.run_code}...")
-
-        result = action_func(
-            repo_path=run.project_root,
-            template_group=run.workflow_name,
-            job_id=run.run_id,
-            step_name=run.current_step,
-        )
+        output_callback(f"Retrying run {run.run_code}...")
+        result = runner_service.approve(run_id=run.run_id, retry=True)
         output_callback(result)
 
     async def _execute_reset(

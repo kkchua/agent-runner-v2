@@ -1192,8 +1192,12 @@ def _sync_results_to_backend(
     """Sync step execution results to the backend (daemon mode only).
 
     Called automatically after step execution when running in daemon mode.
-    Uses ``build_job_sync_payload`` from ``daemon_runtime`` to map the
-    job.json state to the backend persistence API format.
+
+    V2 mode: If v2_backend_url is configured, sends outcome-only payload
+    to the V2 backend which computes routing via its state machine.
+
+    V1 mode: Uses ``build_job_sync_payload`` from ``daemon_runtime`` to map
+    the job.json state to the backend persistence API format.
 
     Before syncing, checks if backend state changed during execution
     (e.g., cancelled by console). If cancelled/stopped, skips sync to
@@ -1214,12 +1218,48 @@ def _sync_results_to_backend(
     run_id = str(state.get("workflow_run_id") or "").strip()
     if not backend_url or not step_run_id:
         return
+
+    # V2 mode: outcome-only sync via state machine backend
+    from .v2_sync import resolve_v2_backend_url, sync_outcome_v2
+    v2_url = resolve_v2_backend_url()
+    if v2_url:
+        try:
+            result_dict = {
+                "status": step_result.status,
+                "outcome": step_result.status.lower(),
+                "coder_used": coder_used,
+                "remark": step_result.remark,
+            }
+            # Attach failure classification if available
+            if hasattr(step_result, "failure_class"):
+                result_dict["failure_class"] = step_result.failure_class
+            elif hasattr(step_result, "control_class"):
+                result_dict["failure_class"] = step_result.control_class
+
+            response = sync_outcome_v2(
+                backend_url=v2_url,
+                step_run_id=step_run_id,
+                step_result=result_dict,
+                state=state,
+            )
+            new_status = response.get("run_status", "?")
+            next_step = response.get("current_step", "?")
+            print(
+                f"[daemon-sync-v2] outcome synced → run_status={new_status}, "
+                f"next_step={next_step} (step_run_id={step_run_id})",
+                file=sys.stderr,
+            )
+        except Exception as sync_exc:
+            print(f"[daemon-sync-v2] result sync failed: {sync_exc}", file=sys.stderr)
+        return
+
+    # V1 mode: full sync payload with CLI-computed routing
     try:
         from .daemon_runtime import build_job_sync_payload
         from .backend_client import BackendClient
 
         client = BackendClient(backend_url)
-        
+
         # Check backend status before sync (post-execution conflict check)
         if run_id:
             try:
@@ -1232,7 +1272,7 @@ def _sync_results_to_backend(
                     control = context.get("__run_control") or {}
                     if isinstance(control, dict):
                         stop_requested = bool(control.get("stop_requested"))
-                
+
                 if run_status == "stopped" or stop_requested:
                     print(
                         f"[daemon-sync] Backend state changed during execution "

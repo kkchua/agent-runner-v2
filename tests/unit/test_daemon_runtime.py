@@ -46,3 +46,32 @@ def test_build_job_sync_payload_resolves_relative_artifacts_from_target_project_
     assert payload["output_payload"]["CODEBASE_SCAN_SNAPSHOT"].replace("\\", "/") == (
         "D:/repo-target/docs/repo/codebase/04_changes/snapshot.json"
     )
+
+
+def test_build_job_sync_payload_clears_one_shot_run_control_flags() -> None:
+    payload = build_job_sync_payload(
+        job={
+            "job_status": "COMPLETED",
+            "review_state": {},
+            "context_payload": {
+                "__run_control": {
+                    "approve_requested": True,
+                    "retry_requested": True,
+                    "action_step": "review_step",
+                    "feedback": "operator note",
+                }
+            },
+        },
+        step_result={"status": "APPROVED", "outcome": "approved", "remark": "ok"},
+        step_run_id="step-1",
+    )
+
+    assert payload["context_payload"]["__run_control"] == {
+        "approve_requested": False,
+        "reject_requested": False,
+        "resume_requested": False,
+        "retry_requested": False,
+        "stop_requested": False,
+        "action_step": None,
+        "feedback": None,
+    }

@@ -378,6 +378,146 @@ def _is_quit_daemon_requested(run: dict[str, Any]) -> bool:
     return False
 
 
+def _get_approval_request(run: dict[str, Any]) -> dict[str, Any] | None:
+    """Check if an approval/reject/resume/retry was requested via context_payload flag.
+
+    Only checks context_payload.__run_control flags (approve_requested, etc.).
+    Does NOT auto-detect awaiting_human status - that would auto-approve without human action.
+
+    Returns the approval request details if found, None otherwise.
+    """
+    context = run.get("context_payload") or {}
+    if isinstance(context, dict):
+        control = context.get("__run_control") or {}
+        if isinstance(control, dict):
+            for action_type in ("approve_requested", "reject_requested", "resume_requested", "retry_requested"):
+                if control.get(action_type):
+                    return {
+                        "action_type": action_type,
+                        "action_step": control.get("action_step", ""),
+                        "feedback": control.get("feedback", ""),
+                    }
+    return None
+
+
+def _spawn_approval_child(
+    *,
+    run: dict[str, Any],
+    approval_request: dict[str, Any],
+    runtime_root: Path,
+    cli_pythonpath: str,
+    logger: _DaemonLogger,
+    backend_url: str,
+) -> ChildExecution | None:
+    """Spawn CLI with --approve-step to handle the approval request.
+
+    The CLI will load local job.json, record the approval, advance to next step, and sync.
+    """
+    import subprocess
+    import sys
+
+    run_id = str(run.get("id") or "")
+    run_code = str(run.get("run_code") or "")
+    workflow_name = str(run.get("workflow_name") or "")
+    job_id = str(run.get("run_code") or "")  # Local job ID is the run_code
+    action_step = approval_request.get("action_step", "")
+    action_type = approval_request.get("action_type", "")
+
+    # Map action_type to CLI flag
+    flag_map = {
+        "approve_requested": "--approve-step",
+        "reject_requested": "--reject-step",
+        "resume_requested": "--resume-step",
+        "retry_requested": "--retry-step",
+    }
+    cli_flag = flag_map.get(action_type, "--approve-step")
+
+    logger.log(
+        "info", "spawning_approval_child",
+        message=f"Spawning CLI to handle {action_type} for step {action_step}",
+        details={"run_id": run_id, "run_code": run_code, "action_step": action_step, "cli_flag": cli_flag},
+    )
+
+    # Create child directory
+    child_dir = runtime_root / f"approval-{run_id}"
+    child_dir.mkdir(parents=True, exist_ok=True)
+
+    # Build request payload for the CLI
+    request_payload = {
+        "workflow_run_id": run_id,
+        "workflow_name": workflow_name,
+        "job_id": job_id,
+        "step_name": action_step,
+        "cli_flag": cli_flag,
+        "backend_url": backend_url,
+    }
+    request_path = child_dir / "request.json"
+    request_path.write_text(json.dumps(request_payload, indent=2), encoding="utf-8")
+
+    result_path = child_dir / "result.json"
+    combined_log_path = child_dir / "child.log"
+    child_event_log_path = child_dir / "child-events.jsonl"
+
+    # Build CLI command
+    python_exe = sys.executable
+    cli_args = [
+        python_exe, "-m", "agent_runner_v2.run_agent", "run",
+        "--template-group", workflow_name,
+        "--job-id", job_id,
+        cli_flag, action_step,
+    ]
+
+    env = os.environ.copy()
+    if cli_pythonpath:
+        env["PYTHONPATH"] = cli_pythonpath
+    env["BACKEND_URL"] = backend_url
+
+    # Set working directory to project_root so subprocess can find .env file
+    project_root = str(run.get("project_root") or "")
+    subprocess_cwd = _resolve_subprocess_cwd(project_root=project_root, workspace_root=None)
+
+    try:
+        with open(combined_log_path, "ab") as log_fh:
+            proc = subprocess.Popen(
+                cli_args,
+                stdout=log_fh,
+                stderr=subprocess.STDOUT,
+                cwd=str(subprocess_cwd),
+                env=env,
+            )
+
+        child = ChildExecution(
+            run_id=run_id,
+            step_run_id=f"approval-{run_id}",
+            step_name=action_step,
+            run_code=run_code,
+            request_payload=request_payload,
+            request_path=request_path,
+            result_path=result_path,
+            combined_log_path=combined_log_path,
+            child_event_log_path=child_event_log_path,
+            process=proc,
+            started_at_iso=_now_iso(),
+            started_at_monotonic=time.monotonic(),
+        )
+
+        logger.log(
+            "info", "approval_child_spawned",
+            message=f"Spawned CLI for {action_type}",
+            child=child,
+            details={"pid": proc.pid, "cli_flag": cli_flag, "action_step": action_step},
+        )
+        return child
+
+    except Exception as exc:
+        logger.log(
+            "error", "approval_spawn_failed",
+            message=f"Failed to spawn CLI for {action_type}: {exc}",
+            details={"run_id": run_id, "run_code": run_code, "error": str(exc)},
+        )
+        return None
+
+
 def _handle_quit_daemon(client, claim: dict, logger) -> bool:
     """Handle quit daemon command.
 
@@ -529,17 +669,22 @@ def _spawn_child(*, claim: dict[str, Any], runtime_root: Path, cli_pythonpath: s
         })
         raise ValueError(error_msg)
     
+    # Compute job step directory path (where manual mode writes result.json)
+    step_sequence_no = int(claim.get('step_execution_spec', {}).get("step_sequence_no") or 
+                          claim.get('step_execution_spec', {}).get("step_order") or 1)
+    step_name = str(step_run.get('step_name') or '')
     job_id_to_pass = ""  # Default: empty, will create new job
 
     if backend_run_code and template_group:
         potential_job_dir = job_dir(template_group, backend_run_code)
         if potential_job_dir.exists():
             job_id_to_pass = backend_run_code
+        elif step_sequence_no > 1:
+            raise FileNotFoundError(
+                f"Local job state missing for backend run {backend_run_code!r} "
+                f"before claimed step {step_name!r} (sequence {step_sequence_no})."
+            )
 
-    # Compute job step directory path (where manual mode writes result.json)
-    step_sequence_no = int(claim.get('step_execution_spec', {}).get("step_sequence_no") or 
-                          claim.get('step_execution_spec', {}).get("step_order") or 1)
-    step_name = str(step_run.get('step_name') or '')
     job_step_dir = job_dir(template_group, backend_run_code) / f"{step_sequence_no:02d}_{step_name}"
     job_step_result_path = job_step_dir / "result.json"
 
@@ -713,11 +858,161 @@ class SupervisorConfig:
     once: bool = False
 
 
+def _run_supervisor_v2(*, config: SupervisorConfig, v2_url: str) -> int:
+    """V2 supervisor — simplified claim loop using state machine backend.
+
+    The V2 backend handles all routing, action detection, and stop requests.
+    The daemon only needs to: claim → spawn → report outcome.
+
+    No separate approval polling, no __run_control flag parsing,
+    no terminal_run_ids safety net.
+    """
+    from .v2_backend_client import V2BackendClient
+
+    logger = _DaemonLogger(config.log_file, config.worker_id)
+    client = V2BackendClient(v2_url)
+    client.register_worker(
+        worker_id=config.worker_id,
+        worker_label=config.worker_label,
+        capabilities={"mode": ["execute-step-daemon"], "max_parallel": config.max_parallel},
+    )
+    logger.log("info", "daemon_v2_started", message="V2 worker daemon started", details={
+        "v2_backend_url": v2_url, "worker_id": config.worker_id,
+    })
+
+    children: dict[str, ChildExecution] = {}
+    running = True
+
+    def _handle_signal(_sig, _frame):
+        nonlocal running
+        running = False
+        logger.log("info", "daemon_v2_shutdown_signal", message="received shutdown signal")
+
+    signal.signal(signal.SIGINT, _handle_signal)
+    signal.signal(signal.SIGTERM, _handle_signal)
+
+    while running or children:
+        # Heartbeat — check for shutdown commands
+        try:
+            hb_resp = client.heartbeat(
+                worker_id=config.worker_id,
+                status="idle" if not children else "busy",
+            )
+            commands = hb_resp.get("commands", [])
+            if "shutdown" in commands:
+                logger.log("info", "daemon_v2_shutdown_command", message="backend requested shutdown")
+                running = False
+        except RuntimeError as hb_err:
+            logger.log("warning", "daemon_v2_heartbeat_failed", message=str(hb_err))
+
+        # Claim work (single endpoint serves both EXECUTE_STEP and PROCESS_ACTION)
+        if running and len(children) < config.max_parallel:
+            try:
+                work = client.claim_work(worker_id=config.worker_id)
+            except RuntimeError as claim_err:
+                logger.log("warning", "daemon_v2_claim_failed", message=str(claim_err))
+                work = {"work_type": "IDLE"}
+
+            work_type = work.get("work_type", "IDLE")
+
+            if work_type == "IDLE":
+                logger.log("info", "daemon_v2_no_work", message="no work available")
+            elif work_type in ("EXECUTE_STEP", "PROCESS_ACTION"):
+                run_data = work.get("run", {})
+                step_data = work.get("step_run", {})
+                run_id = str(run_data.get("run_id", ""))
+                run_code = str(run_data.get("run_code", ""))
+                step_run_id = str(step_data.get("step_run_id", ""))
+                step_name = str(step_data.get("step_name", ""))
+                workflow_name = str(run_data.get("workflow_name", ""))
+
+                logger.log("info", "daemon_v2_claimed", message=f"claimed {work_type}", details={
+                    "run_code": run_code, "step": step_name, "work_type": work_type,
+                })
+
+                # Build claim dict compatible with _spawn_child
+                claim = {
+                    "run": {
+                        "id": run_id,
+                        "run_code": run_code,
+                        "workflow_name": workflow_name,
+                        "project_root": run_data.get("project_root"),
+                    },
+                    "step_run": {
+                        "id": step_run_id,
+                        "step_name": step_name,
+                    },
+                    "run": {
+                        "id": run_id,
+                        "run_code": run_code,
+                    },
+                }
+
+                # For PROCESS_ACTION, add action info to claim
+                if work_type == "PROCESS_ACTION":
+                    action = work.get("action", "")
+                    flag_map = {
+                        "APPROVE": "--approve-step",
+                        "REJECT": "--reject-step",
+                        "RESUME": "--resume-step",
+                        "RETRY": "--retry-step",
+                    }
+                    flag = flag_map.get(action, "--approve-step")
+                    claim["_v2_action_flag"] = flag
+                    claim["_v2_action_step"] = step_name
+                    claim["_v2_feedback"] = work.get("feedback", "")
+
+                try:
+                    child = _spawn_child(
+                        claim=claim,
+                        runtime_root=config.runtime_dir,
+                        cli_pythonpath=config.cli_pythonpath,
+                        logger=logger,
+                        backend_url=config.backend_url,
+                        step_spec_source=config.step_spec_source,
+                    )
+                    children[child.step_run_id] = child
+                except Exception as exc:
+                    logger.log("error", "daemon_v2_spawn_failed", message=str(exc), details={
+                        "run_code": run_code, "step": step_name,
+                    })
+                    # Report failure to V2 backend
+                    try:
+                        client.report_outcome(
+                            step_run_id=step_run_id,
+                            outcome="failed",
+                            failure_class="FATAL",
+                            error_message=f"Daemon failed to spawn child: {exc}",
+                        )
+                    except Exception:
+                        pass
+
+            if config.once:
+                running = False
+
+        # Check completed children
+        for step_run_id in list(children.keys()):
+            child = children[step_run_id]
+            if child.state in ("completed", "failed", "killed", "timed_out"):
+                logger.log("info", "daemon_v2_child_done", message=f"child done: {child.state}", details={
+                    "step_run_id": step_run_id, "exit_code": child.exit_code,
+                })
+                del children[step_run_id]
+
+        time.sleep(config.poll_seconds)
+
+    logger.log("info", "daemon_v2_stopped", message="V2 daemon stopped")
+    return 0
+
+
 def _run_supervisor(*, config: SupervisorConfig) -> int:
     """Run the main daemon supervisor loop.
 
     Polls backend for work, spawns children, monitors liveness,
     and handles timeouts and shutdown signals.
+
+    V2 mode: If v2_backend_url is configured, uses a simplified claim loop
+    that delegates all routing to the V2 backend's state machine.
 
     Args:
         config: Supervisor configuration dataclass containing all parameters.
@@ -728,6 +1023,11 @@ def _run_supervisor(*, config: SupervisorConfig) -> int:
     from .backend_client import BackendClient
     from .daemon_runtime import build_job_sync_payload
     from .job_state import job_dir
+    from .v2_sync import resolve_v2_backend_url
+
+    v2_url = resolve_v2_backend_url()
+    if v2_url:
+        return _run_supervisor_v2(config=config, v2_url=v2_url)
 
     logger = _DaemonLogger(config.log_file, config.worker_id)
     client = BackendClient(config.backend_url)
@@ -736,6 +1036,7 @@ def _run_supervisor(*, config: SupervisorConfig) -> int:
 
     children: dict[str, ChildExecution] = {}
     terminal_run_ids: set[str] = set()
+    seen_approval_requests: dict[str, tuple[str, str]] = {}
     running = True
 
     def _handle_signal(_sig, _frame):
@@ -865,6 +1166,70 @@ def _run_supervisor(*, config: SupervisorConfig) -> int:
                 if config.once:
                     running = False
                     break
+
+            # Check for approval requests on runs assigned to this worker
+            # This handles the case where a step completed with WAITING_FOR_HUMAN_APPROVAL
+            # and the console has recorded an approval request via sync_job_state
+            if running and len(children) < config.max_parallel:
+                try:
+                    # Query for runs assigned to this worker that might have approval requests
+                    runs_response = client.list_runs(worker_id=config.worker_id)
+                    runs_list = runs_response if isinstance(runs_response, list) else runs_response.get("runs", [])
+
+                    current_approval_requests: dict[str, tuple[str, str]] = {}
+
+                    for run_data in runs_list:
+                        if len(children) >= config.max_parallel:
+                            break
+
+                        # Check if this run has an approval request
+                        approval_request = _get_approval_request(run_data)
+                        if approval_request:
+                            run_id = str(run_data.get("id") or "")
+                            run_code = str(run_data.get("run_code") or "")
+                            request_key = (
+                                str(approval_request.get("action_type") or ""),
+                                str(approval_request.get("action_step") or ""),
+                            )
+                            current_approval_requests[run_id] = request_key
+
+                            # Skip if we're already handling this run
+                            if f"approval-{run_id}" in children:
+                                continue
+                            if seen_approval_requests.get(run_id) == request_key:
+                                continue
+
+                            logger.log(
+                                "info", "approval_request_detected",
+                                message=f"Detected {approval_request['action_type']} for run {run_code}",
+                                details={"run_id": run_id, "run_code": run_code, "action_step": approval_request["action_step"]},
+                            )
+
+                            # Spawn CLI to handle the approval
+                            approval_child = _spawn_approval_child(
+                                run=run_data,
+                                approval_request=approval_request,
+                                runtime_root=config.runtime_dir,
+                                cli_pythonpath=config.cli_pythonpath,
+                                logger=logger,
+                                backend_url=config.backend_url,
+                            )
+
+                            if approval_child:
+                                seen_approval_requests[run_id] = request_key
+                                children[approval_child.step_run_id] = approval_child
+                                _send_child_heartbeat(client, config.worker_id, approval_child, status='busy')
+                                approval_child.last_heartbeat_at = time.monotonic()
+
+                    stale_run_ids = [
+                        run_id for run_id, request_key in seen_approval_requests.items()
+                        if current_approval_requests.get(run_id) != request_key
+                    ]
+                    for run_id in stale_run_ids:
+                        del seen_approval_requests[run_id]
+
+                except RuntimeError as list_err:
+                    logger.log('warning', 'approval_poll_failed', message=f'Failed to poll for approval requests: {list_err}')
 
         if not children:
             try:

@@ -18,7 +18,7 @@ prompt_targets = ["all"]
 
 # ============================================================================
 # Step 1: Generate Videos (action-driven, Agnes Video V2.0 API)
-# Scans step_03/ for PNG images, extracts prompts from metadata, generates videos
+# Scans step_03_generatedimage/ for PNG images, extracts prompts from metadata, generates videos
 # ============================================================================
 [[step]]
 name = "generate_videos"
@@ -32,14 +32,14 @@ produces = ["VIDEO_INDEX"]
 result_meta_key = "VIDEO_INDEX"
 
 # ============================================================================
-# Step 2: Archive step_03 inputs (runs after generate_videos approval)
+# Step 2: Archive step_03_generatedimage inputs (runs after generate_videos approval)
 # ============================================================================
 [[step]]
 name = "archive_step_03"
 action = "archive_inputs"
-source_dir = "step_03"
-archive_dir = "step_03_archive"
-index_file = "step_04/index.json"
+source_dir = "step_03_generatedimage"
+archive_dir = "step_03_generatedimage_archive"
+index_file = "step_04_generatedvideo/index.json"
 onsuccess = "stepCompletion"
 
 [step.artifacts]

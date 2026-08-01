@@ -4,23 +4,23 @@ Generate videos from images using the Agnes Video V2.0 API. This workflow extrac
 
 ## Overview
 
-This workflow scans `step_03/` for PNG images, extracts `t2i_prompt1` and `t2i_prompt2` from the embedded ComfyUI workflow metadata, and uses `t2i_prompt1` to generate videos via the Agnes Video API.
+This workflow scans `step_03_generatedimage/` for PNG images, extracts `t2i_prompt1` and `t2i_prompt2` from the embedded ComfyUI workflow metadata, and uses `t2i_prompt1` to generate videos via the Agnes Video API.
 
 ## Workflow Steps
 
-1. **generate_videos** — Scans `step_03/` for PNG files, extracts prompts from metadata, calls video generation API, downloads videos to `step_04/`
-2. **archive_step_03** — Archives processed inputs from `step_03/` to `step_03_archive/` (only files listed in `step_04/index.json`)
+1. **generate_videos** — Scans `step_03_generatedimage/` for PNG files, extracts prompts from metadata, calls video generation API, downloads videos to `step_04_generatedvideo/`
+2. **archive_step_03** — Archives processed inputs from `step_03_generatedimage/` to `step_03_generatedimage_archive/` (only files listed in `step_04_generatedvideo/index.json`)
 3. **stepCompletion** — Terminal step
 
 ## Directory Structure
 
 ```
 <project_root>/
-├── step_03/              # Input PNG images (with embedded ComfyUI metadata)
-├── step_04/              # Output videos (.mp4) + index.json
-── step_03_archive/      # Archived processed inputs
-├── step_04_archive/      # Archived processed outputs (if needed)
-── config.json           # Media configuration (model, dimensions, timeouts)
+├── step_03_generatedimage/        # Input PNG images (with embedded ComfyUI metadata)
+├── step_04_generatedvideo/        # Output videos (.mp4) + index.json
+├── step_03_generatedimage_archive/ # Archived processed inputs
+├── step_04_generatedvideo_archive/ # Archived processed outputs (if needed)
+├── config.json                    # Media configuration (model, dimensions, timeouts)
 ```
 
 ## PNG Metadata Extraction
@@ -71,15 +71,15 @@ The workflow supports multiple API keys for round-robin rotation. Define numbere
 
 ## Usage
 
-1. Place PNG images (with ComfyUI metadata) in `step_03/`
+1. Place PNG images (with ComfyUI metadata) in `step_03_generatedimage/`
 2. Create `config.json` with video generation settings
 3. Configure `.env` with API key(s)
 4. Run the workflow via operator console or CLI
 
 ## Output
 
-- `step_04/*.mp4` — Generated videos (named after input PNGs)
-- `step_04/index.json` — Manifest listing input-to-output mappings
+- `step_04_generatedvideo/*.mp4` — Generated videos (named after input PNGs)
+- `step_04_generatedvideo/index.json` — Manifest listing input-to-output mappings
 
 ## Error Handling
 
