@@ -1,6 +1,6 @@
 # agent-runner-v2 Documentation Index
 
-**Version:** v0.3.0 | **Last Updated:** 2026-07-27
+**Version:** v0.4.0 | **Last Updated:** 2026-08-01
 
 This is the master index for agent-runner-v2 documentation. Use this page to find the right document for your task instead of reading everything.
 
@@ -63,15 +63,28 @@ This is the master index for agent-runner-v2 documentation. Use this page to fin
 
 These files are kept for historical reference but should not be used as primary reference.
 
-**Architecture principle (from docs/developer/ARCHITECTURAL_REFACTOR.md):**
+**Architecture principle — V2 (current, backend-authoritative):**
+```
+Console (React)  ──REST──▶  Backend V2 (State Machine)  ◀──REST──  Daemon (Worker)
+                                  │                                    │
+                                  │ owns state transitions             │ spawns
+                                  │                                    ▼
+                                  └────────────────────────────  CLI (Execute)
+```
+- **Backend V2**: State machine + persistence. All routing, validation, and state transitions.
+- **Daemon**: Thin worker loop. Claims work, spawns CLI, reports outcome. No business logic.
+- **CLI**: Pure execution engine. Runs steps, classifies failures. Reports outcome only.
+- **Console**: React web app. Calls backend API directly. No CLI intermediary.
+
+**V2 code location:** `agent_runner_v2/v2/` — daemon, backend client, sync adapter.
+**V2 architecture spec:** `docs/repo/agent_runner/sdlc/delivery/00_initiatives/INIT-20260801-002_platform-v2-architecture-redesign.md`
+
+**V1 architecture (legacy, being migrated):**
 ```
 Console (Control Panel) → CLI (brain) → Backend (database)
 Daemon  (messenger)     → CLI (brain) → Backend (database)
 ```
-- **Backend**: No logic. Database persistence only.
-- **Console**: UI only. ALL operations through CLI. Zero direct backend calls.
-- **Daemon**: Messenger. Claims work, spawns CLI, monitors liveness. No business logic.
-- **CLI**: The brain. All logic, all backend API calls, all state transitions.
+V1 files are marked `[V1 DEPRECATED]` — do not use for new development.
 
 ---
 
@@ -221,17 +234,19 @@ Root markdown files are **not authoritative** for workflow design or documentati
 | Task | Entry Point |
 |------|-------------|
 | CLI execution | `agent_runner_v2/run_agent.py` → `main()` |
-| Daemon polling | `agent_runner_v2/daemon.py` → `_run_supervisor()` |
+| V2 daemon | `agent_runner_v2/v2/daemon.py` → `run_supervisor_v2()` |
+| V1 daemon (legacy) | `agent_runner_v2/daemon.py` → `_run_supervisor()` |
+| V2 backend client | `agent_runner_v2/v2/backend_client.py` → `V2BackendClient` |
+| V2 outcome sync | `agent_runner_v2/v2/sync.py` → `sync_outcome_v2()` |
 | Step execution | `agent_runner_v2/step_runner.py` → `run_step()` |
 | Job state management | `agent_runner_v2/job_state.py` → `load_job()`, `save_job()` |
-| Workflow routing | `agent_runner_v2/workflow_router.py` → `route_after_step()` |
-| Backend sync | `agent_runner_v2/daemon_runtime.py` → `build_job_sync_payload()` |
 
 ### Key Directories
 
 | Directory | Purpose |
 |-----------|---------|
 | `agent_runner_v2/` | Core runner code |
+| `agent_runner_v2/v2/` | **V2 daemon, backend client, sync** (backend-authoritative mode) |
 | `workflows/` | Workflow packages (plugin-based) |
 | `tests/unit/` | Unit tests (pure logic, no filesystem) |
 | `tests/integration/` | Integration tests (real files, subprocesses) |
