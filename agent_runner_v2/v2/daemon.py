@@ -81,15 +81,6 @@ def _spawn_child_v2(
     if not job_id_to_pass:
         cli_args.extend(["--start-step", step_name])
 
-    # For PROCESS_ACTION, add the action flag
-    action_flag = claim.get("_v2_action_flag")
-    if action_flag:
-        action_step = claim.get("_v2_action_step", step_name)
-        cli_args.extend([action_flag, action_step])
-        feedback = claim.get("_v2_feedback", "")
-        if feedback:
-            cli_args.extend(["--feedback", feedback])
-
     env = os.environ.copy()
     if cli_pythonpath:
         env["PYTHONPATH"] = cli_pythonpath + os.pathsep + env.get("PYTHONPATH", "")
@@ -227,7 +218,45 @@ def run_supervisor_v2(*, config: SupervisorConfig, v2_url: str) -> int:
 
             if work_type == "IDLE":
                 logger.log("info", "daemon_v2_no_work", message="no work available")
-            elif work_type in ("EXECUTE_STEP", "PROCESS_ACTION"):
+
+            elif work_type == "PROCESS_ACTION":
+                # V2 action processing — backend-authoritative, no CLI needed.
+                # The backend's _handle_action_consumed handles all state transitions.
+                run_data = work.get("run", {})
+                step_data = work.get("step_run", {})
+                run_code = str(run_data.get("run_code", ""))
+                step_run_id = str(step_data.get("step_run_id", ""))
+                step_name = str(step_data.get("step_name", ""))
+                action = work.get("action", "")
+
+                logger.log("info", "daemon_v2_action_claimed", message=f"processing {action} directly", details={
+                    "run_code": run_code, "step": step_name, "action": action,
+                })
+
+                # Map action to outcome — backend state machine handles the rest
+                _ACTION_OUTCOME = {
+                    "APPROVE": ("approved", None),
+                    "RESUME":  ("approved", None),
+                    "REJECT":  ("rejected", "HUMAN_RETRY_REQUIRED"),
+                    "RETRY":   ("failed",   "HUMAN_RETRY_REQUIRED"),
+                }
+                outcome, failure_class = _ACTION_OUTCOME.get(action, ("failed", "FATAL"))
+
+                try:
+                    client.report_outcome(
+                        step_run_id=step_run_id,
+                        outcome=outcome,
+                        failure_class=failure_class,
+                    )
+                    logger.log("info", "daemon_v2_action_reported", message=f"{action} reported as {outcome}", details={
+                        "run_code": run_code, "step": step_name,
+                    })
+                except Exception as exc:
+                    logger.log("error", "daemon_v2_action_report_failed", message=str(exc), details={
+                        "run_code": run_code, "step": step_name, "action": action,
+                    })
+
+            elif work_type == "EXECUTE_STEP":
                 run_data = work.get("run", {})
                 step_data = work.get("step_run", {})
                 run_id = str(run_data.get("run_id", ""))
@@ -253,20 +282,6 @@ def run_supervisor_v2(*, config: SupervisorConfig, v2_url: str) -> int:
                         "step_name": step_name,
                     },
                 }
-
-                # For PROCESS_ACTION, add action info to claim
-                if work_type == "PROCESS_ACTION":
-                    action = work.get("action", "")
-                    flag_map = {
-                        "APPROVE": "--approve-step",
-                        "REJECT": "--reject-step",
-                        "RESUME": "--resume-step",
-                        "RETRY": "--retry-step",
-                    }
-                    flag = flag_map.get(action, "--approve-step")
-                    claim["_v2_action_flag"] = flag
-                    claim["_v2_action_step"] = step_name
-                    claim["_v2_feedback"] = work.get("feedback", "")
 
                 try:
                     child = _spawn_child_v2(
