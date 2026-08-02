@@ -61,9 +61,9 @@ result_meta_key = "ARCHIVE_STEP_00"
 # ============================================================================
 [[step]]
 name = "generate_prompts"
-prompt = "prompts/02_generate_prompts_v1.txt"
+prompt = "prompts/02_generate_prompts_v7.txt"
 enable_notifications = true
-requires_human_approval_after = true
+requires_human_approval_after = false
 onsuccess = "archive_step_01"
 
 [step.artifacts]
@@ -105,7 +105,7 @@ result_meta_key = "ARCHIVE_STEP_01"
 name = "generate_images"
 action = "generate_images"
 enable_notifications = true
-requires_human_approval_after = false
+requires_human_approval_after = true
 onsuccess = "archive_step_02"
 
 [step.artifacts]
