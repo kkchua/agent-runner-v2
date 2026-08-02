@@ -245,15 +245,46 @@ class _DaemonLogger:
     """JSONL logger for daemon events.
 
     Writes to both a file and stdout for daemon monitoring.
+    Supports log rotation: when file exceeds max_size, rotates to .1, .2, etc.
 
     Args:
         path: Path to the JSONL log file.
         worker_id: Worker identifier for log correlation.
+        max_bytes: Maximum file size before rotation (default 10MB).
+        backup_count: Number of backup files to keep (default 5).
     """
 
-    def __init__(self, path: Path, worker_id: str):
+    def __init__(self, path: Path, worker_id: str, max_bytes: int = 10 * 1024 * 1024, backup_count: int = 5):
         self.path = path
         self.worker_id = worker_id
+        self.max_bytes = max_bytes
+        self.backup_count = backup_count
+
+    def _rotate_if_needed(self) -> None:
+        """Rotate log file if it exceeds max_bytes."""
+        if not self.path.exists():
+            return
+        try:
+            if self.path.stat().st_size < self.max_bytes:
+                return
+        except OSError:
+            return
+
+        # Rotate: delete oldest, shift others up
+        for i in range(self.backup_count - 1, 0, -1):
+            src = self.path.with_suffix(f".log.{i}" if i > 0 else ".log")
+            dst = self.path.with_suffix(f".log.{i + 1}")
+            if src.exists():
+                try:
+                    src.rename(dst)
+                except OSError:
+                    pass
+
+        # Current log becomes .1
+        try:
+            self.path.rename(self.path.with_suffix(".log.1"))
+        except OSError:
+            pass
 
     def log(self, level: str, event: str, *, message: str = '', child: ChildExecution | None = None, details: dict[str, Any] | None = None) -> None:
         """Log an event to JSONL file and stdout.
@@ -265,6 +296,7 @@ class _DaemonLogger:
             child: Optional child execution context to include.
             details: Optional additional details dict.
         """
+        self._rotate_if_needed()
         payload: dict[str, Any] = {
             'ts': _utcnow_iso(),
             'level': level,

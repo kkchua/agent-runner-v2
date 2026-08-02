@@ -61,9 +61,9 @@ result_meta_key = "ARCHIVE_STEP_00"
 # ============================================================================
 [[step]]
 name = "generate_prompts"
-prompt = "prompts/02_generate_prompts_v5.txt"
+prompt = "prompts/02_generate_prompts_v1.txt"
 enable_notifications = true
-requires_human_approval_after = false
+requires_human_approval_after = true
 onsuccess = "archive_step_01"
 
 [step.artifacts]

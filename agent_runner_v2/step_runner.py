@@ -421,6 +421,21 @@ def run_action(
         changed_paths=[],
     )
 
+    # Write action_manifest.json for diagnostic visibility into action steps.
+    # Unlike prompt steps (which have prompt.txt, raw_output.txt, usage.json, etc.),
+    # action steps had no human-readable record of what happened.
+    _save_json_atomic(step_dir / "action_manifest.json", {
+        "action_name": action_name,
+        "step_name": step,
+        "invoked_at": invoked_at,
+        "finished_at": finished_at,
+        "status": result.status,
+        "remark": result.remark,
+        "artifacts": format_report_artifacts(dict(result.artifacts or {}), project_root=project_root),
+        **({"reject_code": result.reject_code} if result.reject_code else {}),
+        "step_config": {k: v for k, v in step_cfg.items() if k not in ("_workflow_bundle", "coder", "on_reject_refine", "on_exhaust_replan")},
+    })
+
     return StepResult(
         status=coder_result["status"],
         remark=str(coder_result.get("remark") or ""),

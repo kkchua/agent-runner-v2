@@ -128,8 +128,9 @@ class V2BackendClient:
         run_id: str,
         action: str,
         feedback: str | None = None,
+        force: bool = False,
     ) -> dict[str, Any]:
-        payload: dict[str, Any] = {"action": action}
+        payload: dict[str, Any] = {"action": action, "force": force}
         if feedback:
             payload["feedback"] = feedback
         return self._request("POST", f"/api/runs/{run_id}/action", payload)
