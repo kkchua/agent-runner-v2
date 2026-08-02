@@ -16,6 +16,8 @@ Invoked via: ukbe-run-agent daemon [worker-id]
 from __future__ import annotations
 
 import json
+import logging
+import logging.handlers
 import os
 import signal
 import subprocess
@@ -242,10 +244,9 @@ class ChildExecution:
 
 
 class _DaemonLogger:
-    """JSONL logger for daemon events.
+    """JSONL logger for daemon events using standard library rotation.
 
-    Writes to both a file and stdout for daemon monitoring.
-    Supports log rotation: when file exceeds max_size, rotates to .1, .2, etc.
+    Writes to both a rotating file and stdout for daemon monitoring.
 
     Args:
         path: Path to the JSONL log file.
@@ -257,34 +258,21 @@ class _DaemonLogger:
     def __init__(self, path: Path, worker_id: str, max_bytes: int = 10 * 1024 * 1024, backup_count: int = 5):
         self.path = path
         self.worker_id = worker_id
-        self.max_bytes = max_bytes
-        self.backup_count = backup_count
 
-    def _rotate_if_needed(self) -> None:
-        """Rotate log file if it exceeds max_bytes."""
-        if not self.path.exists():
-            return
-        try:
-            if self.path.stat().st_size < self.max_bytes:
-                return
-        except OSError:
-            return
+        path.parent.mkdir(parents=True, exist_ok=True)
+        self._handler = logging.handlers.RotatingFileHandler(
+            str(path), maxBytes=max_bytes, backupCount=backup_count, encoding='utf-8',
+        )
+        self._handler.setFormatter(logging.Formatter('%(message)s'))
 
-        # Rotate: delete oldest, shift others up
-        for i in range(self.backup_count - 1, 0, -1):
-            src = self.path.with_suffix(f".log.{i}" if i > 0 else ".log")
-            dst = self.path.with_suffix(f".log.{i + 1}")
-            if src.exists():
-                try:
-                    src.rename(dst)
-                except OSError:
-                    pass
+        self._stdout_handler = logging.StreamHandler(sys.stdout)
+        self._stdout_handler.setFormatter(logging.Formatter('%(message)s'))
 
-        # Current log becomes .1
-        try:
-            self.path.rename(self.path.with_suffix(".log.1"))
-        except OSError:
-            pass
+        self._logger = logging.getLogger(f'daemon.{worker_id}.{id(self)}')
+        self._logger.setLevel(logging.INFO)
+        self._logger.propagate = False
+        self._logger.addHandler(self._handler)
+        self._logger.addHandler(self._stdout_handler)
 
     def log(self, level: str, event: str, *, message: str = '', child: ChildExecution | None = None, details: dict[str, Any] | None = None) -> None:
         """Log an event to JSONL file and stdout.
@@ -296,7 +284,6 @@ class _DaemonLogger:
             child: Optional child execution context to include.
             details: Optional additional details dict.
         """
-        self._rotate_if_needed()
         payload: dict[str, Any] = {
             'ts': _utcnow_iso(),
             'level': level,
@@ -313,9 +300,8 @@ class _DaemonLogger:
                 'pid': child.process.pid,
                 'state': child.state,
             })
-        _append_jsonl(self.path, payload)
-        sys.stdout.write(json.dumps(payload, ensure_ascii=True) + '\n')
-        sys.stdout.flush()
+        line = json.dumps(payload, ensure_ascii=True, sort_keys=True)
+        self._logger.info(line)
         if child is not None:
             _append_jsonl(child.child_event_log_path, payload)
 
