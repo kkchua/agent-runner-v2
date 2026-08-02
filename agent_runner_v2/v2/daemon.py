@@ -173,12 +173,22 @@ def run_supervisor_v2(*, config: SupervisorConfig, v2_url: str) -> int:
         nonlocal running
         running = False
         logger.log("info", "daemon_v2_shutdown_signal", message="received shutdown signal")
+        # Terminate all children immediately so daemon can exit
+        for step_run_id, child in list(children.items()):
+            if child.exit_code is None:
+                logger.log("info", "daemon_v2_shutdown_terminate", message="terminating child on shutdown", details={
+                    "step_run_id": step_run_id, "pid": child.process.pid,
+                })
+                try:
+                    child.process.terminate()
+                except OSError:
+                    pass
 
     signal.signal(signal.SIGINT, _handle_signal)
     signal.signal(signal.SIGTERM, _handle_signal)
 
-    while running or children:
-        # Heartbeat — check for shutdown commands
+    while running:
+        # Heartbeat — check for shutdown commands and force-cancel signals
         try:
             hb_resp = client.heartbeat(
                 worker_id=config.worker_id,
@@ -188,6 +198,20 @@ def run_supervisor_v2(*, config: SupervisorConfig, v2_url: str) -> int:
             if "shutdown" in commands:
                 logger.log("info", "daemon_v2_shutdown_command", message="backend requested shutdown")
                 running = False
+
+            # Handle force-cancel: terminate children for cancelled runs
+            if "terminate_children" in commands:
+                detail = hb_resp.get("detail") or {}
+                force_run_ids = set(detail.get("force_cancel_run_ids", []))
+                for step_run_id, child in list(children.items()):
+                    if child.run_id in force_run_ids and child.exit_code is None:
+                        logger.log("info", "daemon_v2_force_cancel", message="force-cancelling child", details={
+                            "step_run_id": step_run_id, "run_id": child.run_id, "pid": child.process.pid,
+                        })
+                        try:
+                            child.process.terminate()
+                        except OSError:
+                            pass
         except RuntimeError as hb_err:
             logger.log("warning", "daemon_v2_heartbeat_failed", message=str(hb_err))
 
@@ -271,9 +295,47 @@ def run_supervisor_v2(*, config: SupervisorConfig, v2_url: str) -> int:
             if config.once:
                 running = False
 
-        # Check completed children
+        # Check completed children — poll subprocess directly (V2 daemon
+        # has no separate watchdog thread, so we must detect exit here).
         for step_run_id in list(children.keys()):
             child = children[step_run_id]
+
+            # Detect process exit via poll() — child.state is only set to
+            # "killed"/"timed_out" by timeout logic below, so a normally
+            # exited child would otherwise stay in "running" forever.
+            if child.exit_code is None:
+                proc_rc = child.process.poll()
+                if proc_rc is not None:
+                    child.exit_code = proc_rc
+                    child.state = "completed"
+
+            # Timeout watchdog — kill if child exceeded step_timeout_seconds
+            if child.exit_code is None and config.step_timeout_seconds > 0:
+                elapsed = time.monotonic() - child.started_at_monotonic
+                if child.term_sent_at is None and elapsed >= config.step_timeout_seconds:
+                    child.state = "timed_out"
+                    child.term_sent_at = time.monotonic()
+                    logger.log("error", "daemon_v2_child_timeout", message="child exceeded timeout", details={
+                        "step_run_id": step_run_id, "timeout_seconds": config.step_timeout_seconds,
+                    })
+                    try:
+                        child.process.terminate()
+                    except OSError:
+                        pass
+
+            # Kill grace — force-kill after terminate grace period
+            if child.exit_code is None and child.term_sent_at is not None:
+                if time.monotonic() - child.term_sent_at >= 30:
+                    child.state = "killed"
+                    child.exit_code = -1
+                    logger.log("warning", "daemon_v2_child_killed", message="force-killed child after grace period", details={
+                        "step_run_id": step_run_id,
+                    })
+                    try:
+                        child.process.kill()
+                    except OSError:
+                        pass
+
             if child.state in ("completed", "failed", "killed", "timed_out"):
                 logger.log("info", "daemon_v2_child_done", message=f"child done: {child.state}", details={
                     "step_run_id": step_run_id, "exit_code": child.exit_code,

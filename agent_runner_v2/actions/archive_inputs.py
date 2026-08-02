@@ -69,10 +69,9 @@ def archive_inputs(
 
     if not source_dir.is_dir():
         return ActionResult(
-            status="REJECTED",
-            remark=f"Source directory not found: {source_dir}",
+            status="APPROVED",
+            remark=f"Source directory not found: {source_dir_rel}/ — nothing to archive (may have been archived in a previous run).",
             artifacts={},
-            reject_code="SOURCE_NOT_FOUND",
         )
 
     archive_dir.mkdir(parents=True, exist_ok=True)

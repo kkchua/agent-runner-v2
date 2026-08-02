@@ -64,11 +64,11 @@ def _api_request_with_retry(
     max_retries=5,
     retry_base_wait=5,
 ):
-    """Execute an HTTP request with retry logic for 503 and 429 responses.
+    """Execute an HTTP request with retry logic for 503, 429, and 400 responses.
 
-    Implements exponential backoff for HTTP 503 (Service Unavailable)
-    and HTTP 429 (Too Many Requests) responses. Other error statuses
-    are raised immediately.
+    Implements exponential backoff for HTTP 503 (Service Unavailable),
+    HTTP 429 (Too Many Requests), and HTTP 400 (Bad Request) responses.
+    Other error statuses are raised immediately.
 
     Args:
         method: HTTP method string ('GET' or 'POST').
@@ -76,14 +76,14 @@ def _api_request_with_retry(
         headers: Dictionary of HTTP headers.
         json_payload: Dictionary payload for POST requests.
         timeout: HTTP request timeout in seconds.
-        max_retries: Maximum number of retry attempts for 503/429 errors.
+        max_retries: Maximum number of retry attempts for retryable errors.
 
     Returns:
         requests.Response object on success.
 
     Raises:
-        requests.HTTPError: For non-503/429 error responses.
-        RuntimeError: If max retries are exhausted on 503/429 errors.
+        requests.HTTPError: For non-retryable error responses.
+        RuntimeError: If max retries are exhausted on retryable errors.
     """
     last_error = None
     for attempt in range(max_retries + 1):
@@ -100,7 +100,7 @@ def _api_request_with_retry(
                     timeout=timeout,
                 )
 
-            if resp.status_code in (503, 429):
+            if resp.status_code in (503, 429, 400):
                 wait_seconds = min(retry_base_wait * (2 ** attempt), 120)
                 last_error = (
                     f"HTTP {resp.status_code} on attempt {attempt + 1}/"
@@ -108,9 +108,9 @@ def _api_request_with_retry(
                 )
                 logger.warning(
                     "HTTP %d from %s — attempt %d/%d, "
-                    "retrying in %ds",
+                    "retrying in %ds — response: %s",
                     resp.status_code, url, attempt + 1, max_retries + 1,
-                    wait_seconds,
+                    wait_seconds, resp.text[:500],
                 )
                 time.sleep(wait_seconds)
                 continue
@@ -206,6 +206,7 @@ class _ImageWorkItem:
     image_endpoint: str
     img_model: str
     img_size: str
+    img_ratio: str
     api_timeout: int
     api_max_retries: int
     retry_base_wait: int
@@ -235,11 +236,13 @@ def _process_single_image(item: _ImageWorkItem) -> dict:
         "prompt": t2i_prompt,
         "size": item.img_size,
     }
+    if item.img_ratio:
+        payload["ratio"] = item.img_ratio
     logger.info(
         "generate_images: %s[%d] requesting image "
-        "(model=%s, size=%s, prompt=%.80s...)",
+        "(model=%s, size=%s, ratio=%s, prompt=%.80s...)",
         item.variant_json_path.name, item.var_idx,
-        item.img_model, item.img_size, t2i_prompt,
+        item.img_model, item.img_size, item.img_ratio or "(default)", t2i_prompt,
     )
 
     if item.process_delay > 0:
@@ -600,16 +603,17 @@ def generate_images(*, context, state, step_cfg, project_root) -> ActionResult:
     img_config = config.get("image", {})
     img_model = img_config.get("model", "agnes-image-2.1-flash")
     img_size = img_config.get("size", "1024x1024")
+    img_ratio = img_config.get("ratio", "")
     process_delay = config.get("process_delay", 15)
     api_timeout = config.get("api_timeout", 500)
     api_max_retries = config.get("api_max_retries", 5)
     retry_base_wait = config.get("retry_base_wait", 5)
     max_concurrent = config.get("max_concurrent", 2)
     logger.info(
-        "generate_images: config — model=%s, size=%s, "
+        "generate_images: config — model=%s, size=%s, ratio=%s, "
         "delay=%ds, timeout=%ds, max_retries=%d, retry_base_wait=%ds, "
         "max_concurrent=%d",
-        img_model, img_size, process_delay,
+        img_model, img_size, img_ratio or "(default)", process_delay,
         api_timeout, api_max_retries, retry_base_wait, max_concurrent,
     )
 
@@ -672,6 +676,7 @@ def generate_images(*, context, state, step_cfg, project_root) -> ActionResult:
                 image_endpoint=image_endpoint,
                 img_model=img_model,
                 img_size=img_size,
+                img_ratio=img_ratio,
                 api_timeout=api_timeout,
                 api_max_retries=api_max_retries,
                 retry_base_wait=retry_base_wait,

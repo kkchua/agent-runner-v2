@@ -25,6 +25,29 @@ def _sync_backend_after_human_approval(*, state: dict[str, Any]) -> str | None:
     if not step_run_id:
         return None
 
+    # Check for V2 backend first
+    from .v2.sync import resolve_v2_backend_url, sync_outcome_v2
+    v2_url = resolve_v2_backend_url()
+    if v2_url:
+        last_model_output = state.get("last_model_output") or {}
+        step_result = {
+            "status": str(last_model_output.get("status") or "APPROVED"),
+            "outcome": "approved",
+            "coder_used": last_model_output.get("coder_used"),
+            "remark": last_model_output.get("remark"),
+        }
+        try:
+            sync_outcome_v2(
+                backend_url=v2_url,
+                step_run_id=step_run_id,
+                step_result=step_result,
+                state=state,
+            )
+        except Exception as exc:
+            return f"V2 backend sync failed: {exc}"
+        return None
+
+    # V1 backend fallback
     cfg = load_runner_config()
     backend_url = (
         str(state.get("backend_url") or "").strip()
