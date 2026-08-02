@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Operator Console V2 — UI Mockup</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0f172a; color: #f1f5f9; display: flex; height: 100vh; }
+
+  /* Sidebar */
+  .sidebar { width: 240px; background: #1e293b; border-right: 1px solid #334155; display: flex; flex-direction: column; flex-shrink: 0; }
+  .sidebar-header { padding: 20px 16px; border-bottom: 1px solid #334155; }
+  .sidebar-header h1 { font-size: 16px; font-weight: 700; color: #f8fafc; }
+  .sidebar-header p { font-size: 11px; color: #94a3b8; margin-top: 2px; }
+  .sidebar-nav { flex: 1; padding: 12px 8px; }
+  .nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 8px; cursor: pointer; font-size: 14px; color: #cbd5e1; transition: all 0.15s; margin-bottom: 2px; }
+  .nav-item:hover { background: #334155; color: #e2e8f0; }
+  .nav-item.active { background: #3b82f6; color: #fff; }
+  .nav-icon { width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+  .nav-badge { margin-left: auto; background: #ef4444; color: #fff; font-size: 11px; padding: 1px 6px; border-radius: 10px; font-weight: 600; }
+  .sidebar-footer { padding: 12px 16px; border-top: 1px solid #334155; }
+  .worker-select { width: 100%; background: #0f172a; border: 1px solid #334155; border-radius: 6px; padding: 8px 10px; color: #e2e8f0; font-size: 13px; }
+  .worker-label { font-size: 11px; color: #94a3b8; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+
+  /* Main content */
+  .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  .topbar { height: 56px; background: #1e293b; border-bottom: 1px solid #334155; display: flex; align-items: center; padding: 0 24px; justify-content: space-between; flex-shrink: 0; }
+  .topbar h2 { font-size: 18px; font-weight: 600; }
+  .topbar-actions { display: flex; gap: 8px; align-items: center; }
+  .content { flex: 1; overflow-y: auto; padding: 24px; }
+
+  /* Buttons */
+  .btn { padding: 8px 16px; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; border: none; transition: all 0.15s; display: inline-flex; align-items: center; gap: 6px; }
+  .btn-primary { background: #3b82f6; color: #fff; }
+  .btn-primary:hover { background: #2563eb; }
+  .btn-success { background: #22c55e; color: #fff; }
+  .btn-success:hover { background: #16a34a; }
+  .btn-danger { background: #ef4444; color: #fff; }
+  .btn-danger:hover { background: #dc2626; }
+  .btn-warning { background: #f59e0b; color: #000; }
+  .btn-warning:hover { background: #d97706; }
+  .btn-outline { background: transparent; border: 1px solid #475569; color: #cbd5e1; }
+  .btn-outline:hover { border-color: #94a3b8; color: #f1f5f9; }
+  .btn-sm { padding: 5px 10px; font-size: 12px; }
+  .btn-icon { padding: 6px 8px; }
+
+  /* Status badges */
+  .status { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: 500; }
+  .status-running { background: #1e3a5f; color: #60a5fa; }
+  .status-pending { background: #1e3a5f; color: #93c5fd; }
+  .status-awaiting { background: #422006; color: #fbbf24; }
+  .status-completed { background: #052e16; color: #4ade80; }
+  .status-failed { background: #450a0a; color: #f87171; }
+  .status-dot { width: 6px; height: 6px; border-radius: 50%; }
+  .status-running .status-dot { background: #60a5fa; animation: pulse 2s infinite; }
+  .status-pending .status-dot { background: #93c5fd; }
+  .status-awaiting .status-dot { background: #fbbf24; animation: pulse 1.5s infinite; }
+  .status-completed .status-dot { background: #4ade80; }
+  .status-failed .status-dot { background: #f87171; }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+  /* Cards */
+  .card { background: #1e293b; border: 1px solid #334155; border-radius: 10px; overflow: hidden; }
+  .card-header { padding: 16px 20px; border-bottom: 1px solid #334155; display: flex; justify-content: space-between; align-items: center; }
+  .card-header h3 { font-size: 15px; font-weight: 600; }
+  .card-body { padding: 20px; }
+
+  /* Stats row */
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+  .stat-card { background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 16px 20px; }
+  .stat-value { font-size: 28px; font-weight: 700; color: #f8fafc; }
+  .stat-label { font-size: 12px; color: #94a3b8; margin-top: 2px; text-transform: uppercase; letter-spacing: 0.5px; }
+
+  /* Run list */
+  .run-row { display: grid; grid-template-columns: 140px 1fr 120px 140px 160px; align-items: center; padding: 12px 20px; border-bottom: 1px solid #1e293b; gap: 12px; transition: background 0.1s; cursor: pointer; }
+  .run-row:hover { background: #334155; }
+  .run-row:last-child { border-bottom: none; }
+  .run-code { font-family: 'SF Mono', 'Consolas', monospace; font-size: 13px; color: #93c5fd; font-weight: 500; }
+  .run-workflow { font-size: 13px; color: #e2e8f0; }
+  .run-step { font-size: 12px; color: #94a3b8; font-family: monospace; }
+  .run-actions { display: flex; gap: 4px; justify-content: flex-end; }
+
+  /* Forms */
+  .form-group { margin-bottom: 16px; }
+  .form-label { display: block; font-size: 13px; color: #cbd5e1; margin-bottom: 6px; font-weight: 500; }
+  .form-input, .form-select { width: 100%; background: #0f172a; border: 1px solid #334155; border-radius: 6px; padding: 9px 12px; color: #e2e8f0; font-size: 14px; }
+  .form-input:focus, .form-select:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59,130,246,0.2); }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+  /* Worker cards */
+  .worker-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+  .worker-card { background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 16px 20px; }
+  .worker-card h4 { font-size: 14px; font-weight: 600; margin-bottom: 8px; }
+  .worker-meta { font-size: 12px; color: #94a3b8; display: flex; flex-direction: column; gap: 4px; }
+
+  /* Page sections */
+  .page { display: none; }
+  .page.active { display: block; }
+
+  /* Detail panel */
+  .detail-overlay { display: none; position: fixed; top: 0; right: 0; width: 480px; height: 100vh; background: #1e293b; border-left: 1px solid #334155; z-index: 100; box-shadow: -4px 0 20px rgba(0,0,0,0.3); flex-direction: column; }
+  .detail-overlay.open { display: flex; }
+  .detail-header { padding: 20px; border-bottom: 1px solid #334155; display: flex; justify-content: space-between; align-items: flex-start; }
+  .detail-body { flex: 1; overflow-y: auto; padding: 20px; }
+  .detail-section { margin-bottom: 20px; }
+  .detail-section h4 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: #94a3b8; margin-bottom: 8px; }
+  .detail-field { display: flex; justify-content: space-between; padding: 6px 0; font-size: 13px; border-bottom: 1px solid #0f172a; }
+  .detail-field .label { color: #94a3b8; }
+  .detail-field .value { color: #e2e8f0; font-family: monospace; }
+  .detail-actions { padding: 16px 20px; border-top: 1px solid #334155; display: flex; gap: 8px; flex-wrap: wrap; }
+
+  /* Toast */
+  .toast { position: fixed; bottom: 24px; right: 24px; background: #22c55e; color: #fff; padding: 12px 20px; border-radius: 8px; font-size: 14px; font-weight: 500; display: none; z-index: 200; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+  .toast.show { display: block; animation: slideUp 0.3s ease; }
+  @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+  /* Confirmation dialog */
+  .dialog-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 300; align-items: center; justify-content: center; }
+  .dialog-overlay.open { display: flex; }
+  .dialog { background: #1e293b; border: 1px solid #334155; border-radius: 12px; width: 420px; padding: 24px; }
+  .dialog h3 { font-size: 16px; margin-bottom: 12px; }
+  .dialog p { font-size: 14px; color: #cbd5e1; margin-bottom: 16px; line-height: 1.5; }
+  .dialog-actions { display: flex; gap: 8px; justify-content: flex-end; }
+</style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<div class="sidebar">
+  <div class="sidebar-header">
+    <h1>⚡ Agent Runner</h1>
+    <p>Operator Console V2</p>
+  </div>
+  <div class="sidebar-nav">
+    <div class="nav-item active" onclick="showPage('runs')">
+      <span class="nav-icon">▶</span> Active Runs
+      <span class="nav-badge" id="run-count">3</span>
+    </div>
+    <div class="nav-item" onclick="showPage('submit')">
+      <span class="nav-icon">＋</span> Submit Job
+    </div>
+    <div class="nav-item" onclick="showPage('workers')">
+      <span class="nav-icon">⚙</span> Workers
+    </div>
+    <div class="nav-item" onclick="showPage('workflows')">
+      <span class="nav-icon">📋</span> Workflows
+    </div>
+  </div>
+  <div class="sidebar-footer">
+    <div class="worker-label">Worker</div>
+    <select class="worker-select">
+      <option>worker-1 (live)</option>
+      <option>worker-2 (dev)</option>
+    </select>
+  </div>
+</div>
+
+<!-- Main -->
+<div class="main">
+  <div class="topbar">
+    <h2 id="page-title">Active Runs</h2>
+    <div class="topbar-actions">
+      <button class="btn btn-outline btn-sm" onclick="showToast('Runs refreshed')">↻ Refresh</button>
+      <label style="font-size:12px;color:#94a3b8;display:flex;align-items:center;gap:4px;">
+        <input type="checkbox" checked> Auto
+      </label>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- RUNS PAGE -->
+    <div class="page active" id="page-runs">
+      <div class="stats">
+        <div class="stat-card">
+          <div class="stat-value" style="color:#60a5fa">1</div>
+          <div class="stat-label">Running</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color:#fbbf24">1</div>
+          <div class="stat-label">Awaiting Action</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color:#93c5fd">1</div>
+          <div class="stat-label">Pending</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color:#4ade80">12</div>
+          <div class="stat-label">Completed Today</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h3>Active Runs</h3>
+          <span style="font-size:12px;color:#94a3b8">3 runs</span>
+        </div>
+        <div style="padding:4px 0;">
+          <div class="run-row" onclick="openDetail('JOB-001')">
+            <span class="run-code">JOB-a3f8c1d2</span>
+            <span class="run-workflow">agnes_media_gen_v1</span>
+            <span class="status status-running"><span class="status-dot"></span> RUNNING</span>
+            <span class="run-step">generate_images</span>
+            <span class="run-actions">
+              <button class="btn btn-danger btn-sm" onclick="event.stopPropagation();confirmAction('Cancel','JOB-a3f8c1d2')">Cancel</button>
+            </span>
+          </div>
+          <div class="run-row" onclick="openDetail('JOB-002')">
+            <span class="run-code">JOB-b7e2f4a9</span>
+            <span class="run-workflow">sdlc_50_implementation_v1</span>
+            <span class="status status-awaiting"><span class="status-dot"></span> AWAITING_APPROVAL</span>
+            <span class="run-step">review_code</span>
+            <span class="run-actions">
+              <button class="btn btn-success btn-sm" onclick="event.stopPropagation();confirmAction('Approve','JOB-b7e2f4a9')">Approve</button>
+              <button class="btn btn-danger btn-sm" onclick="event.stopPropagation();confirmAction('Reject','JOB-b7e2f4a9')">Reject</button>
+            </span>
+          </div>
+          <div class="run-row" onclick="openDetail('JOB-003')">
+            <span class="run-code">JOB-c1d5e8b3</span>
+            <span class="run-workflow">image_csv_gen_v3</span>
+            <span class="status status-pending"><span class="status-dot"></span> PENDING</span>
+            <span class="run-step">validate_csv</span>
+            <span class="run-actions">
+              <button class="btn btn-danger btn-sm" onclick="event.stopPropagation();confirmAction('Cancel','JOB-c1d5e8b3')">Cancel</button>
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SUBMIT PAGE -->
+    <div class="page" id="page-submit">
+      <div class="card" style="max-width:640px;">
+        <div class="card-header">
+          <h3>Submit New Job</h3>
+        </div>
+        <div class="card-body">
+          <div class="form-group">
+            <label class="form-label">Workflow</label>
+            <select class="form-select" id="submit-workflow" onchange="updateStartStep()">
+              <option value="">Select a workflow...</option>
+              <option value="agnes_media_gen_v1">agnes_media_gen_v1</option>
+              <option value="agnes_gen_video_v1">agnes_gen_video_v1</option>
+              <option value="image_csv_gen_v3">image_csv_gen_v3</option>
+              <option value="sdlc_10_initiative_intake_v1">sdlc_10_initiative_intake_v1</option>
+              <option value="sdlc_50_implementation_v1">sdlc_50_implementation_v1</option>
+            </select>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Project Root</label>
+              <input class="form-input" placeholder="/path/to/project" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Start Step (optional)</label>
+              <select class="form-select" id="start-step">
+                <option value="">From beginning</option>
+              </select>
+            </div>
+          </div>
+          <div id="dynamic-inputs" style="display:none;">
+            <div class="form-label" style="margin-top:8px;margin-bottom:8px;">Required Inputs</div>
+            <div class="form-group">
+              <label class="form-label">CONCEPT_FILE</label>
+              <div style="display:flex;gap:8px;">
+                <input class="form-input" placeholder="/path/to/concept.md" />
+                <button class="btn btn-outline btn-sm">Browse</button>
+              </div>
+            </div>
+          </div>
+          <div style="margin-top:20px;display:flex;gap:8px;">
+            <button class="btn btn-primary" onclick="confirmAction('Submit','new job')">Submit Job</button>
+            <button class="btn btn-outline" onclick="showPage('runs')">Cancel</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- WORKERS PAGE -->
+    <div class="page" id="page-workers">
+      <div class="worker-grid">
+        <div class="worker-card">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+            <h4>worker-1</h4>
+            <span class="status status-running"><span class="status-dot"></span> busy</span>
+          </div>
+          <div class="worker-meta">
+            <span>Label: live</span>
+            <span>Current: JOB-a3f8c1d2 / generate_images</span>
+            <span>Last heartbeat: 3s ago</span>
+          </div>
+          <div style="margin-top:12px;display:flex;gap:6px;">
+            <button class="btn btn-outline btn-sm" onclick="confirmAction('Stop','worker-1')">Stop</button>
+          </div>
+        </div>
+        <div class="worker-card">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+            <h4>worker-2</h4>
+            <span class="status status-pending"><span class="status-dot"></span> idle</span>
+          </div>
+          <div class="worker-meta">
+            <span>Label: dev</span>
+            <span>Current: —</span>
+            <span>Last heartbeat: 8s ago</span>
+          </div>
+          <div style="margin-top:12px;display:flex;gap:6px;">
+            <button class="btn btn-outline btn-sm" onclick="confirmAction('Stop','worker-2')">Stop</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- WORKFLOWS PAGE -->
+    <div class="page" id="page-workflows">
+      <div class="card">
+        <div class="card-header">
+          <h3>Workflow Definitions</h3>
+          <button class="btn btn-primary btn-sm" onclick="showToast('Workflows synced')">↻ Sync Workflows</button>
+        </div>
+        <div style="padding:4px 0;">
+          <div class="run-row" style="cursor:default;">
+            <span class="run-code" style="color:#e2e8f0;">agnes_media_gen_v1</span>
+            <span class="run-workflow">4 steps · Image + video generation pipeline</span>
+            <span class="status status-completed" style="font-size:11px;">ACTIVE</span>
+            <span class="run-step">Prefix: AMG</span>
+            <span></span>
+          </div>
+          <div class="run-row" style="cursor:default;">
+            <span class="run-code" style="color:#e2e8f0;">agnes_gen_video_v1</span>
+            <span class="run-workflow">4 steps · Video generation from image</span>
+            <span class="status status-completed" style="font-size:11px;">ACTIVE</span>
+            <span class="run-step">Prefix: AGV</span>
+            <span></span>
+          </div>
+          <div class="run-row" style="cursor:default;">
+            <span class="run-code" style="color:#e2e8f0;">image_csv_gen_v3</span>
+            <span class="run-workflow">3 steps · CSV-based image generation</span>
+            <span class="status status-completed" style="font-size:11px;">ACTIVE</span>
+            <span class="run-step">Prefix: ICG</span>
+            <span></span>
+          </div>
+          <div class="run-row" style="cursor:default;">
+            <span class="run-code" style="color:#e2e8f0;">sdlc_50_implementation_v1</span>
+            <span class="run-workflow">11 steps · SDLC implementation workflow</span>
+            <span class="status status-completed" style="font-size:11px;">ACTIVE</span>
+            <span class="run-step">Prefix: SDLC50</span>
+            <span></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Detail Panel -->
+<div class="detail-overlay" id="detail-panel">
+  <div class="detail-header">
+    <div>
+      <div style="font-size:12px;color:#94a3b8;margin-bottom:4px;">Run Detail</div>
+      <h3 id="detail-code" style="font-family:monospace;font-size:18px;">JOB-b7e2f4a9</h3>
+    </div>
+    <button class="btn btn-outline btn-icon" onclick="closeDetail()">✕</button>
+  </div>
+  <div class="detail-body">
+    <div class="detail-section">
+      <h4>State</h4>
+      <div class="detail-field"><span class="label">Status</span><span class="status status-awaiting"><span class="status-dot"></span> AWAITING_APPROVAL</span></div>
+      <div class="detail-field"><span class="label">Action Requested</span><span class="value" style="color:#fbbf24;">—</span></div>
+      <div class="detail-field"><span class="label">Current Step</span><span class="value">review_code</span></div>
+      <div class="detail-field"><span class="label">Workflow</span><span class="value">sdlc_50_implementation_v1</span></div>
+      <div class="detail-field"><span class="label">Worker</span><span class="value">worker-1</span></div>
+    </div>
+    <div class="detail-section">
+      <h4>Progress</h4>
+      <div class="detail-field"><span class="label">Completed Steps</span><span class="value">analyze_spec, resolve_questions, define_artifacts, design_steps, generate_package, review_package, validate_package, implement_code</span></div>
+      <div class="detail-field"><span class="label">Failed Steps</span><span class="value">—</span></div>
+      <div class="detail-field"><span class="label">Submitted</span><span class="value">2026-08-01 09:15:22</span></div>
+      <div class="detail-field"><span class="label">Updated</span><span class="value">2026-08-01 10:32:08</span></div>
+    </div>
+    <div class="detail-section">
+      <h4>Valid Actions</h4>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;">
+        <span class="status status-awaiting" style="cursor:pointer;">APPROVE</span>
+        <span class="status status-failed" style="cursor:pointer;">REJECT</span>
+        <span class="status status-failed" style="cursor:pointer;">CANCEL</span>
+      </div>
+    </div>
+  </div>
+  <div class="detail-actions">
+    <button class="btn btn-success" onclick="confirmAction('Approve','JOB-b7e2f4a9')">✓ Approve</button>
+    <button class="btn btn-danger" onclick="confirmAction('Reject','JOB-b7e2f4a9')">✕ Reject</button>
+    <button class="btn btn-warning" onclick="confirmAction('Resume','JOB-b7e2f4a9')">↻ Resume</button>
+    <button class="btn btn-outline" onclick="confirmAction('Retry','JOB-b7e2f4a9')">⟳ Retry</button>
+    <button class="btn btn-outline" onclick="confirmAction('Cancel','JOB-b7e2f4a9')" style="margin-left:auto;">Cancel Run</button>
+  </div>
+</div>
+
+<!-- Confirmation Dialog -->
+<div class="dialog-overlay" id="confirm-dialog">
+  <div class="dialog">
+    <h3 id="dialog-title">Confirm Action</h3>
+    <p id="dialog-message">Are you sure you want to proceed?</p>
+    <div class="form-group" id="dialog-feedback" style="display:none;">
+      <label class="form-label">Feedback (optional)</label>
+      <input class="form-input" placeholder="Enter feedback or reason..." />
+    </div>
+    <div class="dialog-actions">
+      <button class="btn btn-outline" onclick="closeDialog()">Cancel</button>
+      <button class="btn btn-primary" id="dialog-confirm" onclick="executeAction()">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast">Action completed</div>
+
+<script>
+  let currentAction = '';
+  let currentTarget = '';
+
+  function showPage(name) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.getElementById('page-' + name).classList.add('active');
+    const titles = { runs: 'Active Runs', submit: 'Submit Job', workers: 'Workers', workflows: 'Workflows' };
+    document.getElementById('page-title').textContent = titles[name] || name;
+    const navItems = document.querySelectorAll('.nav-item');
+    const idx = { runs: 0, submit: 1, workers: 2, workflows: 3 }[name];
+    if (idx !== undefined) navItems[idx].classList.add('active');
+    closeDetail();
+  }
+
+  function openDetail(runId) {
+    document.getElementById('detail-panel').classList.add('open');
+  }
+
+  function closeDetail() {
+    document.getElementById('detail-panel').classList.remove('open');
+  }
+
+  function confirmAction(action, target) {
+    currentAction = action;
+    currentTarget = target;
+    document.getElementById('dialog-title').textContent = `Confirm: ${action}`;
+    document.getElementById('dialog-message').textContent = `${action} ${target}? This action will be sent to the backend immediately.`;
+    const fb = document.getElementById('dialog-feedback');
+    fb.style.display = (action === 'Approve' || action === 'Reject' || action === 'Resume' || action === 'Retry') ? 'block' : 'none';
+    const btn = document.getElementById('dialog-confirm');
+    btn.className = 'btn ' + ({ Approve:'btn-success', Reject:'btn-danger', Cancel:'btn-danger', Submit:'btn-primary', Stop:'btn-warning', Resume:'btn-warning', Retry:'btn-outline' }[action] || 'btn-primary');
+    btn.textContent = action;
+    document.getElementById('confirm-dialog').classList.add('open');
+  }
+
+  function closeDialog() {
+    document.getElementById('confirm-dialog').classList.remove('open');
+  }
+
+  function executeAction() {
+    closeDialog();
+    showToast(`${currentAction} sent for ${currentTarget}`);
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2500);
+  }
+
+  function updateStartStep() {
+    const wf = document.getElementById('submit-workflow').value;
+    const steps = {
+      'agnes_media_gen_v1': ['generate_descriptions', 'generate_prompts', 'generate_images', 'generate_videos'],
+      'agnes_gen_video_v1': ['prepare_input', 'generate_video_prompts', 'generate_videos', 'archive'],
+      'image_csv_gen_v3': ['parse_csv', 'generate_images', 'validate'],
+      'sdlc_50_implementation_v1': ['analyze_spec', 'resolve_questions', 'define_artifacts', 'design_steps', 'generate_package', 'review_package', 'validate_package', 'implement_code', 'review_code', 'validate_code', 'complete'],
+    };
+    const sel = document.getElementById('start-step');
+    sel.innerHTML = '<option value="">From beginning</option>';
+    if (steps[wf]) {
+      steps[wf].forEach(s => { const o = document.createElement('option'); o.value = s; o.textContent = s; sel.appendChild(o); });
+    }
+    document.getElementById('dynamic-inputs').style.display = wf ? 'block' : 'none';
+  }
+</script>
+</body>
+</html>
