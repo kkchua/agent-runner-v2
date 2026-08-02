@@ -246,13 +246,41 @@ def _print_console(record: dict[str, Any]) -> None:
 
 
 # ---------------------------------------------------------------------------
-# File output (JSON-lines)
+# File output (JSON-lines) with rotation
 # ---------------------------------------------------------------------------
+
+_MAX_LOG_BYTES = 10 * 1024 * 1024  # 10 MB
+_BACKUP_COUNT = 5
+
+
+def _rotate_log(log_path: Path) -> None:
+    """Rotate log file when it exceeds _MAX_LOG_BYTES."""
+    try:
+        if log_path.stat().st_size < _MAX_LOG_BYTES:
+            return
+    except OSError:
+        return
+    # Shift older backups up
+    for i in range(_BACKUP_COUNT - 1, 0, -1):
+        src = log_path.with_suffix(f".log.{i}" if i > 0 else ".log")
+        dst = log_path.with_suffix(f".log.{i + 1}")
+        if src.exists():
+            try:
+                src.rename(dst)
+            except OSError:
+                pass
+    # Current log becomes .1
+    try:
+        log_path.rename(log_path.with_suffix(".log.1"))
+    except OSError:
+        pass
+
 
 def _write_file(record: dict[str, Any]) -> None:
     log_path = _ensure_log_file()
     if log_path is None:
         return
+    _rotate_log(log_path)
     try:
         with open(log_path, "a", encoding="utf-8") as fh:
             fh.write(json.dumps(record, ensure_ascii=False) + "\n")
