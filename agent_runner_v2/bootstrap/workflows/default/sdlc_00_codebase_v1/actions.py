@@ -159,22 +159,9 @@ def publish_codebase_docs(
 
 
 def _resolve_run_root(context: dict, state: dict, project_root: Path) -> Path | None:
-    """Derive the run root from any known codebase artifact path."""
-    artifacts_state = state.get("artifacts") or {}
-    for key in ("CODEBASE_INVENTORY", "CODEBASE_CHANGE_IMPACT", "SYNC_LOG"):
-        path_str = artifacts_state.get(key) or context.get(key, "")
-        if path_str:
-            p = Path(path_str)
-            if not p.is_absolute():
-                p = project_root / p
-            # Walk up to find the run root (runs/<job_id>/)
-            # The artifact is under runs/<job_id>/<subdir>/file.md
-            # So we need to go up 2 levels from the file
-            candidate = p.parent
-            # If parent is a known subdir, go up one more
-            if candidate.name in CODEBASE_SUBDIRS or candidate.name == "sync_logs":
-                candidate = candidate.parent
-            # Check if this looks like a run root (contains job_id in path)
-            if "runs" in candidate.parts:
-                return candidate
-    return None
+    """Construct the run root deterministically from job_id."""
+    job_id = str(state.get("job_id") or "").strip()
+    if not job_id:
+        return None
+    run_root = project_root / "docs" / "repo" / "codebase" / "runs" / job_id
+    return run_root if run_root.exists() else None

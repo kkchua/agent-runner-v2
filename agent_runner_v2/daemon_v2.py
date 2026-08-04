@@ -518,14 +518,48 @@ def run_supervisor(*, config: SupervisorConfig, v2_url: str) -> int:
     The V2 backend handles all routing, action detection, and stop requests.
     The daemon fetches full backend state before spawning each child, ensuring
     the CLI starts with fresh backend-authoritative local state.
+
+    Workers must be pre-registered in the backend (via operator console or admin API).
+    The daemon validates the worker exists and is active on startup, then only
+    sends heartbeats and claims work — no auto-registration.
     """
     logger = DaemonLogger(config.log_file, config.worker_id)
     client = V2BackendClient(v2_url)
-    client.register_worker(
-        worker_id=config.worker_id,
-        worker_label=config.worker_label,
-        capabilities={"mode": ["execute-step-daemon"], "max_parallel": config.max_parallel},
-    )
+
+    # Startup validation: verify worker exists and is enabled in backend
+    # Retry indefinitely on connection errors (backend may be temporarily down)
+    # Only terminate if worker is explicitly disabled
+    retry_delay = 5  # seconds between retries
+    worker_validated = False
+    
+    while not worker_validated:
+        try:
+            worker_info = client.get_worker(worker_id=config.worker_id)
+            is_enabled = worker_info.get("is_enabled", False)
+            if not is_enabled:
+                logger.log("error", "daemon_v2_worker_disabled", message=(
+                    f"Worker '{config.worker_id}' is disabled (is_enabled=false). "
+                    "Enable the worker via operator console or admin API before starting the daemon."
+                ))
+                print(f"ERROR: Worker '{config.worker_id}' is disabled (is_enabled=false).")
+                print("Enable the worker via operator console or admin API before starting the daemon.")
+                return 1
+            # Worker is enabled — proceed
+            logger.log("info", "daemon_v2_worker_validated", message=f"Worker '{config.worker_id}' is enabled", details={
+                "is_enabled": is_enabled,
+                "worker_label": worker_info.get("worker_label", ""),
+            })
+            worker_validated = True
+        except RuntimeError as exc:
+            error_msg = str(exc)
+            # Connection error — retry indefinitely
+            logger.log("warning", "daemon_v2_backend_unreachable", message=(
+                f"Backend unreachable: {error_msg}. Retrying in {retry_delay}s..."
+            ))
+            print(f"WARNING: Backend unreachable. Retrying in {retry_delay}s...")
+            time.sleep(retry_delay)
+            # Continue loop — retry forever until backend is available
+
     logger.log("info", "daemon_v2_started", message="V2 worker daemon started", details={
         "v2_backend_url": v2_url, "worker_id": config.worker_id,
     })
@@ -551,199 +585,204 @@ def run_supervisor(*, config: SupervisorConfig, v2_url: str) -> int:
     signal.signal(signal.SIGTERM, _handle_signal)
 
     while running:
-        # Heartbeat — check for shutdown commands and force-cancel signals
         try:
-            hb_resp = client.heartbeat(
-                worker_id=config.worker_id,
-                status="idle" if not children else "busy",
-            )
-            commands = hb_resp.get("commands", [])
-            if "shutdown" in commands:
-                logger.log("info", "daemon_v2_shutdown_command", message="backend requested shutdown")
-                running = False
+            # Heartbeat — check for shutdown commands and force-cancel signals
+            try:
+                hb_resp = client.heartbeat(
+                    worker_id=config.worker_id,
+                    status="idle" if not children else "busy",
+                )
+                commands = hb_resp.get("commands", [])
+                if "shutdown" in commands:
+                    logger.log("info", "daemon_v2_shutdown_command", message="backend requested shutdown")
+                    running = False
 
-            if "terminate_children" in commands:
-                detail = hb_resp.get("detail") or {}
-                force_run_ids = set(detail.get("force_cancel_run_ids", []))
-                for step_run_id, child in list(children.items()):
-                    if child.run_id in force_run_ids and child.exit_code is None:
-                        logger.log("info", "daemon_v2_force_cancel", message="force-cancelling child", details={
-                            "step_run_id": step_run_id, "run_id": child.run_id, "pid": child.process.pid,
+                if "terminate_children" in commands:
+                    detail = hb_resp.get("detail") or {}
+                    force_run_ids = set(detail.get("force_cancel_run_ids", []))
+                    for step_run_id, child in list(children.items()):
+                        if child.run_id in force_run_ids and child.exit_code is None:
+                            logger.log("info", "daemon_v2_force_cancel", message="force-cancelling child", details={
+                                "step_run_id": step_run_id, "run_id": child.run_id, "pid": child.process.pid,
+                            })
+                            try:
+                                child.process.terminate()
+                            except OSError:
+                                pass
+            except RuntimeError as hb_err:
+                logger.log("warning", "daemon_v2_heartbeat_failed", message=str(hb_err))
+
+            # Claim work
+            if running and len(children) < config.max_parallel:
+                try:
+                    work = client.claim_work(worker_id=config.worker_id)
+                except RuntimeError as claim_err:
+                    logger.log("warning", "daemon_v2_claim_failed", message=str(claim_err))
+                    work = {"work_type": "IDLE"}
+
+                work_type = work.get("work_type", "IDLE")
+
+                if work_type == "IDLE":
+                    logger.log("info", "daemon_v2_no_work", message="no work available")
+
+                elif work_type == "PROCESS_ACTION":
+                    run_data = work.get("run", {})
+                    step_data = work.get("step_run", {})
+                    run_code = str(run_data.get("run_code", ""))
+                    step_run_id = str(step_data.get("step_run_id", ""))
+                    step_name = str(step_data.get("step_name", ""))
+                    action = work.get("action", "")
+
+                    logger.log("info", "daemon_v2_action_claimed", message=f"processing {action} directly", details={
+                        "run_code": run_code, "step": step_name, "action": action,
+                    })
+
+                    _ACTION_OUTCOME = {
+                        "APPROVE": ("approved", None),
+                        "RESUME":  ("approved", None),
+                        "REJECT":  ("rejected", "HUMAN_RETRY_REQUIRED"),
+                        "RETRY":   ("failed",   "HUMAN_RETRY_REQUIRED"),
+                    }
+                    outcome, failure_class = _ACTION_OUTCOME.get(action, ("failed", "FATAL"))
+
+                    try:
+                        client.report_outcome(
+                            step_run_id=step_run_id,
+                            outcome=outcome,
+                            failure_class=failure_class,
+                        )
+                        logger.log("info", "daemon_v2_action_reported", message=f"{action} reported as {outcome}", details={
+                            "run_code": run_code, "step": step_name,
+                        })
+                    except Exception as exc:
+                        logger.log("error", "daemon_v2_action_report_failed", message=str(exc), details={
+                            "run_code": run_code, "step": step_name, "action": action,
+                        })
+
+                elif work_type == "EXECUTE_STEP":
+                    run_data = work.get("run", {})
+                    step_data = work.get("step_run", {})
+                    run_id = str(run_data.get("run_id", ""))
+                    run_code = str(run_data.get("run_code", ""))
+                    step_run_id = str(step_data.get("step_run_id", ""))
+                    step_name = str(step_data.get("step_name", ""))
+                    workflow_name = str(run_data.get("workflow_name", ""))
+
+                    logger.log("info", "daemon_v2_claimed", message=f"claimed {work_type}", details={
+                        "run_code": run_code, "step": step_name, "work_type": work_type,
+                    })
+
+                    claim = {
+                        "run": {
+                            "id": run_id,
+                            "run_code": run_code,
+                            "workflow_name": workflow_name,
+                            "project_root": run_data.get("project_root"),
+                        },
+                        "step_run": {
+                            "id": step_run_id,
+                            "step_name": step_name,
+                        },
+                    }
+
+                    try:
+                        child = _spawn_child(
+                            claim=claim,
+                            runtime_root=config.runtime_dir,
+                            cli_pythonpath=config.cli_pythonpath,
+                            logger=logger,
+                            v2_backend_url=v2_url,
+                            client=client,
+                        )
+                        children[child.step_run_id] = child
+                    except Exception as exc:
+                        logger.log("error", "daemon_v2_spawn_failed", message=str(exc), details={
+                            "run_code": run_code, "step": step_name,
+                        })
+                        # Write failure to queue (no child object available)
+                        try:
+                            today = datetime.now().strftime("%Y%m%d")
+                            spawn_queue_dir = Path(str(QUEUE_ROOT)) / today / workflow_name / run_code
+                            outcome_queue.write_outcome(spawn_queue_dir, step_run_id, {
+                                "step_run_id": step_run_id,
+                                "run_id": run_id,
+                                "run_code": run_code,
+                                "workflow_name": workflow_name,
+                                "step_name": step_name,
+                                "outcome": "failed",
+                                "failure_class": "FATAL",
+                                "error_message": f"Daemon failed to spawn child: {exc}",
+                            })
+                        except Exception:
+                            pass
+
+                if config.once:
+                    running = False
+
+            # Check completed children
+            for step_run_id in list(children.keys()):
+                child = children[step_run_id]
+
+                if child.exit_code is None:
+                    proc_rc = child.process.poll()
+                    if proc_rc is not None:
+                        child.exit_code = proc_rc
+                        child.state = "completed"
+
+                if child.exit_code is None and config.step_timeout_seconds > 0:
+                    elapsed = time.monotonic() - child.started_at_monotonic
+                    if child.term_sent_at is None and elapsed >= config.step_timeout_seconds:
+                        child.state = "timed_out"
+                        child.term_sent_at = time.monotonic()
+                        logger.log("error", "daemon_v2_child_timeout", message="child exceeded timeout", details={
+                            "step_run_id": step_run_id, "timeout_seconds": config.step_timeout_seconds,
                         })
                         try:
                             child.process.terminate()
                         except OSError:
                             pass
-        except RuntimeError as hb_err:
-            logger.log("warning", "daemon_v2_heartbeat_failed", message=str(hb_err))
 
-        # Claim work
-        if running and len(children) < config.max_parallel:
-            try:
-                work = client.claim_work(worker_id=config.worker_id)
-            except RuntimeError as claim_err:
-                logger.log("warning", "daemon_v2_claim_failed", message=str(claim_err))
-                work = {"work_type": "IDLE"}
-
-            work_type = work.get("work_type", "IDLE")
-
-            if work_type == "IDLE":
-                logger.log("info", "daemon_v2_no_work", message="no work available")
-
-            elif work_type == "PROCESS_ACTION":
-                run_data = work.get("run", {})
-                step_data = work.get("step_run", {})
-                run_code = str(run_data.get("run_code", ""))
-                step_run_id = str(step_data.get("step_run_id", ""))
-                step_name = str(step_data.get("step_name", ""))
-                action = work.get("action", "")
-
-                logger.log("info", "daemon_v2_action_claimed", message=f"processing {action} directly", details={
-                    "run_code": run_code, "step": step_name, "action": action,
-                })
-
-                _ACTION_OUTCOME = {
-                    "APPROVE": ("approved", None),
-                    "RESUME":  ("approved", None),
-                    "REJECT":  ("rejected", "HUMAN_RETRY_REQUIRED"),
-                    "RETRY":   ("failed",   "HUMAN_RETRY_REQUIRED"),
-                }
-                outcome, failure_class = _ACTION_OUTCOME.get(action, ("failed", "FATAL"))
-
-                try:
-                    client.report_outcome(
-                        step_run_id=step_run_id,
-                        outcome=outcome,
-                        failure_class=failure_class,
-                    )
-                    logger.log("info", "daemon_v2_action_reported", message=f"{action} reported as {outcome}", details={
-                        "run_code": run_code, "step": step_name,
-                    })
-                except Exception as exc:
-                    logger.log("error", "daemon_v2_action_report_failed", message=str(exc), details={
-                        "run_code": run_code, "step": step_name, "action": action,
-                    })
-
-            elif work_type == "EXECUTE_STEP":
-                run_data = work.get("run", {})
-                step_data = work.get("step_run", {})
-                run_id = str(run_data.get("run_id", ""))
-                run_code = str(run_data.get("run_code", ""))
-                step_run_id = str(step_data.get("step_run_id", ""))
-                step_name = str(step_data.get("step_name", ""))
-                workflow_name = str(run_data.get("workflow_name", ""))
-
-                logger.log("info", "daemon_v2_claimed", message=f"claimed {work_type}", details={
-                    "run_code": run_code, "step": step_name, "work_type": work_type,
-                })
-
-                claim = {
-                    "run": {
-                        "id": run_id,
-                        "run_code": run_code,
-                        "workflow_name": workflow_name,
-                        "project_root": run_data.get("project_root"),
-                    },
-                    "step_run": {
-                        "id": step_run_id,
-                        "step_name": step_name,
-                    },
-                }
-
-                try:
-                    child = _spawn_child(
-                        claim=claim,
-                        runtime_root=config.runtime_dir,
-                        cli_pythonpath=config.cli_pythonpath,
-                        logger=logger,
-                        v2_backend_url=v2_url,
-                        client=client,
-                    )
-                    children[child.step_run_id] = child
-                except Exception as exc:
-                    logger.log("error", "daemon_v2_spawn_failed", message=str(exc), details={
-                        "run_code": run_code, "step": step_name,
-                    })
-                    # Write failure to queue (no child object available)
-                    try:
-                        today = datetime.now().strftime("%Y%m%d")
-                        spawn_queue_dir = Path(str(QUEUE_ROOT)) / today / workflow_name / run_code
-                        outcome_queue.write_outcome(spawn_queue_dir, step_run_id, {
+                if child.exit_code is None and child.term_sent_at is not None:
+                    if time.monotonic() - child.term_sent_at >= 30:
+                        child.state = "killed"
+                        child.exit_code = -1
+                        logger.log("warning", "daemon_v2_child_killed", message="force-killed child after grace period", details={
                             "step_run_id": step_run_id,
-                            "run_id": run_id,
-                            "run_code": run_code,
-                            "workflow_name": workflow_name,
-                            "step_name": step_name,
-                            "outcome": "failed",
-                            "failure_class": "FATAL",
-                            "error_message": f"Daemon failed to spawn child: {exc}",
                         })
-                    except Exception:
-                        pass
+                        try:
+                            child.process.kill()
+                        except OSError:
+                            pass
 
-            if config.once:
-                running = False
-
-        # Check completed children
-        for step_run_id in list(children.keys()):
-            child = children[step_run_id]
-
-            if child.exit_code is None:
-                proc_rc = child.process.poll()
-                if proc_rc is not None:
-                    child.exit_code = proc_rc
-                    child.state = "completed"
-
-            if child.exit_code is None and config.step_timeout_seconds > 0:
-                elapsed = time.monotonic() - child.started_at_monotonic
-                if child.term_sent_at is None and elapsed >= config.step_timeout_seconds:
-                    child.state = "timed_out"
-                    child.term_sent_at = time.monotonic()
-                    logger.log("error", "daemon_v2_child_timeout", message="child exceeded timeout", details={
-                        "step_run_id": step_run_id, "timeout_seconds": config.step_timeout_seconds,
+                if child.state in ("completed", "failed", "killed", "timed_out"):
+                    logger.log("info", "daemon_v2_child_done", message=f"child done: {child.state}", details={
+                        "step_run_id": step_run_id, "exit_code": child.exit_code,
                     })
-                    try:
-                        child.process.terminate()
-                    except OSError:
-                        pass
+                    # Check if CLI wrote a result to the queue
+                    queue_file = (child.queue_dir / f"{step_run_id}.json") if child.queue_dir else None
+                    if queue_file and queue_file.exists():
+                        # Queue poller will handle it
+                        logger.log("info", "daemon_v2_result_in_queue", message="result file found in queue", details={
+                            "step_run_id": step_run_id, "queue_file": str(queue_file),
+                        })
+                    else:
+                        # CLI didn't write to queue — write failure on its behalf
+                        exit_code = child.exit_code or -1
+                        _write_failure_to_queue(
+                            child,
+                            outcome="failed",
+                            failure_class="HUMAN_RETRY_REQUIRED",
+                            error_message=f"Child exited with code {exit_code}, no result in queue",
+                            logger=logger,
+                        )
+                    del children[step_run_id]
 
-            if child.exit_code is None and child.term_sent_at is not None:
-                if time.monotonic() - child.term_sent_at >= 30:
-                    child.state = "killed"
-                    child.exit_code = -1
-                    logger.log("warning", "daemon_v2_child_killed", message="force-killed child after grace period", details={
-                        "step_run_id": step_run_id,
-                    })
-                    try:
-                        child.process.kill()
-                    except OSError:
-                        pass
+            # Process pending outcome queue files
+            _process_queue(client, logger)
 
-            if child.state in ("completed", "failed", "killed", "timed_out"):
-                logger.log("info", "daemon_v2_child_done", message=f"child done: {child.state}", details={
-                    "step_run_id": step_run_id, "exit_code": child.exit_code,
-                })
-                # Check if CLI wrote a result to the queue
-                queue_file = (child.queue_dir / f"{step_run_id}.json") if child.queue_dir else None
-                if queue_file and queue_file.exists():
-                    # Queue poller will handle it
-                    logger.log("info", "daemon_v2_result_in_queue", message="result file found in queue", details={
-                        "step_run_id": step_run_id, "queue_file": str(queue_file),
-                    })
-                else:
-                    # CLI didn't write to queue — write failure on its behalf
-                    exit_code = child.exit_code or -1
-                    _write_failure_to_queue(
-                        child,
-                        outcome="failed",
-                        failure_class="HUMAN_RETRY_REQUIRED",
-                        error_message=f"Child exited with code {exit_code}, no result in queue",
-                        logger=logger,
-                    )
-                del children[step_run_id]
-
-        # Process pending outcome queue files
-        _process_queue(client, logger)
+        except Exception as exc:
+            # Top-level exception handler — daemon keeps running through any error
+            logger.log("error", "daemon_v2_loop_error", message=f"Unexpected error in main loop: {exc}")
 
         time.sleep(config.poll_seconds)
 

@@ -369,21 +369,21 @@ class TestCreateBackup:
         assert backup_path.exists()
         assert (backup_path / "README.md").exists()
 
-    def test_rejects_if_codebase_not_found(self, tmp_path: Path) -> None:
-        """Test that action rejects if codebase root doesn't exist."""
+    def test_approves_if_codebase_not_found(self, tmp_path: Path) -> None:
+        """Test that action approves if codebase root doesn't exist (first run)."""
         context = {}
         state = {}
         step_cfg = {}
-        
+
         result = create_backup(
             context=context,
             state=state,
             step_cfg=step_cfg,
             project_root=tmp_path,
         )
-        
-        assert result.status == "REJECTED"
-        assert result.reject_code == "CODEBASE_ROOT_NOT_FOUND"
+
+        assert result.status == "APPROVED"
+        assert "first run" in result.remark.lower()
 
 
 class TestGenerateSyncLog:
