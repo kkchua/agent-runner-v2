@@ -1,6 +1,6 @@
 # agent-runner-v2 Documentation Index
 
-**Version:** v0.4.0 | **Last Updated:** 2026-08-01
+**Version:** v0.8.1 | **Last Updated:** 2026-08-04
 
 This is the master index for agent-runner-v2 documentation. Use this page to find the right document for your task instead of reading everything.
 
@@ -10,7 +10,7 @@ This is the master index for agent-runner-v2 documentation. Use this page to fin
 
 **New to the project?** Start here:
 1. Read this README.md (you are here)
-2. Read [QWEN.md](QWEN.md) for comprehensive project overview
+2. Read [AGENTS.md](AGENTS.md) for comprehensive project overview
 3. Check [AGENT_RUNNER_V2_SPECIALIST.md](AGENT_RUNNER_V2_SPECIALIST.md) for navigation guidance
 
 **Need to write code?** Go to [Coders](#for-coders) section below.
@@ -28,7 +28,7 @@ This is the master index for agent-runner-v2 documentation. Use this page to fin
 | Document | Purpose | When to Read |
 |----------|---------|--------------|
 | [docs/developer/CODER_IMPLEMENTATION_SOP.md](docs/developer/CODER_IMPLEMENTATION_SOP.md) | **Execution discipline for coding tasks** — 8 mandatory rules | **Before writing/editing code** — mandatory reading |
-| [QWEN.md](QWEN.md) | **Comprehensive project reference** — architecture, modules, conventions, commands | When you need to understand the codebase structure |
+| [AGENTS.md](AGENTS.md) | **Comprehensive project reference** — architecture, modules, conventions, commands | When you need to understand the codebase structure |
 | [docs/developer/AGENT_RUNNER_V2_SPECIALIST.md](docs/developer/AGENT_RUNNER_V2_SPECIALIST.md) | **Agent navigation instructions** — how to find things without repo-wide scans | When you're lost or need to locate specific components |
 
 **Key rules from CODER_IMPLEMENTATION_SOP.md:**
@@ -49,7 +49,7 @@ This is the master index for agent-runner-v2 documentation. Use this page to fin
 
 | Document | Purpose | When to Read |
 |----------|---------|--------------|
-| [QWEN.md](QWEN.md) | **Main architecture reference** — module layout, runtime modes, workflow packages, key concepts | For general architecture understanding |
+| [AGENTS.md](AGENTS.md) | **Main architecture reference** — module layout, runtime modes, workflow packages, key concepts | For general architecture understanding |
 | [docs/developer/ARCHITECTURAL_REFACTOR.md](docs/developer/ARCHITECTURAL_REFACTOR.md) | **Complete architectural refactor documentation** — root cause analysis, architecture violations, Phase 1-3 implementation, race conditions, results | When working on console, daemon, or CLI architecture. **Consolidates ARCHITECTURAL_REFACTOR_FINDINGS.md, ARCHITECTURAL_REFACTOR_SPEC.md, and DAEMON_RACE_CONDITIONS.md** |
 | [masterplan/LAYER_ARCHITECTURE_MASTERPLAN.md](masterplan/LAYER_ARCHITECTURE_MASTERPLAN.md) | **Layer architecture** — L1/L2/L3 layer boundaries and responsibilities | For understanding the three-layer governance model |
 | [masterplan/LAYER1_GOVERNANCE_SPECIFICATION.md](masterplan/LAYER1_GOVERNANCE_SPECIFICATION.md) | **Layer 1 spec** — Foundation governance rules | When working on governance bootstrap workflows |
@@ -63,9 +63,20 @@ This is the master index for agent-runner-v2 documentation. Use this page to fin
 
 These files are kept for historical reference but should not be used as primary reference.
 
-**Architecture principle — V2 (current, backend-authoritative):**
+**Architecture principle — V2 (current, backend-authoritative, multi-repo):**
+
+The platform is split across three repositories:
+
+| Repo | Path | Responsibility | Tech Stack |
+|------|------|----------------|------------|
+| **agent-runner-v2** | `D:\MyProjectSpace\01_Workflows\agent-runner-v2` | Daemon + CLI execution engine | Python 3.12+, pip |
+| **agent-runner-backend-v2** | `D:\MyProjectSpace\01_Workflows\agent-runner-backend-v2` | State machine + persistence (port 8200) | FastAPI, SQLAlchemy 2.x, PostgreSQL, Alembic |
+| **operator-console-v2** | `D:\MyProjectSpace\01_Workflows\operator-console-v2` | Web-based operator UI | React 19, Vite, TypeScript, TanStack Query, Tailwind CSS |
+
 ```
 Console (React)  ──REST──▶  Backend V2 (State Machine)  ◀──REST──  Daemon (Worker)
+  operator-                   agent-runner-                           agent-runner-
+  console-v2                  backend-v2                              v2
                                   │                                    │
                                   │ owns state transitions             │ spawns
                                   │                                    ▼
@@ -76,7 +87,7 @@ Console (React)  ──REST──▶  Backend V2 (State Machine)  ◀──REST�
 - **CLI**: Pure execution engine. Runs steps, classifies failures. Reports outcome only.
 - **Console**: React web app. Calls backend API directly. No CLI intermediary.
 
-**V2 code location:** `agent_runner_v2/v2/` — daemon, backend client, sync adapter.
+**V2 code location (this repo):** `agent_runner_v2/v2/` — backend client, sync adapter. V2 daemon at `agent_runner_v2/daemon_v2.py`.
 **V2 architecture spec:** `docs/repo/agent_runner/sdlc/delivery/00_initiatives/INIT-20260801-002_platform-v2-architecture-redesign.md`
 
 **V1 architecture (legacy, being migrated):**
@@ -94,7 +105,7 @@ V1 files are marked `[V1 DEPRECATED]` — do not use for new development.
 |----------|---------|--------------|
 | [docs/developer/JOB_DEFINITION_DICTIONARY.md](docs/developer/JOB_DEFINITION_DICTIONARY.md) | **Job state reference** — job.json fields, backend run/step_run fields, status values, transitions, mapping | When working with job state, status transitions, or backend sync |
 | [docs/developer/ARCHITECTURAL_REFACTOR.md](docs/developer/ARCHITECTURAL_REFACTOR.md#race-conditions) | **Race condition fixes** — pre-execution backend sync, post-execution conflict check (see Race Conditions section) | When working on daemon-mode execution or result syncing |
-| [QWEN.md](QWEN.md) | **Runtime modes** — CLI, Daemon, Manual mode descriptions | For understanding how jobs are executed |
+| [AGENTS.md](AGENTS.md) | **Runtime modes** — CLI, Daemon, Manual mode descriptions | For understanding how jobs are executed |
 
 **Key concepts from JOB_DEFINITION_DICTIONARY.md:**
 - **job.json**: Local file at `~/.ukbe-runner/jobs/{template_group}/{job_id}/job.json`
@@ -109,7 +120,7 @@ V1 files are marked `[V1 DEPRECATED]` — do not use for new development.
 
 | Document | Purpose | When to Read |
 |----------|---------|--------------|
-| [QWEN.md](QWEN.md) | **Workflow package system** — workflow.toml structure, StepConfig, WorkflowBundle, BundleGovernance | When creating or modifying workflows |
+| [AGENTS.md](AGENTS.md) | **Workflow package system** — workflow.toml structure, StepConfig, WorkflowBundle, BundleGovernance | When creating or modifying workflows |
 | [masterplan/WORKFLOW_EXTENSION_INTERFACE_PLAN.md](masterplan/WORKFLOW_EXTENSION_INTERFACE_PLAN.md) | **WorkflowExtensions pattern** — how workflows hook into the runner | When implementing custom workflow logic |
 
 **Workflow package structure:**
@@ -132,7 +143,6 @@ workflows/<name>/
 | [masterplan/LAYER3_AI_DRIVEN_SDLC_SPECIFICATION.md](masterplan/LAYER3_AI_DRIVEN_SDLC_SPECIFICATION.md) | **SDLC workflow chain** — 9 workflows (sdlc_00 through sdlc_80) | When working on SDLC delivery workflows |
 | [masterplan/SDLC_WORKFLOW_SCAFFOLD_PLAN.md](masterplan/SDLC_WORKFLOW_SCAFFOLD_PLAN.md) | **Scaffold workflow** — sdlc_00_delivery_scaffold_v1 | When working on delivery folder structure |
 | [masterplan/SDLC_00_CODEBASE_V1_PLAN.md](masterplan/SDLC_00_CODEBASE_V1_PLAN.md) | **Codebase workflow** — codebase_inventory_v1 | When working on codebase documentation |
-| [masterplan/SDLC_CONSOLE_APP_PLAN.md](masterplan/SDLC_CONSOLE_APP_PLAN.md) | **Console app** — operator console development | When working on the Flet-based GUI |
 
 **SDLC workflow chain:**
 ```
@@ -162,7 +172,7 @@ sdlc_80_review_v1        → VAL_FILE → REV_FILE, MEM_FILE, CLOSE_FILE
 
 ```
 README.md (you are here)
-  └─> QWEN.md (comprehensive reference)
+  └─> AGENTS.md (comprehensive reference)
        ├─> docs/developer/CODER_IMPLEMENTATION_SOP.md (coding rules)
        ├─> docs/developer/AGENT_RUNNER_V2_SPECIALIST.md (navigation)
        └─> docs/developer/JOB_DEFINITION_DICTIONARY.md (job state)
@@ -182,6 +192,10 @@ masterplan/
 ---
 
 ## What's NOT Here
+
+**Operator Console:** The operator console is a React web app in a separate repo — `D:\MyProjectSpace\01_Workflows\operator-console-v2`. The legacy Flet code in `agent_runner_v2/operator_console/` is deprecated and will be removed.
+
+**Backend V2:** The backend is a FastAPI application in a separate repo — `D:\MyProjectSpace\01_Workflows\agent-runner-backend-v2`. This repo contains only the client adapter (`v2/backend_client.py`).
 
 **Archived guidance:** Historical root guidance and superseded documents are in `docs/archive/`. Do not use archived docs as current reference.
 
@@ -205,7 +219,7 @@ When documents conflict, use this authority order:
 2. **Current runner code** under `agent_runner_v2/`
 3. **Generated governance docs** under `docs/system/00_governance/bootstrap/`
 4. **Generated repo-local docs** under `docs/repo/*`
-5. **This documentation** (README.md, QWEN.md, etc.)
+5. **This documentation** (README.md, AGENTS.md, etc.)
 
 Root markdown files are **not authoritative** for workflow design or documentation contracts. They are reference material only.
 
@@ -234,7 +248,7 @@ Root markdown files are **not authoritative** for workflow design or documentati
 | Task | Entry Point |
 |------|-------------|
 | CLI execution | `agent_runner_v2/run_agent.py` → `main()` |
-| V2 daemon | `agent_runner_v2/v2/daemon.py` → `run_supervisor_v2()` |
+| V2 daemon | `agent_runner_v2/daemon_v2.py` → `main()` |
 | V1 daemon (legacy) | `agent_runner_v2/daemon.py` → `_run_supervisor()` |
 | V2 backend client | `agent_runner_v2/v2/backend_client.py` → `V2BackendClient` |
 | V2 outcome sync | `agent_runner_v2/v2/sync.py` → `sync_outcome_v2()` |
@@ -246,7 +260,9 @@ Root markdown files are **not authoritative** for workflow design or documentati
 | Directory | Purpose |
 |-----------|---------|
 | `agent_runner_v2/` | Core runner code |
-| `agent_runner_v2/v2/` | **V2 daemon, backend client, sync** (backend-authoritative mode) |
+| `agent_runner_v2/v2/` | **V2 backend client, sync** (backend-authoritative mode) |
+| `agent_runner_v2/daemon_v2.py` | **V2 daemon** — self-contained worker loop |
+| `agent_runner_v2/operator_console/` | **[DEPRECATED]** Legacy Flet console — will be removed. Console moved to `operator-console-v2` repo |
 | `workflows/` | Workflow packages (plugin-based) |
 | `tests/unit/` | Unit tests (pure logic, no filesystem) |
 | `tests/integration/` | Integration tests (real files, subprocesses) |
@@ -255,24 +271,25 @@ Root markdown files are **not authoritative** for workflow design or documentati
 | `docs/developer/` | Active developer documentation |
 | `docs/archive/` | Superseded historical documents |
 | `masterplan/` | Architecture specs and design docs |
-| `scripts/` | Workflow-specific batch scripts (reference only) |
+| `scripts/` | Workflow-specific batch scripts |
 | `~/.ukbe-runner/` | Global runner home (config, bundles, jobs) |
 
 ### Batch Scripts
 
 **Active scripts (in root):**
 - `run-daemon.bat` / `run-daemon.sh` — Start the backend-connected daemon
-- `run-console.bat` / `run-console.sh` — Launch the Flet-based operator console
 - `run-init.bat` / `run-init.sh` — Install bootstrap bundle and seed workflows
 - `run-cleanup-workflow.bat` / `run-cleanup-workflow.sh` — Clean up workflow runs
+- `run-cleanup.bat` — Clean up old job history and runtime files
 - `run-bootstrap-publish.bat` / `run-bootstrap-publish.sh` — Build packaged bootstrap bundle
 - `sync-workflows-to-backend.bat` / `sync-workflows-to-backend.sh` — Sync workflow definitions to backend
+
+**Deprecated scripts (in `scripts/`):**
+- `run-console.bat` / `run-console.sh` — **[DEPRECATED]** Launches the legacy Flet console. Use the React console in `operator-console-v2` repo instead (`npm run dev`)
 
 **Workflow-specific scripts (in `scripts/`):**
 - `run-*.bat` / `run-*.sh` — Individual workflow execution scripts
 - `submit-*.bat` / `submit-*.sh` — Workflow submission scripts
-
-**Note:** Workflow operations are typically done through the operator console (`run-console.bat`) rather than individual batch scripts.
 
 ---
 
@@ -281,7 +298,7 @@ Root markdown files are **not authoritative** for workflow design or documentati
 **Adding new documentation:**
 1. Create the document in the appropriate location
 2. Add it to this README.md index
-3. Update QWEN.md if it's a major architectural change
+3. Update AGENTS.md if it's a major architectural change
 4. Link from related documents
 
 **Updating this index:**
@@ -295,6 +312,6 @@ Root markdown files are **not authoritative** for workflow design or documentati
 ## Contact & Support
 
 - **Bug reports:** Use `/bug` command in Qwen Code
-- **Architecture questions:** Refer to QWEN.md and masterplan specs
+- **Architecture questions:** Refer to AGENTS.md and masterplan specs
 - **Coding questions:** Refer to CODER_IMPLEMENTATION_SOP.md
 - **Navigation help:** Refer to AGENT_RUNNER_V2_SPECIALIST.md

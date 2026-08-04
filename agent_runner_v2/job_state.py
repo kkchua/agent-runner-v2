@@ -143,14 +143,66 @@ def normalize_repo_relative_path(value: str) -> str:
     return str(resolve_repo_path(value).resolve().relative_to(PROJECT_ROOT.resolve()))
 
 
-def group_dir(group_name: str) -> Path:
-    """Return the jobs root directory for a workflow template group."""
+def _extract_date_from_job_id(job_id: str) -> str | None:
+    """Extract the YYYYMMDD date from a job_id.
+
+    Job IDs follow the format ``{PREFIX}-{SOURCE_ID}-{YYYYMMDD}-{NNN}``.
+    The date is the second-to-last dash-separated segment.
+
+    Returns None if the date cannot be extracted.
+    """
+    parts = job_id.split("-")
+    if len(parts) >= 2:
+        candidate = parts[-2]
+        if len(candidate) == 8 and candidate.isdigit():
+            return candidate
+    return None
+
+
+def group_dir(group_name: str, date: str | None = None) -> Path:
+    """Return the jobs root directory for a workflow template group.
+
+    Args:
+        group_name: Workflow template group name.
+        date: Optional YYYYMMDD date prefix. Defaults to today.
+    """
+    date_str = date or dt.datetime.now().strftime("%Y%m%d")
+    return JOBS_ROOT / date_str / group_name
+
+
+def _legacy_group_dir(group_name: str) -> Path:
+    """Return the pre-date-prefix group directory (backward compat)."""
     return JOBS_ROOT / group_name
 
 
 def job_dir(group_name: str, job_id: str) -> Path:
-    """Return the directory containing a specific job's state and step folders."""
-    return group_dir(group_name) / job_id
+    """Return the directory containing a specific job's state and step folders.
+
+    Resolution order:
+    1. ``AGENT_RUNNER_JOB_DIR`` env var (set by daemon — authoritative).
+    2. Date-based path using date extracted from job_id.
+    3. Legacy path (``JOBS_ROOT / group_name / job_id``) for backward compat.
+    """
+    # Daemon mode: use the env var directly
+    env_job_dir = os.environ.get("AGENT_RUNNER_JOB_DIR", "").strip()
+    if env_job_dir:
+        return Path(env_job_dir)
+
+    # Extract date from job_id for path construction
+    date = _extract_date_from_job_id(job_id)
+    date_path = group_dir(group_name, date) / job_id
+
+    # Prefer date-based path if it exists
+    if date_path.exists():
+        return date_path
+
+    # Fall back to legacy path for pre-migration jobs
+    legacy_path = _legacy_group_dir(group_name) / job_id
+    if legacy_path.exists():
+        return legacy_path
+
+    # Default to date-based path (for new job creation)
+    return date_path
 
 
 def job_state_path(group_name: str, job_id: str) -> Path:
@@ -365,8 +417,6 @@ def make_job_id(group_name: str, group_cfg: dict[str, Any], seed_artifacts: dict
     The format is ``{PREFIX}-{SOURCE_ID}-{YYYYMMDD}-{NNN}`` where SOURCE_ID is
     derived from the seed artifact filename for workflows that carry one.
     """
-    gd = group_dir(group_name)
-    ensure_dir(gd)
     prefix = group_cfg.get("job_prefix", group_name.upper())
     today = dt.datetime.now().strftime("%Y%m%d")
     source_id = "GEN"
@@ -383,11 +433,18 @@ def make_job_id(group_name: str, group_cfg: dict[str, Any], seed_artifacts: dict
         if task_file:
             source_id = _extract_short_id(task_file, "TASK")
     base = f"{prefix}-{source_id}-{today}-"
-    nums = [
-        int(child.name[len(base):])
-        for child in gd.iterdir()
-        if child.is_dir() and child.name.startswith(base) and child.name[len(base):].isdigit()
-    ]
+
+    # Search today's date folder and legacy folder for existing sequence numbers
+    nums: list[int] = []
+    for search_dir in (group_dir(group_name, today), _legacy_group_dir(group_name)):
+        if not search_dir.exists():
+            continue
+        nums.extend(
+            int(child.name[len(base):])
+            for child in search_dir.iterdir()
+            if child.is_dir() and child.name.startswith(base) and child.name[len(base):].isdigit()
+        )
+
     return f"{base}{(max(nums) + 1 if nums else 1):03d}"
 
 
@@ -577,18 +634,36 @@ def save_job(group_name: str, job_id: str, state: dict[str, Any]) -> None:
 # ---------------------------------------------------------------------------
 
 def iter_group_jobs(group_name: str) -> list[dict[str, Any]]:
-    """Load all job states for a workflow group, applying backward-compat normalization."""
-    gd = group_dir(group_name)
-    if not gd.exists():
-        return []
+    """Load all job states for a workflow group, applying backward-compat normalization.
+
+    Searches across all date-prefixed folders and the legacy (non-dated) folder.
+    """
     states: list[dict[str, Any]] = []
-    for child in sorted(gd.iterdir()):
-        if not child.is_dir():
-            continue
-        path = child / "job.json"
-        if not path.exists():
-            continue
-        states.append(ensure_backward_compatible_state(load_json(path)))
+    seen_job_ids: set[str] = set()
+
+    # Collect candidate directories: all date folders + legacy folder
+    search_dirs: list[Path] = []
+    jobs_root = Path(JOBS_ROOT)
+    if jobs_root.exists():
+        for date_dir in sorted(jobs_root.iterdir(), reverse=True):
+            if date_dir.is_dir() and date_dir.name.isdigit() and len(date_dir.name) == 8:
+                candidate = date_dir / group_name
+                if candidate.exists():
+                    search_dirs.append(candidate)
+        # Legacy folder (non-dated)
+        legacy = jobs_root / group_name
+        if legacy.exists():
+            search_dirs.append(legacy)
+
+    for gd in search_dirs:
+        for child in sorted(gd.iterdir()):
+            if not child.is_dir() or child.name in seen_job_ids:
+                continue
+            path = child / "job.json"
+            if not path.exists():
+                continue
+            seen_job_ids.add(child.name)
+            states.append(ensure_backward_compatible_state(load_json(path)))
     return states
 
 

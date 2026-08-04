@@ -1,15 +1,15 @@
 """[V1 LEGACY] Worker daemon supervisor.
 
 This module contains V1 (legacy) daemon logic for the old backend protocol.
-It is kept for backward compatibility during the V1→V2 migration.
+It is kept for backward compatibility and reference during the V1→V2 migration.
 
 For the current V2 architecture (backend-authoritative state machine):
-    - V2 daemon code: agent_runner_v2/v2/daemon.py
+    - V2 daemon code: agent_runner_v2/daemon_v2.py (self-contained, no V1 imports)
     - Architecture spec: docs/repo/agent_runner/sdlc/delivery/00_initiatives/INIT-20260801-002_platform-v2-architecture-redesign.md
 
-The entry point (main, _run_supervisor) dispatches to V2 when v2_backend_url
-is configured. Shared infrastructure (ChildExecution, _DaemonLogger,
-SupervisorConfig) is used by both V1 and V2 code paths.
+The entry point (main, _run_supervisor) dispatches to V2 daemon_v2 when
+v2_backend_url is configured. Shared infrastructure (ChildExecution,
+_DaemonLogger, SupervisorConfig) is used by the V1 code path only.
 
 Invoked via: ukbe-run-agent daemon [worker-id]
 """
@@ -884,8 +884,7 @@ class SupervisorConfig:
     once: bool = False
 
 
-# V2 daemon code moved to agent_runner_v2/v2/daemon.py
-# _spawn_child_v2 and _run_supervisor_v2 are now in the v2/ module.
+# V2 daemon code moved to agent_runner_v2/daemon_v2.py (self-contained).
 
 
 def _run_supervisor(*, config: SupervisorConfig) -> int:
@@ -910,8 +909,8 @@ def _run_supervisor(*, config: SupervisorConfig) -> int:
 
     v2_url = resolve_v2_backend_url()
     if v2_url:
-        from .v2.daemon import run_supervisor_v2
-        return run_supervisor_v2(config=config, v2_url=v2_url)
+        from .daemon_v2 import run_supervisor
+        return run_supervisor(config=config, v2_url=v2_url)
 
     logger = _DaemonLogger(config.log_file, config.worker_id)
     client = BackendClient(config.backend_url)

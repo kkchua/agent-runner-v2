@@ -1,12 +1,12 @@
-"""Sync workflow definitions to the backend registry.
+"""Sync workflow definitions to the V2 backend registry.
 
-Discovers workflows from packaged ``workflow.toml`` workflow directories.
+Discovers workflows from packaged ``workflow.toml`` workflow directories,
+converts from runner format to V2 backend format, validates locally,
+then POSTs to the V2 backend API at ``/api/workflows/sync``.
 
-Each definition is validated locally first, then POSTed to the backend API at
-``/api/admin/workflows/sync`` only if local validation passes.
-
-The backend sync endpoint is treated as persistence-oriented transport. Bundle
-semantics and workflow-definition validation are owned by ``agent-runner-v2``.
+V2 backend format differs from runner's TEMPLATE_GROUPS format:
+  Runner:  {"steps": [...], "step_configs": {"name": {...}}}
+  V2:      {"steps": {"name": {...}}, "init_step": "...", ...}
 """
 
 from __future__ import annotations
@@ -17,7 +17,6 @@ import json
 import os
 import sys
 from pathlib import Path
-from urllib import error, request
 
 from .config_loader import load_runner_config
 from .workflow_packages.loader import (
@@ -25,6 +24,82 @@ from .workflow_packages.loader import (
     load_workflow_package,
 )
 from .workflow_bundle_validator import validate_workflow_bundle_dir
+
+
+# ---------------------------------------------------------------------------
+# URL resolution
+# ---------------------------------------------------------------------------
+
+def _resolve_backend_url(cfg: dict, cli_url: str) -> str:
+    """Resolve backend URL — prefer V2 over V1.
+
+    Priority: CLI flag > V2 env > V2 config > V1 env > V1 config > default.
+    """
+    if cli_url:
+        return cli_url
+    v2_env = os.environ.get("AGENT_RUNNER_V2_BACKEND_URL", "").strip()
+    if v2_env:
+        return v2_env
+    v2_cfg = str(cfg.get("v2_backend_url") or "").strip()
+    if v2_cfg:
+        return v2_cfg
+    v1_env = os.environ.get("AGENT_RUNNER_BACKEND_URL", "").strip()
+    if v1_env:
+        return v1_env
+    return str(cfg.get("backend_url") or "") or "http://127.0.0.1:8100"
+
+
+# ---------------------------------------------------------------------------
+# Format conversion: runner TEMPLATE_GROUPS → V2 backend definition
+# ---------------------------------------------------------------------------
+
+def convert_to_v2_format(group_dict: dict) -> dict:
+    """Convert runner's TEMPLATE_GROUPS format to V2 backend definition format.
+
+    Runner format (from bundle_to_template_group_dict):
+        {"steps": ["a", "b"], "step_configs": {"a": {"onsuccess": "...", ...}}}
+
+    V2 backend format:
+        {"job_prefix": "...", "init_step": "...", "default_max_rejects": N,
+         "steps": {"a": {"onsuccess": "...", ...}, "b": {...}}}
+    """
+    step_configs = group_dict.get("step_configs", {})
+    steps_order = group_dict.get("steps", [])
+
+    definition = {
+        "job_prefix": group_dict.get("job_prefix", "JOB"),
+        "init_step": group_dict.get("job_init_step"),
+        "default_max_rejects": group_dict.get("default_max_rejects", 0),
+        "steps": {},
+    }
+
+    for step_name in steps_order:
+        cfg = step_configs.get(step_name, {})
+        step_def = {}
+        if "onsuccess" in cfg:
+            step_def["onsuccess"] = cfg["onsuccess"]
+        if cfg.get("requires_human_approval_after"):
+            step_def["requires_human_approval_after"] = True
+        if "on_reject_refine" in cfg:
+            step_def["on_reject_refine"] = cfg["on_reject_refine"]
+        if "on_exhaust_replan" in cfg:
+            step_def["on_exhaust_replan"] = cfg["on_exhaust_replan"]
+        if "coder" in cfg:
+            step_def["coder"] = cfg["coder"]
+        if "action" in cfg:
+            step_def["action"] = cfg["action"]
+        if "prompt_file" in cfg:
+            step_def["prompt_file"] = cfg["prompt_file"]
+        if "artifacts" in cfg:
+            step_def["artifacts"] = cfg["artifacts"]
+        definition["steps"][step_name] = step_def
+
+    return definition
+
+
+# ---------------------------------------------------------------------------
+# Workflow discovery
+# ---------------------------------------------------------------------------
 
 def _workflows_dir() -> Path:
     return Path.cwd().resolve() / "workflows"
@@ -43,13 +118,12 @@ def _discover_plugin_workflows(workflows_dir: Path) -> dict[str, dict]:
 
         bundle = load_workflow_package(candidate)
         group_dict = bundle_to_template_group_dict(bundle)
-        
-        # Debug: show what we loaded from TOML
+
         print(f"  [plugin] Loaded {bundle.name!r}: default_max_rejects={bundle.default_max_rejects}", file=sys.stderr)
-        
         plugin_workflows[bundle.name] = group_dict
 
     return plugin_workflows
+
 
 def _load_all_workflows(workflows_dir: Path) -> dict[str, dict]:
     """Load workflow definitions from the current repo workflow packages."""
@@ -59,46 +133,35 @@ def _load_all_workflows(workflows_dir: Path) -> dict[str, dict]:
 
 
 def _strip_bundle_refs(definition: dict) -> dict:
-    """Remove runtime-only ``_workflow_bundle`` references before serialization.
-
-    ``bundle_to_template_group_dict()`` stamps a non-serializable
-    ``WorkflowBundle`` object on each step config for runtime use
-    (context hook injection in ``step_runner``). The backend sync
-    API only needs the plain dict shape.
-    """
+    """Remove runtime-only ``_workflow_bundle`` references before serialization."""
     step_configs = definition.get("step_configs", {})
     for cfg in step_configs.values():
         cfg.pop("_workflow_bundle", None)
     return definition
 
 
+# ---------------------------------------------------------------------------
+# Backend sync
+# ---------------------------------------------------------------------------
+
 def _post_sync(
     backend_url: str,
     workflow_name: str,
     definition: dict,
-    preserve_history: bool,
-    changed_by: str = "sync_script",
-    change_reason: str = "",
 ) -> dict:
-    """POST a single workflow definition to the backend sync endpoint."""
-    payload = json.dumps(
-        {
-            "workflow_name": workflow_name,
-            "definition": definition,
-            "preserve_history": preserve_history,
-            "changed_by": changed_by,
-            "change_reason": change_reason,
-        }
-    ).encode("utf-8")
-    req = request.Request(
-        f"{backend_url.rstrip('/')}/api/admin/workflows/sync",
-        data=payload,
-        headers={"Content-Type": "application/json"},
-        method="POST",
-    )
-    with request.urlopen(req, timeout=120) as resp:
-        return json.loads(resp.read().decode("utf-8"))
+    """POST a V2-format workflow definition to the backend sync endpoint."""
+    from .v2.backend_client import V2BackendClient
 
+    client = V2BackendClient(backend_url)
+    return client.sync_workflow(
+        workflow_name=workflow_name,
+        definition=definition,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Output helpers
+# ---------------------------------------------------------------------------
 
 def _print_validation_failure(workflow_name: str, validation) -> None:
     print(f"\n[{workflow_name}] local validation failed:", file=sys.stderr)
@@ -120,12 +183,16 @@ def _print_sync_summary(*, synced: list[str], validation_failed: list[str], tran
         print(f"  backend_failed_workflows: {', '.join(transport_failed)}", file=sys.stderr)
 
 
+# ---------------------------------------------------------------------------
+# Entry point
+# ---------------------------------------------------------------------------
+
 def main(argv: list[str] | None = None) -> int:
     cfg = load_runner_config()
     parser = argparse.ArgumentParser(
         description=(
-            "Validate workflow bundles locally, then sync validated workflow "
-            "definitions into the backend registry."
+            "Validate workflow bundles locally, convert to V2 backend format, "
+            "then sync to the V2 backend registry."
         )
     )
     parser.add_argument(
@@ -138,34 +205,21 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument(
         "--backend-url",
-        default=os.environ.get("AGENT_RUNNER_BACKEND_URL")
-        or str(cfg.get("backend_url") or "")
-        or "http://127.0.0.1:8100",
-        help="Backend base URL (default: ~/.ukbe-runner/config.json backend_url, else http://127.0.0.1:8100)",
-    )
-    parser.add_argument(
-        "--preserve-history",
-        action=argparse.BooleanOptionalAction,
-        default=True,
-        help="Keep existing execution history when definitions change.",
-    )
-    parser.add_argument(
-        "--changed-by",
-        default="sync_script",
-        help="Who is making this change (default: sync_script).",
-    )
-    parser.add_argument(
-        "--change-reason",
         default="",
-        help="Reason for the change (optional audit trail note).",
+        help="V2 backend URL (default: config.json v2_backend_url, else V1 backend_url)",
+    )
+    parser.add_argument(
+        "--skip-validation",
+        action="store_true",
+        help="Skip local validation before sync.",
     )
     args = parser.parse_args(argv)
+
+    backend_url = _resolve_backend_url(cfg, args.backend_url)
+
     workflows_dir = _workflows_dir()
     if not workflows_dir.is_dir():
-        print(
-            f"ERROR: Required workflow source folder is missing: {workflows_dir}",
-            file=sys.stderr,
-        )
+        print(f"ERROR: Required workflow source folder is missing: {workflows_dir}", file=sys.stderr)
         return 2
 
     workflows = _load_all_workflows(workflows_dir)
@@ -173,66 +227,46 @@ def main(argv: list[str] | None = None) -> int:
 
     missing = [name for name in workflow_names if name not in workflows]
     if missing:
-        print(
-            f"Unknown workflow name(s): {', '.join(missing)}",
-            file=sys.stderr,
-        )
+        print(f"Unknown workflow name(s): {', '.join(missing)}", file=sys.stderr)
         return 2
 
-    print(f"Backend URL: {args.backend_url}")
+    print(f"Backend URL: {backend_url}")
     print(f"Workflows: {', '.join(workflow_names)}")
-    print("Validation owner: agent-runner-v2 (local preflight)")
-    print("Backend role: persistence-oriented workflow registry")
+    print("Format: V2 backend (steps dict, not steps list)")
 
     failed = False
     synced: list[str] = []
     validation_failed: list[str] = []
     transport_failed: list[str] = []
+
     for workflow_name in workflow_names:
         bundle_dir = workflows_dir / workflow_name
-        validation = validate_workflow_bundle_dir(bundle_dir)
-        if not validation.valid:
-            _print_validation_failure(workflow_name, validation)
-            failed = True
-            validation_failed.append(workflow_name)
-            continue
 
-        definition = _strip_bundle_refs(workflows[workflow_name])
-        
-        # Debug: calculate hash locally to match backend calculation
+        if not args.skip_validation:
+            validation = validate_workflow_bundle_dir(bundle_dir)
+            if not validation.valid:
+                _print_validation_failure(workflow_name, validation)
+                failed = True
+                validation_failed.append(workflow_name)
+                continue
+
+        group_dict = _strip_bundle_refs(workflows[workflow_name])
+        v2_definition = convert_to_v2_format(group_dict)
+
         source_hash = hashlib.sha256(
-            json.dumps(definition, sort_keys=True).encode("utf-8")
+            json.dumps(v2_definition, sort_keys=True).encode("utf-8")
         ).hexdigest()
-        
+
         print(f"\n[{workflow_name}] Preparing sync:", file=sys.stderr)
-        print(f"  default_max_rejects: {definition.get('default_max_rejects')}", file=sys.stderr)
-        print(f"  steps count: {len(definition.get('steps', []))}", file=sys.stderr)
-        print(f"  step_configs count: {len(definition.get('step_configs', {}))}", file=sys.stderr)
+        print(f"  init_step: {v2_definition.get('init_step')}", file=sys.stderr)
+        print(f"  steps count: {len(v2_definition.get('steps', {}))}", file=sys.stderr)
+        print(f"  default_max_rejects: {v2_definition.get('default_max_rejects')}", file=sys.stderr)
         print(f"  source_hash (first 16): {source_hash[:16]}...", file=sys.stderr)
-        
+
         try:
-            response = _post_sync(
-                args.backend_url,
-                workflow_name,
-                definition,
-                args.preserve_history,
-                args.changed_by,
-                args.change_reason,
-            )
-        except error.HTTPError as exc:
-            body = exc.read().decode("utf-8", errors="replace")
-            print(
-                f"[{workflow_name}] sync failed: HTTP {exc.code} {body}",
-                file=sys.stderr,
-            )
-            failed = True
-            transport_failed.append(workflow_name)
-            continue
+            response = _post_sync(backend_url, workflow_name, v2_definition)
         except Exception as exc:
-            print(
-                f"[{workflow_name}] sync failed: {exc}",
-                file=sys.stderr,
-            )
+            print(f"[{workflow_name}] sync failed: {exc}", file=sys.stderr)
             failed = True
             transport_failed.append(workflow_name)
             continue

@@ -161,6 +161,15 @@ def get_jobs_root() -> Path:
     return _CTX.runner_home / "jobs"
 
 
+def get_queue_root() -> Path:
+    """Return the outcome queue root path (~/.ukbe-runner/queue).
+
+    The queue holds step outcome files written by the CLI and consumed
+    by the daemon for backend synchronisation.
+    """
+    return _CTX.runner_home / "queue"
+
+
 def get_governance_runtime_root() -> Path:
     """Return the Layer 1 governance runtime root (global bundle path)."""
     return _CTX.runner_home / "bundles" / "core" / "current" / "foundation"
@@ -491,5 +500,6 @@ PROJECT_ROOT = PathProxy(get_workspace_root)
 RUNNER_HOME = PathProxy(get_runner_home)
 RUNNER_ROOT = PathProxy(get_workflow_root)
 JOBS_ROOT = PathProxy(get_jobs_root)
+QUEUE_ROOT = PathProxy(get_queue_root)
 DELIVERY_ROOT = PathProxy(lambda: get_delivery_root() or get_workspace_root())
 ARTIFACT_ROOT = PathProxy(resolve_artifact_root)

@@ -107,58 +107,58 @@ After every image has been processed:
 
 ---
 
-# Reconstruction Objective
+# Thematic Variance Objective
 
-Do NOT summarize the description JSON.
-Treat the JSON as semantic evidence describing an existing photograph.
-Your objective is to reconstruct the original image as faithfully as possible.
-The generated prompt should maximize reconstruction fidelity instead of creativity.
-When information is missing, infer only realistic photographic properties.
-Never invent new semantic content.
+Use the description JSON as inspiration for the CONCEPT category.
+Your objective is to generate creative variations that share the same thematic concept but explore different specific subjects, styles, and environments.
+
+Example transformations:
+- Fish in murky pond → koi in crystal pool → salmon in mountain river → jellyfish in deep ocean
+- Tropical hillside → autumn forest → snowy mountain → desert dunes → urban garden
+- Sunrise beach → sunset cliffs → moonlit lake → dawn mist → twilight cityscape
+
+Vary freely across:
+- Specific subject types within the same category
+- Environmental settings and conditions
+- Photographic approach (natural, cinematic, golden hour, moody, high contrast)
+- Lighting, mood, atmosphere
+- Weather and seasons
+
+Keep the core concept category consistent while exploring creative variety.
+
 
 ---
 
-# Semantic Fidelity Rules
+# Thematic Variance Rules
 
-The following MUST NOT remain identical across every variant.
+The CONCEPT category MUST remain consistent across every variant.
 
-## Subject
+## Concept Category (KEEP)
 
-- identity
-- number of people
-- gender if identifiable
-- age group if identifiable
-- clothing
-- hairstyle
-- facial characteristics
-- accessories
+- Core subject type (e.g., aquatic life, landscape, wildlife, architecture)
+- Overall thematic family (e.g., nature, urban, people, objects)
+- General mood direction (e.g., serene, dynamic, mysterious)
 
-## Scene
+## Subject Variation (ALLOW)
 
-- environment
-- location
-- important objects
-- object relationships
-- architecture
-- landscape
-- landmarks
+- Specific subject identity CAN vary within category
+- Number of subjects CAN vary
+- Subject species/type CAN vary (e.g., different fish breeds, different tree types)
+- Subject presence CAN vary (some variants may omit secondary subjects)
 
-## Composition
+## Scene Variation (ALLOW)
 
-- primary subject
-- major scene arrangement
-- important foreground objects
-- important background objects
+- Environment CAN vary (e.g., pond → river → ocean → aquarium)
+- Location CAN vary (e.g., park → forest → garden → urban)
+- Weather CAN vary (e.g., sunny → rainy → foggy → snowy)
+- Time of day CAN vary (e.g., dawn → midday → sunset → night)
+- Season CAN vary (e.g., spring → summer → autumn → winter)
 
-Never introduce:
+## Composition Variation (ALLOW)
 
-- new people
-- new animals
-- new buildings
-- new vehicles
-- new objects
-- new weather events
-- new scenery
+- Framing CAN vary (e.g., close-up → wide shot → aerial)
+- Camera angle CAN vary (e.g., eye-level → low angle → overhead)
+- Depth layers CAN vary based on scene needs
 
 ---
 
@@ -298,11 +298,23 @@ Each variant explores the SAME concept with DIFFERENT specific subjects.
 
 # Variant Diversity Rules
 
-Each variant should maximize photographic diversity.
+Every variant must preserve the core CONCEPT category.
+
+Each variant should maximize creative diversity across:
+
+- Specific subject types (different species, different objects)
+- Environment and setting (different locations, different contexts)
+- Photographic approach (natural, cinematic, golden hour, moody, high contrast)
+- Camera position, height, distance, framing, perspective
+- Lighting direction, intensity, atmosphere, color grading
+- Weather and season (free to vary)
+- Mood and emotional tone
 
 Do NOT create variants by changing only one parameter.
 
-Every variant should feel visually distinct while still clearly depicting the same original scene.
+Each variant should explore a different creative interpretation.
+
+Every variant should feel visually distinct while maintaining thematic coherence.
 
 Do not reuse the same sentence structure between variants.
 
@@ -310,20 +322,90 @@ Rewrite each prompt independently.
 
 ---
 
-# Photography Rules
+# Visual Style Rules
 
-Assume the image is a real photograph.
+CRITICAL: ALL image prompts (t2i_prompt1) MUST produce photorealistic,
+photographic-quality images. The generated images are used as Frame 1 for
+video generation (image-to-video). Non-photographic styles (painting,
+illustration, anime, cartoon) produce poor video results with flickering,
+morphing, and temporal inconsistency.
 
-Use professional photography terminology.
+## Mandatory Style: Photorealistic Photography
 
-Never describe the image as:
+Every variant MUST use a photographic style. Visual variety between variants
+comes from DIFFERENT PHOTOGRAPHIC TECHNIQUES, not different art mediums.
 
-- painting
-- illustration
-- anime
-- CGI
-- 3D render
+IMPORTANT: The restriction is on RENDERING STYLE only, not on SUBJECT MATTER.
+Fantasy, sci-fi, surreal, dreamlike, and imaginary subjects are ALL ALLOWED —
+they must simply be rendered as if photographed by a real camera. Think of it
+as a movie still or a high-end VFX shot, not a painting.
 
+Examples of allowed photorealistic non-real subjects:
+- Sci-fi alien planet with twin suns (rendered like a movie VFX still)
+- Fantasy forest with bioluminescent trees (rendered like a cinematic shot)
+- Surreal dreamlike scene with floating islands (rendered like a photograph)
+- Cyberpunk cityscape at night (rendered like editorial photography)
+- Underwater magical realm (rendered like nature documentary footage)
+
+Examples of forbidden renderings:
+- The same sci-fi planet painted in oil painting style
+- The same fantasy forest as a watercolor illustration
+- The same dreamlike scene as anime or cartoon
+
+## Allowed Photographic Styles
+
+- Natural photography (outdoor, available light)
+- Cinematic photography (dramatic lighting, film-like color grading)
+- Editorial photography (magazine-quality, polished)
+- Landscape photography (wide depth of field, sharp detail)
+- Macro photography (extreme close-up, shallow depth of field)
+- Wildlife photography (telephoto compression, natural behavior)
+- Architectural photography (clean lines, perspective control)
+- Street photography (candid, urban atmosphere)
+- Fine art photography (creative lighting, mood-driven — but still photographic)
+- Long exposure photography (motion blur on water, light trails)
+
+## Strictly Forbidden Styles (Will Break Video Rendering)
+
+- Oil painting / impasto / brushstroke textures
+- Watercolor / ink wash
+- Digital painting / concept art / matte painting
+- Anime / cartoon / cel-shaded
+- Illustration / pen and ink / graphic art
+- Sketch / charcoal / pencil
+- 3D render / CGI look
+- Pixel art / voxel
+- Pointillism / stipple
+- Any non-photographic art medium
+
+## How to Add "painterly" or "artistic" Quality
+
+If the source image description suggests an artistic feel, achieve it through
+PHOTOGRAPHIC means only:
+- Soft bokeh and shallow depth of field (not brushstrokes)
+- Golden hour or blue hour lighting (not painted skies)
+- Film grain and analog color tones (not watercolor washes)
+- Lens flare and optical effects (not digital painting overlays)
+- Selective focus and tilt-shift (not illustration techniques)
+
+## Variant Differentiation Through Photography
+
+Each variant should use a DIFFERENT photographic approach:
+
+- Variant 1: Natural photography — faithful to the source image lighting and mood
+- Variant 2: Cinematic — dramatic side lighting, deeper shadows, film color grading
+- Variant 3: Golden hour — warm directional light, long shadows, amber tones
+- Variant 4: Moody/atmospheric — fog, mist, overcast, muted desaturated tones
+- Variant 5: High contrast — strong directional light, bold shadows, vivid colors
+
+If num_variants > 5, continue varying through:
+- Different focal lengths (wide angle vs telephoto compression)
+- Different depth of field (deep focus vs creamy bokeh)
+- Different perspectives (low angle, high angle, eye level, Dutch angle)
+- Different weather conditions (clear, overcast, rain, snow — photographic)
+- Different times of day (dawn, midday, sunset, blue hour, night)
+
+All variants MUST remain photorealistic. No exceptions.
 
 ---
 
