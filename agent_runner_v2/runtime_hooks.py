@@ -22,7 +22,6 @@ from .hooks_protocols import (
     ArtifactHooks,
     BundleHooks,
     CoderHooks,
-    DaemonHooks,
     ExecutionHooks,
     JobHooks,
     StepExecutionHooks,
@@ -56,7 +55,6 @@ class RuntimeHooks:
     # Module caches for lazy loading
     _workflow_runtime: Any = None
     _step_execution_runtime: Any = None
-    _daemon_runtime: Any = None
     _backend_execution: Any = None
     _execution_core: Any = None
     _job_state: Any = None
@@ -73,12 +71,6 @@ class RuntimeHooks:
             from . import step_execution_runtime
             self._step_execution_runtime = step_execution_runtime
         return self._step_execution_runtime
-
-    def _get_daemon_runtime(self) -> Any:
-        if self._daemon_runtime is None:
-            from . import daemon_runtime
-            self._daemon_runtime = daemon_runtime
-        return self._daemon_runtime
 
     def _get_backend_execution(self) -> Any:
         if self._backend_execution is None:
@@ -204,48 +196,6 @@ class RuntimeHooks:
             step_cfg=step_cfg,
             effective_root=effective_root,
             hooks=effective_hooks,
-        )
-
-    # =================================================================
-    # DaemonHooks Implementation
-    # =================================================================
-
-    def resolve_worker_engine_root(self, engine_root: str | None) -> tuple[str | None, str | None]:
-        """Resolve worker engine root path and name."""
-        return self._get_daemon_runtime().resolve_worker_engine_root(engine_root)
-
-    def build_worker_crash_result(
-        self,
-        *,
-        run: dict[str, Any],
-        step_run: dict[str, Any],
-        error: Exception,
-    ) -> dict[str, Any]:
-        """Build error result for worker crash."""
-        return self._get_daemon_runtime().build_worker_crash_result(
-            run=run,
-            step_run=step_run,
-            error=error,
-            hooks=self,
-        )
-
-    def build_worker_request_payload(
-        self,
-        *,
-        run: dict[str, Any],
-        step_run: dict[str, Any],
-        step_execution_spec: dict[str, Any] | None = None,
-        backend_url: str = "",
-        step_spec_source: str = "backend",
-    ) -> dict[str, Any]:
-        """Build payload for worker request."""
-        return self._get_daemon_runtime().build_worker_request_payload(
-            run=run,
-            step_run=step_run,
-            step_execution_spec=step_execution_spec,
-            backend_url=backend_url,
-            step_spec_source=step_spec_source,
-            hooks=self,
         )
 
     # =================================================================

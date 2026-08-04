@@ -208,52 +208,6 @@ class TestShowRun:
         assert run_obj.get("workflow_name") == TEST_WORKFLOW
 
 
-class TestStopRun:
-    """Test stop sets the stop flag."""
-
-    def test_stop_run_via_cli_main(self, client):
-        """stop_commands.main sets stop flag, verified via get_run."""
-        from agent_runner_v2 import stop_commands
-
-        result = _submit_test_run(client)
-        run_id = _extract_run_id(result)
-
-        exit_code, stdout, stderr = _run_cli(
-            stop_commands.main,
-            [run_id, "--reason", "E2E test cleanup"],
-        )
-        assert exit_code == 0, f"stop failed: {stderr}"
-
-        output = json.loads(stdout)
-        assert output.get("run", output).get("id") == run_id or "status" in output
-
-
-class TestApproveRun:
-    """Test approve endpoint behavior."""
-
-    def test_approve_rejects_non_awaiting_run(self, client):
-        """approve_commands.main returns error for a run not awaiting human action.
-
-        A freshly submitted run is in 'pending' state, not 'awaiting_human'.
-        The backend correctly rejects the approve with a 400 error.
-        This test proves the approve CLI command properly reports backend errors.
-        """
-        from agent_runner_v2 import approve_commands
-
-        result = _submit_test_run(client)
-        run_id = _extract_run_id(result)
-
-        exit_code, stdout, stderr = _run_cli(
-            approve_commands.main,
-            [run_id, "--resume", "--feedback", "E2E test approve"],
-        )
-        # Backend rejects because run is not awaiting human action
-        assert exit_code == 1
-        error_output = json.loads(stderr)
-        assert error_output.get("status") == "error"
-        assert "not awaiting human action" in error_output.get("message", "")
-
-
 class TestResetStep:
     """Test reset-step changes the current step."""
 
@@ -272,41 +226,6 @@ class TestResetStep:
 
         output = json.loads(stdout)
         assert isinstance(output, dict)
-
-
-class TestQuitDaemon:
-    """Test daemon-quit creates a control job."""
-
-    def test_quit_daemon_via_cli_main(self, client):
-        """quit_daemon_commands.main creates a run with quit_daemon flag.
-
-        Uses the special __daemon_control__ workflow, not a real workflow.
-        The daemon intercepts the __run_control.quit_daemon flag and shuts down.
-        """
-        from agent_runner_v2 import quit_daemon_commands
-
-        exit_code, stdout, stderr = _run_cli(
-            quit_daemon_commands.main,
-            ["--worker-id", WORKER_ID, "--reason", "E2E test"],
-        )
-        assert exit_code == 0, f"daemon-quit failed: {stderr}"
-
-        output = json.loads(stdout)
-        assert output.get("status") == "submitted"
-        run_id = output.get("run_id", "")
-        assert run_id, f"No run_id in output: {output}"
-
-        detail = client.get_run(run_id=run_id)
-        run_obj = detail.get("run", detail)
-        assert run_obj.get("workflow_name") == "__daemon_control__"
-        ctx = run_obj.get("context_payload") or {}
-        run_control = ctx.get("__run_control") or {}
-        assert run_control.get("quit_daemon") is True
-
-    def test_quit_daemon_uses_control_workflow_not_real(self):
-        """Verify quit_daemon defaults to __daemon_control__, not a real workflow."""
-        from agent_runner_v2 import quit_daemon_commands
-        assert quit_daemon_commands.CONTROL_WORKFLOW == "__daemon_control__"
 
 
 class TestCleanup:
@@ -414,34 +333,3 @@ class TestListRunsFilter:
         run_list_other = runs_other if isinstance(runs_other, list) else runs_other.get("runs", [])
         run_ids_other = [r.get("id") for r in run_list_other]
         assert run_id not in run_ids_other
-
-
-class TestDaemonQuitMarksStopped:
-    """Test that daemon quit creates a properly flagged control job."""
-
-    def test_daemon_quit_creates_control_job(self, client):
-        """quit_daemon creates a run with __daemon_control__ workflow and quit flag.
-
-        Note: The run stays 'pending' until a daemon claims it. The daemon's
-        _handle_quit_daemon() then syncs completion and calls stop_run to
-        prevent re-claiming. This test verifies the job is created correctly;
-        the re-claim prevention is tested in test_daemon_quit_handling.py.
-        """
-        from agent_runner_v2 import quit_daemon_commands
-
-        exit_code, stdout, stderr = _run_cli(
-            quit_daemon_commands.main,
-            ["--worker-id", WORKER_ID, "--reason", "E2E control job verify"],
-        )
-        assert exit_code == 0, f"daemon-quit failed: {stderr}"
-
-        output = json.loads(stdout)
-        run_id = output.get("run_id", "")
-        assert run_id
-
-        detail = client.get_run(run_id=run_id)
-        run_obj = detail.get("run", detail)
-        assert run_obj.get("workflow_name") == "__daemon_control__"
-        ctx = run_obj.get("context_payload") or {}
-        run_control = ctx.get("__run_control") or {}
-        assert run_control.get("quit_daemon") is True

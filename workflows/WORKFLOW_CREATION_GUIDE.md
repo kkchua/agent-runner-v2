@@ -1245,7 +1245,7 @@ ukbe-run-agent engine use v1.0.1
 - `engine_version: "SNAPSHOT"` + `repo_root` pointing to the repo
 - Workflows loaded from `workflows/` in the repo
 - Code changes picked up immediately (daemon spawns fresh subprocesses)
-- Only `daemon.py` changes require a daemon restart
+- Only `daemon_v2.py` changes require a daemon restart
 
 **Production (versioned):**
 - `engine install <tag>` copies the package to `~/.ukbe-runner/engine/versions/<tag>/`

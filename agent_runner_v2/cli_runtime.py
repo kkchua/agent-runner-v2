@@ -5,9 +5,7 @@ import os
 from dataclasses import dataclass
 from typing import Any
 
-from .backend_client import BackendClient
 from .config_loader import load_runner_config
-from .daemon_runtime import build_job_sync_payload
 from .state_defaults import default_loop_context, default_replan_context
 
 
@@ -45,32 +43,6 @@ def _sync_backend_after_human_approval(*, state: dict[str, Any]) -> str | None:
             )
         except Exception as exc:
             return f"V2 backend sync failed: {exc}"
-        return None
-
-    # V1 backend fallback
-    cfg = load_runner_config()
-    backend_url = (
-        str(state.get("backend_url") or "").strip()
-        or os.environ.get("AGENT_RUNNER_BACKEND_URL")
-        or str(cfg.get("backend_url") or "").strip()
-    )
-    if not backend_url:
-        return "backend sync skipped: backend_url not configured"
-
-    last_model_output = state.get("last_model_output") or {}
-    step_result = {
-        "status": str(last_model_output.get("status") or "APPROVED"),
-        "outcome": "approved",
-        "coder_used": last_model_output.get("coder_used"),
-        "remark": last_model_output.get("remark"),
-        "artifacts": dict(last_model_output.get("artifacts") or {}),
-    }
-    payload = build_job_sync_payload(
-        job=state,
-        step_result=step_result,
-        step_run_id=step_run_id,
-    )
-    BackendClient(backend_url).sync_job_state(step_run_id=step_run_id, payload=payload)
     return None
 
 
@@ -79,16 +51,13 @@ def _sync_backend_after_override_step(*, state: dict[str, Any], step_name: str) 
     if not run_id:
         return None
 
-    cfg = load_runner_config()
-    backend_url = (
-        str(state.get("backend_url") or "").strip()
-        or os.environ.get("AGENT_RUNNER_BACKEND_URL")
-        or str(cfg.get("backend_url") or "").strip()
-    )
-    if not backend_url:
-        return "backend sync skipped: backend_url not configured"
+    from .v2.sync import resolve_v2_backend_url
+    from .v2.backend_client import V2BackendClient
+    v2_url = resolve_v2_backend_url()
+    if not v2_url:
+        return "backend sync skipped: v2_backend_url not configured"
 
-    BackendClient(backend_url).reset_run_step(run_id=run_id, step_name=step_name)
+    V2BackendClient(v2_url).reset_step(run_id=run_id, step_name=step_name)
     return None
 
 

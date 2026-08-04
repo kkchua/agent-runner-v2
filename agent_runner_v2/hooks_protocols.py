@@ -224,39 +224,6 @@ class StepExecutionHooks(Protocol):
 
 
 @runtime_checkable
-class DaemonHooks(Protocol):
-    """Protocol for daemon worker operations."""
-
-    def resolve_worker_engine_root(
-        self, engine_root: str | None
-    ) -> tuple[str | None, str | None]:
-        """Resolve worker engine root path and name."""
-        ...
-
-    def build_worker_crash_result(
-        self,
-        *,
-        run: dict[str, Any],
-        step_run: dict[str, Any],
-        error: Exception,
-    ) -> dict[str, Any]:
-        """Build error result for worker crash."""
-        ...
-
-    def build_worker_request_payload(
-        self,
-        *,
-        run: dict[str, Any],
-        step_run: dict[str, Any],
-        step_execution_spec: dict[str, Any] | None,
-        backend_url: str,
-        step_spec_source: str,
-    ) -> dict[str, Any]:
-        """Build payload for worker request."""
-        ...
-
-
-@runtime_checkable
 class ExecutionHooks(Protocol):
     """Protocol for execution-related operations."""
 

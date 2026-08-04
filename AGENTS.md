@@ -39,8 +39,6 @@ First time working on this repo? Do this in order:
 
 - **Do not edit bootstrap copies.** Files under `agent_runner_v2/bootstrap/` and `docs/system/00_governance/bootstrap/` are packaged snapshots. Edit the repo-local source under `workflows/` instead.
 - **Do not edit generated governance docs.** Files under `bundle_governance/generated/` are auto-generated from `workflow.toml`. Edit the workflow manifest, not the output.
-- **Do not touch `daemon.py`.** It is the V1 daemon, deprecated. All daemon work goes in `daemon_v2.py`.
-- **Do not touch `operator_console/`.** It is the legacy Flet console, deprecated. The React console lives in the `operator-console-v2` repo.
 - **Do not add error handling for impossible cases.** Only validate at system boundaries (user input, external APIs, file I/O).
 - **Do not add broad `try/except` or silent `None` returns.** Use explicit exceptions (`ConfigurationError`, `NotFoundError`). See `exceptions.py`.
 - **Do not use `if/elif` chains for dispatch.** Use the registry pattern (`CODER_REGISTRY` in `coder_adapters.py`).
