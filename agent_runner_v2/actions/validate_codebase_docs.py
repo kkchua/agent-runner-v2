@@ -3,9 +3,16 @@ from __future__ import annotations
 
 """
 actions/validate_codebase_docs.py — Deterministic validation for bootstrap/reconcile codebase docs.
+
+Includes semantic validation:
+- YAML frontmatter field values (not just existence)
+- ASCII-only content
+- Change impact structure (no overlap between created/updated)
+- Review decision consistency (review doc matches meta.json)
 """
 
 import json
+import re
 from datetime import datetime
 from pathlib import Path
 
@@ -18,6 +25,166 @@ from ..runtime_context import resolve_step_meta_rel, write_meta_sidecar
 def _write_text(path: Path, content: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(content, encoding="utf-8")
+
+
+def _validate_frontmatter(path: Path) -> tuple[bool, str]:
+    """Validate YAML frontmatter has required field values.
+    
+    Returns:
+        Tuple of (is_valid, message)
+    """
+    if not path.exists():
+        return False, f"File does not exist: {path.name}"
+    
+    content = path.read_text(encoding="utf-8")
+    if not content.startswith("---"):
+        return False, f"{path.name}: No YAML frontmatter"
+    
+    # Extract frontmatter between --- markers
+    end = content.find("---", 3)
+    if end == -1:
+        return False, f"{path.name}: Incomplete YAML frontmatter"
+    
+    frontmatter = content[3:end].strip()
+    
+    # Required field values per prompt specification
+    required = {
+        "doc_type": "system",
+        "authority": "workflow-generated",
+        "scan_policy": "include",
+        "lifecycle_status": "approved",
+        "version": "1.0.0",
+    }
+    
+    errors = []
+    for field, expected in required.items():
+        # Check for field with expected value (with quotes)
+        pattern = rf'{field}:\s*"{re.escape(expected)}"'
+        if not re.search(pattern, frontmatter):
+            errors.append(f"{field} != \"{expected}\"")
+    
+    if errors:
+        return False, f"{path.name}: {', '.join(errors)}"
+    
+    return True, f"{path.name}: frontmatter valid"
+
+
+def _validate_ascii_only(path: Path) -> tuple[bool, str]:
+    """Validate file contains only ASCII characters (byte values 0x00-0x7F).
+    
+    Returns:
+        Tuple of (is_valid, message)
+    """
+    if not path.exists():
+        return False, f"File does not exist: {path.name}"
+    
+    content = path.read_bytes()
+    non_ascii_positions = []
+    
+    # Check each byte
+    for i, byte in enumerate(content):
+        if byte > 127:
+            non_ascii_positions.append(i)
+            if len(non_ascii_positions) >= 10:  # Limit to first 10 violations
+                break
+    
+    if non_ascii_positions:
+        return False, f"{path.name}: Found {len(non_ascii_positions)}+ non-ASCII bytes at positions {non_ascii_positions[:5]}"
+    
+    return True, f"{path.name}: ASCII-only"
+
+
+def _extract_section_files(content: str, section_title: str) -> set[str]:
+    """Extract file paths from a markdown section.
+    
+    Looks for lines starting with - or * under the section title.
+    """
+    files = set()
+    in_section = False
+    
+    for line in content.splitlines():
+        # Check if we're entering the target section
+        if section_title.lower() in line.lower() and line.startswith("#"):
+            in_section = True
+            continue
+        
+        # Check if we're leaving the section (new heading)
+        if in_section and line.startswith("#"):
+            break
+        
+        # Extract file paths from list items
+        if in_section and (line.strip().startswith("-") or line.strip().startswith("*")):
+            # Extract path-like content (contains / or .)
+            item = line.strip().lstrip("-*").strip()
+            if "/" in item or "." in item:
+                # Extract just the path part (before any description)
+                path_part = item.split("—")[0].split("-")[0].split("(")[0].strip()
+                if path_part:
+                    files.add(path_part)
+    
+    return files
+
+
+def _validate_change_impact_structure(path: Path) -> tuple[bool, str]:
+    """Validate change impact report doesn't list files in both created and updated sections.
+    
+    Returns:
+        Tuple of (is_valid, message)
+    """
+    if not path.exists():
+        return False, f"File does not exist: {path.name}"
+    
+    content = path.read_text(encoding="utf-8")
+    
+    # Extract files from "Documentation Created" and "Documentation Updated" sections
+    created_files = _extract_section_files(content, "Documentation Created")
+    updated_files = _extract_section_files(content, "Documentation Updated")
+    
+    # Check for overlap
+    overlap = created_files & updated_files
+    
+    if overlap:
+        return False, f"{path.name}: Files in both created and updated: {', '.join(list(overlap)[:3])}"
+    
+    return True, f"{path.name}: No overlap between created/updated"
+
+
+def _validate_review_consistency(review_path: Path, meta_path: Path) -> tuple[bool, str]:
+    """Validate review decision in document matches meta.json status.
+    
+    Returns:
+        Tuple of (is_valid, message)
+    """
+    if not review_path.exists():
+        return False, f"Review file does not exist: {review_path.name}"
+    
+    if not meta_path.exists():
+        return False, f"Meta file does not exist: {meta_path.name}"
+    
+    review_content = review_path.read_text(encoding="utf-8")
+    
+    try:
+        meta = json.loads(meta_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as e:
+        return False, f"Invalid JSON in {meta_path.name}: {e}"
+    
+    # Extract decision from review document
+    # Look for explicit APPROVED or REJECTED markers
+    review_decision = None
+    if "Decision: APPROVED" in review_content or "**APPROVED**" in review_content:
+        review_decision = "APPROVED"
+    elif "Decision: REJECTED" in review_content or "**REJECTED**" in review_content:
+        review_decision = "REJECTED"
+    
+    if review_decision is None:
+        return False, f"{review_path.name}: No explicit decision found"
+    
+    meta_status = meta.get("status")
+    
+    if review_decision != meta_status:
+        return False, f"{review_path.name}: Review says {review_decision}, meta.json says {meta_status}"
+    
+    return True, f"{review_path.name}: Decision consistent ({review_decision})"
 
 
 def validate_codebase_docs(*, context: dict[str, str], state: dict, step_cfg: dict, project_root: Path) -> ActionResult:
@@ -71,6 +238,47 @@ def validate_codebase_docs(*, context: dict[str, str], state: dict, step_cfg: di
     ]
     checks.append(("component docs exist", all(path.exists() for path in component_docs), "baseline component set"))
     checks.append(("inventory row count", "documentation files" in inventory_path.read_text(encoding="utf-8"), "inventory rendered"))
+
+    # ── Semantic Validation ──────────────────────────────────────────────
+    # Validate YAML frontmatter field values (not just existence)
+    if inventory_path.exists():
+        ok, msg = _validate_frontmatter(inventory_path)
+        checks.append(("inventory frontmatter values", ok, msg))
+    
+    if change_path.exists():
+        ok, msg = _validate_frontmatter(change_path)
+        checks.append(("change impact frontmatter values", ok, msg))
+    
+    # Validate ASCII-only content for all staged docs
+    docs_to_check = [inventory_path, change_path]
+    for md_file in module_dir.glob("*.md"):
+        docs_to_check.append(md_file)
+    for md_file in component_dir.glob("*.md"):
+        docs_to_check.append(md_file)
+    
+    ascii_violations = []
+    for doc_path in docs_to_check:
+        if doc_path.exists():
+            ok, msg = _validate_ascii_only(doc_path)
+            if not ok:
+                ascii_violations.append(msg)
+    
+    if ascii_violations:
+        checks.append(("ASCII-only content", False, f"{len(ascii_violations)} files with violations: {ascii_violations[0]}"))
+    else:
+        checks.append(("ASCII-only content", True, "all staged docs are ASCII-only"))
+    
+    # Validate change impact structure (no overlap between created/updated)
+    if change_path.exists():
+        ok, msg = _validate_change_impact_structure(change_path)
+        checks.append(("change impact structure", ok, msg))
+    
+    # Validate review decision consistency (if review file exists)
+    review_path = change_dir.parent / "sync_logs" / f"{job_id}-review.md"
+    review_meta_path = review_path.parent / f"{job_id}-review.meta.json"
+    if review_path.exists() and review_meta_path.exists():
+        ok, msg = _validate_review_consistency(review_path, review_meta_path)
+        checks.append(("review decision consistency", ok, msg))
 
     passed = all(ok for _, ok, _ in checks)
     title = f"{project_root.name or 'repository'} codebase {mode} validation"
