@@ -1,6 +1,6 @@
 [workflow]
 name = "sdlc_00_codebase_v1"
-version = "1.0.0"
+version = "1.1.0"
 label = "SDLC Codebase Sync v1"
 job_prefix = "SDLC00CB"
 description = "Periodic sync of repository code to codebase documentation with staging, review, and publish."
