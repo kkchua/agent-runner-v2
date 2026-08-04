@@ -12,6 +12,7 @@ from agent_runner_v2.v2.sync import (
     build_v2_outcome_payload,
     is_v2_enabled,
     resolve_v2_backend_url,
+    sync_outcome_v2,
 )
 
 
@@ -172,3 +173,73 @@ class TestV2BackendClient:
         from agent_runner_v2.v2_backend_client import V2BackendClient
         client = V2BackendClient("http://localhost:8200/")
         assert client._url("/api/runs") == "http://localhost:8200/api/runs"
+
+
+class TestSyncOutcomeV2Retry:
+    def test_retries_then_succeeds(self):
+        """Transient 404 (claim commit still in flight) must be retried."""
+        calls = {"count": 0}
+
+        class FakeClient:
+            def __init__(self, base_url):
+                self.base_url = base_url
+
+            def report_outcome(self, **kwargs):
+                calls["count"] += 1
+                if calls["count"] < 3:
+                    raise RuntimeError(
+                        "V2 backend request failed: POST /api/runs/step-runs/sr-1/outcome "
+                        'status=404 body={"detail":"Step run sr-1 not found"}'
+                    )
+                return {"run_status": "PENDING", "current_step": "next_step"}
+
+        with patch("agent_runner_v2.v2.backend_client.V2BackendClient", FakeClient):
+            result = sync_outcome_v2(
+                backend_url="http://localhost:8200",
+                step_run_id="sr-1",
+                step_result={"status": "APPROVED"},
+                state={},
+                max_attempts=3,
+                backoff_base=0,
+            )
+
+        assert calls["count"] == 3
+        assert result["run_status"] == "PENDING"
+        assert result["current_step"] == "next_step"
+
+    def test_exhausts_retries_and_raises(self):
+        class FakeClient:
+            def __init__(self, base_url):
+                self.base_url = base_url
+
+            def report_outcome(self, **kwargs):
+                raise RuntimeError("always failing")
+
+        with patch("agent_runner_v2.v2.backend_client.V2BackendClient", FakeClient):
+            with pytest.raises(RuntimeError, match="always failing"):
+                sync_outcome_v2(
+                    backend_url="http://localhost:8200",
+                    step_run_id="sr-1",
+                    step_result={"status": "APPROVED"},
+                    state={},
+                    max_attempts=2,
+                    backoff_base=0,
+                )
+
+    def test_succeeds_on_first_attempt(self):
+        class FakeClient:
+            def __init__(self, base_url):
+                self.base_url = base_url
+
+            def report_outcome(self, **kwargs):
+                return {"run_status": "COMPLETED"}
+
+        with patch("agent_runner_v2.v2.backend_client.V2BackendClient", FakeClient):
+            result = sync_outcome_v2(
+                backend_url="http://localhost:8200",
+                step_run_id="sr-1",
+                step_result={"status": "APPROVED"},
+                state={},
+            )
+
+        assert result["run_status"] == "COMPLETED"

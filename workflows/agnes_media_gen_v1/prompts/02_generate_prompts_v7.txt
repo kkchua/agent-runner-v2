@@ -160,16 +160,6 @@ The CONCEPT category MUST remain consistent across every variant.
 - Camera angle CAN vary (e.g., eye-level → low angle → overhead)
 - Depth layers CAN vary based on scene needs
 
-Never introduce:
-
-- new people
-- new animals
-- new buildings
-- new vehicles
-- new objects
-- new weather events
-- new scenery
-
 ---
 
 # Permitted Photographic Inference

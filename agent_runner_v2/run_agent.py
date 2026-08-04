@@ -293,7 +293,7 @@ def _worker_command(
     Returns:
         Exit code from the daemon process.
     """
-    from .daemon import main as _daemon_main
+    from .daemon_v2 import main as _daemon_main
 
     daemon_argv = [worker_id]
     if worker_label:
@@ -656,7 +656,7 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if args.command == "daemon":
-        from .daemon import main as _daemon_main
+        from .daemon_v2 import main as _daemon_main
         return _daemon_main(args.daemon_argv)
 
     if args.command == "worker":
@@ -1010,22 +1010,14 @@ def main(argv: list[str] | None = None) -> int:
                     "step_dir": _safe_relative_to(step_dir, JOBS_ROOT),
                 }, indent=2))
 
-                # Daemon mode: sync guardrail rejection to backend
+                # Daemon mode: write guardrail rejection to queue
                 if args.mode == "daemon" and state.get("workflow_step_run_id"):
-                    from .step_runner import StepResult
-                    guardrail_result = StepResult(
-                        status="REJECTED",
-                        remark=reject_reason or "Guardrail validation failed",
-                        artifacts={},
-                        reject_code=reject_code or "GUARDRAIL_REJECTED",
-                        meta_json_path="",
-                        usage_data=default_usage_summary(),
-                    )
-                    _sync_results_to_backend(
+                    _write_result_to_queue(
                         state=state,
-                        step_result=guardrail_result,
-                        coder_used=coder_used,
-                        backend_url=os.environ.get("AGENT_RUNNER_BACKEND_URL") or "",
+                        outcome="rejected",
+                        failure_class="GUARDRAIL_VIOLATION",
+                        error_message=reject_reason or "Guardrail validation failed",
+                        exit_code=1,
                     )
 
                 return 1
@@ -1068,21 +1060,14 @@ def main(argv: list[str] | None = None) -> int:
             "step_dir": _safe_relative_to(step_dir, JOBS_ROOT),
         }, indent=2))
 
-        # Daemon mode: sync failure to backend so backend shows failed status
+        # Daemon mode: write failure to queue
         if args.mode == "daemon" and state.get("workflow_step_run_id"):
-            failure_result = StepResult(
-                status="REJECTED",
-                remark=routed.failure.failure_reason,
-                artifacts={},
-                reject_code=routed.failure.failure_code,
-                meta_json_path="",
-                usage_data=default_usage_summary(),
-            )
-            _sync_results_to_backend(
+            _write_result_to_queue(
                 state=state,
-                step_result=failure_result,
-                coder_used=coder_used,
-                backend_url=os.environ.get("AGENT_RUNNER_BACKEND_URL") or "",
+                outcome="failed",
+                failure_class=state.get("last_failure_class") or "HUMAN_RETRY_REQUIRED",
+                error_message=routed.failure.failure_reason,
+                exit_code=routed.exit_code,
             )
 
         return routed.exit_code
@@ -1152,13 +1137,16 @@ def main(argv: list[str] | None = None) -> int:
         "meta_json_path": report_meta_json_path,
     })
 
-    # Daemon mode: sync results to backend automatically
+    # Daemon mode: write result to queue for daemon to sync to backend
     if args.mode == "daemon" and state.get("workflow_step_run_id"):
-        _sync_results_to_backend(
+        outcome = "approved" if step_result.status.upper() in ("APPROVED", "COMPLETED") else "rejected"
+        _write_result_to_queue(
             state=state,
+            outcome=outcome,
+            failure_class=None,
+            error_message=step_result.remark if outcome != "approved" else None,
+            exit_code=exit_code,
             step_result=step_result,
-            coder_used=coder_used,
-            backend_url=os.environ.get("AGENT_RUNNER_BACKEND_URL") or "",
         )
 
     print(json.dumps({
@@ -1182,6 +1170,94 @@ def main(argv: list[str] | None = None) -> int:
     return exit_code
 
 
+def _write_result_to_queue(
+    *,
+    state: dict[str, Any],
+    outcome: str,
+    failure_class: str | None = None,
+    error_message: str | None = None,
+    exit_code: int = 0,
+    step_result: Any = None,
+) -> None:
+    """Write step outcome to the queue file for daemon to pick up.
+
+    Called in daemon mode instead of _sync_results_to_backend.
+    The daemon's queue poller reads these files and calls report_outcome
+    on the backend.
+
+    Parameters
+    ----------
+    state :
+        The current job state dict (from job.json).
+    outcome :
+        Outcome string: "approved", "rejected", or "failed".
+    failure_class :
+        Failure classification (AUTO_RETRYABLE, HUMAN_RETRY_REQUIRED, FATAL).
+    error_message :
+        Error message or remark.
+    exit_code :
+        CLI process exit code.
+    step_result :
+        Optional StepResult for extracting artifacts and review state.
+    """
+    queue_dir_str = os.environ.get("AGENT_RUNNER_QUEUE_DIR", "").strip()
+    if not queue_dir_str:
+        return  # Not in daemon mode or queue dir not set
+
+    step_run_id = str(state.get("workflow_step_run_id") or "").strip()
+    if not step_run_id:
+        print("[queue] no step_run_id in state, skipping queue write", file=sys.stderr)
+        return
+
+    from pathlib import Path
+    from .v2 import queue as outcome_queue
+
+    queue_dir = Path(queue_dir_str)
+
+    # Build artifacts dict from job state
+    artifacts_raw = state.get("artifacts") or {}
+    artifacts = {}
+    for key, path in artifacts_raw.items():
+        if path and isinstance(path, str) and path.strip():
+            artifacts[key] = path.strip()
+
+    # Build review dict from review_state
+    review = None
+    review_state = state.get("review_state") or {}
+    review_decision = review_state.get("final_decision") or review_state.get("review_decision")
+    if review_decision and str(review_decision).upper() != "PENDING":
+        review = {
+            "decision": str(review_decision),
+            "remark": review_state.get("remark") or error_message,
+        }
+
+    # Extract usage summary
+    usage_summary = state.get("usage_summary")
+
+    # Build outcome data
+    outcome_data: dict[str, Any] = {
+        "step_run_id": step_run_id,
+        "run_id": str(state.get("workflow_run_id") or ""),
+        "run_code": str(state.get("job_id") or ""),
+        "workflow_name": str(state.get("template_group") or ""),
+        "step_name": str(state.get("current_step") or ""),
+        "job_dir": os.environ.get("AGENT_RUNNER_JOB_DIR"),
+        "outcome": outcome,
+        "failure_class": failure_class,
+        "artifacts": artifacts or None,
+        "review": review,
+        "error_message": error_message,
+        "usage_summary": usage_summary,
+        "exit_code": exit_code,
+    }
+
+    try:
+        outcome_queue.write_outcome(queue_dir, step_run_id, outcome_data)
+        print(f"[queue] outcome written to {queue_dir / f'{step_run_id}.json'}", file=sys.stderr)
+    except Exception as exc:
+        print(f"[queue] failed to write outcome: {exc}", file=sys.stderr)
+
+
 def _sync_results_to_backend(
     *,
     state: dict[str, Any],
@@ -1189,9 +1265,11 @@ def _sync_results_to_backend(
     coder_used: str,
     backend_url: str,
 ) -> None:
-    """Sync step execution results to the backend (daemon mode only).
+    """DEPRECATED — replaced by _write_result_to_queue().
 
-    Called automatically after step execution when running in daemon mode.
+    This function is no longer called. The CLI now writes outcomes to the
+    file queue, and the daemon's queue poller reports them to the backend.
+    Kept for reference during the transition period.
 
     V2 mode: If v2_backend_url is configured, sends outcome-only payload
     to the V2 backend which computes routing via its state machine.

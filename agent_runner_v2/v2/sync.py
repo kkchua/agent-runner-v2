@@ -14,6 +14,7 @@ Provides:
 from __future__ import annotations
 
 import os
+import time
 from typing import Any
 
 from ..config_loader import load_runner_config
@@ -107,8 +108,15 @@ def sync_outcome_v2(
     step_run_id: str,
     step_result: dict[str, Any],
     state: dict[str, Any],
+    max_attempts: int = 4,
+    backoff_base: float = 1.0,
 ) -> dict[str, Any]:
     """Send outcome to V2 backend and return the routing decision.
+
+    Retries transient failures with exponential backoff. The backend commits
+    claim/outcome transactions after its response is sent (FastAPI dependency
+    teardown), so an outcome POST can briefly race the claim's commit and
+    receive a "Step run not found" 404 even though the step run exists.
 
     Returns the backend response which includes:
     - run_status: the new status computed by the state machine
@@ -120,12 +128,22 @@ def sync_outcome_v2(
     client = V2BackendClient(backend_url)
     payload = build_v2_outcome_payload(step_result=step_result, state=state)
 
-    return client.report_outcome(
-        step_run_id=step_run_id,
-        outcome=payload["outcome"],
-        failure_class=payload.get("failure_class"),
-        artifacts=payload.get("artifacts"),
-        review=payload.get("review"),
-        error_message=payload.get("error_message"),
-        usage_summary=payload.get("usage_summary"),
-    )
+    last_exc: Exception | None = None
+    for attempt in range(1, max_attempts + 1):
+        try:
+            return client.report_outcome(
+                step_run_id=step_run_id,
+                outcome=payload["outcome"],
+                failure_class=payload.get("failure_class"),
+                artifacts=payload.get("artifacts"),
+                review=payload.get("review"),
+                error_message=payload.get("error_message"),
+                usage_summary=payload.get("usage_summary"),
+            )
+        except RuntimeError as exc:
+            last_exc = exc
+            if attempt < max_attempts:
+                time.sleep(backoff_base * (2 ** (attempt - 1)))
+
+    assert last_exc is not None
+    raise last_exc

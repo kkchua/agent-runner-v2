@@ -12,7 +12,7 @@ def test_main_worker_command_delegates_to_daemon(monkeypatch):
         captured["argv"] = list(argv or [])
         return 0
 
-    monkeypatch.setattr("agent_runner_v2.daemon.main", fake_daemon_main)
+    monkeypatch.setattr("agent_runner_v2.daemon_v2.main", fake_daemon_main)
 
     rc = run_agent.main(
         [

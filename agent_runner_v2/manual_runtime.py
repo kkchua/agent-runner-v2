@@ -4,6 +4,8 @@ import os
 from dataclasses import dataclass
 from typing import Any
 
+from .job_state import set_job_status
+
 
 @dataclass
 class ManualRunResolution:
@@ -113,8 +115,10 @@ def _initialize_state_from_backend(
     dict
         Initialized job state.
     """
-    run = backend_state.get("run") or {}
-    
+    # Support both nested claim shape ({"run": {...}}) and flat RunResponse
+    # shape from get_run() where workflow_name lives at the top level.
+    run = backend_state.get("run") or backend_state
+
     # Create base job state
     state = hooks.create_job(
         group_name=run.get("workflow_name") or group_cfg.get("workflow_name", ""),
@@ -123,10 +127,11 @@ def _initialize_state_from_backend(
         mode=mode,
         job_no=job_no or run.get("run_code", ""),
     )
-    
+
     # Merge backend state into job state
-    if run.get("id"):
-        state["workflow_run_id"] = str(run["id"])
+    run_id = run.get("run_id") or run.get("id")
+    if run_id:
+        state["workflow_run_id"] = str(run_id)
     if run.get("current_step_run_id"):
         state["workflow_step_run_id"] = str(run["current_step_run_id"])
     if run.get("backend_url"):
@@ -147,6 +152,96 @@ def _initialize_state_from_backend(
             state.setdefault("context_payload", {})["__run_control"] = context["__run_control"]
     
     return state
+
+
+def sync_local_from_backend(
+    state: dict[str, Any],
+    backend_state: dict[str, Any],
+) -> bool:
+    """Reconcile local job state with authoritative backend state.
+
+    Called in daemon mode after loading local job.json. The backend is the
+    source of truth — merge its computed fields into the local state so the
+    CLI always starts with fresh data.
+
+    This replaces per-check workarounds (like clearing stale approval flags)
+    with a single sync boundary before execution.
+
+    Returns True if any field was changed.
+    """
+    # Support both nested claim shape ({"run": {...}}) and flat RunResponse
+    # shape from get_run() where fields live at the top level.
+    run = backend_state.get("run") or backend_state
+    changed = False
+
+    # 1. Map backend run_status → local job_status
+    # Uses the real V2 backend statuses from services/state_machine.py:
+    #   PENDING / RUNNING / USER_SUBMITTED → IN_PROGRESS
+    #   WAITING_FOR_HUMAN_APPROVAL → WAITING_FOR_HUMAN_APPROVAL
+    #   AWAITING_INTERVENTION → WAITING_FOR_HUMAN_INTERVENTION
+    #   AWAITING_MAXRETRIED → WAITING_FOR_HUMAN_MAXRETRIED
+    #   USER_* / COMPLETED / FAILED / CANCELLED → terminal or transitional
+    backend_status = (run.get("run_status") or "").upper()
+    _STATUS_MAP = {
+        "USER_SUBMITTED": "IN_PROGRESS",
+        "PENDING": "IN_PROGRESS",
+        "RUNNING": "IN_PROGRESS",
+        "USER_APPROVED": "IN_PROGRESS",
+        "USER_REJECTED": "IN_PROGRESS",
+        "USER_RESUMED": "IN_PROGRESS",
+        "USER_RETRIED": "IN_PROGRESS",
+        "WAITING_FOR_HUMAN_APPROVAL": "WAITING_FOR_HUMAN_APPROVAL",
+        "AWAITING_INTERVENTION": "WAITING_FOR_HUMAN_INTERVENTION",
+        "AWAITING_MAXRETRIED": "WAITING_FOR_HUMAN_MAXRETRIED",
+        "COMPLETED": "COMPLETED",
+        "FAILED": "FAILED",
+        "CANCELLED": "CANCELLED",
+        "USER_CANCELLED": "CANCELLED",
+    }
+    if backend_status in _STATUS_MAP:
+        target = _STATUS_MAP[backend_status]
+        current = (state.get("job_status") or state.get("status") or "").upper()
+        if target != current:
+            set_job_status(state, target)
+            changed = True
+
+    # 2. Sync current_step from backend
+    backend_step = (run.get("current_step") or run.get("current_step_name") or "").strip()
+    if backend_step and backend_step != (state.get("current_step") or "").strip():
+        state["current_step"] = backend_step
+        changed = True
+
+    # 3. Sync step run ID
+    step_run_id = (run.get("current_step_run_id") or "").strip()
+    if step_run_id and step_run_id != (state.get("workflow_step_run_id") or "").strip():
+        state["workflow_step_run_id"] = step_run_id
+        changed = True
+
+    # 4. Clear stale approval flags if the backend is no longer gated on this step.
+    #    The backend only stays in WAITING_FOR_HUMAN_APPROVAL for the step being
+    #    reviewed; once it advances (PENDING/RUNNING) the local flag is stale and
+    #    must be cleared so the CLI does not reject the claimed step.
+    pending = state.get("pending_human_approval_for")
+    if pending:
+        still_gated = (
+            backend_status == "WAITING_FOR_HUMAN_APPROVAL"
+            and backend_step == str(pending).strip()
+        )
+        if not still_gated:
+            state["pending_human_approval_for"] = None
+            changed = True
+
+    # 5. Merge output_payload artifacts from backend
+    backend_artifacts = run.get("output_payload") or {}
+    local_artifacts = state.get("artifacts") or {}
+    for key, value in backend_artifacts.items():
+        if value and key not in local_artifacts:
+            local_artifacts[key] = value
+            changed = True
+    if changed and "artifacts" not in state:
+        state["artifacts"] = local_artifacts
+
+    return changed
 
 
 def resolve_manual_run(*, args: Any, group_cfg: dict[str, Any], hooks: Any, mode: str = "manual") -> ManualRunResolution:
@@ -193,6 +288,11 @@ def resolve_manual_run(*, args: Any, group_cfg: dict[str, Any], hooks: Any, mode
             state = hooks.reconcile_job_state(state, group_cfg)
             if _apply_daemon_backend_linkage(mode=mode, state=state):
                 hooks.save_job(args.template_group, state["job_id"], state)
+            # Pre-execution sync: merge backend state into local job.json
+            if mode == "daemon":
+                backend_state = _load_backend_state_file()
+                if backend_state and sync_local_from_backend(state, backend_state):
+                    hooks.save_job(args.template_group, state["job_id"], state)
             original_current_step = state.get("current_step")
             if state.get("pending_human_approval_for"):
                 raise ValueError(
@@ -306,6 +406,11 @@ def resolve_manual_run(*, args: Any, group_cfg: dict[str, Any], hooks: Any, mode
     state = hooks.reconcile_job_state(state, group_cfg)
     if _apply_daemon_backend_linkage(mode=mode, state=state):
         hooks.save_job(args.template_group, state["job_id"], state)
+    # Pre-execution sync: merge backend state into local job.json
+    if mode == "daemon":
+        backend_state = _load_backend_state_file()
+        if backend_state and sync_local_from_backend(state, backend_state):
+            hooks.save_job(args.template_group, state["job_id"], state)
     original_current_step = state.get("current_step")
     if state.get("pending_human_approval_for"):
         raise ValueError(

@@ -2,10 +2,11 @@
 
 | Field | Value |
 |-------|-------|
-| Status | **Draft** |
+| Status | **Implemented** |
 | Layer | Platform (cross-cutting) |
 | Scope | All workflow packages |
 | Date | 2026-07-22 |
+| Implemented | 2026-08-04 |
 
 ---
 

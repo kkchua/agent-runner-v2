@@ -1,5 +1,11 @@
 # Masterplan Index &amp; Implementation Status
 
+**Last Updated:** 2026-08-04
+
+> **Multi-Repo Architecture:** The platform is split across three repositories.
+> Masterplan specs in this folder cover the **agent-runner-v2** repo (daemon + CLI execution engine).
+> Console and backend have their own repos — see `operator-console-v2` and `agent-runner-backend-v2`.
+
 ## Status Definitions
 
 | Status | Meaning |
@@ -38,7 +44,7 @@
 
 | Document | Scope | Status |
 |---|---|---|
-| [WORKFLOW_EXTENSION_INTERFACE_PLAN.md](WORKFLOW_EXTENSION_INTERFACE_PLAN.md) | Workflow plugin interface (WorkflowExtensions base class + scanner) | **Draft** |
+| [WORKFLOW_EXTENSION_INTERFACE_PLAN.md](WORKFLOW_EXTENSION_INTERFACE_PLAN.md) | Workflow plugin interface (WorkflowExtensions base class + scanner) | **Implemented** |
 | [SDLC_00_CODEBASE_V1_PLAN.md](SDLC_00_CODEBASE_V1_PLAN.md) | Codebase sync maintenance workflow implementation plan | **Draft** |
 
 ---

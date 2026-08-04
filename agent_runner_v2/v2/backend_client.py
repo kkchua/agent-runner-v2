@@ -154,6 +154,7 @@ class V2BackendClient:
         review: dict[str, Any] | None = None,
         error_message: str | None = None,
         usage_summary: dict[str, Any] | None = None,
+        job_dir: str | None = None,
     ) -> dict[str, Any]:
         """Report step outcome — backend computes next state via state machine."""
         payload: dict[str, Any] = {"outcome": outcome}
@@ -167,6 +168,8 @@ class V2BackendClient:
             payload["error_message"] = error_message
         if usage_summary:
             payload["usage_summary"] = usage_summary
+        if job_dir:
+            payload["job_dir"] = job_dir
         return self._request("POST", f"/api/runs/step-runs/{step_run_id}/outcome", payload)
 
     # ------------------------------------------------------------------
