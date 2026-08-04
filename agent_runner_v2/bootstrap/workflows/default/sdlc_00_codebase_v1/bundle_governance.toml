@@ -1,7 +1,7 @@
 [governance]
 canonical_source = "bundle_governance/core_governance.md"
 generated_dir = "bundle_governance/generated"
-adapter_targets = ["AGENTS.md", "QWEN.md", "CLAUDE.md"]
+adapter_targets = ["AGENTS.md"]
 include_in_prompts = true
 prompt_targets = [
   "review_sync_log",

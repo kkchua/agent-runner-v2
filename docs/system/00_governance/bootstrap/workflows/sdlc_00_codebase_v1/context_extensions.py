@@ -40,7 +40,7 @@ class Sdlc00CodebaseExtensions(WorkflowExtensions):
 
         return {
             # Staged artifacts (runs/<job_id>/)
-            "CODEBASE_BACKUP": f"docs/repo/codebase/backups/BACKUP-{job_id}/",
+            # NOTE: CODEBASE_BACKUP is a directory, not a file — excluded from path resolution
             "CODEBASE_CHANGE_IMPACT": f"{run_root}/04_changes/{job_id}-reconcile.md",
             "CODEBASE_INVENTORY": f"{run_root}/01_inventory/codebase_inventory.md",
             "SYNC_LOG": f"{run_root}/sync_logs/SYNC-{job_id}.md",
@@ -97,7 +97,6 @@ class Sdlc00CodebaseExtensions(WorkflowExtensions):
             )
             resolved_str = str(resolved)
             result[artifact_key] = resolved_str
-            result[f"{artifact_key}_PATH"] = resolved_str
             pure = PurePath(resolved_str)
             result[f"{artifact_key}_METAJSON"] = str(
                 pure.parent / f"{pure.stem}.meta.json"

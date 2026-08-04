@@ -477,12 +477,12 @@ def create_backup(
     backup_dir = project_root / backup_dir_rel
 
     if not codebase_root.exists():
-        remark = f"Codebase root does not exist: {codebase_root}"
+        # First run — nothing to back up yet, approve and continue
+        remark = f"Codebase root does not exist yet (first run): {codebase_root}"
         return ActionResult(
-            status="REJECTED",
+            status="APPROVED",
             remark=remark,
             artifacts={},
-            reject_code="CODEBASE_ROOT_NOT_FOUND",
         )
 
     # Generate backup directory name with timestamp

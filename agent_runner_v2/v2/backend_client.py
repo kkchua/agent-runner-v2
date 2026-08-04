@@ -80,6 +80,14 @@ class V2BackendClient:
             "capabilities": capabilities or {},
         })
 
+    def get_worker(
+        self,
+        *,
+        worker_id: str,
+    ) -> dict[str, Any]:
+        """Fetch worker details including status. Returns worker dict or raises if not found."""
+        return self._request("GET", f"/api/workers/{worker_id}")
+
     def heartbeat(
         self,
         *,
