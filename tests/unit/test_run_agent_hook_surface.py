@@ -17,9 +17,6 @@ def test_runtime_dependency_modules_expose_required_symbols() -> None:
             "_execute_prepared_step",
             "_resolve_step_coder",
             "_build_group_cfg_from_execution_spec",
-            "_resolve_worker_engine_root",
-            "_build_worker_request_payload",
-            "_build_worker_crash_result",
         },
         "manual_runtime_deps": {
             "_missing_artifacts",
@@ -139,23 +136,6 @@ def test_shared_runtime_deps_workflow_runtime_wrappers_match_direct_contract(mon
     ]
 
 
-def test_shared_runtime_deps_daemon_wrappers_delegate_to_daemon_runtime(monkeypatch) -> None:
-    calls: list[tuple[str, tuple[object, ...], dict[str, object]]] = []
-
-    monkeypatch.setattr(
-        shared_runtime_deps._daemon_runtime,
-        "resolve_worker_engine_root",
-        lambda engine_root, *, hooks: calls.append(("resolve_worker_engine_root", (engine_root,), {"hooks": hooks})) or ("root", "1.2.3"),
-    )
-
-    resolved = shared_runtime_deps._resolve_worker_engine_root("engine-root")
-
-    assert resolved == ("root", "1.2.3")
-    assert calls == [
-        ("resolve_worker_engine_root", ("engine-root",), {"hooks": shared_runtime_deps}),
-    ]
-
-
 def test_run_agent_workflow_runtime_wrappers_match_direct_contract(monkeypatch, tmp_path) -> None:
     calls: list[tuple[str, tuple[object, ...], dict[str, object]]] = []
 
@@ -195,54 +175,6 @@ def test_run_agent_workflow_runtime_wrappers_match_direct_contract(monkeypatch, 
         ("load_group", ("demo",), {"workspace_root": workspace_root, "workflow_root": workflow_root}),
         ("validate_static_reference_files", (workspace_root,), {"group_cfg": group_cfg, "template_group": "demo"}),
         ("missing_artifacts", (["Z"], state), {}),
-    ]
-
-
-def test_run_agent_daemon_wrappers_delegate_to_daemon_runtime(monkeypatch) -> None:
-    calls: list[tuple[str, tuple[object, ...], dict[str, object]]] = []
-
-    monkeypatch.setattr(
-        run_agent._daemon_runtime,
-        "build_worker_request_payload",
-        lambda *, run, step_run, step_execution_spec=None, backend_url="", step_spec_source="backend", hooks: calls.append((
-            "build_worker_request_payload",
-            (),
-            {
-                "run": run,
-                "step_run": step_run,
-                "step_execution_spec": step_execution_spec,
-                "backend_url": backend_url,
-                "step_spec_source": step_spec_source,
-                "hooks": hooks,
-            },
-        )) or {"job_id": "RUN-1"},
-    )
-
-    run_payload = {"id": "run-1"}
-    step_run_payload = {"id": "step-1"}
-
-    request = run_agent._build_worker_request_payload(
-        run=run_payload,
-        step_run=step_run_payload,
-        step_execution_spec={"template_group": "wf"},
-        backend_url="http://backend",
-        step_spec_source="backend",
-    )
-
-    assert request == {"job_id": "RUN-1"}
-    assert calls == [
-        (
-            "build_worker_request_payload",
-            (),
-            {
-                "run": run_payload,
-                "step_run": step_run_payload,
-                "step_execution_spec": {"template_group": "wf"},
-                "backend_url": "http://backend",
-                "step_spec_source": "backend",
-                "hooks": run_agent._shared_runtime_deps,
-            },
-        ),
     ]
 
 

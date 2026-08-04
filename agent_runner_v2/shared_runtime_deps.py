@@ -31,7 +31,6 @@ from .workflow_specs import build_step_execution_spec, get_template_group_cfg, r
 from .routing_runtime import predict_next_step_after_approved
 
 from . import backend_execution as _backend_execution
-from . import daemon_runtime as _daemon_runtime
 from . import step_execution_runtime as _step_execution_runtime
 from . import workflow_runtime as _workflow_runtime
 
@@ -134,35 +133,9 @@ def _resolve_step_coder(
     )
 
 
-def _resolve_worker_engine_root(engine_root: str | None) -> tuple[str | None, str | None]:
-    return _daemon_runtime.resolve_worker_engine_root(engine_root, hooks=sys.modules[__name__])
-
-
 def _build_group_cfg_from_execution_spec(
     spec: dict[str, Any],
     template_group: str,
     step_name: str,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     return _backend_execution.build_group_cfg_from_execution_spec(spec, template_group, step_name)
-
-
-def _build_worker_crash_result(*, run: dict[str, Any], step_run: dict[str, Any], error: Exception) -> dict[str, Any]:
-    return _daemon_runtime.build_worker_crash_result(run=run, step_run=step_run, error=error, hooks=sys.modules[__name__])
-
-
-def _build_worker_request_payload(
-    *,
-    run: dict[str, Any],
-    step_run: dict[str, Any],
-    step_execution_spec: dict[str, Any] | None = None,
-    backend_url: str = "",
-    step_spec_source: str = "backend",
-) -> dict[str, Any]:
-    return _daemon_runtime.build_worker_request_payload(
-        run=run,
-        step_run=step_run,
-        step_execution_spec=step_execution_spec,
-        backend_url=backend_url,
-        step_spec_source=step_spec_source,
-        hooks=sys.modules[__name__],
-    )

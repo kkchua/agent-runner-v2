@@ -84,15 +84,12 @@ main(argv)
   +-- args.command == "install"    -> install_all() / sync_all()
   +-- args.command == "engine"     -> engine_commands.main()
   +-- args.command == "bootstrap-publish" -> publish_bootstrap_bundle()
-  +-- args.command == "daemon"     -> daemon.main()
+  +-- args.command == "daemon"     -> daemon_v2.main()
   +-- args.command == "worker"     -> _worker_command()
   +-- args.command == "poll"       -> _worker_command(once=True)
   +-- args.command == "execute-step" -> (legacy, returns error)
   +-- args.command == "submit"     -> submit_commands.main()
   +-- args.command == "workflow-spec" / "sync-workflow-spec" -> workflow_spec_commands
-  +-- args.command == "approve"    -> approve_commands.main()
-  +-- args.command == "stop"       -> stop_commands.main()
-  +-- args.command == "console"    -> console_commands.main()
   +-- args.command == "codebase-init" -> codebase_init_commands.main()
   |
   +-- args.command == "run" (default) -> full execution pipeline (see section 3)
@@ -188,13 +185,11 @@ main()  [run_agent.py]
 | `runtime_context.py` | Process-local path context (workspace, runner home, workflow root) |
 | `config_loader.py` | Global runner config loader (`~/.ukbe-runner/config.json`) |
 | `bundle_loader.py` | Bundle loading, workspace init, bootstrap publishing |
-| `daemon.py` | Worker daemon supervisor (claims backend work, spawns children) |
-| `daemon_runtime.py` | Worker request building, job sync mapping |
+| `daemon_v2.py` | V2 worker daemon supervisor (claims backend work, spawns children) |
 | `backend_client.py` | HTTP client for backend API interactions |
 | `manual_runtime.py` | Manual (CLI) mode job resolution |
 | `cli_runtime.py` | Admin command handling (approve/stop/override) |
 | `workflow_packages/` | Pluggable workflow bundle system |
-| `operator_console/` | Flet-based desktop GUI |
 
 ### 3.3 Job State Machine
 
@@ -298,7 +293,7 @@ The engine determines it is in development mode by checking:
 2. **`engine_version`** in config — if `"SNAPSHOT"` or absent, the system runs from the live source tree
 3. **`repo_root`** in config — points to the local repo clone so the system can find `workflows/` and other resources
 
-When running in SNAPSHOT mode, the daemon (`daemon.py`) resolves the engine path like this:
+When running in SNAPSHOT mode, the daemon (`daemon_v2.py`) resolves the engine path like this:
 
 ```python
 def _resolve_engine_pythonpath(cfg, log):
@@ -1024,7 +1019,7 @@ A: In Dev Mode: `bootstrap-publish` -> `init`. In User Mode: create a new versio
 | `agent_runner_v2/workflow_router.py` | Post-step routing |
 | `agent_runner_v2/job_state.py` | Job lifecycle management |
 | `agent_runner_v2/bundle_loader.py` | Bootstrap and init |
-| `agent_runner_v2/daemon.py` | Worker daemon |
+| `agent_runner_v2/daemon_v2.py` | V2 worker daemon |
 | `agent_runner_v2/engine_commands.py` | Engine version management |
 | `agent_runner_v2/coder_adapters.py` | LLM coder invocation |
 | `agent_runner_v2/backend_client.py` | Backend API client |

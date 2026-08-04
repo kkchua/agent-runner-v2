@@ -158,19 +158,19 @@ class TestBuildV2OutcomePayload:
 
 class TestV2BackendClient:
     def test_import_succeeds(self):
-        from agent_runner_v2.v2_backend_client import V2BackendClient
+        from agent_runner_v2.v2.backend_client import V2BackendClient
         client = V2BackendClient("http://localhost:8200")
         assert client.base_url == "http://localhost:8200"
         assert client.timeout_seconds == 30
 
     def test_url_construction(self):
-        from agent_runner_v2.v2_backend_client import V2BackendClient
+        from agent_runner_v2.v2.backend_client import V2BackendClient
         client = V2BackendClient("http://localhost:8200")
         assert client._url("/api/runs") == "http://localhost:8200/api/runs"
         assert client._url("/api/runs", {"status": "active"}) == "http://localhost:8200/api/runs?status=active"
 
     def test_url_trailing_slash_stripped(self):
-        from agent_runner_v2.v2_backend_client import V2BackendClient
+        from agent_runner_v2.v2.backend_client import V2BackendClient
         client = V2BackendClient("http://localhost:8200/")
         assert client._url("/api/runs") == "http://localhost:8200/api/runs"
 

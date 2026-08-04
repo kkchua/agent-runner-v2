@@ -109,7 +109,6 @@ except PackageNotFoundError:
     __version__ = "0.0.0-dev"
 from .execution_request import ExecutionRequest
 from .execution_result import ExecutionFailure, ExecutionResult
-from . import daemon_runtime as _daemon_runtime
 from . import cli_runtime as _cli_runtime
 from . import manual_runtime as _manual_runtime
 from . import manual_runtime_deps as _manual_runtime_deps
@@ -472,18 +471,6 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         ns.workflow_spec_argv = raw[1:]
         return ns
 
-    if command == "approve":
-        ns = argparse.Namespace()
-        ns.command = "approve"
-        ns.approve_argv = raw[1:]
-        return ns
-
-    if command == "stop":
-        ns = argparse.Namespace()
-        ns.command = "stop"
-        ns.stop_argv = raw[1:]
-        return ns
-
     if command == "status":
         ns = argparse.Namespace()
         ns.command = "status"
@@ -508,12 +495,6 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         ns.reset_step_argv = raw[1:]
         return ns
 
-    if command == "console":
-        ns = argparse.Namespace()
-        ns.command = "console"
-        ns.console_argv = raw[1:]
-        return ns
-
     if command == "codebase-init":
         ns = argparse.Namespace()
         ns.command = "codebase-init"
@@ -527,12 +508,6 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         p.add_argument("--target", choices=["jobs", "runtime", "all"], default="all", help="Which areas to clean (default: all)")
         ns = p.parse_args(raw[1:])
         ns.command = "cleanup"
-        return ns
-
-    if command == "daemon-quit":
-        ns = argparse.Namespace()
-        ns.command = "daemon-quit"
-        ns.daemon_quit_argv = raw[1:]
         return ns
 
     p = argparse.ArgumentParser(description="Run a job-based LLM workflow (v2).")
@@ -697,14 +672,6 @@ def main(argv: list[str] | None = None) -> int:
         from .workflow_spec_commands import main as _workflow_spec_main
         return _workflow_spec_main(args.workflow_spec_argv)
 
-    if args.command == "approve":
-        from .approve_commands import main as _approve_main
-        return _approve_main(args.approve_argv)
-
-    if args.command == "stop":
-        from .stop_commands import main as _stop_main
-        return _stop_main(args.stop_argv)
-
     if args.command == "status":
         from .status_commands import main as _status_main
         return _status_main(args.status_argv)
@@ -721,10 +688,6 @@ def main(argv: list[str] | None = None) -> int:
         from .reset_step_commands import main as _reset_step_main
         return _reset_step_main(args.reset_step_argv)
 
-    if args.command == "console":
-        from .console_commands import main as _console_main
-        return _console_main(args.console_argv)
-
     if args.command == "codebase-init":
         from .codebase_init_commands import main as _codebase_init_main
         return _codebase_init_main(args.codebase_init_argv)
@@ -739,10 +702,6 @@ def main(argv: list[str] | None = None) -> int:
         if getattr(args, "target", "all") != "all":
             cleanup_argv.extend(["--target", args.target])
         return _cleanup_main(cleanup_argv)
-
-    if args.command == "daemon-quit":
-        from .quit_daemon_commands import main as _quit_daemon_main
-        return _quit_daemon_main(args.daemon_quit_argv)
 
     # Only the "run" command defines --project-root / --target-project-root.
     # Use getattr so any subcommand that slips through (or is added in the
@@ -1256,161 +1215,6 @@ def _write_result_to_queue(
         print(f"[queue] outcome written to {queue_dir / f'{step_run_id}.json'}", file=sys.stderr)
     except Exception as exc:
         print(f"[queue] failed to write outcome: {exc}", file=sys.stderr)
-
-
-def _sync_results_to_backend(
-    *,
-    state: dict[str, Any],
-    step_result: Any,
-    coder_used: str,
-    backend_url: str,
-) -> None:
-    """DEPRECATED — replaced by _write_result_to_queue().
-
-    This function is no longer called. The CLI now writes outcomes to the
-    file queue, and the daemon's queue poller reports them to the backend.
-    Kept for reference during the transition period.
-
-    V2 mode: If v2_backend_url is configured, sends outcome-only payload
-    to the V2 backend which computes routing via its state machine.
-
-    V1 mode: Uses ``build_job_sync_payload`` from ``daemon_runtime`` to map
-    the job.json state to the backend persistence API format.
-
-    Before syncing, checks if backend state changed during execution
-    (e.g., cancelled by console). If cancelled/stopped, skips sync to
-    preserve the cancelled state.
-
-    Parameters
-    ----------
-    state :
-        The current job state dict (from job.json).
-    step_result :
-        The StepResult from step execution.
-    coder_used :
-        Name of the coder that executed the step.
-    backend_url :
-        Backend base URL. If empty, sync is skipped.
-    """
-    step_run_id = str(state.get("workflow_step_run_id") or "").strip()
-    run_id = str(state.get("workflow_run_id") or "").strip()
-
-    # V2 mode: outcome-only sync via state machine backend
-    from .v2.sync import resolve_v2_backend_url, sync_outcome_v2
-    v2_url = resolve_v2_backend_url()
-    if v2_url:
-        if not step_run_id:
-            print("[daemon-sync-v2] no step_run_id in state, skipping sync", file=sys.stderr)
-            return
-        try:
-            result_dict = {
-                "status": step_result.status,
-                "outcome": step_result.status.lower(),
-                "coder_used": coder_used,
-                "remark": step_result.remark,
-            }
-            # Attach failure classification if available
-            if hasattr(step_result, "failure_class"):
-                result_dict["failure_class"] = step_result.failure_class
-            elif hasattr(step_result, "control_class"):
-                result_dict["failure_class"] = step_result.control_class
-
-            response = sync_outcome_v2(
-                backend_url=v2_url,
-                step_run_id=step_run_id,
-                step_result=result_dict,
-                state=state,
-            )
-            new_status = response.get("run_status", "?")
-            next_step = response.get("current_step", "?")
-            print(
-                f"[daemon-sync-v2] outcome synced → run_status={new_status}, "
-                f"next_step={next_step} (step_run_id={step_run_id})",
-                file=sys.stderr,
-            )
-        except Exception as sync_exc:
-            print(f"[daemon-sync-v2] result sync failed: {sync_exc}", file=sys.stderr)
-        return
-
-    # V1 mode: full sync payload with CLI-computed routing
-    if not backend_url or not step_run_id:
-        return
-    try:
-        from .daemon_runtime import build_job_sync_payload
-        from .backend_client import BackendClient
-
-        client = BackendClient(backend_url)
-
-        # Check backend status before sync (post-execution conflict check)
-        if run_id:
-            try:
-                run_detail = client.get_run(run_id=run_id)
-                run = run_detail.get("run", {})
-                run_status = str(run.get("run_status") or "").strip().lower()
-                context = run.get("context_payload") or {}
-                stop_requested = False
-                if isinstance(context, dict):
-                    control = context.get("__run_control") or {}
-                    if isinstance(control, dict):
-                        stop_requested = bool(control.get("stop_requested"))
-
-                if run_status == "stopped" or stop_requested:
-                    print(
-                        f"[daemon-sync] Backend state changed during execution "
-                        f"(run_status={run_status}, stop_requested={stop_requested}), "
-                        f"skipping sync to preserve cancelled state",
-                        file=sys.stderr
-                    )
-                    return
-            except Exception as check_exc:
-                # Non-fatal: proceed with sync if we can't check backend status
-                print(f"[daemon-sync] Warning: could not check backend status before sync: {check_exc}", file=sys.stderr)
-
-        result_dict = {
-            "status": step_result.status,
-            "outcome": step_result.status.lower(),
-            "coder_used": coder_used,
-            "remark": step_result.remark,
-        }
-        sync_payload = build_job_sync_payload(
-            job=state, step_result=result_dict, step_run_id=step_run_id,
-        )
-        client.sync_job_state(step_run_id=step_run_id, payload=sync_payload)
-        print(f"[daemon-sync] results synced to backend (step_run_id={step_run_id})", file=sys.stderr)
-    except Exception as sync_exc:
-        print(f"[daemon-sync] result sync failed: {sync_exc}", file=sys.stderr)
-
-
-def _build_worker_request_payload(
-    *,
-    run: dict[str, Any],
-    step_run: dict[str, Any],
-    step_execution_spec: dict[str, Any] | None = None,
-    backend_url: str = "",
-    step_spec_source: str = "backend",
-) -> dict[str, Any]:
-    """Build the worker request payload for daemon step execution.
-
-    Delegates to daemon_runtime for consistent payload construction.
-
-    Args:
-        run: Backend run dict with workflow metadata.
-        step_run: Backend step_run dict with step metadata.
-        step_execution_spec: Optional step execution spec override.
-        backend_url: Backend base URL for resolving paths.
-        step_spec_source: Source of step spec ('backend' or 'global').
-
-    Returns:
-        Dict payload for worker step execution request.
-    """
-    return _daemon_runtime.build_worker_request_payload(
-        run=run,
-        step_run=step_run,
-        step_execution_spec=step_execution_spec,
-        backend_url=backend_url,
-        step_spec_source=step_spec_source,
-        hooks=_shared_runtime_deps,
-    )
 
 
 PreparedStepExecution = _step_execution_runtime.PreparedStepExecution
