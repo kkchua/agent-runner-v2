@@ -119,6 +119,13 @@ required_inputs = ["CODEBASE_INVENTORY", "CODEBASE_CHANGE_IMPACT"]
 produces = ["VALIDATION_FILE"]
 result_meta_key = "VALIDATION_FILE"
 
+[step.on_reject_refine]
+step = "refine_codebase_docs"
+artifact = "CODEBASE_INVENTORY"
+max_iterations = 2
+exhausted_failure_code = "CODEBASE_VALIDATION_REFINEMENT_EXHAUSTED"
+exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
+
 # ============================================================================
 # Step 7: Publish Codebase Docs (copies runs/ to current/)
 # ============================================================================
