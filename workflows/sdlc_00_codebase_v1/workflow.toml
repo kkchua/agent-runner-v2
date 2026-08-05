@@ -77,6 +77,7 @@ exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
 name = "refine_codebase_docs"
 prompt = "prompts/05_refine_codebase_docs.txt"
 enable_notifications = true
+onsuccess = "review_sync_log"
 
 [step.artifacts]
 required_inputs = ["CODEBASE_INVENTORY", "CODEBASE_CHANGE_IMPACT", "REVIEW_FILE_SUGGESTED"]
@@ -84,8 +85,6 @@ produces = ["CODEBASE_INVENTORY"]
 target_artifact = "CODEBASE_INVENTORY"
 edit_mode = "in_place"
 result_meta_key = "CODEBASE_INVENTORY"
-
-loop_returns_to = "review_sync_log"
 
 [step.coder]
 role_policy = "architect_standard"
