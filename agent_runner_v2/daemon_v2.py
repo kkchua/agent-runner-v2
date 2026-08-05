@@ -681,6 +681,7 @@ def run_supervisor(*, config: SupervisorConfig, v2_url: str) -> int:
                             "run_code": run_code,
                             "workflow_name": workflow_name,
                             "project_root": run_data.get("project_root"),
+                            "job_dir": run_data.get("job_dir"),
                         },
                         "step_run": {
                             "id": step_run_id,
