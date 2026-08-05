@@ -102,7 +102,7 @@ target_artifact = "REVIEW_FILE_SUGGESTED"
 edit_mode = "in_place"
 result_meta_key = "REVIEW_FILE_SUGGESTED"
 
-loop_returns_to = "review_scaffold"
+onsuccess = "review_scaffold"
 
 [step.coder]
 role_policy = "architect_standard"

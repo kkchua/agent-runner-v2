@@ -101,7 +101,7 @@ produces = [
 target_artifact = "L2_PLATFORM_INDEX"
 edit_mode = "in_place"
 result_meta_key = "L2_PLATFORM_INDEX"
-loop_returns_to = "review_platform_core_docs"
+onsuccess = "review_platform_core_docs"
 
 [step.coder]
 role_policy = "refine_standard"

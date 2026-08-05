@@ -65,7 +65,7 @@ required_inputs = ["REVIEW_FILE_SUGGESTED", "TEST_CRITERIA", "WORKFLOW_SPEC"]
 produces = ["TEST_CRITERIA"]
 result_meta_key = "TEST_CRITERIA"
 
-loop_returns_to = "review_test_criteria"
+onsuccess = "review_test_criteria"
 
 [step.coder]
 role_policy = "refine_standard"
@@ -315,7 +315,7 @@ required_inputs = ["REVIEW_FILE_SUGGESTED", "WORKFLOW_MANIFEST", "WORKFLOW_EXTEN
 produces = ["WORKFLOW_MANIFEST", "WORKFLOW_EXTENSIONS", "WORKFLOW_ACTIONS", "WORKFLOW_PROMPTS_INDEX", "WORKFLOW_README", "WORKFLOW_ENV_SAMPLE", "WORKFLOW_CONFIG_SAMPLE"]
 result_meta_key = "WORKFLOW_PROMPTS_INDEX"
 
-loop_returns_to = "review_package"
+onsuccess = "review_package"
 
 [step.coder]
 role_policy = "refine_standard"
