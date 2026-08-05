@@ -1,0 +1,16 @@
+{
+  "schema_version": "v2",
+  "coder_result": {
+    "status": "REJECTED",
+    "remark": "Review completed. One staged module doc (agent-runner-v2-run-agent.md) contains non-ASCII characters at line 24. All other checks passed: sync log, inventory, component docs, frontmatter compliance, and created-vs-updated separation are correct.",
+    "artifacts": {
+      "REVIEW_FILE_SUGGESTED": "D:/MyProjectSpace/01_Workflows/agent-runner-v2/docs/repo/codebase/runs/SDLC00CB-mqe50g5d/sync_logs/SDLC00CB-mqe50g5d-review.md"
+    },
+    "recorded_at": "2026-08-06T05:51:00+08:00",
+    "usage": {
+      "input_tokens": 45000,
+      "output_tokens": 3500,
+      "total_tokens": 48500
+    }
+  }
+}
