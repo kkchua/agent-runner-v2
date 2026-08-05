@@ -5,6 +5,7 @@ codebase_docs.py — Deterministic repo scan and codebase-doc generation helpers
 """
 
 import ast
+import fnmatch
 import json
 import re
 import subprocess
@@ -19,6 +20,9 @@ from .bundle_loader import load_project_config
 from .doc_paths import codebase_doc_rel
 from .doc_text import sanitize_ascii
 
+
+# Per-repo exclusion file name (at repo root)
+SCAN_IGNORE_FILE = ".codebase-scan-ignore"
 
 EXCLUDED_DIRS = {
     ".git",
@@ -42,6 +46,76 @@ EXCLUDED_DIRS = {
 }
 
 STD_LIBS = set(getattr(sys, "stdlib_module_names", set()))
+
+
+def _load_scan_exclusions(project_root: Path) -> list[str]:
+    """Load user-defined exclusion patterns from .codebase-scan-ignore file.
+
+    Returns a list of patterns (one per line). Empty lines and comments (#) are ignored.
+    If the file doesn't exist, returns an empty list.
+    """
+    ignore_file = project_root / SCAN_IGNORE_FILE
+    if not ignore_file.exists():
+        return []
+
+    patterns = []
+    for line in ignore_file.read_text(encoding="utf-8").splitlines():
+        stripped = line.strip()
+        # Skip empty lines and comments
+        if stripped and not stripped.startswith("#"):
+            patterns.append(stripped)
+    return patterns
+
+
+def _matches_exclusion(rel_path: str, patterns: list[str]) -> bool:
+    """Check if a relative path matches any exclusion pattern.
+
+    Supports gitignore-style patterns:
+    - Trailing / matches directories (any file under that directory)
+    - * matches anything except /
+    - ** matches anything including /
+    - Patterns without / match against filename only
+    - Patterns with / match against full path
+    """
+    if not patterns:
+        return False
+
+    # Normalize to forward slashes
+    rel_posix = rel_path.replace("\\", "/")
+    filename = PurePosixPath(rel_posix).name
+
+    for pattern in patterns:
+        # Check if pattern is directory-only (trailing /)
+        dir_only = pattern.endswith("/")
+        clean_pattern = pattern.rstrip("/")
+
+        if dir_only:
+            # Directory pattern: match if path starts with this directory
+            # e.g., "secrets/" matches "secrets/keys.json" or "deep/secrets/file.txt"
+            if rel_posix.startswith(clean_pattern + "/") or f"/{clean_pattern}/" in rel_posix:
+                return True
+            # Also match the directory name anywhere in path
+            parts = rel_posix.split("/")
+            if clean_pattern in parts:
+                return True
+        elif "/" not in clean_pattern:
+            # Simple filename pattern (no slash): match against filename only
+            if fnmatch.fnmatch(filename, clean_pattern):
+                return True
+        else:
+            # Path pattern with slash: match against full path
+            if "**" in clean_pattern:
+                # ** matches any number of directories
+                # Use placeholder to avoid double-replacement
+                regex_pattern = clean_pattern.replace("**", "\x00DOUBLESTAR\x00")
+                regex_pattern = regex_pattern.replace("*", "[^/]*")
+                regex_pattern = regex_pattern.replace("\x00DOUBLESTAR\x00", ".*")
+                if re.match(regex_pattern, rel_posix):
+                    return True
+            elif fnmatch.fnmatch(rel_posix, clean_pattern):
+                return True
+
+    return False
 
 
 @dataclass(frozen=True)
@@ -182,6 +256,9 @@ def _iter_repo_files(project_root: Path) -> list[Path]:
     if git_files is not None:
         return git_files
 
+    # Load user-defined exclusion patterns
+    exclusion_patterns = _load_scan_exclusions(project_root)
+
     files: list[Path] = []
     for path in project_root.rglob("*"):
         if path.is_dir():
@@ -190,6 +267,9 @@ def _iter_repo_files(project_root: Path) -> list[Path]:
         if any(part in EXCLUDED_DIRS for part in rel.parts):
             continue
         if rel.suffix in {".pyc", ".pyo", ".tmp"}:
+            continue
+        # Check user-defined exclusions
+        if _matches_exclusion(rel.as_posix(), exclusion_patterns):
             continue
         files.append(path)
     return sorted(files, key=lambda p: p.relative_to(project_root).as_posix().lower())
@@ -209,6 +289,9 @@ def _iter_git_tracked_and_unignored_files(project_root: Path) -> list[Path] | No
     except (FileNotFoundError, subprocess.CalledProcessError):
         return None
 
+    # Load user-defined exclusion patterns
+    exclusion_patterns = _load_scan_exclusions(project_root)
+
     files: list[Path] = []
     for raw_rel in proc.stdout.split(b"\0"):
         if not raw_rel:
@@ -218,6 +301,9 @@ def _iter_git_tracked_and_unignored_files(project_root: Path) -> list[Path] | No
         if any(part in EXCLUDED_DIRS for part in rel.parts):
             continue
         if rel.suffix in {".pyc", ".pyo", ".tmp"}:
+            continue
+        # Check user-defined exclusions
+        if _matches_exclusion(rel_posix, exclusion_patterns):
             continue
         path = project_root / Path(rel_posix)
         if path.exists() and path.is_file():
