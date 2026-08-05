@@ -144,6 +144,8 @@ def sanitize_ascii(text: str) -> str:
     # Catch-all: replace any remaining Private Use Area characters (U+E000-U+F8FF)
     import re as _re
     text = _re.sub(r"[\ue000-\uf8ff]", "", text)
+    # Final catch-all: strip any remaining non-ASCII characters
+    text = text.encode("ascii", errors="ignore").decode("ascii")
     return text
 
 

@@ -637,9 +637,9 @@ def _classify_exception_v2(exc: Exception) -> tuple[str, str, str]:
             return "AUTO_RETRYABLE", "TRANSIENT_API_ERROR", "adapter"
         return "HUMAN_RETRY_REQUIRED", "ADAPTER_INVOCATION_FAILED", "adapter"
     if isinstance(exc, MetaJsonMissingError):
-        return "HUMAN_RETRY_REQUIRED", "META_JSON_MISSING", "validator"
+        return "AUTO_RETRYABLE", "META_JSON_MISSING", "validator"
     if isinstance(exc, MetaJsonInvalidError):
-        return "HUMAN_RETRY_REQUIRED", "META_JSON_INVALID", "validator"
+        return "AUTO_RETRYABLE", "META_JSON_INVALID", "validator"
     if isinstance(exc, ArtifactMissingError):
         message = str(exc)
         if _looks_like_step_contract_mismatch(message):

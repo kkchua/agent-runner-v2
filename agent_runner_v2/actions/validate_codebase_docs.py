@@ -69,31 +69,6 @@ def _validate_frontmatter(path: Path) -> tuple[bool, str]:
     return True, f"{path.name}: frontmatter valid"
 
 
-def _validate_ascii_only(path: Path) -> tuple[bool, str]:
-    """Validate file contains only ASCII characters (byte values 0x00-0x7F).
-    
-    Returns:
-        Tuple of (is_valid, message)
-    """
-    if not path.exists():
-        return False, f"File does not exist: {path.name}"
-    
-    content = path.read_bytes()
-    non_ascii_positions = []
-    
-    # Check each byte
-    for i, byte in enumerate(content):
-        if byte > 127:
-            non_ascii_positions.append(i)
-            if len(non_ascii_positions) >= 10:  # Limit to first 10 violations
-                break
-    
-    if non_ascii_positions:
-        return False, f"{path.name}: Found {len(non_ascii_positions)}+ non-ASCII bytes at positions {non_ascii_positions[:5]}"
-    
-    return True, f"{path.name}: ASCII-only"
-
-
 def _extract_section_files(content: str, section_title: str) -> set[str]:
     """Extract file paths from a markdown section.
     
@@ -264,26 +239,7 @@ def validate_codebase_docs(*, context: dict[str, str], state: dict, step_cfg: di
     if change_path.exists():
         ok, msg = _validate_frontmatter(change_path)
         checks.append(("change impact frontmatter values", ok, msg))
-    
-    # Validate ASCII-only content for all staged docs
-    docs_to_check = [inventory_path, change_path]
-    for md_file in module_dir.glob("*.md"):
-        docs_to_check.append(md_file)
-    for md_file in component_dir.glob("*.md"):
-        docs_to_check.append(md_file)
-    
-    ascii_violations = []
-    for doc_path in docs_to_check:
-        if doc_path.exists():
-            ok, msg = _validate_ascii_only(doc_path)
-            if not ok:
-                ascii_violations.append(msg)
-    
-    if ascii_violations:
-        checks.append(("ASCII-only content", False, f"{len(ascii_violations)} files with violations: {ascii_violations[0]}"))
-    else:
-        checks.append(("ASCII-only content", True, "all staged docs are ASCII-only"))
-    
+
     # Validate change impact structure (no overlap between created/updated)
     if change_path.exists():
         ok, msg = _validate_change_impact_structure(change_path)

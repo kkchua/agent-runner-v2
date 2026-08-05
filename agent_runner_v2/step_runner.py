@@ -55,7 +55,6 @@ from .constants import (
     repo_governance_rel,
     SIDECAR_INSTRUCTION_TEMPLATE as CONSTANTS_SIDECAR_INSTRUCTION_TEMPLATE,
     TOOL_INSTRUCTION_TEMPLATE as CONSTANTS_TOOL_INSTRUCTION_TEMPLATE,
-    ASCII_ONLY_INSTRUCTION,
     SECTION_HEADING_RULE,
     GOVERNANCE_PATH_REFERENCE_RULE,
     CODER_SOP_INSTRUCTION_TEMPLATE,
@@ -514,7 +513,7 @@ def _read_and_validate_meta_json(path: Path) -> dict:
         )
 
     try:
-        meta = json.loads(path.read_text(encoding="utf-8"))
+        meta = json.loads(path.read_text(encoding="utf-8-sig"))
     except (json.JSONDecodeError, OSError) as exc:
         raise MetaJsonInvalidError(
             f"meta.json at {path} is not valid JSON: {exc}"
@@ -703,7 +702,7 @@ def _repair_or_validate_meta_json(
 
         if meta_path.exists() and meta_path.is_file():
             try:
-                existing = json.loads(meta_path.read_text(encoding="utf-8"))
+                existing = json.loads(meta_path.read_text(encoding="utf-8-sig"))
             except (json.JSONDecodeError, OSError):
                 existing = None
             repaired = _coerce_direct_result_to_meta(
@@ -2525,7 +2524,6 @@ def render_prompt(template_text: str, context: dict[str, str], step_cfg: dict | 
         rendered = rendered + block
         print("[render_prompt] TOOL_INSTRUCTION appended", flush=True)
 
-    rendered += ASCII_ONLY_INSTRUCTION
     rendered += SECTION_HEADING_RULE
     rendered += GOVERNANCE_PATH_REFERENCE_RULE
     workflow_bundle = (step_cfg or {}).get("_workflow_bundle")
