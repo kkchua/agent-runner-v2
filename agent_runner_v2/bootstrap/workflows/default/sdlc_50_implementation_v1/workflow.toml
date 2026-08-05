@@ -116,7 +116,7 @@ target_artifact = "IMPL_FILE"
 edit_mode = "in_place"
 result_meta_key = "IMPL_FILE"
 
-loop_returns_to = "review_implementation"
+onsuccess = "review_implementation"
 
 [step.coder]
 role_policy = "architect_standard"

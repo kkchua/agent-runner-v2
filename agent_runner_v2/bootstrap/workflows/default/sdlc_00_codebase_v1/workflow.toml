@@ -6,7 +6,7 @@ job_prefix = "SDLC00CB"
 description = "Periodic sync of repository code to codebase documentation with staging, review, and publish."
 visibility = "canonical"
 default_max_rejects = 2
-init_step = "create_backup"
+init_step = "sync_codebase_docs"
 
 # Layer 2 platform contract references
 layer = "layer3"
@@ -17,20 +17,7 @@ include_in_prompts = true
 prompt_targets = ["all"]
 
 # ============================================================================
-# Step 1: Create Backup
-# ============================================================================
-[[step]]
-name = "create_backup"
-action = "create_backup"
-enable_notifications = true
-onsuccess = "sync_codebase_docs"
-
-[step.artifacts]
-produces = ["CODEBASE_BACKUP"]
-result_meta_key = "CODEBASE_BACKUP"
-
-# ============================================================================
-# Step 2: Sync Codebase Docs (staging to runs/<job_id>/)
+# Step 1: Sync Codebase Docs (staging to runs/<job_id>/)
 # ============================================================================
 [[step]]
 name = "sync_codebase_docs"
@@ -45,7 +32,7 @@ produces = ["CODEBASE_CHANGE_IMPACT", "CODEBASE_INVENTORY"]
 result_meta_key = "CODEBASE_CHANGE_IMPACT"
 
 # ============================================================================
-# Step 3: Generate Sync Log
+# Step 2: Generate Sync Log
 # ============================================================================
 [[step]]
 name = "generate_sync_log"
@@ -59,7 +46,7 @@ produces = ["SYNC_LOG"]
 result_meta_key = "SYNC_LOG"
 
 # ============================================================================
-# Step 4: Review Sync Log (human approval gate)
+# Step 3: Review Sync Log (human approval gate)
 # ============================================================================
 [[step]]
 name = "review_sync_log"
@@ -84,12 +71,13 @@ exhausted_failure_code = "CODEBASE_SYNC_REFINEMENT_EXHAUSTED"
 exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
 
 # ============================================================================
-# Step 5: Refine Codebase Docs (conditional)
+# Step 4: Refine Codebase Docs (conditional)
 # ============================================================================
 [[step]]
 name = "refine_codebase_docs"
 prompt = "prompts/05_refine_codebase_docs.txt"
 enable_notifications = true
+onsuccess = "review_sync_log"
 
 [step.artifacts]
 required_inputs = ["CODEBASE_INVENTORY", "CODEBASE_CHANGE_IMPACT", "REVIEW_FILE_SUGGESTED"]
@@ -98,13 +86,11 @@ target_artifact = "CODEBASE_INVENTORY"
 edit_mode = "in_place"
 result_meta_key = "CODEBASE_INVENTORY"
 
-loop_returns_to = "review_sync_log"
-
 [step.coder]
 role_policy = "architect_standard"
 
 # ============================================================================
-# Step 6: Validate Codebase Docs
+# Step 5: Validate Codebase Docs
 # ============================================================================
 [[step]]
 name = "validate_codebase_docs"
@@ -112,7 +98,7 @@ action = "validate_codebase_docs"
 mode = "reconcile"
 staging_root = "docs/repo/codebase/runs/{job_id}"
 enable_notifications = true
-onsuccess = "publish_codebase_docs"
+onsuccess = "create_backup"
 
 [step.artifacts]
 required_inputs = ["CODEBASE_INVENTORY", "CODEBASE_CHANGE_IMPACT"]
@@ -125,6 +111,19 @@ artifact = "CODEBASE_INVENTORY"
 max_iterations = 2
 exhausted_failure_code = "CODEBASE_VALIDATION_REFINEMENT_EXHAUSTED"
 exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
+
+# ============================================================================
+# Step 6: Create Backup (before publish)
+# ============================================================================
+[[step]]
+name = "create_backup"
+action = "create_backup"
+enable_notifications = true
+onsuccess = "publish_codebase_docs"
+
+[step.artifacts]
+produces = ["CODEBASE_BACKUP"]
+result_meta_key = "CODEBASE_BACKUP"
 
 # ============================================================================
 # Step 7: Publish Codebase Docs (copies runs/ to current/)

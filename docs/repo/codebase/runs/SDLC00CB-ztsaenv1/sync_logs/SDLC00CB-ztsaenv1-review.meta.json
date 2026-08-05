@@ -1,0 +1,5 @@
+{
+  "result": "Review of codebase sync SDLC00CB-ztsaenv1 completed. Decision: REJECTED. Two critical defects found: (1) sync log scan_policy=exclude instead of include, (2) non-ASCII mojibake in agent-runner-v2-run-agent.md line 24.",
+  "artifacts_produced": ["REVIEW_FILE_SUGGESTED"],
+  "status": "REJECTED"
+}
