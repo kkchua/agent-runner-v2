@@ -195,7 +195,7 @@ def _validate_review_consistency(review_path: Path, meta_path: Path) -> tuple[bo
     if review_decision is None:
         return False, f"{review_path.name}: No explicit decision found"
 
-    meta_status = meta.get("status")
+    meta_status = meta.get("coder_result", {}).get("status") or meta.get("status")
 
     if review_decision != meta_status:
         return False, f"{review_path.name}: Review says {review_decision}, meta.json says {meta_status}"
