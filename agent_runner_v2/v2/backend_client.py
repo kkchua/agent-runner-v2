@@ -23,6 +23,7 @@ class V2BackendClient:
 
     base_url: str
     timeout_seconds: int = 30
+    api_key: str | None = None
 
     def _url(self, path: str, query: dict[str, str] | None = None) -> str:
         base = self.base_url.rstrip("/")
@@ -40,6 +41,8 @@ class V2BackendClient:
     ) -> dict[str, Any]:
         data = None
         headers = {"Accept": "application/json"}
+        if self.api_key:
+            headers["X-API-Key"] = self.api_key
         if payload is not None:
             data = json.dumps(payload).encode("utf-8")
             headers["Content-Type"] = "application/json"

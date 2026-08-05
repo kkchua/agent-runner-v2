@@ -57,7 +57,10 @@ def _sync_backend_after_override_step(*, state: dict[str, Any], step_name: str) 
     if not v2_url:
         return "backend sync skipped: v2_backend_url not configured"
 
-    V2BackendClient(v2_url).reset_step(run_id=run_id, step_name=step_name)
+    from .v2.sync import resolve_v2_api_key
+
+    api_key = resolve_v2_api_key()
+    V2BackendClient(v2_url, api_key=api_key).reset_step(run_id=run_id, step_name=step_name)
     return None
 
 

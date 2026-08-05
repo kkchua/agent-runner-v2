@@ -101,7 +101,7 @@ produces = [
 target_artifact = "L1_FOUNDATION_INDEX"
 edit_mode = "in_place"
 result_meta_key = "L1_FOUNDATION_INDEX"
-loop_returns_to = "review_governance_foundation_docs"
+onsuccess = "review_governance_foundation_docs"
 
 [step.coder]
 role_policy = "refine_standard"

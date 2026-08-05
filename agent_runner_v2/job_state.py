@@ -1666,7 +1666,7 @@ def _handle_refine_success(
     loop_returns_to = step_cfg["loop_returns_to"]
     ctx = state.get("loop_context", {})
     target_key = ctx.get("loop_target_artifact") or step_cfg.get("target_artifact", "IMPL_FILE")
-    return complete_recovery_step(
+    state, exit_code = complete_recovery_step(
         state=state,
         step=step,
         target_key=target_key,
@@ -1686,6 +1686,15 @@ def _handle_refine_success(
         checksum_file=_md5_file,
         reset_replan_context=False,
     )
+    if exit_code == 0:
+        # Clear stale review state so the outcome queue doesn't send a
+        # contradictory review.decision=REJECTED alongside outcome=approved.
+        review_state = state.get("review_state") or {}
+        review_state["review_decision"] = None
+        review_state["review_decided_at"] = None
+        review_state["final_decision"] = None
+        review_state["final_decision_source"] = None
+    return state, exit_code
 
 
 def _handle_replan_success(

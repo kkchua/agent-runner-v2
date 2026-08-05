@@ -151,8 +151,10 @@ def _post_sync(
 ) -> dict:
     """POST a V2-format workflow definition to the backend sync endpoint."""
     from .v2.backend_client import V2BackendClient
+    from .v2.sync import resolve_v2_api_key
 
-    client = V2BackendClient(backend_url)
+    api_key = resolve_v2_api_key()
+    client = V2BackendClient(backend_url, api_key=api_key)
     return client.sync_workflow(
         workflow_name=workflow_name,
         definition=definition,

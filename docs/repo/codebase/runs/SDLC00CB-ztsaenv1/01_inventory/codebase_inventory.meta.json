@@ -1,0 +1,22 @@
+{
+  "artifact_key": "CODEBASE_INVENTORY",
+  "artifact_path": "docs/repo/codebase/runs/SDLC00CB-ztsaenv1/01_inventory/codebase_inventory.md",
+  "schema_version": "v2",
+  "verification": {
+    "frontmatter_compliant": true,
+    "ascii_only": true,
+    "required_fields": {
+      "doc_type": "system",
+      "authority": "workflow-generated",
+      "scan_policy": "include",
+      "lifecycle_status": "approved",
+      "version": "1.0.0"
+    }
+  },
+  "refinement_status": {
+    "findings_addressed": 0,
+    "findings_out_of_scope": 2,
+    "note": "Review findings F-001 (sync log scan_policy) and F-002 (module doc non-ASCII) are outside allowed write paths for this step. Inventory artifact passes all governance checks. No changes applied to codebase_inventory.md."
+  },
+  "recorded_at": "2026-08-05T15:50:27+08:00"
+}

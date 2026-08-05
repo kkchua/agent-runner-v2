@@ -38,6 +38,24 @@ def resolve_v2_backend_url() -> str | None:
     return None
 
 
+def resolve_v2_api_key() -> str | None:
+    """Resolve the V2 backend API key from config or environment.
+
+    Returns the API key if configured, None otherwise.
+    Priority: env var > config.json > None
+    """
+    env_key = os.environ.get("AGENT_RUNNER_V2_API_KEY", "").strip()
+    if env_key:
+        return env_key
+
+    config = load_runner_config()
+    config_key = str(config.get("v2_api_key") or "").strip()
+    if config_key:
+        return config_key
+
+    return None
+
+
 def is_v2_enabled() -> bool:
     """Return True if V2 backend is configured and should be used."""
     return resolve_v2_backend_url() is not None
@@ -125,7 +143,8 @@ def sync_outcome_v2(
     """
     from .backend_client import V2BackendClient
 
-    client = V2BackendClient(backend_url)
+    api_key = resolve_v2_api_key()
+    client = V2BackendClient(backend_url, api_key=api_key)
     payload = build_v2_outcome_payload(step_result=step_result, state=state)
 
     last_exc: Exception | None = None

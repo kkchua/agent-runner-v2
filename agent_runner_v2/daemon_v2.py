@@ -523,8 +523,11 @@ def run_supervisor(*, config: SupervisorConfig, v2_url: str) -> int:
     The daemon validates the worker exists and is active on startup, then only
     sends heartbeats and claims work — no auto-registration.
     """
+    from .v2.sync import resolve_v2_api_key
+
     logger = DaemonLogger(config.log_file, config.worker_id)
-    client = V2BackendClient(v2_url)
+    api_key = resolve_v2_api_key()
+    client = V2BackendClient(v2_url, api_key=api_key)
 
     # Startup validation: verify worker exists and is enabled in backend
     # Retry indefinitely on connection errors (backend may be temporarily down)

@@ -117,7 +117,7 @@ target_artifact = "INIT_FILE"
 edit_mode = "in_place"
 result_meta_key = "INIT_FILE"
 
-loop_returns_to = "review_initiative"
+onsuccess = "review_initiative"
 
 [step.coder]
 role_policy = "architect_standard"
