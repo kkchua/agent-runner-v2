@@ -741,19 +741,6 @@ This requirement is MANDATORY - failure to follow these steps will cause workflo
 """
 
 
-ASCII_ONLY_INSTRUCTION = """
-
-## Output Encoding Rule
-
-All generated documents MUST use ASCII characters only.
-- Use plain hyphens (-) for dashes. Do NOT use em-dashes or en-dashes.
-- Use straight quotes (" and ') for quotations. Do NOT use curly quotes.
-- Do NOT use any other Unicode characters (bullets, arrows, ellipsis, etc.).
-- If your editor or model produces non-ASCII characters, replace them before writing.
-- NEVER call sanitization tools on JSON files (meta.json, .meta.json, etc.) — only on .md documentation files if needed.
-"""
-
-
 SECTION_HEADING_RULE = r"""
 
 ## Section Heading Rule

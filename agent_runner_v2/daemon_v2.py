@@ -502,10 +502,21 @@ def _process_queue(client: V2BackendClient, logger: DaemonLogger) -> None:
                 "next_step": next_step, "file": str(file_path),
             })
         except Exception as exc:
-            logger.log("warning", "daemon_v2_queue_report_failed", message=str(exc), details={
-                "step_run_id": step_run_id, "file": str(file_path),
-            })
-            # Leave file in queue for retry on next poll cycle
+            error_str = str(exc)
+            # Permanent failures: backend will never accept this outcome
+            # (step run deleted, run cancelled, etc.)
+            is_permanent = "status=404" in error_str or "status=409" in error_str
+            if is_permanent:
+                outcome_queue.fail_outcome(file_path)
+                logger.log("warning", "daemon_v2_queue_permanent_failure", message=f"outcome moved to failed (permanent error)", details={
+                    "step_run_id": step_run_id, "file": str(file_path),
+                    "error": error_str[:200],
+                })
+            else:
+                logger.log("warning", "daemon_v2_queue_report_failed", message=str(exc), details={
+                    "step_run_id": step_run_id, "file": str(file_path),
+                })
+                # Leave file in queue for retry on next poll cycle (transient error)
 
 
 # ---------------------------------------------------------------------------

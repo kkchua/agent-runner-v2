@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-run_agent.py â€” Main CLI entry point for agent_runner_v2.
+run_agent.py -- Main CLI entry point for agent_runner_v2.
 
-Orchestration only: load config â†’ resolve job â†’ preflight â†’ prompt â†’ run_step â†’ route.
+Orchestration only: load config -> resolve job -> preflight -> prompt -> run_step -> route.
 
 Related: IMPL-20260422-04
 
@@ -393,7 +393,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
     if command == "install":
         p = argparse.ArgumentParser(description="Install and sync workflow packages. Run without arguments to install all workflows, or specify a workflow name.")
-        p.add_argument("workflow_name", nargs="?", default="", help="Workflow name to install (optional — omit to install all).")
+        p.add_argument("workflow_name", nargs="?", default="", help="Workflow name to install (optional -- omit to install all).")
         ns = p.parse_args(raw[1:])
         ns.command = "install"
         return ns
@@ -917,7 +917,7 @@ def main(argv: list[str] | None = None) -> int:
             flush=True,
         )
 
-    # Mark review state started (job.json only â€” no markdown writes in v2)
+    # Mark review state started (job.json only -- no markdown writes in v2)
     _mark_review_started(state, step=step, step_cfg=step_cfg, coder_used=coder_used)
     save_job(args.template_group, state["job_id"], state)
 
