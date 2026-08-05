@@ -151,39 +151,55 @@ def _validate_change_impact_structure(path: Path) -> tuple[bool, str]:
 
 def _validate_review_consistency(review_path: Path, meta_path: Path) -> tuple[bool, str]:
     """Validate review decision in document matches meta.json status.
-    
+
     Returns:
         Tuple of (is_valid, message)
     """
     if not review_path.exists():
         return False, f"Review file does not exist: {review_path.name}"
-    
+
     if not meta_path.exists():
         return False, f"Meta file does not exist: {meta_path.name}"
-    
+
     review_content = review_path.read_text(encoding="utf-8")
-    
+
     try:
         meta = json.loads(meta_path.read_text(encoding="utf-8"))
     except json.JSONDecodeError as e:
         return False, f"Invalid JSON in {meta_path.name}: {e}"
-    
+
     # Extract decision from review document
-    # Look for explicit APPROVED or REJECTED markers
+    # Look for explicit APPROVED or REJECTED markers in various formats:
+    # - "Decision: APPROVED" (inline with colon)
+    # - "**APPROVED**" (bold markdown)
+    # - "## Decision\n\nAPPROVED" (heading followed by plain text on own line)
     review_decision = None
+    
+    # Check for inline formats first
     if "Decision: APPROVED" in review_content or "**APPROVED**" in review_content:
         review_decision = "APPROVED"
     elif "Decision: REJECTED" in review_content or "**REJECTED**" in review_content:
         review_decision = "REJECTED"
-    
+    else:
+        # Check for plain text decision after ## Decision heading
+        # Look for lines containing only APPROVED or REJECTED (case-insensitive)
+        for line in review_content.splitlines():
+            stripped = line.strip().upper()
+            if stripped == "APPROVED":
+                review_decision = "APPROVED"
+                break
+            elif stripped == "REJECTED":
+                review_decision = "REJECTED"
+                break
+
     if review_decision is None:
         return False, f"{review_path.name}: No explicit decision found"
-    
+
     meta_status = meta.get("status")
-    
+
     if review_decision != meta_status:
         return False, f"{review_path.name}: Review says {review_decision}, meta.json says {meta_status}"
-    
+
     return True, f"{review_path.name}: Decision consistent ({review_decision})"
 
 
