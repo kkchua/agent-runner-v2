@@ -5,8 +5,11 @@
 **Workflow name:** `product_master_gen_v2`
 **Label:** Product Master Generator v2
 **Job prefix:** `PRDM`
+**Init step:** `scan_sources`
 **Description:** Generates a canonical Product Master document that consolidates
-knowledge about a single product from diverse input sources.
+knowledge about a single product from diverse input sources (URLs, images, PDFs,
+data files, marketing materials, user notes). Supports incremental updates when
+an existing Product Master is provided.
 
 ## Purpose
 
@@ -20,48 +23,52 @@ researching it.
 and runs the workflow.
 
 **Outcome:** A structured markdown Product Master document containing all
-relevant product knowledge organized into logical sections.
+relevant product knowledge organized into logical sections, with source
+attribution and explicit knowledge gaps.
 
-## Inputs
+## Workflow Type
 
-**PRODUCT_SOURCE_DIR** — Path to directory containing product source files.
-Supported types (all optional, use whatever is available):
-- Product URLs (text files with URLs)
+**Mixed** -- Action step for source scanning, prompt-driven steps for content
+extraction, assembly, and review.
+
+## Input Artifacts
+
+| Context Variable | Description | Required? |
+|---|---|---|
+| `PRODUCT_SOURCE_DIR` | Directory containing product source files (hardcoded in context_extensions.py, NOT a required_input) | Yes |
+| `PRODUCT_MASTER_INPUT` | Existing Product Master for incremental updates (optional) | No |
+
+**Supported source types** (all optional, use whatever is available):
+- Product URLs (text files with URLs, one per line)
 - Product images (PNG, JPG, WEBP)
 - PDFs (manuals, brochures, specifications)
 - Data files (CSV, XLSX)
 - Marketing materials (DOCX, MD, TXT)
 - User notes (MD, TXT)
 
-**PRODUCT_MASTER_FILE** (optional) — Existing Product Master for incremental
-updates. If provided, the workflow should merge new knowledge and add a
-Changelog.
+## Output Artifacts
 
-## Outputs
+| Artifact Key | Filename Pattern | Description |
+|---|---|---|
+| `SOURCE_INVENTORY` | `SOURCE_INV-{date}-{seq}_{slug}.md` | Catalog of all discovered source files with type classification |
+| `EXTRACTED_CONTENT` | `EXTRACT-{date}-{seq}_{slug}.md` | Raw extracted content from all sources, with source attribution |
+| `PRODUCT_MASTER_FILE` | `PRODUCT_MASTER-{date}-{seq}_{slug}.md` | The assembled canonical Product Master document |
+| `REVIEW_FILE_SUGGESTED` | `PRDM-REV-{date}-{seq}_{slug}.md` | Quality review of the Product Master |
 
-**PRODUCT_MASTER_FILE** — The assembled canonical Product Master document.
+## Product Master Content Requirements
 
-The Product Master should be a comprehensive markdown document with:
-- YAML frontmatter (product name, source count, completeness)
-- Table of contents
-- Knowledge sections organized logically
-- Source attribution where claims trace to input files
-- Changelog (if incremental update)
+The Product Master must contain at minimum these sections:
 
-## Knowledge Sections
-
-The Product Master should contain at minimum these sections:
-
-1. **Product Information** — Factual data: name, brand, model, dimensions,
+1. **Product Information** -- Factual data: name, brand, model, dimensions,
    materials, technical specs, package contents, certifications.
 
-2. **Target Audience** — Demographics, buyer personas, use cases, market
+2. **Target Audience** -- Demographics, buyer personas, use cases, market
    segment, psychographic indicators.
 
-3. **Benefits & USP** — Value proposition, key benefits, problems solved,
+3. **Benefits & USP** -- Value proposition, key benefits, problems solved,
    competitive differentiators with supporting evidence.
 
-4. **Marketing Assets** — Brand assets found, visual inventory, trending
+4. **Marketing Assets** -- Brand assets found, visual inventory, trending
    topics, social hooks, campaign angles.
 
 The workflow should analyze the input sources and determine if additional
@@ -76,41 +83,51 @@ sections would be valuable based on the product type. For example:
 - Identify conflicting information clearly (both sides + sources).
 - Represent missing information as explicit knowledge gaps.
 - Remain independent of downstream workflows (no campaign/media assumptions).
-- Use slug from PRODUCT_SOURCE_DIR name for consistent artifact naming.
-- Support incremental updates (merge + changelog).
+- Use slug derived from PRODUCT_SOURCE_DIR name for consistent artifact naming.
+- Support incremental updates: when PRODUCT_MASTER_INPUT is provided, merge
+  new knowledge and add a Changelog section with dated entries.
+- URL files contain one URL per line; the LLM should fetch and process them.
+- Not all source types will be present -- the workflow must handle any
+  combination gracefully.
 
-## Design Decisions for the Builder
+## Quality Requirements
 
-The builder should determine the optimal architecture for this workflow:
+The final Product Master must pass these quality checks:
 
-- **Section generation strategy:** Generate all sections in one step or
-  parallel independent steps? What makes sense for data flow and review?
+- **Source attribution** -- Claims trace back to specific input files.
+- **Completeness** -- All available sources were processed and their content
+  represented (or explicitly noted as gaps).
+- **No hallucination** -- No information invented beyond what sources provide.
+- **Conflict detection** -- Contradictory information from different sources
+  is flagged with both sides cited.
+- **Downstream agnostic** -- No assumptions about how downstream workflows
+  will use the Product Master.
+- **YAML frontmatter** -- Product name, source count, completeness score,
+  generation date.
 
-- **Quality control:** How should validation be handled? Where do gatekeepers
-  add value in this specific workflow?
+## Builder Instructions
 
-- **Review strategy:** What review points make sense? Should there be
-  per-section reviews, a consolidated review, or both?
+**Step architecture:** The builder shall propose the step sequence based on
+the domain requirements above. The workflow is NOT a meta-workflow, so TDD
+loop is not required. Suggested phase decomposition (builder may adjust):
 
-- **Self-Validation:** Which producer steps benefit from self-checking
-  before reporting completion?
+1. **Scan phase** -- Discover and catalog all source files in PRODUCT_SOURCE_DIR
+2. **Extract phase** -- Process each source type and extract content
+3. **Assemble phase** -- Synthesize extracted content into the Product Master
+4. **Review phase** -- Quality review against the constraints above
+5. **Refine phase** -- Fix issues found in review (conditional)
 
-- **Action steps:** What custom actions are needed (input scanning, etc.)?
+**Action reuse:** Check if existing actions can be reused before defining new ones.
+A `scan_product_sources` action for file discovery is likely needed (deterministic
+directory scan). Other steps should be prompt-driven.
 
-- **Artifact structure:** Should sections be separate artifacts or a
-  single assembled document? Consider modularity vs simplicity.
-
-- **Routing:** How should refinement loops work? What triggers APPROVED
-  vs REJECTED at each review point?
-
-The builder should apply the gatekeeper pattern, self-validation, and
-principles-based generation where they add value, but is not constrained
-to any specific number of steps or gatekeepers.
+**Gatekeepers:** The builder should determine where QC gates add value. At minimum,
+a quality gate after assembly (before final review) is recommended.
 
 ## Notes
 
-- The workflow should not assume all source types are present.
-- URL files contain one URL per line; the LLM should fetch and process them.
-- The output should be downstream-agnostic (no execution assumptions).
+- The output must be downstream-agnostic (no execution assumptions).
 - The design should balance extensibility (easy to add sections later)
   with simplicity (don't over-engineer for the current use case).
+- Reference: `agnes_media_gen_v1` shows the pattern for multi-source
+  directory scanning and archive handling.
