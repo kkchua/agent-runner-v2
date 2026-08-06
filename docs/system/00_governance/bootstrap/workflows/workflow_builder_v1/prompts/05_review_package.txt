@@ -49,8 +49,10 @@ Review Checklist
    - build_context_extensions() returns absolute paths
    - install_to_global() method is present
    - sync_to_backend() method is present
-   - All artifact keys from workflow.toml produces lists appear in
-     register_artifact_keys()
+   - All artifact keys from workflow.toml produces AND required_inputs
+     lists appear in register_artifact_keys() (both outputs and inputs
+     must be registered — the backend needs input registrations to
+     resolve bare filenames from the operator console)
    - Module, class, and methods have docstrings
 
 3. Prompt file checks:

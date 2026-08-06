@@ -95,6 +95,10 @@ class YourWorkflowExtensions(WorkflowExtensions):
         date_str = dt.datetime.now().strftime("%Y%m%d")
         run_root = f"docs/repo/your_area/runs/{job_id}"
         return {
+            # Input artifact — register inputs so the backend can resolve
+            # bare filenames from the operator console
+            "YOUR_INPUT_FILE": f"docs/repo/your_area/inputs/INPUT-{{seq}}_{{slug}}.md",
+            # Output artifacts
             "YOUR_OUTPUT_ARTIFACT": f"{run_root}/OUTPUT-{date_str}.md",
             "REVIEW_FILE_SUGGESTED": f"{run_root}/{job_id}-review.md",
         }
@@ -461,6 +465,11 @@ class MyWorkflowExtensions(WorkflowExtensions):
 3. Use `SDLC_DELIVERY_BASE` from `constants.py` for SDLC delivery paths.
 4. Use `resolve_next_seq()` from `constants.py` for auto-incrementing
    sequence numbers in filenames.
+5. **Register BOTH inputs and outputs** — include path templates for
+   ALL artifacts the workflow uses, not just outputs. Input artifacts
+   from init step `required_inputs` must be registered so the backend
+   can resolve bare filenames submitted by the operator console. Missing
+   input registrations cause "Missing required input artifact(s)" errors.
 
 #### `build_context_extensions()` rules
 

@@ -86,11 +86,13 @@ Output Instructions
 - Write files to the run directory (parent of {WORKFLOW_MANIFEST}).
 - Create prompts/ subdirectory for prompt files.
 - All files must be ASCII-only.
-- Report ALL artifacts in meta.json:
+- Report ONLY the declared artifact keys in meta.json. Do NOT invent new keys.
+  Individual prompt files (prompts/*.txt) are NOT separate artifacts — they are
+  covered by WORKFLOW_PROMPTS_INDEX. Report only these keys:
   - WORKFLOW_MANIFEST: path to workflow.toml
   - WORKFLOW_EXTENSIONS: path to context_extensions.py
   - WORKFLOW_ACTIONS: path to actions.py (if generated)
-  - WORKFLOW_PROMPTS_INDEX: path to prompts index
+  - WORKFLOW_PROMPTS_INDEX: path to prompts index document
   - WORKFLOW_README: path to README.md
   - WORKFLOW_ENV_SAMPLE: path to .env.sample (if generated)
   - WORKFLOW_CONFIG_SAMPLE: path to config.json.sample (if generated)
@@ -114,3 +116,6 @@ Forbidden Content
 - Hardcoded absolute paths in register_artifact_keys()
 - Missing stepCompletion terminal step
 - Omitting WORKFLOW_ACTIONS from meta.json when actions.py exists
+- Inventing artifact keys not in the declared produces list (e.g.
+  WORKFLOW_PROMPT_01, WORKFLOW_PROMPT_02). Prompt files belong under
+  WORKFLOW_PROMPTS_INDEX, not as individual artifact keys.
