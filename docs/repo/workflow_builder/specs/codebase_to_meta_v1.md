@@ -1,5 +1,14 @@
 # Workflow Specification: Codebase to Meta Content v1
 
+> Save to `docs/repo/workflow_builder/specs/codebase_to_meta_v1.md`.
+> The workflow builder reads this document and generates the complete
+> workflow package.
+>
+> **Key principle:** Describe WHAT the workflow does. The builder infers HOW
+> to structure it (step sequence, routing, role policies, gatekeepers).
+> See [BUILDER_REQUIREMENTS.md](../current/BUILDER_REQUIREMENTS.md) for what
+> the builder enforces automatically.
+
 ## Overview
 
 **Workflow name:** `codebase_to_meta_v1`
@@ -40,8 +49,10 @@ for content generation and review.
 
 ## Input Artifacts
 
-**No user-provided inputs.** All paths are hardcoded as context variables
-in `context_extensions.py`:
+**No user-provided inputs.** All paths are resolved from the repo structure
+at runtime.
+
+## Context Variables
 
 | Context Variable | Hardcoded Path | Description |
 |---|---|---|
@@ -185,26 +196,22 @@ Follows the same pattern as `sdlc_00_codebase_v1`:
 
 ## Builder Instructions
 
-**Step architecture:** The builder shall propose the step sequence based on
-the domain requirements above. Suggested phase decomposition (builder may adjust):
+**Domain phases** (builder determines step sequence):
 
-1. **Scan phase** -- Discover audience definitions, catalog codebase docs
-2. **Generate phase** -- Produce meta content per audience (may be one step
-   per audience or a single step iterating over all audiences)
-3. **Review phase** -- Quality review against constraints above
-4. **Refine phase** -- Fix issues (conditional)
-5. **Publish phase** -- Backup, history, copy to current/ with manifest
+1. **Scan** -- Discover audience definitions from `audiences/` directory
+2. **Generate** -- Produce one meta content file per audience
+3. **Review** -- Quality review against constraints above
+4. **Refine** -- Fix issues from review (conditional)
+5. **Publish** -- Backup, history, copy to `current/` with manifest
 
-**Action reuse:** Check if existing actions can be reused. A `scan_audiences`
-action for audience discovery is likely needed. Publish actions (backup,
-history, copy to current) may reuse patterns from `sdlc_00_codebase_v1`.
+**Domain constraints:**
 
-**Gatekeepers:** The builder should determine where QC gates add value. At
-minimum, a quality gate after generation (before review) is recommended.
+- The `audiences/` directory is part of the workflow package and must be
+  deployed to the global runner home at install time.
+- Publish lifecycle follows the same staging pattern as `sdlc_00_codebase_v1`
+  (stage → review → refine → backup → history → publish).
 
-**install_to_global():** The `audiences/` directory must be deployed to the
-global runner home. The workflow's `context_extensions.py` must implement
-real `install_to_global()` logic to copy the audience files.
+**Similar workflow:** `sdlc_00_codebase_v1` uses the same staging/publish pattern.
 
 ## Notes
 

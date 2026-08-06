@@ -37,6 +37,20 @@ Artifact Definition Tasks
    - Include {seq} for auto-incrementing sequence numbers
    - Include {slug} derived from the input specification filename
 
+Self-Critic (Before Self-Validation)
+
+Challenge your reasoning before checking completeness:
+
+1. Am I creating artifact keys for things that aren't separate files?
+2. Are any of these keys redundant or duplicating information another
+   key already captures?
+3. If a downstream step reads this contract, would any path patterns
+   confuse them or fail to resolve?
+4. Did I stay in my lane (artifact definition), or did I leak into step
+   design or workflow routing?
+
+If you find reasoning issues, fix them before proceeding to Self-Validation.
+
 Self-Validation (Before Output)
 
 Before reporting APPROVED, validate:

@@ -17,21 +17,18 @@
 - [1: What is a Workflow Spec](#1-what-is-a-workflow-spec)
 - [2: Before You Start](#2-before-you-start)
 - [3: Section-by-Section Authoring](#3-section-by-section-authoring)
-- [4: Workflow Pattern Reference](#4-workflow-pattern-reference)
-- [5: Role Policy Quick Reference](#5-role-policy-quick-reference)
-- [6: Worked Examples](#6-worked-examples)
-- [7: Common Pitfalls](#7-common-pitfalls)
-- [8: Spec Quality Checklist](#8-spec-quality-checklist)
-- [9: workflow.toml Field Reference](#9-workflowtoml-field-reference)
+- [4: Worked Examples](#4-worked-examples)
+- [5: Common Pitfalls](#5-common-pitfalls)
+- [6: Spec Quality Checklist](#6-spec-quality-checklist)
 
 ---
 
 ## 1: What is a Workflow Spec
 
-A workflow spec is a **single markdown document** that describes everything
-about a workflow -- what it does, what it consumes, what it produces, and
-how it gets there. It is the **sole input** to `workflow_builder_v1`, which
-reads the spec and generates a complete workflow package:
+A workflow spec is a **single markdown document** that describes what a
+workflow does -- its domain problem, inputs, outputs, and constraints. It
+is the **sole input** to `workflow_builder_v1`, which reads the spec and
+generates a complete workflow package:
 
 ```
 spec.md  -->  workflow_builder_v1  -->  workflow package
@@ -44,20 +41,30 @@ spec.md  -->  workflow_builder_v1  -->  workflow package
                                         └── config.json.sample (if needed)
 ```
 
-The spec is the **single source of truth**. If the spec does not mention
-something, the builder will not generate it. If the spec is vague, the
-builder will guess -- and may guess wrong.
+The spec is the **single source of truth** for domain requirements. If the
+spec does not mention something, the builder will not generate it. If the
+spec is vague, the builder will guess -- and may guess wrong.
 
 **Key principle:** The spec describes WHAT the workflow does, not HOW the
-builder should implement it. The builder infers implementation details
-(step types, routing, file structure) from the spec's description of the
-problem domain.
+builder should implement it. The builder automatically infers:
+
+- Step sequence and routing
+- Role policies for each step
+- Gatekeeper placement (4 gatekeepers for meta-workflows)
+- TDD loop for meta-workflows
+- exhausted_failure_code/class on all refine loops
+- init_step detection
+- Action reuse audit
+- Self-critic and self-validation in all prompts
+
+For a complete list of what the builder enforces, see
+[BUILDER_REQUIREMENTS.md](BUILDER_REQUIREMENTS.md).
 
 ---
 
 ## 2: Before You Start
 
-Answer these questions mentally (or jot them down) before writing the spec:
+Answer these questions mentally before writing the spec:
 
 1. **What problem does this workflow solve?** What is the end-to-end
    transformation from input to output?
@@ -66,20 +73,16 @@ Answer these questions mentally (or jot them down) before writing the spec:
    Does another workflow produce the input? Is it manually triggered?
 
 3. **What does the output look like?** A markdown document? Generated
-   images? A published API endpoint? Be specific.
+   images? A published workflow package? Be specific.
 
-4. **Does it need human review?** Should someone approve intermediate
-   results before the workflow continues?
-
-5. **Are there external API calls?** Does the workflow call third-party
+4. **Are there external API calls?** Does the workflow call third-party
    services (image generation, data APIs, etc.)?
 
-6. **Is there retry/rerun logic?** When something fails, should the
-   workflow retry the same step, refine the output, or stop for human
-   intervention?
+5. **What quality requirements must the output meet?** Completeness,
+   accuracy, format, edge cases?
 
-7. **What existing workflows are similar?** Can you model this after an
-   existing pattern? (See Section 4.)
+6. **What existing workflows are similar?** Can you model this after an
+   existing pattern?
 
 ---
 
@@ -94,6 +97,7 @@ Answer these questions mentally (or jot them down) before writing the spec:
 **Label:** Your Workflow Label
 **Job prefix:** `YRWF`
 **Description:** Brief description of what this workflow does.
+**Init step:** `first_step_name`
 ```
 
 **Rules:**
@@ -106,12 +110,13 @@ Answer these questions mentally (or jot them down) before writing the spec:
 - **Label:** Human-readable display name. Use title case.
 
 - **Job prefix:** Exactly 4 uppercase letters. Used for job ID generation
-  (e.g., `WFBUILD-20260730-abc12345`). Choose something mnemonic:
-  - `AMGEN` for Agnes Media Generation
-  - `PRDM` for Product Master
-  - `SDLC` for Software Development Lifecycle
+  (e.g., `WFBUILD-20260730-abc12345`). Choose something mnemonic.
 
 - **Description:** One sentence. What does this workflow do?
+
+- **Init step:** Name of the first step. Leave blank for the builder to
+  determine (it picks the first step, or `generate_test_criteria` for
+  meta-workflows).
 
 ### 3.2: Purpose
 
@@ -142,11 +147,7 @@ Declare one of:
 | **Action-only** | Python actions only, no LLM invocations | Bootstrap admin, data processing |
 | **Mixed** | Combination of prompt-driven and action steps | Media generation (LLM + API calls) |
 
-If you leave this blank, the builder will infer from your step descriptions.
-Being explicit is better.
-
-For mixed workflows, specify which steps are prompt-driven and which are
-action-driven in the Step Sequence section.
+If you leave this blank, the builder will infer from the domain description.
 
 ### 3.4: Input Artifacts
 
@@ -164,12 +165,11 @@ Declare what the workflow consumes:
 **Important distinction:**
 
 - **Explicit inputs** -- artifacts provided by the user or upstream workflow.
-  Declare these in the spec with `required_inputs`.
+  Declare these in the spec.
 
 - **Hardcoded paths** -- directories or config files the workflow expects
-  to exist in the runtime repo. Do NOT declare these as `required_inputs`.
-  Instead, document them as context variables resolved in
-  `context_extensions.py`:
+  to exist in the runtime repo. Do NOT declare these as inputs. Instead,
+  document them as context variables:
 
 ```markdown
 **No user-provided inputs.** All paths are hardcoded in context_extensions.py:
@@ -186,7 +186,7 @@ Declare what the workflow produces:
 ```markdown
 ## Output Artifacts
 
-| Artifact Key | Path Pattern | Description |
+| Artifact Key | Filename Pattern | Description |
 |---|---|---|
 | `REQ_FILE` | `docs/repo/project/runs/{job_id}/REQ-{date}-{seq}_{slug}.md` | Requirements document |
 | `REVIEW_FILE_SUGGESTED` | `docs/repo/project/runs/{job_id}/REV-{date}-{seq}_{slug}.md` | Review document |
@@ -195,101 +195,41 @@ Declare what the workflow produces:
 **Naming conventions:**
 
 - Artifact keys use **UPPER_SNAKE_CASE**.
-- Document artifacts should use the `_FILE` suffix: `REQ_FILE`, `PLAN_FILE`,
-  `REVIEW_FILE_SUGGESTED`.
-- Index artifacts (for batch workflows) use `_INDEX` suffix: `IMAGE_INDEX`,
-  `VIDEO_INDEX`.
-- `REVIEW_FILE_SUGGESTED` is the standard key for review documents (used
-  by the runner's review/refine routing).
+- Document artifacts should use the `_FILE` suffix: `REQ_FILE`, `PLAN_FILE`.
+- Index artifacts (for batch workflows) use `_INDEX` suffix: `IMAGE_INDEX`.
+- `REVIEW_FILE_SUGGESTED` is the standard key for review documents.
 
 **Path patterns:**
 
 - Use `{job_id}`, `{date}`, `{seq}`, `{slug}` placeholders.
-- `{date}` is `YYYYMMDD` format.
-- `{seq}` is a 3-digit auto-incrementing sequence number (prevents overwrites).
-- `{slug}` is extracted from the input artifact filename.
 - All paths are relative to the project root.
+- One key per logical file -- never use directory keys.
 
-### 3.6: Step Sequence
-
-This is the most important section. For each step, describe:
-
-1. **Step name** -- `lowercase_with_underscores`
-2. **Type** -- `prompt` or `action`
-3. **Purpose** -- What this step does (be specific!)
-4. **Role policy** -- For prompt steps only (see Section 5)
-5. **Routing** -- What happens on success, rejection
-
-**Good step description (from agnes_media_gen_v1):**
-```
-Step: generate_images
-Type: action (generate_images)
-Purpose: Scan step_02/ for variant JSONs. For each JSON, iterate over variants
-  and call Agnes Image 2.1 Flash API using t2i_prompt1. Download generated images
-  to step_03/. Update the JSON with image_url for each variant. Save the updated
-  JSON to step_03/ alongside images. Archive processed JSONs to step_02_archive/.
-  Apply PROCESS_DELAY between API calls. Handle 503 errors with retry.
-On success: -> human approval gate (approve -> generate_videos, reject -> rerun)
-```
-
-**Bad step description:**
-```
-Step: generate_images
-Type: action
-Purpose: Generate images.
-```
-
-The bad version tells the builder nothing about WHAT to implement. The
-good version describes the complete behavior: scanning, API calls, file
-management, error handling, archiving.
-
-**Routing conventions:**
-
-- `On success: -> next_step_name` -- advance to the named step
-- `On success: -> human approval gate (approve -> next_step, reject -> rerun)` --
-  requires human approval before advancing
-- `On success: -> stepCompletion` -- terminal step (workflow done)
-- For review steps: `On rejection: -> refine_step (max N iterations)`
-
-### 3.7: Context Variables
+### 3.6: Context Variables
 
 List additional context the workflow needs beyond artifact paths:
 
 ```markdown
 ## Context Variables
 
-- `GOVERNANCE_RUNTIME_ROOT` -- Layer 1 governance docs (standard)
-- `PLATFORM_RUNTIME_ROOT` -- Layer 2 platform docs (standard)
 - `IMAGE_INPUT_DIR` -- Absolute path to input image directory
 - `MEDIA_CONFIG` -- Absolute path to media_config.json
 ```
 
 Standard variables (`GOVERNANCE_RUNTIME_ROOT`, `PLATFORM_RUNTIME_ROOT`)
-are provided automatically. Only list custom variables your workflow needs.
+are provided automatically. Only list custom variables.
 
-### 3.8: Special Requirements
+### 3.7: Quality Requirements
 
-Check all that apply and describe:
+Describe what makes the output "good". These are verifiable criteria the
+builder uses to design review and validation steps:
 
-- **Slug extraction** -- Does the workflow extract a naming slug from input
-  filenames? (e.g., `product_awesome-widget.md` -> slug `awesome-widget`)
+- **Completeness:** What must the output contain?
+- **Accuracy:** What must be correct?
+- **Format:** Structure, naming, encoding requirements?
+- **Edge cases:** What should happen with unusual inputs?
 
-- **Auto-incrementing sequences** -- Do output filenames need sequence
-  numbers to prevent overwrites across multiple runs?
-
-- **Custom actions** -- Does the workflow need Python action code? If so,
-  describe each action in the Custom Actions section.
-
-- **Config files** -- Does the workflow need a `config.json` for runtime
-  settings? Describe the config structure.
-
-- **Environment variables** -- Does the workflow need API keys or credentials
-  from `.env`?
-
-- **Archive pattern** -- Does each step archive processed inputs before
-  producing outputs?
-
-### 3.9: Custom Actions
+### 3.8: Custom Actions
 
 For each custom action, describe:
 
@@ -312,7 +252,7 @@ For each custom action, describe:
 ```
 
 **Critical:** The action description must include enough detail for the
-builder to generate working Python code. Include:
+builder to generate working Python code:
 - What files to scan and where
 - What external APIs to call (endpoints, payload structure)
 - What files to produce and where
@@ -320,246 +260,60 @@ builder to generate working Python code. Include:
 - What configuration values to read
 - What to return (APPROVED/REJECTED conditions)
 
-### 3.10: Gatekeeper Requirements (Optional)
+**Reuse check:** Before defining a new action, check if existing actions
+cover the need (`validate_workflow_bundle`, `promote_workflow_package`,
+`step_completion`). Only create new actions when existing ones don't fit.
 
-For complex multi-step workflows, consider adding QC gatekeepers between
-major phases. Each gatekeeper validates the output of the preceding step
-before downstream steps consume it.
+### 3.9: Builder Instructions (Optional)
 
-Specify how many gatekeepers you want:
-- **1 gatekeeper** -- After requirements
-- **2 gatekeepers** -- After requirements + after steps design
-- **4 gatekeepers** -- Full pipeline: requirements -> artifacts -> steps -> package
+High-level guidance for the builder. Only include if the domain has special
+needs not obvious from the sections above:
 
-### 3.11: Self-Validation (Optional)
-
-When enabled, each producer step (generate, define, design) self-checks
-its output before reporting APPROVED. This catches errors early and
-reduces reviewer burden.
-
-### 3.12: Notes
-
-Any additional context, constraints, or references. Mention:
+- Suggested architecture (if you have a strong preference)
+- Domain-specific constraints
 - Similar existing workflows to model after
 - API documentation references
-- Legacy systems being replaced
-- Constraints the builder should respect
+
+### 3.10: Notes
+
+Any additional context, constraints, or references.
 
 ---
 
-## 4: Workflow Pattern Reference
-
-Choose the pattern that best fits your workflow. The builder will use this
-to determine step structure, routing, and review gates.
-
-### Pattern 1: Action-Only Pipeline
-
-**Use when:** All steps are deterministic Python operations. No LLM needed.
-
-```
-validate -> publish -> init -> sync -> write_summary -> stepCompletion
-```
-
-**Characteristics:**
-- No prompts/ directory
-- No [step.coder] sections
-- Fast execution, deterministic results
-- Each step is a Python @action function
-
-**Example:** `00_bootstrap_lifecycle_admin_v1`
-
-### Pattern 2: Prompt-Driven with Review/Refine Loop
-
-**Use when:** LLM generates documents that need quality review before approval.
-
-```
-generate -> technical_critique -> review -> [refine -> review] -> promote -> stepCompletion
-```
-
-**Characteristics:**
-- 4 prompt files: generate, critique, review, refine
-- 2 role policies: `architect_standard` (generate/refine), `reviewer_standard` (critique/review)
-- Refinement loop: review rejects -> refine -> back to review
-- `requires_human_approval_after = true` on review step
-- Promote step at the end
-
-**Example:** `sdlc_10_requirement_v1` through `sdlc_80_review_v1`
-
-### Pattern 3: Mixed with Generate + Review + Refine + Audit
-
-**Use when:** Extended Pattern 2 with an additional audit/validation step.
-
-```
-generate -> review -> refine -> validate -> audit -> promote -> stepCompletion
-```
-
-**Characteristics:**
-- Has `bundle_governance.toml` with artifact registry
-- Uses `validation_standard` role policy for audit steps
-- Has governance adapters (AGENTS.md, QWEN.md, CLAUDE.md)
-
-**Example:** `01_governance_foundation_v1`, `02_agent_runner_platform_v1`
-
-### Pattern 4: Gatekeeper QC Pipeline
-
-**Use when:** Complex multi-phase workflows where each phase output must be
-validated before the next phase consumes it.
-
-```
-generate_test_criteria -> review_test_criteria -> analyze_spec -> gatekeep_requirements
-  -> resolve_questions -> define_artifacts -> gatekeep_artifacts
-  -> design_steps -> gatekeep_steps -> generate_package -> gatekeep_package
-  -> validate_bundle -> review_package -> [refine_package] -> promote_package -> stepCompletion
-```
-
-**Characteristics:**
-- Every producer step followed by a QC gatekeeper
-- Gatekeepers use `validation_standard` role policy
-- Gatekeepers have `on_reject_refine` routing back to the producer step
-- Producer steps include Self-Validation sections
-- Uses principles-based generation (infers files from design)
-
-**Example:** `workflow_builder_v1`
-
-### Pattern 5: Step-per-Operation with Human Gates
-
-**Use when:** Each step produces tangible output that a human should review
-before the next step runs. Common for API-calling workflows.
-
-```
-step_1 -> [human gate] -> step_2 -> [human gate] -> step_3 -> stepCompletion
-```
-
-**Characteristics:**
-- Every step has `requires_human_approval_after = true`
-- Reject at any gate reruns the same step (not a refine loop)
-- Steps can be prompt-driven or action-driven
-- Archive pattern: each step archives processed inputs
-
-**Example:** `agnes_media_gen_v1`
-
-### Pattern 6: Meta-Workflow Builder
-
-**Use when:** The workflow's output is another workflow package. This is a
-specialized variant of Pattern 4 with mandatory TDD loop and stricter
-validation requirements.
-
-```
-generate_test_criteria -> review_test_criteria -> [refine_test_criteria -> review_test_criteria]
-  -> analyze_spec -> gatekeep_requirements -> resolve_questions
-  -> define_artifacts -> gatekeep_artifacts
-  -> design_steps -> gatekeep_steps
-  -> generate_package -> gatekeep_package
-  -> validate_bundle -> review_package -> [refine_package -> review_package]
-  -> promote_package -> stepCompletion
-```
-
-**Characteristics:**
-- **TDD loop is mandatory** — generate_test_criteria, review_test_criteria,
-  refine_test_criteria must be the first 3 steps. This establishes acceptance
-  criteria before any design work begins.
-- **init_step must be declared** — `init_step = "generate_test_criteria"` in
-  workflow.toml. The runner uses this to know where to start.
-- **4 gatekeepers with distinct artifact keys** — Each gatekeeper produces a
-  unique key: `GATEKEEP_REQUIREMENTS`, `GATEKEEP_ARTIFACTS`, `GATEKEEP_STEPS`,
-  `GATEKEEP_PACKAGE`. Never reuse `REVIEW_FILE_SUGGESTED` for gatekeepers.
-- **exhausted_failure_code/class on all refine loops** — Every `on_reject_refine`
-  must specify what happens when max iterations is reached.
-- **Action reuse** — Must reuse `validate_workflow_bundle` and
-  `promote_workflow_package` from workflow_builder_v1 unless there is a
-  documented reason why the existing actions don't fit.
-- **resolve_questions step** — Between gatekeep_requirements and define_artifacts,
-  clarifies ambiguities before artifact design begins.
-
-**Examples:** `workflow_builder_v1`, `creative_workflow_builder_v1`
-
----
-
-## 5: Role Policy Quick Reference
-
-Assign role policies to prompt-driven steps based on the step's purpose:
-
-| Policy | Default Model | Use For |
-|--------|---------------|---------|
-| `architect_standard` | qwen3.7-plus | Generation steps (create documents, designs) |
-| `reviewer_standard` | qwen3.7-plus | Review/critique steps (evaluate quality) |
-| `refine_standard` | qwen3.7-plus | Refinement steps (fix issues from review) |
-| `validation_standard` | qwen3.7-plus | Gatekeeper/audit steps (validate completeness) |
-| `plan_standard` | qwen3.7-plus | Planning steps (create plans, strategies) |
-| `documentation_standard` | kimi-k2.5 | Documentation generation steps |
-| `backlog_standard` | kimi-k2.5 | Backlog management steps |
-| `task_standard` | MiniMax-M2.5 | Task decomposition steps |
-| `implement_standard` | qwen3-coder-next | Code implementation steps |
-| `execution_standard` | qwen3-coder-next | Code execution steps |
-| `code_fix_standard` | MiniMax-M2.5 | Bug fix steps |
-
-**Typical assignments:**
-
-| Step Type | Role Policy |
-|-----------|-------------|
-| Generate/create | `architect_standard` |
-| Review/critique | `reviewer_standard` |
-| Refine/fix | `refine_standard` |
-| Gatekeep/validate | `validation_standard` |
-| Analyze/plan | `plan_standard` or `architect_standard` |
-
----
-
-## 6: Worked Examples
+## 4: Worked Examples
 
 ### Example A: Mixed Workflow (agnes_media_gen_v1)
 
 This spec describes a media generation pipeline with both LLM steps and
 API-calling action steps. Key aspects:
 
-**Overview section:**
-```markdown
-**Workflow name:** `agnes_media_gen_v1`
-**Job prefix:** `AMGEN`
-```
-Short, mnemonic name. 4-letter prefix.
-
 **Input artifacts -- hardcoded, not required_inputs:**
 ```markdown
 **No user-provided inputs.** All paths are hardcoded in context_extensions.py:
 | `IMAGE_INPUT_DIR` | `{repo_root}/step_00` | Directory where user places input images |
 ```
-The workflow defines its own folder structure. Inputs are not provided by
-upstream artifacts but expected as files in specific directories.
 
-**Step description -- action with full detail:**
+**Custom action -- full detail:**
 ```markdown
-Step: generate_images
-Type: action (generate_images)
-Purpose: Scan step_02/ for variant JSONs. For each JSON, iterate over variants
+### Action: generate_images
+**Purpose:** Scan step_02/ for variant JSONs. For each JSON, iterate over variants
   and call Agnes Image 2.1 Flash API using t2i_prompt1. Download generated images
   to step_03/. Update the JSON with image_url for each variant.
   Apply PROCESS_DELAY between API calls. Handle 503 errors with retry.
-```
-The description includes: what to scan, what API to call, what to produce,
-how to handle errors. This is enough detail for the builder to generate
-working Python code.
-
-**Custom actions section -- API reference included:**
-```markdown
-### Action: generate_images
-**Purpose:** [full description of batch processing, retry, archiving]
 **API Reference:**
 - Endpoint: `https://apihub.agnes-ai.com/v1/images/generations`
 - Model: `agnes-image-2.1-flash`
 - Payload: `{"model": "...", "prompt": "...", "size": "..."}`
 ```
-Including the API endpoint and payload structure ensures the builder
-generates correct API call code.
 
-### Example B: Prompt-Driven with Flexible Architecture (product_master_gen_v2)
+### Example B: Constraints-First (product_master_gen_v2)
 
-This spec describes a document generation workflow where the builder has
-latitude to determine the optimal architecture. Key aspects:
+This spec describes a document generation workflow where the builder
+proposes the step architecture. Key aspects:
 
 **Delegating design decisions to the builder:**
 ```markdown
-## Design Decisions for the Builder
+## Builder Instructions
 
 The builder should determine the optimal architecture for this workflow:
 - **Section generation strategy:** Generate all sections in one step or
@@ -567,35 +321,31 @@ The builder should determine the optimal architecture for this workflow:
 - **Quality control:** How should validation be handled?
 - **Review strategy:** What review points make sense?
 ```
-For workflows where multiple architectures are valid, explicitly delegate
-design decisions to the builder. This gives it permission to choose the
-best approach rather than following a rigid template.
 
 **Flexible output structure:**
 ```markdown
 The workflow should analyze the input sources and determine if additional
 sections would be valuable based on the product type.
 ```
+
 The spec describes WHAT sections should exist but lets the builder decide
-HOW to generate them. This is the right level of abstraction for a spec.
+HOW to generate them.
 
 ---
 
-## 7: Common Pitfalls
+## 5: Common Pitfalls
 
-### Pitfall 1: Vague Step Descriptions
+### Pitfall 1: Vague Action Descriptions
 
 **Bad:**
 ```
-Step: process_data
-Type: action
+### Action: process_data
 Purpose: Process the data and produce output.
 ```
 
 **Good:**
 ```
-Step: process_data
-Type: action (process_data)
+### Action: process_data
 Purpose: Read input.csv from step_01/. For each row, validate fields,
   transform the name column to uppercase, calculate the total price
   including tax. Write results to step_02/output.csv. Archive processed
@@ -603,17 +353,13 @@ Purpose: Read input.csv from step_01/. For each row, validate fields,
   or has no valid rows.
 ```
 
-The builder cannot generate working code from vague descriptions. Include:
-what to read, what to compute, what to write, how to handle errors.
-
 ### Pitfall 2: Wrong Artifact Key Naming
 
 **Bad:** `requirements`, `reqDoc`, `req-doc`
 **Good:** `REQ_FILE`, `REQUIREMENTS_FILE`, `REVIEW_FILE_SUGGESTED`
 
 Artifact keys must be UPPER_SNAKE_CASE. Document artifacts should use the
-`_FILE` suffix. The review artifact key should be `REVIEW_FILE_SUGGESTED`
-(this is a runner convention).
+`_FILE` suffix.
 
 ### Pitfall 3: Declaring Hardcoded Paths as Required Inputs
 
@@ -625,9 +371,6 @@ Artifact keys must be UPPER_SNAKE_CASE. Document artifacts should use the
 
 **Good:**
 ```markdown
-## Input Artifacts
-**No user-provided inputs.** All paths are hardcoded in context_extensions.py.
-
 ## Context Variables
 - `IMAGE_INPUT_DIR` -- Absolute path to step_00/ (image input)
 ```
@@ -638,13 +381,13 @@ upstream artifact), it belongs in Context Variables, not Input Artifacts.
 ### Pitfall 4: Missing Action Implementation Detail
 
 **Bad:**
-```markdown
+```
 ### Action: send_notification
 Purpose: Send a notification to the user.
 ```
 
 **Good:**
-```markdown
+```
 ### Action: send_notification
 Purpose: Read the notification config from config.json. Construct the
   message body from the workflow status and artifact paths. Send via
@@ -653,36 +396,7 @@ Purpose: Read the notification config from config.json. Construct the
   PUSHOVER_USER from .env. Return APPROVED if HTTP 200, REJECTED otherwise.
 ```
 
-### Pitfall 5: Assuming Repo Structure
-
-**Bad:**
-```
-Output goes to docs/repo/my-project/output.md
-```
-
-**Good:**
-```
-Output goes to {WORKFLOW_OUTPUT_DIR}/output.md, where WORKFLOW_OUTPUT_DIR
-is resolved from the project root in context_extensions.py.
-```
-
-The workflow should not assume a specific repo layout. Define its own
-folder structure and resolve paths relative to the project root.
-
-### Pitfall 6: Forgetting the Terminal Step
-
-Every workflow must end with `stepCompletion`. If your spec does not
-mention it, the builder may forget to include it, and the workflow will
-never reach COMPLETED status.
-
-### Pitfall 7: Missing Error Handling Description
-
-For action steps, always describe:
-- What happens on failure (retry? partial save? abort?)
-- What happens on timeout (how long is too long?)
-- What happens on partial success (some items succeed, some fail?)
-
-### Pitfall 8: Over-Specifying Implementation
+### Pitfall 5: Over-Specifying Implementation
 
 **Too much:**
 ```
@@ -694,107 +408,52 @@ Purpose: Use the LLM to read the input file, parse the YAML frontmatter,
   matching the title, followed by sections for each key in the frontmatter...
 ```
 
-The spec should describe WHAT the step achieves, not HOW the LLM should
-write the document. Leave implementation details to the builder.
-
 **Right level:**
 ```
-Step: generate_doc
-Type: prompt
-Role: architect_standard
-Purpose: Generate a structured markdown document from the input spec.
-  Include YAML frontmatter, table of contents, and sections for each
-  major topic. Write to {OUTPUT_FILE}.
+## Quality Requirements
+- Output must be a structured markdown document with YAML frontmatter
+- Must include table of contents and sections for each major topic
+- Title must match the input document title
 ```
 
-### Pitfall 9: Gatekeeper Artifact Key Collision
+Describe WHAT the output should look like, not HOW the LLM should write it.
+
+### Pitfall 6: Reinventing Existing Actions
 
 **Bad:**
 ```
-Step: gatekeep_requirements
-Produces: REVIEW_FILE_SUGGESTED
-
-Step: gatekeep_artifacts
-Produces: REVIEW_FILE_SUGGESTED
-
-Step: gatekeep_steps
-Produces: REVIEW_FILE_SUGGESTED
-```
-
-**Good:**
-```
-Step: gatekeep_requirements
-Produces: GATEKEEP_REQUIREMENTS
-
-Step: gatekeep_artifacts
-Produces: GATEKEEP_ARTIFACTS
-
-Step: gatekeep_steps
-Produces: GATEKEEP_STEPS
-```
-
-Each gatekeeper must produce a **distinct** artifact key. Reusing
-`REVIEW_FILE_SUGGESTED` means review artifacts overwrite each other in
-the job state, making traceability impossible.
-
-### Pitfall 10: Missing init_step Declaration
-
-**Bad:** Spec has no mention of which step the runner should start with.
-
-**Good:**
-```markdown
-## Overview
-**Workflow name:** `my_workflow_v1`
-**Init step:** `generate_test_criteria`
-```
-
-The runner uses `init_step` from workflow.toml to know where to begin
-execution. Without it, the runner may start at the wrong step or fail
-to initialize the workflow correctly.
-
-### Pitfall 11: Reinventing Existing Actions
-
-**Bad:**
-```markdown
 ### Action: validate_creative_bundle
 Purpose: Structural validation of the generated workflow package.
-
-### Action: promote_creative_workflow
-Purpose: Copy the generated workflow package to workflows/<slug>/.
 ```
 
 **Good:**
-```markdown
-## Custom Actions
+```
 Reuse `validate_workflow_bundle` and `promote_workflow_package` from
-workflow_builder_v1. These actions already handle TOML validation,
-prompt file existence checks, artifact key consistency, backup-on-overwrite,
-and target directory verification.
-
-No new custom actions are needed for this workflow.
+workflow_builder_v1. No new custom actions needed.
 ```
 
-Before defining new actions, check if existing actions from
-workflow_builder_v1 or other workflows can be reused. Only create new
-actions when existing ones genuinely don't fit your needs, and explain
-why.
+### Pitfall 7: Missing Error Handling Description
+
+For action steps, always describe:
+- What happens on failure (retry? partial save? abort?)
+- What happens on timeout (how long is too long?)
+- What happens on partial success (some items succeed, some fail?)
 
 ---
 
-## 8: Spec Quality Checklist
+## 6: Spec Quality Checklist
 
 Before submitting the spec to `workflow_builder_v1`, verify:
 
-### Completeness
+### Domain Completeness
 
-- [ ] Overview section has name, label, job prefix (4 chars), description
-- [ ] **init_step is declared** in Overview
-- [ ] Purpose section describes trigger and expected outcome
-- [ ] Workflow type is declared (or step types are clear enough to infer)
-- [ ] Every step has: name, type, purpose, routing
+- [ ] Overview has name, label, job prefix (4 chars), description
+- [ ] Purpose describes trigger and expected outcome
+- [ ] Workflow type declared (or domain clear enough for builder to infer)
+- [ ] Input artifacts identified (or context variables for hardcoded paths)
+- [ ] Output artifacts declared with filename patterns
+- [ ] Quality requirements describe what "good" output looks like
 - [ ] Action steps include enough detail to generate working code
-- [ ] Terminal step (stepCompletion) is mentioned or implied
-- [ ] Output artifacts use individual file keys, not directory keys
 
 ### Naming
 
@@ -804,29 +463,6 @@ Before submitting the spec to `workflow_builder_v1`, verify:
 - [ ] Document artifacts use `_FILE` suffix
 - [ ] Review artifact uses `REVIEW_FILE_SUGGESTED` key
 
-### Routing
-
-- [ ] Every step has clear onsuccess routing
-- [ ] Review steps have on_reject_refine routing
-- [ ] Refine steps route back to review via onsuccess
-- [ ] Last real step routes to stepCompletion
-- [ ] Max iterations specified for refine loops
-- [ ] **on_reject_refine includes exhausted_failure_code and exhausted_failure_class**
-
-### Gatekeepers (if applicable)
-
-- [ ] Each gatekeeper produces a **distinct** artifact key
-- [ ] Gatekeeper keys follow naming convention (GATEKEEP_REQUIREMENTS, etc.)
-- [ ] Gatekeepers use `validation_standard` role policy
-
-### Meta-Workflows (if applicable)
-
-- [ ] TDD loop included (generate_test_criteria → review → refine)
-- [ ] init_step = "generate_test_criteria"
-- [ ] 4 gatekeepers with distinct artifact keys
-- [ ] resolve_questions step between gatekeep_requirements and define_artifacts
-- [ ] Existing actions audited for reuse (validate_workflow_bundle, promote_workflow_package)
-
 ### Actions (if applicable)
 
 - [ ] Each action has purpose, inputs, outputs, error handling
@@ -834,87 +470,18 @@ Before submitting the spec to `workflow_builder_v1`, verify:
 - [ ] Config file structure described (if needed)
 - [ ] Environment variables listed (if needed)
 - [ ] Return conditions (APPROVED/REJECTED) specified
-- [ ] **Existing actions checked for reuse before defining new ones**
+- [ ] Existing actions checked for reuse before defining new ones
 
 ### Paths
 
-- [ ] Input artifacts distinguished from hardcoded paths
+- [ ] Input artifacts distinguished from hardcoded paths (context variables)
 - [ ] Output paths use `{job_id}`, `{date}`, `{seq}`, `{slug}` placeholders
 - [ ] No hardcoded absolute paths in the spec
-- [ ] Archive pattern described (if used)
+- [ ] One artifact key per logical file (no directory keys)
 
 ### Quality
 
-- [ ] Step descriptions are specific enough for code generation
+- [ ] Action descriptions are specific enough for code generation
 - [ ] No vague phrases like "process the data" or "handle the output"
 - [ ] Error handling described for all action steps
 - [ ] Similar existing workflows referenced (if any)
-
----
-
-## 9: workflow.toml Field Reference
-
-This section documents the fields that appear in the generated
-`workflow.toml`. Spec authors should understand these fields to write
-specs that produce correct workflow definitions.
-
-### Top-Level Fields
-
-| Field | Type | Required? | Default | Description |
-|-------|------|-----------|---------|-------------|
-| `name` | string | Yes | — | Workflow name, matches directory name and spec slug |
-| `version` | string | Yes | — | Semantic version (e.g., "1.0.0") |
-| `label` | string | Yes | — | Human-readable display name |
-| `job_prefix` | string | Yes | — | Exactly 4 uppercase letters for job ID generation |
-| `description` | string | Yes | — | One-sentence description of workflow purpose |
-| `visibility` | string | No | `"default"` | `"canonical"` for core workflows, `"default"` otherwise |
-| `init_step` | string | Yes | — | Name of the first step the runner should execute |
-| `default_max_rejects` | integer | No | `3` | Default max refinement iterations for on_reject_refine |
-
-### Step Fields
-
-Each `[[step]]` block defines one workflow step.
-
-| Field | Type | Required? | Description |
-|-------|------|-----------|-------------|
-| `name` | string | Yes | Step name, `lowercase_with_underscores` |
-| `prompt` | string | For prompt steps | Path to prompt template (e.g., `"prompts/01_analyze_spec.txt"`) |
-| `action` | string | For action steps | Action function name (e.g., `"validate_workflow_bundle"`) |
-| `enable_notifications` | boolean | No | Send Pushover notifications on step completion |
-| `requires_human_approval_after` | boolean | No | Pause for human approval after step completes |
-| `onsuccess` | string | Yes | Next step name on success, or `"stepCompletion"` |
-
-### Step Artifacts Section
-
-`[step.artifacts]` declares what the step consumes and produces.
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `required_inputs` | list[string] | Artifact keys this step must read |
-| `optional_inputs` | list[string] | Artifact keys this step may read if available |
-| `produces` | list[string] | Artifact keys this step writes |
-| `result_meta_key` | string | Which produced key is the "primary" output for meta.json |
-
-### Step Coder Section
-
-`[step.coder]` configures the LLM coder for prompt-driven steps.
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `role_policy` | string | Coder role (e.g., `"architect_standard"`, `"reviewer_standard"`) |
-
-### Step on_reject_refine Section
-
-`[step.on_reject_refine]` configures refinement loops for review steps.
-
-| Field | Type | Required? | Description |
-|-------|------|-----------|-------------|
-| `step` | string | Yes | Step to route back to on rejection |
-| `artifact` | string | Yes | Which artifact key the review feedback targets |
-| `max_iterations` | integer | No | Max refinement attempts (default: `default_max_rejects`) |
-| `exhausted_failure_code` | string | **Yes** | Error code when max iterations reached (e.g., `"REQUIREMENTS_GATEKEEP_EXHAUSTED"`) |
-| `exhausted_failure_class` | string | **Yes** | Failure classification (typically `"HUMAN_RETRY_REQUIRED"`) |
-
-**Important:** `exhausted_failure_code` and `exhausted_failure_class` are
-required. Without them, the runner doesn't know how to handle refinement
-exhaustion and may loop indefinitely or fail with an unhelpful error.

@@ -45,6 +45,20 @@ Answer each question with specific evidence from the documents:
 8. Inference Quality: For elements the LLM inferred (workflow type, step types,
    sequence), is the inference sound? Are there better alternatives?
 
+Self-Critic (Before Final Verdict)
+
+Challenge your review before committing to a verdict:
+
+1. Am I rubber-stamping, or did I actually verify each claim against
+   the source spec and requirements documents?
+2. Did I find at least one substantive finding, or am I just saying
+   "looks good"?
+3. If I missed an issue that a later step catches, what would it be?
+4. Is my verdict based on evidence from the files, or on assumptions
+   about what the producer "probably" did?
+
+If your review is superficial, go back and dig deeper before reporting.
+
 Decision Rules
 
 - APPROVED: The requirements are complete and will achieve spec objectives.

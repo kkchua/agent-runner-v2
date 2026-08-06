@@ -23,6 +23,10 @@ Step Design Tasks
    - onsuccess: the next step name, or stepCompletion for the final step
    - on_reject_refine: optional refinement step for review steps
    - loop_returns_to: for refine steps, the step to return to after fix
+   - MANDATORY: Every step with on_reject_refine MUST declare both
+     exhausted_failure_code and exhausted_failure_class. No exceptions.
+     Example: exhausted_failure_code = "REVIEW_REFINEMENT_EXHAUSTED",
+     exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
 3. Assign a role_policy to each prompt-driven step:
    - architect_standard for generation and design steps
    - reviewer_standard for review steps
@@ -31,9 +35,27 @@ Step Design Tasks
    - produces: list of artifact keys the step writes
    - result_meta_key: the primary output key for meta.json
 5. Include a stepCompletion terminal step as the final step.
-6. Set init_step to the first step in the sequence.
+6. Set init_step based on workflow type:
+   - If is_meta_workflow is true (check {WORKFLOW_REQUIREMENTS}):
+     init_step = "generate_test_criteria"
+   - Otherwise: init_step = first step in the sequence
 7. Mark review steps with requires_human_approval_after if the workflow
   requires human gate.
+
+Self-Critic (Before Self-Validation)
+
+Challenge your reasoning before checking completeness:
+
+1. Am I introducing assumptions not supported by {WORKFLOW_REQUIREMENTS}
+   or {ARTIFACT_CONTRACT}?
+2. Is this the simplest step sequence that achieves the objectives, or am
+   I adding unnecessary steps?
+3. If a downstream step reads this architecture, what would confuse them
+   or block them?
+4. Did I stay in my lane (step design), or did I leak into prompt content
+   or file generation?
+
+If you find reasoning issues, fix them before proceeding to Self-Validation.
 
 Self-Validation (Before Output)
 
@@ -50,12 +72,17 @@ Before reporting APPROVED, validate:
 
 4. Action Consistency: For action steps, are action names unique and
    descriptive? Do they match action specifications from requirements?
+   Were existing reusable actions checked before proposing new ones?
 
 5. Prompt Consistency: For prompt steps, are role policies appropriate
    for the task type?
 
 6. Review Loop Design: Do review steps have on_reject_refine? Do refine
    steps have loop_returns_to? Are max_iterations appropriate?
+
+7. Exhausted Failure: Does EVERY step with on_reject_refine have both
+   exhausted_failure_code and exhausted_failure_class declared? No
+   exceptions — this is mandatory for all refine loops.
 
 If validation fails, report REJECTED with specific gaps found.
 

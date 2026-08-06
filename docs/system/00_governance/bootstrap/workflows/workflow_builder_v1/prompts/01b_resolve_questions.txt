@@ -53,6 +53,20 @@ Resolution Tasks
    - Ensure the Workflow Type classification matches the actual step types
      described in the spec.
 
+Self-Critic (Before Output)
+
+Challenge your reasoning before writing the updated document:
+
+1. Am I resolving questions from the spec, or inventing answers that
+   aren't there?
+2. Am I adding scope that the original spec didn't imply?
+3. If a downstream step reads this updated requirements document, would
+   they find any remaining ambiguities?
+4. Did I stay in my lane (question resolution), or did I restructure
+   content that was already correct?
+
+If you find reasoning issues, fix them before proceeding to output.
+
 Output Instructions
 
 - Overwrite {WORKFLOW_REQUIREMENTS} with the updated document.

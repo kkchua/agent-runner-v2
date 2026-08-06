@@ -205,6 +205,20 @@ Produce a test criteria document with these sections:
     If none of these aspects apply to the spec, state "No audit criteria
     required for this spec" and explain why.
 
+Self-Critic (Before Output)
+
+Challenge your reasoning before writing the document:
+
+1. Am I introducing assumptions not supported by the spec document?
+2. Are my test criteria specific and verifiable, or am I writing vague
+   checks like "must be correct"?
+3. If a downstream gatekeeper reads these criteria, would they have enough
+   detail to pass/fail unambiguously?
+4. Did I stay in my lane (test criteria design), or did I leak into
+   implementation details?
+
+If you find reasoning issues, fix them before proceeding to output.
+
 Output Instructions
 
 - Write the test criteria document to {TEST_CRITERIA}.
