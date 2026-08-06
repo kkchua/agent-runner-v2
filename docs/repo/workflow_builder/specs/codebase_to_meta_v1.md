@@ -5,6 +5,7 @@
 **Workflow name:** `codebase_to_meta_v1`
 **Label:** Codebase to Meta Content v1
 **Job prefix:** `META`
+**Init step:** `scan_audiences`
 **Description:** Transforms codebase documentation into audience-specific Rich
 Markdown meta content files via plugin-extensible audience definitions.
 
@@ -31,6 +32,34 @@ are resolved from the repo structure).
 
 **Outcome:** A set of audience-specific meta content Markdown files published
 to `docs/repo/meta_content/current/` with full version history.
+
+## Workflow Type
+
+**Mixed** -- Action steps for scanning and publishing, prompt-driven steps
+for content generation and review.
+
+## Input Artifacts
+
+**No user-provided inputs.** All paths are hardcoded as context variables
+in `context_extensions.py`:
+
+| Context Variable | Hardcoded Path | Description |
+|---|---|---|
+| `CODEBASE_DOC_ROOT` | `{repo_root}/docs/repo/codebase/current/` | Source codebase documentation |
+| `META_CONTENT_ROOT` | `{repo_root}/docs/repo/meta_content/` | Output staging/publish root |
+| `AUDIENCE_DIR` | `{workflow_package}/audiences/` | Audience definition plugins |
+
+## Output Artifacts
+
+| Artifact Key | Filename Pattern | Description |
+|---|---|---|
+| `AUDIENCE_INVENTORY` | `AUDIENCE_INV-{date}-{seq}_{slug}.md` | Discovered audience definitions with metadata |
+| `META_DEV_FILE` | `current/developer/META-DEV-{date}-{seq}.md` | Developer meta content |
+| `META_ARCH_FILE` | `current/architect/META-ARCH-{date}-{seq}.md` | Architect meta content |
+| `META_EXEC_FILE` | `current/executive/META-EXEC-{date}-{seq}.md` | Executive meta content |
+| `META_INDEX` | `runs/{job_id}/meta_index.json` | JSON index of all generated meta files |
+| `REVIEW_FILE_SUGGESTED` | `META-REV-{date}-{seq}_{slug}.md` | Quality review of all generated meta files |
+| `META_MANIFEST` | `current/meta_manifest.json` | Published manifest (publish target) |
 
 ## Audience Definition Plugin System
 
@@ -71,10 +100,6 @@ section_structure:
 
 # Audience Definition: Developer
 
-Generate a meta content document targeted at software developers who will
-work on or extend this codebase. Emphasize practical, hands-on information
-that helps a new developer get productive quickly...
-
 [Additional prompt guidance in the body]
 ```
 
@@ -85,9 +110,6 @@ that helps a new developer get productive quickly...
 - `focus_areas` -- what to emphasize from the codebase docs
 - `exclude` -- what to omit
 - `section_structure` -- expected output sections
-
-**Body:** Additional prompt guidance that provides context, examples, or
-constraints for the LLM generation.
 
 **Initial audience set (3 files):**
 
@@ -102,59 +124,7 @@ constraints for the LLM generation.
    (module count, test coverage, workflow count), risk summary,
    progress status, cost/effort indicators.
 
-## Inputs
-
-**No user-provided inputs.** All paths are resolved by the workflow:
-
-- **Codebase documentation root** -- `docs/repo/codebase/current/`
-  Contains ~155 files across 5 sections:
-  - `00_standards/` (2 files) -- documentation standards and status rules
-  - `01_inventory/` (1 file) -- master inventory of all Python modules
-  - `02_modules/` (141 files) -- one doc per Python module
-  - `03_components/` (6 files) -- cross-cutting component docs
-  - `04_changes/` (4 files) -- change impact and validation records
-  - `codebase_manifest.json` -- artifact inventory with metadata
-
-- **Audience definitions** -- `audiences/` directory in the workflow package
-
-## Outputs
-
-### Output Root and Staging Pattern
-
-Output follows the standard staging pattern under `docs/repo/meta_content/`:
-
-```
-docs/repo/meta_content/
-├── current/                    <-- Published active meta content
-│   ├── developer/
-│   │   └── META-DEV-{date}-{seq}.md
-│   ├── architect/
-│   │   └── META-ARCH-{date}-{seq}.md
-│   ├── executive/
-│   │   └── META-EXEC-{date}-{seq}.md
-│   └── meta_manifest.json      <-- Manifest of all published meta files
-├── runs/{job_id}/              <-- Staging area (per-job work)
-│   ├── developer/
-│   ├── architect/
-│   ├── executive/
-│   ├── meta_index.json
-│   └── REV-{date}-{seq}.md     <-- Review document
-├── history/{job_id}/           <-- Archived previous versions
-└── backups/                    <-- Pre-publish safety snapshots
-```
-
-### Output Artifacts
-
-| Artifact Key | Description |
-|---|---|
-| `META_DEV_FILE` | Developer meta content (Rich Markdown + YAML frontmatter) |
-| `META_ARCH_FILE` | Architect meta content (Rich Markdown + YAML frontmatter) |
-| `META_EXEC_FILE` | Executive meta content (Rich Markdown + YAML frontmatter) |
-| `META_INDEX` | JSON index of all generated meta files with audience metadata |
-| `REVIEW_FILE_SUGGESTED` | Review document covering all generated meta files |
-| `META_MANIFEST` | Published manifest in `current/` (publish target) |
-
-### Meta Content File Format
+## Meta Content File Format
 
 Each output meta content file is Rich Markdown with YAML frontmatter:
 
@@ -171,28 +141,6 @@ section_count: 5
 
 Followed by the audience-tailored content organized per the audience
 definition's `section_structure`.
-
-### Publish Manifest
-
-`meta_manifest.json` tracks all published meta files:
-
-```json
-{
-  "workflow_id": "codebase_to_meta_v1",
-  "change_or_run_id": "{job_id}",
-  "source_codebase_version": "SDLC00CB-bgmxg5vi",
-  "audiences": {
-    "developer": {
-      "label": "Developer",
-      "file": "developer/META-DEV-20260806-001.md",
-      "generated_date": "2026-08-06"
-    }
-  },
-  "published_timestamp": "2026-08-06T12:00:00+08:00",
-  "supersedes": "previous-job-id-or-null",
-  "active_set": true
-}
-```
 
 ## Publish Lifecycle
 
@@ -221,11 +169,44 @@ Follows the same pattern as `sdlc_00_codebase_v1`:
   deployed to the global runner home via `install_to_global()`.
 - Output paths follow the standard staging pattern (`current/`, `runs/`,
   `history/`, `backups/`).
-- Artifact keys use `_FILE` suffix for document artifacts.
-- The workflow should follow the standard prompt-driven pattern with
-  review/refine loop and human approval gate.
+- Prioritize factual accuracy -- no information invented beyond what
+  codebase docs provide.
 
-## References
+## Quality Requirements
+
+- **Completeness** -- All codebase sections represented in each audience output
+  (filtered by audience focus_areas/exclude).
+- **Audience fidelity** -- Tone, focus, and section structure match the
+  audience definition frontmatter.
+- **Self-contained** -- Each meta file readable without reference to source docs.
+- **Source attribution** -- Claims trace to specific codebase doc files.
+- **No hallucination** -- No information invented beyond codebase docs.
+- **YAML frontmatter** -- All required fields present with correct values.
+
+## Builder Instructions
+
+**Step architecture:** The builder shall propose the step sequence based on
+the domain requirements above. Suggested phase decomposition (builder may adjust):
+
+1. **Scan phase** -- Discover audience definitions, catalog codebase docs
+2. **Generate phase** -- Produce meta content per audience (may be one step
+   per audience or a single step iterating over all audiences)
+3. **Review phase** -- Quality review against constraints above
+4. **Refine phase** -- Fix issues (conditional)
+5. **Publish phase** -- Backup, history, copy to current/ with manifest
+
+**Action reuse:** Check if existing actions can be reused. A `scan_audiences`
+action for audience discovery is likely needed. Publish actions (backup,
+history, copy to current) may reuse patterns from `sdlc_00_codebase_v1`.
+
+**Gatekeepers:** The builder should determine where QC gates add value. At
+minimum, a quality gate after generation (before review) is recommended.
+
+**install_to_global():** The `audiences/` directory must be deployed to the
+global runner home. The workflow's `context_extensions.py` must implement
+real `install_to_global()` logic to copy the audience files.
+
+## Notes
 
 - Source codebase docs: `docs/repo/codebase/current/`
 - Codebase manifest: `docs/repo/codebase/current/codebase_manifest.json`
