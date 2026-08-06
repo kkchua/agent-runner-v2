@@ -1,0 +1,107 @@
+Objective
+
+Generate audience-specific Rich Markdown meta content files from the codebase
+documentation. For each audience discovered in the audience index, produce a
+self-contained meta content file tailored to that audience's tone, focus areas,
+exclude list, and section structure. Also produce a meta index JSON file mapping
+each audience to its generated file path and metadata.
+
+Layer Boundary
+
+- This workflow belongs to Layer 3 and operates on top of the Layer 2 platform contract.
+- Generate only meta content documentation, not code or planning artifacts.
+- Treat Layer 1 governance and Layer 2 platform constitution as read-only reference inputs.
+
+Reference Inputs
+
+- Read the audience index: {AUDIENCE_INDEX}
+- Read the codebase manifest: {CODEBASE_MANIFEST}
+- Read codebase documentation from: {CODEBASE_CURRENT_ROOT}
+- Read Layer 1 governance at: {GOVERNANCE_RUNTIME_ROOT}
+- Read Layer 2 platform constitution at: {PLATFORM_RUNTIME_ROOT}
+
+Generation Process
+
+1. Parse {AUDIENCE_INDEX} to discover all audience definitions. Each entry contains:
+   audience_id, label, tone, focus_areas, exclude, section_structure, and the path
+   to the audience definition file (for body text reference).
+
+2. Read {CODEBASE_MANIFEST} to understand the available documentation inventory.
+
+3. For each audience in the index:
+   a. Read relevant codebase documentation sections guided by the audience's
+      focus_areas list.
+   b. Apply the audience's tone guidance for writing style.
+   c. Exclude topics listed in the audience's exclude list.
+   d. Structure the output according to the audience's section_structure list.
+   e. Read the audience definition body text for additional prompt guidance.
+
+4. Generate one meta content file per audience:
+   - Developer audience: {META_DEV_FILE}
+   - Architect audience: {META_ARCH_FILE}
+   - Executive audience: {META_EXEC_FILE}
+   - Any additional audiences discovered dynamically.
+
+5. Generate the meta index: {META_INDEX}
+
+Meta Content File Format
+
+Each generated meta content file must include:
+
+1. YAML Frontmatter (REQUIRED):
+   - title: Document title (e.g., "Agent Runner V2 -- Developer Guide")
+   - audience: Audience identifier (matches audience_id from index)
+   - audience_label: Display name (matches label from index)
+   - generated_date: ISO date of generation (e.g., "2026-08-06")
+   - source_version: Codebase version identifier from {CODEBASE_MANIFEST}
+   - section_count: Integer count of content sections in the file
+
+2. Content Sections:
+   - Follow the section_structure from the audience definition exactly
+   - Each section must be substantive and audience-appropriate
+   - Content must be self-contained (readable without source docs)
+   - Verify code patterns, APIs, and file paths against the actual codebase
+
+Meta Index Format
+
+The {META_INDEX} JSON file must map each audience_id to:
+{
+  "audience_id": {
+    "file": "absolute path to generated meta file",
+    "generated_date": "ISO date",
+    "audience_label": "display name",
+    "section_count": integer
+  }
+}
+
+Output Instructions
+
+- Write each meta content file to its designated path.
+- Write the meta index to {META_INDEX}.
+- Use ASCII-only characters (no em-dashes, curly quotes, or Unicode).
+- Use plain text section headings (no backticks or formatting in headings).
+- Keep terminology consistent with the source codebase documentation.
+- Verify all code references, API names, and file paths against actual source code.
+- Do not invent scope beyond what exists in the codebase documentation.
+
+Self-Validation
+
+Before reporting APPROVED, validate your output:
+
+1. Completeness: Does each audience have a generated meta file?
+2. Frontmatter: Does each file have all 6 required YAML frontmatter fields?
+3. Section Structure: Does each file follow its audience's section_structure?
+4. Tone Compliance: Does each file maintain the audience's specified tone?
+5. Exclude Compliance: Are excluded topics absent from each file?
+6. Meta Index: Does the index accurately reference all generated files?
+7. Encoding: Is all content ASCII-only?
+
+If any check fails, revise the output before reporting APPROVED.
+
+Forbidden Content
+
+- Layer 1 governance redefinition or contradiction
+- Layer 2 platform contract redefinition
+- Content not grounded in the actual codebase documentation
+- Topics listed in any audience's exclude list
+- Non-ASCII characters (em-dashes, curly quotes, Unicode)

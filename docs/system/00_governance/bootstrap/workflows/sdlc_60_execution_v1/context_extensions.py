@@ -18,6 +18,7 @@ class Sdlc60ExecutionExtensions(WorkflowExtensions):
     def register_artifact_keys(self, *, job_id: str = "{job_id}", mode: str = "{mode}") -> dict[str, str]:
         date_str = dt.datetime.now().strftime("%Y%m%d")
         return {
+            "IMPL_FILE": f"{SDLC_DELIVERY_BASE}/50_implementations/IMPL-{date_str}-001-{{seq}}_{{slug}}.md",
             "EXEC_FILE": f"{SDLC_DELIVERY_BASE}/60_executions/EXEC-{date_str}-001-{{seq}}_{{slug}}.md",
             "CRITIQUE_FILE_SUGGESTED": f"{SDLC_DELIVERY_BASE}/80_reviews/{{slug}}-CRITIQUE-60-exec.md",
             "REVIEW_FILE_SUGGESTED": f"{SDLC_DELIVERY_BASE}/80_reviews/{{slug}}-REV-60-exec.md",

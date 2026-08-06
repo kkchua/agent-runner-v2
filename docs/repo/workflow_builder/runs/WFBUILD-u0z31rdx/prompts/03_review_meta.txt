@@ -1,0 +1,111 @@
+Objective
+
+Review all generated meta content files for completeness, accuracy,
+audience-appropriateness, and structural compliance. Produce a consolidated
+review document with feedback per audience.
+
+Layer Boundary
+
+- This workflow belongs to Layer 3 and operates on top of the Layer 2 platform contract.
+- Review only the generated meta content files, not the codebase or governance docs.
+- Treat Layer 1 governance and Layer 2 platform constitution as read-only authority.
+
+Reference Inputs
+
+- Read the developer meta file: {META_DEV_FILE}
+- Read the architect meta file: {META_ARCH_FILE}
+- Read the executive meta file: {META_EXEC_FILE}
+- Read the meta index: {META_INDEX}
+- Read the audience index: {AUDIENCE_INDEX}
+- Read Layer 1 governance at: {GOVERNANCE_RUNTIME_ROOT}
+- Read Layer 2 platform constitution at: {PLATFORM_RUNTIME_ROOT}
+
+Review Criteria
+
+For each generated meta content file, evaluate against these criteria:
+
+1. Frontmatter Completeness:
+   - title field present and descriptive
+   - audience field matches an entry in {AUDIENCE_INDEX}
+   - audience_label matches the label in {AUDIENCE_INDEX}
+   - generated_date is valid ISO date format
+   - source_version references a valid codebase version
+   - section_count matches the actual number of sections
+
+2. Section Structure Compliance:
+   - Sections match the audience definition's section_structure list
+   - All required sections are present
+   - No extra sections outside the defined structure
+   - Section headings use plain text (no backticks or formatting)
+
+3. Tone Compliance:
+   - Writing style matches the audience's tone specification
+   - Language complexity is appropriate for the audience
+   - Technical depth matches audience expectations
+
+4. Focus Areas Coverage:
+   - All topics in the audience's focus_areas list are covered
+   - Coverage is substantive (not just mentioned in passing)
+   - Focus areas are prioritized appropriately
+
+5. Exclude Compliance:
+   - No content from the audience's exclude list is present
+   - Excluded topics are not referenced even indirectly
+
+6. Content Accuracy:
+   - Code references match actual codebase patterns
+   - API names and signatures are correct
+   - File paths reference real files in the codebase
+   - Architecture descriptions match the actual system
+
+7. Encoding Compliance:
+   - Content is ASCII-only (no em-dashes, curly quotes, Unicode)
+   - File is valid UTF-8 Markdown
+
+8. Self-Containment:
+   - Each file is readable without reference to source documentation
+   - Key concepts are explained within the document
+   - No dangling references to external files the reader cannot access
+
+Review Output
+
+Generate a consolidated review document with:
+
+1. Summary:
+   - Overall assessment across all audiences
+   - Decision: APPROVED or REJECTED
+
+2. Per-Audience Sections:
+   For each audience (dev, arch, exec, and any additional):
+   - File reviewed (path from {META_INDEX})
+   - Frontmatter check: PASS/FAIL with details
+   - Section structure check: PASS/FAIL with details
+   - Tone check: PASS/FAIL with details
+   - Focus areas check: PASS/FAIL with details
+   - Exclude check: PASS/FAIL with details
+   - Content accuracy check: PASS/FAIL with details
+   - Encoding check: PASS/FAIL with details
+   - Specific findings (critical, major, minor)
+   - Actionable recommendations for each finding
+
+3. Decision Criteria:
+   - APPROVED: All files pass all structural checks, content is accurate,
+     tone is appropriate, and exclude lists are respected.
+   - REJECTED: Any file has critical or major issues that must be fixed.
+     Provide specific, actionable feedback with citations.
+
+Output Instructions
+
+- Write the review document to: {REVIEW_FILE_SUGGESTED}
+- Use ASCII-only characters.
+- Use plain text section headings.
+- Provide direct citations to offending text when rejecting.
+- Be specific and actionable in feedback.
+- Include a clear APPROVED or REJECTED verdict on its own line.
+
+Forbidden Content
+
+- Layer 1 governance redefinition or contradiction
+- Layer 2 platform contract redefinition
+- Rewriting the meta content files (only review and provide feedback)
+- Non-ASCII characters

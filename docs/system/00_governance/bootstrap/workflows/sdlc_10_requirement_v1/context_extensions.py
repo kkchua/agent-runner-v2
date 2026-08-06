@@ -33,6 +33,11 @@ class Sdlc10RequirementExtensions(WorkflowExtensions):
         date_str = dt.datetime.now().strftime("%Y%m%d")
 
         return {
+            # Initiative document (input from sdlc_00)
+            "INIT_FILE": (
+                f"{SDLC_DELIVERY_BASE}/00_initiatives/"
+                f"INIT-{date_str}-{{seq}}_{{slug}}.md"
+            ),
             # Requirements document (output)
             "REQ_FILE": (
                 f"{SDLC_DELIVERY_BASE}/10_requirements/"
