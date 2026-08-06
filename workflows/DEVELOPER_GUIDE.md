@@ -268,6 +268,10 @@ class MyWorkflowExtensions(WorkflowExtensions):
         date_str = dt.datetime.now().strftime("%Y%m%d")
         run_root = f"docs/repo/my_workflow/runs/{job_id}"
         return {
+            # Input artifact — must be registered so the backend can resolve
+            # bare filenames submitted by the operator console
+            "MY_INPUT": f"docs/repo/my_workflow/inputs/MY-INPUT-{{seq}}_{{slug}}.md",
+            # Output artifacts
             "MY_OUTPUT": f"{run_root}/MY-OUTPUT-{date_str}_{{slug}}.md",
             "REVIEW_FILE_SUGGESTED": f"{run_root}/{job_id}-review.md",
         }
@@ -301,14 +305,24 @@ class MyWorkflowExtensions(WorkflowExtensions):
    path templates are declared here. The returned dict is merged into
    the global `ARTIFACT_PATHS` registry at startup.
 
-2. **`build_context_extensions()` must resolve to absolute paths** —
+2. **Register BOTH inputs and outputs** — `register_artifact_keys()`
+   must include path templates for **all** artifacts the workflow uses,
+   not just the ones it produces. This includes input artifacts from
+   `required_inputs` in the init step. The backend's `_resolve_input_paths()`
+   uses these registrations (via `sync_workflows.py`'s `_extract_init_input_dirs()`)
+   to resolve bare filenames submitted by the operator console into full
+   absolute paths. If an input artifact is missing from the registry, the
+   backend cannot resolve it and the job fails with
+   "Missing required input artifact(s)".
+
+3. **`build_context_extensions()` must resolve to absolute paths** —
    prompt placeholders like `{MY_OUTPUT}` are replaced with the values
    returned here. Always use absolute paths.
 
-3. **Shared constants** — use constants from `constants.py` (e.g.
+4. **Shared constants** — use constants from `constants.py` (e.g.
    `SDLC_DELIVERY_BASE`) instead of hardcoding base paths.
 
-4. **Loop-able artifacts** — use `loop_iteration` parameter to append
+5. **Loop-able artifacts** — use `loop_iteration` parameter to append
    `_iter{N}` suffixes for review/validation/audit paths so refinement
    passes don't overwrite previous outputs.
 
@@ -439,8 +453,14 @@ context resolution — with zero changes to global files.
 |---|---|
 | Declare keys in `workflow.toml` step `produces`/`required_inputs` | **Yes** — this is how the runner discovers your keys |
 | Declare keys in `bundle_governance.toml` `[[artifact]]` | **Yes** — this is the canonical registry for backend sync |
-| Declare keys in `register_artifact_keys()` in `context_extensions.py` | **Yes** — maps keys to filesystem paths for context resolution |
+| Declare keys in `register_artifact_keys()` in `context_extensions.py` | **Yes** — maps keys to filesystem paths for context resolution AND backend input path resolution |
 | Add keys to `constants.py` or `artifact_keys.py` | **No** — workflow keys are auto-accepted |
+
+**Important:** `register_artifact_keys()` must include path templates for
+**input artifacts** (from init step `required_inputs`) as well as output
+artifacts. The backend uses these registrations to resolve bare filenames
+submitted by the operator console into full paths. Missing input
+registrations cause "Missing required input artifact(s)" errors at runtime.
 
 ### Example
 
@@ -523,6 +543,13 @@ For workflow-specific keys, keep them in your workflow package only.
     `[step.artifacts]`. The TOML loader silently drops unknown fields from
     `[step.artifacts]` — only top-level unknown keys are captured by the
     `extra` passthrough dict and reach the action's `step_cfg`.
+
+11. **`register_artifact_keys()` must include input artifacts** — register
+    path templates for ALL artifacts the workflow uses, including inputs
+    from `required_inputs` in the init step. The backend's
+    `_resolve_input_paths()` relies on these registrations to resolve bare
+    filenames submitted by the operator console. Missing input registrations
+    cause "Missing required input artifact(s)" errors at runtime.
 
 ---
 

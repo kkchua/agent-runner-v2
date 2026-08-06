@@ -48,6 +48,9 @@ Instead of "Generate files 1-6", follow this principles-based approach:
 
 6. For context_extensions.py:
    - Use path patterns from {ARTIFACT_CONTRACT}
+   - register_artifact_keys() must include ALL artifacts — both outputs
+     (from produces) AND inputs (from required_inputs in the init step).
+     The backend needs input registrations to resolve bare filenames.
    - Resolve to absolute paths in build_context_extensions()
    - Handle {slug}, {seq}, {iter} placeholder resolution
 

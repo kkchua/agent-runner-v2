@@ -18,6 +18,7 @@ class Sdlc70ValidationExtensions(WorkflowExtensions):
     def register_artifact_keys(self, *, job_id: str = "{job_id}", mode: str = "{mode}") -> dict[str, str]:
         date_str = dt.datetime.now().strftime("%Y%m%d")
         return {
+            "EXEC_FILE": f"{SDLC_DELIVERY_BASE}/60_executions/EXEC-{date_str}-001-{{seq}}_{{slug}}.md",
             "VAL_FILE": f"{SDLC_DELIVERY_BASE}/70_validations/VAL-{date_str}-{{seq}}_{{slug}}.md",
             "CRITIQUE_FILE_SUGGESTED": f"{SDLC_DELIVERY_BASE}/80_reviews/{{slug}}-CRITIQUE-70-val.md",
             "REVIEW_FILE_SUGGESTED": f"{SDLC_DELIVERY_BASE}/80_reviews/{{slug}}-REV-70-val.md",

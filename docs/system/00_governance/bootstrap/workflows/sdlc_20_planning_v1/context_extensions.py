@@ -18,6 +18,7 @@ class Sdlc20PlanningExtensions(WorkflowExtensions):
     def register_artifact_keys(self, *, job_id: str = "{job_id}", mode: str = "{mode}") -> dict[str, str]:
         date_str = dt.datetime.now().strftime("%Y%m%d")
         return {
+            "REQ_FILE": f"{SDLC_DELIVERY_BASE}/10_requirements/REQ-{date_str}-{{seq}}_{{slug}}.md",
             "PLAN_FILE": f"{SDLC_DELIVERY_BASE}/20_plans/PLAN-{date_str}-{{seq}}_{{slug}}.md",
             "CRITIQUE_FILE_SUGGESTED": f"{SDLC_DELIVERY_BASE}/80_reviews/{{slug}}-CRITIQUE-20-plan.md",
             "REVIEW_FILE_SUGGESTED": f"{SDLC_DELIVERY_BASE}/80_reviews/{{slug}}-REV-20-plan.md",

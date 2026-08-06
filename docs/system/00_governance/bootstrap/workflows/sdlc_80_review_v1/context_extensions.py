@@ -18,6 +18,7 @@ class Sdlc80ReviewExtensions(WorkflowExtensions):
     def register_artifact_keys(self, *, job_id: str = "{job_id}", mode: str = "{mode}") -> dict[str, str]:
         date_str = dt.datetime.now().strftime("%Y%m%d")
         return {
+            "VAL_FILE": f"{SDLC_DELIVERY_BASE}/70_validations/VAL-{date_str}-{{seq}}_{{slug}}.md",
             "REV_FILE": f"{SDLC_DELIVERY_BASE}/80_reviews/REV-{date_str}-{{seq}}_{{slug}}.md",
             "MEM_FILE": f"{SDLC_DELIVERY_BASE}/80_reviews/MEM-{date_str}-{{seq}}_{{slug}}.md",
             "CLOSE_FILE": f"{SDLC_DELIVERY_BASE}/80_reviews/CLOSE-{date_str}-{{seq}}_{{slug}}.md",

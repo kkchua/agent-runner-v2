@@ -1,6 +1,7 @@
 """Context extensions for sdlc_40_task_v1 workflow."""
 from __future__ import annotations
 
+import datetime as dt
 from pathlib import Path
 from typing import Any
 
@@ -15,7 +16,9 @@ class Sdlc40TaskExtensions(WorkflowExtensions):
     workflow_name = "sdlc_40_task_v1"
 
     def register_artifact_keys(self, *, job_id: str = "{job_id}", mode: str = "{mode}") -> dict[str, str]:
+        date_str = dt.datetime.now().strftime("%Y%m%d")
         return {
+            "BACKLOG_FILE": f"{SDLC_DELIVERY_BASE}/30_backlogs/BACKLOG-{date_str}-{{seq}}_{{slug}}.md",
             "TASK_FILE": f"{SDLC_DELIVERY_BASE}/40_tasks/{{work_item}}.md",
             "CRITIQUE_FILE_SUGGESTED": f"{SDLC_DELIVERY_BASE}/80_reviews/{{work_item}}-CRITIQUE-40-task.md",
             "REVIEW_FILE_SUGGESTED": f"{SDLC_DELIVERY_BASE}/80_reviews/{{work_item}}-REV-40-task.md",
