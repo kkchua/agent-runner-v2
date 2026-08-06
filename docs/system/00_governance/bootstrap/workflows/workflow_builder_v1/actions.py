@@ -203,7 +203,7 @@ def promote_workflow_package(*, context, state, step_cfg, project_root):
 
     Copies deployable files (workflow.toml, context_extensions.py, prompts/,
     README.md, .env.sample, config.json.sample) from the run directory to
-    workflows/{slug}/. The slug is derived from the WORKFLOW_SPEC artifact
+    workflows/{slug}/. The slug is derived from the WORKFLOW_SPEC_FILE artifact
     path. Existing target directories are backed up before overwriting.
     """
     artifacts = state.get("artifacts", {})
@@ -213,11 +213,11 @@ def promote_workflow_package(*, context, state, step_cfg, project_root):
     # Spec files are always {slug}.md in specs/ directory, so the slug
     # is just the filename stem (unlike SDLC artifacts which use
     # {TYPE}-{date}-{seq}_{slug}.md pattern)
-    spec_path = artifacts.get("WORKFLOW_SPEC", "")
+    spec_path = artifacts.get("WORKFLOW_SPEC_FILE", "")
     if not spec_path:
         return ActionResult(
             status="REJECTED",
-            remark="WORKFLOW_SPEC artifact not found in state.",
+            remark="WORKFLOW_SPEC_FILE artifact not found in state.",
             artifacts={},
             reject_code="MISSING_SPEC",
         )
@@ -225,7 +225,7 @@ def promote_workflow_package(*, context, state, step_cfg, project_root):
     if not slug:
         return ActionResult(
             status="REJECTED",
-            remark=f"Could not derive slug from WORKFLOW_SPEC: {spec_path}",
+            remark=f"Could not derive slug from WORKFLOW_SPEC_FILE: {spec_path}",
             artifacts={},
             reject_code="SLUG_EXTRACTION_FAILED",
         )

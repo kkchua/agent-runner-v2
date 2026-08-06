@@ -13,7 +13,7 @@ The test criteria must align with the enhanced workflow architecture:
 
 Reference Inputs
 
-- Read {WORKFLOW_SPEC} for the complete workflow specification.
+- Read {WORKFLOW_SPEC_FILE} for the complete workflow specification.
 - Read {WORKFLOW_CREATION_GUIDE} for reference on workflow package structure.
 
 Test Criteria Design Principles

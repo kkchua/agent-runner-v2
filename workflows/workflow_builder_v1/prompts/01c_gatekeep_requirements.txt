@@ -9,7 +9,7 @@ will cause downstream failures?"
 
 Reference Inputs
 
-- Read the original specification: {WORKFLOW_SPEC}
+- Read the original specification: {WORKFLOW_SPEC_FILE}
 - Read the generated requirements: {WORKFLOW_REQUIREMENTS}
 - Read the test criteria: {TEST_CRITERIA}
 

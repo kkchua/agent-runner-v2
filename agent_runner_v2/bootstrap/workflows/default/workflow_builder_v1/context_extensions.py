@@ -27,7 +27,7 @@ class WorkflowBuilderExtensions(WorkflowExtensions):
         date_str = dt.datetime.now().strftime("%Y%m%d")
         run_root = f"docs/repo/workflow_builder/runs/{job_id}"
         return {
-            "WORKFLOW_SPEC": "docs/repo/workflow_builder/specs/{slug}.md",
+            "WORKFLOW_SPEC_FILE": "docs/repo/workflow_builder/specs/{slug}.md",
             "TEST_CRITERIA": f"{run_root}/TEST_CRITERIA-{date_str}-{{seq}}_{{slug}}.md",
             "WORKFLOW_REQUIREMENTS": f"{run_root}/REQUIREMENTS-{date_str}-{{seq}}_{{slug}}.md",
             "ARTIFACT_CONTRACT": f"{run_root}/ARTIFACTS-{date_str}-{{seq}}_{{slug}}.md",
@@ -82,7 +82,7 @@ class WorkflowBuilderExtensions(WorkflowExtensions):
 
         # Resolve artifact paths to absolute
         artifacts = state.get("artifacts") or {}
-        spec_path = artifacts.get("WORKFLOW_SPEC", "")
+        spec_path = artifacts.get("WORKFLOW_SPEC_FILE", "")
         slug = extract_slug_from_path(spec_path)
 
         for key, rel_path in self.register_artifact_keys(job_id=job_id).items():

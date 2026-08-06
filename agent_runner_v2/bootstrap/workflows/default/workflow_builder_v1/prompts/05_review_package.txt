@@ -10,7 +10,7 @@ Reference Inputs
 - Read {TEST_CRITERIA} for the acceptance criteria -- verify the generated
   package fulfills ALL criteria in the "Criteria for review_package step"
   section. This is the primary verification contract.
-- Read {WORKFLOW_SPEC} for the original specification -- verify the
+- Read {WORKFLOW_SPEC_FILE} for the original specification -- verify the
   generated workflow actually implements what the spec describes.
 - Read {WORKFLOW_MANIFEST} for the generated workflow.toml.
 - Read {WORKFLOW_EXTENSIONS} for the generated context_extensions.py.
@@ -101,7 +101,7 @@ Review Checklist
    - Configuration section in README.md matches .env.sample and
      config.json.sample content (if those files exist)
 
-6. Spec fulfillment verification (read {TEST_CRITERIA} and {WORKFLOW_SPEC}):
+6. Spec fulfillment verification (read {TEST_CRITERIA} and {WORKFLOW_SPEC_FILE}):
    - Does the generated workflow actually implement the spec objective?
    - For each step in the spec: does the corresponding generated step
      (prompt or action) actually do what the spec describes?

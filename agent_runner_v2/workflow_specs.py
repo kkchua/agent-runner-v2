@@ -49,8 +49,6 @@ TRANSPORT_RAW_CONFIG_KEYS = {
     "enable_notifications",
     "on_reject_refine",
     "requires_human_approval_after",
-    "loop_returns_to",
-    "replan_returns_to",
     "produced_document_status",
     "post_action",
 }

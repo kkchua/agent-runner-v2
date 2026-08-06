@@ -7,7 +7,7 @@ ambiguity.
 
 Reference Inputs
 
-- Read {WORKFLOW_SPEC} for the original specification (read it fully).
+- Read {WORKFLOW_SPEC_FILE} for the original specification (read it fully).
 - Read {WORKFLOW_REQUIREMENTS} for the step 1 output that needs updating.
 - Read {WORKFLOW_CREATION_GUIDE} for workflow package conventions.
 

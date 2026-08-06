@@ -7,7 +7,7 @@ Reference Inputs
 
 - Read {REVIEW_FILE_SUGGESTED} for the list of issues to fix.
 - Read {TEST_CRITERIA} for the current test criteria document.
-- Read {WORKFLOW_SPEC} for the original specification to verify alignment.
+- Read {WORKFLOW_SPEC_FILE} for the original specification to verify alignment.
 
 Refinement Rules
 

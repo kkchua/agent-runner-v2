@@ -73,7 +73,11 @@ def prepare_step_execution(
             context[meta_ctx_key] = str(step_dir / "meta.json")
 
     loop_ctx = state.get("loop_context", {})
-    if step_cfg.get("loop_returns_to") and loop_ctx.get("active") and loop_ctx.get("loop_source_review"):
+    is_refine = any(
+        (sc.get("on_reject_refine") or {}).get("step") == step
+        for sc in group_cfg.get("step_configs", {}).values()
+    )
+    if is_refine and loop_ctx.get("active") and loop_ctx.get("loop_source_review"):
         context[ARTIFACT_KEY_REVIEW] = loop_ctx["loop_source_review"]
 
     action_name = str(step_cfg.get("action") or "")
