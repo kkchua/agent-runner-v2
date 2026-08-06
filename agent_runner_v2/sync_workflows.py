@@ -75,26 +75,90 @@ def convert_to_v2_format(group_dict: dict) -> dict:
 
     for step_name in steps_order:
         cfg = step_configs.get(step_name, {})
-        step_def = {}
-        if "onsuccess" in cfg:
-            step_def["onsuccess"] = cfg["onsuccess"]
-        if cfg.get("requires_human_approval_after"):
-            step_def["requires_human_approval_after"] = True
-        if "on_reject_refine" in cfg:
-            step_def["on_reject_refine"] = cfg["on_reject_refine"]
-        if "on_exhaust_replan" in cfg:
-            step_def["on_exhaust_replan"] = cfg["on_exhaust_replan"]
-        if "coder" in cfg:
-            step_def["coder"] = cfg["coder"]
-        if "action" in cfg:
-            step_def["action"] = cfg["action"]
-        if "prompt_file" in cfg:
-            step_def["prompt_file"] = cfg["prompt_file"]
-        if "artifacts" in cfg:
-            step_def["artifacts"] = cfg["artifacts"]
+        # Store the full step config as-is to preserve all data
+        # (bundle_to_template_group_dict flattens artifacts, so reconstruct)
+        step_def = dict(cfg)
+        # Reconstruct nested artifacts from flattened fields
+        artifacts = {}
+        for key in ("required_inputs", "optional_inputs", "immutable_inputs",
+                     "produces", "updates", "result_meta_key", "target_artifact", "edit_mode"):
+            if key in step_def:
+                artifacts[key] = step_def.pop(key)
+        if artifacts:
+            step_def["artifacts"] = artifacts
         definition["steps"][step_name] = step_def
 
     return definition
+
+
+def _extract_init_input_dirs(bundle_dir: Path, group_dict: dict) -> dict[str, str]:
+    """Extract artifact path directories for init step required inputs.
+
+    Loads the workflow's context_extensions.py, calls register_artifact_keys(),
+    and returns the directory portion of each init input's path template.
+
+    Returns:
+        Dict mapping artifact_key → directory (e.g. {"DRAFT_INIT_FILE": "docs/.../00_draft_initiatives"})
+    """
+    import importlib.util
+
+    context_ext_file = bundle_dir / "context_extensions.py"
+    if not context_ext_file.is_file():
+        return {}
+
+    # Find init step's required inputs
+    init_step_name = group_dict.get("job_init_step")
+    if not init_step_name:
+        return {}
+
+    step_configs = group_dict.get("step_configs", {})
+    init_cfg = step_configs.get(init_step_name, {})
+    artifacts_cfg = init_cfg.get("artifacts", {})
+    required_inputs = artifacts_cfg.get("required_inputs", [])
+    if not required_inputs:
+        return {}
+
+    # Load context_extensions module
+    spec = importlib.util.spec_from_file_location("_ctx_ext", context_ext_file)
+    if spec is None or spec.loader is None:
+        return {}
+    mod = importlib.util.module_from_spec(spec)
+    try:
+        spec.loader.exec_module(mod)
+    except Exception:
+        return {}
+
+    # Find WorkflowExtensions subclass
+    from agent_runner_v2.workflow_packages.extensions_base import WorkflowExtensions
+    ext_cls = None
+    for attr_name in dir(mod):
+        attr = getattr(mod, attr_name)
+        if (isinstance(attr, type) and issubclass(attr, WorkflowExtensions)
+                and attr is not WorkflowExtensions):
+            ext_cls = attr
+            break
+    if ext_cls is None:
+        return {}
+
+    # Get path templates
+    instance = ext_cls()
+    try:
+        path_templates = instance.register_artifact_keys()
+    except Exception:
+        return {}
+
+    # Extract directory portion for each required input
+    result: dict[str, str] = {}
+    for key in required_inputs:
+        template = path_templates.get(key)
+        if template:
+            if "/" in template:
+                directory = template.rsplit("/", 1)[0]
+            else:
+                directory = ""
+            result[key] = directory
+
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -254,6 +318,11 @@ def main(argv: list[str] | None = None) -> int:
 
         group_dict = _strip_bundle_refs(workflows[workflow_name])
         v2_definition = convert_to_v2_format(group_dict)
+
+        # Extract artifact path directories for init step required inputs
+        init_input_dirs = _extract_init_input_dirs(bundle_dir, workflows[workflow_name])
+        if init_input_dirs:
+            v2_definition["init_input_dirs"] = init_input_dirs
 
         source_hash = hashlib.sha256(
             json.dumps(v2_definition, sort_keys=True).encode("utf-8")

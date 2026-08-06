@@ -32,41 +32,23 @@ YAML frontmatter fields with these exact values:
 If any document is missing these fields, add them to the YAML frontmatter.
 If any document has wrong values, correct them.
 
-ASCII-Only Content Rule
-
-All staged documents MUST contain ASCII characters only (byte values 0x00-0x7F).
-Replace non-ASCII characters with ASCII equivalents:
-
-| Non-ASCII Character | Replacement |
-|---------------------|-------------|
-| Em-dash             | --          |
-| Right arrow         | ->          |
-| Left arrow          | <-          |
-| Curly double quotes | "           |
-| Curly single quotes | '           |
-| Bullet              | - or *      |
-
-Scan every staged document for non-ASCII bytes and replace them.
-
 Refinement Rules
 
 1. Address EVERY finding in the review document.
 2. Add missing governance metadata fields to all documents that lack them.
-3. Replace all non-ASCII characters with ASCII equivalents.
-4. Fix the change impact report so that:
+3. Fix the change impact report so that:
    - Files that did not previously exist appear ONLY in "Documentation Created"
    - Files that existed before appear ONLY in "Documentation Updated"
    - No file appears in both sections
-5. Do NOT add content beyond what is needed to address review findings.
-6. Do NOT restructure docs that were not flagged by the review.
-7. Preserve existing content -- only add/fix what the review requires.
+4. Do NOT add content beyond what is needed to address review findings.
+5. Do NOT restructure docs that were not flagged by the review.
+6. Preserve existing content -- only add/fix what the review requires.
 
 Output Instructions
 
 - Edit the staged documents in place under the staging root directory.
 - Edit CODEBASE_INVENTORY in place if it needs metadata fixes.
 - Edit CODEBASE_CHANGE_IMPACT in place if it needs created/updated fixes.
-- Use ASCII-only characters in all output.
 - Do NOT modify the review document itself.
 
 Pre-Write Self-Check
@@ -74,7 +56,6 @@ Pre-Write Self-Check
 Before writing each file, verify:
 1. YAML frontmatter includes doc_type, authority, scan_policy, lifecycle_status, version
 2. All values match the expected values in the table above
-3. No non-ASCII characters remain in the file content
 
 Forbidden Content
 

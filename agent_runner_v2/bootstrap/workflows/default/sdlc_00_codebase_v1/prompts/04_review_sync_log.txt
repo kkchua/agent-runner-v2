@@ -63,17 +63,6 @@ MUST include these exact YAML frontmatter fields with these exact values:
 Check EVERY staged document for these fields. If any field is missing or has
 a wrong value, REJECT the review.
 
-ASCII-Only Content Rule
-
-All staged documents MUST contain ASCII characters only (byte values 0x00-0x7F).
-Common violations to check:
-- Em-dash (U+2014) must be replaced with double hyphen (--)
-- Right arrow (U+2192) must be replaced with (->)
-- Curly quotes must be replaced with straight quotes
-- Bullet characters must be replaced with asterisks or hyphens
-
-If ANY document contains non-ASCII characters, REJECT the review.
-
 Output Instructions
 
 - Write the review document to REVIEW_FILE_SUGGESTED path.
@@ -82,7 +71,6 @@ Output Instructions
 - Include an explicit decision: APPROVED or REJECTED.
 - If REJECTED, include specific refinement instructions listing every file
   that needs changes and what changes are needed.
-- Use ASCII-only characters in the review document itself.
 
 Decision Rules
 
@@ -90,7 +78,6 @@ Decision Rules
   - Sync log exists and is accurate
   - Inventory is complete (all modules accounted for)
   - All module and component docs have correct governance metadata
-  - All documents are ASCII-only
   - Change impact report correctly separates created vs updated docs
 
 - REJECT when ANY of these is true:
@@ -98,7 +85,6 @@ Decision Rules
   - Any module or component doc is missing
   - Any document lacks required metadata fields (doc_type, authority,
     scan_policy, lifecycle_status, version)
-  - Any document contains non-ASCII characters
   - Change impact report lists the same file in both created and updated
 
 CRITICAL: The meta.json status field MUST match your review decision exactly.

@@ -19,7 +19,7 @@ requires_human_approval_after = true
 onsuccess = "review_test_criteria"
 
 [step.artifacts]
-required_inputs = ["WORKFLOW_SPEC"]
+required_inputs = ["WORKFLOW_SPEC_FILE"]
 produces = ["TEST_CRITERIA"]
 result_meta_key = "TEST_CRITERIA"
 
@@ -37,7 +37,7 @@ requires_human_approval_after = true
 onsuccess = "analyze_spec"
 
 [step.artifacts]
-required_inputs = ["TEST_CRITERIA", "WORKFLOW_SPEC"]
+required_inputs = ["TEST_CRITERIA", "WORKFLOW_SPEC_FILE"]
 produces = ["REVIEW_FILE_SUGGESTED"]
 result_meta_key = "REVIEW_FILE_SUGGESTED"
 
@@ -61,7 +61,7 @@ enable_notifications = true
 requires_human_approval_after = true
 
 [step.artifacts]
-required_inputs = ["REVIEW_FILE_SUGGESTED", "TEST_CRITERIA", "WORKFLOW_SPEC"]
+required_inputs = ["REVIEW_FILE_SUGGESTED", "TEST_CRITERIA", "WORKFLOW_SPEC_FILE"]
 produces = ["TEST_CRITERIA"]
 result_meta_key = "TEST_CRITERIA"
 
@@ -81,7 +81,7 @@ requires_human_approval_after = true
 onsuccess = "gatekeep_requirements"
 
 [step.artifacts]
-required_inputs = ["WORKFLOW_SPEC", "TEST_CRITERIA"]
+required_inputs = ["WORKFLOW_SPEC_FILE", "TEST_CRITERIA"]
 produces = ["WORKFLOW_REQUIREMENTS"]
 result_meta_key = "WORKFLOW_REQUIREMENTS"
 
@@ -99,7 +99,7 @@ requires_human_approval_after = true
 onsuccess = "resolve_questions"
 
 [step.artifacts]
-required_inputs = ["WORKFLOW_REQUIREMENTS", "WORKFLOW_SPEC"]
+required_inputs = ["WORKFLOW_REQUIREMENTS", "WORKFLOW_SPEC_FILE"]
 produces = ["GATEKEEP_REQUIREMENTS"]
 result_meta_key = "GATEKEEP_REQUIREMENTS"
 
@@ -124,7 +124,7 @@ requires_human_approval_after = true
 onsuccess = "define_artifacts"
 
 [step.artifacts]
-required_inputs = ["WORKFLOW_REQUIREMENTS", "WORKFLOW_SPEC"]
+required_inputs = ["WORKFLOW_REQUIREMENTS", "WORKFLOW_SPEC_FILE"]
 produces = ["WORKFLOW_REQUIREMENTS"]
 result_meta_key = "WORKFLOW_REQUIREMENTS"
 
@@ -287,7 +287,7 @@ requires_human_approval_after = true
 onsuccess = "promote_package"
 
 [step.artifacts]
-required_inputs = ["WORKFLOW_MANIFEST", "WORKFLOW_EXTENSIONS", "WORKFLOW_PROMPTS_INDEX", "VALIDATION_REPORT", "TEST_CRITERIA", "WORKFLOW_SPEC"]
+required_inputs = ["WORKFLOW_MANIFEST", "WORKFLOW_EXTENSIONS", "WORKFLOW_PROMPTS_INDEX", "VALIDATION_REPORT", "TEST_CRITERIA", "WORKFLOW_SPEC_FILE"]
 produces = ["REVIEW_FILE_SUGGESTED"]
 result_meta_key = "REVIEW_FILE_SUGGESTED"
 
@@ -330,7 +330,7 @@ enable_notifications = true
 onsuccess = "stepCompletion"
 
 [step.artifacts]
-required_inputs = ["WORKFLOW_SPEC", "WORKFLOW_MANIFEST"]
+required_inputs = ["WORKFLOW_SPEC_FILE", "WORKFLOW_MANIFEST"]
 produces = ["WORKFLOW_PACKAGE_DIR"]
 result_meta_key = "WORKFLOW_PACKAGE_DIR"
 

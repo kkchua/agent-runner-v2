@@ -10,7 +10,7 @@ prescriptive (how to achieve it). Your job is to INFER the implementation:
 
 Reference Inputs
 
-- Read {WORKFLOW_SPEC} for the user-provided specification.
+- Read {WORKFLOW_SPEC_FILE} for the user-provided specification.
 - Read {WORKFLOW_CREATION_GUIDE} for reference on workflow patterns and file types.
 - Read {WORKFLOW_BUILDER_SOP} for storage conventions and naming rules.
 
