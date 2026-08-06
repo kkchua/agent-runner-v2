@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from agent_runner_v2.transition_runtime import complete_recovery_step
+from agent_runner_v2.v2.transition_runtime import complete_recovery_step
 
 
 def test_complete_recovery_step_resets_loop_and_advances(tmp_path: Path) -> None:

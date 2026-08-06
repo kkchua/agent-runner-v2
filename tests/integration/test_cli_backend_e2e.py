@@ -17,7 +17,7 @@ import sys
 
 import pytest
 
-from agent_runner_v2.backend_client import BackendClient
+from agent_runner_v2.v2.backend_client_v1 import BackendClient
 from agent_runner_v2.config_loader import load_runner_config
 
 # ---------------------------------------------------------------------------

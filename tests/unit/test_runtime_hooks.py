@@ -202,7 +202,6 @@ class TestRuntimeHooksLazyLoading:
         hooks = RuntimeHooks()
         assert hooks._workflow_runtime is None
         assert hooks._step_execution_runtime is None
-        assert hooks._backend_execution is None
         assert hooks._execution_core is None
         assert hooks._job_state is None
         assert hooks._bundle_loader is None

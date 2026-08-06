@@ -4,7 +4,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from .backend_client import BackendClient
+from .v2.backend_client_v1 import BackendClient
 from .bundle_loader import load_project_config, load_workflow_module, resolve_workflow_root
 from .constants import known_artifact_paths as _known_artifact_paths
 from .exceptions import PreflightBlockedError
@@ -26,11 +26,10 @@ from .runtime_context import ARTIFACT_ROOT, JOBS_ROOT, PACKAGE_ROOT, get_workflo
 from .runtime_utils import now_iso as _now_iso, safe_relative_to as _safe_relative_to, save_json as _save_json, save_text as _save_text
 from .step_runner import build_context, prompt_checksum, render_prompt, resolve_prompt_path, run_action, run_step
 from .task_runtime import ensure_execution_task_binding_integrity, ensure_planning_task_queue_integrity
-from .transition_runtime import mark_review_started
+from .v2.transition_runtime import mark_review_started
 from .workflow_specs import build_step_execution_spec, get_template_group_cfg, reconcile_step_execution_spec
-from .routing_runtime import predict_next_step_after_approved
+from .v2.routing_runtime import predict_next_step_after_approved
 
-from . import backend_execution as _backend_execution
 from . import step_execution_runtime as _step_execution_runtime
 from . import workflow_runtime as _workflow_runtime
 
@@ -138,4 +137,4 @@ def _build_group_cfg_from_execution_spec(
     template_group: str,
     step_name: str,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
-    return _backend_execution.build_group_cfg_from_execution_spec(spec, template_group, step_name)
+    return _workflow_runtime._build_group_cfg_from_spec(spec, template_group, step_name)

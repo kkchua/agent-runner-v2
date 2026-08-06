@@ -108,8 +108,6 @@ def validate_workflow_bundle_dir(bundle_root: Path) -> WorkflowBundleValidationR
     for step_name in bundle.step_order:
         cfg = step_configs.get(step_name, {})
         _validate_step_target(findings, known_steps, cfg.get("onsuccess"), "onsuccess_target_missing", manifest_path, step_name)
-        _validate_step_target(findings, known_steps, cfg.get("loop_returns_to"), "loop_returns_to_missing", manifest_path, step_name)
-        _validate_step_target(findings, known_steps, cfg.get("replan_returns_to"), "replan_returns_to_missing", manifest_path, step_name)
         refine_cfg = cfg.get("on_reject_refine") or {}
         if isinstance(refine_cfg, dict):
             _validate_step_target(findings, known_steps, refine_cfg.get("step"), "on_reject_refine_step_missing", manifest_path, step_name)
@@ -449,7 +447,7 @@ def _collect_step_artifact_references(bundle: Any) -> set[str]:
         for key in (step.result_meta_key, step.result_meta_key_from_context, step.target_artifact):
             if isinstance(key, str) and key.strip():
                 referenced.add(key.strip())
-        for route_cfg in (step.on_reject_refine, step.on_exhaust_replan):
+        for route_cfg in (step.on_reject_refine,):
             if isinstance(route_cfg, dict):
                 artifact_key = route_cfg.get("artifact")
                 if isinstance(artifact_key, str) and artifact_key.strip():

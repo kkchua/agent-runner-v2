@@ -75,10 +75,6 @@ Minor inconsistency. Not a functional issue.
 
 **13/14 have refinement loops.** Only `00_bootstrap` has a degenerate case (`max_iterations = 0`).
 
-### `workflow.toml` — `on_exhaust_replan`
-
-**0/14 have replan sections.** This feature is defined in the loader but unused across all workflows.
-
 ---
 
 ## `context_extensions.py` — Implementation Patterns

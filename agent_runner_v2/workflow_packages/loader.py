@@ -131,16 +131,11 @@ def _parse_bundle(
             coder_must_differ=bool(coder_sec.get("must_differ", False)),
             on_approve=_opt_str(routing, "on_approve"),
             on_reject_refine=raw.get("on_reject_refine"),
-            on_exhaust_replan=raw.get("on_exhaust_replan"),
             reject_code_routes=raw.get("reject_code_routes"),
             requires_human_approval_after=bool(
                 raw.get("requires_human_approval_after", False)
                 or artifact.get("requires_human_approval_after", False)
             ),
-            loop_returns_to=_opt_str(raw, "loop_returns_to")
-                or _opt_str(artifact, "loop_returns_to"),
-            replan_returns_to=_opt_str(raw, "replan_returns_to")
-                or _opt_str(artifact, "replan_returns_to"),
             enable_notifications=bool(raw.get("enable_notifications", False)),
             template_ref=raw.get("template_ref"),
             post_action=_opt_str(raw, "post_action"),
@@ -188,15 +183,15 @@ _STEP_DIRECT_KEYS = {
     "produces", "result_meta_key", "result_meta_key_from_context",
     "target_artifact", "edit_mode", "immutable_inputs",
     "produced_document_status", "coder", "enable_notifications",
-    "on_reject_refine", "on_exhaust_replan", "reject_code_routes",
-    "requires_human_approval_after", "loop_returns_to", "replan_returns_to",
+    "on_reject_refine", "reject_code_routes",
+    "requires_human_approval_after",
     "template_ref", "post_action",
 }
 _KNOWN_STEP_KEYS = {
     "name", "prompt", "action", "mode",
     "artifacts", "coder", "routing",
-    "on_reject_refine", "on_exhaust_replan", "reject_code_routes",
-    "requires_human_approval_after", "loop_returns_to", "replan_returns_to",
+    "on_reject_refine", "reject_code_routes",
+    "requires_human_approval_after",
     "enable_notifications", "template_ref", "post_action",
 }
 
@@ -263,18 +258,12 @@ def bundle_to_template_group_dict(bundle: WorkflowBundle) -> dict[str, Any]:
         # --- Routing -----------------------------------------------------
         if sc.on_reject_refine:
             cfg["on_reject_refine"] = dict(sc.on_reject_refine)
-        if sc.on_exhaust_replan:
-            cfg["on_exhaust_replan"] = dict(sc.on_exhaust_replan)
         if sc.reject_code_routes:
             cfg["reject_code_routes"] = dict(sc.reject_code_routes)
 
         # --- Review gating -----------------------------------------------
         if sc.requires_human_approval_after:
             cfg["requires_human_approval_after"] = True
-        if sc.loop_returns_to:
-            cfg["loop_returns_to"] = sc.loop_returns_to
-        if sc.replan_returns_to:
-            cfg["replan_returns_to"] = sc.replan_returns_to
 
         # --- Behaviour flags --------------------------------------------
         if sc.enable_notifications:

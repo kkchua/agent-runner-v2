@@ -26,7 +26,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from .backend_client import BackendClient
+from .v2.backend_client_v1 import BackendClient
 from .bundle_loader import (
     core_bundles_root,
     init_workspace,
@@ -89,7 +89,7 @@ from .task_runtime import (
     ensure_planning_task_queue_integrity,
     task_execution_binding_current_item,
 )
-from .routing_runtime import predict_next_step_after_approved
+from .v2.routing_runtime import predict_next_step_after_approved
 from .step_runner import (
     StepResult,
     build_context,
@@ -115,10 +115,10 @@ from . import manual_runtime_deps as _manual_runtime_deps
 from . import runtime_utils as _runtime_utils
 from . import shared_runtime_deps as _shared_runtime_deps
 from . import step_execution_runtime as _step_execution_runtime
-from . import transition_runtime as _transition_runtime
+from .v2 import transition_runtime as _transition_runtime
 from . import workflow_runtime as _workflow_runtime
 from .execution_core import execute_routed_step, invoke_prepared_step
-from .workflow_router import route_after_failure, route_after_step
+from .v2.workflow_router import route_after_failure, route_after_step
 from .workflow_specs import reconcile_step_execution_spec
 from .workflow_specs import build_step_execution_spec, get_template_group_cfg
 
@@ -977,6 +977,7 @@ def main(argv: list[str] | None = None) -> int:
                         failure_class="GUARDRAIL_VIOLATION",
                         error_message=reject_reason or "Guardrail validation failed",
                         exit_code=1,
+                        step=step,
                     )
 
                 return 1
@@ -1027,6 +1028,7 @@ def main(argv: list[str] | None = None) -> int:
                 failure_class=state.get("last_failure_class") or "HUMAN_RETRY_REQUIRED",
                 error_message=routed.failure.failure_reason,
                 exit_code=routed.exit_code,
+                step=step,
             )
 
         return routed.exit_code
@@ -1106,6 +1108,7 @@ def main(argv: list[str] | None = None) -> int:
             error_message=step_result.remark if outcome != "approved" else None,
             exit_code=exit_code,
             step_result=step_result,
+            step=step,
         )
 
     print(json.dumps({
@@ -1137,6 +1140,7 @@ def _write_result_to_queue(
     error_message: str | None = None,
     exit_code: int = 0,
     step_result: Any = None,
+    step: str = "",
 ) -> None:
     """Write step outcome to the queue file for daemon to pick up.
 
@@ -1158,6 +1162,10 @@ def _write_result_to_queue(
         CLI process exit code.
     step_result :
         Optional StepResult for extracting artifacts and review state.
+    step :
+        The actual step name that was executed. Must be passed explicitly
+        because state["current_step"] may already point to the next step
+        after routing updates it.
     """
     queue_dir_str = os.environ.get("AGENT_RUNNER_QUEUE_DIR", "").strip()
     if not queue_dir_str:
@@ -1199,7 +1207,7 @@ def _write_result_to_queue(
         "run_id": str(state.get("workflow_run_id") or ""),
         "run_code": str(state.get("job_id") or ""),
         "workflow_name": str(state.get("template_group") or ""),
-        "step_name": str(state.get("current_step") or ""),
+        "step_name": step or str(state.get("current_step") or ""),
         "job_dir": os.environ.get("AGENT_RUNNER_JOB_DIR"),
         "outcome": outcome,
         "failure_class": failure_class,

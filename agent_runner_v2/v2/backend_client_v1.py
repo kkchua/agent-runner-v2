@@ -1,25 +1,9 @@
-"""[V1 DEPRECATED] Backend API client for agent_runner_v2.
-
-→ Replaced by: agent_runner_v2/v2/backend_client.py
-→ Architecture: docs/repo/agent_runner/sdlc/delivery/00_initiatives/INIT-20260801-002_platform-v2-architecture-redesign.md
+"""Backend API client for agent_runner_v2 (CLI commands).
 
 Provides a thin HTTP client wrapper for communicating with the agent-runner
-backend service. All state persistence and workflow coordination happens
-through this client.
+backend service. Used by CLI subcommands (submit, show, list, reset).
 
-Key responsibilities:
-- Submit and manage workflow runs
-- Register workers and claim steps
-- Sync job state and artifacts
-- Approve/reject workflow steps
-- Heartbeat and liveness tracking
-
-The client uses urllib (no external HTTP dependencies) and raises RuntimeError
-on HTTP errors with response body context for debugging.
-
-Primary usage: BackendClient(base_url) instance with method calls.
-
-Related: IMPL-20260422-04
+Note: The daemon uses V2BackendClient from v2/backend_client.py instead.
 """
 from __future__ import annotations
 

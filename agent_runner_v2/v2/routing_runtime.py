@@ -1,27 +1,15 @@
-"""[V1 DEPRECATED] Routing runtime — step routing and state advancement.
-
-→ Replaced by: Backend state machine (agent-runner-backend-v2/services/state_machine.py)
-→ Architecture: docs/repo/agent_runner/sdlc/delivery/00_initiatives/INIT-20260801-002_platform-v2-architecture-redesign.md
-"""
+"""Routing runtime — step routing and state advancement."""
 from __future__ import annotations
 
 from typing import Any
 
-from .task_runtime import task_queue_current_item
+from ..task_runtime import task_queue_current_item
 
 
 def get_next_step_skipping_refine_replan(group_cfg: dict[str, Any], completed_steps: list[str]) -> str | None:
     completed = set(completed_steps)
     skip_steps: set[str] = set()
-    # Only skip actual recovery steps (those with loop_returns_to or replan_returns_to).
-    # Do NOT skip steps that are merely mentioned as on_reject_refine targets --
-    # many workflows use self-referencing on_reject_refine (step points to itself),
-    # which means the step should rerun on rejection, not be skipped entirely.
-    for step_name, sc in group_cfg.get("step_configs", {}).items():
-        if sc.get("loop_returns_to") or sc.get("replan_returns_to"):
-            skip_steps.add(str(step_name))
-    # Also skip steps with "refine" or "replan" in their name (fallback for
-    # workflows that don't use loop_returns_to/replan_returns_to).
+    # Skip steps with "refine" or "replan" in their name.
     for step in group_cfg.get("steps", []):
         lowered = str(step).lower()
         if "replan" in lowered or "refine" in lowered:
@@ -39,12 +27,6 @@ def predict_next_step_after_approved(
     step: str,
     step_cfg: dict[str, Any],
 ) -> str | None:
-    if step_cfg.get("loop_returns_to"):
-        return str(step_cfg["loop_returns_to"])
-
-    if step_cfg.get("replan_returns_to"):
-        return str(step_cfg["replan_returns_to"])
-
     if step_cfg.get("requires_human_approval_after"):
         return step
 

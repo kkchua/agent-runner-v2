@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from agent_runner_v2.routing_runtime import predict_next_step_after_approved
+from agent_runner_v2.v2.routing_runtime import predict_next_step_after_approved
 
 
 def test_predict_next_step_after_approved_returns_same_step_for_human_approval() -> None:

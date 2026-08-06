@@ -133,7 +133,6 @@ workflows/your_workflow_name/prompts/01_first_step.txt
 
 **Critical rules:**
 - Use bare `{ARTIFACT_KEY}` placeholders — never wrap in backticks.
-- ASCII-only content.
 - Reference absolute paths via placeholders, never hardcode.
 
 See [Part C: Prompt Templates](#c4-prompts) for the full reference.
@@ -246,7 +245,6 @@ sole communication channel.
 **Routing** — After each step, the runner decides the next step:
 - `onsuccess` → advance to next step after approval
 - `on_reject_refine` → refinement loop when rejected
-- `on_exhaust_replan` → replan fallback (not currently used)
 - `requires_human_approval_after` → gate on human decision
 
 **Coder Roles** — Role policies (e.g., `architect_standard`,
@@ -386,13 +384,13 @@ exhausted_failure_code = "REFINE_EXHAUSTED"
 exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
 ```
 
-The refine step should include `loop_returns_to` to route back:
+The refine step should use `onsuccess` to route back to the review step:
 
 ```toml
 [[step]]
 name = "refine_docs"
 prompt = "prompts/04_refine.txt"
-loop_returns_to = "review_docs"            # After refine, go back to review
+onsuccess = "review_docs"                  # After refine, go back to review
 
 [step.artifacts]
 required_inputs = ["OUTPUT_ARTIFACT", "REVIEW_FILE_SUGGESTED"]
@@ -611,7 +609,6 @@ Write the requirements document to: {REQ_FILE}
 Output Instructions
 
 - Complete markdown with YAML frontmatter.
-- ASCII only.
 - Include traceability matrix linking requirements to initiative goals.
 ```
 
@@ -790,7 +787,7 @@ generate → technical_critique → review → [refine → review] → promote �
 - 4 prompt files: generate, critique, review, refine
 - 2 role policies: `architect_standard` (generate/refine), `reviewer_standard` (critique/review)
 - Refinement loop: review rejects → refine → back to review
-- `loop_returns_to` on refine step
+- Refine step uses `onsuccess` to return to review
 - `requires_human_approval_after = true` on review step
 - Promote step at the end with `promotes` at `[[step]]` top level
 - `target_artifact` + `edit_mode = "in_place"` on refine step
@@ -802,7 +799,7 @@ generate → technical_critique → review → [refine → review] → promote �
 | generate | prompt | architect_standard | onsuccess → technical_critique |
 | technical_critique | prompt | reviewer_standard | onsuccess → review; on_reject_refine → generate |
 | review | prompt | reviewer_standard | onsuccess → promote; on_reject_refine → refine; requires_human_approval |
-| refine | prompt | architect_standard | loop_returns_to → review |
+| refine | prompt | architect_standard | onsuccess → review |
 | promote | action (promote_artifact) | — | onsuccess → stepCompletion |
 | stepCompletion | action (step_completion) | — | terminal |
 

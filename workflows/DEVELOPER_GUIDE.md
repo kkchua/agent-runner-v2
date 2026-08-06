@@ -13,11 +13,11 @@ a long-lived process.
 ```
 workflows/<name>/
 ├── workflow.toml              # Manifest: steps, artifacts, routing, coders
-├── bundle_governance.toml     # Canonical artifact registry (single source of truth)
+├── bundle_governance.toml     # Optional artifact registry for backend sync
 ├── context_extensions.py      # MANDATORY — WorkflowExtensions interface (see below)
 ├── actions.py                 # Custom @action functions (optional)
 ├── prompts/                   # Prompt template .txt files
-├── bundle_governance/         # Generated governance adapters
+├── bundle_governance/         # Optional generated governance adapters
 │   ├── core_governance.md     # Bundle-level governance rules
 │   ├── prompt_sop.md          # SOP rules injected into every prompt
 │   ├── prompt_contract.json   # Required prompt markers and rejection terms
@@ -35,14 +35,15 @@ Every workflow package must contain at minimum:
 | File | Purpose |
 |---|---|
 | `workflow.toml` | Step definitions, routing, coder roles, artifact contracts |
-| `bundle_governance.toml` | Canonical artifact registry — the single source of truth for artifact keys |
 | `context_extensions.py` | **MANDATORY** — `WorkflowExtensions` subclass implementing lifecycle hooks (see below) |
 | `prompts/` | At least one `.txt` prompt template per prompt-driven step |
 
-## `bundle_governance.toml` — Artifact Registry
+## `bundle_governance.toml` — Artifact Registry (Optional)
 
-**This file is the single source of truth for artifact keys.** Every
-artifact your workflow can produce or consume must be declared here.
+**Optional.** Provides a centralized artifact registry for backend sync
+validation and governance adapter generation. Artifact keys are
+auto-accepted by the runner if they appear in `workflow.toml` step
+fields even without this file.
 
 ### Structure
 
@@ -81,16 +82,16 @@ required = false
 | `description` | No | Human-readable description |
 | `required` | No | Whether the artifact must exist for validation to pass (default `false`) |
 
-### Why it matters
+### Why use it
 
-- The runner stores `workflow_artifact_keys` in job state at creation time.
-- `build_job_sync_payload()` filters artifacts to only keys declared here.
-- Undeclared artifacts are rejected before reaching the backend, preventing
-  foreign-key violations on the backend's `artifact_types` table.
-- The backend sync uses these keys to auto-register artifact types.
+- Provides a centralized artifact registry for governance adapter generation
+  (AGENTS.md, QWEN.md, CLAUDE.md).
+- The backend sync uses declared keys to auto-register artifact types.
+- Adds an extra validation layer for artifact key declarations.
 
-**If your workflow produces an artifact but doesn't declare it in
-`bundle_governance.toml`, the sync will silently drop it.**
+**Note:** Even without this file, artifact keys are auto-accepted by the
+runner if they appear in `workflow.toml` step fields (`produces`,
+`required_inputs`, etc.). See the "Artifact Key Registration" section below.
 
 ---
 
@@ -207,7 +208,6 @@ action = "step_completion"
 |---|---|
 | `onsuccess` | Step to run after approval |
 | `on_reject_refine` | Refinement loop when a step is rejected |
-| `on_exhaust_replan` | Replan fallback when refinement is exhausted |
 | `requires_human_approval_after` | Gate step completion on human approval |
 
 ### Refinement loop
@@ -221,8 +221,8 @@ exhausted_failure_code = "MY_REFINEMENT_EXHAUSTED"
 exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
 ```
 
-The loop route: `review → validate (rejected) → refine → (loop_returns_to) → review`.
-Add `loop_returns_to = "review_docs"` on the refine step.
+The loop route: `review → validate (rejected) → refine → (onsuccess) → review`.
+The refine step uses `onsuccess = "review_docs"` to return to the review step.
 
 ---
 
@@ -391,7 +391,6 @@ Each output must include YAML frontmatter with:
 Output Instructions
 
 - Write complete markdown files.
-- Use ASCII only.
 ```
 
 ## Backend Sync
@@ -514,14 +513,11 @@ For workflow-specific keys, keep them in your workflow package only.
 8. **All injected path placeholders must use absolute paths** — relative
    paths break when the daemon runs from a different working directory.
 
-9. **Use ASCII only in generated documents** — the deterministic validator
-   rejects non-ASCII characters.
-
-10. **Prompt placeholders must be bare `{KEY}`** — never `` `{KEY}` ``.
+9. **Prompt placeholders must be bare `{KEY}`** — never `` `{KEY}` ``.
     Backtick-wrapped placeholders are literal text and will NOT be resolved
     by the runner. The coder needs actual file paths, not key names.
 
-11. **`promotes` key must be top-level in `[[step]]`** — for promote steps
+10. **`promotes` key must be top-level in `[[step]]`** — for promote steps
     using `promote_artifact` or `promote_all` actions, the `promotes` key
     MUST be placed at the top level of `[[step]]`, NOT under
     `[step.artifacts]`. The TOML loader silently drops unknown fields from

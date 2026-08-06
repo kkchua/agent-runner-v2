@@ -1,25 +1,5 @@
 #!/usr/bin/env python3
-"""
-[V1 DEPRECATED] workflow_router.py — Post-step routing for agent_runner_v2.
-
-→ Replaced by: Backend state machine (agent-runner-backend-v2/services/state_machine.py)
-→ Architecture: docs/repo/agent_runner/sdlc/delivery/00_initiatives/INIT-20260801-002_platform-v2-architecture-redesign.md
-
-V1 routing logic (route_after_step, route_after_failure) now lives in the
-backend state machine engine. The CLI only classifies outcomes; the backend
-decides what happens next.
-
-Replaces the monolithic update_job_state_after_result() from v1.
-
-Key v2 differences from v1:
-- No extract_blocking_issues() — blocking_issues is always [] (coder owns content analysis)
-- No review_converges() check — coder decides if replan was adequate
-- No review_file_has_actionable_findings() check — trust coder's REJECTED
-- No duplicate review file check — coder owns path uniqueness
-- No sync_review_metadata() — runner does NOT write to markdown files
-- No stamp_created_metadata() — runner does NOT own markdown fields
-- update_review_state() still used to track review state in job.json only
-"""
+"""workflow_router.py — Post-step routing for agent_runner_v2."""
 from __future__ import annotations
 
 import datetime as dt
@@ -27,16 +7,15 @@ import re
 from pathlib import Path
 from typing import Any
 
-from .coder_adapters import CoderInvocationError
-from .constants import ARTIFACT_KEY_REVIEW
-from .exceptions import ArtifactMissingError, MetaJsonInvalidError, MetaJsonMissingError
-from .failure_runtime import append_failure_history, clear_last_failure, set_last_failure
-from .recovery_runtime import (
+from ..coder_adapters import CoderInvocationError
+from ..constants import ARTIFACT_KEY_REVIEW
+from ..exceptions import ArtifactMissingError, MetaJsonInvalidError, MetaJsonMissingError
+from ..failure_runtime import append_failure_history, clear_last_failure, set_last_failure
+from ..recovery_runtime import (
     activate_refine_loop,
-    activate_replan,
     handle_recovery_budget_exceeded,
 )
-from .job_state import (
+from ..job_state import (
     CONTROL_CLASSES,
     REVIEW_DECISIONS,
     HUMAN_DECISIONS,
@@ -48,10 +27,10 @@ from .job_state import (
     save_job,
     set_job_status,
 )
-from .notifications import send_notification
-from .notification_manager import send_workflow_notification, send_step_notification
-from .runtime_context import PROJECT_ROOT
-from .step_runner import StepResult
+from ..notifications import send_notification
+from ..notification_manager import send_workflow_notification, send_step_notification
+from ..runtime_context import PROJECT_ROOT
+from ..step_runner import StepResult
 
 
 # ---------------------------------------------------------------------------
@@ -433,35 +412,12 @@ def _route_loop_or_replan(
             reject_counts=reject_counts,
         )
 
-    # Loop exhausted — try replan
-    replan_cfg = step_cfg.get("on_exhaust_replan") or {}
-    max_replans = int(replan_cfg.get("max_replans", 0))
-    current_replan_attempt = int(state.get("replan_context", {}).get("replan_attempt", 0))
-
-    if replan_cfg and current_replan_attempt < max_replans:
-        return _trigger_replan(
-            group_name=group_name,
-            group_cfg=group_cfg,
-            state=state,
-            step=step,
-            step_cfg=step_cfg,
-            step_result=step_result,
-            coder_used=coder_used,
-            on_reject_refine=on_reject_refine,
-            replan_cfg=replan_cfg,
-            review_file=review_file,
-            current_replan_attempt=current_replan_attempt,
-            reject_counts=reject_counts,
-            artifacts=artifacts,
-        )
-
-    # Both loop and replan exhausted
+    # Loop exhausted
     exhausted_failure_class = str(
         on_reject_refine.get("exhausted_failure_class") or "HUMAN_RETRY_REQUIRED"
     )
     exhausted_failure_code = str(
-        replan_cfg.get("terminal_failure_code")
-        or on_reject_refine.get("exhausted_failure_code")
+        on_reject_refine.get("exhausted_failure_code")
         or "REFINEMENT_EXHAUSTED"
     )
     state.setdefault("human_retry_count_by_step", {})[step] = (
@@ -540,70 +496,6 @@ def _trigger_loop(
         final_decision_source="MODEL",
     )
     # v2: no sync_review_metadata — runner does NOT write to markdown
-    save_job(group_name, state["job_id"], state)
-    return state, exit_code
-
-
-def _trigger_replan(
-    *,
-    group_name: str,
-    group_cfg: dict,
-    state: dict,
-    step: str,
-    step_cfg: dict,
-    step_result: StepResult,
-    coder_used: str,
-    on_reject_refine: dict,
-    replan_cfg: dict,
-    review_file: str | None,
-    current_replan_attempt: int,
-    reject_counts: dict,
-    artifacts: dict,
-) -> tuple[dict, int]:
-    """Trigger a replan after loop exhaustion."""
-    # Budget check
-    allowed, _ = _consume_planning_attempt_budget(state=state, group_cfg=group_cfg)
-    if not allowed:
-        state, exit_code = handle_recovery_budget_exceeded(
-            state=state,
-            step=step,
-            reject_counts=reject_counts,
-            set_last_failure=set_last_failure,
-            append_failure_history=append_failure_history,
-            set_job_status=set_job_status,
-        )
-        save_job(group_name, state["job_id"], state)
-        return state, exit_code
-
-    trigger_reason = str(
-        on_reject_refine.get("exhausted_failure_code") or "REFINEMENT_EXHAUSTED"
-    )
-    state, exit_code = activate_replan(
-        state=state,
-        step=step,
-        replan_step=replan_cfg["step"],
-        target_artifact=replan_cfg["artifact"],
-        review_file=review_file,
-        replan_attempt=current_replan_attempt + 1,
-        trigger_reason=trigger_reason,
-        artifacts=artifacts,
-        project_root=PROJECT_ROOT,
-        checksum_file=lambda path: __import__("hashlib").md5(path.read_bytes()).hexdigest(),
-        now_iso=_now_iso,
-        clear_last_failure=clear_last_failure,
-        set_job_status=set_job_status,
-    )
-    _update_review_state(
-        state,
-        step=step,
-        step_cfg=step_cfg,
-        coder_used=coder_used,
-        review_decision="REJECTED",
-        human_decision="NOT_REQUIRED",
-        final_decision="REJECTED",
-        final_decision_source="MODEL",
-    )
-    # v2: no sync_review_metadata
     save_job(group_name, state["job_id"], state)
     return state, exit_code
 
