@@ -110,6 +110,7 @@ name = "refine_plan"
 prompt = "prompts/04_refine_plan.txt"
 enable_notifications = true
 
+onsuccess = "review_plan"
 [step.artifacts]
 required_inputs = ["PLAN_FILE", "REVIEW_FILE_SUGGESTED"]
 produces = ["PLAN_FILE"]
@@ -117,7 +118,6 @@ target_artifact = "PLAN_FILE"
 edit_mode = "in_place"
 result_meta_key = "PLAN_FILE"
 
-onsuccess = "review_plan"
 
 [step.coder]
 role_policy = "architect_standard"

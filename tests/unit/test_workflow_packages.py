@@ -126,3 +126,84 @@ class TestWorkflowBundle:
     def test_manifest_not_found_raises(self, tmp_path):
         with pytest.raises(FileNotFoundError, match="workflow.toml"):
             load_workflow_package(tmp_path / "nonexistent")
+
+
+# ---------------------------------------------------------------------------
+# Repo-wide workflow TOML validation
+# ---------------------------------------------------------------------------
+
+_WORKFLOWS_ROOT = Path("workflows")
+
+
+def _all_workflow_toml_paths() -> list[Path]:
+    return sorted(_WORKFLOWS_ROOT.glob("*/workflow.toml"))
+
+
+class TestAllWorkflowTOMLsLoadable:
+    """Every workflow.toml in workflows/ must parse and load cleanly.
+
+    This catches silent TOML traps — e.g. ``onsuccess`` placed after a
+    ``[step.artifacts]`` header gets absorbed into the artifacts sub-dict,
+    breaking routing with no visible error.
+    """
+
+    def test_all_workflow_tomls_load_without_error(self):
+        paths = _all_workflow_toml_paths()
+        assert paths, "No workflow.toml files found under workflows/"
+        failures: list[str] = []
+        for p in paths:
+            try:
+                bundle = load_workflow_package(p.parent)
+            except Exception as exc:
+                failures.append(f"{p}: {exc}")
+        assert failures == [], (
+            f"{len(failures)} workflow(s) failed to load:\n"
+            + "\n".join(failures)
+        )
+
+    def test_all_steps_have_onsuccess_at_step_level(self):
+        """Verify onsuccess is not trapped inside artifacts/coder sub-tables."""
+        import tomllib
+
+        paths = _all_workflow_toml_paths()
+        assert paths, "No workflow.toml files found under workflows/"
+        misplaced: list[str] = []
+        for p in paths:
+            data = tomllib.loads(p.read_text(encoding="utf-8"))
+            for step in data.get("step", []):
+                name = step.get("name", "?")
+                for sub in ("artifacts", "coder"):
+                    sub_dict = step.get(sub) or {}
+                    if "onsuccess" in sub_dict:
+                        misplaced.append(
+                            f"{p}: step '{name}' has onsuccess "
+                            f"inside [step.{sub}]"
+                        )
+        assert misplaced == [], (
+            f"{len(misplaced)} step(s) have misplaced onsuccess:\n"
+            + "\n".join(misplaced)
+            + "\n\nFix: move onsuccess BEFORE any [step.*] sub-table header."
+        )
+
+    def test_all_steps_with_onsuccess_have_valid_target(self):
+        """Every onsuccess value must name a step that exists in the workflow."""
+        import tomllib
+
+        paths = _all_workflow_toml_paths()
+        bad: list[str] = []
+        for p in paths:
+            data = tomllib.loads(p.read_text(encoding="utf-8"))
+            steps = data.get("step", [])
+            step_names = {s.get("name") for s in steps}
+            for step in steps:
+                name = step.get("name", "?")
+                target = step.get("onsuccess")
+                if target and target not in step_names and target != "stepCompletion":
+                    bad.append(
+                        f"{p}: step '{name}' onsuccess='{target}' "
+                        f"not found in steps {sorted(step_names)}"
+                    )
+        assert bad == [], (
+            f"{len(bad)} step(s) have invalid onsuccess targets:\n"
+            + "\n".join(bad)
+        )
