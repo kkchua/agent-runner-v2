@@ -78,6 +78,7 @@ name = "refine_governance_foundation_docs"
 prompt = "prompts/03_refine_governance_foundation_docs.txt"
 enable_notifications = true
 
+onsuccess = "review_governance_foundation_docs"
 [step.artifacts]
 required_inputs = [
   "GOVERNANCE_CONTEXT_INVENTORY",
@@ -101,7 +102,6 @@ produces = [
 target_artifact = "L1_FOUNDATION_INDEX"
 edit_mode = "in_place"
 result_meta_key = "L1_FOUNDATION_INDEX"
-onsuccess = "review_governance_foundation_docs"
 
 [step.coder]
 role_policy = "refine_standard"

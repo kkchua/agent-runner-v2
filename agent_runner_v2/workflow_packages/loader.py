@@ -107,6 +107,22 @@ def _parse_bundle(
         coder_sec = _get_section(raw, "coder", optional=True) or {}
         routing = _get_section(raw, "routing", optional=True) or {}
 
+        # --- Detect misplaced step-level keys in sub-tables ---------------
+        # TOML assigns keys between sub-table headers to the preceding
+        # sub-table.  A key like ``onsuccess`` written after [step.artifacts]
+        # silently ends up inside the artifacts dict instead of at step
+        # level, breaking routing with no visible error.
+        _STEP_LEVEL_ONLY = {"onsuccess"}
+        for _sub_name, _sub_dict in (("artifacts", artifact), ("coder", coder_sec)):
+            _misplaced = _STEP_LEVEL_ONLY & set(_sub_dict.keys())
+            if _misplaced:
+                raise ValueError(
+                    f"workflow '{name}', step '{step_name}': "
+                    f"key(s) {sorted(_misplaced)} found inside "
+                    f"[step.{_sub_name}] — they must appear BEFORE any "
+                    f"[step.*] sub-table header in workflow.toml"
+                )
+
         sc = StepConfig(
             name=step_name,
             prompt_file=_opt_str(raw, "prompt"),

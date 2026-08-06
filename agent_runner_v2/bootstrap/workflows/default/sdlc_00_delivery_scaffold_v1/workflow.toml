@@ -94,6 +94,7 @@ exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
 name = "refine_scaffold"
 prompt = "prompts/04_refine_scaffold.txt"
 enable_notifications = true
+onsuccess = "review_scaffold"
 
 [step.artifacts]
 required_inputs = ["REVIEW_FILE_SUGGESTED"]
@@ -101,8 +102,6 @@ produces = ["REVIEW_FILE_SUGGESTED"]
 target_artifact = "REVIEW_FILE_SUGGESTED"
 edit_mode = "in_place"
 result_meta_key = "REVIEW_FILE_SUGGESTED"
-
-onsuccess = "review_scaffold"
 
 [step.coder]
 role_policy = "architect_standard"

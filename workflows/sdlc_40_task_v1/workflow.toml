@@ -110,6 +110,7 @@ name = "refine_task"
 prompt = "prompts/04_refine_task.txt"
 enable_notifications = true
 
+onsuccess = "review_task"
 [step.artifacts]
 required_inputs = ["TASK_FILE", "REVIEW_FILE_SUGGESTED"]
 produces = ["TASK_FILE"]
@@ -117,7 +118,6 @@ target_artifact = "TASK_FILE"
 edit_mode = "in_place"
 result_meta_key = "TASK_FILE"
 
-onsuccess = "review_task"
 
 [step.coder]
 role_policy = "architect_standard"
