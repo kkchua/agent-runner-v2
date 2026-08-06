@@ -137,7 +137,14 @@ def _initialize_state_from_backend(
     if run.get("backend_url"):
         state["backend_url"] = str(run["backend_url"])
     
-    # Merge artifacts from backend (if available)
+    # Merge input artifacts from backend (user-provided inputs from console/CLI)
+    backend_input_artifacts = run.get("input_payload") or {}
+    if backend_input_artifacts:
+        for key, value in backend_input_artifacts.items():
+            if value:
+                state.setdefault("artifacts", {})[key] = value
+
+    # Merge output artifacts from backend (if available)
     backend_artifacts = run.get("output_payload") or {}
     if backend_artifacts:
         for key, value in backend_artifacts.items():

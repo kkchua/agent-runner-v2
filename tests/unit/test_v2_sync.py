@@ -181,7 +181,7 @@ class TestSyncOutcomeV2Retry:
         calls = {"count": 0}
 
         class FakeClient:
-            def __init__(self, base_url):
+            def __init__(self, base_url, **kwargs):
                 self.base_url = base_url
 
             def report_outcome(self, **kwargs):
@@ -209,7 +209,7 @@ class TestSyncOutcomeV2Retry:
 
     def test_exhausts_retries_and_raises(self):
         class FakeClient:
-            def __init__(self, base_url):
+            def __init__(self, base_url, **kwargs):
                 self.base_url = base_url
 
             def report_outcome(self, **kwargs):
@@ -228,7 +228,7 @@ class TestSyncOutcomeV2Retry:
 
     def test_succeeds_on_first_attempt(self):
         class FakeClient:
-            def __init__(self, base_url):
+            def __init__(self, base_url, **kwargs):
                 self.base_url = base_url
 
             def report_outcome(self, **kwargs):

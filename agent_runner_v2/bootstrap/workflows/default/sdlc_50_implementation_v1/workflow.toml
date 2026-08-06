@@ -109,6 +109,7 @@ name = "refine_implementation"
 prompt = "prompts/04_refine_implementation.txt"
 enable_notifications = true
 
+onsuccess = "review_implementation"
 [step.artifacts]
 required_inputs = ["IMPL_FILE", "REVIEW_FILE_SUGGESTED"]
 produces = ["IMPL_FILE"]
@@ -116,7 +117,6 @@ target_artifact = "IMPL_FILE"
 edit_mode = "in_place"
 result_meta_key = "IMPL_FILE"
 
-onsuccess = "review_implementation"
 
 [step.coder]
 role_policy = "architect_standard"

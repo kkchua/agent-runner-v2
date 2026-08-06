@@ -109,6 +109,7 @@ name = "refine_backlog"
 prompt = "prompts/04_refine_backlog.txt"
 enable_notifications = true
 
+onsuccess = "review_backlog"
 [step.artifacts]
 required_inputs = ["BACKLOG_FILE", "REVIEW_FILE_SUGGESTED"]
 produces = ["BACKLOG_FILE"]
@@ -116,7 +117,6 @@ target_artifact = "BACKLOG_FILE"
 edit_mode = "in_place"
 result_meta_key = "BACKLOG_FILE"
 
-onsuccess = "review_backlog"
 
 [step.coder]
 role_policy = "architect_standard"
