@@ -208,14 +208,14 @@ def route_after_failure(
         return state, 1
 
     if failure_class == "FATAL" or current_count >= max_rejects:
-        set_job_status(state, "FAILED")
+        set_job_status(state, "WAITING_FOR_HUMAN_INTERVENTION")
         if step not in failed_steps:
             failed_steps.append(step)
         state["current_step"] = step
+        state["pending_intervention_for"] = step
         save_job(group_name, state["job_id"], state)
-        # Send notification for workflow failure
-        send_workflow_notification("FAILED", dict(state))
-        return state, 2
+        send_workflow_notification("WAITING_FOR_HUMAN_INTERVENTION", dict(state))
+        return state, 1
 
     set_job_status(
         state,
@@ -331,15 +331,15 @@ def _route_rejected(
         )
 
     if failure_class == "FATAL" or current_count >= max_rejects:
-        set_job_status(state, "FAILED")
+        set_job_status(state, "WAITING_FOR_HUMAN_INTERVENTION")
         failed_steps = state.setdefault("failed_steps", [])
         if step not in failed_steps:
             failed_steps.append(step)
         state["current_step"] = step
+        state["pending_intervention_for"] = step
         save_job(group_name, state["job_id"], state)
-        # Send notification for workflow failure
-        send_workflow_notification("FAILED", dict(state))
-        return state, 2
+        send_workflow_notification("WAITING_FOR_HUMAN_INTERVENTION", dict(state))
+        return state, 1
 
     set_job_status(
         state,
