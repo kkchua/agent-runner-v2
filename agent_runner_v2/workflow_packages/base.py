@@ -72,13 +72,10 @@ class StepConfig:
     # Routing
     on_approve: str | None = None
     on_reject_refine: dict[str, Any] | None = None
-    on_exhaust_replan: dict[str, Any] | None = None
     reject_code_routes: dict[str, Any] | None = None
 
     # Review gating
     requires_human_approval_after: bool = False
-    loop_returns_to: str | None = None
-    replan_returns_to: str | None = None
 
     # Behaviour flags
     enable_notifications: bool = False

@@ -113,7 +113,7 @@ workflows/<name>/
 
 **Artifacts** are named outputs tracked through workflow state. Canonical keys in `artifact_keys.py`, paths resolved via `known_artifact_paths()` in `constants.py`.
 
-**Routing:** `onsuccess` → next step, `on_reject_refine` → refinement loop, `on_exhaust_replan` → replan, or failure routing via `route_after_failure()`.
+**Routing:** `onsuccess` → next step, `on_reject_refine` → refinement loop.
 
 ### Key Source Modules
 

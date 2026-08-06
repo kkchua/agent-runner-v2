@@ -55,7 +55,6 @@ class RuntimeHooks:
     # Module caches for lazy loading
     _workflow_runtime: Any = None
     _step_execution_runtime: Any = None
-    _backend_execution: Any = None
     _execution_core: Any = None
     _job_state: Any = None
     _bundle_loader: Any = None
@@ -71,12 +70,6 @@ class RuntimeHooks:
             from . import step_execution_runtime
             self._step_execution_runtime = step_execution_runtime
         return self._step_execution_runtime
-
-    def _get_backend_execution(self) -> Any:
-        if self._backend_execution is None:
-            from . import backend_execution
-            self._backend_execution = backend_execution
-        return self._backend_execution
 
     def _get_execution_core(self) -> Any:
         if self._execution_core is None:
@@ -115,7 +108,7 @@ class RuntimeHooks:
         step_name: str,
     ) -> tuple[dict[str, Any], dict[str, Any]]:
         """Build group and step config from execution spec."""
-        return self._get_backend_execution().build_group_cfg_from_execution_spec(
+        return self._get_workflow_runtime()._build_group_cfg_from_spec(
             spec, template_group, step_name
         )
 

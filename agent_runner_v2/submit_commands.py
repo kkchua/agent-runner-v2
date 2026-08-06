@@ -14,7 +14,7 @@ import re
 import sys
 from pathlib import Path
 
-from .backend_client import BackendClient
+from .v2.backend_client_v1 import BackendClient
 from .config_loader import load_runner_config
 
 

@@ -432,7 +432,7 @@ def run_action(
         "remark": result.remark,
         "artifacts": format_report_artifacts(dict(result.artifacts or {}), project_root=project_root),
         **({"reject_code": result.reject_code} if result.reject_code else {}),
-        "step_config": {k: v for k, v in step_cfg.items() if k not in ("_workflow_bundle", "coder", "on_reject_refine", "on_exhaust_replan")},
+        "step_config": {k: v for k, v in step_cfg.items() if k not in ("_workflow_bundle", "coder", "on_reject_refine")},
     })
 
     return StepResult(

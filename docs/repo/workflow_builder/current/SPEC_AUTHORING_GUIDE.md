@@ -698,7 +698,7 @@ Before submitting the spec to `workflow_builder_v1`, verify:
 
 - [ ] Every step has clear onsuccess routing
 - [ ] Review steps have on_reject_refine routing
-- [ ] Refine steps route back to review (loop_returns_to)
+- [ ] Refine steps route back to review via onsuccess
 - [ ] Last real step routes to stepCompletion
 - [ ] Max iterations specified for refine loops
 

@@ -11,7 +11,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from agent_runner_v2.backend_client import BackendClient
+from agent_runner_v2.v2.backend_client_v1 import BackendClient
 
 
 # ---------------------------------------------------------------------------
@@ -70,7 +70,7 @@ class TestRequestErrorHandling:
     def test_http_error_raises_runtime_error(self):
         from urllib.error import HTTPError
         c = _make_client()
-        with patch("agent_runner_v2.backend_client.request.urlopen") as mock_open:
+        with patch("agent_runner_v2.v2.backend_client_v1.request.urlopen") as mock_open:
             mock_open.side_effect = HTTPError(
                 url="http://localhost:8100/api/runs",
                 code=404,
@@ -84,28 +84,28 @@ class TestRequestErrorHandling:
     def test_url_error_raises_runtime_error(self):
         from urllib.error import URLError
         c = _make_client()
-        with patch("agent_runner_v2.backend_client.request.urlopen") as mock_open:
+        with patch("agent_runner_v2.v2.backend_client_v1.request.urlopen") as mock_open:
             mock_open.side_effect = URLError("Connection refused")
             with pytest.raises(RuntimeError, match="Connection refused"):
                 c._request("GET", "/api/runs")
 
     def test_empty_body_returns_empty_dict(self):
         c = _make_client()
-        with patch("agent_runner_v2.backend_client.request.urlopen") as mock_open:
+        with patch("agent_runner_v2.v2.backend_client_v1.request.urlopen") as mock_open:
             mock_open.return_value = _mock_response("")
             result = c._request("GET", "/api/runs/123")
         assert result == {}
 
     def test_json_body_parsed(self):
         c = _make_client()
-        with patch("agent_runner_v2.backend_client.request.urlopen") as mock_open:
+        with patch("agent_runner_v2.v2.backend_client_v1.request.urlopen") as mock_open:
             mock_open.return_value = _mock_response({"id": "r1", "status": "running"})
             result = c._request("GET", "/api/runs/r1")
         assert result["id"] == "r1"
 
     def test_payload_serialized_as_json(self):
         c = _make_client()
-        with patch("agent_runner_v2.backend_client.request.urlopen") as mock_open:
+        with patch("agent_runner_v2.v2.backend_client_v1.request.urlopen") as mock_open:
             mock_open.return_value = _mock_response({})
             c._request("POST", "/api/runs", payload={"workflow_name": "wf1"})
             # Verify the request was constructed with JSON data
@@ -122,7 +122,7 @@ class TestRequestErrorHandling:
 class TestSubmitRun:
     def test_minimal_payload(self):
         c = _make_client()
-        with patch("agent_runner_v2.backend_client.request.urlopen") as mock_open:
+        with patch("agent_runner_v2.v2.backend_client_v1.request.urlopen") as mock_open:
             mock_open.return_value = _mock_response({"run": {"id": "r1"}})
             result = c.submit_run(workflow_name="wf1")
             req = mock_open.call_args[0][0]
@@ -134,7 +134,7 @@ class TestSubmitRun:
     def test_target_worker_id_not_worker_id(self):
         """CRITICAL: parameter is target_worker_id, not worker_id."""
         c = _make_client()
-        with patch("agent_runner_v2.backend_client.request.urlopen") as mock_open:
+        with patch("agent_runner_v2.v2.backend_client_v1.request.urlopen") as mock_open:
             mock_open.return_value = _mock_response({"run": {"id": "r1"}})
             c.submit_run(workflow_name="wf1", target_worker_id="w1")
             req = mock_open.call_args[0][0]
@@ -144,7 +144,7 @@ class TestSubmitRun:
 
     def test_all_optional_fields(self):
         c = _make_client()
-        with patch("agent_runner_v2.backend_client.request.urlopen") as mock_open:
+        with patch("agent_runner_v2.v2.backend_client_v1.request.urlopen") as mock_open:
             mock_open.return_value = _mock_response({"run": {"id": "r1"}})
             c.submit_run(
                 workflow_name="wf1",
@@ -176,7 +176,7 @@ class TestSubmitRun:
 
     def test_posts_to_correct_endpoint(self):
         c = _make_client()
-        with patch("agent_runner_v2.backend_client.request.urlopen") as mock_open:
+        with patch("agent_runner_v2.v2.backend_client_v1.request.urlopen") as mock_open:
             mock_open.return_value = _mock_response({})
             c.submit_run(workflow_name="wf1")
             req = mock_open.call_args[0][0]
@@ -191,7 +191,7 @@ class TestSubmitRun:
 class TestApproveRun:
     def test_default_action_is_approve(self):
         c = _make_client()
-        with patch("agent_runner_v2.backend_client.request.urlopen") as mock_open:
+        with patch("agent_runner_v2.v2.backend_client_v1.request.urlopen") as mock_open:
             mock_open.return_value = _mock_response({})
             c.approve_run(run_id="r1")
             body = json.loads(mock_open.call_args[0][0].data)
@@ -199,7 +199,7 @@ class TestApproveRun:
 
     def test_reject_action(self):
         c = _make_client()
-        with patch("agent_runner_v2.backend_client.request.urlopen") as mock_open:
+        with patch("agent_runner_v2.v2.backend_client_v1.request.urlopen") as mock_open:
             mock_open.return_value = _mock_response({})
             c.approve_run(run_id="r1", action="reject", feedback="needs work")
             body = json.loads(mock_open.call_args[0][0].data)
@@ -208,7 +208,7 @@ class TestApproveRun:
 
     def test_correct_endpoint(self):
         c = _make_client()
-        with patch("agent_runner_v2.backend_client.request.urlopen") as mock_open:
+        with patch("agent_runner_v2.v2.backend_client_v1.request.urlopen") as mock_open:
             mock_open.return_value = _mock_response({})
             c.approve_run(run_id="run-uuid-123")
             req = mock_open.call_args[0][0]
@@ -222,7 +222,7 @@ class TestApproveRun:
 class TestGetRun:
     def test_correct_endpoint(self):
         c = _make_client()
-        with patch("agent_runner_v2.backend_client.request.urlopen") as mock_open:
+        with patch("agent_runner_v2.v2.backend_client_v1.request.urlopen") as mock_open:
             mock_open.return_value = _mock_response({"run": {"id": "r1"}})
             c.get_run(run_id="r1")
             req = mock_open.call_args[0][0]
@@ -237,7 +237,7 @@ class TestGetRun:
 class TestListRuns:
     def test_no_filters(self):
         c = _make_client()
-        with patch("agent_runner_v2.backend_client.request.urlopen") as mock_open:
+        with patch("agent_runner_v2.v2.backend_client_v1.request.urlopen") as mock_open:
             mock_open.return_value = _mock_response([])
             c.list_runs()
             req = mock_open.call_args[0][0]
@@ -245,7 +245,7 @@ class TestListRuns:
 
     def test_with_worker_id(self):
         c = _make_client()
-        with patch("agent_runner_v2.backend_client.request.urlopen") as mock_open:
+        with patch("agent_runner_v2.v2.backend_client_v1.request.urlopen") as mock_open:
             mock_open.return_value = _mock_response([])
             c.list_runs(worker_id="w1")
             req = mock_open.call_args[0][0]
@@ -253,7 +253,7 @@ class TestListRuns:
 
     def test_with_status_group(self):
         c = _make_client()
-        with patch("agent_runner_v2.backend_client.request.urlopen") as mock_open:
+        with patch("agent_runner_v2.v2.backend_client_v1.request.urlopen") as mock_open:
             mock_open.return_value = _mock_response([])
             c.list_runs(status_group="non_terminal")
             req = mock_open.call_args[0][0]
@@ -261,7 +261,7 @@ class TestListRuns:
 
     def test_with_workflow_name(self):
         c = _make_client()
-        with patch("agent_runner_v2.backend_client.request.urlopen") as mock_open:
+        with patch("agent_runner_v2.v2.backend_client_v1.request.urlopen") as mock_open:
             mock_open.return_value = _mock_response([])
             c.list_runs(workflow_name="wf1")
             req = mock_open.call_args[0][0]
@@ -275,7 +275,7 @@ class TestListRuns:
 class TestStopRun:
     def test_default_mode(self):
         c = _make_client()
-        with patch("agent_runner_v2.backend_client.request.urlopen") as mock_open:
+        with patch("agent_runner_v2.v2.backend_client_v1.request.urlopen") as mock_open:
             mock_open.return_value = _mock_response({})
             c.stop_run(run_id="r1")
             body = json.loads(mock_open.call_args[0][0].data)
@@ -283,7 +283,7 @@ class TestStopRun:
 
     def test_with_reason(self):
         c = _make_client()
-        with patch("agent_runner_v2.backend_client.request.urlopen") as mock_open:
+        with patch("agent_runner_v2.v2.backend_client_v1.request.urlopen") as mock_open:
             mock_open.return_value = _mock_response({})
             c.stop_run(run_id="r1", reason="Cancelled by operator")
             body = json.loads(mock_open.call_args[0][0].data)
@@ -291,7 +291,7 @@ class TestStopRun:
 
     def test_correct_endpoint(self):
         c = _make_client()
-        with patch("agent_runner_v2.backend_client.request.urlopen") as mock_open:
+        with patch("agent_runner_v2.v2.backend_client_v1.request.urlopen") as mock_open:
             mock_open.return_value = _mock_response({})
             c.stop_run(run_id="r1")
             req = mock_open.call_args[0][0]
@@ -305,7 +305,7 @@ class TestStopRun:
 class TestResetRunStep:
     def test_payload(self):
         c = _make_client()
-        with patch("agent_runner_v2.backend_client.request.urlopen") as mock_open:
+        with patch("agent_runner_v2.v2.backend_client_v1.request.urlopen") as mock_open:
             mock_open.return_value = _mock_response({})
             c.reset_run_step(run_id="r1", step_name="generate_docs")
             body = json.loads(mock_open.call_args[0][0].data)
@@ -313,7 +313,7 @@ class TestResetRunStep:
 
     def test_correct_endpoint(self):
         c = _make_client()
-        with patch("agent_runner_v2.backend_client.request.urlopen") as mock_open:
+        with patch("agent_runner_v2.v2.backend_client_v1.request.urlopen") as mock_open:
             mock_open.return_value = _mock_response({})
             c.reset_run_step(run_id="r1", step_name="s1")
             req = mock_open.call_args[0][0]
@@ -327,7 +327,7 @@ class TestResetRunStep:
 class TestRegisterWorker:
     def test_payload(self):
         c = _make_client()
-        with patch("agent_runner_v2.backend_client.request.urlopen") as mock_open:
+        with patch("agent_runner_v2.v2.backend_client_v1.request.urlopen") as mock_open:
             mock_open.return_value = _mock_response({})
             c.register_worker(worker_id="w1", host_name="myhost", worker_label="dev")
             body = json.loads(mock_open.call_args[0][0].data)
@@ -344,7 +344,7 @@ class TestRegisterWorker:
 class TestHeartbeat:
     def test_minimal_payload(self):
         c = _make_client()
-        with patch("agent_runner_v2.backend_client.request.urlopen") as mock_open:
+        with patch("agent_runner_v2.v2.backend_client_v1.request.urlopen") as mock_open:
             mock_open.return_value = _mock_response({})
             c.heartbeat(worker_id="w1")
             body = json.loads(mock_open.call_args[0][0].data)
@@ -353,7 +353,7 @@ class TestHeartbeat:
 
     def test_all_fields(self):
         c = _make_client()
-        with patch("agent_runner_v2.backend_client.request.urlopen") as mock_open:
+        with patch("agent_runner_v2.v2.backend_client_v1.request.urlopen") as mock_open:
             mock_open.return_value = _mock_response({})
             c.heartbeat(
                 worker_id="w1",
@@ -381,7 +381,7 @@ class TestHeartbeat:
 class TestClaimStep:
     def test_uses_query_param(self):
         c = _make_client()
-        with patch("agent_runner_v2.backend_client.request.urlopen") as mock_open:
+        with patch("agent_runner_v2.v2.backend_client_v1.request.urlopen") as mock_open:
             mock_open.return_value = _mock_response({})
             c.claim_step(worker_id="w1")
             req = mock_open.call_args[0][0]
@@ -396,7 +396,7 @@ class TestClaimStep:
 class TestStepRunEndpoints:
     def test_complete_step_run_endpoint(self):
         c = _make_client()
-        with patch("agent_runner_v2.backend_client.request.urlopen") as mock_open:
+        with patch("agent_runner_v2.v2.backend_client_v1.request.urlopen") as mock_open:
             mock_open.return_value = _mock_response({})
             c.complete_step_run(step_run_id="sr1", payload={"status": "completed"})
             req = mock_open.call_args[0][0]
@@ -404,7 +404,7 @@ class TestStepRunEndpoints:
 
     def test_sync_job_state_endpoint(self):
         c = _make_client()
-        with patch("agent_runner_v2.backend_client.request.urlopen") as mock_open:
+        with patch("agent_runner_v2.v2.backend_client_v1.request.urlopen") as mock_open:
             mock_open.return_value = _mock_response({})
             c.sync_job_state(step_run_id="sr1", payload={"run_status": "running"})
             req = mock_open.call_args[0][0]
@@ -418,7 +418,7 @@ class TestStepRunEndpoints:
 class TestRunSubResources:
     def test_create_artifact_endpoint(self):
         c = _make_client()
-        with patch("agent_runner_v2.backend_client.request.urlopen") as mock_open:
+        with patch("agent_runner_v2.v2.backend_client_v1.request.urlopen") as mock_open:
             mock_open.return_value = _mock_response({})
             c.create_artifact(run_id="r1", payload={"key": "OUTPUT", "path": "/out.md"})
             req = mock_open.call_args[0][0]
@@ -426,7 +426,7 @@ class TestRunSubResources:
 
     def test_create_event_endpoint(self):
         c = _make_client()
-        with patch("agent_runner_v2.backend_client.request.urlopen") as mock_open:
+        with patch("agent_runner_v2.v2.backend_client_v1.request.urlopen") as mock_open:
             mock_open.return_value = _mock_response({})
             c.create_event(run_id="r1", payload={"event_type": "STEP_STARTED"})
             req = mock_open.call_args[0][0]
@@ -440,7 +440,7 @@ class TestRunSubResources:
 class TestCleanupExecution:
     def test_payload_structure(self):
         c = _make_client()
-        with patch("agent_runner_v2.backend_client.request.urlopen") as mock_open:
+        with patch("agent_runner_v2.v2.backend_client_v1.request.urlopen") as mock_open:
             mock_open.return_value = _mock_response({"deleted": True})
             c.cleanup_execution(workflow_name="wf1", dry_run=False)
             body = json.loads(mock_open.call_args[0][0].data)
@@ -450,7 +450,7 @@ class TestCleanupExecution:
 
     def test_dry_run_default(self):
         c = _make_client()
-        with patch("agent_runner_v2.backend_client.request.urlopen") as mock_open:
+        with patch("agent_runner_v2.v2.backend_client_v1.request.urlopen") as mock_open:
             mock_open.return_value = _mock_response({})
             c.cleanup_execution(workflow_name="wf1")
             body = json.loads(mock_open.call_args[0][0].data)
@@ -458,7 +458,7 @@ class TestCleanupExecution:
 
     def test_correct_endpoint(self):
         c = _make_client()
-        with patch("agent_runner_v2.backend_client.request.urlopen") as mock_open:
+        with patch("agent_runner_v2.v2.backend_client_v1.request.urlopen") as mock_open:
             mock_open.return_value = _mock_response({})
             c.cleanup_execution(workflow_name="wf1")
             req = mock_open.call_args[0][0]

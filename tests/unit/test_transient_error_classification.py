@@ -11,7 +11,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from agent_runner_v2.workflow_router import (
+from agent_runner_v2.v2.workflow_router import (
     _classify_model_rejection,
     _looks_like_transient_error,
 )

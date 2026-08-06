@@ -33,8 +33,8 @@ from .failure_runtime import (
     clear_last_failure,
     set_last_failure,
 )
-from .routing_runtime import get_next_step_skipping_refine_replan
-from .transition_runtime import (
+from .v2.routing_runtime import get_next_step_skipping_refine_replan
+from .v2.transition_runtime import (
     advance_to_next_step,
     complete_recovery_step,
     mark_review_waiting_for_human,
@@ -939,11 +939,8 @@ def reconcile_job_state(state: dict[str, Any], group_cfg: dict[str, Any]) -> dic
 
     excluded_codes: set[str] = {"MISSING_REVIEW_ARTIFACT", "DUPLICATE_REVIEW_FILE"}
     on_reject_refine = step_cfg.get("on_reject_refine") or {}
-    on_exhaust_replan = step_cfg.get("on_exhaust_replan") or {}
     if on_reject_refine.get("exhausted_failure_code"):
         excluded_codes.add(on_reject_refine["exhausted_failure_code"])
-    if on_exhaust_replan.get("terminal_failure_code"):
-        excluded_codes.add(on_exhaust_replan["terminal_failure_code"])
 
     if (
         get_job_status(state) == "WAITING_FOR_HUMAN_INTERVENTION"
@@ -990,80 +987,16 @@ def _apply_loop_routing(
     return state
 
 
-def _apply_replan_routing(
-    state: dict[str, Any], step: str, step_cfg: dict[str, Any], *, repair_type: str = "REPLAN_TRIGGER",
-) -> dict[str, Any]:
-    """Activate a replan cycle on *state*, routing to the configured replan step.
-
-    Captures a pre-replan checksum of the target artifact, resets loop context,
-    appends to ``replan_history``, and sets the job back to IN_PROGRESS.
-    """
-    on_exhaust_replan = step_cfg["on_exhaust_replan"]
-    review_file = state.get("artifacts", {}).get(ARTIFACT_KEY_REVIEW)
-    current_replan_attempt = int(state.get("replan_context", {}).get("replan_attempt", 0))
-    state["reconciled_from_failure"] = {
-        "class": state.get("last_failure_class"),
-        "code": state.get("last_failure_code"),
-        "reason": state.get("last_failure_reason"),
-        "source": state.get("last_failure_source"),
-    }
-    # In v2, blocking_issues is always [] — content analysis is the coder's job
-    state["replan_context"] = default_replan_context(
-        active=True,
-        source_review_step=step,
-        replan_step=on_exhaust_replan["step"],
-        target_artifact=on_exhaust_replan["artifact"],
-        review_file=review_file,
-        replan_attempt=current_replan_attempt + 1,
-        trigger_reason=str((step_cfg.get("on_reject_refine") or {}).get("exhausted_failure_code") or "REFINEMENT_EXHAUSTED"),
-    )
-    target_path_value = state.get("artifacts", {}).get(on_exhaust_replan["artifact"])
-    if target_path_value:
-        target_path = PROJECT_ROOT / target_path_value
-        if target_path.exists():
-            state["replan_context"]["pre_replan_checksum"] = _md5_file(target_path)
-    state.setdefault("replan_history", []).append({
-        "source_review_step": step,
-        "trigger_reason": state["replan_context"]["trigger_reason"],
-        "source_review_file": review_file,
-        "blocking_issues": [],
-        "replan_step": on_exhaust_replan["step"],
-        "replan_attempt": state["replan_context"]["replan_attempt"],
-        "triggered_at": now_iso(),
-        "replan_result": None, "review_result": None, "resolved_at": None,
-    })
-    state["loop_context"] = default_loop_context()
-    clear_last_failure(state)
-    state["current_step"] = on_exhaust_replan["step"]
-    set_job_status(state, "IN_PROGRESS")
-    state.setdefault("repair_history", []).append({"type": repair_type, "step": step, "timestamp": now_iso()})
-    return state
-
-
 def reapply_routing(state: dict[str, Any], group_cfg: dict[str, Any]) -> dict[str, Any]:
-    """Re-evaluate routing for the current step and activate replan or refine loops as needed.
+    """Re-evaluate routing for the current step and activate refine loops as needed.
 
     Called when a user manually requests routing repair (e.g. after overriding
-    the current step).  Prefers replan routing when the exhausted failure code
-    matches and replan budget remains; otherwise falls back to refine loop.
+    the current step).
     """
     current_step = state.get("current_step")
     step_cfg = group_cfg.get("step_configs", {}).get(current_step, {})
     on_reject_refine = _resolve_reject_route_for_state(state=state, step_cfg=step_cfg) or {}
-    on_exhaust_replan = step_cfg.get("on_exhaust_replan") or {}
     exhausted_code = on_reject_refine.get("exhausted_failure_code")
-    max_replans = int(on_exhaust_replan.get("max_replans", 0))
-    current_replan_attempt = int(state.get("replan_context", {}).get("replan_attempt", 0))
-
-    if (
-        step_cfg.get("on_reject_refine")
-        and state.get("artifacts", {}).get(ARTIFACT_KEY_REVIEW)
-        and exhausted_code
-        and state.get("last_failure_code") == exhausted_code
-        and on_exhaust_replan.get("step")
-        and current_replan_attempt < max_replans
-    ):
-        return _apply_replan_routing(state, current_step, step_cfg, repair_type="USER_REAPPLY_REPLAN")
 
     if step_cfg.get("on_reject_refine") and state.get("artifacts", {}).get(ARTIFACT_KEY_REVIEW):
         return _apply_loop_routing(state, current_step, step_cfg, repair_type="USER_REAPPLY")
@@ -1084,31 +1017,7 @@ def _resolve_reject_route_for_state(*, state: dict[str, Any], step_cfg: dict[str
 
 
 def recover_exhausted_planning_job(state: dict[str, Any], group_cfg: dict[str, Any]) -> dict[str, Any]:
-    """Attempt to recover a FAILED job by activating replan routing if budget allows.
-
-    Only applies when the job is FAILED, the current step has an exhausted
-    failure code in its history, a review artifact exists, and replan attempts
-    remain.  Persists the repaired state to disk on success.
-    """
-    if get_job_status(state) != "FAILED":
-        return state
-    current_step = state.get("current_step")
-    step_cfg = group_cfg.get("step_configs", {}).get(current_step, {})
-    on_reject_refine = step_cfg.get("on_reject_refine") or {}
-    on_exhaust_replan = step_cfg.get("on_exhaust_replan") or {}
-    exhausted_code = on_reject_refine.get("exhausted_failure_code")
-    max_replans = int(on_exhaust_replan.get("max_replans", 0))
-    current_replan_attempt = int(state.get("replan_context", {}).get("replan_attempt", 0))
-    if not exhausted_code or not on_exhaust_replan.get("step") or current_replan_attempt >= max_replans:
-        return state
-    has_exhausted_failure = any(
-        entry.get("step") == current_step and entry.get("failure_code") == exhausted_code
-        for entry in state.get("failure_history", [])
-    )
-    if not has_exhausted_failure or not state.get("artifacts", {}).get(ARTIFACT_KEY_REVIEW):
-        return state
-    state = _apply_replan_routing(state, current_step, step_cfg, repair_type="RECOVERY_REPLAN_MIGRATION")
-    save_job(state["template_group"], state["job_id"], state)
+    """No-op — replan routing removed; backend handles exhaustion as standard SOP."""
     return state
 
 
@@ -1599,6 +1508,19 @@ def get_next_step(group_cfg: dict[str, Any], state: dict[str, Any]) -> str | Non
 
 
 # ---------------------------------------------------------------------------
+# Step type detection
+# ---------------------------------------------------------------------------
+
+def _is_refine_step(group_cfg: dict[str, Any], step_name: str) -> bool:
+    """Check if step is the target of any on_reject_refine config."""
+    for step_cfg in group_cfg.get("step_configs", {}).values():
+        on_reject = step_cfg.get("on_reject_refine") or {}
+        if on_reject.get("step") == step_name:
+            return True
+    return False
+
+
+# ---------------------------------------------------------------------------
 # Step advancement state machine
 # ---------------------------------------------------------------------------
 
@@ -1640,11 +1562,8 @@ def advance_step(
         review_state["final_decision"] = "APPROVED"
         review_state["final_decision_source"] = "MODEL"
 
-    if step_cfg.get("loop_returns_to"):
+    if _is_refine_step(group_cfg, step):
         return _handle_refine_success(state, step, step_cfg, artifacts)
-
-    if step_cfg.get("replan_returns_to"):
-        return _handle_replan_success(state, step, step_cfg, artifacts)
 
     if step_cfg.get("requires_human_approval_after"):
         return _handle_review_approval(state, step, step_cfg, coder_used)
@@ -1663,7 +1582,7 @@ def _handle_refine_success(
     state: dict[str, Any], step: str, step_cfg: dict[str, Any], artifacts: dict[str, Any],
 ) -> tuple[dict[str, Any], int]:
     """Complete a refine recovery step: verify content changed, update loop history, and return to the review step."""
-    loop_returns_to = step_cfg["loop_returns_to"]
+    next_step = step_cfg.get("onsuccess", "")
     ctx = state.get("loop_context", {})
     target_key = ctx.get("loop_target_artifact") or step_cfg.get("target_artifact", "IMPL_FILE")
     state, exit_code = complete_recovery_step(
@@ -1677,7 +1596,7 @@ def _handle_refine_success(
         history_key="loop_history",
         history_result_field="refine_result",
         history_time_field="refine_at",
-        next_step=loop_returns_to,
+        next_step=next_step,
         project_root=PROJECT_ROOT,
         now_iso=now_iso,
         set_last_failure=set_last_failure,
@@ -1695,35 +1614,6 @@ def _handle_refine_success(
         review_state["final_decision"] = None
         review_state["final_decision_source"] = None
     return state, exit_code
-
-
-def _handle_replan_success(
-    state: dict[str, Any], step: str, step_cfg: dict[str, Any], artifacts: dict[str, Any],
-) -> tuple[dict[str, Any], int]:
-    """Complete a replan recovery step: verify content changed, update replan history, and return to the review step."""
-    replan_returns_to = step_cfg["replan_returns_to"]
-    ctx = state.get("replan_context", {})
-    target_key = ctx.get("target_artifact") or step_cfg.get("target_artifact", "PLAN_FILE")
-    return complete_recovery_step(
-        state=state,
-        step=step,
-        target_key=target_key,
-        artifacts=artifacts,
-        pre_checksum=ctx.get("pre_replan_checksum"),
-        no_op_failure_code="NO_OP_REPLAN",
-        no_op_failure_reason="Replan step made no content change to the target artifact",
-        history_key="replan_history",
-        history_result_field="replan_result",
-        history_time_field="replan_at",
-        next_step=replan_returns_to,
-        project_root=PROJECT_ROOT,
-        now_iso=now_iso,
-        set_last_failure=set_last_failure,
-        append_failure_history=append_failure_history,
-        set_job_status=set_job_status,
-        checksum_file=_md5_file,
-        reset_replan_context=True,
-    )
 
 
 def _handle_review_approval(

@@ -4,7 +4,7 @@ from pathlib import Path
 
 from agent_runner_v2.job_state import get_job_status
 from agent_runner_v2.step_runner import StepResult
-from agent_runner_v2.workflow_router import route_after_step
+from agent_runner_v2.v2.workflow_router import route_after_step
 
 
 def _base_state() -> dict:
@@ -36,15 +36,15 @@ def test_model_rejected_without_refine_sends_waiting_notification(monkeypatch) -
     step_captured: list[tuple[str, dict, str, dict]] = []
 
     monkeypatch.setattr(
-        "agent_runner_v2.workflow_router.save_job",
+        "agent_runner_v2.v2.workflow_router.save_job",
         lambda group_name, job_id, state: None,
     )
     monkeypatch.setattr(
-        "agent_runner_v2.workflow_router.send_workflow_notification",
+        "agent_runner_v2.v2.workflow_router.send_workflow_notification",
         lambda status, context: workflow_captured.append((status, dict(context))) or True,
     )
     monkeypatch.setattr(
-        "agent_runner_v2.workflow_router.send_step_notification",
+        "agent_runner_v2.v2.workflow_router.send_step_notification",
         lambda status, context, step, step_cfg: step_captured.append((status, dict(context), step, dict(step_cfg))) or True,
     )
 
@@ -81,15 +81,15 @@ def test_refine_loop_exhaustion_sends_waiting_notification(monkeypatch) -> None:
     step_captured: list[tuple[str, dict, str, dict]] = []
 
     monkeypatch.setattr(
-        "agent_runner_v2.workflow_router.save_job",
+        "agent_runner_v2.v2.workflow_router.save_job",
         lambda group_name, job_id, state: None,
     )
     monkeypatch.setattr(
-        "agent_runner_v2.workflow_router.send_workflow_notification",
+        "agent_runner_v2.v2.workflow_router.send_workflow_notification",
         lambda status, context: workflow_captured.append((status, dict(context))) or True,
     )
     monkeypatch.setattr(
-        "agent_runner_v2.workflow_router.send_step_notification",
+        "agent_runner_v2.v2.workflow_router.send_step_notification",
         lambda status, context, step, step_cfg: step_captured.append((status, dict(context), step, dict(step_cfg))) or True,
     )
 
@@ -136,15 +136,15 @@ def test_rejected_with_refine_loop_sends_step_rejected_before_recovery(monkeypat
     step_captured: list[tuple[str, dict, str, dict]] = []
 
     monkeypatch.setattr(
-        "agent_runner_v2.workflow_router.save_job",
+        "agent_runner_v2.v2.workflow_router.save_job",
         lambda group_name, job_id, state: None,
     )
     monkeypatch.setattr(
-        "agent_runner_v2.workflow_router.send_workflow_notification",
+        "agent_runner_v2.v2.workflow_router.send_workflow_notification",
         lambda status, context: workflow_captured.append((status, dict(context))) or True,
     )
     monkeypatch.setattr(
-        "agent_runner_v2.workflow_router.send_step_notification",
+        "agent_runner_v2.v2.workflow_router.send_step_notification",
         lambda status, context, step, step_cfg: step_captured.append((status, dict(context), step, dict(step_cfg))) or True,
     )
 
@@ -186,18 +186,18 @@ def test_rejected_with_refine_loop_sends_step_rejected_before_recovery(monkeypat
 
 def test_layer1_review_reject_cleans_stale_validation_and_audit_docs(monkeypatch, tmp_path: Path) -> None:
     monkeypatch.setattr(
-        "agent_runner_v2.workflow_router.save_job",
+        "agent_runner_v2.v2.workflow_router.save_job",
         lambda group_name, job_id, state: None,
     )
     monkeypatch.setattr(
-        "agent_runner_v2.workflow_router.send_workflow_notification",
+        "agent_runner_v2.v2.workflow_router.send_workflow_notification",
         lambda status, context: True,
     )
     monkeypatch.setattr(
-        "agent_runner_v2.workflow_router.send_step_notification",
+        "agent_runner_v2.v2.workflow_router.send_step_notification",
         lambda status, context, step, step_cfg: True,
     )
-    monkeypatch.setattr("agent_runner_v2.workflow_router.PROJECT_ROOT", tmp_path)
+    monkeypatch.setattr("agent_runner_v2.v2.workflow_router.PROJECT_ROOT", tmp_path)
 
     job_id = "00L1-TEST-001"
     review_path = tmp_path / "docs/system/00_governance/bootstrap" / f"{job_id}-layer1-governance-review.md"
@@ -248,18 +248,18 @@ def test_layer1_review_reject_cleans_stale_validation_and_audit_docs(monkeypatch
 
 def test_layer1_validate_reject_preserves_current_validation_but_cleans_stale_audit(monkeypatch, tmp_path: Path) -> None:
     monkeypatch.setattr(
-        "agent_runner_v2.workflow_router.save_job",
+        "agent_runner_v2.v2.workflow_router.save_job",
         lambda group_name, job_id, state: None,
     )
     monkeypatch.setattr(
-        "agent_runner_v2.workflow_router.send_workflow_notification",
+        "agent_runner_v2.v2.workflow_router.send_workflow_notification",
         lambda status, context: True,
     )
     monkeypatch.setattr(
-        "agent_runner_v2.workflow_router.send_step_notification",
+        "agent_runner_v2.v2.workflow_router.send_step_notification",
         lambda status, context, step, step_cfg: True,
     )
-    monkeypatch.setattr("agent_runner_v2.workflow_router.PROJECT_ROOT", tmp_path)
+    monkeypatch.setattr("agent_runner_v2.v2.workflow_router.PROJECT_ROOT", tmp_path)
 
     job_id = "00L1-TEST-002"
     validation_path = tmp_path / "docs/system/00_governance/bootstrap" / f"{job_id}-layer1-governance-validation.md"
@@ -307,15 +307,15 @@ def test_refine_loop_uses_persistent_reject_count_for_exhaustion(monkeypatch) ->
     step_captured: list[tuple[str, dict, str, dict]] = []
 
     monkeypatch.setattr(
-        "agent_runner_v2.workflow_router.save_job",
+        "agent_runner_v2.v2.workflow_router.save_job",
         lambda group_name, job_id, state: None,
     )
     monkeypatch.setattr(
-        "agent_runner_v2.workflow_router.send_workflow_notification",
+        "agent_runner_v2.v2.workflow_router.send_workflow_notification",
         lambda status, context: workflow_captured.append((status, dict(context))) or True,
     )
     monkeypatch.setattr(
-        "agent_runner_v2.workflow_router.send_step_notification",
+        "agent_runner_v2.v2.workflow_router.send_step_notification",
         lambda status, context, step, step_cfg: step_captured.append((status, dict(context), step, dict(step_cfg))) or True,
     )
 
