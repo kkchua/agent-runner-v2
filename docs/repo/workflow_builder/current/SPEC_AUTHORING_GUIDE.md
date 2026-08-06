@@ -22,6 +22,7 @@
 - [6: Worked Examples](#6-worked-examples)
 - [7: Common Pitfalls](#7-common-pitfalls)
 - [8: Spec Quality Checklist](#8-spec-quality-checklist)
+- [9: workflow.toml Field Reference](#9-workflowtoml-field-reference)
 
 ---
 
@@ -437,6 +438,41 @@ step_1 -> [human gate] -> step_2 -> [human gate] -> step_3 -> stepCompletion
 
 **Example:** `agnes_media_gen_v1`
 
+### Pattern 6: Meta-Workflow Builder
+
+**Use when:** The workflow's output is another workflow package. This is a
+specialized variant of Pattern 4 with mandatory TDD loop and stricter
+validation requirements.
+
+```
+generate_test_criteria -> review_test_criteria -> [refine_test_criteria -> review_test_criteria]
+  -> analyze_spec -> gatekeep_requirements -> resolve_questions
+  -> define_artifacts -> gatekeep_artifacts
+  -> design_steps -> gatekeep_steps
+  -> generate_package -> gatekeep_package
+  -> validate_bundle -> review_package -> [refine_package -> review_package]
+  -> promote_package -> stepCompletion
+```
+
+**Characteristics:**
+- **TDD loop is mandatory** — generate_test_criteria, review_test_criteria,
+  refine_test_criteria must be the first 3 steps. This establishes acceptance
+  criteria before any design work begins.
+- **init_step must be declared** — `init_step = "generate_test_criteria"` in
+  workflow.toml. The runner uses this to know where to start.
+- **4 gatekeepers with distinct artifact keys** — Each gatekeeper produces a
+  unique key: `GATEKEEP_REQUIREMENTS`, `GATEKEEP_ARTIFACTS`, `GATEKEEP_STEPS`,
+  `GATEKEEP_PACKAGE`. Never reuse `REVIEW_FILE_SUGGESTED` for gatekeepers.
+- **exhausted_failure_code/class on all refine loops** — Every `on_reject_refine`
+  must specify what happens when max iterations is reached.
+- **Action reuse** — Must reuse `validate_workflow_bundle` and
+  `promote_workflow_package` from workflow_builder_v1 unless there is a
+  documented reason why the existing actions don't fit.
+- **resolve_questions step** — Between gatekeep_requirements and define_artifacts,
+  clarifies ambiguities before artifact design begins.
+
+**Examples:** `workflow_builder_v1`, `creative_workflow_builder_v1`
+
 ---
 
 ## 5: Role Policy Quick Reference
@@ -671,6 +707,78 @@ Purpose: Generate a structured markdown document from the input spec.
   major topic. Write to {OUTPUT_FILE}.
 ```
 
+### Pitfall 9: Gatekeeper Artifact Key Collision
+
+**Bad:**
+```
+Step: gatekeep_requirements
+Produces: REVIEW_FILE_SUGGESTED
+
+Step: gatekeep_artifacts
+Produces: REVIEW_FILE_SUGGESTED
+
+Step: gatekeep_steps
+Produces: REVIEW_FILE_SUGGESTED
+```
+
+**Good:**
+```
+Step: gatekeep_requirements
+Produces: GATEKEEP_REQUIREMENTS
+
+Step: gatekeep_artifacts
+Produces: GATEKEEP_ARTIFACTS
+
+Step: gatekeep_steps
+Produces: GATEKEEP_STEPS
+```
+
+Each gatekeeper must produce a **distinct** artifact key. Reusing
+`REVIEW_FILE_SUGGESTED` means review artifacts overwrite each other in
+the job state, making traceability impossible.
+
+### Pitfall 10: Missing init_step Declaration
+
+**Bad:** Spec has no mention of which step the runner should start with.
+
+**Good:**
+```markdown
+## Overview
+**Workflow name:** `my_workflow_v1`
+**Init step:** `generate_test_criteria`
+```
+
+The runner uses `init_step` from workflow.toml to know where to begin
+execution. Without it, the runner may start at the wrong step or fail
+to initialize the workflow correctly.
+
+### Pitfall 11: Reinventing Existing Actions
+
+**Bad:**
+```markdown
+### Action: validate_creative_bundle
+Purpose: Structural validation of the generated workflow package.
+
+### Action: promote_creative_workflow
+Purpose: Copy the generated workflow package to workflows/<slug>/.
+```
+
+**Good:**
+```markdown
+## Custom Actions
+Reuse `validate_workflow_bundle` and `promote_workflow_package` from
+workflow_builder_v1. These actions already handle TOML validation,
+prompt file existence checks, artifact key consistency, backup-on-overwrite,
+and target directory verification.
+
+No new custom actions are needed for this workflow.
+```
+
+Before defining new actions, check if existing actions from
+workflow_builder_v1 or other workflows can be reused. Only create new
+actions when existing ones genuinely don't fit your needs, and explain
+why.
+
 ---
 
 ## 8: Spec Quality Checklist
@@ -680,11 +788,13 @@ Before submitting the spec to `workflow_builder_v1`, verify:
 ### Completeness
 
 - [ ] Overview section has name, label, job prefix (4 chars), description
+- [ ] **init_step is declared** in Overview
 - [ ] Purpose section describes trigger and expected outcome
 - [ ] Workflow type is declared (or step types are clear enough to infer)
 - [ ] Every step has: name, type, purpose, routing
 - [ ] Action steps include enough detail to generate working code
 - [ ] Terminal step (stepCompletion) is mentioned or implied
+- [ ] Output artifacts use individual file keys, not directory keys
 
 ### Naming
 
@@ -701,6 +811,21 @@ Before submitting the spec to `workflow_builder_v1`, verify:
 - [ ] Refine steps route back to review via onsuccess
 - [ ] Last real step routes to stepCompletion
 - [ ] Max iterations specified for refine loops
+- [ ] **on_reject_refine includes exhausted_failure_code and exhausted_failure_class**
+
+### Gatekeepers (if applicable)
+
+- [ ] Each gatekeeper produces a **distinct** artifact key
+- [ ] Gatekeeper keys follow naming convention (GATEKEEP_REQUIREMENTS, etc.)
+- [ ] Gatekeepers use `validation_standard` role policy
+
+### Meta-Workflows (if applicable)
+
+- [ ] TDD loop included (generate_test_criteria → review → refine)
+- [ ] init_step = "generate_test_criteria"
+- [ ] 4 gatekeepers with distinct artifact keys
+- [ ] resolve_questions step between gatekeep_requirements and define_artifacts
+- [ ] Existing actions audited for reuse (validate_workflow_bundle, promote_workflow_package)
 
 ### Actions (if applicable)
 
@@ -709,6 +834,7 @@ Before submitting the spec to `workflow_builder_v1`, verify:
 - [ ] Config file structure described (if needed)
 - [ ] Environment variables listed (if needed)
 - [ ] Return conditions (APPROVED/REJECTED) specified
+- [ ] **Existing actions checked for reuse before defining new ones**
 
 ### Paths
 
@@ -723,3 +849,72 @@ Before submitting the spec to `workflow_builder_v1`, verify:
 - [ ] No vague phrases like "process the data" or "handle the output"
 - [ ] Error handling described for all action steps
 - [ ] Similar existing workflows referenced (if any)
+
+---
+
+## 9: workflow.toml Field Reference
+
+This section documents the fields that appear in the generated
+`workflow.toml`. Spec authors should understand these fields to write
+specs that produce correct workflow definitions.
+
+### Top-Level Fields
+
+| Field | Type | Required? | Default | Description |
+|-------|------|-----------|---------|-------------|
+| `name` | string | Yes | — | Workflow name, matches directory name and spec slug |
+| `version` | string | Yes | — | Semantic version (e.g., "1.0.0") |
+| `label` | string | Yes | — | Human-readable display name |
+| `job_prefix` | string | Yes | — | Exactly 4 uppercase letters for job ID generation |
+| `description` | string | Yes | — | One-sentence description of workflow purpose |
+| `visibility` | string | No | `"default"` | `"canonical"` for core workflows, `"default"` otherwise |
+| `init_step` | string | Yes | — | Name of the first step the runner should execute |
+| `default_max_rejects` | integer | No | `3` | Default max refinement iterations for on_reject_refine |
+
+### Step Fields
+
+Each `[[step]]` block defines one workflow step.
+
+| Field | Type | Required? | Description |
+|-------|------|-----------|-------------|
+| `name` | string | Yes | Step name, `lowercase_with_underscores` |
+| `prompt` | string | For prompt steps | Path to prompt template (e.g., `"prompts/01_analyze_spec.txt"`) |
+| `action` | string | For action steps | Action function name (e.g., `"validate_workflow_bundle"`) |
+| `enable_notifications` | boolean | No | Send Pushover notifications on step completion |
+| `requires_human_approval_after` | boolean | No | Pause for human approval after step completes |
+| `onsuccess` | string | Yes | Next step name on success, or `"stepCompletion"` |
+
+### Step Artifacts Section
+
+`[step.artifacts]` declares what the step consumes and produces.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `required_inputs` | list[string] | Artifact keys this step must read |
+| `optional_inputs` | list[string] | Artifact keys this step may read if available |
+| `produces` | list[string] | Artifact keys this step writes |
+| `result_meta_key` | string | Which produced key is the "primary" output for meta.json |
+
+### Step Coder Section
+
+`[step.coder]` configures the LLM coder for prompt-driven steps.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `role_policy` | string | Coder role (e.g., `"architect_standard"`, `"reviewer_standard"`) |
+
+### Step on_reject_refine Section
+
+`[step.on_reject_refine]` configures refinement loops for review steps.
+
+| Field | Type | Required? | Description |
+|-------|------|-----------|-------------|
+| `step` | string | Yes | Step to route back to on rejection |
+| `artifact` | string | Yes | Which artifact key the review feedback targets |
+| `max_iterations` | integer | No | Max refinement attempts (default: `default_max_rejects`) |
+| `exhausted_failure_code` | string | **Yes** | Error code when max iterations reached (e.g., `"REQUIREMENTS_GATEKEEP_EXHAUSTED"`) |
+| `exhausted_failure_class` | string | **Yes** | Failure classification (typically `"HUMAN_RETRY_REQUIRED"`) |
+
+**Important:** `exhausted_failure_code` and `exhausted_failure_class` are
+required. Without them, the runner doesn't know how to handle refinement
+exhaustion and may loop indefinitely or fail with an unhelpful error.

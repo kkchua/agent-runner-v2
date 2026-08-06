@@ -57,6 +57,16 @@ docs/repo/workflow_builder/
 - Gatekeeper types: GATEKEEP-REQ, GATEKEEP-ART, GATEKEEP-STEPS, GATEKEEP-PKG
 - Sequence numbers auto-increment via `resolve_next_seq()`
 
+**Gatekeeper artifact key mapping:** Each gatekeeper type maps to a
+**distinct** artifact key in workflow.toml. Never reuse the same key:
+
+| Run Artifact Type | Artifact Key in workflow.toml |
+|---|---|
+| GATEKEEP-REQ | `GATEKEEP_REQUIREMENTS` |
+| GATEKEEP-ART | `GATEKEEP_ARTIFACTS` |
+| GATEKEEP-STEPS | `GATEKEEP_STEPS` |
+| GATEKEEP-PKG | `GATEKEEP_PACKAGE` |
+
 ### Generated Workflow Package
 
 - Location: `workflows/{slug}/`
@@ -181,3 +191,38 @@ def sync_to_backend(self, *, workspace_root):
 
 Workflows that produce global artifacts (templates, governance docs)
 should implement real install logic. All others return NO_OP.
+
+## workflow.toml Quick Reference
+
+This section covers the most commonly missed fields. For the complete
+field reference, see [SPEC_AUTHORING_GUIDE.md](../SPEC_AUTHORING_GUIDE.md#9-workflowtoml-field-reference).
+
+### Critical Fields
+
+| Field | Purpose | Example |
+|-------|---------|---------|
+| `init_step` | Which step the runner starts with | `"generate_test_criteria"` |
+| `default_max_rejects` | Default max refinement iterations | `3` |
+| `exhausted_failure_code` | Error code when refinement exhausts | `"REQUIREMENTS_GATEKEEP_EXHAUSTED"` |
+| `exhausted_failure_class` | Failure classification | `"HUMAN_RETRY_REQUIRED"` |
+
+### Why These Fields Matter
+
+**init_step:** Without this, the runner doesn't know where to begin
+execution. Meta-workflows must set `init_step = "generate_test_criteria"`
+to start with the TDD loop.
+
+**exhausted_failure_code/class:** Without these, the runner doesn't know
+how to handle refinement exhaustion. The workflow may loop indefinitely
+or fail with an unhelpful error. Every `on_reject_refine` section must
+include both fields.
+
+Example:
+```toml
+[step.on_reject_refine]
+step = "analyze_spec"
+artifact = "WORKFLOW_REQUIREMENTS"
+max_iterations = 2
+exhausted_failure_code = "REQUIREMENTS_GATEKEEP_EXHAUSTED"
+exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
+```
