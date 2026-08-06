@@ -64,26 +64,23 @@ Type: action
 Purpose: Call codebase_docs.py functions (build_snapshot, render_module_doc,
   render_inventory, render_change_impact) to regenerate only the affected
   module docs, plus update the inventory and generate a change impact report.
-On success: → update_manifest
+On success: → commit_and_track
 ```
 
-### Step 4: update_manifest
+### Step 4: commit_and_track
 
 ```
-Step: update_manifest
+Step: commit_and_track
 Type: action
-Purpose: Write the current HEAD commit hash to the .last_sync_commit tracking
-  file and update codebase_manifest.json with the new sync metadata.
-On success: → commit_changes
-```
-
-### Step 5: commit_changes
-
-```
-Step: commit_changes
-Type: action
-Purpose: Git add docs/repo/codebase/current/ and commit with message
-  "docs: incremental codebase update {job_id}".
+Purpose: Atomically update the tracking file, manifest, and commit all changes.
+  1. Write the current HEAD commit hash to .last_sync_commit
+  2. Update codebase_manifest.json with new sync metadata
+  3. Git add docs/repo/codebase/current/ (includes .last_sync_commit)
+  4. Git commit with message "docs: incremental codebase update {job_id}"
+  If the commit fails, .last_sync_commit is not committed and retains its
+  previous committed value on disk — the next run will re-detect the same
+  changes and retry. This ensures the tracking file never points ahead of
+  the committed state.
 On success: → stepCompletion
 ```
 
