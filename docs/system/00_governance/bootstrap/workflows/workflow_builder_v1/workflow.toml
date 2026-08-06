@@ -60,12 +60,12 @@ prompt = "prompts/00c_refine_test_criteria.txt"
 enable_notifications = true
 requires_human_approval_after = true
 
+onsuccess = "review_test_criteria"
 [step.artifacts]
 required_inputs = ["REVIEW_FILE_SUGGESTED", "TEST_CRITERIA", "WORKFLOW_SPEC_FILE"]
 produces = ["TEST_CRITERIA"]
 result_meta_key = "TEST_CRITERIA"
 
-onsuccess = "review_test_criteria"
 
 [step.coder]
 role_policy = "refine_standard"
@@ -310,12 +310,12 @@ prompt = "prompts/06_refine_package.txt"
 enable_notifications = true
 requires_human_approval_after = true
 
+onsuccess = "review_package"
 [step.artifacts]
 required_inputs = ["REVIEW_FILE_SUGGESTED", "WORKFLOW_MANIFEST", "WORKFLOW_EXTENSIONS", "WORKFLOW_PROMPTS_INDEX"]
 produces = ["WORKFLOW_MANIFEST", "WORKFLOW_EXTENSIONS", "WORKFLOW_ACTIONS", "WORKFLOW_PROMPTS_INDEX", "WORKFLOW_README", "WORKFLOW_ENV_SAMPLE", "WORKFLOW_CONFIG_SAMPLE"]
 result_meta_key = "WORKFLOW_PROMPTS_INDEX"
 
-onsuccess = "review_package"
 
 [step.coder]
 role_policy = "refine_standard"

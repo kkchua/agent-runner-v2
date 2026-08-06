@@ -110,6 +110,7 @@ name = "refine_requirements"
 prompt = "prompts/04_refine_requirements.txt"
 enable_notifications = true
 
+onsuccess = "review_requirements"
 [step.artifacts]
 required_inputs = ["REQ_FILE", "REVIEW_FILE_SUGGESTED"]
 produces = ["REQ_FILE"]
@@ -117,7 +118,6 @@ target_artifact = "REQ_FILE"
 edit_mode = "in_place"
 result_meta_key = "REQ_FILE"
 
-onsuccess = "review_requirements"
 
 [step.coder]
 role_policy = "architect_standard"

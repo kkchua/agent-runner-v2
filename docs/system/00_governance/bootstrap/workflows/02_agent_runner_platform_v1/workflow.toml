@@ -78,6 +78,7 @@ name = "refine_platform_core_docs"
 prompt = "prompts/03_refine_platform_core_docs.txt"
 enable_notifications = true
 
+onsuccess = "review_platform_core_docs"
 [step.artifacts]
 required_inputs = [
   "PLATFORM_CONTEXT_INVENTORY",
@@ -101,7 +102,6 @@ produces = [
 target_artifact = "L2_PLATFORM_INDEX"
 edit_mode = "in_place"
 result_meta_key = "L2_PLATFORM_INDEX"
-onsuccess = "review_platform_core_docs"
 
 [step.coder]
 role_policy = "refine_standard"

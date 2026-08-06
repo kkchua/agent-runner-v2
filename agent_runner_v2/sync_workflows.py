@@ -113,7 +113,8 @@ def _extract_init_input_dirs(bundle_dir: Path, group_dict: dict) -> dict[str, st
 
     step_configs = group_dict.get("step_configs", {})
     init_cfg = step_configs.get(init_step_name, {})
-    artifacts_cfg = init_cfg.get("artifacts", {})
+    # Adapter flattens artifacts to top-level; try nested first, then flat
+    artifacts_cfg = init_cfg.get("artifacts") or init_cfg
     required_inputs = artifacts_cfg.get("required_inputs", [])
     if not required_inputs:
         return {}

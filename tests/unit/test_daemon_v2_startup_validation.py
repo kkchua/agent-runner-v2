@@ -46,7 +46,7 @@ def _make_config(tmp_path: Path, worker_id: str = "worker-1") -> daemon_v2.Super
 
 class _FakeClientEnabled:
     """Fake client where worker is enabled."""
-    def __init__(self, base_url: str = "http://localhost:8200"):
+    def __init__(self, base_url: str = "http://localhost:8200", **kwargs):
         self.base_url = base_url
 
     def get_worker(self, *, worker_id: str) -> dict:
@@ -58,7 +58,7 @@ class _FakeClientEnabled:
 
 class _FakeClientDisabled:
     """Fake client where worker exists but is disabled."""
-    def __init__(self, base_url: str = "http://localhost:8200"):
+    def __init__(self, base_url: str = "http://localhost:8200", **kwargs):
         self.base_url = base_url
 
     def get_worker(self, *, worker_id: str) -> dict:
@@ -67,7 +67,7 @@ class _FakeClientDisabled:
 
 class _FakeClientBackendDown:
     """Fake client where backend is unreachable (connection error)."""
-    def __init__(self, base_url: str = "http://localhost:8200"):
+    def __init__(self, base_url: str = "http://localhost:8200", **kwargs):
         self.base_url = base_url
         self.call_count = 0
 
@@ -78,7 +78,7 @@ class _FakeClientBackendDown:
 
 class _FakeClientRecoversAfterRetries:
     """Fake client that fails N times then succeeds (simulates backend recovery)."""
-    def __init__(self, base_url: str = "http://localhost:8200"):
+    def __init__(self, base_url: str = "http://localhost:8200", **kwargs):
         self.base_url = base_url
         self.call_count = 0
         self.fail_until = 3  # Fail first 3 calls, then succeed
@@ -130,7 +130,7 @@ def test_startup_retries_when_backend_down(tmp_path, monkeypatch) -> None:
     max_calls = 5  # Stop after this many calls to avoid infinite loop
     
     class AlwaysFailClient:
-        def __init__(self, base_url: str = "http://localhost:8200"):
+        def __init__(self, base_url: str = "http://localhost:8200", **kwargs):
             self.base_url = base_url
         
         def get_worker(self, *, worker_id: str) -> dict:
@@ -217,7 +217,7 @@ def test_no_register_worker_call_on_startup(tmp_path, monkeypatch) -> None:
     register_called = {"value": False}
 
     class TrackingClient:
-        def __init__(self, base_url: str = "http://localhost:8200"):
+        def __init__(self, base_url: str = "http://localhost:8200", **kwargs):
             self.base_url = base_url
 
         def get_worker(self, *, worker_id: str) -> dict:
@@ -247,7 +247,7 @@ def test_main_loop_survives_unexpected_errors(tmp_path, monkeypatch) -> None:
     call_count = {"value": 0}
 
     class FlakyClient:
-        def __init__(self, base_url: str = "http://localhost:8200"):
+        def __init__(self, base_url: str = "http://localhost:8200", **kwargs):
             self.base_url = base_url
 
         def get_worker(self, *, worker_id: str) -> dict:

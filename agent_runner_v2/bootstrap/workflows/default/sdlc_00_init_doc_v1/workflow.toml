@@ -110,6 +110,7 @@ name = "refine_initiative"
 prompt = "prompts/04_refine_initiative.txt"
 enable_notifications = true
 
+onsuccess = "review_initiative"
 [step.artifacts]
 required_inputs = ["INIT_FILE", "REVIEW_FILE_SUGGESTED"]
 produces = ["INIT_FILE"]
@@ -117,7 +118,6 @@ target_artifact = "INIT_FILE"
 edit_mode = "in_place"
 result_meta_key = "INIT_FILE"
 
-onsuccess = "review_initiative"
 
 [step.coder]
 role_policy = "architect_standard"
