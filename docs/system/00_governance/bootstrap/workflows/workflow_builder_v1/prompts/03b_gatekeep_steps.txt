@@ -49,6 +49,20 @@ Answer each question with specific evidence from the documents:
 10. Downstream Feasibility: Can the generate_package step consume this
     architecture and produce valid workflow files?
 
+Self-Critic (Before Final Verdict)
+
+Challenge your review before committing to a verdict:
+
+1. Am I rubber-stamping, or did I actually trace the data flow from
+   inputs to outputs through every step?
+2. Did I find at least one substantive finding, or am I just saying
+   "looks good"?
+3. If I missed a routing error, which step would fail at runtime?
+4. Is my verdict based on evidence from the architecture document, or
+   on assumptions about what the producer "probably" designed?
+
+If your review is superficial, go back and dig deeper before reporting.
+
 Decision Rules
 
 - APPROVED: The step architecture is complete and will achieve requirements.

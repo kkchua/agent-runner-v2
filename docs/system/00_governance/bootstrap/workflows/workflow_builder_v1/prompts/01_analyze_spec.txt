@@ -24,7 +24,17 @@ Analysis Tasks
    - mixed: combination of both
    Base this on the nature of tasks described, not just explicit declaration.
 
-3. Propose step sequence with types:
+3. Detect meta-workflow:
+   Check if the workflow's output is another workflow package (workflow.toml +
+   prompts/ + actions.py + context_extensions.py). If yes, set is_meta_workflow
+   to true. Meta-workflows MUST include:
+   - TDD loop: generate_test_criteria -> review -> refine
+   - 4 gatekeeper steps: GATEKEEP_REQUIREMENTS, GATEKEEP_ARTIFACTS,
+     GATEKEEP_STEPS, GATEKEEP_PACKAGE
+   - init_step = "generate_test_criteria"
+   Document these requirements in the Meta-Workflow Requirements section.
+
+4. Propose step sequence with types:
    For each step, determine:
    - Step name (lowercase_with_underscores)
    - Step type: 'prompt' (needs LLM judgment) or 'action' (deterministic code)
@@ -32,21 +42,43 @@ Analysis Tasks
    - Inputs: what artifacts it reads
    - Outputs: what artifacts it produces
 
-4. Identify custom actions (if any):
-   For each action step, specify:
+5. Identify custom actions (if any):
+   Before proposing a new action, check if an existing reusable action covers
+   the need:
+   - validate_workflow_bundle (validates workflow package structure)
+   - promote_workflow_package (promotes workflow to target repo)
+   - step_completion (standard terminal step)
+   If an existing action covers the need, reference it with reused_from instead
+   of proposing a new one.
+   For each truly new action step, specify:
    - Action name (lowercase_with_underscores)
    - Purpose: what the action does
    - Inputs: what it reads (context variables, files)
    - Outputs: what it produces
    - Logic: high-level description of the operation
+   - reused_from: "existing_action_name" if reusing, or "new" if custom
 
-5. Identify all input artifacts (external files the workflow reads).
+6. Identify all input artifacts (external files the workflow reads).
 
-6. Identify all output artifacts (files the workflow writes).
+7. Identify all output artifacts (files the workflow writes).
 
-7. Identify constraints: governance layer, naming rules, dependencies.
+8. Identify constraints: governance layer, naming rules, dependencies.
 
-8. Flag any open questions or ambiguities needing resolution.
+9. Flag any open questions or ambiguities needing resolution.
+
+Self-Critic (Before Self-Validation)
+
+Challenge your reasoning before checking completeness:
+
+1. Am I introducing assumptions not supported by the spec document?
+2. Is this the simplest approach that meets the objective, or am I
+   over-engineering?
+3. If a downstream step reads this output, what would confuse them or
+   block them?
+4. Did I stay in my lane (requirements analysis), or did I leak into
+   step design or artifact path assignment?
+
+If you find reasoning issues, fix them before proceeding to Self-Validation.
 
 Self-Validation (Before Output)
 
@@ -61,13 +93,17 @@ Before reporting APPROVED, validate:
 
 3. Action Specifications: If action steps are proposed, are they truly
    deterministic operations that can be implemented in Python? Are inputs,
-   outputs, and logic clearly specified?
+   outputs, and logic clearly specified? Were existing reusable actions
+   checked before proposing new ones?
 
 4. Feasibility: Can the artifact definition step consume this and produce
    a complete artifact contract? Are all implied artifacts declared?
 
 5. Constraint Compliance: Does the solution respect all constraints from
    the spec?
+
+6. Meta-Workflow Compliance: If is_meta_workflow is true, does the document
+   declare TDD loop, 4 gatekeeper keys, and init_step = generate_test_criteria?
 
 If validation fails, report REJECTED with specific gaps found.
 
@@ -79,16 +115,19 @@ Output Instructions
   - doc_type: "workflow_design"
   - lifecycle_status: "draft"
   - effective_version: "{job_id}"
+  - is_meta_workflow: true/false (true if output is another workflow package)
 - Include these sections in order:
   1. Overview: one-paragraph summary of purpose.
   2. Workflow Type: inferred type with justification.
-  3. Proposed Steps: numbered list of steps with name, type, purpose, inputs, outputs.
-  4. Custom Actions: table of action specifications (if any action steps proposed).
-     Columns: action_name, purpose, inputs, outputs, logic_description.
-  5. Input Artifacts: table of artifact keys, descriptions, required/optional.
-  6. Output Artifacts: table of artifact keys, descriptions, required/optional.
-  7. Constraints: governance, naming, dependencies.
-  8. Open Questions: numbered list (or "None").
+  3. Meta-Workflow Requirements: (only if is_meta_workflow is true) TDD loop,
+     4 gatekeeper keys, init_step value. Omit this section if not a meta-workflow.
+  4. Proposed Steps: numbered list of steps with name, type, purpose, inputs, outputs.
+  5. Custom Actions: table of action specifications (if any action steps proposed).
+     Columns: action_name, purpose, inputs, outputs, logic_description, reused_from.
+  6. Input Artifacts: table of artifact keys, descriptions, required/optional.
+  7. Output Artifacts: table of artifact keys, descriptions, required/optional.
+  8. Constraints: governance, naming, dependencies.
+  9. Open Questions: numbered list (or "None").
 - Use UPPER_SNAKE_CASE for all artifact keys.
 - Do not define file paths -- handled by define_artifacts step.
 
