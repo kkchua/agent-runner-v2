@@ -1,0 +1,220 @@
+Objective
+
+Generate the composition format specification for the composition system. This
+defines Layer 2 of the three-layer architecture -- the declarative assembly
+instructions that reference components by ID and define how they snap together.
+
+The composition format must define:
+- YAML structure for compositions (composition_id, name, target_metadata,
+  component_bindings)
+- How components are referenced by component_id (references, not duplicates)
+- How overrides work (per-composition customization without modifying the
+  component)
+- How placeholders are resolved from external data sources
+- Ordering rules (ordered lists vs singletons)
+- Optional bindings (not all component types required in every composition)
+
+Reference Inputs
+
+- Read {WORKFLOW_SPEC_FILE} for the composition system specification --
+  identifies what compositions look like in this domain.
+- Read {COMPONENT_SCHEMA_FILE} for the component types -- compositions
+  reference these components by ID.
+- Read {TEST_CRITERIA_FILE} for acceptance criteria -- sections 4 and 5
+  define what makes a good composition format.
+- Read {COMPOSITION_SYSTEM_STANDARD} Section 4 (Composition Format Standard)
+  for the standard composition pattern.
+
+Composition Format Design Principles
+
+1. Follow the universal composition format from the Composition System
+   Standard:
+   - YAML structure with composition_id, name, target_metadata,
+     component_bindings
+   - component_bindings is a dict of binding_name -> component_id + overrides
+   - Some bindings are ordered lists (e.g., scenes), others are singletons
+     (e.g., voice_style)
+
+2. References, not duplicates:
+   - Compositions reference components by component_id
+   - The workflow resolves references against the component library at
+     generation time
+   - Components are NOT copied into compositions
+
+3. Override mechanism:
+   - Allow per-composition customization without modifying the component
+   - Overrides must conform to the component type's schema
+   - Overrides are merged with the component's base properties (override
+     wins on conflict)
+   - Example:
+     ```yaml
+     opening_hook:
+       component_id: "hook-dramatic-reveal-001"
+       overrides:
+         hook_script: "What if everything you knew about {product_name} was wrong?"
+     ```
+
+4. Placeholder resolution:
+   - {placeholder} values in overrides are resolved from external data sources
+   - Identify the data sources (e.g., Product Master, configuration files,
+     user input)
+   - Unresolved placeholders are flagged as {UNRESOLVED: field_name}
+   - Example:
+     ```yaml
+     opening_hook:
+       component_id: "hook-dramatic-reveal-001"
+       overrides:
+         hook_script: "What if everything you knew about {product_name} was wrong?"
+     # {product_name} resolved from Product Master
+     ```
+
+5. Ordering rules:
+   - Some bindings are ordered lists (e.g., scenes in a manuscript, pages
+     in an app)
+   - Others are singletons (e.g., voice_style, visual_direction)
+   - The domain defines which is which
+   - Example:
+     ```yaml
+     # Singleton binding
+     voice_style:
+       component_id: "voice-professional-001"
+
+     # Ordered list binding
+     scenes:
+       - component_id: "scene-problem-001"
+         overrides: { ... }
+       - component_id: "scene-solution-001"
+         overrides: { ... }
+     ```
+
+6. Optional bindings:
+   - Not all component types are required in every composition
+   - A composition may omit certain bindings if they're not needed
+   - Define which bindings are required vs optional
+
+Generation Tasks
+
+Produce a composition format document with these sections:
+
+1. Overview
+   - One-paragraph summary of the composition format's purpose
+   - How compositions fit into the three-layer architecture
+   - Domain context (what kind of compositions this system produces)
+
+2. Composition Structure
+   - YAML structure definition
+   - For each field: name, type, required/optional, description
+   - Example of a complete composition file
+
+3. Component Bindings
+   - How components are referenced by component_id
+   - Singleton bindings (one component per binding)
+   - Ordered list bindings (multiple components in sequence)
+   - Which bindings are required vs optional (domain-defined)
+   - Example of each binding type
+
+4. Override Mechanism
+   - How overrides customize components per-composition
+   - Override rules (must conform to component type schema, merge with base)
+   - Example of overrides in action
+
+5. Placeholder Resolution
+   - How {placeholder} values are resolved from data sources
+   - Identify the data sources for this domain
+   - How unresolved placeholders are handled ({UNRESOLVED: field_name})
+   - Example of placeholder resolution
+
+6. Ordering Rules
+   - Which bindings are ordered lists vs singletons
+   - Why (domain-specific reasoning)
+   - Example of ordered vs singleton bindings
+
+7. Composition Validation
+   - All referenced component_ids exist in the component library
+   - Overrides conform to component type schema
+   - Required bindings present
+   - Placeholders are resolvable
+   - Ordering constraints satisfied
+
+8. Example Compositions
+   - At least two complete example compositions
+   - Show different binding types, overrides, placeholders
+   - Demonstrate the full range of the format
+
+Context Verification (Before Self-Critic)
+
+Verify consistency with prior artifacts:
+
+1. Component Schema Alignment: Do composition binding names reference component
+   types defined in {COMPONENT_SCHEMA_FILE}? Every binding must map to a valid
+   component_type.
+2. Spec Alignment: Do compositions match the spec's description of what
+   deliverables look like?
+3. Test Criteria Alignment: Does the format satisfy {TEST_CRITERIA_FILE}
+   sections 4-5?
+4. Override Consistency: Do override examples use property names from the
+   component schema's type-specific properties? No invented properties.
+5. Placeholder Consistency: Are placeholder names consistent with the spec's
+   data source descriptions?
+
+If any inconsistency is found, fix it before proceeding.
+
+Self-Critic (Before Self-Validation)
+
+Challenge your reasoning before checking completeness:
+
+1. Am I introducing composition patterns not supported by the spec?
+2. Are my override rules clear and unambiguous?
+3. If a downstream step reads this format, would it know how to resolve
+   compositions into outputs?
+4. Did I follow the Composition System Standard's composition format pattern?
+
+If you find reasoning issues, fix them before proceeding to Self-Validation.
+
+Self-Validation (Before Output)
+
+Before reporting APPROVED, validate:
+
+1. Structure Completeness: Does the format define the YAML structure with
+   all required fields (composition_id, name, target_metadata,
+   component_bindings)?
+
+2. Reference Pattern: Are components referenced by component_id (not copied)?
+   Is the reference pattern clear?
+
+3. Override Mechanism: Is the override mechanism clear? Can composition authors
+   customize components without modifying them?
+
+4. Placeholder Resolution: Are data sources identified? Is the resolution
+   process clear? Are unresolved placeholders handled?
+
+5. Ordering Rules: Are ordered vs singleton bindings defined? Is the reasoning
+   clear?
+
+6. Example Quality: Are there at least two complete example compositions?
+   Do they demonstrate the full range of the format?
+
+7. Standard Conformance: Does the format follow the Composition System
+   Standard's composition format pattern?
+
+If validation fails, report REJECTED with specific gaps found.
+
+Output Instructions
+
+- Write the composition format to {COMPOSITION_FORMAT_FILE}.
+- Output must be ASCII-only.
+- Include YAML frontmatter with at minimum:
+  - doc_type: "composition_format"
+  - lifecycle_status: "draft"
+  - effective_version: "{job_id}"
+  - domain: "{domain_name}" (from spec)
+- Use YAML code blocks for composition examples.
+- Use tables for field definitions.
+
+Forbidden Content
+
+- Non-ASCII characters
+- Vague descriptions like "some value" or "varies"
+- Composition patterns not supported by the spec
+- Missing override mechanism
+- Missing placeholder resolution

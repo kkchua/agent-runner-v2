@@ -1562,7 +1562,7 @@ def advance_step(
         review_state["final_decision"] = "APPROVED"
         review_state["final_decision_source"] = "MODEL"
 
-    if _is_refine_step(group_cfg, step):
+    if _is_refine_step(group_cfg, step) and state.get("loop_context", {}).get("active"):
         return _handle_refine_success(state, step, step_cfg, artifacts)
 
     if step_cfg.get("requires_human_approval_after"):

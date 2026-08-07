@@ -15,7 +15,7 @@ init_step = "generate_test_criteria"
 name = "generate_test_criteria"
 prompt = "prompts/00_generate_test_criteria.txt"
 enable_notifications = true
-requires_human_approval_after = true
+requires_human_approval_after = false
 onsuccess = "review_test_criteria"
 
 [step.artifacts]
@@ -33,7 +33,7 @@ role_policy = "architect_standard"
 name = "review_test_criteria"
 prompt = "prompts/00b_review_test_criteria.txt"
 enable_notifications = true
-requires_human_approval_after = true
+requires_human_approval_after = false
 onsuccess = "analyze_spec"
 
 [step.artifacts]
@@ -57,8 +57,8 @@ exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
 [[step]]
 name = "refine_test_criteria"
 prompt = "prompts/00c_refine_test_criteria.txt"
-enable_notifications = true
-requires_human_approval_after = true
+enable_notifications = false
+requires_human_approval_after = false
 
 onsuccess = "review_test_criteria"
 [step.artifacts]
@@ -76,8 +76,8 @@ role_policy = "refine_standard"
 [[step]]
 name = "analyze_spec"
 prompt = "prompts/01_analyze_spec.txt"
-enable_notifications = true
-requires_human_approval_after = true
+enable_notifications = false
+requires_human_approval_after = false
 onsuccess = "gatekeep_requirements"
 
 [step.artifacts]
@@ -94,8 +94,8 @@ role_policy = "architect_standard"
 [[step]]
 name = "gatekeep_requirements"
 prompt = "prompts/01c_gatekeep_requirements.txt"
-enable_notifications = true
-requires_human_approval_after = true
+enable_notifications = false
+requires_human_approval_after = false
 onsuccess = "resolve_questions"
 
 [step.artifacts]
@@ -119,8 +119,8 @@ exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
 [[step]]
 name = "resolve_questions"
 prompt = "prompts/01b_resolve_questions.txt"
-enable_notifications = true
-requires_human_approval_after = true
+enable_notifications = false
+requires_human_approval_after = false
 onsuccess = "define_artifacts"
 
 [step.artifacts]
@@ -137,8 +137,8 @@ role_policy = "architect_standard"
 [[step]]
 name = "define_artifacts"
 prompt = "prompts/02_define_artifacts.txt"
-enable_notifications = true
-requires_human_approval_after = true
+enable_notifications = false
+requires_human_approval_after = false
 onsuccess = "gatekeep_artifacts"
 
 [step.artifacts]
@@ -147,7 +147,7 @@ produces = ["ARTIFACT_CONTRACT_FILE"]
 result_meta_key = "ARTIFACT_CONTRACT_FILE"
 
 [step.coder]
-role_policy = "architect_standard"
+role_policy = "implement_standard"
 
 # ============================================================================
 # Step 2b: Gatekeep Artifacts
@@ -155,8 +155,8 @@ role_policy = "architect_standard"
 [[step]]
 name = "gatekeep_artifacts"
 prompt = "prompts/02b_gatekeep_artifacts.txt"
-enable_notifications = true
-requires_human_approval_after = true
+enable_notifications = false
+requires_human_approval_after = false
 onsuccess = "design_steps"
 
 [step.artifacts]
@@ -180,8 +180,8 @@ exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
 [[step]]
 name = "design_steps"
 prompt = "prompts/03_design_steps.txt"
-enable_notifications = true
-requires_human_approval_after = true
+enable_notifications = false
+requires_human_approval_after = false
 onsuccess = "gatekeep_steps"
 
 [step.artifacts]
@@ -198,8 +198,8 @@ role_policy = "architect_standard"
 [[step]]
 name = "gatekeep_steps"
 prompt = "prompts/03b_gatekeep_steps.txt"
-enable_notifications = true
-requires_human_approval_after = true
+enable_notifications = false
+requires_human_approval_after = false
 onsuccess = "generate_package"
 
 [step.artifacts]
@@ -224,17 +224,17 @@ exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
 name = "generate_package"
 prompt = "prompts/04_generate_package.txt"
 enable_notifications = true
-requires_human_approval_after = true
+requires_human_approval_after = false
 onsuccess = "gatekeep_package"
 
 [step.artifacts]
 required_inputs = ["WORKFLOW_REQUIREMENTS_FILE", "ARTIFACT_CONTRACT_FILE", "STEP_ARCHITECTURE_FILE", "TEST_CRITERIA_FILE"]
 produces = ["WORKFLOW_MANIFEST_FILE", "WORKFLOW_EXTENSIONS_FILE", "WORKFLOW_ACTIONS_FILE", "WORKFLOW_PROMPTS_INDEX_FILE", "WORKFLOW_README_FILE"]
-optional_produces = ["WORKFLOW_ENV_SAMPLE_FILE", "WORKFLOW_CONFIG_SAMPLE_FILE"]
+optional_produces = ["WORKFLOW_ENV_SAMPLE_FILE", "WORKFLOW_CONFIG_SAMPLE_FILE", "BUILDER_SPEC_TEMPLATE_FILE", "BUILDER_SOP_FILE", "BUILDER_STANDARD_FILE"]
 result_meta_key = "WORKFLOW_PROMPTS_INDEX_FILE"
 
 [step.coder]
-role_policy = "architect_standard"
+role_policy = "implement_standard"
 
 # ============================================================================
 # Step 4b: Gatekeep Package
@@ -242,8 +242,8 @@ role_policy = "architect_standard"
 [[step]]
 name = "gatekeep_package"
 prompt = "prompts/04b_gatekeep_package.txt"
-enable_notifications = true
-requires_human_approval_after = true
+enable_notifications = false
+requires_human_approval_after = false
 onsuccess = "validate_bundle"
 
 [step.artifacts]
@@ -268,8 +268,8 @@ exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
 [[step]]
 name = "validate_bundle"
 action = "validate_workflow_bundle"
-enable_notifications = true
-requires_human_approval_after = true
+enable_notifications = false
+requires_human_approval_after = false
 onsuccess = "review_package"
 
 [step.artifacts]
@@ -283,8 +283,8 @@ result_meta_key = "VALIDATION_REPORT_FILE"
 [[step]]
 name = "review_package"
 prompt = "prompts/05_review_package.txt"
-enable_notifications = true
-requires_human_approval_after = true
+enable_notifications = false
+requires_human_approval_after = false
 onsuccess = "promote_package"
 
 [step.artifacts]
@@ -308,14 +308,14 @@ exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
 [[step]]
 name = "refine_package"
 prompt = "prompts/06_refine_package.txt"
-enable_notifications = true
-requires_human_approval_after = true
+enable_notifications = false
+requires_human_approval_after = false
 
 onsuccess = "review_package"
 [step.artifacts]
 required_inputs = ["REVIEW_FILE_SUGGESTED", "WORKFLOW_MANIFEST_FILE", "WORKFLOW_EXTENSIONS_FILE", "WORKFLOW_PROMPTS_INDEX_FILE"]
 produces = ["WORKFLOW_MANIFEST_FILE", "WORKFLOW_EXTENSIONS_FILE", "WORKFLOW_ACTIONS_FILE", "WORKFLOW_PROMPTS_INDEX_FILE", "WORKFLOW_README_FILE"]
-optional_produces = ["WORKFLOW_ENV_SAMPLE_FILE", "WORKFLOW_CONFIG_SAMPLE_FILE"]
+optional_produces = ["WORKFLOW_ENV_SAMPLE_FILE", "WORKFLOW_CONFIG_SAMPLE_FILE", "BUILDER_SPEC_TEMPLATE_FILE", "BUILDER_SOP_FILE", "BUILDER_STANDARD_FILE"]
 result_meta_key = "WORKFLOW_PROMPTS_INDEX_FILE"
 
 

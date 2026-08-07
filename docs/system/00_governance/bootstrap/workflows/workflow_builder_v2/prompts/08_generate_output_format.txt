@@ -1,0 +1,184 @@
+Objective
+
+Generate the output format specification for the composition system. This
+defines Layer 3 of the three-layer architecture -- the resolved outputs that
+are complete, self-contained deliverables with all component references
+expanded, overrides applied, and placeholders filled.
+
+The output format must define:
+- Output structure (sections, metadata, format)
+- Resolution rules (how references are expanded, overrides applied, placeholders
+  filled)
+- Quality requirements (no dangling references, no unresolved placeholders,
+  schema conformance)
+- Downstream extraction contracts (how downstream workflows consume the output)
+
+Reference Inputs
+
+- Read {WORKFLOW_SPEC_FILE} for the composition system specification --
+  identifies what the final output looks like in this domain.
+- Read {COMPONENT_SCHEMA_FILE} for the component types -- outputs contain
+  resolved components.
+- Read {COMPOSITION_FORMAT_FILE} for the composition format -- outputs are
+  resolved from compositions.
+- Read {TEST_CRITERIA_FILE} for acceptance criteria -- sections 6 and 7
+  define what makes a good output format.
+- Read {COMPOSITION_SYSTEM_STANDARD} Section 5 (Output Format Standard) for
+  the standard output pattern.
+
+Output Format Design Principles
+
+1. Follow the universal output format from the Composition System Standard:
+   - Markdown with YAML frontmatter
+   - Frontmatter includes: composition_id, composition_name, metadata,
+     component_count, generation_date, lifecycle_status
+   - Structured sections that present resolved components in human-readable
+     format
+
+2. All references expanded:
+   - Every component_id reference is replaced with the full component content
+     (common properties + type-specific properties + overrides applied)
+   - The output is self-contained -- no need to reference the component library
+
+3. Placeholders resolved:
+   - Every {placeholder} is replaced with the value from the external data
+     source
+   - Unresolved placeholders are marked as {UNRESOLVED: field_name}
+   - The output clearly indicates which placeholders could not be resolved
+
+4. Self-contained:
+   - The output contains all information needed to understand and use the
+     deliverable
+   - No need to reference the component library or composition file
+   - Downstream workflows can extract their concerns from the output alone
+
+5. Downstream-agnostic:
+   - The output describes WHAT the deliverable is, not HOW to produce it
+   - Downstream workflows extract their specific concerns from the output
+   - The output is not tied to a specific downstream implementation
+
+6. Quality requirements:
+   - No dangling references (all component_ids resolved)
+   - No unresolved placeholders (all placeholders filled or explicitly flagged)
+   - Schema conformance (overrides applied correctly)
+   - Completeness (all required sections present)
+   - Consistency (no contradictions between sections)
+
+Generation Tasks
+
+Produce an output format document with these sections:
+
+1. Overview
+   - One-paragraph summary of the output format's purpose
+   - How outputs fit into the three-layer architecture
+   - Domain context (what kind of deliverables this system produces)
+
+2. Output Structure
+   - Markdown with YAML frontmatter structure
+   - For each frontmatter field: name, type, required/optional, description
+   - Required sections (domain-defined)
+   - Example of a complete output file
+
+3. Resolution Rules
+   - How component references are expanded (component_id -> full component)
+   - How overrides are applied (override wins on conflict)
+   - How placeholders are resolved (from data sources)
+   - How unresolved placeholders are handled ({UNRESOLVED: field_name})
+   - Example of resolution in action
+
+4. Required Sections
+   - List of required sections in the output (domain-defined)
+   - For each section: name, purpose, content description
+   - Example of each section
+
+5. Quality Requirements
+   - No dangling references (all component_ids resolved)
+   - No unresolved placeholders (all placeholders filled or flagged)
+   - Schema conformance (overrides applied correctly)
+   - Completeness (all required sections present)
+   - Consistency (no contradictions between sections)
+
+6. Downstream Extraction Contracts
+   - How downstream workflows consume the output
+   - What they extract from the output
+   - Example extraction contracts for 2-3 downstream workflows
+   - Platform-specific considerations (if applicable)
+
+7. Example Outputs
+   - At least one complete example output
+   - Show resolved components, applied overrides, filled placeholders
+   - Demonstrate all required sections
+
+Context Verification (Before Self-Critic)
+
+Verify consistency with prior artifacts:
+
+1. Component Schema Alignment: Does the output structure accommodate all
+   component types from {COMPONENT_SCHEMA_FILE}? Each type must have a
+   representation in the output.
+2. Composition Format Alignment: Do resolution rules match the composition
+   format's override mechanism and placeholder resolution from
+   {COMPOSITION_FORMAT_FILE}?
+3. Three-Layer Consistency: Can you trace a component from schema -> composition
+   -> output without losing information?
+4. Test Criteria Alignment: Does the format satisfy {TEST_CRITERIA_FILE}
+   sections 6-7?
+5. Downstream Contract Consistency: Do downstream extraction contracts reference
+   sections that actually exist in the output structure?
+
+If any inconsistency is found, fix it before proceeding.
+
+Self-Critic (Before Self-Validation)
+
+Challenge your reasoning before checking completeness:
+
+1. Am I introducing output structures not supported by the spec?
+2. Are my resolution rules clear and unambiguous?
+3. If a downstream workflow reads this output, would it know what to extract?
+4. Did I follow the Composition System Standard's output format pattern?
+
+If you find reasoning issues, fix them before proceeding to Self-Validation.
+
+Self-Validation (Before Output)
+
+Before reporting APPROVED, validate:
+
+1. Structure Completeness: Does the format define the output structure with
+   all required fields (frontmatter, sections)?
+
+2. Resolution Rules: Are resolution rules clear? Can a downstream step know
+   how to expand references, apply overrides, fill placeholders?
+
+3. Quality Requirements: Are quality requirements defined? Can a gatekeeper
+   validate outputs unambiguously?
+
+4. Downstream Contracts: Are downstream extraction contracts defined? Can
+   downstream workflows know what to extract?
+
+5. Example Quality: Is there at least one complete example output? Does it
+   demonstrate the full resolution process?
+
+6. Standard Conformance: Does the format follow the Composition System
+   Standard's output format pattern?
+
+If validation fails, report REJECTED with specific gaps found.
+
+Output Instructions
+
+- Write the output format to {OUTPUT_FORMAT_FILE}.
+- Output must be ASCII-only.
+- Include YAML frontmatter with at minimum:
+  - doc_type: "output_format"
+  - lifecycle_status: "draft"
+  - effective_version: "{job_id}"
+  - domain: "{domain_name}" (from spec)
+- Use Markdown code blocks for output examples.
+- Use tables for field definitions.
+
+Forbidden Content
+
+- Non-ASCII characters
+- Vague descriptions like "some value" or "varies"
+- Output structures not supported by the spec
+- Missing resolution rules
+- Missing downstream extraction contracts

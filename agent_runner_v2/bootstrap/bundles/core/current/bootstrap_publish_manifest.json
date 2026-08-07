@@ -21,7 +21,8 @@
     "sdlc_60_execution_v1",
     "sdlc_70_validation_v1",
     "sdlc_80_review_v1",
-    "workflow_builder_v1"
+    "workflow_builder_v1",
+    "workflow_builder_v2"
   ],
   "shared_registry_copied": true,
   "plugin_workflows_copied": [
@@ -41,6 +42,7 @@
     "sdlc_60_execution_v1",
     "sdlc_70_validation_v1",
     "sdlc_80_review_v1",
-    "workflow_builder_v1"
+    "workflow_builder_v1",
+    "workflow_builder_v2"
   ]
 }

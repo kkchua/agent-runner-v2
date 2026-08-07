@@ -50,6 +50,12 @@ Refinement Rules
 14. If actions.py is created or modified, update {WORKFLOW_PROMPTS_INDEX_FILE}
     to reflect the new file.
 
+15. If the review flagged missing supplementary specification documents for
+    meta-workflows (e.g. BUILDER_SPEC_TEMPLATE_FILE, BUILDER_SOP_FILE,
+    BUILDER_STANDARD_FILE), generate them at the paths declared in
+    {ARTIFACT_CONTRACT_FILE}. Each must have YAML frontmatter with doc_type
+    and lifecycle_status fields, ASCII-only content.
+
 Self-Critic (Before Reporting Complete)
 
 Challenge your fixes:

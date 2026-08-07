@@ -124,28 +124,24 @@ Output Instructions
 - Write files to the run directory (parent of {WORKFLOW_MANIFEST_FILE}).
 - Create prompts/ subdirectory for prompt files.
 - All files must be ASCII-only.
-- Report ONLY the declared artifact keys in meta.json. Do NOT invent new keys.
-  Individual prompt files (prompts/*.txt) are NOT separate artifacts — they are
-  covered by WORKFLOW_PROMPTS_INDEX. Report only these keys:
-  - WORKFLOW_MANIFEST: path to workflow.toml
-  - WORKFLOW_EXTENSIONS: path to context_extensions.py
-  - WORKFLOW_ACTIONS: path to actions.py (if generated)
-  - WORKFLOW_PROMPTS_INDEX: path to prompts index document
-  - WORKFLOW_README: path to README.md
-  - WORKFLOW_ENV_SAMPLE: path to .env.sample (if generated)
-  - WORKFLOW_CONFIG_SAMPLE: path to config.json.sample (if generated)
-
-Example meta.json:
-{
-  "status": "APPROVED",
-  "remark": "Generated complete workflow package with 8 files",
-  "artifacts": {
-    "WORKFLOW_MANIFEST": "/path/to/workflow.toml",
-    "WORKFLOW_EXTENSIONS": "/path/to/context_extensions.py",
-    "WORKFLOW_ACTIONS": "/path/to/actions.py",
-    ...
-  }
-}
+- Report ALL generated file paths in meta.json using their declared artifact
+  keys from {ARTIFACT_CONTRACT_FILE}. Read the artifact contract to determine
+  which keys correspond to the files you generated.
+- Individual prompt files (prompts/*.txt) are NOT separate artifacts — they are
+  covered by WORKFLOW_PROMPTS_INDEX_FILE.
+- Always report these standard keys when the corresponding files are generated:
+  - WORKFLOW_MANIFEST_FILE: path to workflow.toml
+  - WORKFLOW_EXTENSIONS_FILE: path to context_extensions.py
+  - WORKFLOW_ACTIONS_FILE: path to actions.py (if generated)
+  - WORKFLOW_PROMPTS_INDEX_FILE: path to prompts index document
+  - WORKFLOW_README_FILE: path to README.md
+  - WORKFLOW_ENV_SAMPLE_FILE: path to .env.sample (if generated)
+  - WORKFLOW_CONFIG_SAMPLE_FILE: path to config.json.sample (if generated)
+- For meta-workflows: if {WORKFLOW_REQUIREMENTS_FILE} declares is_meta_workflow
+  as true, also report any supplementary specification documents that the design
+  requires (e.g. BUILDER_SPEC_TEMPLATE_FILE, BUILDER_SOP_FILE,
+  BUILDER_STANDARD_FILE). Check {ARTIFACT_CONTRACT_FILE} for the full list of
+  declared keys and their path patterns.
 
 Forbidden Content
 
@@ -153,7 +149,7 @@ Forbidden Content
 - Backtick-wrapped placeholders like `{ARTIFACT_KEY}`
 - Hardcoded absolute paths in register_artifact_keys()
 - Missing stepCompletion terminal step
-- Omitting WORKFLOW_ACTIONS from meta.json when actions.py exists
-- Inventing artifact keys not in the declared produces list (e.g.
+- Omitting WORKFLOW_ACTIONS_FILE from meta.json when actions.py exists
+- Inventing artifact keys not in {ARTIFACT_CONTRACT_FILE} (e.g.
   WORKFLOW_PROMPT_01, WORKFLOW_PROMPT_02). Prompt files belong under
-  WORKFLOW_PROMPTS_INDEX, not as individual artifact keys.
+  WORKFLOW_PROMPTS_INDEX_FILE, not as individual artifact keys.

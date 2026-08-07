@@ -17,6 +17,16 @@
         "agnes-2.0-flash"
       ]
     },
+	"gatekeeper_standard": {
+      "default_role": "bailian_qwen3.7-plus",
+	  "agent": "arv_architect",
+      "allowed_roles": [
+        "bailian_qwen3.7-plus",
+		"bailian_kimi-k2.5",
+		"zen_go_mimo-v2.5",
+        "agnes-2.0-flash"
+      ]
+    },
 	"image_video": {
       "default_role": "zen_go_deepseek-v4-flash",
 	  "agent": "arv_architect",

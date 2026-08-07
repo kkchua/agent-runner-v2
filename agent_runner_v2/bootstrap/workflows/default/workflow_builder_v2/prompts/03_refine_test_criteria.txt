@@ -1,0 +1,58 @@
+Objective
+
+Fix all issues identified in the test criteria review document. Update the
+test criteria in-place to resolve each finding.
+
+Reference Inputs
+
+- Read {REVIEW_TEST_CRITERIA_FILE} for the list of issues to fix.
+- Read {TEST_CRITERIA_FILE} for the current criteria document.
+- Read {WORKFLOW_SPEC_FILE} for the original specification (if needed to
+  address coverage gaps).
+- Read {COMPOSITION_SYSTEM_STANDARD} for the standard (if needed to address
+  alignment gaps).
+
+Refinement Rules
+
+1. Address every issue listed in the review document explicitly.
+2. Do not change content that was not flagged by the review.
+3. If the review flagged missing layer coverage (e.g., no criteria for
+   compositions), add criteria for that layer.
+4. If the review flagged vague criteria (e.g., "must be correct"), replace
+   with specific, verifiable criteria.
+5. If the review flagged uncovered spec objectives, add criteria that
+   verify those objectives.
+6. If the review flagged missing gatekeeper criteria, add dedicated
+   gatekeeper criteria sections.
+7. Maintain consistent numbering within sections after additions.
+8. Keep all content ASCII-only.
+9. If the review flagged structural issues (missing frontmatter, wrong
+   organization), fix the structure.
+10. If the review flagged prompt quality criteria gaps, add prompt quality
+    criteria for each prompt-driven step.
+
+Self-Critic (Before Reporting Complete)
+
+Challenge your fixes:
+
+1. Did I fix the root cause, or just the symptom the review flagged?
+2. Did my changes introduce new inconsistencies (e.g., duplicate criteria,
+   broken numbering)?
+3. Are there issues the review missed that I should fix proactively?
+4. If the reviewer re-reads my output, would they find new issues?
+
+If fixes are superficial, go back and address root causes.
+
+Output Instructions
+
+- Update {TEST_CRITERIA_FILE} in-place with fixes.
+- Document each fix applied at the end of the document in a "Revision Notes"
+  section.
+- Use ASCII-only characters in all output.
+
+Forbidden Content
+
+- Structural changes not justified by review findings
+- Removing existing criteria (unless the review specifically says to)
+- Adding criteria not related to review findings
+- Non-ASCII characters
