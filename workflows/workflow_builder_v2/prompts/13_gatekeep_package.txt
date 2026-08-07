@@ -1,0 +1,145 @@
+Objective
+
+Validate the generated workflow package for completeness and alignment with
+the design artifacts. This is a quality control checkpoint before the review
+step performs comprehensive quality review.
+
+A deterministic validation has already run (see {VALIDATION_REPORT_FILE}).
+That report caught structural defects (syntax errors, TYPE_CHECKING imports,
+artifact binding issues, missing files). Your job is to catch what static
+analysis cannot: design fidelity, semantic correctness, and cross-file
+consistency.
+
+DO NOT re-check things the deterministic validation already confirmed.
+Focus on higher-level design questions.
+
+Reference Inputs
+
+- Read {VALIDATION_REPORT_FILE} for deterministic validation results.
+  If any ERROR-level findings exist, the package should be REJECTED
+  immediately -- those are runtime defects that must be fixed first.
+- Read {WORKFLOW_MANIFEST_FILE} for the generated workflow.toml.
+- Read {WORKFLOW_EXTENSIONS_FILE} for the generated context_extensions.py.
+- Read {WORKFLOW_ACTIONS_FILE} for the generated actions.py (if action steps
+  were declared).
+- Read {WORKFLOW_PROMPTS_INDEX_FILE} for the list of generated prompt files.
+- Read {WORKFLOW_README_FILE} for the generated README.md.
+- Read {WORKFLOW_ENV_SAMPLE_FILE} for the generated .env.sample (if it exists).
+- Read {WORKFLOW_CONFIG_SAMPLE_FILE} for the generated config.json.sample (if
+  it exists).
+- Read {COMPONENT_SCHEMA_FILE} for the component schema design.
+- Read {COMPOSITION_FORMAT_FILE} for the composition format design.
+- Read {OUTPUT_FORMAT_FILE} for the output format design.
+- Read {OPERATIONAL_WORKFLOW_FILE} for the operational workflow design.
+- Read {TEST_CRITERIA_FILE} for acceptance criteria -- section 11 defines what
+  the gatekeeper must check.
+
+Pre-Check: Deterministic Validation
+
+Before performing your own analysis, check {VALIDATION_REPORT_FILE}:
+
+1. If the report contains any ERROR-level findings, REJECT the package
+   immediately. The errors must be fixed by generate_package before you
+   proceed with semantic review. Cite the specific errors from the report.
+
+2. If the report shows all checks passed (or only warnings), proceed with
+   the validation questions below.
+
+Validation Questions
+
+Answer each question with specific evidence from the documents:
+
+1. File Completeness: Does the package contain ALL files implied by the
+   operational workflow design?
+   - If action steps exist, does actions.py exist?
+   - Does prompts/ contain one file per prompt-driven step?
+   - Are core files (workflow.toml, context_extensions.py, README.md) present?
+   - Are conditional files (.env.sample, config.json.sample) present only if
+     needed?
+
+2. Design Fidelity: Do generated files match {OPERATIONAL_WORKFLOW_FILE}?
+   - Does workflow.toml contain all domain steps from the design?
+   - Does context_extensions.py register all artifact keys from the design?
+   - Does actions.py implement all action specifications from the design?
+   - Are there any scope shrink (dropped domain elements)?
+   - Note: promote and stepCompletion are required infrastructure steps
+     added by the package assembly process -- they are NOT scope creep.
+
+3. Composition Integrity: Are the component schema, composition format, and
+   output format consistent with each other?
+   - Do compositions reference components defined in the schema?
+   - Do outputs resolve compositions correctly?
+   - Are there contradictions between the three layers?
+
+4. Prompt Completeness: Does prompts/ have one file per prompt-driven step?
+   - Are prompt files named correctly (NN_step_name.txt)?
+   - Do prompts have Objective, Reference Inputs, Output Instructions?
+   - Are placeholders bare {KEY} format (not backtick-wrapped)?
+
+5. Action Completeness: If actions.py exists, are ALL declared actions
+   implemented?
+   - Do actions have @action decorators?
+   - Do actions return ActionResult?
+   - Were existing reusable actions referenced instead of duplicated?
+   - Do action implementations follow the design specifications (error
+     handling, early exit behavior, artifact production)?
+
+6. Cross-File Consistency: Are artifact keys consistent between workflow.toml
+   and context_extensions.py? Do step names match prompt file naming? Does
+   README.md match the actual package contents?
+
+7. Semantic Correctness: Do the action implementations actually do what the
+   design specifies?
+   - Does the early-exit/no-changes path return empty artifacts?
+   - Are error codes and reject codes consistent with the design?
+   - Are artifact paths constructed correctly (using context variables)?
+
+Self-Critic (Before Final Verdict)
+
+Challenge your review before committing to a verdict:
+
+1. Am I rubber-stamping, or did I actually verify each file against the
+   design?
+2. Did I find at least one substantive finding, or am I just saying
+   "looks good"?
+3. If I missed an issue that the review step catches, what would it be?
+4. Is my verdict based on evidence from the files, or on assumptions
+   about what the generator "probably" produced?
+5. Did I check the deterministic validation report first?
+
+If your review is superficial, go back and dig deeper before reporting.
+
+Decision Rules
+
+- APPROVED: The package is complete, contains all domain steps from the
+  design plus required infrastructure steps (promote, stepCompletion),
+  deterministic validation passed (no errors), and all validation questions
+  have satisfactory answers. No missing files, no scope shrink.
+
+- REJECTED: The package has gaps (missing files, design mismatches, scope
+  issues), does not match the operational workflow design, has deterministic
+  validation errors, or will cause review failures. Include specific findings
+  for each failed validation question.
+
+Output Instructions
+
+- Write the gatekeeper report to {GATEKEEP_PACKAGE_FILE}.
+- Include YAML frontmatter with doc_type: "gatekeep_report".
+- Structure:
+  1. Summary: Overall assessment (1-2 sentences)
+  2. Deterministic Validation Status: PASS/FAIL with reference to
+     {VALIDATION_REPORT_FILE}
+  3. Validation Results: Table with columns: Question, Status (PASS/FAIL),
+     Evidence
+  4. Issues (if any): Numbered list of specific gaps found
+  5. Recommendations: Specific suggestions to fix issues
+  6. Verdict: APPROVED or REJECTED on its own line
+- All content must be ASCII-only.
+- The result field in meta.json must match the verdict exactly.
+
+Forbidden Content
+
+- Non-ASCII characters
+- Vague findings without specific evidence
+- Approving packages with known gaps
+- Approving packages with deterministic validation errors

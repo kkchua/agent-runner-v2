@@ -1,0 +1,109 @@
+Objective
+
+Validate the generated output format for completeness, correctness, and
+conformance to the Composition System Standard. This is a quality control
+checkpoint before downstream steps consume the format.
+
+The gatekeeper asks: "Does this format define how outputs are structured?
+Are the resolution rules clear? Can downstream workflows extract their
+concerns from the output unambiguously?"
+
+Reference Inputs
+
+- Read {OUTPUT_FORMAT_FILE} for the format to validate.
+- Read {COMPONENT_SCHEMA_FILE} for the component types -- outputs contain
+  resolved components.
+- Read {COMPOSITION_FORMAT_FILE} for the composition format -- outputs are
+  resolved from compositions.
+- Read {TEST_CRITERIA_FILE} for acceptance criteria -- sections 6 and 7
+  define what makes a good output format and what the gatekeeper must check.
+- Read {COMPOSITION_SYSTEM_STANDARD} Section 5 (Output Format Standard) for
+  the standard output pattern.
+- Read {WORKFLOW_SPEC_FILE} for the original specification -- verify the
+  format aligns with the spec's output requirements.
+
+Validation Questions
+
+Answer each question with specific evidence from the documents:
+
+1. Structure Completeness: Does the format define the output structure with
+   all required fields (frontmatter, sections)? Are there missing fields?
+
+2. Resolution Rules: Are resolution rules defined for:
+   - Expanding component references (component_id -> full component)
+   - Applying overrides (override wins on conflict)
+   - Resolving placeholders (from data sources)
+   - Handling unresolved placeholders ({UNRESOLVED: field_name})
+   Are the rules clear and unambiguous?
+
+3. Required Sections: Are required sections defined (domain-defined)? Does
+   each section have a clear purpose and content description?
+
+4. Quality Requirements: Are quality requirements defined? Can a gatekeeper
+   validate outputs unambiguously? Rules for:
+   - No dangling references (all component_ids resolved)
+   - No unresolved placeholders (all placeholders filled or flagged)
+   - Schema conformance (overrides applied correctly)
+   - Completeness (all required sections present)
+   - Consistency (no contradictions between sections)
+
+5. Downstream Extraction Contracts: Are downstream extraction contracts
+   defined? Can downstream workflows know what to extract from the output?
+   Are there example extraction contracts for 2-3 downstream workflows?
+
+6. Example Quality: Is there at least one complete example output? Does it
+   demonstrate the full resolution process (expanded references, applied
+   overrides, filled placeholders)?
+
+7. Standard Conformance: Does the format follow the Composition System
+   Standard's output format pattern? Are there deviations?
+
+8. Downstream Feasibility: Can a downstream workflow read this format and
+   know how to extract its concerns from the output? Is the format clear
+   enough for implementation?
+
+Self-Critic (Before Final Verdict)
+
+Challenge your review before committing to a verdict:
+
+1. Am I rubber-stamping, or did I actually verify each output rule against
+   the standard and spec?
+2. Did I find at least one substantive finding, or am I just saying
+   "looks good"?
+3. If I missed an issue that a later step catches, what would it be?
+4. Is my verdict based on evidence from the format, or on assumptions
+   about what the generator "probably" did?
+
+If your review is superficial, go back and dig deeper before reporting.
+
+Decision Rules
+
+- APPROVED: The output format is complete, clear, and conforms to the
+  Composition System Standard. All validation questions have satisfactory
+  answers. Resolution rules are clear. Downstream extraction contracts are
+  defined. Examples demonstrate the full resolution process.
+
+- REJECTED: The output format has gaps (missing structure, unclear resolution
+  rules, missing downstream contracts), does not conform to the standard, or
+  will cause downstream failures. Include specific findings for each failed
+  validation question.
+
+Output Instructions
+
+- Write the gatekeeper report to {GATEKEEP_OUTPUT_FORMAT_FILE}.
+- Include YAML frontmatter with doc_type: "gatekeep_report".
+- Structure:
+  1. Summary: Overall assessment (1-2 sentences)
+  2. Validation Results: Table with columns: Question, Status (PASS/FAIL),
+     Evidence
+  3. Issues (if any): Numbered list of specific gaps found
+  4. Recommendations: Specific suggestions to fix issues
+  5. Verdict: APPROVED or REJECTED on its own line
+- All content must be ASCII-only.
+- The result field in meta.json must match the verdict exactly.
+
+Forbidden Content
+
+- Non-ASCII characters
+- Vague findings without specific evidence
+- Approving formats with known gaps

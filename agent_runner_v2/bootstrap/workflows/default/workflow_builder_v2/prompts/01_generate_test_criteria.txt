@@ -1,0 +1,233 @@
+Objective
+
+Read the composition system specification and produce a comprehensive test
+criteria document that defines what "done" looks like for the generated
+composition system workflow. This document serves as the acceptance contract
+-- all downstream steps must fulfill these criteria.
+
+The test criteria must align with the Composition System Standard's three-layer
+architecture:
+- Layer 1: Component Library (standardized building blocks)
+- Layer 2: Composition Definitions (declarative assembly instructions)
+- Layer 3: Resolved Outputs (complete deliverables with expanded references)
+
+Reference Inputs
+
+- Read {WORKFLOW_SPEC_FILE} for the complete composition system specification.
+- Read {COMPOSITION_SYSTEM_STANDARD} for the Composition System Standard --
+  defines the universal component schema, composition format, output format,
+  and workflow pattern.
+- Read {META_WORKFLOW_BUILDER_ARCHITECTURE} for the meta-workflow builder
+  architecture -- defines the step implementation interface and universal
+  execution flow.
+
+Test Criteria Design Principles
+
+1. Focus on SEMANTIC correctness, not just structural validity.
+   - BAD: "Component schema file must exist"
+   - GOOD: "Component schema must define all component types from the spec
+     with complete type-specific properties, validation rules, and at least
+     one example component per type"
+
+2. Structure criteria by workflow_builder_v2 phase so each step can look up
+   only the criteria relevant to it:
+   - Phase 1: Foundation (test criteria quality)
+   - Phase 2: Component Schema (layer 1 quality)
+   - Phase 3: Composition Format (layer 2 quality)
+   - Phase 4: Output Format (layer 3 quality)
+   - Phase 5: Operational Workflow (workflow correctness)
+   - Phase 6: Package Assembly (file completeness and consistency)
+
+3. Include both positive criteria (what must be present) and negative
+   criteria (what must NOT be present).
+
+4. Each criterion must be verifiable -- a reviewer must be able to check
+   the generated files and determine pass/fail unambiguously.
+
+5. Include criteria for gatekeeper validation -- QC checkpoints that
+   validate each layer before downstream consumption.
+
+6. Include criteria for composition system quality:
+   - Components must be truly reusable (not single-use)
+   - Compositions must reference by ID, not duplicate content
+   - Outputs must be self-contained (all references expanded)
+   - Placeholders must be resolvable from declared data sources
+
+Generation Tasks
+
+Produce a test criteria document with these sections:
+
+1. Spec Objective Summary
+   - One-paragraph summary of what the composition system must achieve
+   - The end-to-end transformation (component library + compositions -> outputs)
+   - Domain context (what kind of deliverables this system produces)
+
+2. Criteria for generate_component_schema step (Phase 2)
+   - Component types: Does the schema define ALL component types from the spec?
+   - Common properties: Does each component have component_id, component_type,
+     name, version, description?
+   - Type-specific properties: Does each type define its specific properties
+     with types, required/optional, descriptions?
+   - Validation rules: Are there clear validation rules for each component type?
+   - Extensibility model: Can new types be added without breaking existing ones?
+   - Examples: Is there at least one example component per type?
+   - SELF-VALIDATION: Does the schema include a self-check that all types
+     from the spec are covered?
+
+3. Criteria for gatekeep_component_schema step (Phase 2)
+   - TYPE COMPLETENESS: Does the gatekeeper verify ALL component types from
+     the spec are defined?
+   - SCHEMA CONFORMANCE: Does the gatekeeper verify each component follows
+     the universal component schema (common + type-specific properties)?
+   - VALIDATION RULES: Does the gatekeeper verify validation rules are
+     present and enforceable?
+   - UNIQUENESS: Does the gatekeeper verify component_ids are unique?
+   - EVIDENCE: Is the verdict justified with specific evidence?
+
+4. Criteria for generate_composition_format step (Phase 3)
+   - Composition structure: Does the format define YAML structure for
+     compositions with component_bindings?
+   - Reference pattern: Are components referenced by component_id, not copied?
+   - Override mechanism: Can compositions override component properties?
+   - Placeholder resolution: Are {placeholder} values resolved from data sources?
+   - Ordering rules: Are ordered vs singleton bindings defined?
+   - Optional bindings: Can compositions omit non-required component types?
+   - SELF-VALIDATION: Does the format include a self-check that all
+     composition rules are covered?
+
+5. Criteria for gatekeep_composition_format step (Phase 3)
+   - REFERENCE INTEGRITY: Does the gatekeeper verify compositions reference
+     valid component_ids?
+   - OVERRIDE CONFORMANCE: Does the gatekeeper verify overrides conform to
+     component type schemas?
+   - PLACEHOLDER RESOLVABILITY: Does the gatekeeper verify placeholders can
+     be resolved from declared data sources?
+   - REQUIRED BINDINGS: Does the gatekeeper verify required bindings are present?
+   - ORDERING CONSTRAINTS: Does the gatekeeper verify ordering rules are satisfied?
+
+6. Criteria for generate_output_format step (Phase 4)
+   - Output structure: Does the format define the resolved output structure
+     (sections, metadata, format)?
+   - Resolution rules: Are all component references expanded in the output?
+   - Placeholder filling: Are all placeholders replaced with values?
+   - Self-contained: Does the output contain all information needed without
+     referencing the component library?
+   - Downstream contracts: Are extraction contracts defined for downstream
+     workflows?
+   - Unresolved handling: Are unresolved placeholders flagged as
+     {UNRESOLVED: field_name}?
+   - SELF-VALIDATION: Does the format include a self-check that all output
+     sections are covered?
+
+7. Criteria for gatekeep_output_format step (Phase 4)
+   - REFERENCE EXPANSION: Does the gatekeeper verify all component_ids are
+     expanded?
+   - PLACEHOLDER COMPLETENESS: Does the gatekeeper verify all placeholders
+     are resolved or flagged?
+   - SECTION COMPLETENESS: Does the gatekeeper verify all required sections
+     are present?
+   - CONSISTENCY: Does the gatekeeper verify no contradictions between sections?
+   - DOWNSTREAM FEASIBILITY: Does the gatekeeper verify downstream workflows
+     can extract their concerns?
+
+8. Criteria for generate_operational_workflow step (Phase 5)
+   - Workflow phases: Does the design define scan, plan, generate, review phases?
+   - Step sequence: Is the step sequence logical and complete?
+   - Artifact contracts: Are all input/output artifacts declared?
+   - Action implementations: Are deterministic operations identified as actions?
+   - Prompt-driven steps: Are LLM-judgment steps identified as prompts?
+   - Routing: Is step routing correct (onsuccess, on_reject_refine)?
+   - SELF-VALIDATION: Does the design include a self-check that all phases
+     are covered?
+
+9. Criteria for gatekeep_operational_workflow step (Phase 5)
+   - PHASE COMPLETENESS: Does the gatekeeper verify all workflow phases are
+     defined?
+   - DATA FLOW: Does the gatekeeper verify artifact flow from inputs to outputs?
+   - ROUTING VALIDITY: Does the gatekeeper verify step routing is correct?
+   - TYPE CONSISTENCY: Does the gatekeeper verify step types match task nature?
+   - ACTION FEASIBILITY: Does the gatekeeper verify action specifications are
+     implementable?
+
+10. Criteria for generate_package step (Phase 6)
+    - FILE COMPLETENESS: Are ALL files implied by the operational workflow
+      present? (workflow.toml, context_extensions.py, actions.py, prompts/,
+      README.md)
+    - DESIGN FIDELITY: Do generated files match the operational workflow design?
+    - COMPONENT SCHEMA: Is the component schema embedded or referenced correctly?
+    - COMPOSITION FORMAT: Is the composition format embedded or referenced?
+    - OUTPUT FORMAT: Is the output format embedded or referenced?
+    - PROMPT QUALITY: Do prompts have clear objectives, inputs, outputs?
+    - ACTION IMPLEMENTATIONS: If action steps exist, are they implemented?
+    - SELF-VALIDATION: Does the step include a self-check that all files
+      are generated?
+
+11. Criteria for gatekeep_package step (Phase 6)
+    - FILE CHECKLIST: Does the gatekeeper verify ALL expected files exist?
+    - DESIGN FIDELITY: Does the gatekeeper verify files match the operational
+      workflow design?
+    - COMPOSITION INTEGRITY: Does the gatekeeper verify component schema,
+      composition format, and output format are consistent?
+    - PROMPT COMPLETENESS: Does the gatekeeper verify prompts/ has one file
+      per prompt-driven step?
+    - SCOPE CHECK: Does the gatekeeper detect scope shrink or scope creep?
+
+12. Criteria for review_package step (Phase 6)
+    - SPEC FULFILLMENT: Does the workflow actually implement the spec objective?
+    - COMPONENT QUALITY: Are components truly reusable and well-defined?
+    - COMPOSITION QUALITY: Are compositions clear and resolvable?
+    - OUTPUT QUALITY: Are outputs self-contained and complete?
+    - DATA FLOW: Does information flow correctly through the workflow?
+    - NO HALLUCINATIONS: No extra configs, wrong models, unnecessary inputs?
+    - GATEKEEPER EFFECTIVENESS: Did gatekeepers catch issues early?
+    - Verify ALL criteria in this document pass
+
+13. Criteria for refine_package step (Phase 6)
+    - COMPLETENESS: Can refine fix ALL types of issues flagged in review?
+    - CONSISTENCY: Does refinement maintain cross-file consistency?
+    - ROOT CAUSE: Does refinement fix root causes, not symptoms?
+
+14. Prompt Quality Criteria (for prompt-driven steps)
+    For each prompt-driven step in the operational workflow, generate criteria:
+    - Output mechanism: Does the prompt explicitly instruct the LLM to use
+      file-writing tools to create actual files on disk?
+    - Ambiguity check: Are there phrases that could be misinterpreted?
+    - Common LLM mistakes: Does the prompt guard against known failure modes?
+    - Completeness: Does the prompt specify all required outputs, formats,
+      and file naming conventions?
+    - SELF-VALIDATION: Does the prompt include self-validation?
+
+Self-Critic (Before Output)
+
+Challenge your reasoning before writing the document:
+
+1. Am I introducing assumptions not supported by the spec document?
+2. Are my test criteria specific and verifiable, or am I writing vague
+   checks like "must be correct"?
+3. If a downstream gatekeeper reads these criteria, would they have enough
+   detail to pass/fail unambiguously?
+4. Did I stay in my lane (test criteria design), or did I leak into
+   implementation details?
+5. Did I cover all three layers of the composition system (components,
+   compositions, outputs)?
+
+If you find reasoning issues, fix them before proceeding to output.
+
+Output Instructions
+
+- Write the test criteria document to {TEST_CRITERIA_FILE}.
+- Output must be ASCII-only.
+- Include YAML frontmatter with at minimum:
+  - doc_type: "test_criteria"
+  - lifecycle_status: "draft"
+  - effective_version: "{job_id}"
+- Each criterion must be a specific, verifiable statement.
+- Use numbered lists for criteria within each section.
+- Mark negative criteria with "MUST NOT" prefix.
+- Include gatekeeper criteria for each gatekeeper step.
+
+Forbidden Content
+
+- Vague criteria like "must be correct" or "must work properly"
+- Non-ASCII characters
+- Criteria that cannot be verified by reading the generated files
