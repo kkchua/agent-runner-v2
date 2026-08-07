@@ -44,6 +44,20 @@ Answer each question with specific evidence from the documents:
 8. Downstream Feasibility: Can the step design phase consume these artifacts
    and define valid step bindings?
 
+Self-Critic (Before Final Verdict)
+
+Challenge your review before committing to a verdict:
+
+1. Am I rubber-stamping, or did I actually verify each artifact path
+   against the requirements and creation guide?
+2. Did I find at least one substantive finding, or am I just saying
+   "looks good"?
+3. If I missed a missing artifact key, which downstream step would break?
+4. Is my verdict based on evidence from the files, or on assumptions
+   about what the producer "probably" declared?
+
+If your review is superficial, go back and dig deeper before reporting.
+
 Decision Rules
 
 - APPROVED: The artifact contract is complete and supports the solution.

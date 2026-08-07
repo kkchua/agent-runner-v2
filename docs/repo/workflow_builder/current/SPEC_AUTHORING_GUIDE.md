@@ -18,8 +18,9 @@
 - [2: Before You Start](#2-before-you-start)
 - [3: Section-by-Section Authoring](#3-section-by-section-authoring)
 - [4: Worked Examples](#4-worked-examples)
-- [5: Common Pitfalls](#5-common-pitfalls)
-- [6: Spec Quality Checklist](#6-spec-quality-checklist)
+- [5: Meta-Builder Specs](#5-meta-builder-specs)
+- [6: Common Pitfalls](#6-common-pitfalls)
+- [7: Spec Quality Checklist](#7-spec-quality-checklist)
 
 ---
 
@@ -333,7 +334,93 @@ HOW to generate them.
 
 ---
 
-## 5: Common Pitfalls
+## 5: Meta-Builder Specs
+
+A **meta-builder** is a workflow whose output is another workflow builder
+(not a domain document or media file). Examples: `creative_workflow_builder_v1`
+generates builders for creative media workflows from agent-md files.
+
+Meta-builders follow the same spec authoring pattern as normal workflows,
+but produce **additional spec documents** alongside the workflow bundle.
+
+### 5.1: Meta-Builder Output Artifacts
+
+In addition to the standard workflow bundle (`workflow.toml`,
+`context_extensions.py`, `actions.py`, `prompts/`, `README.md`), a
+meta-builder produces three spec documents:
+
+| Artifact | Purpose | Promote Target |
+|---|---|---|
+| **Spec template** | Blank input template that the generated builder accepts | `docs/repo/workflow_builder/current/templates/` |
+| **SOP** | Operating procedure for running the generated builder | `docs/repo/workflow_builder/current/sop/` |
+| **Standard** | Builder-specific quality requirements and constraints | `docs/repo/workflow_builder/current/` |
+
+These three documents are generated in the same `generate_package` step
+as the workflow bundle. The `promote_builder_docs` action copies them
+to the correct subdirectories under `docs/repo/workflow_builder/current/`.
+
+### 5.2: Filename Format
+
+All spec documents use versioned filenames with UPPER_SNAKE_CASE:
+
+```
+{SLUG}_SPEC_TEMPLATE_v{N}.md    -- e.g., CREATIVE_WORKFLOW_SPEC_TEMPLATE_v1.md
+{SLUG}_SOP_v{N}.md              -- e.g., CREATIVE_WORKFLOW_SOP_v1.md
+{SLUG}_STANDARD_v{N}.md         -- e.g., CREATIVE_WORKFLOW_STANDARD_v1.md
+```
+
+The `{SLUG}` matches the workflow name (uppercase). The `{N}` is the
+version number, starting at 1. Increment when the spec template or
+standard changes in a breaking way.
+
+### 5.3: Input Spec Template Reference
+
+The workflow.toml should declare which spec template the builder expects
+as input. This allows the gatekeeper to validate that inputs conform to
+the expected format:
+
+```toml
+[workflow]
+name = "creative_workflow_builder_v1"
+input_spec_template = "CREATIVE_WORKFLOW_SPEC_TEMPLATE_v1"
+```
+
+The `input_spec_template` value is an artifact key that resolves to the
+spec template file path via `context_extensions.py`.
+
+### 5.4: Promote Targets
+
+Meta-builder output goes to **two destinations**:
+
+| Output | Destination | Action |
+|---|---|---|
+| Workflow bundle (`workflow.toml`, `context_extensions.py`, etc.) | `workflows/{slug}/` | `promote_workflow_package` |
+| Spec documents (template, SOP, standard) | `docs/repo/workflow_builder/current/` | `promote_builder_docs` |
+
+The `promote_builder_docs` action copies:
+- `{SLUG}_SPEC_TEMPLATE_v{N}.md` → `current/templates/`
+- `{SLUG}_SOP_v{N}.md` → `current/sop/`
+- `{SLUG}_STANDARD_v{N}.md` → `current/`
+
+### 5.5: Spec Authoring for Meta-Builders
+
+When writing a meta-builder spec, include these additional sections:
+
+1. **Spec template requirements** -- Describe what the generated builder's
+   input spec template should contain (sections, fields, constraints).
+
+2. **SOP requirements** -- Describe what the SOP should cover (setup,
+   execution, troubleshooting, expected outcomes).
+
+3. **Standard requirements** -- Describe the quality bar for the generated
+   builder (validation rules, naming conventions, gatekeeper criteria).
+
+4. **Promote targets** -- Declare that spec documents go to
+   `docs/repo/workflow_builder/current/`, not `workflows/`.
+
+---
+
+## 6: Common Pitfalls
 
 ### Pitfall 1: Vague Action Descriptions
 
@@ -441,7 +528,7 @@ For action steps, always describe:
 
 ---
 
-## 6: Spec Quality Checklist
+## 7: Spec Quality Checklist
 
 Before submitting the spec to `workflow_builder_v1`, verify:
 
@@ -485,3 +572,13 @@ Before submitting the spec to `workflow_builder_v1`, verify:
 - [ ] No vague phrases like "process the data" or "handle the output"
 - [ ] Error handling described for all action steps
 - [ ] Similar existing workflows referenced (if any)
+
+### Meta-Builder (if applicable)
+
+- [ ] Three spec documents declared as output artifacts (spec template, SOP, standard)
+- [ ] Filename format uses `{SLUG}_SPEC_TEMPLATE_v{N}.md` pattern
+- [ ] `promote_builder_docs` step declared after `promote_workflow_package`
+- [ ] Spec template requirements describe what the generated builder accepts as input
+- [ ] SOP requirements describe setup, execution, troubleshooting
+- [ ] Standard requirements describe quality bar for generated builder
+- [ ] `input_spec_template` declared in workflow.toml if builder expects a specific input format
