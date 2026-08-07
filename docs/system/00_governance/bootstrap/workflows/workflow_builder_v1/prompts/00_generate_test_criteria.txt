@@ -118,7 +118,7 @@ Produce a test criteria document with these sections:
 8. Criteria for generate_package step
    - PRINCIPLES-BASED: Does generation follow principles-based approach
      (not fixed numbered task list)?
-   - FILE COMPLETENESS: Are ALL files implied by {STEP_ARCHITECTURE} present?
+   - FILE COMPLETENESS: Are ALL files implied by {STEP_ARCHITECTURE_FILE} present?
    - actions.py: If action steps exist, is actions.py generated with
      complete @action implementations?
    - workflow.toml: Exact match with step architecture (names, routing, artifacts)
@@ -133,8 +133,8 @@ Produce a test criteria document with these sections:
    - FILE CHECKLIST: Does the gatekeeper verify ALL expected files exist?
    - ACTION COMPLETENESS: Does the gatekeeper verify actions.py exists
      and contains actual implementations (not stubs) if action steps declared?
-   - DESIGN FIDELITY: Does the gatekeeper verify files match {STEP_ARCHITECTURE}
-     and {ARTIFACT_CONTRACT} exactly?
+   - DESIGN FIDELITY: Does the gatekeeper verify files match {STEP_ARCHITECTURE_FILE}
+     and {ARTIFACT_CONTRACT_FILE} exactly?
    - PROMPT COMPLETENESS: Does the gatekeeper verify prompts/ has one
      file per prompt-driven step?
    - SCOPE CHECK: Does the gatekeeper detect scope shrink (dropped elements)
@@ -221,7 +221,7 @@ If you find reasoning issues, fix them before proceeding to output.
 
 Output Instructions
 
-- Write the test criteria document to {TEST_CRITERIA}.
+- Write the test criteria document to {TEST_CRITERIA_FILE}.
 - Output must be ASCII-only.
 - Include YAML frontmatter with at minimum:
   - doc_type: "test_criteria"

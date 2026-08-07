@@ -33,10 +33,10 @@ extraction, assembly, and review.
 
 ## Input Artifacts
 
-| Context Variable | Description | Required? |
+| Artifact Key | Description | Required? |
 |---|---|---|
-| `PRODUCT_SOURCE_DIR` | Directory containing product source files (hardcoded in context_extensions.py, NOT a required_input) | Yes |
-| `PRODUCT_MASTER_INPUT` | Existing Product Master for incremental updates (optional) | No |
+| `PRODUCT_SOURCE_DIR` | Directory containing product source files | Yes |
+| `PRODUCT_MASTER_INPUT` | Existing Product Master for incremental updates | No (optional) |
 
 **Supported source types** (all optional, use whatever is available):
 - Product URLs (text files with URLs, one per line)
@@ -50,8 +50,8 @@ extraction, assembly, and review.
 
 | Artifact Key | Filename Pattern | Description |
 |---|---|---|
-| `SOURCE_INVENTORY` | `SOURCE_INV-{date}-{seq}_{slug}.md` | Catalog of all discovered source files with type classification |
-| `EXTRACTED_CONTENT` | `EXTRACT-{date}-{seq}_{slug}.md` | Raw extracted content from all sources, with source attribution |
+| `SOURCE_INVENTORY_FILE` | `SOURCE_INV-{date}-{seq}_{slug}.md` | Catalog of all discovered source files with type classification |
+| `EXTRACTED_CONTENT_FILE` | `EXTRACT-{date}-{seq}_{slug}.md` | Raw extracted content from all sources, with source attribution |
 | `PRODUCT_MASTER_FILE` | `PRODUCT_MASTER-{date}-{seq}_{slug}.md` | The assembled canonical Product Master document |
 | `REVIEW_FILE_SUGGESTED` | `PRDM-REV-{date}-{seq}_{slug}.md` | Quality review of the Product Master |
 
@@ -117,9 +117,31 @@ loop is not required. Suggested phase decomposition (builder may adjust):
 4. **Review phase** -- Quality review against the constraints above
 5. **Refine phase** -- Fix issues found in review (conditional)
 
-**Action reuse:** Check if existing actions can be reused before defining new ones.
-A `scan_product_sources` action for file discovery is likely needed (deterministic
-directory scan). Other steps should be prompt-driven.
+### Action: scan_product_sources
+
+**Purpose:** Recursively scan PRODUCT_SOURCE_DIR for all files. Classify each file
+by type (URL list, image, PDF, data file, marketing material, user note) based on
+extension. Build a source inventory with file path, type, size, and modification
+date. Write the inventory to SOURCE_INVENTORY_FILE.
+
+**Inputs:** PRODUCT_SOURCE_DIR
+
+**Outputs:** SOURCE_INVENTORY_FILE
+
+**Error handling:**
+- If PRODUCT_SOURCE_DIR doesn't exist or is empty, return REJECTED with reject_code `NO_SOURCES_FOUND`.
+- If a file can't be read (permissions), log a warning and skip it — include skipped files in the inventory with status "unreadable".
+
+**Returns:** APPROVED when at least one source file is found and classified. REJECTED if directory is missing or empty.
+
+### URL Fetching
+
+URL files contain one URL per line. The prompt-driven extract step shall fetch
+each URL and process the response. Fetch constraints:
+- Timeout: 30 seconds per URL
+- On failure (timeout, HTTP error, SSL error): log the URL and error, skip it,
+  note it as a knowledge gap in the Product Master
+- Do not retry failed URLs — the review step will flag missing content
 
 **Gatekeepers:** The builder should determine where QC gates add value. At minimum,
 a quality gate after assembly (before final review) is recommended.

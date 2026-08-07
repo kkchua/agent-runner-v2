@@ -6,7 +6,7 @@ with an APPROVED or REJECTED verdict.
 
 Reference Inputs
 
-- Read {TEST_CRITERIA} for the generated test criteria document.
+- Read {TEST_CRITERIA_FILE} for the generated test criteria document.
 - Read {WORKFLOW_SPEC_FILE} for the original specification to verify alignment.
 
 Review Checklist

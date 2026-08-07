@@ -52,7 +52,7 @@ builder should implement it. The builder automatically infers:
 - Step sequence and routing
 - Role policies for each step
 - Gatekeeper placement (4 gatekeepers for meta-workflows)
-- TDD loop for meta-workflows
+- TDD loop for all workflows
 - exhausted_failure_code/class on all refine loops
 - init_step detection
 - Action reuse audit
@@ -115,9 +115,8 @@ Answer these questions mentally before writing the spec:
 
 - **Description:** One sentence. What does this workflow do?
 
-- **Init step:** Name of the first step. Leave blank for the builder to
-  determine (it picks the first step, or `generate_test_criteria` for
-  meta-workflows).
+- **Init step:** Name of the first step. Always `generate_test_criteria`
+  (TDD loop is universal for all workflows).
 
 ### 3.2: Purpose
 

@@ -15,7 +15,7 @@ def validate_workflow_bundle(*, context, state, step_cfg, project_root):
     """Validate the generated workflow package using structural and semantic checks.
 
     Runs the bundle validator for structural checks, then performs semantic
-    validation against the TEST_CRITERIA document. Checks that action-driven
+    validation against the TEST_CRITERIA_FILE document. Checks that action-driven
     steps have corresponding action code, and that the generated package
     fulfills the spec requirements.
     """
@@ -23,12 +23,12 @@ def validate_workflow_bundle(*, context, state, step_cfg, project_root):
 
     artifacts = state.get("artifacts", {})
     project_root = Path(project_root)
-    manifest_path_str = artifacts.get("WORKFLOW_MANIFEST", "")
+    manifest_path_str = artifacts.get("WORKFLOW_MANIFEST_FILE", "")
 
     if not manifest_path_str:
         return ActionResult(
             status="REJECTED",
-            remark="WORKFLOW_MANIFEST artifact not found in state.",
+            remark="WORKFLOW_MANIFEST_FILE artifact not found in state.",
             artifacts={},
             reject_code="MISSING_MANIFEST",
         )
@@ -72,7 +72,7 @@ def validate_workflow_bundle(*, context, state, step_cfg, project_root):
         return ActionResult(
             status="APPROVED",
             remark=f"Workflow bundle is valid. {len(all_findings)} findings (all warnings).",
-            artifacts={"VALIDATION_REPORT": str(report_path)},
+            artifacts={"VALIDATION_REPORT_FILE": str(report_path)},
         )
     else:
         errors = [f for f in all_findings if f.get("level") == "error"]
@@ -80,7 +80,7 @@ def validate_workflow_bundle(*, context, state, step_cfg, project_root):
         return ActionResult(
             status="REJECTED",
             remark=f"Workflow bundle has {len(errors)} validation errors:\n{error_summary}",
-            artifacts={"VALIDATION_REPORT": str(report_path)},
+            artifacts={"VALIDATION_REPORT_FILE": str(report_path)},
             reject_code="VALIDATION_FAILED",
         )
 
@@ -139,10 +139,10 @@ def _run_semantic_validation(bundle_root: Path, artifacts: dict, project_root: P
 
     # Check: gatekeeper artifacts should exist
     gatekeep_artifacts = [
-        ("GATEKEEP_REQUIREMENTS", "gatekeep_requirements"),
-        ("GATEKEEP_ARTIFACTS", "gatekeep_artifacts"),
-        ("GATEKEEP_STEPS", "gatekeep_steps"),
-        ("GATEKEEP_PACKAGE", "gatekeep_package"),
+        ("GATEKEEP_REQUIREMENTS_FILE", "gatekeep_requirements"),
+        ("GATEKEEP_ARTIFACTS_FILE", "gatekeep_artifacts"),
+        ("GATEKEEP_STEPS_FILE", "gatekeep_steps"),
+        ("GATEKEEP_PACKAGE_FILE", "gatekeep_package"),
     ]
     for key, step_name in gatekeep_artifacts:
         artifact_path = artifacts.get(key, "")
@@ -231,11 +231,11 @@ def promote_workflow_package(*, context, state, step_cfg, project_root):
         )
 
     # Source: run root (parent of workflow.toml)
-    manifest_path = artifacts.get("WORKFLOW_MANIFEST", "")
+    manifest_path = artifacts.get("WORKFLOW_MANIFEST_FILE", "")
     if not manifest_path:
         return ActionResult(
             status="REJECTED",
-            remark="WORKFLOW_MANIFEST artifact not found in state.",
+            remark="WORKFLOW_MANIFEST_FILE artifact not found in state.",
             artifacts={},
             reject_code="MISSING_MANIFEST",
         )
@@ -306,7 +306,7 @@ def promote_workflow_package(*, context, state, step_cfg, project_root):
     return ActionResult(
         status="APPROVED",
         remark=remark,
-        artifacts={"WORKFLOW_PACKAGE_DIR": str(target_dir)},
+        artifacts={"WORKFLOW_PACKAGE_DIR_FILE": str(target_dir)},
     )
 
 
@@ -316,9 +316,9 @@ def promote_builder_docs(*, context, state, step_cfg, project_root):
 
     Copies three spec documents from the run directory to the builder's
     documentation area:
-    - BUILDER_SPEC_TEMPLATE -> current/templates/
-    - BUILDER_SOP -> current/sop/
-    - BUILDER_STANDARD -> current/
+    - BUILDER_SPEC_TEMPLATE_FILE -> current/templates/
+    - BUILDER_SOP_FILE -> current/sop/
+    - BUILDER_STANDARD_FILE -> current/
 
     This action is for meta-builders only (workflows whose output is another
     workflow builder). Normal workflows do not produce these documents.
@@ -338,9 +338,9 @@ def promote_builder_docs(*, context, state, step_cfg, project_root):
 
     # Mapping: artifact key -> target subdirectory
     doc_mapping = {
-        "BUILDER_SPEC_TEMPLATE": builder_docs_root / "templates",
-        "BUILDER_SOP": builder_docs_root / "sop",
-        "BUILDER_STANDARD": builder_docs_root,
+        "BUILDER_SPEC_TEMPLATE_FILE": builder_docs_root / "templates",
+        "BUILDER_SOP_FILE": builder_docs_root / "sop",
+        "BUILDER_STANDARD_FILE": builder_docs_root,
     }
 
     copied = []

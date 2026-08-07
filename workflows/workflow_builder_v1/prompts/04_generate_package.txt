@@ -8,16 +8,16 @@ The fundamental principle: generate EVERY file the design requires.
 
 Reference Inputs
 
-- Read {STEP_ARCHITECTURE} for the step sequence, types, and routing.
-- Read {ARTIFACT_CONTRACT} for artifact keys and path patterns.
-- Read {WORKFLOW_REQUIREMENTS} for action specifications (if any).
+- Read {STEP_ARCHITECTURE_FILE} for the step sequence, types, and routing.
+- Read {ARTIFACT_CONTRACT_FILE} for artifact keys and path patterns.
+- Read {WORKFLOW_REQUIREMENTS_FILE} for action specifications (if any).
 - Read {WORKFLOW_CREATION_GUIDE} for file structure and conventions.
 
 Inference-Based Generation
 
 Instead of "Generate files 1-6", follow this principles-based approach:
 
-1. Identify Step Types from {STEP_ARCHITECTURE}:
+1. Identify Step Types from {STEP_ARCHITECTURE_FILE}:
    - For EACH prompt-driven step: generate a prompt file in prompts/
    - For EACH action-driven step: add action implementation to actions.py
 
@@ -34,7 +34,7 @@ Instead of "Generate files 1-6", follow this principles-based approach:
    - config.json.sample: if runtime config needed
 
 4. For actions.py specifically:
-   - Read {WORKFLOW_REQUIREMENTS} Custom Actions section
+   - Read {WORKFLOW_REQUIREMENTS_FILE} Custom Actions section
    - Before implementing each action, check if it maps to an existing
      reusable action (validate_workflow_bundle, promote_workflow_package,
      step_completion). If reused, reference it in workflow.toml with
@@ -45,13 +45,13 @@ Instead of "Generate files 1-6", follow this principles-based approach:
    - Use type hints and docstrings
 
 5. For workflow.toml:
-   - Match step sequence exactly from {STEP_ARCHITECTURE}
-   - Use artifact keys exactly from {ARTIFACT_CONTRACT}
+   - Match step sequence exactly from {STEP_ARCHITECTURE_FILE}
+   - Use artifact keys exactly from {ARTIFACT_CONTRACT_FILE}
    - Place onsuccess at [[step]] top level (not under [step.artifacts])
    - Place promotes at [[step]] top level for promote steps
 
 6. For context_extensions.py:
-   - Use path patterns from {ARTIFACT_CONTRACT}
+   - Use path patterns from {ARTIFACT_CONTRACT_FILE}
    - register_artifact_keys() must include ALL artifacts — both outputs
      (from produces) AND inputs (from required_inputs in the init step).
      The backend needs input registrations to resolve bare filenames.
@@ -65,7 +65,7 @@ Instead of "Generate files 1-6", follow this principles-based approach:
    - ASCII-only content
 
 8. Meta-workflow gatekeeper auto-placement (when is_meta_workflow is true
-   in {WORKFLOW_REQUIREMENTS}):
+   in {WORKFLOW_REQUIREMENTS_FILE}):
    The generated workflow.toml MUST include 4 gatekeeper steps:
    - gatekeep_requirements: validates WORKFLOW_REQUIREMENTS, rejects to
      analyze_spec, produces GATEKEEP_REQUIREMENTS
@@ -84,8 +84,8 @@ Challenge your reasoning before checking completeness:
 
 1. Am I generating files or code that the design documents don't actually
    require?
-2. Am I introducing assumptions not supported by {STEP_ARCHITECTURE} or
-   {ARTIFACT_CONTRACT}?
+2. Am I introducing assumptions not supported by {STEP_ARCHITECTURE_FILE} or
+   {ARTIFACT_CONTRACT_FILE}?
 3. If a downstream validator reads this package, what would fail?
 4. Did I reuse existing framework actions where possible, or did I
    unnecessarily duplicate them?
@@ -97,12 +97,12 @@ Self-Validation (Before Output)
 Before reporting APPROVED, validate:
 
 1. File Completeness: Does the package contain ALL files implied by the design?
-   - If {STEP_ARCHITECTURE} declares action steps, does actions.py exist?
+   - If {STEP_ARCHITECTURE_FILE} declares action steps, does actions.py exist?
    - Does prompts/ contain one file per prompt-driven step?
    - Are core files (workflow.toml, context_extensions.py, README.md) present?
 
-2. Design Fidelity: Do generated files match {STEP_ARCHITECTURE} and
-   {ARTIFACT_CONTRACT} exactly? Any scope shrink or scope creep?
+2. Design Fidelity: Do generated files match {STEP_ARCHITECTURE_FILE} and
+   {ARTIFACT_CONTRACT_FILE} exactly? Any scope shrink or scope creep?
 
 3. Action Implementation: If actions.py exists, are ALL declared actions
    implemented? Do they have proper @action decorators? Do they return
@@ -113,7 +113,7 @@ Before reporting APPROVED, validate:
    artifacts dict? Including WORKFLOW_ACTIONS if generated?
 
 5. Meta-Workflow Compliance: If is_meta_workflow is true in
-   {WORKFLOW_REQUIREMENTS}, does workflow.toml include all 4 gatekeeper
+   {WORKFLOW_REQUIREMENTS_FILE}, does workflow.toml include all 4 gatekeeper
    steps (GATEKEEP_REQUIREMENTS, GATEKEEP_ARTIFACTS, GATEKEEP_STEPS,
    GATEKEEP_PACKAGE) with proper on_reject_refine routing?
 
@@ -121,7 +121,7 @@ If validation fails, report REJECTED with specific gaps found.
 
 Output Instructions
 
-- Write files to the run directory (parent of {WORKFLOW_MANIFEST}).
+- Write files to the run directory (parent of {WORKFLOW_MANIFEST_FILE}).
 - Create prompts/ subdirectory for prompt files.
 - All files must be ASCII-only.
 - Report ONLY the declared artifact keys in meta.json. Do NOT invent new keys.

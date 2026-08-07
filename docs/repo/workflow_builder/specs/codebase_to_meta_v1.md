@@ -64,13 +64,13 @@ at runtime.
 
 | Artifact Key | Filename Pattern | Description |
 |---|---|---|
-| `AUDIENCE_INVENTORY` | `AUDIENCE_INV-{date}-{seq}_{slug}.md` | Discovered audience definitions with metadata |
+| `AUDIENCE_INVENTORY_FILE` | `AUDIENCE_INV-{date}-{seq}_{slug}.md` | Discovered audience definitions with metadata |
 | `META_DEV_FILE` | `current/developer/META-DEV-{date}-{seq}.md` | Developer meta content |
 | `META_ARCH_FILE` | `current/architect/META-ARCH-{date}-{seq}.md` | Architect meta content |
 | `META_EXEC_FILE` | `current/executive/META-EXEC-{date}-{seq}.md` | Executive meta content |
-| `META_INDEX` | `runs/{job_id}/meta_index.json` | JSON index of all generated meta files |
+| `META_INDEX_FILE` | `runs/{job_id}/meta_index.json` | JSON index of all generated meta files |
 | `REVIEW_FILE_SUGGESTED` | `META-REV-{date}-{seq}_{slug}.md` | Quality review of all generated meta files |
-| `META_MANIFEST` | `current/meta_manifest.json` | Published manifest (publish target) |
+| `META_MANIFEST_FILE` | `current/meta_manifest.json` | Published manifest (publish target) |
 
 ## Audience Definition Plugin System
 

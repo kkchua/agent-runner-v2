@@ -334,8 +334,8 @@ onsuccess = "publish_docs"
 
 [step.artifacts]
 required_inputs = ["INPUT_ARTIFACT"]
-produces = ["VALIDATION_REPORT"]
-result_meta_key = "VALIDATION_REPORT"
+produces = ["VALIDATION_REPORT_FILE"]
+result_meta_key = "VALIDATION_REPORT_FILE"
 ```
 
 #### Promote step
@@ -882,16 +882,16 @@ prompt = "prompts/01c_gatekeep_requirements.txt"
 onsuccess = "resolve_questions"
 
 [step.artifacts]
-required_inputs = ["WORKFLOW_REQUIREMENTS", "WORKFLOW_SPEC"]
-produces = ["GATEKEEP_REQUIREMENTS"]
-result_meta_key = "GATEKEEP_REQUIREMENTS"
+required_inputs = ["WORKFLOW_REQUIREMENTS_FILE", "WORKFLOW_SPEC_FILE"]
+produces = ["GATEKEEP_REQUIREMENTS_FILE"]
+result_meta_key = "GATEKEEP_REQUIREMENTS_FILE"
 
 [step.coder]
 role_policy = "validation_standard"
 
 [step.on_reject_refine]
 step = "analyze_spec"
-artifact = "WORKFLOW_REQUIREMENTS"
+artifact = "WORKFLOW_REQUIREMENTS_FILE"
 max_iterations = 2
 ```
 
@@ -1108,7 +1108,7 @@ onsuccess = "next_step"
 
 [step.on_reject_refine]
 step = "analyze_spec"     # ✅ Back to producer step
-artifact = "WORKFLOW_REQUIREMENTS"
+artifact = "WORKFLOW_REQUIREMENTS_FILE"
 max_iterations = 2
 ```
 

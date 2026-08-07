@@ -8,12 +8,12 @@ Are there missing files that the design requires?"
 
 Reference Inputs
 
-- Read the step architecture: {STEP_ARCHITECTURE}
-- Read the artifact contract: {ARTIFACT_CONTRACT}
-- Read the workflow manifest: {WORKFLOW_MANIFEST}
-- Read the prompts index: {WORKFLOW_PROMPTS_INDEX}
-- Check if actions file exists: {WORKFLOW_ACTIONS}
-- Read the test criteria: {TEST_CRITERIA}
+- Read the step architecture: {STEP_ARCHITECTURE_FILE}
+- Read the artifact contract: {ARTIFACT_CONTRACT_FILE}
+- Read the workflow manifest: {WORKFLOW_MANIFEST_FILE}
+- Read the prompts index: {WORKFLOW_PROMPTS_INDEX_FILE}
+- Check if actions file exists: {WORKFLOW_ACTIONS_FILE}
+- Read the test criteria: {TEST_CRITERIA_FILE}
 
 Validation Questions
 
@@ -30,7 +30,7 @@ Answer each question with specific evidence:
    - config.json.sample: conditional (if config needed)
 
 2. Action Implementation: If the design declares action-driven steps, does
-   {WORKFLOW_ACTIONS} exist with @action decorators for each action?
+   {WORKFLOW_ACTIONS_FILE} exist with @action decorators for each action?
    Are action function signatures correct?
 
 3. Prompt Completeness: Does prompts/ contain one file per prompt-driven
@@ -76,7 +76,7 @@ Decision Rules
 
 Output Instructions
 
-- Write the gatekeeper report to {GATEKEEP_PACKAGE}.
+- Write the gatekeeper report to {GATEKEEP_PACKAGE_FILE}.
 - Include YAML frontmatter with doc_type: "gatekeep_report".
 - Structure:
   1. Summary: Overall assessment (1-2 sentences)

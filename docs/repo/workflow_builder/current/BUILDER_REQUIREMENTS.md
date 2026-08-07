@@ -35,9 +35,9 @@ generated workflows. Spec authors do NOT need to specify them.
 | **Role policies** | Assigns based on step purpose (generate/review/refine/validate) |
 | **Routing** | Determines based on workflow type |
 | **Gatekeeper placement** | Auto-places 4 gatekeepers for meta-workflows |
-| **TDD loop** | Auto-adds for meta-workflows (generate_test_criteria → review → refine) |
+| **TDD loop** | Auto-adds for ALL workflows (generate_test_criteria → review → refine) |
 | **exhausted_failure** | Auto-injects `exhausted_failure_code` + `exhausted_failure_class` on ALL refine loops |
-| **init_step** | Auto-detects (`generate_test_criteria` for meta-workflows, first step otherwise) |
+| **init_step** | Always `generate_test_criteria` (TDD loop is universal) |
 | **Action reuse** | Audits existing actions before generating custom ones |
 | **Self-critic** | Adds self-critic section to ALL generated prompts |
 | **Self-validation** | Adds self-validation section to ALL generated prompts |
@@ -109,16 +109,16 @@ step_1 -> [human gate] -> step_2 -> [human gate] -> step_3 -> stepCompletion
 ### Pattern 6: Meta-Workflow Builder
 
 The workflow's output is another workflow package. Specialized variant of
-Pattern 4 with mandatory TDD loop.
+Pattern 4 with additional mandatory elements beyond the universal TDD loop.
 
 ```
 generate_test_criteria -> review -> [refine] -> analyze -> gatekeep -> ...
 ```
 
-- TDD loop is mandatory (first 3 steps)
+- TDD loop is mandatory (first 3 steps) — same as ALL workflows
 - init_step = "generate_test_criteria"
-- 4 gatekeepers with distinct artifact keys
-- Action reuse required
+- 4 gatekeepers with distinct artifact keys (meta-workflow specific)
+- Action reuse required (meta-workflow specific)
 
 ---
 
@@ -195,10 +195,10 @@ builder suggests gatekeepers based on the number of major phases.
 
 | Gatekeeper | Artifact Key | Validates | Rejects To |
 |---|---|---|---|
-| After requirements | `GATEKEEP_REQUIREMENTS` | Parse completeness, classification | analyze_spec |
-| After artifacts | `GATEKEEP_ARTIFACTS` | Every artifact has one producer | define_artifacts |
-| After steps | `GATEKEEP_STEPS` | Step sequence covers all phases | design_steps |
-| After package | `GATEKEEP_PACKAGE` | Generated files match design | generate_package |
+| After requirements | `GATEKEEP_REQUIREMENTS_FILE` | Parse completeness, classification | analyze_spec |
+| After artifacts | `GATEKEEP_ARTIFACTS_FILE` | Every artifact has one producer | define_artifacts |
+| After steps | `GATEKEEP_STEPS_FILE` | Step sequence covers all phases | design_steps |
+| After package | `GATEKEEP_PACKAGE_FILE` | Generated files match design | generate_package |
 
 ### Rules
 
@@ -209,25 +209,37 @@ builder suggests gatekeepers based on the number of major phases.
 
 ---
 
-## 6: Meta-Workflow Rules
+## 6: Universal TDD Loop
+
+ALL workflows include a test-driven development loop as the first steps,
+not just meta-workflows. This ensures acceptance criteria are established
+before any design or implementation work begins.
+
+### Mandatory Elements
+
+1. **First 3 steps** must be:
+   - `generate_test_criteria` → `review_test_criteria` → `refine_test_criteria`
+   - Establishes acceptance criteria before any design work
+
+2. **init_step** — Always `generate_test_criteria`
+
+3. **exhausted_failure** — On the refine loop
+
+4. **TEST_CRITERIA_FILE** — Required input for all subsequent design steps
+
+---
+
+## 7: Meta-Workflow Rules
 
 Meta-workflows generate other workflow packages. They have stricter
 requirements because their output is structural, not documentary.
 
-### Mandatory Elements
+### Additional Mandatory Elements (beyond universal TDD)
 
-1. **TDD loop** — First 3 steps must be:
-   - `generate_test_criteria` → `review_test_criteria` → `refine_test_criteria`
-   - Establishes acceptance criteria before any design work
+1. **4 gatekeepers** — Full pipeline validation:
+   - GATEKEEP_REQUIREMENTS_FILE, GATEKEEP_ARTIFACTS_FILE, GATEKEEP_STEPS_FILE, GATEKEEP_PACKAGE_FILE
 
-2. **init_step** — Must be `generate_test_criteria`
-
-3. **4 gatekeepers** — Full pipeline validation:
-   - GATEKEEP_REQUIREMENTS, GATEKEEP_ARTIFACTS, GATEKEEP_STEPS, GATEKEEP_PACKAGE
-
-4. **exhausted_failure** — On ALL refine loops (not just some)
-
-5. **Action reuse** — Must reuse:
+2. **Action reuse** — Must reuse:
    - `validate_workflow_bundle` (structural validation)
    - `promote_workflow_package` (copy to workflows/ directory)
    - `step_completion` (terminal step)
@@ -241,7 +253,7 @@ requirements document YAML frontmatter.
 
 ---
 
-## 7: Self-Critic Pattern
+## 8: Self-Critic Pattern
 
 All generated prompts include a self-critic section that challenges
 reasoning quality, not just structural completeness.
@@ -281,7 +293,7 @@ Self-Critic (Before Reporting Complete)
 
 ---
 
-## 8: Action Reuse
+## 9: Action Reuse
 
 Before generating custom actions, the builder audits existing reusable
 actions:
@@ -297,7 +309,7 @@ actions:
 
 ---
 
-## 9: Generated File Structure
+## 10: Generated File Structure
 
 The builder generates these files in the workflow package directory:
 
@@ -323,7 +335,7 @@ principle: generate EVERY file the design requires.
 
 ---
 
-## 10: Artifact Key Conventions
+## 11: Artifact Key Conventions
 
 | Convention | Example |
 |------------|---------|

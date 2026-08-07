@@ -20,8 +20,8 @@ onsuccess = "review_test_criteria"
 
 [step.artifacts]
 required_inputs = ["WORKFLOW_SPEC_FILE"]
-produces = ["TEST_CRITERIA"]
-result_meta_key = "TEST_CRITERIA"
+produces = ["TEST_CRITERIA_FILE"]
+result_meta_key = "TEST_CRITERIA_FILE"
 
 [step.coder]
 role_policy = "architect_standard"
@@ -37,7 +37,7 @@ requires_human_approval_after = true
 onsuccess = "analyze_spec"
 
 [step.artifacts]
-required_inputs = ["TEST_CRITERIA", "WORKFLOW_SPEC_FILE"]
+required_inputs = ["TEST_CRITERIA_FILE", "WORKFLOW_SPEC_FILE"]
 produces = ["REVIEW_FILE_SUGGESTED"]
 result_meta_key = "REVIEW_FILE_SUGGESTED"
 
@@ -62,9 +62,9 @@ requires_human_approval_after = true
 
 onsuccess = "review_test_criteria"
 [step.artifacts]
-required_inputs = ["REVIEW_FILE_SUGGESTED", "TEST_CRITERIA", "WORKFLOW_SPEC_FILE"]
-produces = ["TEST_CRITERIA"]
-result_meta_key = "TEST_CRITERIA"
+required_inputs = ["REVIEW_FILE_SUGGESTED", "TEST_CRITERIA_FILE", "WORKFLOW_SPEC_FILE"]
+produces = ["TEST_CRITERIA_FILE"]
+result_meta_key = "TEST_CRITERIA_FILE"
 
 
 [step.coder]
@@ -81,9 +81,9 @@ requires_human_approval_after = true
 onsuccess = "gatekeep_requirements"
 
 [step.artifacts]
-required_inputs = ["WORKFLOW_SPEC_FILE", "TEST_CRITERIA"]
-produces = ["WORKFLOW_REQUIREMENTS"]
-result_meta_key = "WORKFLOW_REQUIREMENTS"
+required_inputs = ["WORKFLOW_SPEC_FILE", "TEST_CRITERIA_FILE"]
+produces = ["WORKFLOW_REQUIREMENTS_FILE"]
+result_meta_key = "WORKFLOW_REQUIREMENTS_FILE"
 
 [step.coder]
 role_policy = "architect_standard"
@@ -99,16 +99,16 @@ requires_human_approval_after = true
 onsuccess = "resolve_questions"
 
 [step.artifacts]
-required_inputs = ["WORKFLOW_REQUIREMENTS", "WORKFLOW_SPEC_FILE"]
-produces = ["GATEKEEP_REQUIREMENTS"]
-result_meta_key = "GATEKEEP_REQUIREMENTS"
+required_inputs = ["WORKFLOW_REQUIREMENTS_FILE", "WORKFLOW_SPEC_FILE"]
+produces = ["GATEKEEP_REQUIREMENTS_FILE"]
+result_meta_key = "GATEKEEP_REQUIREMENTS_FILE"
 
 [step.coder]
 role_policy = "validation_standard"
 
 [step.on_reject_refine]
 step = "analyze_spec"
-artifact = "WORKFLOW_REQUIREMENTS"
+artifact = "WORKFLOW_REQUIREMENTS_FILE"
 max_iterations = 2
 exhausted_failure_code = "REQUIREMENTS_GATEKEEP_EXHAUSTED"
 exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
@@ -124,9 +124,9 @@ requires_human_approval_after = true
 onsuccess = "define_artifacts"
 
 [step.artifacts]
-required_inputs = ["WORKFLOW_REQUIREMENTS", "WORKFLOW_SPEC_FILE"]
-produces = ["WORKFLOW_REQUIREMENTS"]
-result_meta_key = "WORKFLOW_REQUIREMENTS"
+required_inputs = ["WORKFLOW_REQUIREMENTS_FILE", "WORKFLOW_SPEC_FILE"]
+produces = ["WORKFLOW_REQUIREMENTS_FILE"]
+result_meta_key = "WORKFLOW_REQUIREMENTS_FILE"
 
 [step.coder]
 role_policy = "architect_standard"
@@ -142,9 +142,9 @@ requires_human_approval_after = true
 onsuccess = "gatekeep_artifacts"
 
 [step.artifacts]
-required_inputs = ["WORKFLOW_REQUIREMENTS"]
-produces = ["ARTIFACT_CONTRACT"]
-result_meta_key = "ARTIFACT_CONTRACT"
+required_inputs = ["WORKFLOW_REQUIREMENTS_FILE"]
+produces = ["ARTIFACT_CONTRACT_FILE"]
+result_meta_key = "ARTIFACT_CONTRACT_FILE"
 
 [step.coder]
 role_policy = "architect_standard"
@@ -160,16 +160,16 @@ requires_human_approval_after = true
 onsuccess = "design_steps"
 
 [step.artifacts]
-required_inputs = ["ARTIFACT_CONTRACT", "WORKFLOW_REQUIREMENTS"]
-produces = ["GATEKEEP_ARTIFACTS"]
-result_meta_key = "GATEKEEP_ARTIFACTS"
+required_inputs = ["ARTIFACT_CONTRACT_FILE", "WORKFLOW_REQUIREMENTS_FILE"]
+produces = ["GATEKEEP_ARTIFACTS_FILE"]
+result_meta_key = "GATEKEEP_ARTIFACTS_FILE"
 
 [step.coder]
 role_policy = "validation_standard"
 
 [step.on_reject_refine]
 step = "define_artifacts"
-artifact = "ARTIFACT_CONTRACT"
+artifact = "ARTIFACT_CONTRACT_FILE"
 max_iterations = 2
 exhausted_failure_code = "ARTIFACTS_GATEKEEP_EXHAUSTED"
 exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
@@ -185,9 +185,9 @@ requires_human_approval_after = true
 onsuccess = "gatekeep_steps"
 
 [step.artifacts]
-required_inputs = ["WORKFLOW_REQUIREMENTS", "ARTIFACT_CONTRACT"]
-produces = ["STEP_ARCHITECTURE"]
-result_meta_key = "STEP_ARCHITECTURE"
+required_inputs = ["WORKFLOW_REQUIREMENTS_FILE", "ARTIFACT_CONTRACT_FILE"]
+produces = ["STEP_ARCHITECTURE_FILE"]
+result_meta_key = "STEP_ARCHITECTURE_FILE"
 
 [step.coder]
 role_policy = "architect_standard"
@@ -203,16 +203,16 @@ requires_human_approval_after = true
 onsuccess = "generate_package"
 
 [step.artifacts]
-required_inputs = ["STEP_ARCHITECTURE", "ARTIFACT_CONTRACT", "WORKFLOW_REQUIREMENTS"]
-produces = ["GATEKEEP_STEPS"]
-result_meta_key = "GATEKEEP_STEPS"
+required_inputs = ["STEP_ARCHITECTURE_FILE", "ARTIFACT_CONTRACT_FILE", "WORKFLOW_REQUIREMENTS_FILE"]
+produces = ["GATEKEEP_STEPS_FILE"]
+result_meta_key = "GATEKEEP_STEPS_FILE"
 
 [step.coder]
 role_policy = "validation_standard"
 
 [step.on_reject_refine]
 step = "design_steps"
-artifact = "STEP_ARCHITECTURE"
+artifact = "STEP_ARCHITECTURE_FILE"
 max_iterations = 2
 exhausted_failure_code = "STEPS_GATEKEEP_EXHAUSTED"
 exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
@@ -228,10 +228,10 @@ requires_human_approval_after = true
 onsuccess = "gatekeep_package"
 
 [step.artifacts]
-required_inputs = ["WORKFLOW_REQUIREMENTS", "ARTIFACT_CONTRACT", "STEP_ARCHITECTURE", "TEST_CRITERIA"]
-produces = ["WORKFLOW_MANIFEST", "WORKFLOW_EXTENSIONS", "WORKFLOW_ACTIONS", "WORKFLOW_PROMPTS_INDEX", "WORKFLOW_README"]
-optional_produces = ["WORKFLOW_ENV_SAMPLE", "WORKFLOW_CONFIG_SAMPLE"]
-result_meta_key = "WORKFLOW_PROMPTS_INDEX"
+required_inputs = ["WORKFLOW_REQUIREMENTS_FILE", "ARTIFACT_CONTRACT_FILE", "STEP_ARCHITECTURE_FILE", "TEST_CRITERIA_FILE"]
+produces = ["WORKFLOW_MANIFEST_FILE", "WORKFLOW_EXTENSIONS_FILE", "WORKFLOW_ACTIONS_FILE", "WORKFLOW_PROMPTS_INDEX_FILE", "WORKFLOW_README_FILE"]
+optional_produces = ["WORKFLOW_ENV_SAMPLE_FILE", "WORKFLOW_CONFIG_SAMPLE_FILE"]
+result_meta_key = "WORKFLOW_PROMPTS_INDEX_FILE"
 
 [step.coder]
 role_policy = "architect_standard"
@@ -247,17 +247,17 @@ requires_human_approval_after = true
 onsuccess = "validate_bundle"
 
 [step.artifacts]
-required_inputs = ["WORKFLOW_MANIFEST", "WORKFLOW_EXTENSIONS", "STEP_ARCHITECTURE", "ARTIFACT_CONTRACT"]
-optional_inputs = ["WORKFLOW_ACTIONS"]
-produces = ["GATEKEEP_PACKAGE"]
-result_meta_key = "GATEKEEP_PACKAGE"
+required_inputs = ["WORKFLOW_MANIFEST_FILE", "WORKFLOW_EXTENSIONS_FILE", "STEP_ARCHITECTURE_FILE", "ARTIFACT_CONTRACT_FILE"]
+optional_inputs = ["WORKFLOW_ACTIONS_FILE"]
+produces = ["GATEKEEP_PACKAGE_FILE"]
+result_meta_key = "GATEKEEP_PACKAGE_FILE"
 
 [step.coder]
 role_policy = "validation_standard"
 
 [step.on_reject_refine]
 step = "generate_package"
-artifact = "WORKFLOW_MANIFEST"
+artifact = "WORKFLOW_MANIFEST_FILE"
 max_iterations = 2
 exhausted_failure_code = "PACKAGE_GATEKEEP_EXHAUSTED"
 exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
@@ -273,9 +273,9 @@ requires_human_approval_after = true
 onsuccess = "review_package"
 
 [step.artifacts]
-required_inputs = ["WORKFLOW_MANIFEST", "WORKFLOW_EXTENSIONS", "TEST_CRITERIA"]
-produces = ["VALIDATION_REPORT"]
-result_meta_key = "VALIDATION_REPORT"
+required_inputs = ["WORKFLOW_MANIFEST_FILE", "WORKFLOW_EXTENSIONS_FILE", "TEST_CRITERIA_FILE"]
+produces = ["VALIDATION_REPORT_FILE"]
+result_meta_key = "VALIDATION_REPORT_FILE"
 
 # ============================================================================
 # Step 6: Review Package
@@ -288,7 +288,7 @@ requires_human_approval_after = true
 onsuccess = "promote_package"
 
 [step.artifacts]
-required_inputs = ["WORKFLOW_MANIFEST", "WORKFLOW_EXTENSIONS", "WORKFLOW_PROMPTS_INDEX", "VALIDATION_REPORT", "TEST_CRITERIA", "WORKFLOW_SPEC_FILE"]
+required_inputs = ["WORKFLOW_MANIFEST_FILE", "WORKFLOW_EXTENSIONS_FILE", "WORKFLOW_PROMPTS_INDEX_FILE", "VALIDATION_REPORT_FILE", "TEST_CRITERIA_FILE", "WORKFLOW_SPEC_FILE"]
 produces = ["REVIEW_FILE_SUGGESTED"]
 result_meta_key = "REVIEW_FILE_SUGGESTED"
 
@@ -313,10 +313,10 @@ requires_human_approval_after = true
 
 onsuccess = "review_package"
 [step.artifacts]
-required_inputs = ["REVIEW_FILE_SUGGESTED", "WORKFLOW_MANIFEST", "WORKFLOW_EXTENSIONS", "WORKFLOW_PROMPTS_INDEX"]
-produces = ["WORKFLOW_MANIFEST", "WORKFLOW_EXTENSIONS", "WORKFLOW_ACTIONS", "WORKFLOW_PROMPTS_INDEX", "WORKFLOW_README"]
-optional_produces = ["WORKFLOW_ENV_SAMPLE", "WORKFLOW_CONFIG_SAMPLE"]
-result_meta_key = "WORKFLOW_PROMPTS_INDEX"
+required_inputs = ["REVIEW_FILE_SUGGESTED", "WORKFLOW_MANIFEST_FILE", "WORKFLOW_EXTENSIONS_FILE", "WORKFLOW_PROMPTS_INDEX_FILE"]
+produces = ["WORKFLOW_MANIFEST_FILE", "WORKFLOW_EXTENSIONS_FILE", "WORKFLOW_ACTIONS_FILE", "WORKFLOW_PROMPTS_INDEX_FILE", "WORKFLOW_README_FILE"]
+optional_produces = ["WORKFLOW_ENV_SAMPLE_FILE", "WORKFLOW_CONFIG_SAMPLE_FILE"]
+result_meta_key = "WORKFLOW_PROMPTS_INDEX_FILE"
 
 
 [step.coder]
@@ -332,9 +332,9 @@ enable_notifications = true
 onsuccess = "stepCompletion"
 
 [step.artifacts]
-required_inputs = ["WORKFLOW_SPEC_FILE", "WORKFLOW_MANIFEST"]
-produces = ["WORKFLOW_PACKAGE_DIR"]
-result_meta_key = "WORKFLOW_PACKAGE_DIR"
+required_inputs = ["WORKFLOW_SPEC_FILE", "WORKFLOW_MANIFEST_FILE"]
+produces = ["WORKFLOW_PACKAGE_DIR_FILE"]
+result_meta_key = "WORKFLOW_PACKAGE_DIR_FILE"
 
 # ============================================================================
 # Step 9: Step Completion

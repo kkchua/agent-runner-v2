@@ -6,13 +6,13 @@ workflow package files in-place to resolve each finding.
 Reference Inputs
 
 - Read {REVIEW_FILE_SUGGESTED} for the list of issues to fix.
-- Read {WORKFLOW_MANIFEST} for the current workflow.toml content.
-- Read {WORKFLOW_EXTENSIONS} for the current context_extensions.py content.
-- Read {WORKFLOW_PROMPTS_INDEX} for the list of generated prompt files.
-- Read {WORKFLOW_README} for the current README.md content.
-- Read {WORKFLOW_ENV_SAMPLE} for the current .env.sample content (if it
+- Read {WORKFLOW_MANIFEST_FILE} for the current workflow.toml content.
+- Read {WORKFLOW_EXTENSIONS_FILE} for the current context_extensions.py content.
+- Read {WORKFLOW_PROMPTS_INDEX_FILE} for the list of generated prompt files.
+- Read {WORKFLOW_README_FILE} for the current README.md content.
+- Read {WORKFLOW_ENV_SAMPLE_FILE} for the current .env.sample content (if it
   exists).
-- Read {WORKFLOW_CONFIG_SAMPLE} for the current config.json.sample content
+- Read {WORKFLOW_CONFIG_SAMPLE_FILE} for the current config.json.sample content
   (if it exists).
 
 Refinement Rules
@@ -31,23 +31,23 @@ Refinement Rules
    workflow.toml and context_extensions.py.
 8. If the review flagged routing errors, correct the step references.
 9. If the review flagged README.md issues (missing sections, wrong step
-   table, incorrect artifact keys), update {WORKFLOW_README} in-place.
+   table, incorrect artifact keys), update {WORKFLOW_README_FILE} in-place.
 10. If the review flagged .env.sample issues (missing variables, bad
     comments, or file should not exist), update or remove
-    {WORKFLOW_ENV_SAMPLE} accordingly.
+    {WORKFLOW_ENV_SAMPLE_FILE} accordingly.
 11. If the review flagged config.json.sample issues (invalid JSON, missing
     settings, or file should not exist), update or remove
-    {WORKFLOW_CONFIG_SAMPLE} accordingly.
+    {WORKFLOW_CONFIG_SAMPLE_FILE} accordingly.
 
-12. If the review flagged missing actions.py, generate {WORKFLOW_ACTIONS}
+12. If the review flagged missing actions.py, generate {WORKFLOW_ACTIONS_FILE}
     with proper @action decorated functions per the action specifications
-    in {WORKFLOW_REQUIREMENTS}. Include error handling, input validation,
+    in {WORKFLOW_REQUIREMENTS_FILE}. Include error handling, input validation,
     and ActionResult returns.
 
 13. If the review flagged incomplete action implementations (stubs instead
-    of actual logic), update {WORKFLOW_ACTIONS} with complete implementations.
+    of actual logic), update {WORKFLOW_ACTIONS_FILE} with complete implementations.
 
-14. If actions.py is created or modified, update {WORKFLOW_PROMPTS_INDEX}
+14. If actions.py is created or modified, update {WORKFLOW_PROMPTS_INDEX_FILE}
     to reflect the new file.
 
 Self-Critic (Before Reporting Complete)
@@ -63,15 +63,15 @@ If fixes are superficial, go back and address root causes.
 
 Output Instructions
 
-- Update {WORKFLOW_MANIFEST} in-place with fixes.
-- Update {WORKFLOW_EXTENSIONS} in-place with fixes.
+- Update {WORKFLOW_MANIFEST_FILE} in-place with fixes.
+- Update {WORKFLOW_EXTENSIONS_FILE} in-place with fixes.
 - Update any prompt files that were flagged, using the paths from
-  {WORKFLOW_PROMPTS_INDEX}.
-- Update {WORKFLOW_PROMPTS_INDEX} if prompt file listings changed.
-- Update {WORKFLOW_README} in-place with fixes.
-- Update {WORKFLOW_ENV_SAMPLE} in-place if flagged (or remove if the review
+  {WORKFLOW_PROMPTS_INDEX_FILE}.
+- Update {WORKFLOW_PROMPTS_INDEX_FILE} if prompt file listings changed.
+- Update {WORKFLOW_README_FILE} in-place with fixes.
+- Update {WORKFLOW_ENV_SAMPLE_FILE} in-place if flagged (or remove if the review
   says it should not exist).
-- Update {WORKFLOW_CONFIG_SAMPLE} in-place if flagged (or remove if the
+- Update {WORKFLOW_CONFIG_SAMPLE_FILE} in-place if flagged (or remove if the
   review says it should not exist).
 - Document each fix applied in a summary section at the top of each modified
   file as a comment (for code files) or at the end of the document (for

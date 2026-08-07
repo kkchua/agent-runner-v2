@@ -8,7 +8,7 @@ ambiguity.
 Reference Inputs
 
 - Read {WORKFLOW_SPEC_FILE} for the original specification (read it fully).
-- Read {WORKFLOW_REQUIREMENTS} for the step 1 output that needs updating.
+- Read {WORKFLOW_REQUIREMENTS_FILE} for the step 1 output that needs updating.
 - Read {WORKFLOW_CREATION_GUIDE} for workflow package conventions.
 
 Resolution Tasks
@@ -69,7 +69,7 @@ If you find reasoning issues, fix them before proceeding to output.
 
 Output Instructions
 
-- Overwrite {WORKFLOW_REQUIREMENTS} with the updated document.
+- Overwrite {WORKFLOW_REQUIREMENTS_FILE} with the updated document.
 - Output must be ASCII-only.
 - Preserve the YAML frontmatter (update effective_version if needed).
 - Preserve all sections that are already correct.
