@@ -109,7 +109,7 @@ If validation fails, report REJECTED with specific gaps found.
 
 Output Instructions
 
-- Write the structured requirements document to {WORKFLOW_REQUIREMENTS}.
+- Write the structured requirements document to {WORKFLOW_REQUIREMENTS_FILE}.
 - Output must be ASCII-only.
 - Include YAML frontmatter with at minimum:
   - doc_type: "workflow_design"

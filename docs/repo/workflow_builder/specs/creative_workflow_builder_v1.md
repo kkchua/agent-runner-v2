@@ -11,7 +11,7 @@
 >
 > **This is a meta-workflow** — its output is another workflow package.
 > The builder auto-detects this and enforces: TDD loop (init_step = generate_test_criteria),
-> 4 gatekeepers (GATEKEEP_REQUIREMENTS, GATEKEEP_ARTIFACTS, GATEKEEP_STEPS, GATEKEEP_PACKAGE),
+> 4 gatekeepers (GATEKEEP_REQUIREMENTS_FILE, GATEKEEP_ARTIFACTS_FILE, GATEKEEP_STEPS_FILE, GATEKEEP_PACKAGE_FILE),
 > exhausted_failure on all refine loops, action reuse audit.
 
 ## Overview
@@ -45,10 +45,10 @@ Creative media agent-md files (like the 7 JiMeng workflows) contain rich, monoli
 
 | Artifact Key | Filename Pattern | Description |
 |---|---|---|
-| `TEST_CRITERIA` | `TEST_CRITERIA-{date}-{seq}_{slug}.md` | Acceptance criteria for generated workflow |
-| `CREATIVE_REQUIREMENTS` | `CREATIVE_REQ-{date}-{seq}_{slug}.md` | Parsed workflow structure, phases, tools, constraints |
-| `STATE_CONTRACT` | `STATE_CONTRACT-{date}-{seq}_{slug}.md` | Artifact key design and state flow between steps |
-| `STEP_ARCHITECTURE` | `STEP_ARCH-{date}-{seq}_{slug}.md` | Step sequence with routing, role policies, API mappings |
+| `TEST_CRITERIA_FILE` | `TEST_CRITERIA-{date}-{seq}_{slug}.md` | Acceptance criteria for generated workflow |
+| `CREATIVE_REQUIREMENTS_FILE` | `CREATIVE_REQ-{date}-{seq}_{slug}.md` | Parsed workflow structure, phases, tools, constraints |
+| `STATE_CONTRACT_FILE` | `STATE_CONTRACT-{date}-{seq}_{slug}.md` | Artifact key design and state flow between steps |
+| `STEP_ARCHITECTURE_FILE` | `STEP_ARCH-{date}-{seq}_{slug}.md` | Step sequence with routing, role policies, API mappings |
 | `WORKFLOW_MANIFEST` | `workflow.toml` | Generated workflow manifest |
 | `WORKFLOW_EXTENSIONS` | `context_extensions.py` | Generated artifact key registration and context injection |
 | `WORKFLOW_ACTIONS` | `actions.py` | Generated custom actions (conditional — only if API steps needed) |
@@ -57,10 +57,10 @@ Creative media agent-md files (like the 7 JiMeng workflows) contain rich, monoli
 | `WORKFLOW_ENV_SAMPLE` | `.env.sample` | Generated env template (conditional) |
 | `WORKFLOW_CONFIG_SAMPLE` | `config.json.sample` | Generated config template (conditional) |
 | `REVIEW_FILE_SUGGESTED` | `CWFBLD-REV-{date}-{seq}_{slug}.md` | Final review of generated package |
-| `VALIDATION_REPORT` | `VALIDATION-{date}-{seq}_{slug}.md` | Structural validation report |
-| `BUILDER_SPEC_TEMPLATE` | `CREATIVE_WORKFLOW_SPEC_TEMPLATE_v1.md` | Spec template for the generated builder's inputs |
-| `BUILDER_SOP` | `CREATIVE_WORKFLOW_SOP_v1.md` | Operating procedure for the generated builder |
-| `BUILDER_STANDARD` | `CREATIVE_WORKFLOW_STANDARD_v1.md` | Quality requirements and constraints for the generated builder |
+| `VALIDATION_REPORT_FILE` | `VALIDATION-{date}-{seq}_{slug}.md` | Structural validation report |
+| `BUILDER_SPEC_TEMPLATE_FILE` | `CREATIVE_WORKFLOW_SPEC_TEMPLATE_v1.md` | Spec template for the generated builder's inputs |
+| `BUILDER_SOP_FILE` | `CREATIVE_WORKFLOW_SOP_v1.md` | Operating procedure for the generated builder |
+| `BUILDER_STANDARD_FILE` | `CREATIVE_WORKFLOW_STANDARD_v1.md` | Quality requirements and constraints for the generated builder |
 
 **Granularity rule:** One artifact key per logical file. The runner tracks individual files, not directories.
 

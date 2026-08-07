@@ -73,8 +73,8 @@ variables in `context_extensions.py`:
 | `RENDERED_PDF_FILE` | `current/{slug}.pdf` | PDF document |
 | `RENDERED_DOCX_FILE` | `current/{slug}.docx` | Word document |
 | `RENDERED_PPTX_FILE` | `current/{slug}.pptx` | PowerPoint presentation |
-| `RENDER_INDEX` | `runs/{job_id}/render_index.json` | JSON index of rendered outputs (staging) |
-| `RENDER_MANIFEST` | `current/render_manifest.json` | Published manifest (publish target) |
+| `RENDER_INDEX_FILE` | `runs/{job_id}/render_index.json` | JSON index of rendered outputs (staging) |
+| `RENDER_MANIFEST_FILE` | `current/render_manifest.json` | Published manifest (publish target) |
 
 Only formats listed in config.json are produced. Unselected formats have
 no output artifact. The `{slug}` is derived from the input meta content
@@ -116,18 +116,34 @@ class BaseRenderer:
    with inline CSS. Reuses `agent_runner_v2/site_styles.py` framework
    (`page_shell()`, `card()`, `table()`, `section()`, `COMMON_CSS`).
    Supports table of contents generation, audience-themed color schemes.
+   **Error handling:** If `markdown` package is not installed, return REJECTED
+   with reject_code `MISSING_DEPENDENCY`. If source Markdown file is empty
+   or unreadable, return REJECTED with reject_code `INVALID_SOURCE`.
 
 2. **pdf_renderer.py** -- Converts rendered HTML to PDF document. Uses
    HTML-to-PDF conversion (e.g., weasyprint or similar). Inherits styling
    from the HTML renderer.
+   **Error handling:** If weasyprint (or configured PDF engine) is not
+   installed, return REJECTED with reject_code `MISSING_DEPENDENCY` and
+   remark listing the required pip package. If conversion fails mid-way
+   (corrupt fonts, memory), return REJECTED with reject_code
+   `RENDER_FAILED` — do not write partial PDF output. Timeout: 120 seconds.
 
 3. **docx_renderer.py** -- Converts Markdown to Word document using
    python-docx. Maps Markdown headings, paragraphs, tables, code blocks
    to Word styles.
+   **Error handling:** If python-docx is not installed, return REJECTED
+   with reject_code `MISSING_DEPENDENCY`. If source contains unsupported
+   elements (embedded videos, SVG), log a warning and render as static
+   image placeholder — do not fail.
 
 4. **pptx_renderer.py** -- Converts Markdown to PowerPoint presentation
    using python-pptx. Maps top-level sections to slides, extracts key
    points as bullet lists, generates title slide from frontmatter metadata.
+   **Error handling:** If python-pptx is not installed, return REJECTED
+   with reject_code `MISSING_DEPENDENCY`. If slide count exceeds 200,
+   return REJECTED with reject_code `TOO_MANY_SLIDES` and suggest using
+   `slide_density: "low"` in config.
 
 ## Publish Lifecycle
 

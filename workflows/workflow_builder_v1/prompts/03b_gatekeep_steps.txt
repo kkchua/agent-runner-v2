@@ -8,16 +8,16 @@ Will data flow properly through the pipeline?"
 
 Reference Inputs
 
-- Read the requirements: {WORKFLOW_REQUIREMENTS}
-- Read the artifact contract: {ARTIFACT_CONTRACT}
-- Read the step architecture: {STEP_ARCHITECTURE}
-- Read the test criteria: {TEST_CRITERIA}
+- Read the requirements: {WORKFLOW_REQUIREMENTS_FILE}
+- Read the artifact contract: {ARTIFACT_CONTRACT_FILE}
+- Read the step architecture: {STEP_ARCHITECTURE_FILE}
+- Read the test criteria: {TEST_CRITERIA_FILE}
 
 Validation Questions
 
 Answer each question with specific evidence from the documents:
 
-1. Coverage: Does every requirement from {WORKFLOW_REQUIREMENTS} have
+1. Coverage: Does every requirement from {WORKFLOW_REQUIREMENTS_FILE} have
    corresponding steps that implement it? Are there requirement gaps?
 
 2. Step Type Appropriateness: Is each step correctly typed?
@@ -73,7 +73,7 @@ Decision Rules
 
 Output Instructions
 
-- Write the gatekeeper report to {GATEKEEP_STEPS}.
+- Write the gatekeeper report to {GATEKEEP_STEPS_FILE}.
 - Include YAML frontmatter with doc_type: "gatekeep_report".
 - Structure:
   1. Summary: Overall assessment (1-2 sentences)

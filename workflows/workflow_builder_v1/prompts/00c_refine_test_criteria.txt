@@ -6,7 +6,7 @@ document in-place to resolve each finding.
 Reference Inputs
 
 - Read {REVIEW_FILE_SUGGESTED} for the list of issues to fix.
-- Read {TEST_CRITERIA} for the current test criteria document.
+- Read {TEST_CRITERIA_FILE} for the current test criteria document.
 - Read {WORKFLOW_SPEC_FILE} for the original specification to verify alignment.
 
 Refinement Rules
@@ -22,7 +22,7 @@ Refinement Rules
 
 Output Instructions
 
-- Update {TEST_CRITERIA} in-place with fixes.
+- Update {TEST_CRITERIA_FILE} in-place with fixes.
 - Document each fix applied at the end of the document.
 - Use ASCII-only characters in all output.
 

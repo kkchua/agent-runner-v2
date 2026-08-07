@@ -7,23 +7,23 @@ with an APPROVED or REJECTED verdict.
 
 Reference Inputs
 
-- Read {TEST_CRITERIA} for the acceptance criteria -- verify the generated
+- Read {TEST_CRITERIA_FILE} for the acceptance criteria -- verify the generated
   package fulfills ALL criteria in the "Criteria for review_package step"
   section. This is the primary verification contract.
 - Read {WORKFLOW_SPEC_FILE} for the original specification -- verify the
   generated workflow actually implements what the spec describes.
-- Read {WORKFLOW_MANIFEST} for the generated workflow.toml.
-- Read {WORKFLOW_EXTENSIONS} for the generated context_extensions.py.
-- Read {WORKFLOW_ACTIONS} for the generated actions.py (if action steps
+- Read {WORKFLOW_MANIFEST_FILE} for the generated workflow.toml.
+- Read {WORKFLOW_EXTENSIONS_FILE} for the generated context_extensions.py.
+- Read {WORKFLOW_ACTIONS_FILE} for the generated actions.py (if action steps
   were declared).
-- Read {WORKFLOW_PROMPTS_INDEX} for the list of generated prompt files.
-- Read {VALIDATION_REPORT} for automated validation results.
-- Read {WORKFLOW_README} for the generated user guide.
-- Read {WORKFLOW_ENV_SAMPLE} for the generated env template (if it exists).
-- Read {WORKFLOW_CONFIG_SAMPLE} for the generated config template (if it
+- Read {WORKFLOW_PROMPTS_INDEX_FILE} for the list of generated prompt files.
+- Read {VALIDATION_REPORT_FILE} for automated validation results.
+- Read {WORKFLOW_README_FILE} for the generated user guide.
+- Read {WORKFLOW_ENV_SAMPLE_FILE} for the generated env template (if it exists).
+- Read {WORKFLOW_CONFIG_SAMPLE_FILE} for the generated config template (if it
   exists).
-- Read {GATEKEEP_REQUIREMENTS}, {GATEKEEP_ARTIFACTS}, {GATEKEEP_STEPS},
-  {GATEKEEP_PACKAGE} to verify gatekeepers ran and their verdicts.
+- Read {GATEKEEP_REQUIREMENTS_FILE}, {GATEKEEP_ARTIFACTS_FILE}, {GATEKEEP_STEPS_FILE},
+  {GATEKEEP_PACKAGE_FILE} to verify gatekeepers ran and their verdicts.
 - Read {WORKFLOW_CREATION_GUIDE} Part E (Common Pitfalls) for the review
   checklist.
 
@@ -103,7 +103,7 @@ Review Checklist
    - Configuration section in README.md matches .env.sample and
      config.json.sample content (if those files exist)
 
-6. Spec fulfillment verification (read {TEST_CRITERIA} and {WORKFLOW_SPEC_FILE}):
+6. Spec fulfillment verification (read {TEST_CRITERIA_FILE} and {WORKFLOW_SPEC_FILE}):
    - Does the generated workflow actually implement the spec objective?
    - For each step in the spec: does the corresponding generated step
      (prompt or action) actually do what the spec describes?
@@ -115,7 +115,7 @@ Review Checklist
    - Are there any hallucinated elements not in the spec (extra configs,
      wrong models, unnecessary required_inputs)?
    - Verify ALL criteria in the "Criteria for review_package step" section
-     of {TEST_CRITERIA} pass
+     of {TEST_CRITERIA_FILE} pass
 
 7. Gatekeeper effectiveness (read gatekeeper reports):
    - Did gatekeep_requirements run and approve? If it rejected, were issues
@@ -130,7 +130,7 @@ Review Checklist
      a process failure (gatekeepers should have blocked progression)
 
 8. Audit Verification (if TEST_CRITERIA includes audit criteria):
-   Read the "Audit Criteria (Conditional)" section of {TEST_CRITERIA} and
+   Read the "Audit Criteria (Conditional)" section of {TEST_CRITERIA_FILE} and
    verify the generated workflow addresses each audit concern:
    - Security Audit: Are API keys loaded from .env (not hardcoded)? Are
      credentials passed securely? Are there no credential values in generated

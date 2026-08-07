@@ -10,8 +10,8 @@ will cause downstream failures?"
 Reference Inputs
 
 - Read the original specification: {WORKFLOW_SPEC_FILE}
-- Read the generated requirements: {WORKFLOW_REQUIREMENTS}
-- Read the test criteria: {TEST_CRITERIA}
+- Read the generated requirements: {WORKFLOW_REQUIREMENTS_FILE}
+- Read the test criteria: {TEST_CRITERIA_FILE}
 
 Validation Questions
 
@@ -70,7 +70,7 @@ Decision Rules
 
 Output Instructions
 
-- Write the gatekeeper report to {GATEKEEP_REQUIREMENTS}.
+- Write the gatekeeper report to {GATEKEEP_REQUIREMENTS_FILE}.
 - Include YAML frontmatter with doc_type: "gatekeep_report".
 - Structure:
   1. Summary: Overall assessment (1-2 sentences)

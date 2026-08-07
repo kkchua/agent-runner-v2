@@ -5,8 +5,8 @@ requirements and artifact contract.
 
 Reference Inputs
 
-- Read {WORKFLOW_REQUIREMENTS} for the structured requirements.
-- Read {ARTIFACT_CONTRACT} for the defined artifact keys and paths.
+- Read {WORKFLOW_REQUIREMENTS_FILE} for the structured requirements.
+- Read {ARTIFACT_CONTRACT_FILE} for the defined artifact keys and paths.
 - Read {ROLE_POLICIES} for available role policies that can be assigned to
   each step.
 - Read {WORKFLOW_CREATION_GUIDE} Part C.1 for workflow.toml step syntax and
@@ -36,7 +36,7 @@ Step Design Tasks
    - result_meta_key: the primary output key for meta.json
 5. Include a stepCompletion terminal step as the final step.
 6. Set init_step based on workflow type:
-   - If is_meta_workflow is true (check {WORKFLOW_REQUIREMENTS}):
+   - If is_meta_workflow is true (check {WORKFLOW_REQUIREMENTS_FILE}):
      init_step = "generate_test_criteria"
    - Otherwise: init_step = first step in the sequence
 7. Mark review steps with requires_human_approval_after if the workflow
@@ -46,8 +46,8 @@ Self-Critic (Before Self-Validation)
 
 Challenge your reasoning before checking completeness:
 
-1. Am I introducing assumptions not supported by {WORKFLOW_REQUIREMENTS}
-   or {ARTIFACT_CONTRACT}?
+1. Am I introducing assumptions not supported by {WORKFLOW_REQUIREMENTS_FILE}
+   or {ARTIFACT_CONTRACT_FILE}?
 2. Is this the simplest step sequence that achieves the objectives, or am
    I adding unnecessary steps?
 3. If a downstream step reads this architecture, what would confuse them
@@ -62,7 +62,7 @@ Self-Validation (Before Output)
 Before reporting APPROVED, validate:
 
 1. Coverage: Does the step sequence implement ALL requirements from
-   {WORKFLOW_REQUIREMENTS}? Are there requirement gaps?
+   {WORKFLOW_REQUIREMENTS_FILE}? Are there requirement gaps?
 
 2. Artifact Flow: Can you trace a complete chain from initial inputs to
    final outputs? Are all required_inputs satisfied by prior produces?
@@ -88,7 +88,7 @@ If validation fails, report REJECTED with specific gaps found.
 
 Output Instructions
 
-- Write the step architecture document to {STEP_ARCHITECTURE}.
+- Write the step architecture document to {STEP_ARCHITECTURE_FILE}.
 - Output must be ASCII-only.
 - Include YAML frontmatter with at minimum:
   - doc_type: "step_architecture"

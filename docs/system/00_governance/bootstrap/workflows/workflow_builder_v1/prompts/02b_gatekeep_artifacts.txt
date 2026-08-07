@@ -9,9 +9,9 @@ pieces that will block downstream steps?"
 
 Reference Inputs
 
-- Read the requirements: {WORKFLOW_REQUIREMENTS}
-- Read the artifact contract: {ARTIFACT_CONTRACT}
-- Read the test criteria: {TEST_CRITERIA}
+- Read the requirements: {WORKFLOW_REQUIREMENTS_FILE}
+- Read the artifact contract: {ARTIFACT_CONTRACT_FILE}
+- Read the test criteria: {TEST_CRITERIA_FILE}
 
 Validation Questions
 
@@ -68,7 +68,7 @@ Decision Rules
 
 Output Instructions
 
-- Write the gatekeeper report to {GATEKEEP_ARTIFACTS}.
+- Write the gatekeeper report to {GATEKEEP_ARTIFACTS_FILE}.
 - Include YAML frontmatter with doc_type: "gatekeep_report".
 - Structure:
   1. Summary: Overall assessment (1-2 sentences)
