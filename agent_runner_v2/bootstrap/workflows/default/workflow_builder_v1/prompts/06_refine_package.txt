@@ -50,6 +50,17 @@ Refinement Rules
 14. If actions.py is created or modified, update {WORKFLOW_PROMPTS_INDEX}
     to reflect the new file.
 
+Self-Critic (Before Reporting Complete)
+
+Challenge your fixes:
+
+1. Did I fix the root cause, or just the symptom the review flagged?
+2. Did my changes introduce new inconsistencies in other files?
+3. Are there issues the review missed that I should fix proactively?
+4. If the reviewer re-reads my output, would they find new issues?
+
+If fixes are superficial, go back and address root causes.
+
 Output Instructions
 
 - Update {WORKFLOW_MANIFEST} in-place with fixes.

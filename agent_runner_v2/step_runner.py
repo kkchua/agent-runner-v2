@@ -228,9 +228,12 @@ def run_step(
     coder_result = meta["coder_result"]
 
     artifacts = dict(coder_result.get("artifacts") or {})
+    produces = step_cfg.get("produces", [])
+    optional_produces = step_cfg.get("optional_produces", [])
     artifacts = _backfill_declared_produced_artifacts(
         artifacts=artifacts,
-        produces=step_cfg.get("produces", []),
+        produces=produces,
+        optional_produces=optional_produces,
         context=context,
         state=state,
         project_root=project_root,
@@ -253,10 +256,10 @@ def run_step(
         )
 
     # Validate artifacts are in the produces list (declarative protection model)
-    produces = step_cfg.get("produces", [])
     _validate_artifacts_in_produces_list(
         artifacts=artifacts,
         produces=produces,
+        optional_produces=optional_produces,
         step=step,
     )
 
@@ -268,6 +271,7 @@ def run_step(
     _validate_declared_produced_artifacts_exist(
         artifacts=artifacts,
         produces=produces,
+        optional_produces=optional_produces,
         context=context,
         state=state,
         project_root=project_root,
@@ -401,9 +405,11 @@ def run_action(
 
     # Validate artifacts are in the produces list (declarative protection model)
     produces = step_cfg.get("produces", [])
+    optional_produces = step_cfg.get("optional_produces", [])
     _validate_artifacts_in_produces_list(
         artifacts=artifacts,
         produces=produces,
+        optional_produces=optional_produces,
         step=step,
     )
 
@@ -769,6 +775,7 @@ def _validate_declared_produced_artifacts_exist(
     *,
     artifacts: dict[str, str],
     produces: list[str],
+    optional_produces: list[str],
     context: dict[str, str],
     state: dict[str, Any],
     project_root: Path,
@@ -778,10 +785,14 @@ def _validate_declared_produced_artifacts_exist(
 
     Unlike `_validate_artifact_files_exist`, this enforces the full `produces`
     contract, not just the subset of artifact paths explicitly returned by the model.
+
+    Optional produces (optional_produces) are skipped if not present in artifacts
+    and not resolvable from context — they are allowed but not required.
     """
-    if not produces:
+    if not produces and not optional_produces:
         return
 
+    optional_set = set(optional_produces)
     missing: list[str] = []
     for artifact_key in produces:
         path_str = str(artifacts.get(artifact_key) or "").strip()
@@ -802,6 +813,20 @@ def _validate_declared_produced_artifacts_exist(
         if not resolved.exists():
             missing.append(f"{artifact_key} -> {path_str}")
 
+    # Optional produces: only flag if explicitly declared in artifacts but missing
+    for artifact_key in optional_produces:
+        path_str = str(artifacts.get(artifact_key) or "").strip()
+        if not path_str:
+            # Not declared in meta.json — skip (it's optional)
+            continue
+        resolved = resolve_repo_or_runtime_path(
+            path_str,
+            project_root=project_root,
+            runtime_root=JOBS_ROOT,
+        )
+        if not resolved.exists():
+            missing.append(f"{artifact_key} -> {path_str}")
+
     if missing:
         raise ArtifactMissingError(
             f"Step '{step}' was approved but declared produced artifacts are missing on disk: {missing}",
@@ -813,6 +838,7 @@ def _backfill_declared_produced_artifacts(
     *,
     artifacts: dict[str, str],
     produces: list[str],
+    optional_produces: list[str],
     context: dict[str, str],
     state: dict[str, Any],
     project_root: Path,
@@ -823,12 +849,15 @@ def _backfill_declared_produced_artifacts(
     artifact set from the sidecar. When the omitted file exists at the declared
     contract path, bind it into the returned artifact map so downstream steps
     can consume the full produced set.
+
+    Also attempts backfill for optional_produces keys.
     """
-    if not produces:
+    all_declared = produces + optional_produces
+    if not all_declared:
         return dict(artifacts)
 
     normalized = dict(artifacts)
-    for artifact_key in produces:
+    for artifact_key in all_declared:
         current = str(normalized.get(artifact_key) or "").strip()
         if current:
             continue
@@ -853,26 +882,27 @@ def _validate_artifacts_in_produces_list(
     *,
     artifacts: dict[str, str],
     produces: list[str],
+    optional_produces: list[str],
     step: str,
 ) -> None:
     """Raise ArtifactMissingError if any artifact is not in the step's produces list.
-    
+
     This enforces the declarative write-contract model:
     - Each step declares what it produces in template_groups.py
     - LLM can only report artifacts in that list
     - Prevents workflows from reporting undeclared outputs
-    
+
+    Both produces and optional_produces are allowed.
+
     Note: Only explicit alias normalization is allowed:
     - REVIEW_FILE_SUGGESTED_METAJSON → REVIEW_FILE_SUGGESTED
     - REVIEW_FILE_SUGGESTED_PATH → REVIEW_FILE_SUGGESTED
     """
-    if not produces:
+    allowed = set(produces) | set(optional_produces)
+    if not allowed:
         # Action steps or steps without declared outputs - skip validation
         return
-    
-    # Convert produces list to set for comparison
-    allowed = set(produces)
-    
+
     # Normalize artifacts using explicit alias suffixes only.
     normalized_artifacts = {}
     for artifact_key, artifact_path in artifacts.items():

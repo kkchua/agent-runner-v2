@@ -210,14 +210,14 @@ def promote_workflow_package(*, context, state, step_cfg, project_root):
     project_root = Path(project_root)
 
     # Derive slug from spec filename
-    # Spec files are always {slug}.md in specs/ directory, so the slug
-    # is just the filename stem (unlike SDLC artifacts which use
-    # {TYPE}-{date}-{seq}_{slug}.md pattern)
-    spec_path = artifacts.get("WORKFLOW_SPEC_FILE", "")
+    # Configurable via step_cfg slug_source_artifact (defaults to WORKFLOW_SPEC_FILE).
+    # Meta-builders with non-standard inputs (e.g., AGENT_MD_FILE) can override this.
+    slug_source_key = step_cfg.get("slug_source_artifact", "WORKFLOW_SPEC_FILE")
+    spec_path = artifacts.get(slug_source_key, "")
     if not spec_path:
         return ActionResult(
             status="REJECTED",
-            remark="WORKFLOW_SPEC_FILE artifact not found in state.",
+            remark=f"{slug_source_key} artifact not found in state.",
             artifacts={},
             reject_code="MISSING_SPEC",
         )
@@ -225,7 +225,7 @@ def promote_workflow_package(*, context, state, step_cfg, project_root):
     if not slug:
         return ActionResult(
             status="REJECTED",
-            remark=f"Could not derive slug from WORKFLOW_SPEC_FILE: {spec_path}",
+            remark=f"Could not derive slug from {slug_source_key}: {spec_path}",
             artifacts={},
             reject_code="SLUG_EXTRACTION_FAILED",
         )
@@ -307,4 +307,81 @@ def promote_workflow_package(*, context, state, step_cfg, project_root):
         status="APPROVED",
         remark=remark,
         artifacts={"WORKFLOW_PACKAGE_DIR": str(target_dir)},
+    )
+
+
+@action("promote_builder_docs")
+def promote_builder_docs(*, context, state, step_cfg, project_root):
+    """Promote meta-builder spec documents to docs/repo/workflow_builder/current/.
+
+    Copies three spec documents from the run directory to the builder's
+    documentation area:
+    - BUILDER_SPEC_TEMPLATE -> current/templates/
+    - BUILDER_SOP -> current/sop/
+    - BUILDER_STANDARD -> current/
+
+    This action is for meta-builders only (workflows whose output is another
+    workflow builder). Normal workflows do not produce these documents.
+    """
+    artifacts = state.get("artifacts", {})
+    project_root = Path(project_root)
+
+    # Target base: docs/repo/workflow_builder/current/
+    builder_docs_root = project_root / "docs" / "repo" / "workflow_builder" / "current"
+    if not builder_docs_root.exists():
+        return ActionResult(
+            status="REJECTED",
+            remark=f"Builder docs root not found: {builder_docs_root}",
+            artifacts={},
+            reject_code="MISSING_BUILDER_DOCS_ROOT",
+        )
+
+    # Mapping: artifact key -> target subdirectory
+    doc_mapping = {
+        "BUILDER_SPEC_TEMPLATE": builder_docs_root / "templates",
+        "BUILDER_SOP": builder_docs_root / "sop",
+        "BUILDER_STANDARD": builder_docs_root,
+    }
+
+    copied = []
+    missing = []
+
+    for artifact_key, target_dir in doc_mapping.items():
+        source_path_str = artifacts.get(artifact_key, "")
+        if not source_path_str:
+            missing.append(artifact_key)
+            continue
+
+        source_path = Path(source_path_str)
+        if not source_path.is_absolute():
+            source_path = project_root / source_path_str
+
+        if not source_path.exists():
+            missing.append(f"{artifact_key} (file not found: {source_path})")
+            continue
+
+        target_dir.mkdir(parents=True, exist_ok=True)
+        target_path = target_dir / source_path.name
+        shutil.copy2(source_path, target_path)
+        copied.append(f"{artifact_key} -> {target_path.relative_to(project_root)}")
+
+    if not copied and missing:
+        return ActionResult(
+            status="REJECTED",
+            remark=f"No spec documents found to promote. Missing: {missing}",
+            artifacts={},
+            reject_code="NO_DOCS_TO_PROMOTE",
+        )
+
+    remark_parts = [f"Promoted: {', '.join(copied)}"]
+    if missing:
+        remark_parts.append(f"Missing (skipped): {', '.join(missing)}")
+
+    remark = ". ".join(remark_parts)
+    print(f"[promote_builder_docs] {remark}", flush=True)
+
+    return ActionResult(
+        status="APPROVED",
+        remark=remark,
+        artifacts={},
     )

@@ -1,5 +1,14 @@
 # Workflow Specification: Incremental Codebase Doc Update
 
+> Save to `docs/repo/workflow_builder/specs/incremental-codebase-update.md`.
+> The workflow builder reads this document and generates the complete
+> workflow package.
+>
+> **Key principle:** Describe WHAT the workflow does. The builder infers HOW
+> to structure it (step sequence, routing, role policies, gatekeepers).
+> See [BUILDER_REQUIREMENTS.md](../current/BUILDER_REQUIREMENTS.md) for what
+> the builder enforces automatically.
+
 ## Overview
 
 **Workflow name:** `update_codebase_docs_v1`
@@ -19,107 +28,68 @@ The full codebase scan workflow (`sdlc_00_codebase_v1`) processes all 141+ modul
 
 **Action-only** — All steps are deterministic operations (git commands, file scanning, doc generation). No LLM involvement.
 
-## Inputs
+## Input Artifacts
 
-**LAST_SYNC_COMMIT_FILE** — Tracking file (`.last_sync_commit` in `docs/repo/codebase/current/`) containing the commit hash from the last doc sync. If missing, the workflow should exit with a message telling the user to run `sdlc_00_codebase_v1` first.
+**No user-provided inputs.** The workflow reads a tracking file from the repo structure:
 
-## Outputs
+| Context Variable | Hardcoded Path | Description |
+|---|---|---|
+| `CODEBASE_CURRENT_ROOT` | `{repo_root}/docs/repo/codebase/current/` | Codebase documentation root |
+| `LAST_SYNC_COMMIT_FILE` | `{CODEBASE_CURRENT_ROOT}/.last_sync_commit` | Tracking file with last sync commit hash |
 
-| Artifact Key | Description |
-|---|---|
-| `UPDATED_MODULE_DOCS` | Regenerated module docs in `docs/repo/codebase/current/02_modules/` for affected modules only |
-| `UPDATED_INVENTORY` | Updated `codebase_inventory.md` reflecting any new/removed files |
-| `UPDATED_CHANGE_IMPACT` | Change impact report for this incremental update |
-| `UPDATED_MANIFEST` | Updated `codebase_manifest.json` with new sync commit hash |
+If `.last_sync_commit` doesn't exist, the workflow exits with a clear message telling the user to run `sdlc_00_codebase_v1` first. Do NOT attempt a full scan.
 
-## Step Sequence
+## Output Artifacts
 
-### Step 1: detect_changes
+| Artifact Key | Filename Pattern | Description |
+|---|---|---|
+| `UPDATED_MODULE_DOCS` | `current/02_modules/{module_name}.md` | Regenerated module docs for affected modules only |
+| `UPDATED_INVENTORY` | `current/codebase_inventory.md` | Updated inventory reflecting any new/removed files |
+| `UPDATED_CHANGE_IMPACT` | `current/change_impact.md` | Change impact report for this incremental update |
+| `UPDATED_MANIFEST` | `current/codebase_manifest.json` | Updated manifest with new sync commit hash |
 
-```
-Step: detect_changes
-Type: action
-Purpose: Read the last sync commit hash from the tracking file. Run git diff to get
-  the list of changed files since that commit. Filter to relevant file types
-  (*.py, workflow.toml, config files). If no relevant changes, exit early.
-On success: → scan_affected_modules
-```
+## Quality Requirements
 
-### Step 2: scan_affected_modules
-
-```
-Step: scan_affected_modules
-Type: action
-Purpose: Map changed file paths to affected Python module names. Use the existing
-  module classification logic from codebase_docs.py to determine which module
-  docs need regeneration.
-On success: → regenerate_docs
-```
-
-### Step 3: regenerate_docs
-
-```
-Step: regenerate_docs
-Type: action
-Purpose: Call codebase_docs.py functions (build_snapshot, render_module_doc,
-  render_inventory, render_change_impact) to regenerate only the affected
-  module docs, plus update the inventory and generate a change impact report.
-On success: → commit_and_track
-```
-
-### Step 4: commit_and_track
-
-```
-Step: commit_and_track
-Type: action
-Purpose: Atomically update the tracking file, manifest, and commit all changes.
-  1. Write the current HEAD commit hash to .last_sync_commit
-  2. Update codebase_manifest.json with new sync metadata
-  3. Git add docs/repo/codebase/current/ (includes .last_sync_commit)
-  4. Git commit with message "docs: incremental codebase update {job_id}"
-  If the commit fails, .last_sync_commit is not committed and retains its
-  previous committed value on disk — the next run will re-detect the same
-  changes and retry. This ensures the tracking file never points ahead of
-  the committed state.
-On success: → stepCompletion
-```
-
-### Terminal: stepCompletion
-
-```
-Step: stepCompletion
-Type: action
-```
-
-## Context Variables
-
-- `CODEBASE_CURRENT_ROOT` — Path to `docs/repo/codebase/current/`
-- `LAST_SYNC_COMMIT_FILE` — Path to `.last_sync_commit` tracking file
-
-## Special Requirements
-
-- **Early exit on no changes** — If git diff shows no relevant file changes, the workflow should exit successfully without regenerating anything.
-- **First-run fallback** — If `.last_sync_commit` doesn't exist, exit with a clear message telling the user to run `sdlc_00_codebase_v1` first. Do NOT attempt a full scan.
+- **Early exit on no changes** — If git diff shows no relevant file changes, exit successfully without regenerating anything.
 - **File filtering** — Only trigger on changes to: `*.py`, `workflow.toml`, `pyproject.toml`, `requirements.txt`, `constants.py`. Ignore changes to `docs/`, `tests/`, `*.md`, `*.json`, and generated files.
 - **Atomic updates** — If any step fails, do not commit partial updates. Exit with error and leave docs unchanged.
+- **Tracking file consistency** — The `.last_sync_commit` file must never point ahead of the committed state. If the commit fails, the tracking file retains its previous committed value on disk, so the next run re-detects the same changes and retries.
+- **Module classification** — Map changed file paths to affected Python module names using the existing module classification logic from `codebase_docs.py`.
 
 ## Custom Actions
 
-The workflow needs custom actions that integrate with the existing `codebase_docs.py` module. The actions should reuse the existing scan and render functions rather than reimplementing them.
+The workflow integrates with the existing `codebase_docs.py` module. Reuse existing scan and render functions rather than reimplementing them.
 
-**Required action features:**
-1. Git integration (diff, commit)
-2. Module classification (map files to modules)
-3. Incremental rendering (only affected modules)
-4. Tracking file management (read/write last sync commit)
+**Required capabilities:**
+1. Git integration (diff since last sync commit, atomic commit)
+2. Module classification (map changed files to affected modules)
+3. Incremental rendering (only affected modules, plus inventory and change impact)
+4. Tracking file management (read/write last sync commit hash)
 5. Error handling (graceful failure, no partial commits)
+
+## Builder Instructions
+
+**Domain phases** (builder determines step sequence):
+
+1. **Detect** — Read last sync commit, run git diff, filter to relevant file types
+2. **Scan** — Map changed files to affected module names
+3. **Regenerate** — Call `codebase_docs.py` functions to render affected module docs
+4. **Commit** — Atomically update tracking file, manifest, and git commit
+
+**Domain constraints:**
+
+- The workflow must reuse `codebase_docs.py` functions: `build_snapshot`, `render_module_doc`, `render_inventory`, `render_change_impact`.
+- Git commit message format: `"docs: incremental codebase update {job_id}"`
+- If no relevant changes detected, exit successfully without regenerating.
+
+**Similar workflow:** `sdlc_00_codebase_v1` (full scan, same output structure).
 
 ## Notes
 
 **Git hook integration:**
-- A post-commit hook script (`.git/hooks/post-commit`) will submit this workflow to the backend when source code changes are detected.
-- The hook should check if the daemon is running before submitting.
-- Concurrency handling: If the workflow is already running, the hook should skip submission.
+- A post-commit hook script (`.git/hooks/post-commit`) submits this workflow to the backend when source code changes are detected.
+- The hook checks if the daemon is running before submitting.
+- Concurrency handling: If the workflow is already running, the hook skips submission.
 
 **Relationship to sdlc_00_codebase_v1:**
 - This workflow is complementary to the full scan workflow, not a replacement.

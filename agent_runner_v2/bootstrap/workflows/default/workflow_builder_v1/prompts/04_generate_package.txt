@@ -35,7 +35,11 @@ Instead of "Generate files 1-6", follow this principles-based approach:
 
 4. For actions.py specifically:
    - Read {WORKFLOW_REQUIREMENTS} Custom Actions section
-   - Implement EACH action with @action decorator
+   - Before implementing each action, check if it maps to an existing
+     reusable action (validate_workflow_bundle, promote_workflow_package,
+     step_completion). If reused, reference it in workflow.toml with
+     action = "existing_name" — do NOT duplicate the implementation.
+   - Implement ONLY truly new actions with @action decorator
    - Include proper ActionResult returns (APPROVED/REJECTED)
    - Include error handling and input validation
    - Use type hints and docstrings
@@ -60,6 +64,34 @@ Instead of "Generate files 1-6", follow this principles-based approach:
    - Use bare {ARTIFACT_KEY} placeholders (never backtick-wrapped)
    - ASCII-only content
 
+8. Meta-workflow gatekeeper auto-placement (when is_meta_workflow is true
+   in {WORKFLOW_REQUIREMENTS}):
+   The generated workflow.toml MUST include 4 gatekeeper steps:
+   - gatekeep_requirements: validates WORKFLOW_REQUIREMENTS, rejects to
+     analyze_spec, produces GATEKEEP_REQUIREMENTS
+   - gatekeep_artifacts: validates ARTIFACT_CONTRACT, rejects to
+     define_artifacts, produces GATEKEEP_ARTIFACTS
+   - gatekeep_steps: validates STEP_ARCHITECTURE, rejects to design_steps,
+     produces GATEKEEP_STEPS
+   - gatekeep_package: validates generated package, rejects to
+     generate_package, produces GATEKEEP_PACKAGE
+   Each gatekeeper uses role_policy = "validation_standard" and must have
+   exhausted_failure_code and exhausted_failure_class on its on_reject_refine.
+
+Self-Critic (Before Self-Validation)
+
+Challenge your reasoning before checking completeness:
+
+1. Am I generating files or code that the design documents don't actually
+   require?
+2. Am I introducing assumptions not supported by {STEP_ARCHITECTURE} or
+   {ARTIFACT_CONTRACT}?
+3. If a downstream validator reads this package, what would fail?
+4. Did I reuse existing framework actions where possible, or did I
+   unnecessarily duplicate them?
+
+If you find reasoning issues, fix them before proceeding to Self-Validation.
+
 Self-Validation (Before Output)
 
 Before reporting APPROVED, validate:
@@ -74,10 +106,16 @@ Before reporting APPROVED, validate:
 
 3. Action Implementation: If actions.py exists, are ALL declared actions
    implemented? Do they have proper @action decorators? Do they return
-   ActionResult?
+   ActionResult? Were existing reusable actions referenced instead of
+   duplicated?
 
 4. Artifact Reporting: Are ALL generated file paths reported in meta.json
    artifacts dict? Including WORKFLOW_ACTIONS if generated?
+
+5. Meta-Workflow Compliance: If is_meta_workflow is true in
+   {WORKFLOW_REQUIREMENTS}, does workflow.toml include all 4 gatekeeper
+   steps (GATEKEEP_REQUIREMENTS, GATEKEEP_ARTIFACTS, GATEKEEP_STEPS,
+   GATEKEEP_PACKAGE) with proper on_reject_refine routing?
 
 If validation fails, report REJECTED with specific gaps found.
 
