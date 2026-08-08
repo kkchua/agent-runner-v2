@@ -421,6 +421,30 @@ def _spawn_child(
 # Queue processing
 # ---------------------------------------------------------------------------
 
+def _child_outcome_action(child: ChildExecution) -> str:
+    """Determine what to do when a child process has exited.
+
+    Returns:
+        ``"queue"``    — queue file exists, poller will handle it.
+        ``"skip"``     — outcome already processed (archived or failed); no action.
+        ``"failure"``  — no outcome found, write a failure to the queue.
+    """
+    if child.queue_dir is None:
+        return "failure"
+
+    step_run_id = child.step_run_id
+    queue_file = child.queue_dir / f"{step_run_id}.json"
+    if queue_file.exists():
+        return "queue"
+
+    archived_file = child.queue_dir / "archive" / f"{step_run_id}.json"
+    failed_file = child.queue_dir / "failed" / f"{step_run_id}.json"
+    if archived_file.exists() or failed_file.exists():
+        return "skip"
+
+    return "failure"
+
+
 def _write_failure_to_queue(
     child: ChildExecution,
     *,
@@ -773,12 +797,16 @@ def run_supervisor(*, config: SupervisorConfig, v2_url: str) -> int:
                     logger.log("info", "daemon_v2_child_done", message=f"child done: {child.state}", details={
                         "step_run_id": step_run_id, "exit_code": child.exit_code,
                     })
-                    # Check if CLI wrote a result to the queue
-                    queue_file = (child.queue_dir / f"{step_run_id}.json") if child.queue_dir else None
-                    if queue_file and queue_file.exists():
-                        # Queue poller will handle it
+                    # Determine what to do with the completed child's outcome
+                    action = _child_outcome_action(child)
+                    if action == "queue":
+                        queue_file = child.queue_dir / f"{step_run_id}.json"
                         logger.log("info", "daemon_v2_result_in_queue", message="result file found in queue", details={
                             "step_run_id": step_run_id, "queue_file": str(queue_file),
+                        })
+                    elif action == "skip":
+                        logger.log("info", "daemon_v2_outcome_already_handled", message="outcome already processed, skipping false failure", details={
+                            "step_run_id": step_run_id,
                         })
                     else:
                         # CLI didn't write to queue — write failure on its behalf
