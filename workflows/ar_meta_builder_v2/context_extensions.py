@@ -38,14 +38,22 @@ class ArMetaBuilderV2Extensions(WorkflowExtensions):
         the runner resolves at execution time.  All paths are relative
         to the workspace root.
         """
-        run = "docs/repo/ar_meta_builder_v2/runs/{job_id}"
+        repo = "docs/repo/ar_meta_builder_v2"
+        run = f"{repo}/runs/{{job_id}}"
         out = f"{run}/output"
+        specs = f"{repo}/specs"
+        standards = f"{repo}/standards"
+        impls = f"{repo}/impls"
 
         return {
             # -- Inputs --
             "WORKFLOW_SPEC_FILE": (
                 "Specs/detault.spec.md"
             ),
+
+            # -- Promoted deliverables --
+            "MASTER_SPEC_FILE": f"{specs}/{{workflow_name}}_{{codename}}.md",
+            "DEFAULT_IMPL_FILE": f"{impls}/default.impl.md",
 
             # -- Phase 0: Input Validation --
             "VALIDATION_INPUT_SPEC_FILE": (
@@ -168,7 +176,7 @@ class ArMetaBuilderV2Extensions(WorkflowExtensions):
             "WORKFLOW_PROMPTS_INDEX_FILE": f"{out}/prompts_index.json",
             "WORKFLOW_README_FILE": f"{out}/README.md",
             "STANDARDS_COMPOSITION_STANDARD_FILE": (
-                f"{out}/Standards/COMPOSITION_STANDARD.md"
+                f"{standards}/COMPOSITION_STANDARD.md"
             ),
             "SPECS_BUILDER_SPEC_FILE": (
                 f"{out}/Specs/bootstrap.spec"

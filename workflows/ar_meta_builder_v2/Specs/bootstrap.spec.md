@@ -10,13 +10,13 @@ output_type: "documented_versioned"
 
 ## Purpose
 
-Build a meta-workflow that transforms runtime specifications into complete, executable workflow packages for the agent-runner-v2 platform.
+Build a meta-workflow that transforms a bootstrap specification into a complete composition system for the agent-runner-v2 platform.
 
-The meta-builder takes a runtime spec (describing a target workflow's domain, components, and composition requirements) and generates a full workflow package that can be immediately executed.
+The meta-builder takes a bootstrap spec (describing a target workflow's domain, components, and composition requirements) and generates three deliverables: a master spec, a default runtime implementation, and a full executable workflow package.
 
 ## Input
 
-A runtime specification file (markdown with YAML frontmatter) containing:
+A bootstrap specification file (markdown with YAML frontmatter) containing:
 - Target workflow identity (name, standard, version)
 - Output delivery type (documented_versioned or direct)
 - Domain description and natural phases
@@ -25,6 +25,23 @@ A runtime specification file (markdown with YAML frontmatter) containing:
 
 ## Output
 
+Three deliverables that together form a complete composition system:
+
+### 1. Master Spec
+A composition system specification that defines the target workflow's architecture:
+- Component schema and relationships
+- Composition format and rules
+- Output format and delivery contracts
+- Validation and quality gates
+
+### 2. Default Runtime Implementation (`default.impl.md`)
+A concrete, default implementation of the master spec:
+- Specific component instances with values
+- Example composition demonstrating the format
+- Expected output examples
+- Serves as both a test case and usage documentation
+
+### 3. Workflow Package
 A complete executable workflow package containing:
 - Workflow definition (TOML format)
 - Context extensions (Python)
@@ -32,10 +49,15 @@ A complete executable workflow package containing:
 - Prompt templates (one per generation/review step)
 - Documentation (README)
 - Domain-specific composition standard
-- Embedded builder specification (for recursive bootstrap)
+- Embedded bootstrap specification (for recursive bootstrap)
 
 ### Version Naming
-The generated workflow must include a **codename** (a distinctive, memorable name) that identifies this version. The output folder name follows the pattern: `{base_workflow_name}_{codename}` (e.g., `ar_meta_builder_einstein`).
+All three deliverables share a **codename** (a distinctive, memorable name) that identifies this version. The output folder name follows the pattern: `{base_workflow_name}_{codename}` (e.g., `ar_meta_builder_einstein`).
+
+Each deliverable goes to its own location:
+- Master spec → `docs/repo/composition_standard/`
+- Default runtime implementation (`default.impl.md`) → `docs/repo/{workflow_name}/`
+- Workflow package → `workflows/{workflow_name}/`
 
 The codename should be:
 - Unique and distinctive
@@ -43,6 +65,25 @@ The codename should be:
 - Appropriate for the workflow's character/approach
 
 The workflow.toml `name` field must match the folder name exactly.
+
+## Promotion, Backup and Publish
+
+After a successful meta-builder run, the three deliverables are promoted to their target locations:
+
+All documentation deliverables are self-contained under `docs/repo/{workflow_name}/`:
+
+| Deliverable | Target Location |
+|---|---|
+| Master spec | `docs/repo/{workflow_name}/specs/` |
+| Composition standard | `docs/repo/{workflow_name}/standards/` |
+| Default runtime implementation | `docs/repo/{workflow_name}/impls/` |
+| Workflow package | `workflows/{workflow_name}/` |
+
+### Backup
+Before promoting, backup any existing files at the target locations. The workflow package backup uses the existing backup mechanism (timestamped copy under `workflows/{slug}_bak_{timestamp}/`).
+
+### Publish
+After promotion, run `run-bootstrap-publish.bat` to package the updated workflow into the bootstrap bundle, then `run-init.bat` to install it to the global runner home.
 
 ## Constraints
 
@@ -91,14 +132,16 @@ The meta-builder must understand:
 
 ## Success Criteria
 
-The generated workflow package is successful if:
-1. It can be immediately executed without manual modification
-2. It produces valid, well-structured output for a given runtime spec
-3. It maintains identity isolation (no meta-builder leakage)
-4. It follows the three-layer composition pattern
-5. It includes comprehensive validation at each phase
-6. It has a unique codename and outputs to a new folder (not overwriting the source)
-7. It can bootstrap the next version (recursive capability)
+The meta-builder run is successful if:
+1. A master spec is produced that fully defines the composition system
+2. A default runtime implementation (`default.impl.md`) is produced that satisfies the master spec
+3. The workflow package can be immediately executed without manual modification
+4. The workflow produces valid, well-structured output for the default runtime implementation
+5. It maintains identity isolation (no meta-builder leakage)
+6. It follows the three-layer composition pattern
+7. It includes comprehensive validation at each phase
+8. All three deliverables share a unique codename and output to a new folder (not overwriting the source)
+9. It can bootstrap the next version (recursive capability)
 
 ## What NOT to Specify
 
