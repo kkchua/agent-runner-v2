@@ -144,6 +144,16 @@ def _initialize_state_from_backend(
             if value:
                 state.setdefault("artifacts", {})[key] = value
 
+    # Resolve spec filenames to Specs/ directory paths.
+    # This must happen BEFORE missing_artifacts check so that the resolved
+    # path is used for existence validation.
+    workflow_name = run.get("workflow_name") or group_cfg.get("workflow_name", "")
+    if workflow_name and "WORKFLOW_SPEC_FILE" in state.get("artifacts", {}):
+        from .workflow_packages.extensions_base import resolve_input_specs
+        result: dict[str, str] = {}
+        resolve_input_specs(result, state, workflow_name, ["WORKFLOW_SPEC_FILE"])
+        # resolve_input_specs writes to both result and state["artifacts"]
+
     # Merge output artifacts from backend (if available)
     backend_artifacts = run.get("output_payload") or {}
     if backend_artifacts:

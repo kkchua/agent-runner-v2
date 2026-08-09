@@ -1948,9 +1948,8 @@ def _apply_workflow_package_context_hooks(
             if isinstance(extensions, dict):
                 artifacts = state.get("artifacts") or {}
                 for k, v in extensions.items():
-                    if k in artifacts and artifacts[k] is not None:
-                        logger.debug("[ctx_hooks] skip %s (in artifacts)", k)
-                        continue  # preserve user-provided or prior-step artifact value
+                    # Context extensions provide authoritative path resolution.
+                    # Always inject them — they override backend-resolved paths.
                     ctx[k] = v
                 logger.info(
                     "[ctx_hooks] injected %d keys: %s",
