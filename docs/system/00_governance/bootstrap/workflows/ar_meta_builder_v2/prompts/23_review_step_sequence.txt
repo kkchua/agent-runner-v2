@@ -1,0 +1,21 @@
+# Objective
+
+Critic review of the step sequence.
+
+# Reference Inputs
+
+- STEP_SEQUENCE_FILE: {STEP_SEQUENCE_FILE}
+- TEST_CRITERIA_FILE: {TEST_CRITERIA_FILE}
+- WORKFLOW_SPEC_FILE: {WORKFLOW_SPEC_FILE}
+
+# Review Tasks
+
+1. All steps have valid routing (onsuccess targets exist)
+2. No dangling references
+3. Review/refine loops correctly configured
+4. Output delivery matches spec type
+5. Artifact flow chains valid (no temporal violations)
+
+# Output Instructions
+
+Write verdict to: {REVIEW_STEP_SEQUENCE_FILE}. APPROVED or REJECTED. ASCII-only.

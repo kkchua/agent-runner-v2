@@ -1,0 +1,21 @@
+# Objective
+
+Critic review of the runtime standard.
+
+# Reference Inputs
+
+- RUNTIME_STANDARD_FILE: {RUNTIME_STANDARD_FILE}
+- TEST_CRITERIA_FILE: {TEST_CRITERIA_FILE}
+- WORKFLOW_SPEC_FILE: {WORKFLOW_SPEC_FILE}
+
+# Review Tasks
+
+1. All 3 layers consolidated (Component Schema, Composition Format, Output Format)
+2. Identity matches target spec (not builder)
+3. Cross-phase consistency verified
+4. Extensibility model defined
+5. No builder identity leakage
+
+# Output Instructions
+
+Write verdict to: {REVIEW_RUNTIME_STANDARD_FILE}. APPROVED or REJECTED. ASCII-only.

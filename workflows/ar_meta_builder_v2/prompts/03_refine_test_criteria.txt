@@ -1,0 +1,28 @@
+# Objective
+
+Address all findings from the test criteria review. Fix specific issues
+while preserving criteria that were not challenged.
+
+# Reference Inputs
+
+- REVIEW_TEST_CRITERIA_FILE: {REVIEW_TEST_CRITERIA_FILE}
+- TEST_CRITERIA_FILE: {TEST_CRITERIA_FILE}
+
+# Tasks
+
+1. Read the review findings
+2. Fix each identified issue in the test criteria
+3. Preserve all criteria that were not challenged
+4. Update the self-validation section if criteria count changed
+5. Verify all fixes address the root cause, not just symptoms
+
+# Forbidden Content
+
+- Do NOT add new criteria beyond what the review requires
+- Do NOT remove criteria that passed review
+- Do NOT include non-ASCII characters
+
+# Output Instructions
+
+Write updated test criteria to: {TEST_CRITERIA_FILE}
+ASCII-only. Preserve YAML frontmatter.

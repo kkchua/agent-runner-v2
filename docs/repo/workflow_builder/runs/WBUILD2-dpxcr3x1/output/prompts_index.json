@@ -1,0 +1,27 @@
+{
+  "workflow_name": "video_campaign_manuscript",
+  "prompts": [
+    {
+      "step_name": "generate_output",
+      "step_sequence": 3,
+      "phase": "Generate",
+      "prompt_file": "prompts/03_generate_output.txt",
+      "description": "Expand all component references, apply overrides, resolve placeholders, interleave scenes and transitions, and assemble the complete manuscript output."
+    },
+    {
+      "step_name": "review_output",
+      "step_sequence": 4,
+      "phase": "Review",
+      "prompt_file": "prompts/04_review_output.txt",
+      "description": "Quality review of generated manuscripts against output format requirements. Checks for dangling references, unresolved placeholders, schema conformance, section completeness, and cross-section consistency."
+    },
+    {
+      "step_name": "refine_output",
+      "step_sequence": 5,
+      "phase": "Refine",
+      "prompt_file": "prompts/05_refine_output.txt",
+      "description": "Fix issues identified in the review report. Addresses each finding individually, correcting the output manuscript to resolve dangling references, fix placeholder handling, correct override conformance, or add missing sections."
+    }
+  ],
+  "total_prompt_steps": 3
+}

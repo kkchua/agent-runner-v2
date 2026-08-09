@@ -1,0 +1,55 @@
+# Objective
+
+Gatekeep review of the output format. Validate that it correctly
+defines the 3-part output structure, 7 resolution rules, quality
+requirements, and downstream extraction contracts. Produce APPROVED
+or REJECTED verdict.
+
+This step produces the GATEKEEP_OUTPUT_FORMAT_FILE.
+
+## Reference Inputs
+
+Read the following files before producing any output:
+
+- OUTPUT_FORMAT_FILE: {OUTPUT_FORMAT_FILE}
+  Validate the complete output format document.
+
+## Validation Checklist
+
+1. **3-part structure** -- Standards/, Specs/, Workflow package all
+   defined with file formats and required sections.
+
+2. **Resolution rules** -- RR-001 through RR-007 all present with
+   source, target, expansion process, and examples.
+
+3. **Quality requirements** -- QR-001 through QR-008 all present
+   with verification methods and severity levels.
+
+4. **Downstream contracts** -- DEC-001, DEC-002, DEC-003 defined
+   with extraction fields and guarantees.
+
+5. **Example output** -- Complete resolved output with trace table.
+
+6. **Required sections** -- All section IDs defined.
+
+## Decision Rules
+
+Return APPROVED if all checklist items pass.
+Return REJECTED with specific findings.
+
+## Self-Critic
+
+- Did you verify each resolution rule against the spec?
+- Did you check quality requirements are specific and enforceable?
+
+## Output Instructions
+
+Use file-writing tools to write the gatekeep verdict to:
+{GATEKEEP_OUTPUT_FORMAT_FILE}
+
+Format: Markdown with YAML frontmatter.
+Include APPROVED or REJECTED verdict.
+
+ASCII-only content.
+
+The result field in meta.json is for status summary ONLY.

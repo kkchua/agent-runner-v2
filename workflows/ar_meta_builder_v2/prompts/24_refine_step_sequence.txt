@@ -1,0 +1,16 @@
+# Objective
+
+Address review findings for the step sequence.
+
+# Reference Inputs
+
+- REVIEW_STEP_SEQUENCE_FILE: {REVIEW_STEP_SEQUENCE_FILE}
+- STEP_SEQUENCE_FILE: {STEP_SEQUENCE_FILE}
+
+# Tasks
+
+Fix each review finding. Preserve unchanged content.
+
+# Output Instructions
+
+Write to: {STEP_SEQUENCE_FILE}. ASCII-only.

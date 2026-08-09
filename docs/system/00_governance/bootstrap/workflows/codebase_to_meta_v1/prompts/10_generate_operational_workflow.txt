@@ -1,0 +1,101 @@
+# Objective
+
+Generate the operational workflow design defining all 9 phases, the
+complete step sequence with types and routing, artifact contracts,
+action specifications, review/refine loop design, and package file
+inventory for the AR Meta Builder v1 meta-meta builder.
+
+This step produces the OPERATIONAL_WORKFLOW_FILE.
+
+## Reference Inputs
+
+Read the following files before producing any output:
+
+- WORKFLOW_SPEC_FILE: {WORKFLOW_SPEC_FILE}
+  Read Section 5 (Operational Workflow). This defines the phase
+  structure, step sequence, and routing patterns.
+
+- TEST_CRITERIA_FILE: {TEST_CRITERIA_FILE}
+  Read the criteria for Phase 5 (Operational Workflow).
+
+- COMPONENT_SCHEMA_FILE: {COMPONENT_SCHEMA_FILE}
+  Read component types. The operational workflow references these
+  in step definitions.
+
+- COMPOSITION_FORMAT_FILE: {COMPOSITION_FORMAT_FILE}
+  Read composition structure. The workflow pattern must match one
+  of the 6 defined patterns.
+
+- OUTPUT_FORMAT_FILE: {OUTPUT_FORMAT_FILE}
+  Read output structure. The package file inventory must match
+  the output format's file list.
+
+## Generation Tasks
+
+Produce an operational workflow document with these sections:
+
+1. **Overview** -- Workflow pattern (meta_meta_builder), 21 steps,
+   18 prompt, 3 action.
+
+2. **Workflow Phases** -- All 9 phases with purpose and steps:
+   - Phase 1: Foundation (TDD Loop) -- 3 steps
+   - Phase 2: Component Schema -- 2 steps
+   - Phase 3: Composition Format -- 2 steps
+   - Phase 4: Output Format -- 2 steps
+   - Phase 5: Operational Workflow -- 2 steps
+   - Phase 6: Composition Standard (v3) -- 2 steps
+   - Phase 7: Meta Composition Spec (v3) -- 1 step
+   - Phase 8: Package Assembly -- 5 steps
+   - Phase 9: Promotion -- 2 steps
+
+3. **Step Sequence** -- Complete table with: step number, name,
+   type, purpose, required_inputs, produces, onsuccess,
+   on_reject_refine.
+
+4. **Artifact Contract** -- Input artifacts and output artifacts
+   with descriptions and producing steps.
+
+5. **Action Specifications** -- For each action step:
+   validate_package_deterministic, promote_workflow_package,
+   step_completion.
+
+6. **Review/Refine Loop Design** -- 8 loops with properties.
+
+7. **Package File Inventory** -- Core files, conditional files,
+   prompt files, supplementary files.
+
+8. **Self-Validation** -- Phase completeness, step routing,
+   artifact flow integrity, type classification.
+
+## Self-Critic
+
+- Did you define exactly 21 steps?
+- Did you define exactly 9 phases?
+- Does every step have valid onsuccess routing?
+- Are all artifact flow chains valid (no dangling references)?
+- Did you include the v3 innovation phases (6 and 7)?
+
+## Forbidden Content
+
+- Do NOT invent steps or phases not in the spec.
+- Do NOT include non-ASCII characters.
+- Do NOT ask clarifying questions.
+
+## Output Instructions
+
+Use file-writing tools to write the operational workflow to:
+{OPERATIONAL_WORKFLOW_FILE}
+
+Format: Markdown with YAML frontmatter
+Frontmatter must include:
+  doc_type: "operational_workflow"
+  lifecycle_status: "draft"
+  domain: "ar_meta_builder"
+  step_count: 21
+  action_count: 3
+  prompt_step_count: 18
+  workflow_pattern: "meta_meta_builder"
+
+ASCII-only content.
+
+The result field in meta.json is for status summary ONLY.

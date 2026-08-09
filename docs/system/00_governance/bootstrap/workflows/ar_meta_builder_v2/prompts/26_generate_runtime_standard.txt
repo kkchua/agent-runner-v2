@@ -1,0 +1,51 @@
+# Objective
+
+Produce the Runtime Standard -- a consolidated composition standard
+merging Phases 1-6 into a single coherent reference document.
+
+# Reference Inputs
+
+- WORKFLOW_SPEC_FILE: {WORKFLOW_SPEC_FILE}
+- TEST_CRITERIA_FILE: {TEST_CRITERIA_FILE}
+- DOMAIN_ANALYSIS_FILE: {DOMAIN_ANALYSIS_FILE}
+- DOMAIN_COMPONENT_SCHEMA_FILE: {DOMAIN_COMPONENT_SCHEMA_FILE}
+- COMPOSITION_FORMAT_FILE: {COMPOSITION_FORMAT_FILE}
+- OUTPUT_FORMAT_FILE: {OUTPUT_FORMAT_FILE}
+- ARTIFACT_CONTRACT_FILE: {ARTIFACT_CONTRACT_FILE}
+- STEP_SEQUENCE_FILE: {STEP_SEQUENCE_FILE}
+
+# Generation Tasks
+
+1. **Standard Identity** -- From target spec: standard_name,
+   standard_version, standard_filename, workflow_name.
+
+2. **Component Schema Section (Layer 1)** -- Consolidate Phase 2:
+   component types, common properties, type-specific properties,
+   validation rules.
+
+3. **Composition Format Section (Layer 2)** -- Consolidate Phase 3:
+   binding rules, override mechanism, placeholder resolution,
+   ordering rules.
+
+4. **Output Format Section (Layer 3)** -- Consolidate Phase 4:
+   output structure, resolution rules, quality requirements.
+
+5. **Cross-Phase Consistency** -- Verify all 3 layers are mutually
+   consistent. No contradictions between layers.
+
+6. **Extensibility Model** -- How to add new component types,
+   backward compatibility, schema versioning.
+
+7. **Self-Validation** -- Verify all phases consolidated, identity
+   correct, cross-phase consistency declared.
+
+# Forbidden Content
+
+- Do NOT use builder identity (ar_meta_builder_v2, AMB_STANDARD)
+- Do NOT include non-ASCII characters
+
+# Output Instructions
+
+Write to: {RUNTIME_STANDARD_FILE}
+Markdown with YAML frontmatter: doc_type: "runtime_standard",
+identity_locked: true. ASCII-only.

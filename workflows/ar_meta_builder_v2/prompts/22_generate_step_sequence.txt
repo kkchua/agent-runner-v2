@@ -1,0 +1,45 @@
+# Objective
+
+Produce the Step Sequence for the target workflow. Design the concrete
+step definitions, routing, review loops, and delivery mechanism.
+
+# Reference Inputs
+
+- WORKFLOW_SPEC_FILE: {WORKFLOW_SPEC_FILE}
+- TEST_CRITERIA_FILE: {TEST_CRITERIA_FILE}
+- DOMAIN_ANALYSIS_FILE: {DOMAIN_ANALYSIS_FILE}
+- DOMAIN_COMPONENT_SCHEMA_FILE: {DOMAIN_COMPONENT_SCHEMA_FILE}
+- COMPOSITION_FORMAT_FILE: {COMPOSITION_FORMAT_FILE}
+- OUTPUT_FORMAT_FILE: {OUTPUT_FORMAT_FILE}
+- ARTIFACT_CONTRACT_FILE: {ARTIFACT_CONTRACT_FILE}
+
+# Generation Tasks
+
+1. **Step Definitions** -- Table with: step name, type (prompt/action),
+   routing (onsuccess), role policy.
+
+2. **Review/Refine Loops** -- For each generate step, define the
+   review and refine pair with on_reject_refine configuration.
+
+3. **Approval Gates** -- If output_type = documented_versioned,
+   define where human approval is required.
+
+4. **Delivery Mechanism** -- How output is delivered:
+   - documented_versioned: review -> approve -> promote -> archive
+   - direct: generate -> promote
+
+5. **Artifact Flow Chains** -- Trace each artifact from producer
+   to consumer. Verify no temporal violations.
+
+6. **Self-Validation** -- Verify routing valid, no dangling refs.
+
+# Forbidden Content
+
+- Do NOT copy the builder's step structure
+- Do NOT include non-ASCII characters
+
+# Output Instructions
+
+Write to: {STEP_SEQUENCE_FILE}
+Markdown with YAML frontmatter: doc_type: "step_sequence",
+identity_locked: true. ASCII-only.

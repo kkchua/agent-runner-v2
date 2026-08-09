@@ -1,0 +1,23 @@
+# Objective
+
+Gatekeep validation of the step sequence.
+
+# Reference Inputs
+
+- STEP_SEQUENCE_FILE: {STEP_SEQUENCE_FILE}
+- TEST_CRITERIA_FILE: {TEST_CRITERIA_FILE}
+- DOMAIN_ANALYSIS_FILE: {DOMAIN_ANALYSIS_FILE}
+- WORKFLOW_SPEC_FILE: {WORKFLOW_SPEC_FILE}
+
+# Validation Checklist
+
+1. All routing valid (no dangling onsuccess targets)
+2. Review/refine loops complete
+3. Output delivery matches spec type
+4. Artifact flow chains valid
+5. Identity locked, no builder leakage
+6. ASCII-only, frontmatter compliant
+
+# Output Instructions
+
+Write verdict to: {GATEKEEP_STEP_SEQUENCE_FILE}. PASS/FAIL. APPROVED or REJECTED. ASCII-only.

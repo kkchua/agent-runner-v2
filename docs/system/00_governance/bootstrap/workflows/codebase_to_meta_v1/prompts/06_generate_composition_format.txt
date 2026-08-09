@@ -1,0 +1,86 @@
+# Objective
+
+Generate the composition format defining how components are assembled
+into compositions for Layer 2 of the AR Meta Builder v1 composition
+system. This defines binding rules, override mechanisms, placeholder
+resolution, and ordering constraints.
+
+This step produces the COMPOSITION_FORMAT_FILE.
+
+## Reference Inputs
+
+Read the following files before producing any output:
+
+- WORKFLOW_SPEC_FILE: {WORKFLOW_SPEC_FILE}
+  Read Section 3 (Composition Format). This defines the 8 binding
+  rules, 6 workflow patterns, override mechanism, placeholder
+  resolution, and ordering rules.
+
+- TEST_CRITERIA_FILE: {TEST_CRITERIA_FILE}
+  Read the criteria for Phase 3 (Composition Format).
+
+- COMPONENT_SCHEMA_FILE: {COMPONENT_SCHEMA_FILE}
+  Read the component types defined in Layer 1. The composition
+  format references these types in its binding rules.
+
+## Generation Tasks
+
+Produce a composition format document with these sections:
+
+1. **Overview** -- Layer 2 role in the 3-layer architecture.
+
+2. **Composition Structure** -- YAML structure with fields:
+   builder_name, builder_label, job_prefix, builder_purpose,
+   workflow_pattern, step_bindings, artifact_bindings,
+   composition_standard_binding, output_variances, domain_specs.
+
+3. **Component Bindings** -- 8 binding rules (one per component type)
+   with cardinality, required status, reference pattern, singleton
+   bindings, ordered list bindings, unordered set bindings.
+
+4. **Override Mechanism** -- Merge semantics, schema conformance,
+   common properties non-overridable, override syntax.
+
+5. **Placeholder Resolution** -- 3 data sources (Input Spec,
+   Governance, Runtime), resolution order, unresolved handling.
+
+6. **Ordering Rules** -- Constraints for step_bindings (foundation
+   first, layer sequence, gatekeep after generate, terminal last).
+
+7. **Composition Validation** -- CV-001 through CV-010.
+
+8. **Example Compositions** -- At least 2 complete examples.
+
+9. **Self-Validation** -- Verify 8 binding rules, 6 patterns, all
+   validation checks.
+
+## Self-Critic
+
+- Did you define exactly 8 binding rules matching the 8 component
+  types?
+- Did you define exactly 6 workflow patterns from the spec?
+- Is the override mechanism complete with examples?
+- Are placeholder resolution data sources documented?
+
+## Forbidden Content
+
+- Do NOT invent binding rules or patterns not in the spec.
+- Do NOT include non-ASCII characters.
+- Do NOT ask clarifying questions.
+
+## Output Instructions
+
+Use file-writing tools to write the composition format to:
+{COMPOSITION_FORMAT_FILE}
+
+Format: Markdown with YAML frontmatter
+Frontmatter must include:
+  doc_type: "composition_format"
+  lifecycle_status: "draft"
+  layer: 2
+  binding_rule_count: 8
+  workflow_pattern_count: 6
+
+ASCII-only content.
+
+The result field in meta.json is for status summary ONLY.

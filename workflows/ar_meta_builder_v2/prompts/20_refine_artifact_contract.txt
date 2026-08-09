@@ -1,0 +1,16 @@
+# Objective
+
+Address review findings for the artifact contract.
+
+# Reference Inputs
+
+- REVIEW_ARTIFACT_CONTRACT_FILE: {REVIEW_ARTIFACT_CONTRACT_FILE}
+- ARTIFACT_CONTRACT_FILE: {ARTIFACT_CONTRACT_FILE}
+
+# Tasks
+
+Fix each review finding. Preserve unchanged content.
+
+# Output Instructions
+
+Write to: {ARTIFACT_CONTRACT_FILE}. ASCII-only.

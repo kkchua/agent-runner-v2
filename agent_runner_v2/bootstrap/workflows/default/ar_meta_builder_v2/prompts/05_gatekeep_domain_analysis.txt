@@ -1,0 +1,38 @@
+# Objective
+
+Gatekeep validation of the domain analysis artifact. Run the phase-specific
+test criteria AND the meta-test-criteria against the artifact.
+
+# Reference Inputs
+
+- DOMAIN_ANALYSIS_FILE: {DOMAIN_ANALYSIS_FILE}
+- TEST_CRITERIA_FILE: {TEST_CRITERIA_FILE}
+- WORKFLOW_SPEC_FILE: {WORKFLOW_SPEC_FILE}
+
+# Validation Checklist
+
+Check each criterion and report PASS/FAIL with evidence:
+
+1. Target identity matches spec (standard_name, standard_version,
+   standard_filename from spec frontmatter)
+2. Output type correctly extracted from spec
+3. Meta-test-criteria present with all 4 invariants
+4. Natural phases identified from spec domain
+5. Component inventory derived from spec
+6. All 7 common properties defined
+7. identity_locked = true declared
+8. No builder identity leakage (no "ar_meta_builder_v2" or "AMB_STANDARD"
+   as target values)
+9. ASCII-only content
+10. YAML frontmatter compliant
+
+# Forbidden Content
+
+- Do NOT modify any files
+- Do NOT include non-ASCII characters
+
+# Output Instructions
+
+Write verdict to: {GATEKEEP_DOMAIN_ANALYSIS_FILE}
+Verdict: PASS or FAIL per criterion. Overall: APPROVED or REJECTED.
+ASCII-only. YAML frontmatter: doc_type: "gatekeep_domain_analysis".

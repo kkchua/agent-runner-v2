@@ -1,0 +1,50 @@
+# Objective
+
+Gatekeep review of the composition standard. Validate that it
+correctly defines all 3 layers, has a valid standard_name,
+standard_version, component_types_defined, schema_sections, and
+extensibility_model. Produce APPROVED or REJECTED verdict.
+
+This step produces the GATEKEEP_COMPOSITION_STANDARD_FILE.
+
+## Reference Inputs
+
+Read the following files before producing any output:
+
+- COMPOSITION_STANDARD_FILE: {COMPOSITION_STANDARD_FILE}
+  Validate the complete composition standard document.
+
+## Validation Checklist
+
+1. **standard_name** -- Present, non-empty, UPPER_SNAKE_CASE.
+2. **standard_version** -- Valid semantic version (MAJOR.MINOR.PATCH).
+3. **component_types_defined** -- Non-empty, matches spec types.
+4. **schema_sections** -- Exactly 3 entries: "Component Schema",
+   "Composition Format", "Output Format".
+5. **extensibility_model** -- Concrete, non-vague description.
+6. **Layer completeness** -- All 3 layers defined with required
+   sections.
+7. **Self-description** -- The standard is self-contained and can
+   be understood without reading other artifacts.
+
+## Decision Rules
+
+Return APPROVED if all checklist items pass.
+Return REJECTED with specific findings.
+
+## Self-Critic
+
+- Did you verify each layer has the required sections?
+- Is the extensibility_model specific enough to guide extension?
+
+## Output Instructions
+
+Use file-writing tools to write the gatekeep verdict to:
+{GATEKEEP_COMPOSITION_STANDARD_FILE}
+
+Format: Markdown with YAML frontmatter.
+Include APPROVED or REJECTED verdict.
+
+ASCII-only content.
+
+The result field in meta.json is for status summary ONLY.

@@ -1,0 +1,125 @@
+[workflow]
+name = "video_campaign_manuscript"
+version = "1.0.0"
+label = "Video Campaign Manuscript Composition System"
+job_prefix = "VCMS"
+description = "Three-layer composition system for video campaign manuscripts. Scans and validates a component library (Layer 1), resolves declarative composition definitions (Layer 2), and produces fully resolved video production manuscripts (Layer 3) with all component content expanded, overrides merged, and placeholders filled from external data sources."
+visibility = "canonical"
+default_max_rejects = 2
+init_step = "scan_components"
+
+# Layer 2 platform contract references
+layer = "layer3"
+platform = "agent-runner-v2"
+
+[workflow.governance]
+include_in_prompts = true
+prompt_targets = ["all"]
+
+# ============================================================================
+# Phase: Scan
+# ============================================================================
+
+[[step]]
+name = "scan_components"
+action = "scan_components"
+enable_notifications = true
+requires_human_approval_after = false
+onsuccess = "plan_compositions"
+
+[step.artifacts]
+required_inputs = ["COMPONENT_LIBRARY_DIR"]
+produces = ["COMPONENT_INVENTORY_FILE", "VALIDATION_REPORT_FILE"]
+result_meta_key = "COMPONENT_INVENTORY_FILE"
+
+# ============================================================================
+# Phase: Plan
+# ============================================================================
+
+[[step]]
+name = "plan_compositions"
+action = "plan_compositions"
+enable_notifications = true
+requires_human_approval_after = false
+onsuccess = "generate_output"
+
+[step.artifacts]
+required_inputs = ["COMPONENT_INVENTORY_FILE", "COMPOSITIONS_DIR", "DATA_SOURCE_DIR"]
+produces = ["RESOLUTION_PLAN_FILE"]
+result_meta_key = "RESOLUTION_PLAN_FILE"
+
+# ============================================================================
+# Phase: Generate
+# ============================================================================
+
+[[step]]
+name = "generate_output"
+prompt = "prompts/03_generate_output.txt"
+enable_notifications = true
+requires_human_approval_after = false
+onsuccess = "review_output"
+
+[step.artifacts]
+required_inputs = ["COMPONENT_INVENTORY_FILE", "RESOLUTION_PLAN_FILE", "COMPONENT_SCHEMA_FILE", "OUTPUT_FORMAT_FILE"]
+produces = ["OUTPUT_FILE"]
+result_meta_key = "OUTPUT_FILE"
+
+[step.coder]
+role_policy = "architect_standard"
+
+# ============================================================================
+# Phase: Review
+# ============================================================================
+
+[[step]]
+name = "review_output"
+prompt = "prompts/04_review_output.txt"
+enable_notifications = true
+requires_human_approval_after = false
+onsuccess = "step_completion"
+
+[step.artifacts]
+required_inputs = ["OUTPUT_FILE", "RESOLUTION_PLAN_FILE", "COMPONENT_SCHEMA_FILE", "COMPOSITION_FORMAT_FILE", "OUTPUT_FORMAT_FILE"]
+produces = ["REVIEW_FILE_SUGGESTED"]
+result_meta_key = "REVIEW_FILE_SUGGESTED"
+
+[step.coder]
+role_policy = "reviewer_standard"
+
+[step.on_reject_refine]
+step = "refine_output"
+artifact = "REVIEW_FILE_SUGGESTED"
+max_iterations = 2
+exhausted_failure_code = "OUTPUT_REVIEW_EXHAUSTED"
+exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
+
+# ============================================================================
+# Phase: Refine
+# ============================================================================
+
+[[step]]
+name = "refine_output"
+prompt = "prompts/05_refine_output.txt"
+enable_notifications = false
+requires_human_approval_after = false
+onsuccess = "review_output"
+
+[step.artifacts]
+required_inputs = ["REVIEW_FILE_SUGGESTED", "OUTPUT_FILE", "RESOLUTION_PLAN_FILE"]
+produces = ["OUTPUT_FILE"]
+result_meta_key = "OUTPUT_FILE"
+
+[step.coder]
+role_policy = "architect_standard"
+
+# ============================================================================
+# Terminal Step
+# ============================================================================
+
+[[step]]
+name = "step_completion"
+action = "step_completion"
+enable_notifications = true
+
+[step.artifacts]
+result_meta_key = "COMPLETION_RESULT"

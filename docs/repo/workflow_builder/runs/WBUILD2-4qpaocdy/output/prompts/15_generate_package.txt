@@ -1,0 +1,148 @@
+# Objective
+
+Assemble the complete executable workflow package from all prior
+artifacts. This step reads the operational workflow design and all
+layer artifacts, then generates: workflow.toml, context_extensions.py,
+actions.py, prompts_index.json, README.md, and the v3 supplementary
+files (Standards/COMPOSITION_STANDARD.md and Specs/ directory).
+
+This step produces 6 files and 1 directory:
+- WORKFLOW_MANIFEST_FILE (workflow.toml)
+- WORKFLOW_EXTENSIONS_FILE (context_extensions.py)
+- WORKFLOW_ACTIONS_FILE (actions.py)
+- WORKFLOW_PROMPTS_INDEX_FILE (prompts_index.json)
+- WORKFLOW_README_FILE (README.md)
+- STANDARDS_COMPOSITION_STANDARD_FILE (Standards/COMPOSITION_STANDARD.md)
+- Specs/ directory (empty directory for user-provided specs at runtime)
+
+## Reference Inputs
+
+Read the following files before producing any output:
+
+- WORKFLOW_SPEC_FILE: {WORKFLOW_SPEC_FILE}
+  Read for domain context and builder metadata.
+
+- TEST_CRITERIA_FILE: {TEST_CRITERIA_FILE}
+  Read for acceptance criteria.
+
+- COMPONENT_SCHEMA_FILE: {COMPONENT_SCHEMA_FILE}
+  Read for component type definitions.
+
+- COMPOSITION_FORMAT_FILE: {COMPOSITION_FORMAT_FILE}
+  Read for composition structure and binding rules.
+
+- OUTPUT_FORMAT_FILE: {OUTPUT_FORMAT_FILE}
+  Read for output format and resolution rules.
+
+- OPERATIONAL_WORKFLOW_FILE: {OPERATIONAL_WORKFLOW_FILE}
+  Read for the authoritative step sequence, artifact bindings,
+  and routing. This is the PRIMARY source for the workflow package.
+
+- COMPOSITION_STANDARD_FILE: {COMPOSITION_STANDARD_FILE}
+  Read for the v3 composition standard.
+
+- META_COMPOSITION_SPEC_FILE: {META_COMPOSITION_SPEC_FILE}
+  Read for the meta composition spec.
+
+## Generation Tasks
+
+### File 1: workflow.toml
+
+Generate the workflow manifest following the operational workflow's
+step sequence table EXACTLY. For each step:
+- Copy required_inputs and produces VERBATIM from the design.
+- Set onsuccess from the design.
+- For prompt steps: include [step.coder] with appropriate role_policy
+  (architect_standard for generate/refine, reviewer_standard for
+  review, gatekeeper_standard for gatekeep).
+- For review/gatekeep steps: include [step.on_reject_refine] with
+  all 5 fields (step, artifact, max_iterations,
+  exhausted_failure_code, exhausted_failure_class).
+- Include step_completion as the terminal step.
+- Place onsuccess at [[step]] top level, not under [step.artifacts].
+
+### File 2: context_extensions.py
+
+Generate the WorkflowExtensions class with:
+- workflow_name matching the workflow directory name.
+- register_artifact_keys() returning relative paths with {job_id},
+  {seq} placeholders for ALL artifact keys (both inputs and outputs).
+- build_context_extensions() returning absolute paths.
+- install_to_global() and sync_to_backend() methods.
+- Module, class, and methods must have docstrings.
+- All imports at top level (NOT inside TYPE_CHECKING).
+
+### File 3: actions.py
+
+Generate action implementations for action-driven steps:
+- validate_package_deterministic: Static analysis of package files.
+- promote_workflow_package: Deploy package to workflows/ directory.
+- step_completion: Framework built-in, referenced by name only.
+- All actions use @action decorator and return ActionResult.
+- Include proper error handling and type hints.
+
+### File 4: prompts_index.json
+
+Generate a JSON index of all prompt files with step names, file paths,
+and step order numbers.
+
+### File 5: README.md
+
+Generate user guide with: Overview, Prerequisites, Usage, Step
+Reference table, Artifact Keys table, Architecture section.
+Include Standards/ and Specs/ in the File Structure section.
+
+### File 6: Standards/COMPOSITION_STANDARD.md
+
+Copy the content from {COMPOSITION_STANDARD_FILE} into the output
+package at Standards/COMPOSITION_STANDARD.md. This is the v3
+innovation: every generated meta builder has its own self-describing
+composition standard. Create the Standards/ subdirectory if it does
+not exist. The file must be a complete copy of the composition
+standard generated in Phase 6.
+
+### Directory: Specs/
+
+Create an empty Specs/ directory within the output package. This
+directory accepts user-provided specifications at runtime. Create
+a .gitkeep file inside Specs/ so that version control tracks the
+empty directory.
+
+## Self-Critic
+
+- Did you copy artifact bindings VERBATIM from the operational
+  workflow design?
+- Does every prompt step have a corresponding prompt file?
+- Are all artifact keys registered in context_extensions.py?
+- Does actions.py have @action for every action step?
+- Are there any self-referential artifact bindings?
+- Did you put runtime imports inside TYPE_CHECKING?
+- Did you create Standards/COMPOSITION_STANDARD.md as a copy of the
+  Phase 6 composition standard?
+- Did you create the empty Specs/ directory with a .gitkeep file?
+
+## Forbidden Content
+
+- Do NOT hardcode absolute paths in register_artifact_keys().
+- Do NOT put runtime imports inside TYPE_CHECKING blocks.
+- Do NOT include non-ASCII characters.
+- Do NOT ask clarifying questions.
+- Do NOT invent steps or artifacts beyond the design.
+
+## Output Instructions
+
+Use file-writing tools to write ALL SIX files and create the Specs/
+directory:
+
+1. {WORKFLOW_MANIFEST_FILE} -- workflow.toml
+2. {WORKFLOW_EXTENSIONS_FILE} -- context_extensions.py
+3. {WORKFLOW_ACTIONS_FILE} -- actions.py
+4. {WORKFLOW_PROMPTS_INDEX_FILE} -- prompts_index.json
+5. {WORKFLOW_README_FILE} -- README.md
+6. {STANDARDS_COMPOSITION_STANDARD_FILE} -- Standards/COMPOSITION_STANDARD.md
+7. Create empty directory: Specs/ (with .gitkeep file inside)
+
+ASCII-only content for all files.
+
+The result field in meta.json is for status summary ONLY. Write all
+content to the files specified above.
