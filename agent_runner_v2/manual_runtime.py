@@ -148,11 +148,18 @@ def _initialize_state_from_backend(
     # This must happen BEFORE missing_artifacts check so that the resolved
     # path is used for existence validation.
     workflow_name = run.get("workflow_name") or group_cfg.get("workflow_name", "")
-    if workflow_name and "WORKFLOW_SPEC_FILE" in state.get("artifacts", {}):
-        from .workflow_packages.extensions_base import resolve_input_specs
-        result: dict[str, str] = {}
-        resolve_input_specs(result, state, workflow_name, ["WORKFLOW_SPEC_FILE"])
-        # resolve_input_specs writes to both result and state["artifacts"]
+    if workflow_name:
+        # Check for any input spec keys that need resolution
+        artifacts = state.get("artifacts", {})
+        spec_keys_to_resolve = [
+            key for key in ("WORKFLOW_SPEC_FILE", "BOOTSTRAP_SPEC_FILE")
+            if key in artifacts
+        ]
+        if spec_keys_to_resolve:
+            from .workflow_packages.extensions_base import resolve_input_specs
+            result: dict[str, str] = {}
+            resolve_input_specs(result, state, workflow_name, spec_keys_to_resolve)
+            # resolve_input_specs writes to both result and state["artifacts"]
 
     # Merge output artifacts from backend (if available)
     backend_artifacts = run.get("output_payload") or {}
