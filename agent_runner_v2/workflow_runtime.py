@@ -115,8 +115,13 @@ def missing_artifacts(keys: list[str], state: dict[str, Any]) -> list[str]:
     legacy_paths = legacy_artifact_paths()
     for key in keys:
         value = artifacts.get(key)
-        if value and (ARTIFACT_ROOT / value).exists():
-            continue
+        if value:
+            # Handle absolute paths directly (e.g., from operator console)
+            value_path = Path(value)
+            if not value_path.is_absolute():
+                value_path = ARTIFACT_ROOT / value
+            if value_path.exists():
+                continue
         known_path = known_paths.get(key)
         if known_path and (ARTIFACT_ROOT / known_path).exists():
             artifacts[key] = known_path

@@ -14,6 +14,11 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from ..runtime_context import (
+  get_runner_home, 
+  get_workflow_root
+)
+
 
 class WorkflowExtensions:
     """Base class for workflow plugin lifecycle hooks.
@@ -137,3 +142,57 @@ class WorkflowExtensions:
             ``"NO_OP"`` if this workflow does not sync.
         """
         return {"status": "NO_OP"}
+
+
+def resolve_input_specs(
+    result: dict[str, str],
+    state: dict[str, Any],
+    workflow_name: str,
+    spec_keys: list[str],
+) -> None:
+    """Resolve spec filenames to workflow Specs/ directory paths.
+
+    Call from ``build_context_extensions()`` for input artifact keys
+    that accept spec filenames from the operator console.
+
+    The Specs/ directory is the authoritative source for workflow specs.
+    Whether the value is a bare filename, an absolute path (from backend
+    resolution), or a relative path, only the filename is extracted and
+    resolved to ``{runner_home}/workflows/{workflow_name}/Specs/``.
+
+    Blank/empty values resolve to ``Specs/default_spec.md``.
+
+    Only the listed *spec_keys* are touched. Output artifact keys are
+    never affected.
+
+    Args:
+        result: The context extensions dict being built. Modified in place.
+        state: Job state dict containing ``artifacts``.
+        workflow_name: Workflow package name (used to locate Specs/ dir).
+        spec_keys: Artifact keys that hold input spec filenames.
+    """
+    # runner_home = get_runner_home()
+    # specs_dir = runner_home / "workflows" / workflow_name / "Specs"
+    specs_dir = get_runner_home() / "workflows" / "default" / workflow_name / "Specs"
+    
+    artifacts = state.get("artifacts") or {}
+
+    for key in spec_keys:
+        value = artifacts.get(key)
+
+        if not value or not value.strip():
+            resolved = str(specs_dir / "default_spec.md")
+            result[key] = resolved
+            artifacts[key] = resolved
+            continue
+
+        # Always extract just the filename — Specs/ dir is authoritative.
+        # Handles bare filenames, backend-resolved absolute paths, and
+        # relative paths uniformly.
+        filename = Path(value).name
+        resolved = str(specs_dir / filename)
+        result[key] = resolved
+        # Write back to state["artifacts"] so missing_artifacts sees the
+        # resolved path. This allows the workflow to overwrite the
+        # daemon-populated filename with the full Specs/ path.
+        artifacts[key] = resolved
