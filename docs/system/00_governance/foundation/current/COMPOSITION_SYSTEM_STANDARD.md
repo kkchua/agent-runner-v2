@@ -540,7 +540,137 @@ system spec describes a domain in terms of its compositional architecture.
 
 ---
 
-## 12. References
+## 13. Composition Spec vs Runtime Implementation
+
+A **Composition Spec** and a **Runtime Implementation** serve distinct but complementary roles in the composition system architecture.
+
+### 13.1 Separation of Concerns
+
+| Aspect | Composition Spec | Runtime Implementation |
+|--------|-----------------|----------------------|
+| **Purpose** | Defines WHAT the transformation does | Defines HOW the transformation executes |
+| **Nature** | Declarative contract | Concrete executor |
+| **Contains** | Meta schema, invariants, constraints, interfaces | Algorithms, data structures, code logic |
+| **Changes when** | Requirements change | Performance/implementation details change |
+| **Stability** | Stable across implementations | May have multiple implementations |
+
+### 13.2 Composition Spec (The Contract)
+
+The Composition Spec defines:
+
+1. **Meta Schema** — The intermediate representation (Layer 1, Layer 2, Layer 3 components)
+2. **Input Mapping** — How input artifacts map to Layer 1 components
+3. **Transformation Rules** — The stages that transform Layer 1 → Layer 2 → Layer 3
+4. **Invariants** — Conditions that must hold at each stage
+5. **Constraints** — Hard requirements (e.g., compression ratio ≤ 20%)
+6. **Extension Interfaces** — Protocol definitions for pluggable components
+7. **Output Contract** — What the output must satisfy (not how it's formatted)
+
+**The spec is output-type-agnostic.** It defines the transformation contract, not the specific output format. The spec should use generic output interfaces that different runtime implementations can satisfy.
+
+**Example (Generic Output Contract):**
+```
+OutputDocument (interface)
+  - output_type: enum (summary, bullet_points, key_phrases, etc.)
+  - content_structure: varies by output_type
+  - validation_rules: varies by output_type
+  - metadata: dict
+```
+
+### 13.3 Runtime Implementation (The Executor)
+
+The Runtime Implementation defines:
+
+1. **Pipeline Architecture** — How stages are organized and executed
+2. **Algorithms** — Concrete implementations of each transformation stage
+3. **Data Structures** — How components are represented in memory
+4. **Extension Implementations** — Concrete classes that satisfy the spec's Protocol interfaces
+5. **Error Handling** — Recovery mechanisms and failure modes
+6. **Configuration** — Runtime parameters and their defaults
+7. **Output Rendering** — How Layer 3 components are serialized to disk
+
+**Multiple runtime implementations can satisfy the same composition spec.** Each implementation may produce different output types or use different algorithms, as long as all invariants and constraints are satisfied.
+
+**Example (Multiple Implementations):**
+```
+SummaryRuntime       → produces SummaryDocument       → SUMMARY_FILE
+BulletPointRuntime   → produces BulletPointDocument   → BULLET_POINT_FILE
+KeyPhraseRuntime     → produces KeyPhraseList         → KEY_PHRASE_FILE
+```
+
+All three satisfy the same composition spec (same input parsing, same Layer 1/Layer 2 transformation), but produce different outputs via different Layer 3 components and different output rendering.
+
+### 13.4 Output-Type-Agnostic Design
+
+The composition spec should **not hardcode a specific output type**. Instead, it should define a generic output contract that supports multiple output types through different runtime implementations.
+
+**Anti-pattern (Output-Type-Specific):**
+```
+Layer 3: SummaryDocument (hardcoded)
+Output: SUMMARY_FILE (hardcoded)
+```
+
+This design only supports summary output. To support bullet points or key phrases, you would need a completely different composition spec.
+
+**Correct pattern (Output-Type-Agnostic):**
+```
+Layer 3: OutputDocument (interface)
+  - output_type: enum (summary, bullet_points, key_phrases, etc.)
+  - content_blocks: array
+  - validation_rules: varies by output_type
+
+Runtime Implementation chooses:
+  - SummaryRuntime → SummaryDocument → SUMMARY_FILE
+  - BulletPointRuntime → BulletPointDocument → BULLET_POINT_FILE
+```
+
+This design supports multiple output types from the same composition spec. The requirement document specifies which output type is desired, and the appropriate runtime implementation is selected.
+
+### 13.5 Extension Points
+
+The composition spec defines **extension points** where runtime implementations can vary:
+
+| Extension Point | Purpose | Example Variations |
+|----------------|---------|-------------------|
+| InputParser | Parse different input formats | .txt, .md, .pdf, .docx |
+| TransformationAlgorithm | Different algorithms for the same stage | TF-IDF vs TextRank for importance scoring |
+| OutputRenderer | Render different output formats | Text, Markdown, JSON, YAML, HTML |
+| ValidationStrategy | Different validation approaches | Rule-based vs ML-based validation |
+
+Each extension point is defined as a Protocol interface in the composition spec. Runtime implementations provide concrete classes that satisfy these interfaces.
+
+### 13.6 Relationship to Requirement Document
+
+The **requirement document** specifies:
+- Input artifacts (what content to transform)
+- Output type (summary, bullet points, key phrases, etc.)
+- Transformation requirements (what the transformation should achieve)
+- Constraints (hard requirements)
+
+The **composition spec** is derived from the requirement document and defines:
+- Meta schema (intermediate representation)
+- Transformation rules (stages and invariants)
+- Extension interfaces (pluggable components)
+- Output contract (generic interface, not specific format)
+
+The **runtime implementation** is designed to satisfy the composition spec and produces:
+- Concrete output (specific format based on output type)
+- Output file (SUMMARY_FILE, BULLET_POINT_FILE, etc.)
+
+### 13.7 Design Checklist
+
+When authoring a composition spec, ensure:
+
+- [ ] Layer 3 defines a generic output interface, not a specific output type
+- [ ] Extension interfaces are defined as Protocols, not concrete classes
+- [ ] Multiple runtime implementations can satisfy the spec
+- [ ] Output type is determined by the requirement document, not hardcoded in the spec
+- [ ] Invariants and constraints are output-type-agnostic (apply to all output types)
+- [ ] Extension points are clearly documented with example variations
+
+---
+
+## 14. References
 
 - **Composition System Spec Template:** `docs/repo/workflow_builder/current/templates/COMPOSITION_SYSTEM_SPEC_TEMPLATE.md`
 - **Video Campaign Manuscript spec (v2 format):** `docs/repo/workflow_builder/specs/video_campaign_manuscript_v2.md`
