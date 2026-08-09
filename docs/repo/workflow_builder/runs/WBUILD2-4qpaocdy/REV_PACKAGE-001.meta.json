@@ -1,0 +1,16 @@
+{
+  "schema_version": "v2",
+  "coder_result": {
+    "status": "REJECTED",
+    "remark": "Comprehensive review of Workflow Builder v3 package. Found 2 MAJOR issues and 1 MINOR issue. MAJOR: (1) Standards/COMPOSITION_STANDARD.md missing from output package despite being one of three required output parts per spec Section 4.1, TC-GP-006. (2) promote_workflow_package action does not copy Standards/ or Specs/ despite spec Section 5.4 requiring it, TC-OW-020. MINOR: (3) step_completion step missing requires_human_approval_after field. All other checks pass: routing valid, all 22 artifact keys registered, 18 prompt files ASCII-only with bare placeholders, both actions implemented with proper error handling. Verdict: REJECTED -- v3 self-describing meta builder innovation is incomplete without Standards/ and Specs/ in the package.",
+    "artifacts": {
+      "REVIEW_FILE_SUGGESTED": "D:/MyProjectSpace/01_Workflows/agent-runner-v2/docs/repo/workflow_builder/runs/WBUILD2-4qpaocdy/REV_PACKAGE-001.md"
+    },
+    "recorded_at": "2026-08-08T15:55:02+08:00",
+    "usage": {
+      "input_tokens": 85000,
+      "output_tokens": 12000,
+      "total_tokens": 97000
+    }
+  }
+}

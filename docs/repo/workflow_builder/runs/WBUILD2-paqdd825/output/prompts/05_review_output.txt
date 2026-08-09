@@ -1,0 +1,141 @@
+# Step: review_output
+
+## Objective
+
+Perform quality review of the generated output file(s) against the output format
+requirements. Evaluate reference expansion, placeholder completeness, section
+integrity, override correctness, cross-section consistency, frontmatter validity,
+and downstream feasibility. Produce a structured review report with findings and
+a verdict (APPROVED or REJECTED).
+
+This step is the quality gate before promotion. It ensures that the resolved
+production manuscript is self-contained, correctly formatted, and suitable for
+downstream consumption by voiceover generation, visual asset creation, video
+assembly, and platform adaptation workflows.
+
+## Reference Inputs
+
+Read these files for context. Use ONLY information from these files.
+
+- Output File: {OUTPUT_FILE}
+  The generated production manuscript to review.
+
+- Resolution Plan: {RESOLUTION_PLAN_FILE}
+  The original composition resolution instructions, used to verify that the
+  output correctly reflects the intended bindings, overrides, and placeholder
+  resolutions.
+
+- Output Format Specification: {OUTPUT_FORMAT_FILE}
+  Defines the exact section structure, frontmatter fields, formatting rules,
+  placeholder flagging syntax, and quality requirements.
+
+## Review Checks
+
+Perform ALL of the following checks. For each check, report PASS or FAIL with
+specific evidence (section name, line reference, or finding description).
+
+### 1. Reference Expansion
+
+- Verify all component_id references from the composition are fully expanded
+  in the output. No residual "hook-xxx-001", "scene-xxx-001" strings.
+- Scan the output for any string matching the component_id naming pattern.
+- Each binding in the resolution plan must produce corresponding output content.
+
+### 2. Placeholder Completeness
+
+- Verify all placeholders are either resolved (replaced with actual values)
+  or flagged as {UNRESOLVED: field_name}.
+- No raw {placeholder} syntax may appear without flagging.
+- The {UNRESOLVED: field_name} syntax must be consistent throughout.
+- The unresolved_placeholder_count in frontmatter must match actual count.
+
+### 3. Override Correctness
+
+- For each binding with overrides in the resolution plan, verify the output
+  contains the override value, not the original component value.
+- For properties NOT overridden, verify the component-defined value appears.
+- Verify no invented properties appear that are not in the component schema.
+
+### 4. Section Completeness
+
+- Verify all required sections are present: Opening, Voice Direction, Visual
+  Treatment, Scene-by-Scene Breakdown, Production Notes.
+- Verify conditional sections: Audio Direction present if and only if audio_mood
+  binding exists in the composition. Text Overlay present if and only if
+  text_style binding exists.
+- Verify each section contains substantive content (not empty or stub).
+
+### 5. Frontmatter Validity
+
+- Verify YAML frontmatter is present with --- delimiters.
+- Verify all required fields: composition_id, composition_name, metadata,
+  component_count, generation_date, lifecycle_status, unresolved_placeholder_count.
+- Verify lifecycle_status correctness: "draft" if unresolved placeholders,
+  "review" if all resolved and pending human approval.
+
+### 6. Cross-Section Consistency
+
+- Verify no contradictions between sections.
+- Verify component_count in frontmatter matches actual expanded components.
+- Verify scene numbering is sequential.
+- Verify transition directives appear between consecutive scenes.
+
+### 7. Downstream Feasibility
+
+- Verify downstream workflows can extract their required data:
+  - Voiceover: scene_script values in order + voice_style properties
+  - Visual Assets: visual_direction per scene + global visual treatment
+  - Video Assembly: all sections in correct order with transitions
+  - Platform Adaptation: target_platforms in metadata
+
+## Output Instructions
+
+Write the review report to {REVIEW_FILE_SUGGESTED}.
+
+The report must include:
+1. YAML frontmatter with: doc_type, lifecycle_status, reviewed_artifact
+2. Verdict section: APPROVED or REJECTED
+3. Findings table with columns: Severity, Check, Location, Description
+   - Severity: CRITICAL, MAJOR, MINOR
+   - Check: which of the 7 review checks above
+   - Location: section name or line reference
+   - Description: specific finding with evidence
+4. Evidence section: per-check pass/fail with specific details
+5. Summary: total findings by severity, overall verdict justification
+
+## File Writing Instructions
+
+CRITICAL: You MUST use file-writing tools to create the actual review report
+file on disk at the path specified by {REVIEW_FILE_SUGGESTED}. Do NOT print
+the content as your response. Write it to the file using write_file or
+create_file tools.
+
+The report file must be complete. Do not abbreviate or use placeholders.
+
+Use ASCII characters only. Do not use em-dashes, curly quotes, or Unicode
+symbols.
+
+## meta.json Instructions
+
+After writing the review file, write the meta.json sidecar. The result field
+in meta.json is for status summary ONLY -- it is NOT for artifact data.
+The artifacts dict must map REVIEW_FILE_SUGGESTED to the absolute path of
+the file you wrote.
+
+IMPORTANT: The verdict in the review report determines workflow routing.
+If you find CRITICAL issues, set verdict to REJECTED. The workflow will then
+route to the refine_output step for corrections.
+If all checks pass or only MINOR issues exist, set verdict to APPROVED.
+
+## Self-Critic
+
+Before completing, verify:
+1. All 7 review checks were performed (not skipped).
+2. Each finding has specific evidence (not generic statements).
+3. The verdict is justified by the findings.
+4. CRITICAL findings always produce REJECTED verdict.
+5. The review file was written to disk, not just described.
+6. No component_id references were missed in the scan.
+7. Placeholder flagging syntax was verified for consistency.
+
+Re-read the review file after writing and confirm it matches requirements.

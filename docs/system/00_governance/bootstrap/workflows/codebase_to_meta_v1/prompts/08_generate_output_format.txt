@@ -1,0 +1,90 @@
+# Objective
+
+Generate the output format defining the resolved output structure
+for Layer 3 of the AR Meta Builder v1 composition system. This
+defines the 3-part output directory, 7 resolution rules, quality
+requirements, and downstream extraction contracts.
+
+This step produces the OUTPUT_FORMAT_FILE.
+
+## Reference Inputs
+
+Read the following files before producing any output:
+
+- WORKFLOW_SPEC_FILE: {WORKFLOW_SPEC_FILE}
+  Read Section 4 (Output Format). This defines the 3-part output
+  structure, resolution rules, and quality requirements.
+
+- TEST_CRITERIA_FILE: {TEST_CRITERIA_FILE}
+  Read the criteria for Phase 4 (Output Format).
+
+- COMPONENT_SCHEMA_FILE: {COMPONENT_SCHEMA_FILE}
+  Read the component types. Output format defines how each type
+  is resolved into files.
+
+- COMPOSITION_FORMAT_FILE: {COMPOSITION_FORMAT_FILE}
+  Read the composition structure. Output format defines how
+  compositions are expanded into concrete output files.
+
+## Generation Tasks
+
+Produce an output format document with these sections:
+
+1. **Overview** -- Layer 3 role, 3-part output description.
+
+2. **Output Structure** -- 3-part directory structure:
+   - Part 1: Standards/COMPOSITION_STANDARD.md
+   - Part 2: Specs/ directory
+   - Part 3: Workflow package (workflow.toml, context_extensions.py,
+     actions.py, prompts/, README.md, conditional files)
+
+3. **Resolution Rules** -- RR-001 through RR-007:
+   - RR-001: step_definition resolution
+   - RR-002: role_policy resolution
+   - RR-003: routing_pattern resolution
+   - RR-004: prompt_pattern resolution
+   - RR-005: artifact_contract resolution
+   - RR-006: composition_standard resolution
+   - RR-007: placeholder resolution
+
+4. **Required Sections** -- Section definitions for each output part.
+
+5. **Quality Requirements** -- QR-001 through QR-008.
+
+6. **Downstream Extraction Contracts** -- DEC-001, DEC-002, DEC-003.
+
+7. **Example Output** -- Complete resolved output example.
+
+8. **Self-Validation** -- Verify 7 rules, 8 quality requirements,
+   3 output parts.
+
+## Self-Critic
+
+- Did you define exactly 7 resolution rules?
+- Did you define exactly 8 quality requirements?
+- Is the 3-part output structure complete?
+- Are downstream contracts self-contained?
+
+## Forbidden Content
+
+- Do NOT invent resolution rules or quality requirements not in
+  the spec.
+- Do NOT include non-ASCII characters.
+- Do NOT ask clarifying questions.
+
+## Output Instructions
+
+Use file-writing tools to write the output format to:
+{OUTPUT_FORMAT_FILE}
+
+Format: Markdown with YAML frontmatter
+Frontmatter must include:
+  doc_type: "output_format"
+  lifecycle_status: "draft"
+  layer: 3
+  resolution_rule_count: 7
+  quality_requirement_count: 8
+
+ASCII-only content.
+
+The result field in meta.json is for status summary ONLY.

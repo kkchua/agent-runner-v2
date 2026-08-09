@@ -1,0 +1,23 @@
+# Objective
+
+Gatekeep validation of the output format.
+
+# Reference Inputs
+
+- OUTPUT_FORMAT_FILE: {OUTPUT_FORMAT_FILE}
+- TEST_CRITERIA_FILE: {TEST_CRITERIA_FILE}
+- DOMAIN_ANALYSIS_FILE: {DOMAIN_ANALYSIS_FILE}
+- WORKFLOW_SPEC_FILE: {WORKFLOW_SPEC_FILE}
+
+# Validation Checklist
+
+1. 3-part output structure defined
+2. Resolution rules RR-001 through RR-005 present
+3. Quality requirements QR-001 through QR-012 defined
+4. Example output consistent
+5. Identity locked, no builder leakage
+6. ASCII-only, frontmatter compliant
+
+# Output Instructions
+
+Write verdict to: {GATEKEEP_OUTPUT_FORMAT_FILE}. PASS/FAIL. APPROVED or REJECTED. ASCII-only.

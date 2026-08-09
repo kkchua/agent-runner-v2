@@ -1,0 +1,25 @@
+# Objective
+
+Gatekeep validation of the composition format.
+
+# Reference Inputs
+
+- COMPOSITION_FORMAT_FILE: {COMPOSITION_FORMAT_FILE}
+- TEST_CRITERIA_FILE: {TEST_CRITERIA_FILE}
+- DOMAIN_ANALYSIS_FILE: {DOMAIN_ANALYSIS_FILE}
+- WORKFLOW_SPEC_FILE: {WORKFLOW_SPEC_FILE}
+
+# Validation Checklist
+
+1. All component types have binding rules
+2. Override mechanism complete
+3. All 7 placeholders defined
+4. Ordering rules consistent
+5. Meta-test-criteria propagation defined
+6. Identity locked, no builder leakage
+7. ASCII-only, frontmatter compliant
+
+# Output Instructions
+
+Write verdict to: {GATEKEEP_COMPOSITION_FORMAT_FILE}
+PASS/FAIL per criterion. APPROVED or REJECTED. ASCII-only.

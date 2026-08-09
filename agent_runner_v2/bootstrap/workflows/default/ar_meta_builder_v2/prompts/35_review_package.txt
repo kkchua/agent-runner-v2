@@ -1,0 +1,31 @@
+# Objective
+
+Final quality review of the complete workflow package before promotion.
+
+# Reference Inputs
+
+- WORKFLOW_MANIFEST_FILE: {WORKFLOW_MANIFEST_FILE}
+- WORKFLOW_EXTENSIONS_FILE: {WORKFLOW_EXTENSIONS_FILE}
+- WORKFLOW_ACTIONS_FILE: {WORKFLOW_ACTIONS_FILE}
+- WORKFLOW_README_FILE: {WORKFLOW_README_FILE}
+- VALIDATION_REPORT_FILE: {VALIDATION_REPORT_FILE}
+
+# Review Checklist
+
+1. Identity correct -- workflow.toml name matches target spec
+2. No builder leakage -- grep all files for "ar_meta_builder_v2" /
+   "AMB_STANDARD" in wrong contexts
+3. All files present (workflow.toml, context_extensions.py, actions.py,
+   prompts/, README.md, Standards/, Specs/)
+4. TOML/Python syntax valid
+5. Artifact bindings consistent across all files
+6. All prompt files exist for prompt-driven steps
+7. Prompt placeholders match required_inputs in workflow.toml
+8. context_extensions.py registers all artifact keys
+9. Standards/ has composition standard
+10. Specs/ has embedded builder spec
+
+# Output Instructions
+
+Write verdict to: {REVIEW_FILE_SUGGESTED}
+APPROVED or REJECTED with specific findings. ASCII-only.

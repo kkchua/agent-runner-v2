@@ -1,0 +1,42 @@
+# Objective
+
+Address review findings and regenerate affected package files.
+
+# Reference Inputs
+
+- {REVIEW_FILE_SUGGESTED}
+- {WORKFLOW_SPEC_FILE}
+- {TEST_CRITERIA_FILE}
+- {DOMAIN_ANALYSIS_FILE}
+- {DOMAIN_COMPONENT_SCHEMA_FILE}
+- {COMPOSITION_FORMAT_FILE}
+- {OUTPUT_FORMAT_FILE}
+- {ARTIFACT_CONTRACT_FILE}
+- {STEP_SEQUENCE_FILE}
+- {RUNTIME_STANDARD_FILE}
+- {OPERATIONAL_WORKFLOW_FILE}
+
+# Tasks
+
+1. Read review findings
+2. Fix each issue in the affected file(s)
+3. Re-verify cross-file consistency after fixes
+4. Ensure identity correctness (target spec identity, not builder)
+
+# Forbidden Content
+
+- Do NOT use builder identity in any output file
+- Do NOT include non-ASCII characters
+
+# Output Instructions
+
+Regenerate affected files:
+- {WORKFLOW_MANIFEST_FILE}
+- {WORKFLOW_EXTENSIONS_FILE}
+- {WORKFLOW_ACTIONS_FILE}
+- {WORKFLOW_PROMPTS_INDEX_FILE}
+- {WORKFLOW_README_FILE}
+- {STANDARDS_COMPOSITION_STANDARD_FILE}
+- {SPECS_BUILDER_SPEC_FILE}
+
+ASCII-only for all files.

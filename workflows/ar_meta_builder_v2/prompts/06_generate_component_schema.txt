@@ -1,0 +1,62 @@
+# Objective
+
+Produce the Domain Component Schema (Layer 1) for the target workflow.
+Fine-tune the base component schema for the target domain by defining
+component types, common properties, type-specific properties, and
+validation rules.
+
+# Reference Inputs
+
+- WORKFLOW_SPEC_FILE: {WORKFLOW_SPEC_FILE}
+- TEST_CRITERIA_FILE: {TEST_CRITERIA_FILE}
+- DOMAIN_ANALYSIS_FILE: {DOMAIN_ANALYSIS_FILE}
+- BASE_COMPOSITION_STANDARD: {BASE_COMPOSITION_STANDARD}
+
+# Generation Tasks
+
+1. **Component Type Summary** -- Table of all component types with
+   phase, purpose, required flag, cardinality. Derive types from the
+   spec domain, NOT from the builder's types.
+
+2. **Common Properties** -- Define all 7 required common properties:
+   component_id, component_type, name, version, description,
+   phase_origin, identity_locked. Plus optional properties.
+
+3. **Type-Specific Properties** -- For each component type, define
+   the required and optional properties specific to that type.
+
+4. **Validation Rules** -- Define VR-001 through VR-008 (or as
+   appropriate for the target domain):
+   - VR-001: Required common fields present
+   - VR-002: Valid component type
+   - VR-003: Unique component identifier
+   - VR-004: Type-specific schema conformance
+   - VR-005: Identity locking verified
+   - VR-006: Phase origin matches position
+   - VR-007: Base schema version check
+   - VR-008: Artifact contract conflict check
+
+5. **Fine-Tuning Decisions** -- Document keep/add/drop/specialize
+   decisions with rationale for each type relative to base schema.
+
+6. **Self-Validation** -- Verify all types have properties and rules.
+
+# Self-Critic
+
+- Are component types derived from the spec, not hardcoded?
+- Do all 7 common properties appear?
+- Does each type have specific properties defined?
+- Are validation rules numbered and specific?
+
+# Forbidden Content
+
+- Do NOT use "ar_meta_builder_v2" as the workflow name
+- Do NOT use "AMB_STANDARD" as the standard name
+- Do NOT copy the builder's component types verbatim
+- Do NOT include non-ASCII characters
+
+# Output Instructions
+
+Write to: {DOMAIN_COMPONENT_SCHEMA_FILE}
+Markdown with YAML frontmatter: doc_type: "component_schema",
+identity_locked: true. ASCII-only.

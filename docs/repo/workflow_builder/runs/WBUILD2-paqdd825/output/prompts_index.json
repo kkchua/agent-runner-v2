@@ -1,0 +1,32 @@
+{
+  "workflow_name": "video_campaign_manuscript",
+  "prompts": [
+    {
+      "step_name": "generate_output",
+      "step_number": 4,
+      "file": "prompts/04_generate_output.txt",
+      "phase": "Generate",
+      "description": "Generate fully resolved video campaign production manuscript(s) by expanding component references, merging overrides, resolving placeholders, and assembling into required section structure.",
+      "produces": ["OUTPUT_FILE"],
+      "required_inputs": ["RESOLUTION_PLAN_FILE", "COMPONENT_INVENTORY_FILE", "VALIDATION_REPORT_FILE", "DATA_SOURCE_DIR", "OUTPUT_FORMAT_FILE"]
+    },
+    {
+      "step_name": "review_output",
+      "step_number": 5,
+      "file": "prompts/05_review_output.txt",
+      "phase": "Review",
+      "description": "Quality review of generated output against output format requirements: reference expansion, placeholder completeness, section integrity, override correctness, cross-section consistency.",
+      "produces": ["REVIEW_FILE_SUGGESTED"],
+      "required_inputs": ["OUTPUT_FILE", "RESOLUTION_PLAN_FILE", "OUTPUT_FORMAT_FILE"]
+    },
+    {
+      "step_name": "refine_output",
+      "step_number": 6,
+      "file": "prompts/06_refine_output.txt",
+      "phase": "Refine",
+      "description": "Fix issues identified in the review report. Address each finding individually, correct defects, and produce a revised output file.",
+      "produces": ["OUTPUT_FILE"],
+      "required_inputs": ["REVIEW_FILE_SUGGESTED", "OUTPUT_FILE", "RESOLUTION_PLAN_FILE", "COMPONENT_INVENTORY_FILE", "DATA_SOURCE_DIR"]
+    }
+  ]
+}

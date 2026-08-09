@@ -1,0 +1,152 @@
+[workflow]
+name = "video_campaign_manuscript"
+version = "1.0.0"
+label = "Video Campaign Manuscript Composition System"
+job_prefix = "VCMS"
+description = "Resolves component compositions into self-contained video campaign production manuscripts. Scans component libraries (Layer 1), plans composition resolutions (Layer 2), generates fully expanded outputs (Layer 3), reviews quality, and refines defects."
+visibility = "canonical"
+default_max_rejects = 3
+init_step = "scan_components"
+
+layer = "layer3"
+platform = "agent-runner-v2"
+
+[workflow.governance]
+include_in_prompts = true
+prompt_targets = ["all"]
+
+# ============================================================================
+# Phase: Scan
+# ============================================================================
+
+[[step]]
+name = "scan_components"
+action = "scan_components"
+enable_notifications = true
+requires_human_approval_after = false
+onsuccess = "validate_components"
+
+[step.artifacts]
+required_inputs = ["COMPONENT_LIBRARY_DIR", "COMPONENT_SCHEMA_FILE"]
+produces = ["COMPONENT_INVENTORY_FILE"]
+result_meta_key = "COMPONENT_INVENTORY_FILE"
+
+# ----------------------------------------------------------------------------
+
+[[step]]
+name = "validate_components"
+action = "validate_components"
+enable_notifications = true
+requires_human_approval_after = false
+onsuccess = "plan_compositions"
+
+[step.artifacts]
+required_inputs = ["COMPONENT_INVENTORY_FILE", "COMPONENT_SCHEMA_FILE"]
+produces = ["VALIDATION_REPORT_FILE"]
+result_meta_key = "VALIDATION_REPORT_FILE"
+
+# ============================================================================
+# Phase: Plan
+# ============================================================================
+
+[[step]]
+name = "plan_compositions"
+action = "plan_compositions"
+enable_notifications = true
+requires_human_approval_after = false
+onsuccess = "generate_output"
+
+[step.artifacts]
+required_inputs = ["COMPOSITIONS_DIR", "COMPONENT_INVENTORY_FILE", "VALIDATION_REPORT_FILE", "DATA_SOURCE_DIR"]
+produces = ["RESOLUTION_PLAN_FILE"]
+result_meta_key = "RESOLUTION_PLAN_FILE"
+
+# ============================================================================
+# Phase: Generate
+# ============================================================================
+
+[[step]]
+name = "generate_output"
+prompt = "prompts/04_generate_output.txt"
+enable_notifications = true
+requires_human_approval_after = false
+onsuccess = "review_output"
+
+[step.artifacts]
+required_inputs = ["RESOLUTION_PLAN_FILE", "COMPONENT_INVENTORY_FILE", "VALIDATION_REPORT_FILE", "DATA_SOURCE_DIR", "OUTPUT_FORMAT_FILE"]
+produces = ["OUTPUT_FILE"]
+result_meta_key = "OUTPUT_FILE"
+
+[step.coder]
+role_policy = "architect_standard"
+
+# ============================================================================
+# Phase: Review
+# ============================================================================
+
+[[step]]
+name = "review_output"
+prompt = "prompts/05_review_output.txt"
+enable_notifications = true
+requires_human_approval_after = false
+onsuccess = "promote"
+
+[step.artifacts]
+required_inputs = ["OUTPUT_FILE", "RESOLUTION_PLAN_FILE", "OUTPUT_FORMAT_FILE"]
+produces = ["REVIEW_FILE_SUGGESTED"]
+result_meta_key = "REVIEW_FILE_SUGGESTED"
+
+[step.coder]
+role_policy = "reviewer_standard"
+
+[step.on_reject_refine]
+step = "refine_output"
+artifact = "REVIEW_FILE_SUGGESTED"
+max_iterations = 2
+exhausted_failure_code = "OUTPUT_REVIEW_EXHAUSTED"
+exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
+
+# ============================================================================
+# Phase: Refine (conditional)
+# ============================================================================
+
+[[step]]
+name = "refine_output"
+prompt = "prompts/06_refine_output.txt"
+enable_notifications = false
+requires_human_approval_after = false
+onsuccess = "review_output"
+
+[step.artifacts]
+required_inputs = ["REVIEW_FILE_SUGGESTED", "OUTPUT_FILE", "RESOLUTION_PLAN_FILE", "COMPONENT_INVENTORY_FILE", "DATA_SOURCE_DIR"]
+produces = ["OUTPUT_FILE"]
+result_meta_key = "OUTPUT_FILE"
+
+[step.coder]
+role_policy = "architect_standard"
+
+# ============================================================================
+# Phase: Promotion
+# ============================================================================
+
+[[step]]
+name = "promote"
+action = "promote_workflow_package"
+enable_notifications = true
+requires_human_approval_after = false
+onsuccess = "stepCompletion"
+
+[step.artifacts]
+result_meta_key = "PROMOTE_RESULT"
+
+# ============================================================================
+# Terminal Step
+# ============================================================================
+
+[[step]]
+name = "stepCompletion"
+action = "step_completion"
+enable_notifications = true
+
+[step.artifacts]
+result_meta_key = "COMPLETION_RESULT"

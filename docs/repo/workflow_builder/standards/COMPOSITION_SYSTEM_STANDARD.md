@@ -484,9 +484,67 @@ This creates a **workflow that builds workflows** — a meta-meta-workflow.
 
 ---
 
-## 11. References
+## 11. Authoring a Composition System Specification
 
-- **Video Campaign Manuscript implementation:** `docs/repo/workflow_builder/specs/video_campaign_manuscript_v1.md`
+A **Composition System Specification** is the input document for
+workflow_builder_v2. It describes a domain's composition system using
+the three-layer architecture defined in this standard. The builder reads
+the spec and generates a complete workflow package that implements the
+composition system.
+
+### 11.1 Spec Structure
+
+The spec is a single markdown document with these sections:
+
+| Section | Layer | Content |
+|---|---|---|
+| 1. Domain Overview | — | Domain name, purpose, context |
+| 2. Component Schema | Layer 1 | Component types, properties, validation rules, examples |
+| 3. Composition Format | Layer 2 | Binding rules, override mechanism, placeholder resolution, example |
+| 4. Output Format | Layer 3 | Output sections, resolution rules, quality requirements, skeleton |
+| 5. Operational Requirements | — | Workflow phases, artifacts, action steps, domain constraints |
+
+### 11.2 Key Principles
+
+**The spec is authoritative.** The builder reads component types, composition
+rules, and output structure directly from the spec's structured sections.
+It does not infer these from narrative text. If the spec lists 7 component
+types, the builder generates exactly those 7 types.
+
+**Describe WHAT, not HOW.** The spec defines the domain's composition
+architecture. The builder designs the operational workflow (step sequence,
+routing, prompts) that implements it.
+
+**Include examples.** Each layer should include at least one concrete
+example: a sample component file, a sample composition, and a sample
+output skeleton. Examples disambiguate the schema definitions.
+
+### 11.3 Template and Examples
+
+- **Template:** `docs/repo/workflow_builder/current/templates/COMPOSITION_SYSTEM_SPEC_TEMPLATE.md`
+- **Example (Video Campaign Manuscript):** `docs/repo/workflow_builder/specs/video_campaign_manuscript_v2.md`
+
+### 11.4 Relationship to v1-Style Specs
+
+The v1-style workflow spec (overview, purpose, artifacts, actions, quality)
+describes a workflow in terms of its execution structure. The composition
+system spec describes a domain in terms of its compositional architecture.
+
+| Aspect | v1-Style Spec | Composition System Spec |
+|---|---|---|
+| Focus | Workflow execution structure | Domain composition architecture |
+| Input to | workflow_builder_v1 | workflow_builder_v2 |
+| Describes | Steps, artifacts, actions, routing | Components, compositions, outputs |
+| Builder infers | Step sequence, routing, prompts | Operational workflow, step sequence |
+| Best for | Any workflow pattern | Composition-based workflows |
+
+---
+
+## 12. References
+
+- **Composition System Spec Template:** `docs/repo/workflow_builder/current/templates/COMPOSITION_SYSTEM_SPEC_TEMPLATE.md`
+- **Video Campaign Manuscript spec (v2 format):** `docs/repo/workflow_builder/specs/video_campaign_manuscript_v2.md`
+- **Video Campaign Manuscript implementation (v1 format):** `docs/repo/workflow_builder/specs/video_campaign_manuscript_v1.md`
 - **Workflow Builder architecture:** `docs/repo/workflow_builder/current/WORKFLOW_CREATION_GUIDE.md`
 - **Plugin Workflow System:** `docs/repo/workflow_builder/current/PLUGIN_WORKFLOW_SYSTEM.md`
 

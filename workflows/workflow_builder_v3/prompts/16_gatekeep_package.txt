@@ -1,0 +1,80 @@
+# Objective
+
+Gatekeep review of the generated workflow package. Validate file
+completeness, design fidelity, TOML/Python syntax, artifact binding
+consistency, and composition integrity. Produce APPROVED or REJECTED
+verdict.
+
+This step produces the GATEKEEP_PACKAGE_FILE.
+
+## Reference Inputs
+
+Read the following files before producing any output:
+
+- WORKFLOW_MANIFEST_FILE: {WORKFLOW_MANIFEST_FILE}
+  Validate workflow.toml structure, step definitions, routing.
+
+- WORKFLOW_EXTENSIONS_FILE: {WORKFLOW_EXTENSIONS_FILE}
+  Validate context_extensions.py artifact key coverage.
+
+- WORKFLOW_ACTIONS_FILE: {WORKFLOW_ACTIONS_FILE}
+  Validate actions.py implementations.
+
+- VALIDATION_REPORT_FILE: {VALIDATION_REPORT_FILE}
+  Read the deterministic validation report. Use its findings
+  as a starting point for your review.
+
+## Validation Checklist
+
+1. **File completeness** -- All required files generated:
+   workflow.toml, context_extensions.py, actions.py,
+   prompts_index.json, README.md.
+
+2. **Step count** -- workflow.toml has all steps from the
+   operational workflow design.
+
+3. **Artifact bindings** -- required_inputs and produces match
+   the design VERBATIM for every step.
+
+4. **Routing** -- All onsuccess targets exist. No dangling refs.
+
+5. **Role policies** -- Every prompt step has valid role_policy.
+
+6. **Review loops** -- All review/gatekeep steps have
+   on_reject_refine with 5 required fields.
+
+7. **Action implementations** -- Every action step has @action
+   in actions.py (except step_completion which is built-in).
+
+8. **Artifact key coverage** -- All keys in workflow.toml
+   registered in context_extensions.py.
+
+9. **No self-referential bindings** -- No artifact appears in
+   both required_inputs and produces of the same step (except
+   refine steps which legitimately re-produce).
+
+10. **Prompt file references** -- All prompt files referenced
+    in workflow.toml have corresponding files.
+
+## Decision Rules
+
+Return APPROVED if all checklist items pass.
+Return REJECTED with specific findings.
+
+## Self-Critic
+
+- Did you compare each step's bindings against the design?
+- Did you check for dangling step and artifact references?
+- Did you verify the deterministic validation report findings?
+
+## Output Instructions
+
+Use file-writing tools to write the gatekeep verdict to:
+{GATEKEEP_PACKAGE_FILE}
+
+Format: Markdown with YAML frontmatter.
+Include APPROVED or REJECTED verdict.
+
+ASCII-only content.
+
+The result field in meta.json is for status summary ONLY.

@@ -1,0 +1,46 @@
+# Objective
+
+Produce the Output Format (Layer 3) for the target workflow. Define
+what the assembled deliverable looks like after all component bindings
+are resolved.
+
+# Reference Inputs
+
+- WORKFLOW_SPEC_FILE: {WORKFLOW_SPEC_FILE}
+- TEST_CRITERIA_FILE: {TEST_CRITERIA_FILE}
+- DOMAIN_ANALYSIS_FILE: {DOMAIN_ANALYSIS_FILE}
+- DOMAIN_COMPONENT_SCHEMA_FILE: {DOMAIN_COMPONENT_SCHEMA_FILE}
+- COMPOSITION_FORMAT_FILE: {COMPOSITION_FORMAT_FILE}
+
+# Generation Tasks
+
+1. **3-Part Output Structure** -- Standards/, Specs/, Workflow Package.
+   Define files in each part with source phase and description.
+
+2. **Resolution Rules** -- RR-001 through RR-005:
+   - All phase outputs consolidated
+   - Identity resolved from spec
+   - Placeholders resolved
+   - Self-contained package
+   - Self-bootstrapping
+
+3. **Quality Requirements** -- QR-001 through QR-012:
+   Identity correctness, no builder leakage, standard filename match,
+   artifact key uniqueness, prompt existence, Python/TOML validity,
+   class name derived, output delivery match, meta-test-criteria
+   satisfied, self-bootstrap spec present, standards directory present.
+
+4. **Example Output** -- Complete example of resolved output.
+
+5. **Self-Validation** -- Verify all rules and requirements defined.
+
+# Forbidden Content
+
+- Do NOT use builder identity as target identity
+- Do NOT include non-ASCII characters
+
+# Output Instructions
+
+Write to: {OUTPUT_FORMAT_FILE}
+Markdown with YAML frontmatter: doc_type: "output_format",
+identity_locked: true. ASCII-only.

@@ -1,0 +1,56 @@
+# Objective
+
+Produce the domain analysis artifact for the target workflow. This is the
+foundational artifact that establishes target identity, output type, and
+meta-test-criteria that propagate to ALL subsequent phases.
+
+# Reference Inputs
+
+- WORKFLOW_SPEC_FILE: {WORKFLOW_SPEC_FILE}
+- TEST_CRITERIA_FILE: {TEST_CRITERIA_FILE}
+
+# Generation Tasks
+
+Read the spec and produce a domain analysis document containing:
+
+1. **Target Identity** -- Extract from spec frontmatter:
+   - standard_name, standard_version, standard_filename
+   - These are the TARGET's identity, NOT the builder's
+
+2. **Output Type** -- Extract from spec: documented_versioned or direct
+
+3. **Natural Phases** -- Identify the target domain's natural workflow
+   phases from the spec description
+
+4. **Component Inventory** -- List the domain components identified
+   from the spec
+
+5. **Meta-Test-Criteria** -- Define exactly 4 invariants:
+   a. Identity invariant: generated workflow uses spec identity
+   b. Structure invariant: generated structure matches spec domain
+   c. Output delivery invariant: matches spec's declared output type
+   d. Derivation invariant: types derived from base schema fine-tuning
+
+6. **Common Properties** -- All 7 required: component_id, component_type,
+   name, version, description, phase_origin, identity_locked
+
+7. **Self-Validation** -- Verify identity fields match spec exactly
+
+# Self-Critic
+
+- Did you use the TARGET identity from the spec, not the builder identity?
+- Are all 4 meta-test-criteria present and specific?
+- Is identity_locked = true declared?
+
+# Forbidden Content
+
+- Do NOT use "ar_meta_builder_v2" as the workflow name
+- Do NOT use "AMB_STANDARD" as the standard name
+- Do NOT copy the builder's phase structure
+- Do NOT include non-ASCII characters
+
+# Output Instructions
+
+Write to: {DOMAIN_ANALYSIS_FILE}
+Markdown with YAML frontmatter: doc_type: "domain_analysis",
+identity_locked: true. ASCII-only.

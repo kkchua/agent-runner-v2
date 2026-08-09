@@ -1,0 +1,35 @@
+# Objective
+
+Review the generated test criteria for completeness, specificity, and
+accuracy. This is the critic step -- evaluate whether the test criteria
+actually test the right things.
+
+# Reference Inputs
+
+- TEST_CRITERIA_FILE: {TEST_CRITERIA_FILE}
+- WORKFLOW_SPEC_FILE: {WORKFLOW_SPEC_FILE}
+
+# Review Tasks
+
+Check each of these items:
+
+1. **Coverage** -- Do criteria cover all 8 phases from the spec?
+2. **Specificity** -- Is every criterion specific enough for a gatekeeper
+   to verify objectively? Flag any "must be correct" or "must work" items.
+3. **Traceability** -- Does each criterion trace to a spec section?
+4. **Meta-test-criteria** -- Are the 4 invariants present (identity,
+   structure, output delivery, derivation)?
+5. **Negative criteria** -- Are builder leakage prohibitions included?
+6. **Self-validation** -- Does the document verify its own completeness?
+
+# Forbidden Content
+
+- Do NOT modify the test criteria file directly
+- Do NOT include non-ASCII characters
+
+# Output Instructions
+
+Write review verdict to: {REVIEW_TEST_CRITERIA_FILE}
+
+Verdict: APPROVED or REJECTED. If REJECTED, list specific findings with
+criterion references. ASCII-only. YAML frontmatter: doc_type: "review_test_criteria".

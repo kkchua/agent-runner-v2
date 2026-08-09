@@ -1,0 +1,89 @@
+# Objective
+
+Assemble the complete executable workflow package from all prior
+artifacts. This step generates: workflow.toml, context_extensions.py,
+actions.py, prompt template files, prompts_index.json, README.md,
+and supplementary files (Standards/, Specs/).
+
+# Reference Inputs
+
+- WORKFLOW_SPEC_FILE: {WORKFLOW_SPEC_FILE}
+- TEST_CRITERIA_FILE: {TEST_CRITERIA_FILE}
+- DOMAIN_ANALYSIS_FILE: {DOMAIN_ANALYSIS_FILE}
+- DOMAIN_COMPONENT_SCHEMA_FILE: {DOMAIN_COMPONENT_SCHEMA_FILE}
+- COMPOSITION_FORMAT_FILE: {COMPOSITION_FORMAT_FILE}
+- OUTPUT_FORMAT_FILE: {OUTPUT_FORMAT_FILE}
+- ARTIFACT_CONTRACT_FILE: {ARTIFACT_CONTRACT_FILE}
+- STEP_SEQUENCE_FILE: {STEP_SEQUENCE_FILE}
+- RUNTIME_STANDARD_FILE: {RUNTIME_STANDARD_FILE}
+- OPERATIONAL_WORKFLOW_FILE: {OPERATIONAL_WORKFLOW_FILE}
+
+# Generation Tasks
+
+### File 1: workflow.toml
+Generate from OPERATIONAL_WORKFLOW step sequence EXACTLY:
+- Copy required_inputs and produces VERBATIM
+- Set onsuccess from the design
+- [step.coder] with role_policy for prompt steps
+- [step.on_reject_refine] with all 5 fields for review/gatekeep steps
+- CRITICAL: workflow name must be the TARGET's workflow_name from spec,
+  NOT "ar_meta_builder_v2"
+
+### File 2: context_extensions.py
+Generate WorkflowExtensions subclass with:
+- workflow_name matching the TARGET directory name
+- register_artifact_keys() for ALL artifact keys
+- build_context_extensions() resolving to absolute paths
+- All imports at top level (NOT inside TYPE_CHECKING)
+
+### File 3: actions.py
+Generate @action implementations for action-driven steps.
+Include proper error handling and type hints.
+
+### Files 4-N: Prompt Templates
+Create one .txt per prompt-driven step in prompts/ directory.
+Each prompt must contain: Objective, Reference Inputs, Tasks,
+Self-Critic, Forbidden Content, Output Instructions.
+
+### File: README.md
+Describe the TARGET workflow (not the builder).
+
+### File: Standards/COMPOSITION_STANDARD.md
+Copy from {RUNTIME_STANDARD_FILE}.
+
+### Directory: Specs/
+Create with .gitkeep for user-provided specs at runtime.
+
+### File: Specs/bootstrap.spec
+Copy of {WORKFLOW_SPEC_FILE} for self-bootstrap. This enables the
+generated workflow to regenerate itself (recursive chain).
+
+# Self-Critic
+
+- Did you use the TARGET identity from the spec, not the builder?
+- Did you copy artifact bindings VERBATIM from the operational workflow?
+- Does every prompt step have a matching .txt file?
+- Are all artifact keys registered in context_extensions.py?
+- Did you create Standards/ and Specs/ directories?
+
+# Forbidden Content
+
+- Do NOT use "ar_meta_builder_v2" as the workflow name
+- Do NOT use "AMB_STANDARD" as the standard name
+- Do NOT put runtime imports inside TYPE_CHECKING
+- Do NOT hardcode absolute paths in register_artifact_keys()
+- Do NOT include non-ASCII characters
+- Do NOT skip any prompt files
+
+# Output Instructions
+
+Write ALL files:
+1. {WORKFLOW_MANIFEST_FILE} -- workflow.toml
+2. {WORKFLOW_EXTENSIONS_FILE} -- context_extensions.py
+3. {WORKFLOW_ACTIONS_FILE} -- actions.py
+4. {WORKFLOW_PROMPTS_INDEX_FILE} -- prompts_index.json
+5. {WORKFLOW_README_FILE} -- README.md
+6. {STANDARDS_COMPOSITION_STANDARD_FILE} -- Standards/COMPOSITION_STANDARD.md
+7. {SPECS_BUILDER_SPEC_FILE} -- Specs/ builder spec copy
+
+ASCII-only for all files.

@@ -1,0 +1,24 @@
+# Objective
+
+Gatekeep validation of the artifact contract.
+
+# Reference Inputs
+
+- ARTIFACT_CONTRACT_FILE: {ARTIFACT_CONTRACT_FILE}
+- TEST_CRITERIA_FILE: {TEST_CRITERIA_FILE}
+- DOMAIN_ANALYSIS_FILE: {DOMAIN_ANALYSIS_FILE}
+- WORKFLOW_SPEC_FILE: {WORKFLOW_SPEC_FILE}
+
+# Validation Checklist
+
+1. All keys unique, no duplicates
+2. Filename patterns use {job_id}/{seq} placeholders
+3. No global registry conflicts
+4. All phase outputs covered
+5. Naming conventions followed
+6. Identity locked, no builder leakage
+7. ASCII-only, frontmatter compliant
+
+# Output Instructions
+
+Write verdict to: {GATEKEEP_ARTIFACT_CONTRACT_FILE}. PASS/FAIL. APPROVED or REJECTED. ASCII-only.

@@ -1,0 +1,27 @@
+# Objective
+
+Gatekeep validation of the component schema. Run test criteria and
+meta-test-criteria against the artifact.
+
+# Reference Inputs
+
+- DOMAIN_COMPONENT_SCHEMA_FILE: {DOMAIN_COMPONENT_SCHEMA_FILE}
+- TEST_CRITERIA_FILE: {TEST_CRITERIA_FILE}
+- DOMAIN_ANALYSIS_FILE: {DOMAIN_ANALYSIS_FILE}
+- WORKFLOW_SPEC_FILE: {WORKFLOW_SPEC_FILE}
+
+# Validation Checklist
+
+1. All component types defined (matching spec domain)
+2. All 7 common properties present
+3. Type-specific properties complete for each type
+4. Validation rules VR-001 through VR-008 defined
+5. Fine-tuning decisions documented
+6. Identity locked (no builder leakage)
+7. Meta-test-criteria invariants satisfied
+8. ASCII-only, frontmatter compliant
+
+# Output Instructions
+
+Write verdict to: {GATEKEEP_COMPONENT_SCHEMA_FILE}
+PASS/FAIL per criterion. Overall: APPROVED or REJECTED. ASCII-only.

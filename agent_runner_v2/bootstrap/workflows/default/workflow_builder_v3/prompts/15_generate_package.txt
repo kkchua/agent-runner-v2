@@ -1,0 +1,211 @@
+# Objective
+
+Assemble the complete executable workflow package from all prior
+artifacts. This step reads the operational workflow design and all
+layer artifacts, then generates: workflow.toml, context_extensions.py,
+actions.py, the 18 prompt template files, prompts_index.json,
+README.md, and the v3 supplementary files
+(Standards/COMPOSITION_STANDARD.md and Specs/ directory).
+
+This step produces 6 files, 18 prompt files, and 2 directories:
+- WORKFLOW_MANIFEST_FILE (workflow.toml)
+- WORKFLOW_EXTENSIONS_FILE (context_extensions.py)
+- WORKFLOW_ACTIONS_FILE (actions.py)
+- 18 prompt .txt files in prompts/ directory (one per prompt step)
+- WORKFLOW_PROMPTS_INDEX_FILE (prompts_index.json)
+- WORKFLOW_README_FILE (README.md)
+- STANDARDS_COMPOSITION_STANDARD_FILE (Standards/COMPOSITION_STANDARD.md)
+- Specs/ directory (empty directory for user-provided specs at runtime)
+
+## Reference Inputs
+
+Read the following files before producing any output:
+
+- WORKFLOW_SPEC_FILE: {WORKFLOW_SPEC_FILE}
+  Read for domain context and builder metadata.
+
+- TEST_CRITERIA_FILE: {TEST_CRITERIA_FILE}
+  Read for acceptance criteria.
+
+- COMPONENT_SCHEMA_FILE: {COMPONENT_SCHEMA_FILE}
+  Read for component type definitions.
+
+- COMPOSITION_FORMAT_FILE: {COMPOSITION_FORMAT_FILE}
+  Read for composition structure and binding rules.
+
+- OUTPUT_FORMAT_FILE: {OUTPUT_FORMAT_FILE}
+  Read for output format and resolution rules.
+
+- OPERATIONAL_WORKFLOW_FILE: {OPERATIONAL_WORKFLOW_FILE}
+  Read for the authoritative step sequence, artifact bindings,
+  and routing. This is the PRIMARY source for the workflow package.
+
+- COMPOSITION_STANDARD_FILE: {COMPOSITION_STANDARD_FILE}
+  Read for the v3 composition standard.
+
+- META_COMPOSITION_SPEC_FILE: {META_COMPOSITION_SPEC_FILE}
+  Read for the meta composition spec.
+
+## Generation Tasks
+
+### File 1: workflow.toml
+
+Generate the workflow manifest following the operational workflow's
+step sequence table EXACTLY. For each step:
+- Copy required_inputs and produces VERBATIM from the design.
+- Set onsuccess from the design.
+- For prompt steps: include [step.coder] with appropriate role_policy
+  (architect_standard for generate/refine, reviewer_standard for
+  review, gatekeeper_standard for gatekeep).
+- For review/gatekeep steps: include [step.on_reject_refine] with
+  all 5 fields (step, artifact, max_iterations,
+  exhausted_failure_code, exhausted_failure_class).
+- Include step_completion as the terminal step.
+- Place onsuccess at [[step]] top level, not under [step.artifacts].
+
+### File 2: context_extensions.py
+
+Generate the WorkflowExtensions class with:
+- workflow_name matching the workflow directory name.
+- register_artifact_keys() returning relative paths with {job_id},
+  {seq} placeholders for ALL artifact keys (both inputs and outputs).
+- build_context_extensions() returning absolute paths.
+- install_to_global() and sync_to_backend() methods.
+- Module, class, and methods must have docstrings.
+- All imports at top level (NOT inside TYPE_CHECKING).
+
+### File 3: actions.py
+
+Generate action implementations for action-driven steps:
+- validate_package_deterministic: Static analysis of package files.
+- promote_workflow_package: Deploy package to workflows/ directory.
+- step_completion: Framework built-in, referenced by name only.
+- All actions use @action decorator and return ActionResult.
+- Include proper error handling and type hints.
+
+### Files 4-21: Prompt Template Files (prompts/ directory)
+
+Create the prompts/ directory and write ALL 18 prompt template files.
+Each prompt file must be a complete, self-contained prompt template
+that the coder (LLM) will use when executing that step. The prompt
+content must be derived from the OPERATIONAL_WORKFLOW_FILE,
+TEST_CRITERIA_FILE, and the layer artifacts.
+
+File naming convention: prompts/NN_{step_name}.txt where NN is the
+2-digit step order number matching the workflow.toml step sequence.
+
+The 18 prompt files to create:
+
+| # | File | Step Type | Key Content |
+|---|------|-----------|-------------|
+| 01 | prompts/01_generate_test_criteria.txt | generate | Read WORKFLOW_SPEC_FILE, produce test criteria document |
+| 02 | prompts/02_review_test_criteria.txt | review | Review TEST_CRITERIA_FILE against spec, approve or reject |
+| 03 | prompts/03_refine_test_criteria.txt | refine | Fix issues identified in review, update TEST_CRITERIA_FILE |
+| 04 | prompts/04_generate_component_schema.txt | generate | Read spec + criteria, produce component schema (Layer 1) |
+| 05 | prompts/05_gatekeep_component_schema.txt | gatekeep | Validate component schema against checklist |
+| 06 | prompts/06_generate_composition_format.txt | generate | Read spec + criteria + schema, produce composition format (Layer 2) |
+| 07 | prompts/07_gatekeep_composition_format.txt | gatekeep | Validate composition format against checklist |
+| 08 | prompts/08_generate_output_format.txt | generate | Read spec + composition format, produce output format (Layer 3) |
+| 09 | prompts/09_gatekeep_output_format.txt | gatekeep | Validate output format against checklist |
+| 10 | prompts/10_generate_operational_workflow.txt | generate | Read spec + output format, produce operational workflow design |
+| 11 | prompts/11_gatekeep_operational_workflow.txt | gatekeep | Validate operational workflow against checklist |
+| 12 | prompts/12_generate_composition_standard.txt | generate | Consolidate all 3 layers into single composition standard |
+| 13 | prompts/13_gatekeep_composition_standard.txt | gatekeep | Validate composition standard against checklist |
+| 14 | prompts/14_generate_meta_composition_spec.txt | generate | Produce meta composition spec from standard |
+| 15 | prompts/15_generate_package.txt | generate | (This file — self-referential, copy from source) |
+| 16 | prompts/16_gatekeep_package.txt | gatekeep | Review validation report + all artifacts against test criteria |
+| 17 | prompts/17_review_package.txt | review | Final quality review of complete package |
+| 18 | prompts/18_refine_package.txt | refine | Fix issues from review, regenerate package files |
+
+Each prompt file MUST contain:
+1. **Objective** — What this step achieves
+2. **Reference Inputs** — List of artifact placeholders to read
+   (use {ARTIFACT_KEY} syntax matching required_inputs in workflow.toml)
+3. **Generation/Review Tasks** — Specific tasks the coder must perform
+4. **Self-Critic** — Checklist for the coder to verify its own output
+5. **Forbidden Content** — What the coder must NOT do
+6. **Output Instructions** — What file(s) to write and where
+
+For generate steps: Include detailed instructions on what content
+to produce, referencing the test criteria and layer artifacts.
+For review/gatekeep steps: Include validation checklist items.
+For refine steps: Include instructions on how to address review feedback.
+
+IMPORTANT: For prompt 15 (generate_package), copy the content of
+THIS prompt file (the one you are reading now) into
+prompts/15_generate_package.txt. This ensures self-consistency.
+
+### File 22: prompts_index.json
+
+Generate a JSON index of all prompt files with step names, file paths,
+and step order numbers.
+
+### File 23: README.md
+
+Generate user guide with: Overview, Prerequisites, Usage, Step
+Reference table, Artifact Keys table, Architecture section.
+Include Standards/ and Specs/ in the File Structure section.
+
+### File 6: Standards/COMPOSITION_STANDARD.md
+
+Copy the content from {COMPOSITION_STANDARD_FILE} into the output
+package at Standards/COMPOSITION_STANDARD.md. This is the v3
+innovation: every generated meta builder has its own self-describing
+composition standard. Create the Standards/ subdirectory if it does
+not exist. The file must be a complete copy of the composition
+standard generated in Phase 6.
+
+### Directory: Specs/
+
+Create an empty Specs/ directory within the output package. This
+directory accepts user-provided specifications at runtime. Create
+a .gitkeep file inside Specs/ so that version control tracks the
+empty directory.
+
+## Self-Critic
+
+- Did you copy artifact bindings VERBATIM from the operational
+  workflow design?
+- Did you create ALL 18 prompt files in the prompts/ directory?
+- Does every prompt step in workflow.toml have a matching .txt file?
+- Does each prompt file contain all 6 required sections (Objective,
+  Reference Inputs, Tasks, Self-Critic, Forbidden, Output)?
+- Do the {ARTIFACT_KEY} placeholders in each prompt match the
+  required_inputs in workflow.toml for that step?
+- Are all artifact keys registered in context_extensions.py?
+- Does actions.py have @action for every action step?
+- Are there any self-referential artifact bindings?
+- Did you put runtime imports inside TYPE_CHECKING?
+- Did you create Standards/COMPOSITION_STANDARD.md as a copy of the
+  Phase 6 composition standard?
+- Did you create the empty Specs/ directory with a .gitkeep file?
+
+## Forbidden Content
+
+- Do NOT hardcode absolute paths in register_artifact_keys().
+- Do NOT put runtime imports inside TYPE_CHECKING blocks.
+- Do NOT include non-ASCII characters.
+- Do NOT ask clarifying questions.
+- Do NOT invent steps or artifacts beyond the design.
+- Do NOT skip any prompt files — all 18 must be created.
+- Do NOT create a prompts_index.json without also creating the
+  actual prompt files it references.
+
+## Output Instructions
+
+Use file-writing tools to write ALL files and create the directories:
+
+1. {WORKFLOW_MANIFEST_FILE} -- workflow.toml
+2. {WORKFLOW_EXTENSIONS_FILE} -- context_extensions.py
+3. {WORKFLOW_ACTIONS_FILE} -- actions.py
+4-21. prompts/01_generate_test_criteria.txt through
+      prompts/18_refine_package.txt (18 prompt template files)
+22. {WORKFLOW_PROMPTS_INDEX_FILE} -- prompts_index.json
+23. {WORKFLOW_README_FILE} -- README.md
+24. {STANDARDS_COMPOSITION_STANDARD_FILE} -- Standards/COMPOSITION_STANDARD.md
+25. Create empty directory: Specs/ (with .gitkeep file inside)
+
+ASCII-only content for all files.
+
+The result field in meta.json is for status summary ONLY. Write all
+content to the files specified above.

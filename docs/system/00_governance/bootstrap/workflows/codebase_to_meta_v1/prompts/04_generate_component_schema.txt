@@ -1,0 +1,86 @@
+# Objective
+
+Generate the component schema defining all 8 component types for
+Layer 1 of the AR Meta Builder v1 composition system. This is the
+foundational building block library for the ar_meta_builder domain.
+
+This step produces the COMPONENT_SCHEMA_FILE.
+
+## Reference Inputs
+
+Read the following files before producing any output:
+
+- WORKFLOW_SPEC_FILE: {WORKFLOW_SPEC_FILE}
+  Read Section 2 (Component Schema). This defines the 8 component
+  types: step_definition, role_policy, routing_pattern,
+  prompt_pattern, artifact_contract, composition_standard,
+  output_variance, domain_spec. Read each type's requirements
+  carefully.
+
+- TEST_CRITERIA_FILE: {TEST_CRITERIA_FILE}
+  Read the criteria for Phase 2 (Component Schema). These define
+  what the generated schema must satisfy.
+
+## Generation Tasks
+
+Produce a component schema document with these sections:
+
+1. **Overview** -- Domain context, component type count (8), schema
+   pattern reference.
+
+2. **Common Properties** -- Define the 5 required common properties
+   (component_id, component_type, name, version, description) and
+   3 optional common properties (duration_range, platforms, tags).
+
+3. **Component Types** -- For each of the 8 types:
+   - Type name and purpose
+   - Required/Optional status
+   - Cardinality
+   - Type-specific properties (name, type, required, description)
+   - Validation rules
+   - Example component (complete YAML)
+
+4. **Validation Rules (Global)** -- VR-001 through VR-014 as defined
+   in the spec.
+
+5. **Extensibility Model** -- How new types can be added without
+   breaking existing compositions.
+
+6. **Component File Format** -- How components are stored and
+   exchanged.
+
+7. **Self-Validation** -- Verify all 8 types are defined with
+   properties, rules, and examples.
+
+## Self-Critic
+
+Challenge your reasoning:
+- Did you define exactly 8 types? Not more, not fewer?
+- Did you read the spec for each type's properties, or did you
+  invent them?
+- Are your validation rules specific and enforceable?
+- Does every type have a complete example?
+
+## Forbidden Content
+
+- Do NOT invent component types not in the spec.
+- Do NOT omit any of the 8 types.
+- Do NOT include non-ASCII characters.
+- Do NOT ask clarifying questions.
+
+## Output Instructions
+
+Use file-writing tools to write the component schema to:
+{COMPONENT_SCHEMA_FILE}
+
+Format: Markdown with YAML frontmatter
+Frontmatter must include:
+  doc_type: "component_schema"
+  lifecycle_status: "draft"
+  domain: "ar_meta_builder"
+  component_type_count: 8
+
+ASCII-only content.
+
+The result field in meta.json is for status summary ONLY. Write all
+content to the file specified above.

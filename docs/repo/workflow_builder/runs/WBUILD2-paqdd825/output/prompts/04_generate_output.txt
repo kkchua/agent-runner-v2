@@ -1,0 +1,150 @@
+# Step: generate_output
+
+## Objective
+
+Generate fully resolved video campaign production manuscript(s) by expanding all
+component references, merging overrides, resolving placeholders, and assembling
+the output into the required section structure. You produce self-contained
+deliverables that downstream workflows consume for voiceover generation, visual
+asset creation, video assembly, and platform adaptation.
+
+This step implements Layer 3 of the three-layer composition architecture. You
+take the resolution plan (Layer 2 instructions), the component inventory (Layer 1
+building blocks), the validation report, and the data source files, then produce
+complete production manuscripts where every component_id reference has been
+expanded to full content, every override has been applied (override wins on
+conflict), and every placeholder has been filled from external data sources.
+
+## Reference Inputs
+
+Read these files for context. Use ONLY information from these files. Do not
+invent component types, composition rules, or output sections not present in
+these inputs.
+
+- Component Inventory: {COMPONENT_INVENTORY_FILE}
+  Catalog of all discovered components with their properties.
+
+- Validation Report: {VALIDATION_REPORT_FILE}
+  Per-component validation results. Use only components with status "valid".
+
+- Resolution Plan: {RESOLUTION_PLAN_FILE}
+  For each composition: binding map, resolved references, overrides, placeholder
+  inventory, binding presence checks, ordering constraints.
+
+- Data Source Directory: {DATA_SOURCE_DIR}
+  Directory containing placeholder resolution data files (product_master/,
+  platform_config/, campaign_input/). Read all YAML files in this directory
+  tree to build a placeholder-to-value mapping.
+
+- Output Format Specification: {OUTPUT_FORMAT_FILE}
+  Defines the exact section structure, frontmatter fields, formatting rules,
+  and placeholder flagging syntax for the output.
+
+## Output Instructions
+
+For EACH composition in the resolution plan, generate a complete output file.
+Write each output to {OUTPUT_FILE}. If multiple compositions exist, write them
+as separate sections within the same output file, each with its own frontmatter
+block. If only one composition exists, produce a single output.
+
+### Output Structure
+
+Each output must be a markdown file with YAML frontmatter followed by sections.
+
+YAML Frontmatter fields (all required):
+- composition_id: from the composition
+- composition_name: from the composition name field
+- metadata: object with duration_target, target_platforms, campaign_type, brand
+- component_count: integer counting all expanded component instances
+- generation_date: ISO 8601 date (YYYY-MM-DD)
+- lifecycle_status: "draft" if any unresolved placeholders, else "review"
+- unresolved_placeholder_count: integer count of unresolved placeholders
+
+Required Sections (in order):
+1. ## Opening -- Resolved hook component properties
+2. ## Voice Direction -- Resolved voice_style component properties
+3. ## Visual Treatment -- Resolved visual_direction component properties
+4. ## Scene-by-Scene Breakdown -- Numbered scenes with transition directives
+5. ## Audio Direction -- Resolved audio_mood (conditional, omit if not bound)
+6. ## Text Overlay -- Resolved text_style (conditional, omit if not bound)
+7. ## Production Notes -- Placeholder summary, duration summary, binding summary
+
+### Resolution Process
+
+1. For each binding in the composition, look up the component_id in the
+   component inventory.
+2. Retrieve all common and type-specific properties from the inventory entry.
+3. Apply overrides: for each key in overrides, replace the base property value.
+   Non-overridden properties retain their component-defined values.
+4. Scan all resolved property values for {placeholder_name} patterns.
+5. Load data source files from {DATA_SOURCE_DIR} and resolve each placeholder
+   to its data source value.
+6. Any placeholder that cannot be resolved must be flagged as:
+   {UNRESOLVED: placeholder_name}
+   This is the ONLY accepted flagging syntax. No alternatives.
+7. Count unresolved placeholders and set lifecycle_status accordingly.
+
+### Scene Rendering
+
+- Scenes are numbered sequentially: Scene 1, Scene 2, Scene 3, etc.
+- Between consecutive scenes, insert a transition directive:
+  --- Transition: [Type] ([Duration]s, [energy] energy) ---
+- If transitions binding is omitted, use default cut transitions:
+  --- Transition: Cut (0.2s, high energy) [DEFAULT] ---
+- Each scene subsection shows: Purpose, Narration, Visual Direction, Duration,
+  Description.
+
+### Placeholder Resolution Summary (in Production Notes)
+
+Include a table:
+| Placeholder | Resolved Value | Data Source | Status |
+List all placeholders found, their resolved values, source files, and status.
+
+### Duration Summary (in Production Notes)
+
+Calculate total duration: hook duration + sum of scene durations + sum of
+transition durations. Compare against target_metadata.duration_target.
+
+### Binding Summary (in Production Notes)
+
+List each binding resolved, noting overrides applied and which optional
+bindings were omitted.
+
+## File Writing Instructions
+
+CRITICAL: You MUST use file-writing tools to create the actual output file on
+disk at the path specified by {OUTPUT_FILE}. Do NOT print the content as your
+response. Write it to the file using write_file or create_file tools.
+
+The output file must be complete. Do not use "..." or "TODO" or "remaining
+sections as above" as substitutes for actual content.
+
+The output file MUST begin with YAML frontmatter delimited by --- markers.
+
+Use ASCII characters only. Do not use em-dashes, curly quotes, or Unicode
+symbols.
+
+## meta.json Instructions
+
+After writing the output file, write the meta.json sidecar. The result field
+in meta.json is for status summary ONLY -- it is NOT for artifact data.
+The artifacts dict must map OUTPUT_FILE to the absolute path of the file you
+wrote.
+
+## Self-Critic
+
+Before completing, verify:
+1. All required sections are present (Opening, Voice Direction, Visual
+   Treatment, Scene-by-Scene Breakdown, Production Notes).
+2. Conditional sections follow binding presence (Audio Direction if audio_mood
+   bound, Text Overlay if text_style bound).
+3. All component_id references are fully expanded -- no residual IDs.
+4. All placeholders are resolved or flagged as {UNRESOLVED: field_name}.
+5. YAML frontmatter contains all required fields with correct values.
+6. lifecycle_status is "draft" if any unresolved placeholders exist.
+7. component_count matches actual expanded component instances.
+8. Scene numbering is sequential and transition directives are between scenes.
+9. Duration calculations are correct.
+10. No {placeholder} syntax remains without either resolution or flagging.
+
+Re-read the output file after writing and confirm it matches requirements.
