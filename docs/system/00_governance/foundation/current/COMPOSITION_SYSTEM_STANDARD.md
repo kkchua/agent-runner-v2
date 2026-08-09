@@ -672,11 +672,11 @@ When authoring a composition spec, ensure:
 
 ## 14. References
 
-- **Composition System Spec Template:** `docs/repo/workflow_builder/current/templates/COMPOSITION_SYSTEM_SPEC_TEMPLATE.md`
-- **Video Campaign Manuscript spec (v2 format):** `docs/repo/workflow_builder/specs/video_campaign_manuscript_v2.md`
-- **Video Campaign Manuscript implementation (v1 format):** `docs/repo/workflow_builder/specs/video_campaign_manuscript_v1.md`
-- **Workflow Builder architecture:** `docs/repo/workflow_builder/current/WORKFLOW_CREATION_GUIDE.md`
-- **Plugin Workflow System:** `docs/repo/workflow_builder/current/PLUGIN_WORKFLOW_SYSTEM.md`
+- **Artifact Generator Builder workflow:** `workflows/artifact_generator_builder/`
+- **AGB sample requirement doc:** `workflows/artifact_generator_builder/Specs/sample_requirement.md`
+- **AGB simple test case:** `workflows/artifact_generator_builder/Specs/simple_text_summarizer.md`
+- **Workflow package system:** `agent_runner_v2/workflow_packages/`
+- **Workflow extensions base:** `agent_runner_v2/workflow_packages/extensions_base.py`
 
 ---
 
