@@ -50,12 +50,12 @@ class ArtifactGeneratorBuilderExtensions(WorkflowExtensions):
             "GATEKEEP_REQUIREMENT_FILE": f"{run}/GATEKEEP_REQUIREMENT-{{seq}}.md",
 
             # -- Phase 2: Design Composition Spec --
-            "COMPOSITION_SPEC_FILE": f"{run}/COMPOSITION_SPEC-{{seq}}.md",
+            "COMPOSITION_SPEC_FILE": f"{out}/COMPOSITION_SPEC-{{seq}}.md",
             "REVIEW_COMPOSITION_SPEC_FILE": f"{run}/REVIEW_COMPOSITION_SPEC-{{seq}}.md",
             "GATEKEEP_COMPOSITION_SPEC_FILE": f"{run}/GATEKEEP_COMPOSITION_SPEC-{{seq}}.md",
 
             # -- Phase 3: Design Runtime Implementation --
-            "RUNTIME_IMPL_FILE": f"{run}/RUNTIME_IMPL-{{seq}}.md",
+            "RUNTIME_IMPL_FILE": f"{out}/RUNTIME_IMPL-{{seq}}.md",
             "REVIEW_RUNTIME_IMPL_FILE": f"{run}/REVIEW_RUNTIME_IMPL-{{seq}}.md",
             "GATEKEEP_RUNTIME_IMPL_FILE": f"{run}/GATEKEEP_RUNTIME_IMPL-{{seq}}.md",
 
