@@ -10,6 +10,9 @@
     "02_agent_runner_platform_v1",
     "agnes_gen_video_v1",
     "agnes_media_gen_v1",
+    "ar_meta_builder_v1",
+    "ar_meta_builder_v2",
+    "codebase_to_meta_v1",
     "sdlc_00_codebase_v1",
     "sdlc_00_delivery_scaffold_v1",
     "sdlc_00_init_doc_v1",
@@ -22,7 +25,8 @@
     "sdlc_70_validation_v1",
     "sdlc_80_review_v1",
     "workflow_builder_v1",
-    "workflow_builder_v2"
+    "workflow_builder_v2",
+    "workflow_builder_v3"
   ],
   "shared_registry_copied": true,
   "plugin_workflows_copied": [
@@ -31,6 +35,9 @@
     "02_agent_runner_platform_v1",
     "agnes_gen_video_v1",
     "agnes_media_gen_v1",
+    "ar_meta_builder_v1",
+    "ar_meta_builder_v2",
+    "codebase_to_meta_v1",
     "sdlc_00_codebase_v1",
     "sdlc_00_delivery_scaffold_v1",
     "sdlc_00_init_doc_v1",
@@ -43,6 +50,7 @@
     "sdlc_70_validation_v1",
     "sdlc_80_review_v1",
     "workflow_builder_v1",
-    "workflow_builder_v2"
+    "workflow_builder_v2",
+    "workflow_builder_v3"
   ]
 }

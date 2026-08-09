@@ -16,8 +16,11 @@ The composition format must define:
 
 Reference Inputs
 
-- Read {WORKFLOW_SPEC_FILE} for the composition system specification --
-  identifies what compositions look like in this domain.
+- Read {WORKFLOW_SPEC_FILE} for the composition system specification.
+  Section 3 (Composition Format) is the AUTHORITATIVE source for composition
+  rules. It defines binding rules, override mechanisms, placeholder resolution,
+  and provides example compositions. Your task is to VALIDATE and EXPAND these
+  into a full composition format document — not to invent new rules.
 - Read {COMPONENT_SCHEMA_FILE} for the component types -- compositions
   reference these components by ID.
 - Read {TEST_CRITERIA_FILE} for acceptance criteria -- sections 4 and 5

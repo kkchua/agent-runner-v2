@@ -302,6 +302,9 @@ class TestActionImplementations:
             "step": [
                 {"name": "promote", "action": "promote_workflow_package"},
                 {"name": "done", "action": "step_completion"},
+                {"name": "promote_final", "action": "promote_artifact"},
+                {"name": "copy_output", "action": "copy_artifact"},
+                {"name": "archive", "action": "archive_inputs"},
             ]
         }
         findings: list[dict[str, str]] = []

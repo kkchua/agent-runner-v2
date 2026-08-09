@@ -14,8 +14,11 @@ The operational workflow design must define:
 
 Reference Inputs
 
-- Read {WORKFLOW_SPEC_FILE} for the composition system specification --
-  identifies the workflow requirements.
+- Read {WORKFLOW_SPEC_FILE} for the composition system specification.
+  Section 5 (Operational Requirements) is the AUTHORITATIVE source for
+  workflow phases, input/output artifacts, and action step descriptions.
+  Your task is to VALIDATE and EXPAND these into a detailed operational
+  workflow design — not to invent new phases or artifacts.
 - Read {COMPONENT_SCHEMA_FILE} for the component types -- the workflow
   scans and validates components.
 - Read {COMPOSITION_FORMAT_FILE} for the composition format -- the workflow
@@ -112,6 +115,23 @@ Produce an operational workflow design document with these sections:
    - How many iterations allowed (max_iterations)?
    - What happens when loops exhaust (exhausted_failure_code)?
 
+8. Package File Inventory
+   Enumerate EVERY file the generate_package step must CREATE. This is a
+   checklist for the package assembly step -- if a file is not listed here,
+   it will not be generated. Include:
+   - Core files: workflow.toml, context_extensions.py, README.md
+   - Conditional files: actions.py (if action steps exist), .env.sample
+     (if env vars needed), config.json.sample (if runtime config needed)
+   - Prompt files: One prompts/NN_step_name.txt per prompt-driven step
+   - Supplementary files: Domain-specific data files the workflow needs at
+     runtime (e.g., audience definition files, template files, schema files,
+     config files). These are files the scan step or other steps expect to
+     find deployed with the workflow package. If the design mentions an
+     "audiences/" directory or any runtime data directory, every file in
+     that directory must be listed here.
+   For each file, list: file name, relative path under the package root,
+   and purpose (why this file must exist).
+
 Context Verification (Before Self-Critic)
 
 Verify consistency with ALL prior artifacts:
@@ -132,6 +152,10 @@ Verify consistency with ALL prior artifacts:
    references.
 7. Action Reuse: For each action-driven step, did you check if an existing
    reusable action (promote_workflow_package, step_completion) covers the need?
+8. Package Inventory Traceability: Does the Package File Inventory reference
+   every supplementary file mentioned in the Step Sequence or Artifact
+   Contract? For example, if a scan step reads from "audiences/" at runtime,
+   are the audience definition files individually listed in the inventory?
 
 If any inconsistency is found, fix it before proceeding.
 
@@ -170,6 +194,10 @@ Before reporting APPROVED, validate:
 
 7. Standard Conformance: Does the design follow the Composition System
    Standard's workflow pattern?
+
+8. Package File Inventory: Does the design explicitly enumerate every file
+   the package must contain? Are supplementary data files (like runtime
+   audience definitions, templates, schemas) listed in the inventory?
 
 If validation fails, report REJECTED with specific gaps found.
 

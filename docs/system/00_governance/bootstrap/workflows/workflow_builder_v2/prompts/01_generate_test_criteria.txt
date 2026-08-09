@@ -14,6 +14,15 @@ architecture:
 Reference Inputs
 
 - Read {WORKFLOW_SPEC_FILE} for the complete composition system specification.
+  The spec uses a structured format with explicit sections for the three-layer
+  architecture:
+  - Section 2: Component Schema (Layer 1) — component types, properties, validation
+  - Section 3: Composition Format (Layer 2) — binding rules, overrides, placeholders
+  - Section 4: Output Format (Layer 3) — output structure, resolution rules, quality
+  - Section 5: Operational Requirements — workflow phases, artifacts, action steps
+  Use these sections as the AUTHORITATIVE source for what the composition system
+  does. Do not infer component types or composition rules from narrative text —
+  read them directly from the structured sections.
 - Read {COMPOSITION_SYSTEM_STANDARD} for the Composition System Standard --
   defines the universal component schema, composition format, output format,
   and workflow pattern.

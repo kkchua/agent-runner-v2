@@ -15,8 +15,11 @@ The output format must define:
 
 Reference Inputs
 
-- Read {WORKFLOW_SPEC_FILE} for the composition system specification --
-  identifies what the final output looks like in this domain.
+- Read {WORKFLOW_SPEC_FILE} for the composition system specification.
+  Section 4 (Output Format) is the AUTHORITATIVE source for output structure.
+  It defines the output sections, resolution rules, quality requirements, and
+  provides an example output skeleton. Your task is to VALIDATE and EXPAND
+  these into a full output format document — not to invent new sections.
 - Read {COMPONENT_SCHEMA_FILE} for the component types -- outputs contain
   resolved components.
 - Read {COMPOSITION_FORMAT_FILE} for the composition format -- outputs are

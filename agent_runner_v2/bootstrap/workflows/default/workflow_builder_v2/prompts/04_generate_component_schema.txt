@@ -15,8 +15,12 @@ The component schema must define:
 
 Reference Inputs
 
-- Read {WORKFLOW_SPEC_FILE} for the composition system specification --
-  identifies what component types the domain needs.
+- Read {WORKFLOW_SPEC_FILE} for the composition system specification.
+  Section 2 (Component Schema) is the AUTHORITATIVE source for component types.
+  It lists all component types, their type-specific properties, validation rules,
+  and example components. Your task is to VALIDATE and EXPAND these into a full
+  component schema document — not to invent new types. If the spec lists 7
+  component types, your schema must define exactly those 7 types.
 - Read {TEST_CRITERIA_FILE} for acceptance criteria -- sections 2 and 3
   define what makes a good component schema.
 - Read {COMPOSITION_SYSTEM_STANDARD} Section 3 (Universal Component Schema)
