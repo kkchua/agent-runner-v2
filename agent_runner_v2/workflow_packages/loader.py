@@ -293,6 +293,14 @@ def bundle_to_template_group_dict(bundle: WorkflowBundle) -> dict[str, Any]:
         for k, v in sc.extra.items():
             cfg[k] = v
 
+        # Flatten [step.config] sub-table into top-level cfg keys so
+        # actions can read them as step_cfg.get("phase") instead of
+        # step_cfg.get("config", {}).get("phase").
+        config_sub = cfg.pop("config", None)
+        if isinstance(config_sub, dict):
+            for k, v in config_sub.items():
+                cfg[k] = v
+
         step_configs[step_name] = cfg
 
     # Stamp the bundle reference on each step config so downstream code
