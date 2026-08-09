@@ -525,9 +525,12 @@ def _classify_model_rejection(step_result: StepResult) -> tuple[str, str, str]:
 def _classify_exception_v2(exc: Exception) -> tuple[str, str, str]:
     """Map v2 exception types to (failure_class, failure_code, failure_source)."""
     if isinstance(exc, CoderInvocationError):
+        # All coder invocation failures are auto-retryable — the LLM may
+        # have stopped early, hit a transient API issue, or failed to
+        # produce output. max_rejects (default 3) prevents infinite loops.
         if _looks_like_transient_error(str(exc)):
             return "AUTO_RETRYABLE", "TRANSIENT_API_ERROR", "adapter"
-        return "HUMAN_RETRY_REQUIRED", "ADAPTER_INVOCATION_FAILED", "adapter"
+        return "AUTO_RETRYABLE", "ADAPTER_INVOCATION_FAILED", "adapter"
     if isinstance(exc, MetaJsonMissingError):
         return "AUTO_RETRYABLE", "META_JSON_MISSING", "validator"
     if isinstance(exc, MetaJsonInvalidError):
