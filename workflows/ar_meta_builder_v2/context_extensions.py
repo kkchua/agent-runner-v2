@@ -47,7 +47,7 @@ class ArMetaBuilderV2Extensions(WorkflowExtensions):
 
         return {
             # -- Inputs --
-            "WORKFLOW_SPEC_FILE": (
+            "BOOTSTRAP_SPEC_FILE": (
                 "Specs/detault.spec.md"
             ),
 
@@ -177,9 +177,6 @@ class ArMetaBuilderV2Extensions(WorkflowExtensions):
             "WORKFLOW_README_FILE": f"{out}/README.md",
             "STANDARDS_COMPOSITION_STANDARD_FILE": (
                 f"{standards}/COMPOSITION_STANDARD.md"
-            ),
-            "SPECS_BUILDER_SPEC_FILE": (
-                f"{out}/Specs/bootstrap.spec"
             ),
             "VALIDATION_REPORT_FILE": (
                 f"{run}/VALIDATION_REPORT-{{seq}}.md"
