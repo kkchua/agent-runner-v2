@@ -36,7 +36,7 @@ requires_human_approval_after = false
 onsuccess = "generate_test_criteria"
 
 [step.artifacts]
-required_inputs = ["WORKFLOW_SPEC_FILE"]
+required_inputs = ["BOOTSTRAP_SPEC_FILE"]
 produces = ["VALIDATION_INPUT_SPEC_FILE"]
 result_meta_key = "VALIDATION_INPUT_SPEC_FILE"
 
@@ -56,7 +56,7 @@ onsuccess = "review_test_criteria"
 role_policy = "architect_standard"
 
 [step.artifacts]
-required_inputs = ["WORKFLOW_SPEC_FILE"]
+required_inputs = ["BOOTSTRAP_SPEC_FILE"]
 produces = ["TEST_CRITERIA_FILE"]
 result_meta_key = "TEST_CRITERIA_FILE"
 
@@ -71,7 +71,7 @@ onsuccess = "generate_domain_analysis"
 role_policy = "reviewer_standard"
 
 [step.artifacts]
-required_inputs = ["TEST_CRITERIA_FILE", "WORKFLOW_SPEC_FILE"]
+required_inputs = ["TEST_CRITERIA_FILE", "BOOTSTRAP_SPEC_FILE"]
 produces = ["REVIEW_TEST_CRITERIA_FILE"]
 result_meta_key = "REVIEW_TEST_CRITERIA_FILE"
 
@@ -108,7 +108,7 @@ onsuccess = "validate_domain_analysis"
 role_policy = "architect_standard"
 
 [step.artifacts]
-required_inputs = ["WORKFLOW_SPEC_FILE", "TEST_CRITERIA_FILE"]
+required_inputs = ["BOOTSTRAP_SPEC_FILE", "TEST_CRITERIA_FILE"]
 produces = ["DOMAIN_ANALYSIS_FILE"]
 result_meta_key = "DOMAIN_ANALYSIS_FILE"
 
@@ -120,7 +120,7 @@ requires_human_approval_after = false
 onsuccess = "gatekeep_domain_analysis"
 
 [step.artifacts]
-required_inputs = ["DOMAIN_ANALYSIS_FILE", "WORKFLOW_SPEC_FILE"]
+required_inputs = ["DOMAIN_ANALYSIS_FILE", "BOOTSTRAP_SPEC_FILE"]
 produces = ["VALIDATE_DOMAIN_ANALYSIS_FILE"]
 result_meta_key = "VALIDATE_DOMAIN_ANALYSIS_FILE"
 
@@ -139,7 +139,7 @@ onsuccess = "generate_component_schema"
 role_policy = "gatekeeper_standard"
 
 [step.artifacts]
-required_inputs = ["DOMAIN_ANALYSIS_FILE", "TEST_CRITERIA_FILE", "WORKFLOW_SPEC_FILE"]
+required_inputs = ["DOMAIN_ANALYSIS_FILE", "TEST_CRITERIA_FILE", "BOOTSTRAP_SPEC_FILE"]
 produces = ["GATEKEEP_DOMAIN_ANALYSIS_FILE"]
 result_meta_key = "GATEKEEP_DOMAIN_ANALYSIS_FILE"
 
@@ -165,7 +165,7 @@ onsuccess = "review_component_schema"
 role_policy = "architect_standard"
 
 [step.artifacts]
-required_inputs = ["WORKFLOW_SPEC_FILE", "TEST_CRITERIA_FILE", "DOMAIN_ANALYSIS_FILE"]
+required_inputs = ["BOOTSTRAP_SPEC_FILE", "TEST_CRITERIA_FILE", "DOMAIN_ANALYSIS_FILE"]
 produces = ["DOMAIN_COMPONENT_SCHEMA_FILE"]
 result_meta_key = "DOMAIN_COMPONENT_SCHEMA_FILE"
 
@@ -180,7 +180,7 @@ onsuccess = "validate_component_schema"
 role_policy = "reviewer_standard"
 
 [step.artifacts]
-required_inputs = ["DOMAIN_COMPONENT_SCHEMA_FILE", "TEST_CRITERIA_FILE", "WORKFLOW_SPEC_FILE"]
+required_inputs = ["DOMAIN_COMPONENT_SCHEMA_FILE", "TEST_CRITERIA_FILE", "BOOTSTRAP_SPEC_FILE"]
 produces = ["REVIEW_COMPONENT_SCHEMA_FILE"]
 result_meta_key = "REVIEW_COMPONENT_SCHEMA_FILE"
 
@@ -214,7 +214,7 @@ requires_human_approval_after = false
 onsuccess = "gatekeep_component_schema"
 
 [step.artifacts]
-required_inputs = ["DOMAIN_COMPONENT_SCHEMA_FILE", "WORKFLOW_SPEC_FILE"]
+required_inputs = ["DOMAIN_COMPONENT_SCHEMA_FILE", "BOOTSTRAP_SPEC_FILE"]
 produces = ["VALIDATE_COMPONENT_SCHEMA_FILE"]
 result_meta_key = "VALIDATE_COMPONENT_SCHEMA_FILE"
 
@@ -233,7 +233,7 @@ onsuccess = "generate_composition_format"
 role_policy = "gatekeeper_standard"
 
 [step.artifacts]
-required_inputs = ["DOMAIN_COMPONENT_SCHEMA_FILE", "TEST_CRITERIA_FILE", "DOMAIN_ANALYSIS_FILE", "WORKFLOW_SPEC_FILE"]
+required_inputs = ["DOMAIN_COMPONENT_SCHEMA_FILE", "TEST_CRITERIA_FILE", "DOMAIN_ANALYSIS_FILE", "BOOTSTRAP_SPEC_FILE"]
 produces = ["GATEKEEP_COMPONENT_SCHEMA_FILE"]
 result_meta_key = "GATEKEEP_COMPONENT_SCHEMA_FILE"
 
@@ -259,7 +259,7 @@ onsuccess = "review_composition_format"
 role_policy = "architect_standard"
 
 [step.artifacts]
-required_inputs = ["WORKFLOW_SPEC_FILE", "TEST_CRITERIA_FILE", "DOMAIN_ANALYSIS_FILE", "DOMAIN_COMPONENT_SCHEMA_FILE"]
+required_inputs = ["BOOTSTRAP_SPEC_FILE", "TEST_CRITERIA_FILE", "DOMAIN_ANALYSIS_FILE", "DOMAIN_COMPONENT_SCHEMA_FILE"]
 produces = ["COMPOSITION_FORMAT_FILE"]
 result_meta_key = "COMPOSITION_FORMAT_FILE"
 
@@ -274,7 +274,7 @@ onsuccess = "validate_composition_format"
 role_policy = "reviewer_standard"
 
 [step.artifacts]
-required_inputs = ["COMPOSITION_FORMAT_FILE", "TEST_CRITERIA_FILE", "WORKFLOW_SPEC_FILE"]
+required_inputs = ["COMPOSITION_FORMAT_FILE", "TEST_CRITERIA_FILE", "BOOTSTRAP_SPEC_FILE"]
 produces = ["REVIEW_COMPOSITION_FORMAT_FILE"]
 result_meta_key = "REVIEW_COMPOSITION_FORMAT_FILE"
 
@@ -308,7 +308,7 @@ requires_human_approval_after = false
 onsuccess = "gatekeep_composition_format"
 
 [step.artifacts]
-required_inputs = ["COMPOSITION_FORMAT_FILE", "WORKFLOW_SPEC_FILE"]
+required_inputs = ["COMPOSITION_FORMAT_FILE", "BOOTSTRAP_SPEC_FILE"]
 produces = ["VALIDATE_COMPOSITION_FORMAT_FILE"]
 result_meta_key = "VALIDATE_COMPOSITION_FORMAT_FILE"
 
@@ -327,7 +327,7 @@ onsuccess = "generate_output_format"
 role_policy = "gatekeeper_standard"
 
 [step.artifacts]
-required_inputs = ["COMPOSITION_FORMAT_FILE", "TEST_CRITERIA_FILE", "DOMAIN_ANALYSIS_FILE", "WORKFLOW_SPEC_FILE"]
+required_inputs = ["COMPOSITION_FORMAT_FILE", "TEST_CRITERIA_FILE", "DOMAIN_ANALYSIS_FILE", "BOOTSTRAP_SPEC_FILE"]
 produces = ["GATEKEEP_COMPOSITION_FORMAT_FILE"]
 result_meta_key = "GATEKEEP_COMPOSITION_FORMAT_FILE"
 
@@ -353,7 +353,7 @@ onsuccess = "review_output_format"
 role_policy = "architect_standard"
 
 [step.artifacts]
-required_inputs = ["WORKFLOW_SPEC_FILE", "TEST_CRITERIA_FILE", "DOMAIN_ANALYSIS_FILE", "DOMAIN_COMPONENT_SCHEMA_FILE", "COMPOSITION_FORMAT_FILE"]
+required_inputs = ["BOOTSTRAP_SPEC_FILE", "TEST_CRITERIA_FILE", "DOMAIN_ANALYSIS_FILE", "DOMAIN_COMPONENT_SCHEMA_FILE", "COMPOSITION_FORMAT_FILE"]
 produces = ["OUTPUT_FORMAT_FILE"]
 result_meta_key = "OUTPUT_FORMAT_FILE"
 
@@ -368,7 +368,7 @@ onsuccess = "validate_output_format"
 role_policy = "reviewer_standard"
 
 [step.artifacts]
-required_inputs = ["OUTPUT_FORMAT_FILE", "TEST_CRITERIA_FILE", "WORKFLOW_SPEC_FILE"]
+required_inputs = ["OUTPUT_FORMAT_FILE", "TEST_CRITERIA_FILE", "BOOTSTRAP_SPEC_FILE"]
 produces = ["REVIEW_OUTPUT_FORMAT_FILE"]
 result_meta_key = "REVIEW_OUTPUT_FORMAT_FILE"
 
@@ -402,7 +402,7 @@ requires_human_approval_after = false
 onsuccess = "gatekeep_output_format"
 
 [step.artifacts]
-required_inputs = ["OUTPUT_FORMAT_FILE", "WORKFLOW_SPEC_FILE"]
+required_inputs = ["OUTPUT_FORMAT_FILE", "BOOTSTRAP_SPEC_FILE"]
 produces = ["VALIDATE_OUTPUT_FORMAT_FILE"]
 result_meta_key = "VALIDATE_OUTPUT_FORMAT_FILE"
 
@@ -421,7 +421,7 @@ onsuccess = "generate_artifact_contract"
 role_policy = "gatekeeper_standard"
 
 [step.artifacts]
-required_inputs = ["OUTPUT_FORMAT_FILE", "TEST_CRITERIA_FILE", "DOMAIN_ANALYSIS_FILE", "WORKFLOW_SPEC_FILE"]
+required_inputs = ["OUTPUT_FORMAT_FILE", "TEST_CRITERIA_FILE", "DOMAIN_ANALYSIS_FILE", "BOOTSTRAP_SPEC_FILE"]
 produces = ["GATEKEEP_OUTPUT_FORMAT_FILE"]
 result_meta_key = "GATEKEEP_OUTPUT_FORMAT_FILE"
 
@@ -447,7 +447,7 @@ onsuccess = "review_artifact_contract"
 role_policy = "architect_standard"
 
 [step.artifacts]
-required_inputs = ["WORKFLOW_SPEC_FILE", "TEST_CRITERIA_FILE", "DOMAIN_ANALYSIS_FILE", "DOMAIN_COMPONENT_SCHEMA_FILE", "COMPOSITION_FORMAT_FILE", "OUTPUT_FORMAT_FILE"]
+required_inputs = ["BOOTSTRAP_SPEC_FILE", "TEST_CRITERIA_FILE", "DOMAIN_ANALYSIS_FILE", "DOMAIN_COMPONENT_SCHEMA_FILE", "COMPOSITION_FORMAT_FILE", "OUTPUT_FORMAT_FILE"]
 produces = ["ARTIFACT_CONTRACT_FILE"]
 result_meta_key = "ARTIFACT_CONTRACT_FILE"
 
@@ -462,7 +462,7 @@ onsuccess = "validate_artifact_contract"
 role_policy = "reviewer_standard"
 
 [step.artifacts]
-required_inputs = ["ARTIFACT_CONTRACT_FILE", "TEST_CRITERIA_FILE", "WORKFLOW_SPEC_FILE"]
+required_inputs = ["ARTIFACT_CONTRACT_FILE", "TEST_CRITERIA_FILE", "BOOTSTRAP_SPEC_FILE"]
 produces = ["REVIEW_ARTIFACT_CONTRACT_FILE"]
 result_meta_key = "REVIEW_ARTIFACT_CONTRACT_FILE"
 
@@ -496,7 +496,7 @@ requires_human_approval_after = false
 onsuccess = "gatekeep_artifact_contract"
 
 [step.artifacts]
-required_inputs = ["ARTIFACT_CONTRACT_FILE", "WORKFLOW_SPEC_FILE"]
+required_inputs = ["ARTIFACT_CONTRACT_FILE", "BOOTSTRAP_SPEC_FILE"]
 produces = ["VALIDATE_ARTIFACT_CONTRACT_FILE"]
 result_meta_key = "VALIDATE_ARTIFACT_CONTRACT_FILE"
 
@@ -515,7 +515,7 @@ onsuccess = "generate_step_sequence"
 role_policy = "gatekeeper_standard"
 
 [step.artifacts]
-required_inputs = ["ARTIFACT_CONTRACT_FILE", "TEST_CRITERIA_FILE", "DOMAIN_ANALYSIS_FILE", "WORKFLOW_SPEC_FILE"]
+required_inputs = ["ARTIFACT_CONTRACT_FILE", "TEST_CRITERIA_FILE", "DOMAIN_ANALYSIS_FILE", "BOOTSTRAP_SPEC_FILE"]
 produces = ["GATEKEEP_ARTIFACT_CONTRACT_FILE"]
 result_meta_key = "GATEKEEP_ARTIFACT_CONTRACT_FILE"
 
@@ -541,7 +541,7 @@ onsuccess = "review_step_sequence"
 role_policy = "architect_standard"
 
 [step.artifacts]
-required_inputs = ["WORKFLOW_SPEC_FILE", "TEST_CRITERIA_FILE", "DOMAIN_ANALYSIS_FILE", "DOMAIN_COMPONENT_SCHEMA_FILE", "COMPOSITION_FORMAT_FILE", "OUTPUT_FORMAT_FILE", "ARTIFACT_CONTRACT_FILE"]
+required_inputs = ["BOOTSTRAP_SPEC_FILE", "TEST_CRITERIA_FILE", "DOMAIN_ANALYSIS_FILE", "DOMAIN_COMPONENT_SCHEMA_FILE", "COMPOSITION_FORMAT_FILE", "OUTPUT_FORMAT_FILE", "ARTIFACT_CONTRACT_FILE"]
 produces = ["STEP_SEQUENCE_FILE"]
 result_meta_key = "STEP_SEQUENCE_FILE"
 
@@ -556,7 +556,7 @@ onsuccess = "validate_step_sequence"
 role_policy = "reviewer_standard"
 
 [step.artifacts]
-required_inputs = ["STEP_SEQUENCE_FILE", "TEST_CRITERIA_FILE", "WORKFLOW_SPEC_FILE"]
+required_inputs = ["STEP_SEQUENCE_FILE", "TEST_CRITERIA_FILE", "BOOTSTRAP_SPEC_FILE"]
 produces = ["REVIEW_STEP_SEQUENCE_FILE"]
 result_meta_key = "REVIEW_STEP_SEQUENCE_FILE"
 
@@ -590,7 +590,7 @@ requires_human_approval_after = false
 onsuccess = "gatekeep_step_sequence"
 
 [step.artifacts]
-required_inputs = ["STEP_SEQUENCE_FILE", "WORKFLOW_SPEC_FILE"]
+required_inputs = ["STEP_SEQUENCE_FILE", "BOOTSTRAP_SPEC_FILE"]
 produces = ["VALIDATE_STEP_SEQUENCE_FILE"]
 result_meta_key = "VALIDATE_STEP_SEQUENCE_FILE"
 
@@ -609,7 +609,7 @@ onsuccess = "generate_runtime_standard"
 role_policy = "gatekeeper_standard"
 
 [step.artifacts]
-required_inputs = ["STEP_SEQUENCE_FILE", "TEST_CRITERIA_FILE", "DOMAIN_ANALYSIS_FILE", "WORKFLOW_SPEC_FILE"]
+required_inputs = ["STEP_SEQUENCE_FILE", "TEST_CRITERIA_FILE", "DOMAIN_ANALYSIS_FILE", "BOOTSTRAP_SPEC_FILE"]
 produces = ["GATEKEEP_STEP_SEQUENCE_FILE"]
 result_meta_key = "GATEKEEP_STEP_SEQUENCE_FILE"
 
@@ -635,7 +635,7 @@ onsuccess = "review_runtime_standard"
 role_policy = "architect_standard"
 
 [step.artifacts]
-required_inputs = ["WORKFLOW_SPEC_FILE", "TEST_CRITERIA_FILE", "DOMAIN_ANALYSIS_FILE", "DOMAIN_COMPONENT_SCHEMA_FILE", "COMPOSITION_FORMAT_FILE", "OUTPUT_FORMAT_FILE", "ARTIFACT_CONTRACT_FILE", "STEP_SEQUENCE_FILE"]
+required_inputs = ["BOOTSTRAP_SPEC_FILE", "TEST_CRITERIA_FILE", "DOMAIN_ANALYSIS_FILE", "DOMAIN_COMPONENT_SCHEMA_FILE", "COMPOSITION_FORMAT_FILE", "OUTPUT_FORMAT_FILE", "ARTIFACT_CONTRACT_FILE", "STEP_SEQUENCE_FILE"]
 produces = ["RUNTIME_STANDARD_FILE"]
 result_meta_key = "RUNTIME_STANDARD_FILE"
 
@@ -650,7 +650,7 @@ onsuccess = "validate_runtime_standard"
 role_policy = "reviewer_standard"
 
 [step.artifacts]
-required_inputs = ["RUNTIME_STANDARD_FILE", "TEST_CRITERIA_FILE", "WORKFLOW_SPEC_FILE"]
+required_inputs = ["RUNTIME_STANDARD_FILE", "TEST_CRITERIA_FILE", "BOOTSTRAP_SPEC_FILE"]
 produces = ["REVIEW_RUNTIME_STANDARD_FILE"]
 result_meta_key = "REVIEW_RUNTIME_STANDARD_FILE"
 
@@ -684,7 +684,7 @@ requires_human_approval_after = false
 onsuccess = "gatekeep_runtime_standard"
 
 [step.artifacts]
-required_inputs = ["RUNTIME_STANDARD_FILE", "WORKFLOW_SPEC_FILE"]
+required_inputs = ["RUNTIME_STANDARD_FILE", "BOOTSTRAP_SPEC_FILE"]
 produces = ["VALIDATE_RUNTIME_STANDARD_FILE"]
 result_meta_key = "VALIDATE_RUNTIME_STANDARD_FILE"
 
@@ -703,7 +703,7 @@ onsuccess = "generate_operational_workflow"
 role_policy = "gatekeeper_standard"
 
 [step.artifacts]
-required_inputs = ["RUNTIME_STANDARD_FILE", "TEST_CRITERIA_FILE", "DOMAIN_ANALYSIS_FILE", "WORKFLOW_SPEC_FILE"]
+required_inputs = ["RUNTIME_STANDARD_FILE", "TEST_CRITERIA_FILE", "DOMAIN_ANALYSIS_FILE", "BOOTSTRAP_SPEC_FILE"]
 produces = ["GATEKEEP_RUNTIME_STANDARD_FILE"]
 result_meta_key = "GATEKEEP_RUNTIME_STANDARD_FILE"
 
@@ -729,7 +729,7 @@ onsuccess = "review_operational_workflow"
 role_policy = "architect_standard"
 
 [step.artifacts]
-required_inputs = ["WORKFLOW_SPEC_FILE", "TEST_CRITERIA_FILE", "DOMAIN_ANALYSIS_FILE", "DOMAIN_COMPONENT_SCHEMA_FILE", "COMPOSITION_FORMAT_FILE", "OUTPUT_FORMAT_FILE", "ARTIFACT_CONTRACT_FILE", "STEP_SEQUENCE_FILE", "RUNTIME_STANDARD_FILE"]
+required_inputs = ["BOOTSTRAP_SPEC_FILE", "TEST_CRITERIA_FILE", "DOMAIN_ANALYSIS_FILE", "DOMAIN_COMPONENT_SCHEMA_FILE", "COMPOSITION_FORMAT_FILE", "OUTPUT_FORMAT_FILE", "ARTIFACT_CONTRACT_FILE", "STEP_SEQUENCE_FILE", "RUNTIME_STANDARD_FILE"]
 produces = ["OPERATIONAL_WORKFLOW_FILE"]
 result_meta_key = "OPERATIONAL_WORKFLOW_FILE"
 
@@ -744,7 +744,7 @@ onsuccess = "validate_operational_workflow"
 role_policy = "reviewer_standard"
 
 [step.artifacts]
-required_inputs = ["OPERATIONAL_WORKFLOW_FILE", "TEST_CRITERIA_FILE", "WORKFLOW_SPEC_FILE"]
+required_inputs = ["OPERATIONAL_WORKFLOW_FILE", "TEST_CRITERIA_FILE", "BOOTSTRAP_SPEC_FILE"]
 produces = ["REVIEW_OPERATIONAL_WORKFLOW_FILE"]
 result_meta_key = "REVIEW_OPERATIONAL_WORKFLOW_FILE"
 
@@ -778,7 +778,7 @@ requires_human_approval_after = false
 onsuccess = "gatekeep_operational_workflow"
 
 [step.artifacts]
-required_inputs = ["OPERATIONAL_WORKFLOW_FILE", "WORKFLOW_SPEC_FILE"]
+required_inputs = ["OPERATIONAL_WORKFLOW_FILE", "BOOTSTRAP_SPEC_FILE"]
 produces = ["VALIDATE_OPERATIONAL_WORKFLOW_FILE"]
 result_meta_key = "VALIDATE_OPERATIONAL_WORKFLOW_FILE"
 
@@ -797,7 +797,7 @@ onsuccess = "generate_package"
 role_policy = "gatekeeper_standard"
 
 [step.artifacts]
-required_inputs = ["OPERATIONAL_WORKFLOW_FILE", "TEST_CRITERIA_FILE", "DOMAIN_ANALYSIS_FILE", "WORKFLOW_SPEC_FILE"]
+required_inputs = ["OPERATIONAL_WORKFLOW_FILE", "TEST_CRITERIA_FILE", "DOMAIN_ANALYSIS_FILE", "BOOTSTRAP_SPEC_FILE"]
 produces = ["GATEKEEP_OPERATIONAL_WORKFLOW_FILE"]
 result_meta_key = "GATEKEEP_OPERATIONAL_WORKFLOW_FILE"
 
@@ -823,8 +823,8 @@ onsuccess = "validate_package"
 role_policy = "architect_standard"
 
 [step.artifacts]
-required_inputs = ["WORKFLOW_SPEC_FILE", "TEST_CRITERIA_FILE", "DOMAIN_ANALYSIS_FILE", "DOMAIN_COMPONENT_SCHEMA_FILE", "COMPOSITION_FORMAT_FILE", "OUTPUT_FORMAT_FILE", "ARTIFACT_CONTRACT_FILE", "STEP_SEQUENCE_FILE", "RUNTIME_STANDARD_FILE", "OPERATIONAL_WORKFLOW_FILE"]
-produces = ["WORKFLOW_MANIFEST_FILE", "WORKFLOW_EXTENSIONS_FILE", "WORKFLOW_ACTIONS_FILE", "WORKFLOW_PROMPTS_INDEX_FILE", "WORKFLOW_README_FILE", "STANDARDS_COMPOSITION_STANDARD_FILE", "SPECS_BUILDER_SPEC_FILE"]
+required_inputs = ["BOOTSTRAP_SPEC_FILE", "TEST_CRITERIA_FILE", "DOMAIN_ANALYSIS_FILE", "DOMAIN_COMPONENT_SCHEMA_FILE", "COMPOSITION_FORMAT_FILE", "OUTPUT_FORMAT_FILE", "ARTIFACT_CONTRACT_FILE", "STEP_SEQUENCE_FILE", "RUNTIME_STANDARD_FILE", "OPERATIONAL_WORKFLOW_FILE"]
+produces = ["WORKFLOW_MANIFEST_FILE", "WORKFLOW_EXTENSIONS_FILE", "WORKFLOW_ACTIONS_FILE", "WORKFLOW_PROMPTS_INDEX_FILE", "WORKFLOW_README_FILE", "STANDARDS_COMPOSITION_STANDARD_FILE", "MASTER_SPEC_FILE", "DEFAULT_IMPL_FILE"]
 result_meta_key = "WORKFLOW_MANIFEST_FILE"
 
 [[step]]
@@ -872,8 +872,8 @@ onsuccess = "validate_package"
 role_policy = "architect_standard"
 
 [step.artifacts]
-required_inputs = ["REVIEW_FILE_SUGGESTED", "WORKFLOW_SPEC_FILE", "TEST_CRITERIA_FILE", "DOMAIN_ANALYSIS_FILE", "DOMAIN_COMPONENT_SCHEMA_FILE", "COMPOSITION_FORMAT_FILE", "OUTPUT_FORMAT_FILE", "ARTIFACT_CONTRACT_FILE", "STEP_SEQUENCE_FILE", "RUNTIME_STANDARD_FILE", "OPERATIONAL_WORKFLOW_FILE"]
-produces = ["WORKFLOW_MANIFEST_FILE", "WORKFLOW_EXTENSIONS_FILE", "WORKFLOW_ACTIONS_FILE", "WORKFLOW_PROMPTS_INDEX_FILE", "WORKFLOW_README_FILE", "STANDARDS_COMPOSITION_STANDARD_FILE", "SPECS_BUILDER_SPEC_FILE"]
+required_inputs = ["REVIEW_FILE_SUGGESTED", "BOOTSTRAP_SPEC_FILE", "TEST_CRITERIA_FILE", "DOMAIN_ANALYSIS_FILE", "DOMAIN_COMPONENT_SCHEMA_FILE", "COMPOSITION_FORMAT_FILE", "OUTPUT_FORMAT_FILE", "ARTIFACT_CONTRACT_FILE", "STEP_SEQUENCE_FILE", "RUNTIME_STANDARD_FILE", "OPERATIONAL_WORKFLOW_FILE"]
+produces = ["WORKFLOW_MANIFEST_FILE", "WORKFLOW_EXTENSIONS_FILE", "WORKFLOW_ACTIONS_FILE", "WORKFLOW_PROMPTS_INDEX_FILE", "WORKFLOW_README_FILE", "STANDARDS_COMPOSITION_STANDARD_FILE", "MASTER_SPEC_FILE", "DEFAULT_IMPL_FILE"]
 result_meta_key = "WORKFLOW_MANIFEST_FILE"
 
 [[step]]
