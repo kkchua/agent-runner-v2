@@ -1,0 +1,435 @@
+# Artifact Generator Builder
+# Builds artifact generators that follow the mandatory pattern:
+# Input → Composition Spec → Runtime Implementation → Output
+#
+# Each phase follows the TDD pattern:
+#   generate → review → gatekeep
+
+[workflow]
+name = "artifact_generator_builder"
+version = "1.0.0"
+label = "Artifact Generator Builder"
+job_prefix = "AGB"
+description = "Builds artifact generators that transform input content into output artifacts following a consistent pattern: input → composition spec → runtime implementation → output."
+visibility = "canonical"
+default_max_rejects = 3
+init_step = "analyze_requirement"
+layer = "layer3"
+platform = "agent-runner-v2"
+
+[workflow.governance]
+include_in_prompts = true
+prompt_targets = ["all"]
+
+# =============================================================================
+# Phase 1: Analyze Requirement
+# =============================================================================
+
+[[step]]
+name = "analyze_requirement"
+prompt = "prompts/01_analyze_requirement.txt"
+enable_notifications = true
+requires_human_approval_after = false
+onsuccess = "review_requirement"
+
+[step.coder]
+role_policy = "architect_standard"
+
+[step.artifacts]
+required_inputs = ["REQUIREMENT_DOC"]
+produces = ["REQUIREMENT_ANALYSIS_FILE"]
+result_meta_key = "REQUIREMENT_ANALYSIS_FILE"
+
+[[step]]
+name = "review_requirement"
+prompt = "prompts/01b_review_requirement.txt"
+enable_notifications = true
+requires_human_approval_after = false
+onsuccess = "gatekeep_requirement"
+
+[step.coder]
+role_policy = "reviewer_standard"
+
+[step.artifacts]
+required_inputs = ["REQUIREMENT_ANALYSIS_FILE", "REQUIREMENT_DOC"]
+produces = ["REVIEW_REQUIREMENT_FILE"]
+result_meta_key = "REVIEW_REQUIREMENT_FILE"
+
+[step.on_reject_refine]
+step = "refine_requirement"
+artifact = "REVIEW_REQUIREMENT_FILE"
+max_iterations = 2
+exhausted_failure_code = "REQUIREMENT_REVIEW_EXHAUSTED"
+exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
+
+[[step]]
+name = "refine_requirement"
+prompt = "prompts/01c_refine_requirement.txt"
+enable_notifications = false
+requires_human_approval_after = false
+onsuccess = "review_requirement"
+
+[step.coder]
+role_policy = "architect_standard"
+
+[step.artifacts]
+required_inputs = ["REVIEW_REQUIREMENT_FILE", "REQUIREMENT_ANALYSIS_FILE"]
+produces = ["REQUIREMENT_ANALYSIS_FILE"]
+result_meta_key = "REQUIREMENT_ANALYSIS_FILE"
+
+[[step]]
+name = "gatekeep_requirement"
+prompt = "prompts/01d_gatekeep_requirement.txt"
+enable_notifications = true
+requires_human_approval_after = false
+onsuccess = "design_composition_spec"
+
+[step.coder]
+role_policy = "gatekeeper_standard"
+
+[step.artifacts]
+required_inputs = ["REQUIREMENT_ANALYSIS_FILE", "REVIEW_REQUIREMENT_FILE"]
+produces = ["GATEKEEP_REQUIREMENT_FILE"]
+result_meta_key = "GATEKEEP_REQUIREMENT_FILE"
+
+[step.on_reject_refine]
+step = "analyze_requirement"
+artifact = "GATEKEEP_REQUIREMENT_FILE"
+max_iterations = 2
+exhausted_failure_code = "REQUIREMENT_GATEKEEP_EXHAUSTED"
+exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
+
+# =============================================================================
+# Phase 2: Design Composition Spec
+# =============================================================================
+
+[[step]]
+name = "design_composition_spec"
+prompt = "prompts/02_design_composition_spec.txt"
+enable_notifications = true
+requires_human_approval_after = false
+onsuccess = "review_composition_spec"
+
+[step.coder]
+role_policy = "architect_standard"
+
+[step.artifacts]
+required_inputs = ["REQUIREMENT_ANALYSIS_FILE", "REQUIREMENT_DOC"]
+produces = ["COMPOSITION_SPEC_FILE"]
+result_meta_key = "COMPOSITION_SPEC_FILE"
+
+[[step]]
+name = "review_composition_spec"
+prompt = "prompts/02b_review_composition_spec.txt"
+enable_notifications = true
+requires_human_approval_after = false
+onsuccess = "gatekeep_composition_spec"
+
+[step.coder]
+role_policy = "reviewer_standard"
+
+[step.artifacts]
+required_inputs = ["COMPOSITION_SPEC_FILE", "REQUIREMENT_ANALYSIS_FILE"]
+produces = ["REVIEW_COMPOSITION_SPEC_FILE"]
+result_meta_key = "REVIEW_COMPOSITION_SPEC_FILE"
+
+[step.on_reject_refine]
+step = "refine_composition_spec"
+artifact = "REVIEW_COMPOSITION_SPEC_FILE"
+max_iterations = 2
+exhausted_failure_code = "COMPOSITION_SPEC_REVIEW_EXHAUSTED"
+exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
+
+[[step]]
+name = "refine_composition_spec"
+prompt = "prompts/02c_refine_composition_spec.txt"
+enable_notifications = false
+requires_human_approval_after = false
+onsuccess = "review_composition_spec"
+
+[step.coder]
+role_policy = "architect_standard"
+
+[step.artifacts]
+required_inputs = ["REVIEW_COMPOSITION_SPEC_FILE", "COMPOSITION_SPEC_FILE"]
+produces = ["COMPOSITION_SPEC_FILE"]
+result_meta_key = "COMPOSITION_SPEC_FILE"
+
+[[step]]
+name = "gatekeep_composition_spec"
+prompt = "prompts/02d_gatekeep_composition_spec.txt"
+enable_notifications = true
+requires_human_approval_after = false
+onsuccess = "design_runtime_impl"
+
+[step.coder]
+role_policy = "gatekeeper_standard"
+
+[step.artifacts]
+required_inputs = ["COMPOSITION_SPEC_FILE", "REVIEW_COMPOSITION_SPEC_FILE"]
+produces = ["GATEKEEP_COMPOSITION_SPEC_FILE"]
+result_meta_key = "GATEKEEP_COMPOSITION_SPEC_FILE"
+
+[step.on_reject_refine]
+step = "design_composition_spec"
+artifact = "GATEKEEP_COMPOSITION_SPEC_FILE"
+max_iterations = 2
+exhausted_failure_code = "COMPOSITION_SPEC_GATEKEEP_EXHAUSTED"
+exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
+
+# =============================================================================
+# Phase 3: Design Runtime Implementation
+# =============================================================================
+
+[[step]]
+name = "design_runtime_impl"
+prompt = "prompts/03_design_runtime_impl.txt"
+enable_notifications = true
+requires_human_approval_after = false
+onsuccess = "review_runtime_impl"
+
+[step.coder]
+role_policy = "architect_standard"
+
+[step.artifacts]
+required_inputs = ["COMPOSITION_SPEC_FILE", "REQUIREMENT_ANALYSIS_FILE"]
+produces = ["RUNTIME_IMPL_FILE"]
+result_meta_key = "RUNTIME_IMPL_FILE"
+
+[[step]]
+name = "review_runtime_impl"
+prompt = "prompts/03b_review_runtime_impl.txt"
+enable_notifications = true
+requires_human_approval_after = false
+onsuccess = "gatekeep_runtime_impl"
+
+[step.coder]
+role_policy = "reviewer_standard"
+
+[step.artifacts]
+required_inputs = ["RUNTIME_IMPL_FILE", "COMPOSITION_SPEC_FILE"]
+produces = ["REVIEW_RUNTIME_IMPL_FILE"]
+result_meta_key = "REVIEW_RUNTIME_IMPL_FILE"
+
+[step.on_reject_refine]
+step = "refine_runtime_impl"
+artifact = "REVIEW_RUNTIME_IMPL_FILE"
+max_iterations = 2
+exhausted_failure_code = "RUNTIME_IMPL_REVIEW_EXHAUSTED"
+exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
+
+[[step]]
+name = "refine_runtime_impl"
+prompt = "prompts/03c_refine_runtime_impl.txt"
+enable_notifications = false
+requires_human_approval_after = false
+onsuccess = "review_runtime_impl"
+
+[step.coder]
+role_policy = "architect_standard"
+
+[step.artifacts]
+required_inputs = ["REVIEW_RUNTIME_IMPL_FILE", "RUNTIME_IMPL_FILE"]
+produces = ["RUNTIME_IMPL_FILE"]
+result_meta_key = "RUNTIME_IMPL_FILE"
+
+[[step]]
+name = "gatekeep_runtime_impl"
+prompt = "prompts/03d_gatekeep_runtime_impl.txt"
+enable_notifications = true
+requires_human_approval_after = false
+onsuccess = "define_artifacts"
+
+[step.coder]
+role_policy = "gatekeeper_standard"
+
+[step.artifacts]
+required_inputs = ["RUNTIME_IMPL_FILE", "REVIEW_RUNTIME_IMPL_FILE"]
+produces = ["GATEKEEP_RUNTIME_IMPL_FILE"]
+result_meta_key = "GATEKEEP_RUNTIME_IMPL_FILE"
+
+[step.on_reject_refine]
+step = "design_runtime_impl"
+artifact = "GATEKEEP_RUNTIME_IMPL_FILE"
+max_iterations = 2
+exhausted_failure_code = "RUNTIME_IMPL_GATEKEEP_EXHAUSTED"
+exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
+
+# =============================================================================
+# Phase 4: Define Artifacts
+# =============================================================================
+
+[[step]]
+name = "define_artifacts"
+prompt = "prompts/04_define_artifacts.txt"
+enable_notifications = true
+requires_human_approval_after = false
+onsuccess = "gatekeep_artifacts"
+
+[step.coder]
+role_policy = "architect_standard"
+
+[step.artifacts]
+required_inputs = ["RUNTIME_IMPL_FILE", "COMPOSITION_SPEC_FILE", "REQUIREMENT_ANALYSIS_FILE"]
+produces = ["ARTIFACT_CONTRACT_FILE"]
+result_meta_key = "ARTIFACT_CONTRACT_FILE"
+
+[[step]]
+name = "gatekeep_artifacts"
+prompt = "prompts/04b_gatekeep_artifacts.txt"
+enable_notifications = true
+requires_human_approval_after = false
+onsuccess = "design_steps"
+
+[step.coder]
+role_policy = "gatekeeper_standard"
+
+[step.artifacts]
+required_inputs = ["ARTIFACT_CONTRACT_FILE", "RUNTIME_IMPL_FILE"]
+produces = ["GATEKEEP_ARTIFACTS_FILE"]
+result_meta_key = "GATEKEEP_ARTIFACTS_FILE"
+
+[step.on_reject_refine]
+step = "define_artifacts"
+artifact = "GATEKEEP_ARTIFACTS_FILE"
+max_iterations = 2
+exhausted_failure_code = "ARTIFACTS_GATEKEEP_EXHAUSTED"
+exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
+
+# =============================================================================
+# Phase 5: Design Steps
+# =============================================================================
+
+[[step]]
+name = "design_steps"
+prompt = "prompts/05_design_steps.txt"
+enable_notifications = true
+requires_human_approval_after = false
+onsuccess = "gatekeep_steps"
+
+[step.coder]
+role_policy = "architect_standard"
+
+[step.artifacts]
+required_inputs = ["ARTIFACT_CONTRACT_FILE", "RUNTIME_IMPL_FILE", "COMPOSITION_SPEC_FILE"]
+produces = ["STEP_SEQUENCE_FILE"]
+result_meta_key = "STEP_SEQUENCE_FILE"
+
+[[step]]
+name = "gatekeep_steps"
+prompt = "prompts/05b_gatekeep_steps.txt"
+enable_notifications = true
+requires_human_approval_after = false
+onsuccess = "generate_package"
+
+[step.coder]
+role_policy = "gatekeeper_standard"
+
+[step.artifacts]
+required_inputs = ["STEP_SEQUENCE_FILE", "ARTIFACT_CONTRACT_FILE"]
+produces = ["GATEKEEP_STEPS_FILE"]
+result_meta_key = "GATEKEEP_STEPS_FILE"
+
+[step.on_reject_refine]
+step = "design_steps"
+artifact = "GATEKEEP_STEPS_FILE"
+max_iterations = 2
+exhausted_failure_code = "STEPS_GATEKEEP_EXHAUSTED"
+exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
+
+# =============================================================================
+# Phase 6: Generate Package
+# =============================================================================
+
+[[step]]
+name = "generate_package"
+prompt = "prompts/06_generate_package.txt"
+enable_notifications = true
+requires_human_approval_after = false
+onsuccess = "review_package"
+
+[step.coder]
+role_policy = "architect_standard"
+
+[step.artifacts]
+required_inputs = ["STEP_SEQUENCE_FILE", "ARTIFACT_CONTRACT_FILE", "RUNTIME_IMPL_FILE", "COMPOSITION_SPEC_FILE", "REQUIREMENT_ANALYSIS_FILE"]
+produces = ["WORKFLOW_MANIFEST_FILE", "WORKFLOW_EXTENSIONS_FILE", "WORKFLOW_ACTIONS_FILE", "WORKFLOW_PROMPTS_DIR", "WORKFLOW_README_FILE"]
+result_meta_key = "WORKFLOW_MANIFEST_FILE"
+
+[[step]]
+name = "review_package"
+prompt = "prompts/06b_review_package.txt"
+enable_notifications = true
+requires_human_approval_after = false
+onsuccess = "gatekeep_package"
+
+[step.coder]
+role_policy = "reviewer_standard"
+
+[step.artifacts]
+required_inputs = ["WORKFLOW_MANIFEST_FILE", "STEP_SEQUENCE_FILE"]
+produces = ["REVIEW_PACKAGE_FILE"]
+result_meta_key = "REVIEW_PACKAGE_FILE"
+
+[step.on_reject_refine]
+step = "refine_package"
+artifact = "REVIEW_PACKAGE_FILE"
+max_iterations = 2
+exhausted_failure_code = "PACKAGE_REVIEW_EXHAUSTED"
+exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
+
+[[step]]
+name = "refine_package"
+prompt = "prompts/06c_refine_package.txt"
+enable_notifications = false
+requires_human_approval_after = false
+onsuccess = "review_package"
+
+[step.coder]
+role_policy = "architect_standard"
+
+[step.artifacts]
+required_inputs = ["REVIEW_PACKAGE_FILE", "WORKFLOW_MANIFEST_FILE"]
+produces = ["WORKFLOW_MANIFEST_FILE"]
+result_meta_key = "WORKFLOW_MANIFEST_FILE"
+
+[[step]]
+name = "gatekeep_package"
+prompt = "prompts/06d_gatekeep_package.txt"
+enable_notifications = true
+requires_human_approval_after = false
+onsuccess = "promote_package"
+
+[step.coder]
+role_policy = "gatekeeper_standard"
+
+[step.artifacts]
+required_inputs = ["WORKFLOW_MANIFEST_FILE", "REVIEW_PACKAGE_FILE"]
+produces = ["GATEKEEP_PACKAGE_FILE"]
+result_meta_key = "GATEKEEP_PACKAGE_FILE"
+
+[step.on_reject_refine]
+step = "generate_package"
+artifact = "GATEKEEP_PACKAGE_FILE"
+max_iterations = 2
+exhausted_failure_code = "PACKAGE_GATEKEEP_EXHAUSTED"
+exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
+
+# =============================================================================
+# Phase 7: Promote Package
+# =============================================================================
+
+[[step]]
+name = "promote_package"
+action = "promote_artifact"
+enable_notifications = true
+requires_human_approval_after = true
+
+[step.artifacts]
+required_inputs = ["WORKFLOW_MANIFEST_FILE"]
+produces = ["PROMOTION_REPORT_FILE"]
+result_meta_key = "PROMOTION_REPORT_FILE"
+
+[step.config]
+artifact_key = "WORKFLOW_PACKAGE_DIR"
+backup = true

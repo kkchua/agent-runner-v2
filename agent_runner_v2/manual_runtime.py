@@ -152,7 +152,7 @@ def _initialize_state_from_backend(
         # Check for any input spec keys that need resolution
         artifacts = state.get("artifacts", {})
         spec_keys_to_resolve = [
-            key for key in ("WORKFLOW_SPEC_FILE", "BOOTSTRAP_SPEC_FILE")
+            key for key in ("WORKFLOW_SPEC_FILE", "BOOTSTRAP_SPEC_FILE", "REQUIREMENT_DOC")
             if key in artifacts
         ]
         if spec_keys_to_resolve:

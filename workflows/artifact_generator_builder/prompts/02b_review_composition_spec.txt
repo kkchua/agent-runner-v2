@@ -1,0 +1,50 @@
+# Objective
+
+Review the composition specification for completeness, consistency, and alignment with the requirement analysis.
+
+# Reference Inputs
+
+- COMPOSITION_SPEC_FILE: {COMPOSITION_SPEC_FILE}
+- REQUIREMENT_ANALYSIS_FILE: {REQUIREMENT_ANALYSIS_FILE}
+
+# Review Tasks
+
+1. **Completeness Check** -- All sections present:
+   - Meta schema defined
+   - Input mapping specified
+   - Output mapping specified
+   - Transformation rules clear
+   - Extension mechanism defined
+
+2. **Consistency Check** -- Internal consistency:
+   - Meta schema supports all required transformations
+   - Input mapping covers all input artifacts
+   - Output mapping produces all required output artifacts
+   - No contradictions between sections
+
+3. **Feasibility Check** -- Can this be implemented?
+   - Are transformation rules implementable?
+   - Are there any ambiguous or impossible requirements?
+   - Does the extension mechanism make sense?
+
+4. **Standards Compliance** -- Follows composition system standard:
+   - Three-layer architecture respected
+   - Component schema patterns followed
+   - Proper separation of concerns
+
+# Self-Critic
+
+- Did I check against the requirement analysis?
+- Did I verify feasibility?
+- Is my feedback specific and actionable?
+
+# Forbidden Content
+
+- Do NOT approve if critical issues exist
+- Do NOT invent new requirements
+- Do NOT include non-ASCII characters
+
+# Output Instructions
+
+Write to: {REVIEW_COMPOSITION_SPEC_FILE}
+Markdown with YAML frontmatter: doc_type: "review_composition_spec", verdict: "PASS" or "REJECT", identity_locked: true. ASCII-only.

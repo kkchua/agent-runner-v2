@@ -1,0 +1,40 @@
+# Objective
+
+Final gatekeep of the artifact contract. Approve only if it's complete and consistent.
+
+# Reference Inputs
+
+- ARTIFACT_CONTRACT_FILE: {ARTIFACT_CONTRACT_FILE}
+- RUNTIME_IMPL_FILE: {RUNTIME_IMPL_FILE}
+
+# Gatekeep Tasks
+
+1. **Completeness** -- All artifacts covered:
+   - All input artifacts from requirement
+   - All output artifacts from requirement
+   - All intermediate artifacts needed
+
+2. **Consistency** -- No conflicts:
+   - No duplicate artifact keys
+   - Path patterns don't conflict
+   - Relationships are valid
+
+3. **Compliance** -- Matches runtime impl:
+   - Runtime impl references match contract
+   - Composition spec mappings match contract
+
+# Self-Critic
+
+- Is this ready for step design?
+- Are there any missing artifacts?
+- Are there any conflicts?
+
+# Forbidden Content
+
+- Do NOT approve if critical issues remain
+- Do NOT include non-ASCII characters
+
+# Output Instructions
+
+Write to: {GATEKEEP_ARTIFACTS_FILE}
+Markdown with YAML frontmatter: doc_type: "gatekeep_artifacts", verdict: "APPROVE" or "REJECT", identity_locked: true. ASCII-only.

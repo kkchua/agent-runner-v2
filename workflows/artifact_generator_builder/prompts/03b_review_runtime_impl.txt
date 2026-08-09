@@ -1,0 +1,51 @@
+# Objective
+
+Review the runtime implementation design for correctness, completeness, and alignment with the composition spec.
+
+# Reference Inputs
+
+- RUNTIME_IMPL_FILE: {RUNTIME_IMPL_FILE}
+- COMPOSITION_SPEC_FILE: {COMPOSITION_SPEC_FILE}
+
+# Review Tasks
+
+1. **Spec Compliance** -- Follows composition spec:
+   - Input loading matches input mapping
+   - Transformation matches transformation rules
+   - Output generation matches output mapping
+   - Extension mechanism matches extension spec
+
+2. **Completeness** -- All aspects covered:
+   - Architecture defined
+   - Input loading specified
+   - Transformation engine designed
+   - Output generation specified
+   - Configuration defined
+   - Extension interface clear
+
+3. **Feasibility** -- Can be implemented:
+   - Are the algorithms implementable?
+   - Are there any impossible requirements?
+   - Is the error handling adequate?
+
+4. **Quality** -- Good design practices:
+   - Clear separation of concerns
+   - Modular and testable
+   - Well-documented
+
+# Self-Critic
+
+- Did I verify spec compliance?
+- Did I check feasibility?
+- Is my feedback specific and actionable?
+
+# Forbidden Content
+
+- Do NOT approve if spec compliance issues exist
+- Do NOT invent new requirements
+- Do NOT include non-ASCII characters
+
+# Output Instructions
+
+Write to: {REVIEW_RUNTIME_IMPL_FILE}
+Markdown with YAML frontmatter: doc_type: "review_runtime_impl", verdict: "PASS" or "REJECT", identity_locked: true. ASCII-only.

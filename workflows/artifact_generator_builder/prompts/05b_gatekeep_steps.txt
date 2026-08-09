@@ -1,0 +1,41 @@
+# Objective
+
+Final gatekeep of the step sequence. Approve only if routing is valid and complete.
+
+# Reference Inputs
+
+- STEP_SEQUENCE_FILE: {STEP_SEQUENCE_FILE}
+- ARTIFACT_CONTRACT_FILE: {ARTIFACT_CONTRACT_FILE}
+
+# Gatekeep Tasks
+
+1. **Routing Validity** -- No cycles, no dangling references:
+   - All onsuccess targets exist
+   - All on_reject_refine targets exist
+   - No infinite loops
+
+2. **Artifact Flow** -- All artifacts produced before consumed:
+   - No step references undefined artifacts
+   - All required_inputs are produced by prior steps
+   - result_meta_key matches produces
+
+3. **Completeness** -- All functionality covered:
+   - All runtime impl steps are represented
+   - All artifacts from contract are produced
+   - Review loops are properly configured
+
+# Self-Critic
+
+- Is routing valid?
+- Are all artifacts accounted for?
+- Is this ready for package generation?
+
+# Forbidden Content
+
+- Do NOT approve if routing is invalid
+- Do NOT include non-ASCII characters
+
+# Output Instructions
+
+Write to: {GATEKEEP_STEPS_FILE}
+Markdown with YAML frontmatter: doc_type: "gatekeep_steps", verdict: "APPROVE" or "REJECT", identity_locked: true. ASCII-only.

@@ -1,0 +1,62 @@
+# Objective
+
+Design the default runtime implementation that executes the composition spec to produce output from input.
+
+# Reference Inputs
+
+- COMPOSITION_SPEC_FILE: {COMPOSITION_SPEC_FILE}
+- REQUIREMENT_ANALYSIS_FILE: {REQUIREMENT_ANALYSIS_FILE}
+
+# Generation Tasks
+
+Produce a runtime implementation design containing:
+
+1. **Implementation Architecture** -- High-level structure:
+   - Main entry point and workflow
+   - Component modules and their responsibilities
+   - Data flow through the system
+
+2. **Input Loading** -- How to load and parse input:
+   - File reading and parsing logic
+   - Validation of input format
+   - Conversion to meta content structure
+
+3. **Transformation Engine** -- Core processing logic:
+   - Step-by-step transformation process
+   - How composition spec rules are applied
+   - Error handling and recovery
+
+4. **Output Generation** -- How to produce output:
+   - Rendering/assembly logic
+   - File writing and formatting
+   - Validation of output format
+
+5. **Configuration** -- Runtime parameters:
+   - What can be configured at runtime?
+   - Default values and overrides
+   - Environment-specific settings
+
+6. **Extension Interface** -- How to add new implementations:
+   - What interfaces must new implementations follow?
+   - What hooks/extension points exist?
+   - How to register new implementations?
+
+7. **Self-Validation** -- Verify implementation follows composition spec
+
+# Self-Critic
+
+- Does this implementation follow the composition spec?
+- Can it handle all input variations?
+- Does it produce all required outputs?
+- Is the extension interface clear?
+
+# Forbidden Content
+
+- Do NOT reference the builder's identity
+- Do NOT deviate from the composition spec
+- Do NOT include non-ASCII characters
+
+# Output Instructions
+
+Write to: {RUNTIME_IMPL_FILE}
+Markdown with YAML frontmatter: doc_type: "runtime_impl", identity_locked: true. ASCII-only.
