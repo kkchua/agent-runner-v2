@@ -223,7 +223,7 @@ class ArMetaBuilderV2Extensions(WorkflowExtensions):
 
         # Resolve input spec filenames from operator console to Specs/ paths
         resolve_input_specs(
-            result, state, self.workflow_name, ["WORKFLOW_SPEC_FILE"]
+            result, state, self.workflow_name, ["BOOTSTRAP_SPEC_FILE"]
         )
 
         # Resolve all artifact keys to absolute paths
