@@ -421,7 +421,7 @@ exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
 
 [[step]]
 name = "promote_package"
-action = "promote_artifact"
+action = "promote_workflow_package"
 enable_notifications = true
 requires_human_approval_after = true
 
