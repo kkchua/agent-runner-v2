@@ -756,10 +756,12 @@ def promote_workflow_package(
     target_dir = project_root / "workflows" / slug
 
     # Backup existing target
+    backup_path = None
     if target_dir.exists():
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
         backup_dir = project_root / "workflows" / f"{slug}_bak_{timestamp}"
         shutil.copytree(target_dir, backup_dir)
+        backup_path = backup_dir
 
     target_dir.mkdir(parents=True, exist_ok=True)
 
@@ -799,6 +801,8 @@ def promote_workflow_package(
         )
 
     remark = f"Promoted to {target_dir}: {', '.join(copied)}"
+    if backup_path:
+        remark += f" (backup: {backup_path})"
     return ActionResult(
         status="APPROVED",
         remark=remark,
