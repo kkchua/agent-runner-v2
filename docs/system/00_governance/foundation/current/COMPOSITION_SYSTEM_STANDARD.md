@@ -29,7 +29,11 @@ This standard defines the universal pattern that any domain can adopt.
 
 ## 2. The Three-Layer Architecture
 
-All composition systems follow a three-layer architecture:
+All composition systems follow a three-layer architecture. This architecture supports two distinct patterns:
+
+### Pattern 1: Component Assembly
+
+Pre-defined components are assembled into a deliverable.
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -51,11 +55,49 @@ All composition systems follow a three-layer architecture:
 └─────────────────────────────────────────────────────────────┘
 ```
 
+**Use case:** Video campaign manuscripts, software blueprints, content packages — where you have a library of pre-defined components that are assembled in different combinations.
+
+### Pattern 2: Input Transformation
+
+Input content is transformed into output content through a pipeline.
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ Layer 1: INPUT PARSING                                       │
+│ Parse input into structured intermediate representation      │
+│ Example: Document → Sections → Paragraphs → Sentences        │
+└─────────────────────────────────────────────────────────────┘
+                            ↓
+┌─────────────────────────────────────────────────────────────┐
+│ Layer 2: TRANSFORMATION                                      │
+│ Analyze, transform, and compose intermediate results         │
+│ Example: Sentences → KeyPoints → RedundancyClusters → Blocks │
+└─────────────────────────────────────────────────────────────┘
+                            ↓
+┌─────────────────────────────────────────────────────────────┐
+│ Layer 3: OUTPUT RENDERING                                    │
+│ Render final output from transformed components              │
+│ Example: Summary, Bullet Points, Key Phrases, Q&A            │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Use case:** Text summarization, content conversion, format transformation — where input content is processed through a pipeline to produce different output types.
+
+**Key difference:** Pattern 1 assembles pre-existing components. Pattern 2 transforms input content into new output content. Both follow the same 3-layer architecture, but the nature of each layer differs.
+
 ### Separation of Concerns
 
-- **Components** define WHAT the building blocks are (their properties, constraints, creative DNA)
-- **Compositions** define HOW they fit together (which components, in what order, with what overrides)
-- **Outputs** are the RESULT (complete, self-contained deliverables ready for downstream consumption)
+**Pattern 1 (Assembly):**
+- **Components** define WHAT the building blocks are
+- **Compositions** define HOW they fit together
+- **Outputs** are the RESULT (assembled deliverables)
+
+**Pattern 2 (Transformation):**
+- **Input Parsing** defines HOW to decompose input into structured form
+- **Transformation** defines HOW to analyze and compose intermediate results
+- **Output Rendering** defines HOW to produce final deliverables
+
+Both patterns support **multiple output types** through different runtime implementations (see Section 13).
 
 ---
 
@@ -463,80 +505,116 @@ a standard version increment.
 
 This standard enables a **factory pattern** for generating meta-workflow builders:
 
-**Input:** Domain specification (component types, composition rules, output format)
-**Output:** A meta-workflow builder that knows how to work with that domain's components
+**Input:** Requirement document (input artifacts, output type, transformation requirements, constraints)
+**Output:** A complete artifact generator workflow package
 
-**Example:**
-- Input: "Video manuscript domain with 7 component types"
-- Output: `video_manuscript_builder_v1` workflow that scans components, resolves compositions, generates manuscripts
+**Implementation:** `artifact_generator_builder` (AGB) workflow
 
-**Factory workflow:**
-1. Read domain specification
-2. Generate component schema validation logic
-3. Generate composition resolution logic
-4. Generate output assembly logic
-5. Generate review/refine prompts
-6. Package as a complete workflow bundle
+### 10.1 How It Works
 
-This creates a **workflow that builds workflows** — a meta-meta-workflow.
+The AGB workflow reads a requirement document and produces:
 
-**Status:** Conceptual — not yet implemented.
+1. **Composition Spec** — Defines the meta schema, transformation rules, invariants, and extension interfaces (output-type-agnostic)
+2. **Runtime Implementation** — Designs the concrete executor that satisfies the composition spec
+3. **Workflow Package** — Generates workflow.toml, context_extensions.py, actions.py, prompts/, README.md
+
+### 10.2 Factory Workflow Phases
+
+| Phase | Description |
+|-------|-------------|
+| 1. Analyze Requirement | Understand input/output specifications |
+| 2. Design Composition Spec | Define transformation rules and meta schema |
+| 3. Design Runtime Implementation | Design the executor that follows the spec |
+| 4. Define Artifacts | Specify all artifact keys and paths |
+| 5. Design Steps | Define workflow steps and routing |
+| 6. Generate Package | Produce workflow files |
+| 7. Promote Package | Copy to workflows/ directory |
+
+### 10.3 Example
+
+**Input (Requirement Doc):**
+```
+generator_name: "text_summarizer"
+input: INPUT_TEXT_FILE (.txt or .md)
+output: SUMMARY_FILE (condensed summary)
+constraints: max 20% compression, same language, no new information
+```
+
+**Output (Generated Workflow):**
+- `text_summarizer/workflow.toml` — 17-step workflow definition
+- `text_summarizer/context_extensions.py` — Artifact key registration
+- `text_summarizer/actions.py` — Action implementations
+- `text_summarizer/prompts/` — Prompt templates
+- `text_summarizer/COMPOSITION_SPEC-001.md` — Transformation contract
+- `text_summarizer/RUNTIME_IMPL-001.md` — Executor design
+
+### 10.4 Self-Bootstrap
+
+AGB can build itself! The self-bootstrap requirement specifies:
+
+- **Input:** Requirement documents
+- **Output:** Artifact generators (workflow packages)
+
+This creates a recursive chain where AGB can produce improved versions of itself.
+
+**Status:** Implemented — `workflows/artifact_generator_builder/`
 
 ---
 
-## 11. Authoring a Composition System Specification
+## 11. Authoring a Requirement Document
 
-A **Composition System Specification** is the input document for
-workflow_builder_v2. It describes a domain's composition system using
-the three-layer architecture defined in this standard. The builder reads
-the spec and generates a complete workflow package that implements the
-composition system.
+A **Requirement Document** is the input to the Artifact Generator Builder (AGB). It describes what artifact generator to build using the composition system pattern.
 
-### 11.1 Spec Structure
+### 11.1 Document Structure
 
-The spec is a single markdown document with these sections:
+The requirement document is a markdown file with YAML frontmatter:
 
-| Section | Layer | Content |
-|---|---|---|
-| 1. Domain Overview | — | Domain name, purpose, context |
-| 2. Component Schema | Layer 1 | Component types, properties, validation rules, examples |
-| 3. Composition Format | Layer 2 | Binding rules, override mechanism, placeholder resolution, example |
-| 4. Output Format | Layer 3 | Output sections, resolution rules, quality requirements, skeleton |
-| 5. Operational Requirements | — | Workflow phases, artifacts, action steps, domain constraints |
+```yaml
+---
+generator_name: "text_summarizer"
+version: "1.0.0"
+---
+```
+
+Followed by these sections:
+
+| Section | Purpose | Example |
+|---------|---------|---------|
+| **Purpose** | What the generator does | "Transforms long text into concise summary" |
+| **Input Artifacts** | What content the generator accepts | INPUT_TEXT_FILE (.txt or .md) |
+| **Output Artifacts** | What content the generator produces | SUMMARY_FILE (condensed summary) |
+| **Transformation Requirements** | How to convert input to output | Extract key points, remove redundancy, preserve meaning |
+| **Constraints** | Hard requirements | Max 20% compression, same language, no new information |
+| **Extension Points** (optional) | Future output types or variations | Bullet-point summary, key phrases extraction |
 
 ### 11.2 Key Principles
 
-**The spec is authoritative.** The builder reads component types, composition
-rules, and output structure directly from the spec's structured sections.
-It does not infer these from narrative text. If the spec lists 7 component
-types, the builder generates exactly those 7 types.
+**Be specific about input and output.** The requirement doc must clearly define:
+- Input artifact keys and formats
+- Output artifact keys and formats
+- What transformation happens between them
 
-**Describe WHAT, not HOW.** The spec defines the domain's composition
-architecture. The builder designs the operational workflow (step sequence,
-routing, prompts) that implements it.
+**Define constraints, not implementation.** The requirement doc specifies WHAT must be achieved (e.g., "max 20% compression"), not HOW to achieve it. The composition spec and runtime implementation (generated by AGB) define the HOW.
 
-**Include examples.** Each layer should include at least one concrete
-example: a sample component file, a sample composition, and a sample
-output skeleton. Examples disambiguate the schema definitions.
+**Support multiple output types.** If the generator should support different output types (summary, bullet points, key phrases), list them as extension points. The composition spec will be output-type-agnostic (see Section 13), and different runtime implementations will produce different outputs.
 
-### 11.3 Template and Examples
+### 11.3 Example
 
-- **Template:** `docs/repo/workflow_builder/current/templates/COMPOSITION_SYSTEM_SPEC_TEMPLATE.md`
-- **Example (Video Campaign Manuscript):** `docs/repo/workflow_builder/specs/video_campaign_manuscript_v2.md`
+See `workflows/artifact_generator_builder/Specs/simple_text_summarizer.md` for a complete example.
 
-### 11.4 Relationship to v1-Style Specs
+### 11.4 Relationship to Composition Spec and Runtime Implementation
 
-The v1-style workflow spec (overview, purpose, artifacts, actions, quality)
-describes a workflow in terms of its execution structure. The composition
-system spec describes a domain in terms of its compositional architecture.
+```
+Requirement Document (human-written)
+    ↓ AGB Phase 1-2
+Composition Spec (generated, output-type-agnostic contract)
+    ↓ AGB Phase 3
+Runtime Implementation (generated, concrete executor)
+    ↓ AGB Phase 4-6
+Workflow Package (generated, executable workflow)
+```
 
-| Aspect | v1-Style Spec | Composition System Spec |
-|---|---|---|
-| Focus | Workflow execution structure | Domain composition architecture |
-| Input to | workflow_builder_v1 | workflow_builder_v2 |
-| Describes | Steps, artifacts, actions, routing | Components, compositions, outputs |
-| Builder infers | Step sequence, routing, prompts | Operational workflow, step sequence |
-| Best for | Any workflow pattern | Composition-based workflows |
+The requirement document is the **source of truth** for what the generator should do. The composition spec and runtime implementation are **derived artifacts** that satisfy the requirement.
 
 ---
 
