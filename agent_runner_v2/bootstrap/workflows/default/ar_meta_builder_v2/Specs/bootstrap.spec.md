@@ -34,6 +34,16 @@ A complete executable workflow package containing:
 - Domain-specific composition standard
 - Embedded builder specification (for recursive bootstrap)
 
+### Version Naming
+The generated workflow must include a **codename** (a distinctive, memorable name) that identifies this version. The output folder name follows the pattern: `{base_workflow_name}_{codename}` (e.g., `ar_meta_builder_einstein`).
+
+The codename should be:
+- Unique and distinctive
+- Easy to remember and reference
+- Appropriate for the workflow's character/approach
+
+The workflow.toml `name` field must match the folder name exactly.
+
 ## Constraints
 
 ### Identity Isolation
@@ -53,7 +63,7 @@ Each phase of the generated workflow must include:
 - Gatekeeping step (final approval)
 
 ### Recursive Capability
-The generated workflow must be capable of bootstrapping itself — given its own output as input, it should produce a functionally equivalent (but not necessarily identical) workflow package.
+The generated workflow must be capable of bootstrapping the NEXT version of itself — given its own bootstrap spec as input, it should produce a functionally equivalent (but not necessarily identical) workflow package with a new codename. The output goes to a new folder, NEVER overwriting the source workflow.
 
 ### Artifact Tracking
 All generated artifacts must be:
@@ -87,7 +97,8 @@ The generated workflow package is successful if:
 3. It maintains identity isolation (no meta-builder leakage)
 4. It follows the three-layer composition pattern
 5. It includes comprehensive validation at each phase
-6. It can bootstrap itself (recursive capability)
+6. It has a unique codename and outputs to a new folder (not overwriting the source)
+7. It can bootstrap the next version (recursive capability)
 
 ## What NOT to Specify
 
