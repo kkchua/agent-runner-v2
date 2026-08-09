@@ -4,118 +4,116 @@ This module provides action implementations for the artifact generator
 builder workflow. Actions are deterministic, code-driven steps that
 perform specific operations without LLM involvement.
 """
+from __future__ import annotations
 
+import shutil
+from datetime import datetime
 from pathlib import Path
-from typing import Any
 
 from agent_runner_v2.action_result import ActionResult
 from agent_runner_v2.workflow_packages.actions import action
 
 
-@action
-def promote_artifact(
-    artifacts: dict[str, Any],
-    config: dict[str, Any],
-    **kwargs: Any,
-) -> ActionResult:
-    """Promote the generated workflow package to its target location.
+@action("promote_workflow_package")
+def promote_workflow_package(*, context, state, step_cfg, project_root):
+    """Promote the generated workflow package to the repo workflows directory.
 
-    This action copies the generated workflow package from the run output
-    directory to the workflows/ directory, creating a backup of any
-    existing workflow first.
-
-    Args:
-        artifacts: Dictionary of artifact keys to file paths
-        config: Step configuration containing artifact_key and backup flag
-
-    Returns:
-        ActionResult with promotion status and paths
+    Copies the generated workflow package from the run output directory to
+    workflows/{workflow_name}/. The workflow name is read from the generated
+    workflow.toml manifest. Existing target directories are backed up before
+    overwriting.
     """
-    artifact_key = config.get("artifact_key", "WORKFLOW_PACKAGE_DIR")
-    backup_enabled = config.get("backup", True)
+    artifacts = state.get("artifacts", {})
+    project_root = Path(project_root)
 
-    source_path = Path(artifacts.get(artifact_key, ""))
-    if not source_path or not source_path.exists():
+    # Source: the directory containing workflow.toml
+    manifest_path = artifacts.get("WORKFLOW_MANIFEST_FILE", "")
+    if not manifest_path:
         return ActionResult(
-            success=False,
-            artifact_key="PROMOTION_REPORT_FILE",
-            artifact_path="",
-            message=f"Artifact {artifact_key} not found at {source_path}",
+            status="REJECTED",
+            remark="WORKFLOW_MANIFEST_FILE artifact not found in state.",
+            artifacts={},
+            reject_code="MISSING_MANIFEST",
         )
 
-    # Extract workflow name from the generated workflow.toml
-    manifest_path = Path(artifacts.get("WORKFLOW_MANIFEST_FILE", ""))
-    if not manifest_path.exists():
+    source_dir = Path(manifest_path).parent
+    if not source_dir.is_dir():
         return ActionResult(
-            success=False,
-            artifact_key="PROMOTION_REPORT_FILE",
-            artifact_path="",
-            message="WORKFLOW_MANIFEST_FILE not found",
+            status="REJECTED",
+            remark=f"Workflow output directory not found: {source_dir}",
+            artifacts={},
+            reject_code="SOURCE_DIR_NOT_FOUND",
         )
 
     # Read workflow name from manifest
-    import tomli
+    import tomllib
     with open(manifest_path, "rb") as f:
-        manifest = tomli.load(f)
+        manifest = tomllib.load(f)
 
     workflow_name = manifest.get("workflow", {}).get("name", "")
     if not workflow_name:
         return ActionResult(
-            success=False,
-            artifact_key="PROMOTION_REPORT_FILE",
-            artifact_path="",
-            message="Workflow name not found in manifest",
+            status="REJECTED",
+            remark="Workflow name not found in workflow.toml [workflow] section.",
+            artifacts={},
+            reject_code="MISSING_WORKFLOW_NAME",
         )
 
-    # Determine target path
-    workspace_root = source_path.parent.parent.parent  # Navigate up from output/run/repo
-    target_path = workspace_root / "workflows" / workflow_name
+    # Target: workflows/{workflow_name}/
+    target_dir = project_root / "workflows" / workflow_name
 
-    # Backup existing workflow if enabled
+    # Backup existing target
     backup_status = "No backup needed"
-    if backup_enabled and target_path.exists():
-        import shutil
-        from datetime import datetime
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        backup_path = workspace_root / "workflows" / f"{workflow_name}_bak_{timestamp}"
-        shutil.copytree(target_path, backup_path)
-        backup_status = f"Backed up existing workflow to {backup_path}"
+    if target_dir.exists():
+        timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+        backup_dir = project_root / "workflows" / f"{workflow_name}_bak_{timestamp}"
+        shutil.copytree(target_dir, backup_dir)
+        backup_status = f"Backed up existing workflow to {backup_dir}"
+        print(f"[promote_workflow_package] backed up {target_dir} -> {backup_dir}", flush=True)
 
-    # Copy new workflow to target
-    import shutil
-    if target_path.exists():
-        shutil.rmtree(target_path)
-    shutil.copytree(source_path, target_path)
+    target_dir.mkdir(parents=True, exist_ok=True)
 
-    # Write promotion report
-    report_path = Path(artifacts.get("PROMOTION_REPORT_FILE", ""))
-    if report_path:
-        report_path.parent.mkdir(parents=True, exist_ok=True)
-        report_content = f"""# Promotion Report
+    # Copy workflow files
+    always_copy = ["workflow.toml", "context_extensions.py", "README.md"]
+    conditional_copy = ["actions.py", ".env.sample", "config.json.sample"]
+    copy_dirs = ["prompts", "Specs"]
 
-## Status: SUCCESS
+    copied = []
 
-## Workflow Name
-{workflow_name}
+    for filename in always_copy:
+        src = source_dir / filename
+        if src.exists():
+            shutil.copy2(src, target_dir / filename)
+            copied.append(filename)
 
-## Target Path
-{target_path}
+    for filename in conditional_copy:
+        src = source_dir / filename
+        if src.exists():
+            shutil.copy2(src, target_dir / filename)
+            copied.append(filename)
 
-## Backup Status
-{backup_status}
+    for dirname in copy_dirs:
+        src = source_dir / dirname
+        if src.is_dir():
+            dst = target_dir / dirname
+            if dst.exists():
+                shutil.rmtree(dst)
+            shutil.copytree(src, dst)
+            copied.append(f"{dirname}/")
 
-## Files Promoted
-- workflow.toml
-- context_extensions.py
-- actions.py
-- prompts/
-- README.md
-"""
-        report_path.write_text(report_content, encoding="utf-8")
+    if not copied:
+        return ActionResult(
+            status="REJECTED",
+            remark=f"No files found to promote in {source_dir}",
+            artifacts={},
+            reject_code="NOTHING_TO_PROMOTE",
+        )
+
+    remark = f"Promoted workflow '{workflow_name}' to {target_dir}: {', '.join(copied)}. {backup_status}"
+    print(f"[promote_workflow_package] {remark}", flush=True)
 
     return ActionResult(
-        success=True,
-        artifact_key="PROMOTION_REPORT_FILE",
-        artifact_path=str(report_path) if report_path else "",
-        message=f"Promoted workflow to {target_path}",
+        status="APPROVED",
+        remark=remark,
+        artifacts={"PROMOTION_REPORT_FILE": str(target_dir)},
     )
