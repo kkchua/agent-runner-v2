@@ -16,7 +16,7 @@ The meta-builder takes a bootstrap spec (describing a target workflow's domain, 
 
 ## Input
 
-A bootstrap specification file (markdown with YAML frontmatter) containing:
+A bootstrap specification file (`BOOTSTRAP_SPEC_FILE`, markdown with YAML frontmatter) containing:
 - Target workflow identity (name, standard, version)
 - Output delivery type (documented_versioned or direct)
 - Domain description and natural phases
@@ -28,11 +28,14 @@ A bootstrap specification file (markdown with YAML frontmatter) containing:
 Three deliverables that together form a complete composition system:
 
 ### 1. Master Spec
-A composition system specification that defines the target workflow's architecture:
+An enhanced composition system specification for the NEXT generation of the meta-builder:
+- NOT a copy of the input bootstrap spec — it is a new, improved evolution
 - Component schema and relationships
 - Composition format and rules
 - Output format and delivery contracts
 - Validation and quality gates
+- Includes the fixed promotion/backup/publish logic (propagates to next version)
+- Named `{workflow_name}_{codename}.md` for development; future CLI promotes to `{workflow_name}_v{version}.md`
 
 ### 2. Default Runtime Implementation (`default.impl.md`)
 A concrete, default implementation of the master spec:
@@ -49,15 +52,9 @@ A complete executable workflow package containing:
 - Prompt templates (one per generation/review step)
 - Documentation (README)
 - Domain-specific composition standard
-- Embedded bootstrap specification (for recursive bootstrap)
 
 ### Version Naming
 All three deliverables share a **codename** (a distinctive, memorable name) that identifies this version. The output folder name follows the pattern: `{base_workflow_name}_{codename}` (e.g., `ar_meta_builder_einstein`).
-
-Each deliverable goes to its own location:
-- Master spec → `docs/repo/composition_standard/`
-- Default runtime implementation (`default.impl.md`) → `docs/repo/{workflow_name}/`
-- Workflow package → `workflows/{workflow_name}/`
 
 The codename should be:
 - Unique and distinctive
@@ -104,7 +101,15 @@ Each phase of the generated workflow must include:
 - Gatekeeping step (final approval)
 
 ### Recursive Capability
-The generated workflow must be capable of bootstrapping the NEXT version of itself — given its own bootstrap spec as input, it should produce a functionally equivalent (but not necessarily identical) workflow package with a new codename. The output goes to a new folder, NEVER overwriting the source workflow.
+The master spec IS the enhanced specification for the NEXT generation of the meta-builder. The recursive chain is:
+
+```
+bootstrap spec (input) → meta-builder run → master spec (enhanced, for next version)
+                                                ↓
+                                    next run uses master spec as BOOTSTRAP_SPEC_FILE input
+```
+
+The output goes to a new folder (`{workflow_name}_{codename}`), NEVER overwriting the source workflow. The codename differentiates development versions; a future CLI command promotes to official `{workflow_name}_v{version}`.
 
 ### Artifact Tracking
 All generated artifacts must be:
