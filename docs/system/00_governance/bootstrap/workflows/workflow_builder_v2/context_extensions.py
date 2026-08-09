@@ -24,7 +24,10 @@ from agent_runner_v2.runtime_context import (
     get_platform_runtime_root,
     get_workspace_root,
 )
-from agent_runner_v2.workflow_packages.extensions_base import WorkflowExtensions
+from agent_runner_v2.workflow_packages.extensions_base import (
+    WorkflowExtensions,
+    resolve_input_specs,
+)
 
 
 class WorkflowBuilderV2Extensions(WorkflowExtensions):
@@ -69,6 +72,9 @@ class WorkflowBuilderV2Extensions(WorkflowExtensions):
             # Phase 5: Operational Workflow
             "OPERATIONAL_WORKFLOW_FILE": "docs/repo/workflow_builder/runs/{job_id}/OPERATIONAL_WORKFLOW-{seq}.md",
             "GATEKEEP_OPERATIONAL_WORKFLOW_FILE": "docs/repo/workflow_builder/runs/{job_id}/GK_OPERATIONAL_WORKFLOW-{seq}.md",
+
+            # Phase 5b: Output Composition Spec (extensibility)
+            "OUTPUT_COMPOSITION_SPEC_FILE": "docs/repo/workflow_builder/runs/{job_id}/OUTPUT_COMPOSITION_SPEC-{seq}.md",
 
             # Phase 6: Package
             "WORKFLOW_MANIFEST_FILE": "docs/repo/workflow_builder/runs/{job_id}/output/workflow.toml",
@@ -131,8 +137,24 @@ class WorkflowBuilderV2Extensions(WorkflowExtensions):
             workspace_root / "docs" / "repo" / "workflow_builder" / "standards" / "META_WORKFLOW_BUILDER_ARCHITECTURE.md"
         )
 
+        # Resolve input spec filenames from operator console to Specs/ paths
+        resolve_input_specs(
+            result, state, self.workflow_name, ["WORKFLOW_SPEC_FILE"]
+        )
+
         # Artifact paths from register_artifact_keys() — resolve to absolute
+        artifacts = state.get("artifacts") or {}
         for key, rel_path in self.register_artifact_keys().items():
+            # Already resolved by resolve_input_specs() — don't overwrite
+            if key in result:
+                continue
+            # Input artifacts provided externally already have absolute
+            # paths in state — preserve them.
+            if key in artifacts and artifacts[key]:
+                existing = artifacts[key]
+                if Path(existing).is_absolute():
+                    result[key] = existing
+                    continue
             result[key] = str(workspace_root / rel_path)
 
         return result

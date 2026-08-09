@@ -83,7 +83,7 @@
       ]
     },
     "refine_standard": {
-      "default_role": "bailian_qwen3.7-plus",
+      "default_role": "bailian_kimi-k2.5",
       "agent": "arv_reviewer",
 	  "allowed_roles": [
 	    "bailian_kimi-k2.5",

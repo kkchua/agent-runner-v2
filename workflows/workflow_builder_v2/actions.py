@@ -90,7 +90,11 @@ def validate_package_deterministic(
     if manifest_data and bundle_root:
         _check_prompt_files(manifest_data, bundle_root, findings)
 
-    # --- 8. context_extensions.py artifact key coverage ---
+    # --- 8. Prompt placeholder vs required_inputs consistency ---
+    if manifest_data and bundle_root:
+        _check_prompt_input_consistency(manifest_data, bundle_root, findings)
+
+    # --- 9. context_extensions.py artifact key coverage ---
     if manifest_data and extensions_path and extensions_path.is_file():
         _check_extension_key_coverage(manifest_data, extensions_path, findings)
 
@@ -294,8 +298,12 @@ def _check_action_implementations(
     if not isinstance(steps, list):
         return
 
-    # Built-in actions that don't need implementation in this file
-    builtin_actions = {"step_completion", "promote_workflow_package", "validate_workflow_bundle"}
+    # Built-in / framework-level actions that don't need implementation in this file.
+    # Keep in sync with ACTION_REGISTRY in agent_runner_v2/runner_actions.py.
+    builtin_actions = {
+        "step_completion", "promote_workflow_package", "validate_workflow_bundle",
+        "promote_artifact", "copy_artifact", "archive_inputs", "promote_init",
+    }
 
     actions_source = actions_path.read_text(encoding="utf-8")
 
@@ -331,6 +339,57 @@ def _check_prompt_files(
                 "error", "MISSING_PROMPT_FILE",
                 f"Step '{step.get('name', '')}' references prompt '{prompt_file}' "
                 f"but file does not exist at {prompt_path}",
+            ))
+
+
+def _check_prompt_input_consistency(
+    manifest_data: dict, bundle_root: Path, findings: list[dict[str, str]],
+) -> None:
+    """Check that artifact placeholders in prompt files are declared in workflow.toml.
+
+    Catches the case where a prompt references {OUTPUT_FILE} but the step's
+    required_inputs in workflow.toml does not include OUTPUT_FILE. This means
+    the runner won't verify the artifact exists before executing the step,
+    causing silent failures at runtime.
+    """
+    steps = manifest_data.get("step", [])
+    if not isinstance(steps, list):
+        return
+
+    for step in steps:
+        prompt_file = step.get("prompt", "")
+        if not prompt_file:
+            continue
+
+        prompt_path = bundle_root / prompt_file
+        if not prompt_path.is_file():
+            continue  # missing file already caught by _check_prompt_files
+
+        artifacts_section = step.get("artifacts", {})
+        declared_keys = (
+            set(artifacts_section.get("required_inputs", []))
+            | set(artifacts_section.get("optional_inputs", []))
+            | set(artifacts_section.get("produces", []))
+            | set(artifacts_section.get("optional_produces", []))
+        )
+
+        content = prompt_path.read_text(encoding="utf-8")
+        placeholders = set(re.findall(r"\{([A-Z][A-Z0-9_]+)\}", content))
+
+        # Filter out known non-artifact placeholders
+        non_artifact = {
+            "ARTIFACT_KEY", "SOME_KEY", "job_id", "seq", "UNRESOLVED",
+        }
+        placeholders -= non_artifact
+
+        undeclared = placeholders - declared_keys
+        for key in sorted(undeclared):
+            findings.append(_finding(
+                "error", "PROMPT_INPUT_MISMATCH",
+                f"Prompt '{prompt_file}' for step '{step.get('name', '')}' "
+                f"references {{{key}}} but it is not declared in the step's "
+                f"required_inputs or produces in workflow.toml. "
+                f"The runner will not provide this artifact at runtime.",
             ))
 
 

@@ -222,7 +222,7 @@ name = "gatekeep_operational_workflow"
 prompt = "prompts/11_gatekeep_operational_workflow.txt"
 enable_notifications = true
 requires_human_approval_after = false
-onsuccess = "generate_package"
+onsuccess = "generate_output_composition_spec"
 
 [step.artifacts]
 produces = ["GATEKEEP_OPERATIONAL_WORKFLOW_FILE"]
@@ -239,20 +239,40 @@ exhausted_failure_code = "OPERATIONAL_WORKFLOW_GATEKEEP_EXHAUSTED"
 exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
 
 # ============================================================================
+# Phase 5b: Output Composition Spec (extensibility)
+# ============================================================================
+
+[[step]]
+name = "generate_output_composition_spec"
+prompt = "prompts/12_generate_output_composition_spec.txt"
+enable_notifications = true
+requires_human_approval_after = false
+onsuccess = "generate_package"
+
+[step.artifacts]
+required_inputs = ["WORKFLOW_SPEC_FILE", "OPERATIONAL_WORKFLOW_FILE"]
+produces = ["OUTPUT_COMPOSITION_SPEC_FILE"]
+result_meta_key = "OUTPUT_COMPOSITION_SPEC_FILE"
+
+[step.coder]
+role_policy = "architect_standard"
+
+# ============================================================================
 # Phase 6: Package Assembly
 # ============================================================================
 
 [[step]]
 name = "generate_package"
-prompt = "prompts/12_generate_package.txt"
+prompt = "prompts/13_generate_package.txt"
 enable_notifications = true
 requires_human_approval_after = false
 onsuccess = "validate_package_deterministic"
 
 [step.artifacts]
+required_inputs = ["OUTPUT_COMPOSITION_SPEC_FILE"]
 produces = ["WORKFLOW_MANIFEST_FILE", "WORKFLOW_EXTENSIONS_FILE", "WORKFLOW_ACTIONS_FILE", "WORKFLOW_PROMPTS_INDEX_FILE", "WORKFLOW_README_FILE"]
 optional_produces = ["WORKFLOW_ENV_SAMPLE_FILE", "WORKFLOW_CONFIG_SAMPLE_FILE"]
-result_meta_key = "WORKFLOW_PACKAGE"
+result_meta_key = "WORKFLOW_MANIFEST_FILE"
 
 [step.coder]
 role_policy = "architect_standard"
@@ -268,7 +288,7 @@ onsuccess = "gatekeep_package"
 
 [step.artifacts]
 required_inputs = ["WORKFLOW_MANIFEST_FILE", "WORKFLOW_EXTENSIONS_FILE"]
-optional_inputs = ["WORKFLOW_ACTIONS_FILE"]
+optional_inputs = ["WORKFLOW_ACTIONS_FILE", "OUTPUT_COMPOSITION_SPEC_FILE"]
 produces = ["VALIDATION_REPORT_FILE"]
 result_meta_key = "VALIDATION_REPORT_FILE"
 
@@ -276,14 +296,14 @@ result_meta_key = "VALIDATION_REPORT_FILE"
 
 [[step]]
 name = "gatekeep_package"
-prompt = "prompts/13_gatekeep_package.txt"
+prompt = "prompts/14_gatekeep_package.txt"
 enable_notifications = true
 requires_human_approval_after = false
 onsuccess = "review_package"
 
 [step.artifacts]
 required_inputs = ["WORKFLOW_MANIFEST_FILE", "WORKFLOW_EXTENSIONS_FILE", "VALIDATION_REPORT_FILE"]
-optional_inputs = ["WORKFLOW_ACTIONS_FILE"]
+optional_inputs = ["WORKFLOW_ACTIONS_FILE", "OUTPUT_COMPOSITION_SPEC_FILE"]
 produces = ["GATEKEEP_PACKAGE_FILE"]
 result_meta_key = "GATEKEEP_PACKAGE_FILE"
 
@@ -301,7 +321,7 @@ exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
 
 [[step]]
 name = "review_package"
-prompt = "prompts/14_review_package.txt"
+prompt = "prompts/15_review_package.txt"
 enable_notifications = true
 requires_human_approval_after = false
 onsuccess = "promote"
@@ -324,15 +344,16 @@ exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
 
 [[step]]
 name = "refine_package"
-prompt = "prompts/15_refine_package.txt"
+prompt = "prompts/16_refine_package.txt"
 enable_notifications = false
 requires_human_approval_after = false
 onsuccess = "review_package"
 
 [step.artifacts]
+required_inputs = ["OUTPUT_COMPOSITION_SPEC_FILE"]
 produces = ["WORKFLOW_MANIFEST_FILE", "WORKFLOW_EXTENSIONS_FILE", "WORKFLOW_ACTIONS_FILE", "WORKFLOW_PROMPTS_INDEX_FILE", "WORKFLOW_README_FILE"]
 optional_produces = ["WORKFLOW_ENV_SAMPLE_FILE", "WORKFLOW_CONFIG_SAMPLE_FILE"]
-result_meta_key = "WORKFLOW_PACKAGE"
+result_meta_key = "WORKFLOW_MANIFEST_FILE"
 
 [step.coder]
 role_policy = "architect_standard"
