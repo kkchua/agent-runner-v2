@@ -54,12 +54,6 @@ BOOTSTRAP_SOURCE_ROOT = Path(system_doc_rel())
 FOUNDATION_CURRENT_ROOT_REL = "docs/system/00_governance/foundation/current"
 PLATFORM_CURRENT_ROOT_REL = "docs/system/00_governance/platform"
 PACKAGE_BOOTSTRAP_ROOT = PACKAGE_ROOT / "bootstrap" / "bundles" / CORE_BUNDLE_NAME / "current"
-PACKAGED_BOOTSTRAP_EXCLUDE_PATTERNS = (
-    "*-bootstrap-change-log.md",
-    "*-bootstrap-validation.md",
-    "*-bootstrap-summary.md",
-    "*.meta.json",
-)
 PACKAGED_BOOTSTRAP_EXCLUDED_WORKFLOWS = {
     "00_core_governance_bootstrap_v1",
 }
@@ -160,11 +154,6 @@ def bootstrap_source_root(workspace_root: Path) -> Path:
     return (workspace_root / BOOTSTRAP_SOURCE_ROOT).resolve()
 
 
-def published_workflows_root(workspace_root: Path) -> Path:
-    """Return the published workflows root under bootstrap/workflows/."""
-    return bootstrap_source_root(workspace_root) / "workflows"
-
-
 def _replace_tree(source_root: Path, target_root: Path) -> None:
     """Replace target directory with source directory contents."""
     if not source_root.exists():
@@ -187,17 +176,6 @@ def _tree_has_files(root: Path) -> bool:
     if not root.exists():
         return False
     return any(path.is_file() for path in root.rglob("*"))
-
-
-def _cleanup_packaged_bootstrap(root: Path) -> None:
-    """Remove generated validation docs and workflow packages from packaged bootstrap."""
-    for pattern in PACKAGED_BOOTSTRAP_EXCLUDE_PATTERNS:
-        for candidate in root.rglob(pattern):
-            if candidate.is_file():
-                candidate.unlink()
-    packaged_workflows = root / "workflows"
-    if packaged_workflows.exists():
-        shutil.rmtree(packaged_workflows)
 
 
 def _copy_plugin_workflows_to_bootstrap(
@@ -229,7 +207,6 @@ def _copy_plugin_workflows_to_bootstrap(
             if stale_dest.exists():
                 shutil.rmtree(stale_dest)
             continue
-        _generate_bundle_governance_docs(candidate)
         dest = bootstrap_wf_root / pkg_name
         _replace_tree(candidate, dest)
         _generate_bundle_governance_docs(dest)
@@ -343,10 +320,11 @@ def publish_bootstrap_bundle(
     package_root: Path | None = None,
     plugin_workflows_root: Path | None = None,
 ) -> dict:
-    """Publish the repo's bootstrap bundle to docs/system/00_governance/bootstrap/.
+    """Publish the repo's bootstrap bundle for pip packaging and init.
 
-    This copies workflow packages from ./workflows/ into the bootstrap snapshot,
-    generates governance docs, and prepares the packaged bundle for pip install.
+    This copies workflow packages from ./workflows/ into the packaged bootstrap
+    at agent_runner_v2/bootstrap/workflows/default/, which is the source that
+    run-init.bat reads from to seed the global runner home.
 
     Returns a manifest dict with paths and validation results.
     """
@@ -354,7 +332,6 @@ def publish_bootstrap_bundle(
     source_root = (source_root or bootstrap_source_root(workspace_root)).resolve()
     package_root = (package_root or package_bootstrap_root()).resolve()
     plugin_workflows_root = (plugin_workflows_root or workspace_root / "workflows").resolve()
-    published_workflow_root = published_workflows_root(workspace_root)
     shared_registry_root = (workspace_root / "workflows" / "_registry").resolve()
     if not plugin_workflows_root.is_dir():
         raise FileNotFoundError(
@@ -364,17 +341,6 @@ def publish_bootstrap_bundle(
     validation_reports = _ensure_repo_workflow_bundles_valid(plugin_workflows_root)
 
     source_root.mkdir(parents=True, exist_ok=True)
-
-    # Publish the repo workflow snapshot into docs/system/00_governance/bootstrap/workflows.
-    _reset_tree(published_workflow_root)
-    published_registry = _copy_shared_registry(shared_registry_root, published_workflow_root)
-    published_workflows = _copy_plugin_workflows_to_bootstrap(plugin_workflows_root, published_workflow_root)
-
-    # Keep the packaged bootstrap bundle in sync for local packaging workflows.
-    # The packaged core bundle should contain only the bootstrap docs/assets;
-    # runtime workflow packages are seeded from bootstrap/workflows/default.
-    _replace_tree(source_root, package_root)
-    _cleanup_packaged_bootstrap(package_root)
 
     # Copy L1 foundation docs into the packaged bootstrap so pip-installed
     # users get governance docs without needing the repo checkout.
@@ -393,7 +359,7 @@ def publish_bootstrap_bundle(
             shutil.rmtree(platform_dest)
         shutil.copytree(str(platform_src), str(platform_dest))
 
-    # 2. Rebuild bootstrap workflows/default/ from repo-root workflows/
+    # Copy workflows to bootstrap/workflows/default/ — this is what init reads
     bootstrap_wf_root = BOOTSTRAP_ROOT
     _reset_tree(bootstrap_wf_root)
     copied_registry = _copy_shared_registry(shared_registry_root, bootstrap_wf_root)
@@ -402,10 +368,8 @@ def publish_bootstrap_bundle(
     publish_manifest = {
         "workspace_root": str(workspace_root),
         "source_root": str(source_root),
-        "source_docs_included": True,
-        "published_workflow_root": str(published_workflow_root),
-        "published_registry_copied": bool(published_registry),
-        "published_workflows_copied": [p.name for p in published_workflows],
+        "package_bootstrap_root": str(package_root),
+        "bootstrap_workflows_root": str(bootstrap_wf_root),
         "shared_registry_copied": bool(copied_registry),
         "plugin_workflows_copied": [p.name for p in copied],
     }
@@ -417,18 +381,12 @@ def publish_bootstrap_bundle(
     return {
         "workspace_root": str(workspace_root),
         "source_root": str(source_root),
-        "published_workflow_root": str(published_workflow_root),
         "package_bootstrap_root": str(package_root),
+        "bootstrap_workflows_root": str(bootstrap_wf_root),
         "bundle_name": CORE_BUNDLE_NAME,
-        "source_docs_included": True,
-        "published_registry_copied": bool(published_registry),
-        "published_workflows_copied": [p.name for p in published_workflows],
         "shared_registry_copied": bool(copied_registry),
         "plugin_workflows_copied": [p.name for p in copied],
         "validated_workflows": [report.workflow_name for report in validation_reports],
-        "plugin_governance_docs_generated": {
-            p.name: _generate_bundle_governance_docs(p) for p in copied
-        },
     }
 
 
