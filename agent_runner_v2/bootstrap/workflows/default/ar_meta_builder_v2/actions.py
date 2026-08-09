@@ -721,26 +721,6 @@ def promote_workflow_package(
     artifacts = state.get("artifacts", {})
     project_root = Path(project_root)
 
-    slug_source_key = step_cfg.get(
-        "slug_source_artifact", "WORKFLOW_SPEC_FILE",
-    )
-    spec_path = artifacts.get(slug_source_key, "")
-    if not spec_path:
-        return ActionResult(
-            status="REJECTED",
-            remark=f"{slug_source_key} artifact not found.",
-            artifacts={},
-            reject_code="MISSING_SPEC",
-        )
-    slug = Path(spec_path).stem
-    if not slug:
-        return ActionResult(
-            status="REJECTED",
-            remark=f"Could not derive slug from {spec_path}",
-            artifacts={},
-            reject_code="SLUG_EXTRACTION_FAILED",
-        )
-
     manifest_path = artifacts.get("WORKFLOW_MANIFEST_FILE", "")
     if not manifest_path:
         return ActionResult(
@@ -750,13 +730,38 @@ def promote_workflow_package(
             reject_code="MISSING_MANIFEST",
         )
     source_dir = Path(manifest_path).parent
+
+    # Read workflow name from the generated workflow.toml
+    try:
+        import tomllib
+        with open(manifest_path, "rb") as f:
+            manifest = tomllib.load(f)
+        slug = manifest.get("name", "")
+    except Exception as e:
+        return ActionResult(
+            status="REJECTED",
+            remark=f"Failed to read workflow name from manifest: {e}",
+            artifacts={},
+            reject_code="MANIFEST_READ_FAILED",
+        )
+
+    if not slug:
+        return ActionResult(
+            status="REJECTED",
+            remark="Workflow name not found in manifest.",
+            artifacts={},
+            reject_code="MISSING_WORKFLOW_NAME",
+        )
+
     target_dir = project_root / "workflows" / slug
 
     # Backup existing target
+    backup_path = None
     if target_dir.exists():
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
         backup_dir = project_root / "workflows" / f"{slug}_bak_{timestamp}"
         shutil.copytree(target_dir, backup_dir)
+        backup_path = backup_dir
 
     target_dir.mkdir(parents=True, exist_ok=True)
 
@@ -796,6 +801,8 @@ def promote_workflow_package(
         )
 
     remark = f"Promoted to {target_dir}: {', '.join(copied)}"
+    if backup_path:
+        remark += f" (backup: {backup_path})"
     return ActionResult(
         status="APPROVED",
         remark=remark,
