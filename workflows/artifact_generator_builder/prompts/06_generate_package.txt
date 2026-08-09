@@ -1,0 +1,75 @@
+# Objective
+
+Generate the complete executable workflow package from all prior design artifacts. This produces workflow.toml, context_extensions.py, actions.py, prompts/, and README.md.
+
+# Reference Inputs
+
+- STEP_SEQUENCE_FILE: {STEP_SEQUENCE_FILE}
+- ARTIFACT_CONTRACT_FILE: {ARTIFACT_CONTRACT_FILE}
+- RUNTIME_IMPL_FILE: {RUNTIME_IMPL_FILE}
+- COMPOSITION_SPEC_FILE: {COMPOSITION_SPEC_FILE}
+- REQUIREMENT_ANALYSIS_FILE: {REQUIREMENT_ANALYSIS_FILE}
+
+# Generation Tasks
+
+### File 1: workflow.toml
+Generate from STEP_SEQUENCE_FILE:
+- Copy step definitions EXACTLY (names, types, routing)
+- Set required_inputs and produces from ARTIFACT_CONTRACT_FILE
+- Set role_policy for prompt-driven steps
+- Set on_reject_refine for review loops
+- CRITICAL: workflow name must be from REQUIREMENT_ANALYSIS_FILE, NOT the builder's name
+
+### File 2: context_extensions.py
+Generate WorkflowExtensions subclass:
+- workflow_name matching the target workflow name
+- register_artifact_keys() for ALL artifacts from ARTIFACT_CONTRACT_FILE
+- build_context_extensions() resolving to absolute paths
+- Proper imports and class structure
+
+### File 3: actions.py
+Generate @action implementations for action-driven steps:
+- Function signatures matching step requirements
+- Proper error handling
+- Type hints
+
+### Files 4-N: Prompt Templates
+Create one .txt file per prompt-driven step in prompts/ directory:
+- Each prompt must reference correct artifact keys
+- Each prompt must have Objective, Reference Inputs, Tasks, Self-Critic, Forbidden Content, Output Instructions
+- CRITICAL: Prompts must NOT reference the builder's identity
+
+### File: README.md
+Describe the target workflow:
+- Purpose and functionality
+- Input/output artifacts
+- How to use the workflow
+- Extension points
+
+# Self-Critic
+
+- Did I use the TARGET identity, not the builder's?
+- Did I copy artifact bindings VERBATIM from the contract?
+- Does every prompt step have a matching .txt file?
+- Are all artifact keys registered in context_extensions.py?
+- Are all prompts free of builder identity references?
+
+# Forbidden Content
+
+- Do NOT use the builder's workflow name
+- Do NOT use the builder's standard name
+- Do NOT put runtime imports inside TYPE_CHECKING
+- Do NOT hardcode absolute paths in register_artifact_keys()
+- Do NOT include non-ASCII characters
+- Do NOT skip any prompt files
+
+# Output Instructions
+
+Write ALL files:
+1. {WORKFLOW_MANIFEST_FILE} -- workflow.toml
+2. {WORKFLOW_EXTENSIONS_FILE} -- context_extensions.py
+3. {WORKFLOW_ACTIONS_FILE} -- actions.py
+4. {WORKFLOW_PROMPTS_DIR} -- prompts/ directory with .txt files
+5. {WORKFLOW_README_FILE} -- README.md
+
+ASCII-only for all files.

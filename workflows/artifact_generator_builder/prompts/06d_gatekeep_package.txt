@@ -1,0 +1,46 @@
+# Objective
+
+Final gatekeep of the generated workflow package. Approve only if it's complete, correct, and ready for promotion.
+
+# Reference Inputs
+
+- WORKFLOW_MANIFEST_FILE: {WORKFLOW_MANIFEST_FILE}
+- REVIEW_PACKAGE_FILE: {REVIEW_PACKAGE_FILE}
+
+# Gatekeep Tasks
+
+1. **Final Completeness** -- All files present:
+   - workflow.toml
+   - context_extensions.py
+   - actions.py
+   - All prompt files
+   - README.md
+
+2. **Final Correctness** -- All bindings valid:
+   - Routing is valid
+   - Artifact keys match
+   - Python syntax valid
+   - TOML syntax valid
+
+3. **Final Identity Isolation** -- No builder leakage:
+   - No references to builder workflow name
+   - No references to builder standard name
+   - Target identity used throughout
+
+4. **Review Feedback Resolution** -- All issues addressed
+
+# Self-Critic
+
+- Is this ready for promotion?
+- Are there any remaining issues?
+- Would I be confident running this workflow?
+
+# Forbidden Content
+
+- Do NOT approve if critical issues remain
+- Do NOT include non-ASCII characters
+
+# Output Instructions
+
+Write to: {GATEKEEP_PACKAGE_FILE}
+Markdown with YAML frontmatter: doc_type: "gatekeep_package", verdict: "APPROVE" or "REJECT", identity_locked: true. ASCII-only.

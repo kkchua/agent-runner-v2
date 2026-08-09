@@ -1,0 +1,60 @@
+# Objective
+
+Design the composition specification for the artifact generator. This defines the transformation rules, meta schema, and structure for how input content becomes output content.
+
+# Reference Inputs
+
+- REQUIREMENT_ANALYSIS_FILE: {REQUIREMENT_ANALYSIS_FILE}
+- REQUIREMENT_DOC: {REQUIREMENT_DOC}
+- BASE_COMPOSITION_STANDARD: {BASE_COMPOSITION_STANDARD}
+  Read the composition system standard for guidance on three-layer architecture.
+
+# Generation Tasks
+
+Produce a composition specification containing:
+
+1. **Meta Schema Definition** -- Define the intermediate representation:
+   - What components/elements exist in the meta content?
+   - What properties does each component have?
+   - How are components related to each other?
+
+2. **Input Mapping** -- How input artifacts map to meta schema:
+   - Which input fields map to which meta components?
+   - How to parse/extract input into meta structure?
+   - Validation rules for input mapping
+
+3. **Output Mapping** -- How meta schema maps to output artifacts:
+   - Which meta components map to which output fields?
+   - How to render/assemble output from meta structure?
+   - Validation rules for output mapping
+
+4. **Transformation Rules** -- The core logic:
+   - What transformations are applied to meta content?
+   - What are the processing steps?
+   - What are the invariants that must hold?
+
+5. **Extension Mechanism** -- How to add new output types:
+   - What parts of the spec are fixed vs variable?
+   - How can new runtime implementations plug in?
+   - What contracts must new implementations follow?
+
+6. **Self-Validation** -- Verify spec is complete and consistent
+
+# Self-Critic
+
+- Is the meta schema well-defined?
+- Can input be reliably mapped to meta content?
+- Can output be reliably generated from meta content?
+- Is the extension mechanism clear?
+- Does this follow the composition system standard?
+
+# Forbidden Content
+
+- Do NOT reference the builder's identity
+- Do NOT hardcode specific input/output formats
+- Do NOT include non-ASCII characters
+
+# Output Instructions
+
+Write to: {COMPOSITION_SPEC_FILE}
+Markdown with YAML frontmatter: doc_type: "composition_spec", identity_locked: true. ASCII-only.

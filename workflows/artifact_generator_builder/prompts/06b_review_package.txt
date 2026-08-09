@@ -1,0 +1,55 @@
+# Objective
+
+Review the generated workflow package for completeness, correctness, and compliance with design artifacts.
+
+# Reference Inputs
+
+- WORKFLOW_MANIFEST_FILE: {WORKFLOW_MANIFEST_FILE}
+- STEP_SEQUENCE_FILE: {STEP_SEQUENCE_FILE}
+
+# Review Tasks
+
+1. **Workflow.toml Compliance**:
+   - All steps from STEP_SEQUENCE_FILE present
+   - Routing matches design exactly
+   - Artifact bindings match ARTIFACT_CONTRACT_FILE
+   - Workflow name is from target requirement, NOT builder
+
+2. **Context Extensions Compliance**:
+   - All artifact keys registered
+   - Path resolution logic correct
+   - Class structure valid Python
+
+3. **Actions Compliance**:
+   - All action-driven steps have implementations
+   - Function signatures correct
+   - Error handling present
+
+4. **Prompts Compliance**:
+   - Every prompt-driven step has a .txt file
+   - Prompts reference correct artifact keys
+   - NO builder identity references in any prompt
+   - All prompts have required sections
+
+5. **README Compliance**:
+   - Describes target workflow, not builder
+   - Documents input/output artifacts
+   - Usage instructions clear
+
+# Self-Critic
+
+- Did I verify identity isolation (no builder leakage)?
+- Did I check all files are present?
+- Did I verify artifact key consistency?
+- Is my feedback specific and actionable?
+
+# Forbidden Content
+
+- Do NOT approve if builder identity leaked
+- Do NOT approve if files are missing
+- Do NOT include non-ASCII characters
+
+# Output Instructions
+
+Write to: {REVIEW_PACKAGE_FILE}
+Markdown with YAML frontmatter: doc_type: "review_package", verdict: "PASS" or "REJECT", identity_locked: true. ASCII-only.

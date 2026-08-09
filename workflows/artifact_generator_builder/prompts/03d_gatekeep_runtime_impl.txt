@@ -1,0 +1,31 @@
+# Objective
+
+Final gatekeep of the runtime implementation design. Approve only if it's complete, compliant, and implementable.
+
+# Reference Inputs
+
+- RUNTIME_IMPL_FILE: {RUNTIME_IMPL_FILE}
+- REVIEW_RUNTIME_IMPL_FILE: {REVIEW_RUNTIME_IMPL_FILE}
+
+# Gatekeep Tasks
+
+1. **Final Spec Compliance** -- Follows composition spec
+2. **Final Completeness** -- All aspects covered
+3. **Final Feasibility** -- Can be implemented
+4. **Review Feedback Resolution** -- All issues addressed
+
+# Self-Critic
+
+- Is this ready for artifact definition?
+- Are there any remaining issues?
+- Would I be confident implementing this?
+
+# Forbidden Content
+
+- Do NOT approve if critical issues remain
+- Do NOT include non-ASCII characters
+
+# Output Instructions
+
+Write to: {GATEKEEP_RUNTIME_IMPL_FILE}
+Markdown with YAML frontmatter: doc_type: "gatekeep_runtime_impl", verdict: "APPROVE" or "REJECT", identity_locked: true. ASCII-only.
