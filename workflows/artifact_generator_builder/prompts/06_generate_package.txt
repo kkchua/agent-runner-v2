@@ -35,6 +35,22 @@ Generate the executable workflow files per the step sequence and artifact contra
 5. README.md -- target workflow documentation
 6. Specs/ -- copy the requirement doc ({REQUIREMENT_DOC}) to this folder for the generated workflow
 
+**CRITICAL: The init step MUST declare `required_inputs` in its `[step.artifacts]` section.** This tells the operator console what input files to prompt the user for. Example:
+
+```toml
+[[step]]
+name = "parse_input"
+action = "parse_input_document"
+onsuccess = "next_step"
+
+[step.artifacts]
+required_inputs = ["INPUT_FILE"]
+produces = ["PARSED_DOCUMENT"]
+result_meta_key = "PARSED_DOCUMENT"
+```
+
+Without `required_inputs` on the init step, the operator console cannot show file pickers and the workflow will fail at runtime due to missing input.
+
 ## Part B: Deliverables
 
 Per BASE_COMPOSITION_STANDARD_v1.0.md Section 10.1, produce:

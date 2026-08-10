@@ -1,0 +1,167 @@
+# Text Summarizer Workflow Package
+# Generator: text_summarizer_ayz
+# Pattern: Pattern2_Input_Transformation (three-layer pipeline)
+#
+# Default implementation: summary (3-block prose)
+# Alternative: key_points (ordered list with importance scores)
+#
+# workflow.toml IS the default implementation per Section 13.8.
+
+[workflow]
+name = "text_summarizer_ayz"
+version = "1.0.0"
+label = "Text Summarizer"
+job_prefix = "TXTSUM"
+description = "Transforms long-form text documents into condensed summaries or ranked key points. Supports two output implementations: summary (prose) and key_points (ordered list with scores)."
+visibility = "canonical"
+default_max_rejects = 3
+init_step = "parse_input"
+
+layer = "layer3"
+platform = "agent-runner-v2"
+
+[workflow.governance]
+include_in_prompts = true
+prompt_targets = ["all"]
+
+[[workflow.implementation]]
+name = "key_points"
+description = "Ordered list of extracted key points with importance scores"
+label = "Key Points"
+
+# =============================================================================
+# Step 1: Parse Input (action-driven)
+# Implements: EP-001 InputParser Protocol
+# Layer 1: Input Parsing
+# =============================================================================
+[[step]]
+name = "parse_input"
+action = "parse_input_document"
+enable_notifications = false
+requires_human_approval_after = false
+onsuccess = "analyze_structure"
+
+[step.artifacts]
+produces = ["PARSED_DOCUMENT"]
+result_meta_key = "PARSED_DOCUMENT"
+
+# =============================================================================
+# Step 2: Analyze Structure (prompt-driven)
+# Implements: TR-S1 Region Classification, TR-S2 Redundancy Detection
+# Layer 2: Transformation (first phase)
+# =============================================================================
+[[step]]
+name = "analyze_structure"
+prompt = "prompts/02_analyze_structure.txt"
+enable_notifications = true
+requires_human_approval_after = false
+onsuccess = "score_importance"
+
+[step.artifacts]
+produces = ["ANALYZED_STRUCTURE"]
+result_meta_key = "ANALYZED_STRUCTURE"
+
+[step.coder]
+role_policy = "analyst"
+
+[step.on_reject_refine]
+step = "analyze_structure"
+artifact = "ANALYZED_STRUCTURE"
+max_iterations = 1
+exhausted_failure_code = "ANALYSIS_EXHAUSTED"
+exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
+
+# =============================================================================
+# Step 3: Score Importance (prompt-driven)
+# Implements: TR-S3 Importance Scoring
+# Layer 2: Transformation (second phase)
+# =============================================================================
+[[step]]
+name = "score_importance"
+prompt = "prompts/03_score_importance.txt"
+enable_notifications = true
+requires_human_approval_after = false
+onsuccess = "identify_core_message"
+
+[step.artifacts]
+produces = ["SCORED_SEGMENTS"]
+result_meta_key = "SCORED_SEGMENTS"
+
+[step.coder]
+role_policy = "analyst"
+
+[step.on_reject_refine]
+step = "score_importance"
+artifact = "SCORED_SEGMENTS"
+max_iterations = 1
+exhausted_failure_code = "SCORING_EXHAUSTED"
+exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
+
+# =============================================================================
+# Step 4: Identify Core Message (prompt-driven)
+# Implements: TR-S4 Core Message Identification, TR-S5 Profile Assembly
+# Layer 2: Transformation (third phase)
+# =============================================================================
+[[step]]
+name = "identify_core_message"
+prompt = "prompts/04_identify_core_message.txt"
+enable_notifications = true
+requires_human_approval_after = false
+onsuccess = "render_output"
+
+[step.artifacts]
+produces = ["ANALYSIS_RESULT"]
+result_meta_key = "ANALYSIS_RESULT"
+
+[step.coder]
+role_policy = "analyst"
+
+[step.on_reject_refine]
+step = "identify_core_message"
+artifact = "ANALYSIS_RESULT"
+max_iterations = 1
+exhausted_failure_code = "CORE_MESSAGE_EXHAUSTED"
+exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
+
+# =============================================================================
+# Step 5: Render Output (action-driven)
+# Implements: EP-003 OutputRenderer Protocol
+# Layer 3: Output Rendering
+# Default: render_summary (prose 3-block structure)
+# Override (key_points): render_key_points (ordered list with scores)
+# =============================================================================
+[[step]]
+name = "render_output"
+action = "render_summary"
+enable_notifications = true
+requires_human_approval_after = false
+onsuccess = "validate_output"
+
+[step.artifacts]
+produces = ["OUTPUT_DOCUMENT"]
+result_meta_key = "OUTPUT_DOCUMENT"
+
+# =============================================================================
+# Step 6: Validate Output (action-driven)
+# Implements: EP-004 ValidationStrategy Protocol
+# Default: validate_summary (checks OV-001,002,003,004,005,009)
+# Override (key_points): validate_key_points (checks OV-002,003,004,006,007,008,009)
+# =============================================================================
+[[step]]
+name = "validate_output"
+action = "validate_summary"
+enable_notifications = false
+requires_human_approval_after = false
+onsuccess = "step_completion"
+requires = ["ANALYSIS_RESULT"]
+
+[step.artifacts]
+produces = ["OUTPUT_SUMMARY"]
+result_meta_key = "VALIDATION_RESULT"
+
+# =============================================================================
+# Step 7: Step Completion (terminal action)
+# =============================================================================
+[[step]]
+name = "step_completion"
+action = "step_completion"

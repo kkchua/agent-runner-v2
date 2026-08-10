@@ -1,0 +1,9 @@
+name: key_points
+description: "Ordered list of extracted key points with importance scores"
+
+overrides:
+  render_output:
+    action: "render_key_points"
+
+  validate_output:
+    action: "validate_key_points"

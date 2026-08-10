@@ -88,6 +88,10 @@ def convert_to_v2_format(group_dict: dict) -> dict:
             step_def["artifacts"] = artifacts
         definition["steps"][step_name] = step_def
 
+    # Pass through implementation declarations
+    if group_dict.get("implementation"):
+        definition["implementation"] = group_dict["implementation"]
+
     return definition
 
 
