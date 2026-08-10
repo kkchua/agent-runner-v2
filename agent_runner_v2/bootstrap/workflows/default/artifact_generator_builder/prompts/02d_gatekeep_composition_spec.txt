@@ -1,6 +1,6 @@
 # Objective
 
-Final gatekeep of the composition specification. Approve only if the spec is complete, consistent, and implementable.
+Final gatekeep of the composition specification. Before approving, you must try to find reasons to REJECT.
 
 # Reference Inputs
 
@@ -8,34 +8,46 @@ Final gatekeep of the composition specification. Approve only if the spec is com
 - REVIEW_COMPOSITION_SPEC_FILE: {REVIEW_COMPOSITION_SPEC_FILE}
 - BASE_COMPOSITION_STANDARD: {BASE_COMPOSITION_STANDARD}
 
-# Gatekeep Tasks
+# Self-Challenge Protocol
 
-1. **Final Completeness Check** -- All sections present and complete
-2. **Final Consistency Check** -- No contradictions
-3. **Final Feasibility Check** -- Can be implemented
-4. **Review Feedback Resolution** -- All review issues addressed
-5. **Input Contract Compliance** (BASE_COMPOSITION_STANDARD Section 6.5):
-   - All input document artifact keys use `_FILE` suffix
-   - All directory input artifact keys use `_DIR` suffix
-6. **Output Delivery Contract** (BASE_COMPOSITION_STANDARD Section 6.6):
-   - Output delivery location is declared
-   - Output catalog documents final deliverables and file formats
-7. **Abstract Step Interface Check** (BASE_COMPOSITION_STANDARD Section 13.8):
-   - Each workflow step is defined as an abstract interface
-   - Step interfaces are implementation-agnostic (WHAT, not HOW)
+## Step 1: Runtime Execution Test
 
-# Self-Critic
+Mentally simulate a runtime implementation consuming this spec:
+- Pick each abstract step interface — can you write a concrete prompt or action for it without guessing?
+- Trace the data flow from input to output — does every artifact get consumed and produced exactly once?
+- Check the extension mechanism — could someone add an alternative implementation without modifying the spec?
 
-- Is this ready for runtime implementation design?
-- Are there any remaining issues?
-- Would I be confident implementing a runtime from this?
+Note every point where the simulation stalls or requires a guess.
 
-# Forbidden Content
+## Step 2: Devil's Advocate
 
-- Do NOT approve if critical issues remain
-- Do NOT include non-ASCII characters
+Argue REJECT. Find the strongest case against approving this spec:
+- What step interfaces are too vague to implement?
+- What data flow gaps exist (artifacts produced but never consumed, or consumed but never produced)?
+- Are there hidden dependencies between steps that the spec does not declare?
+
+## Step 3: Review Feedback Check
+
+Read the review ({REVIEW_COMPOSITION_SPEC_FILE}). Were all identified issues addressed? If the review said REJECT, are the specific defects fixed?
+
+## Step 4: Verdict
+
+After challenging, give your final verdict:
+- **APPROVE** — The spec survived all challenges. It is implementable and complete.
+- **REJECT** — The spec has unresolved defects. State what must be fixed.
 
 # Output Instructions
 
 Write to: {GATEKEEP_COMPOSITION_SPEC_FILE}
 Markdown with YAML frontmatter: doc_type: "gatekeep_composition_spec", verdict: "APPROVE" or "REJECT", identity_locked: true. ASCII-only.
+
+Structure your gatekeep as:
+1. Runtime Simulation Results (where it stalled or succeeded)
+2. Devil's Advocate Argument
+3. Review Feedback Resolution (issues addressed or not)
+4. Final Verdict + reasoning
+
+# Forbidden Content
+
+- Do NOT approve if the devil's advocate found genuine blocking issues
+- Do NOT include non-ASCII characters

@@ -635,21 +635,39 @@ from `output/` to `workflows/{codename}/` following the structure in Section 10.
 ### 10.5 Example
 
 **Input (Requirement Doc):**
-```yaml
+```markdown
 ---
 codename: "text_summarizer"
 generator_name: "Text Summarizer"
 version: "1.0.0"
 ---
-input: INPUT_TEXT_FILE (.txt or .md)
-output: SUMMARY_FILE, KEY_POINTS_FILE
-constraints: max 20% compression, same language, no new information
+
+## Purpose
+Transforms long text into concise summary and key points.
+
+## Input
+A text document (.txt or .md) containing long-form content.
+
+## Output
+1. Condensed summary — prose summary at most 20% of original word count.
+2. Key points list — ordered list of extracted key points with importance scores.
+
+## Constraints
+- Max 20% compression ratio
+- Same language as input
+- No new information
+
+## Standard Reference
+See BASE_COMPOSITION_STANDARD_v1.0.md for all structural decisions.
 ```
 
 **Output (after promote):**
 ```
 workflows/text_summarizer/
     standards/COMPOSITION_STANDARD.md
+    impls/
+        {variant_name}/        ← at least one alternative (REQUIRED)
+            impl.yaml
     workflow.toml              ← default implementation
     context_extensions.py
     actions.py
@@ -672,9 +690,25 @@ This creates a recursive chain where AGB can produce improved versions of itself
 
 ## 11. Authoring a Requirement Document
 
-A **Requirement Document** is the input to the Artifact Generator Builder (AGB). It describes what artifact generator to build using the composition system pattern.
+A **Requirement Document** is the input to the Artifact Generator Builder (AGB). It is a pure business description of what generator to build — it describes WHAT, never HOW.
 
-### 11.1 Document Structure
+### 11.1 Separation of Concerns
+
+The requirement document and this standard have distinct responsibilities:
+
+| Concern | Who owns it |
+|---------|-------------|
+| What input content exists | Requirement document |
+| What output is desired | Requirement document |
+| Transformation rules and constraints | Requirement document |
+| Artifact key naming and registration | This standard (AGB LLM follows it) |
+| Output variant identification | This standard (AGB LLM follows it) |
+| Implementation declarations | This standard (AGB LLM follows it) |
+| File structure and naming conventions | This standard (AGB LLM follows it) |
+
+The requirement document MUST reference this standard as the authority for all structural and technical decisions. It shall NOT define artifact keys, naming conventions, output variants, implementation patterns, or any other structural rules — those belong exclusively to this standard. The requirement document describes WHAT to build; this standard defines HOW to structure it.
+
+### 11.2 Document Structure
 
 The requirement document is a markdown file with YAML frontmatter:
 
@@ -697,40 +731,37 @@ Followed by these sections:
 | Section | Purpose | Example |
 |---------|---------|---------|
 | **Purpose** | What the generator does | "Transforms long text into concise summary" |
-| **Input Artifacts** | What content the generator accepts | INPUT_TEXT_FILE (.txt or .md) |
-| **Output Artifacts** | What content the generator produces (at least 2) | SUMMARY_FILE, KEY_POINTS_FILE |
-| **Transformation Requirements** | How to convert input to output | Extract key points, remove redundancy, preserve meaning |
-| **Constraints** | Hard requirements | Max 20% compression, same language, no new information |
-| **Extension Points** (optional) | Future output types or variations | Bullet-point summary, key phrases extraction |
+| **Input** | What content the generator accepts (describe the content, not artifact keys) | "A folder of markdown documents" or "A text document (.txt or .md)" |
+| **Output** | What the generator produces (describe the desired results, not artifact keys) | "A styled HTML report with table of contents" |
+| **Transformation Requirements** | How input becomes output (business rules, not implementation) | "Merge multiple files into single report, auto-generate TOC from headings" |
+| **Constraints** | Hard requirements | "Must handle UTF-8", "Output must be self-contained" |
+| **Standard Reference** | Pointer to this standard for structural decisions | "See BASE_COMPOSITION_STANDARD_v1.0.md" |
 
-### 11.2 Key Principles
+### 11.3 Key Principles
 
-**Be specific about input and output.** The requirement doc must clearly define:
-- Input artifact keys and formats
-- Output artifact keys and formats
-- What transformation happens between them
+**Describe content, not structure.** The requirement doc describes what input content looks like and what output is desired. It does NOT define artifact keys, file naming, or directory structure. The AGB reads this standard and determines all structural details.
 
-**Define constraints, not implementation.** The requirement doc specifies WHAT must be achieved (e.g., "max 20% compression"), not HOW to achieve it. The composition spec and runtime implementation (generated by AGB) define the HOW.
+**Define constraints, not implementation.** The requirement doc specifies WHAT must be achieved (e.g., "max 20% compression", "must be mobile-friendly"), not HOW to achieve it. The composition spec and runtime implementation (generated by AGB) define the HOW.
 
-**Support multiple output types.** If the generator should support different output types (summary, bullet points, key phrases), list them as extension points. The composition spec will be output-type-agnostic (see Section 13), and different runtime implementations will produce different outputs.
+**Be complete about business rules.** All transformation logic, quality requirements, and constraints must be explicit. The AGB LLM uses these to design the composition spec and runtime implementation.
 
-### 11.3 Example
+### 11.4 Example
 
 See `workflows/artifact_generator_builder/Specs/simple_text_summarizer.md` for a complete example.
 
-### 11.4 Relationship to Composition Spec and Runtime Implementation
+### 11.5 Relationship to Composition Spec and Runtime Implementation
 
 ```
-Requirement Document (human-written)
+Requirement Document (human-written, business-only)
     ↓ AGB Phase 1-2
-Composition Spec (generated, output-type-agnostic contract)
+Composition Spec (generated, identifies output variants and artifact keys)
     ↓ AGB Phase 3
 Runtime Implementation (generated, concrete executor)
     ↓ AGB Phase 4-6
-Workflow Package (generated, executable workflow)
+Workflow Package (generated, executable workflow with impl declarations)
 ```
 
-The requirement document is the **source of truth** for what the generator should do. The composition spec and runtime implementation are **derived artifacts** that satisfy the requirement.
+The requirement document is the **source of truth** for what the generator should do. The composition spec and runtime implementation are **derived artifacts** that satisfy the requirement. All structural decisions (artifact keys, output variants, implementation declarations) are made by the AGB LLM guided by this standard.
 
 ---
 
