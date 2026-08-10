@@ -1,6 +1,6 @@
 # Objective
 
-Final gatekeep of the step sequence. Approve only if routing is valid and complete.
+Final gatekeep of the step sequence. Before approving, you must try to find reasons to REJECT.
 
 # Reference Inputs
 
@@ -8,45 +8,51 @@ Final gatekeep of the step sequence. Approve only if routing is valid and comple
 - ARTIFACT_CONTRACT_FILE: {ARTIFACT_CONTRACT_FILE}
 - BASE_COMPOSITION_STANDARD: {BASE_COMPOSITION_STANDARD}
 
-# Gatekeep Tasks
+# Self-Challenge Protocol
 
-1. **Routing Validity** -- No cycles, no dangling references:
-   - All onsuccess targets exist
-   - All on_reject_refine targets exist
-   - No infinite loops
+## Step 1: Runtime Execution Test
 
-2. **Artifact Flow** -- All artifacts produced before consumed:
-   - No step references undefined artifacts
-   - All required_inputs are produced by prior steps
-   - result_meta_key matches produces
+Mentally simulate the daemon executing this step sequence from start to finish:
+- Start at init_step. Follow each `onsuccess` chain. Does it reach stepCompletion without cycles or dead ends?
+- For each step, check: are all `required_inputs` already produced by a prior step?
+- For each step, check: does `result_meta_key` match one of the step's `produces`?
+- For each `on_reject_refine`: does the target step exist? Does it produce the artifact the review needs?
 
-3. **Completeness** -- All functionality covered:
-   - All runtime impl steps are represented
-   - All artifacts from contract are produced
-   - Review loops are properly configured
+Note every point where the simulation fails.
 
-4. **Abstract Step Interface Mapping** (BASE_COMPOSITION_STANDARD Section 13.8):
-   - Each step in the sequence maps to an abstract step interface from the composition spec
-   - Step names match the abstract interface names
-   - Step input/output contracts match the abstract interface declarations
+## Step 2: Devil's Advocate
 
-5. **Component Mapping** (BASE_COMPOSITION_STANDARD Section 13.8):
-   - Prompt-driven steps reference prompt templates from the correct location (shared prompts/ or impl-specific impls/{name}/prompts/)
-   - Action-driven steps reference registered action functions
-   - The default implementation's component mapping covers all steps
+Argue REJECT. Find the strongest case against approving this sequence:
+- Are there routing gaps (steps that cannot be reached, or routing that leads nowhere)?
+- Are there artifact ordering violations (a step needs an artifact that has not been produced yet)?
+- Are there steps that produce artifacts not declared in the contract, or consume artifacts the contract does not define?
+- Would any step fail at runtime because its prompt/action reference is wrong?
 
-# Self-Critic
+## Step 3: Completeness Challenge
 
-- Is routing valid?
-- Are all artifacts accounted for?
-- Is this ready for package generation?
+Check that the sequence covers ALL functionality:
+- Does every abstract step interface from the composition spec have a corresponding step?
+- Does every artifact from the contract get produced?
+- Are there missing review/refine loops for critical steps?
 
-# Forbidden Content
+## Step 4: Verdict
 
-- Do NOT approve if routing is invalid
-- Do NOT include non-ASCII characters
+After challenging, give your final verdict:
+- **APPROVE** — The sequence survived all challenges. Routing is valid, artifact flow is correct, and all functionality is covered.
+- **REJECT** — The sequence has unresolved defects. State what must be fixed.
 
 # Output Instructions
 
 Write to: {GATEKEEP_STEPS_FILE}
 Markdown with YAML frontmatter: doc_type: "gatekeep_steps", verdict: "APPROVE" or "REJECT", identity_locked: true. ASCII-only.
+
+Structure your gatekeep as:
+1. Runtime Simulation Results (trace the execution path, note failures)
+2. Devil's Advocate Argument
+3. Completeness Check Results
+4. Final Verdict + reasoning
+
+# Forbidden Content
+
+- Do NOT approve if the devil's advocate found genuine blocking issues
+- Do NOT include non-ASCII characters

@@ -1,14 +1,13 @@
 # Objective
 
-Design the default runtime implementation that executes the composition spec to produce output from input.
+Design the runtime implementation that executes the composition spec to produce output from input.
 
-# MANDATORY: BASE_COMPOSITION_STANDARD_v1.0.md Section 10
+# MANDATORY: BASE_COMPOSITION_STANDARD_v1.0.md Section 13.8
 
-You MUST follow BASE_COMPOSITION_STANDARD_v1.0.md Section 10 ({BASE_COMPOSITION_STANDARD}). This section defines:
-- The DEFAULT_IMPL_FILE deliverable (Section 10.1) -- you MUST produce it as a self-contained document
-- The codename rules -- you MUST use "{CODENAME}" as the identity, NOT generate your own
-
-Failure to produce the DEFAULT_IMPL_FILE deliverable with correct naming is a REJECT.
+You MUST follow BASE_COMPOSITION_STANDARD_v1.0.md Section 13.8 ({BASE_COMPOSITION_STANDARD}). This section defines the override pattern:
+- The `workflow.toml` IS the default implementation — every step has its prompt or action assigned
+- Alternative implementations use `impls/{name}/impl.yaml` for partial overrides only
+- No separate "default impl mapping" file is needed
 
 # Reference Inputs
 
@@ -27,21 +26,22 @@ Produce a runtime implementation design containing:
 3. **Transformation Engine** -- Step-by-step processing, how composition spec rules are applied, error handling
 4. **Output Generation** -- How to produce ALL output artifacts defined in the requirement doc
 5. **Configuration** -- Runtime parameters, defaults, overrides
-6. **Extension Interface** -- How to add new implementations
+6. **Extension Interface** -- How to add new implementations via `impls/{name}/impl.yaml`
+7. **Default Implementation** -- For each step in the workflow, specify which prompt template or action function handles it. This mapping goes directly into `workflow.toml` (not a separate file).
 
 # Output Instructions
 
-Write TWO files:
+Write ONE file:
 
-1. {RUNTIME_IMPL_FILE} -- Intermediate design notes (doc_type: "runtime_impl")
-2. {DEFAULT_IMPL_FILE} -- Default runtime implementation deliverable (doc_type: "default_impl")
+1. {RUNTIME_IMPL_FILE} -- Runtime implementation design (doc_type: "runtime_impl")
 
-The DEFAULT_IMPL_FILE is a self-contained deliverable per BASE_COMPOSITION_STANDARD_v1.0.md Section 10.1. It must include complete algorithm descriptions, data structures, configuration defaults, and extension point implementations.
+This document must include complete algorithm descriptions, data structures, configuration defaults, and extension point implementations. It must clearly specify the default prompt/action assignment for every step — these assignments will be written directly into `workflow.toml` during package generation.
 
-Both files: identity_locked: true, generator_name: "{CODENAME}", codename: "{CODENAME}". ASCII-only.
+identity_locked: true, generator_name: "{CODENAME}", codename: "{CODENAME}". ASCII-only.
 
 # Forbidden Content
 
 - Do NOT reference the builder's identity
 - Do NOT deviate from the composition spec
 - Do NOT include non-ASCII characters
+- Do NOT produce a separate "default impl" file — workflow.toml IS the default implementation

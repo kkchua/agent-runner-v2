@@ -7,10 +7,9 @@ artifact key definitions and the filesystem paths the runner uses.
 This workflow builds artifact generators that follow the mandatory pattern:
 Input -> Composition Spec -> Runtime Implementation -> Output
 
-Every AGB run produces three deliverables:
+Every AGB run produces two deliverables:
 1. Generator-specific Composition Standard (COMPOSITION_STANDARD_FILE)
-2. Default Runtime Implementation (DEFAULT_IMPL_FILE)
-3. Workflow Package (workflow.toml, context_extensions.py, actions.py, prompts/, README.md)
+2. Workflow Package (workflow.toml, context_extensions.py, actions.py, prompts/, README.md)
 
 The codename is read from the requirement doc's YAML frontmatter and used
 to name the deliverable files and determine the promote target directory.
@@ -72,9 +71,9 @@ class ArtifactGeneratorBuilderExtensions(WorkflowExtensions):
         the runner resolves at execution time. All paths are relative
         to the workspace root.
 
-        Deliverable files (COMPOSITION_STANDARD_FILE,
-        DEFAULT_IMPL_FILE) use a ``{codename}`` placeholder resolved at
-        runtime from the requirement doc's frontmatter.
+        Deliverable files (COMPOSITION_STANDARD_FILE) use a
+        ``{codename}`` placeholder resolved at runtime from the
+        requirement doc's frontmatter.
         """
         repo = "docs/repo/artifact_generator_builder"
         run = f"{repo}/runs/{{job_id}}"
@@ -109,7 +108,6 @@ class ArtifactGeneratorBuilderExtensions(WorkflowExtensions):
 
             # -- Phase 6: Generate Package + Deliverables --
             "COMPOSITION_STANDARD_FILE": f"{out}/standards/COMPOSITION_STANDARD.md",
-            "DEFAULT_IMPL_FILE": f"{out}/impls/default/default.impl.md",
             "WORKFLOW_MANIFEST_FILE": f"{out}/workflow.toml",
             "WORKFLOW_EXTENSIONS_FILE": f"{out}/context_extensions.py",
             "WORKFLOW_ACTIONS_FILE": f"{out}/actions.py",

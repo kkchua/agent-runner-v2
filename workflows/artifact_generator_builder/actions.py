@@ -16,20 +16,20 @@ from agent_runner_v2.workflow_packages.actions import action
 
 @action("promote_workflow_package")
 def promote_workflow_package(*, context, state, step_cfg, project_root):
-    """Promote all three deliverables to workflows/{codename}/.
+    """Promote all deliverables to workflows/{codename}/.
 
     Packages the generated workflow according to the Composition System
     Standard required file structure (Section 10.2):
 
         workflows/{codename}/
             standards/COMPOSITION_STANDARD.md
-            impls/default.impl.md
             workflow.toml
             context_extensions.py
             actions.py
             prompts/
             README.md
             Specs/
+            impls/              (optional — only if alternative impls exist)
 
     The codename is read from the generated workflow.toml manifest.
     Existing target directories are backed up before overwriting.
@@ -122,15 +122,14 @@ def promote_workflow_package(*, context, state, step_cfg, project_root):
             shutil.copy2(src, standards_dir / src.name)
             promoted.append(f"standards/{src.name}")
 
-    # --- Deliverable 2: Default Runtime Impl -> impls/ ---
-    default_impl_path = artifacts.get("DEFAULT_IMPL_FILE", "")
-    if default_impl_path:
-        src = Path(default_impl_path)
-        if src.exists():
-            impls_dir = target_dir / "impls"
-            impls_dir.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(src, impls_dir / src.name)
-            promoted.append(f"impls/{src.name}")
+    # --- Alternative implementations -> impls/ (optional) ---
+    impls_src = source_dir / "impls"
+    if impls_src.is_dir():
+        impls_dst = target_dir / "impls"
+        if impls_dst.exists():
+            shutil.rmtree(impls_dst)
+        shutil.copytree(impls_src, impls_dst)
+        promoted.append("impls/")
 
     if not promoted:
         return ActionResult(
