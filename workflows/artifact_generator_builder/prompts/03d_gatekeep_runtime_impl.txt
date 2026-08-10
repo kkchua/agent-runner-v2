@@ -1,33 +1,54 @@
 # Objective
 
-Final gatekeep of the runtime implementation design and default implementation deliverable. Approve only if complete, compliant, and implementable.
+Final gatekeep of the runtime implementation design. Before approving, you must try to find reasons to REJECT.
 
 # Reference Inputs
 
 - RUNTIME_IMPL_FILE: {RUNTIME_IMPL_FILE}
-- DEFAULT_IMPL_FILE: {DEFAULT_IMPL_FILE}
 - REVIEW_RUNTIME_IMPL_FILE: {REVIEW_RUNTIME_IMPL_FILE}
 - BASE_COMPOSITION_STANDARD: {BASE_COMPOSITION_STANDARD}
 
-# Gatekeep Tasks
+# Self-Challenge Protocol
 
-1. Spec compliance -- follows composition spec
-2. Completeness -- all aspects covered
-3. Feasibility -- can be implemented
-4. Default impl deliverable -- self-contained and valid
-5. Review feedback resolution -- all issues addressed
-6. **Impl Component Mapping** (BASE_COMPOSITION_STANDARD Section 13.8):
-   - Default implementation maps ALL abstract step interfaces to concrete components
-   - Each step is assigned a specific prompt template or action function
-   - Shared vs impl-specific components are clearly identified
-   - Impl folder structure follows `impls/default/` convention
+## Step 1: Runtime Execution Test
+
+Mentally simulate a developer implementing this design:
+- Pick each step — can you write the prompt template or action function without guessing?
+- Trace the data flow — does every input get consumed and every output get produced?
+- Check the override pattern — could someone create `impls/{name}/impl.yaml` to swap a step's prompt or action without touching the core design?
+
+Note every point where the simulation stalls or requires a guess.
+
+## Step 2: Devil's Advocate
+
+Argue REJECT. Find the strongest case against approving this design:
+- What step assignments are ambiguous or missing?
+- What data flow gaps exist (inputs never consumed, outputs never produced)?
+- Would the override pattern actually work, or are there hidden coupling issues?
+- Are there algorithms that look correct on paper but would fail with real data?
+
+## Step 3: Review Feedback Check
+
+Read the review ({REVIEW_RUNTIME_IMPL_FILE}). Were all identified issues addressed? If the review said REJECT, are the specific defects fixed?
+
+## Step 4: Verdict
+
+After challenging, give your final verdict:
+- **APPROVE** — The design survived all challenges. It is implementable and complete.
+- **REJECT** — The design has unresolved defects. State what must be fixed.
 
 # Output Instructions
 
 Write to: {GATEKEEP_RUNTIME_IMPL_FILE}
 Markdown with YAML frontmatter: doc_type: "gatekeep_runtime_impl", verdict: "APPROVE" or "REJECT", identity_locked: true. ASCII-only.
 
+Structure your gatekeep as:
+1. Runtime Simulation Results (where it stalled or succeeded)
+2. Devil's Advocate Argument
+3. Review Feedback Resolution (issues addressed or not)
+4. Final Verdict + reasoning
+
 # Forbidden Content
 
-- Do NOT approve if critical issues remain
+- Do NOT approve if the devil's advocate found genuine blocking issues
 - Do NOT include non-ASCII characters

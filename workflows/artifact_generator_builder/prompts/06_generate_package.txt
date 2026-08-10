@@ -5,11 +5,12 @@ Generate the complete executable workflow package and all required deliverables 
 # MANDATORY: BASE_COMPOSITION_STANDARD_v1.0.md Section 10
 
 You MUST follow BASE_COMPOSITION_STANDARD_v1.0.md Section 10 ({BASE_COMPOSITION_STANDARD}). This section defines:
-- The three required deliverables (Section 10.1) -- you MUST produce all three
+- The two required deliverables (Section 10.1) -- you MUST produce both
 - The required file structure (Section 10.2) -- all filenames and directories MUST match
 - The codename rules -- you MUST use "{CODENAME}" as the identity, NOT generate your own
+- The override pattern (Section 13.8) -- workflow.toml IS the default implementation
 
-Failure to produce all three deliverables with correct naming is a REJECT.
+Failure to produce both deliverables with correct naming is a REJECT.
 
 # Reference Inputs
 
@@ -19,7 +20,6 @@ Failure to produce all three deliverables with correct naming is a REJECT.
 - COMPOSITION_SPEC_FILE: {COMPOSITION_SPEC_FILE}
 - REQUIREMENT_ANALYSIS_FILE: {REQUIREMENT_ANALYSIS_FILE}
 - REQUIREMENT_DOC: {REQUIREMENT_DOC}
-- DEFAULT_IMPL_FILE: {DEFAULT_IMPL_FILE}
 - BASE_COMPOSITION_STANDARD: {BASE_COMPOSITION_STANDARD}
 - CODENAME: {CODENAME}
 
@@ -28,7 +28,7 @@ Failure to produce all three deliverables with correct naming is a REJECT.
 ## Part A: Workflow Package
 
 Generate the executable workflow files per the step sequence and artifact contract:
-1. workflow.toml -- step definitions, routing, artifact bindings (name = {CODENAME})
+1. workflow.toml -- step definitions with prompt=/action= for EVERY step (this IS the default implementation), routing, artifact bindings (name = {CODENAME})
 2. context_extensions.py -- artifact key registration, path resolution
 3. actions.py -- @action implementations for action-driven steps
 4. prompts/ -- one .txt per prompt-driven step
@@ -41,16 +41,39 @@ Per BASE_COMPOSITION_STANDARD_v1.0.md Section 10.1, produce:
 
 1. {COMPOSITION_STANDARD_FILE} -- Generator-specific composition standard adapted from {BASE_COMPOSITION_STANDARD} (doc_type: "composition_standard")
 
-2. {DEFAULT_IMPL_FILE} -- Default runtime implementation component mapping (doc_type: "default_impl"). This file MUST be placed inside the impls/default/ directory. Each implementation group under impls/ MUST have:
-   - {impl_name}.impl.md (required) -- component mapping from abstract steps to concrete prompts/actions
-   - actions.py (optional) -- impl-specific action functions
-   - prompts/ (optional) -- impl-specific prompt templates
-
 Uses codename: "{CODENAME}", identity_locked: true. ASCII-only.
+
+## Part C: Alternative Implementations (if applicable)
+
+If the composition spec or runtime implementation design identifies alternative output variants, create `impls/{name}/` directories with partial overrides:
+
+Each alternative implementation directory contains:
+- `impl.yaml` (required) -- ONLY the steps that differ from the default workflow.toml
+- `actions.py` (optional) -- impl-specific action functions
+- `prompts/` (optional) -- impl-specific prompt templates
+
+**impl.yaml format:**
+
+```yaml
+name: variant_name
+description: "Brief description of this variant"
+
+overrides:
+  step_name:
+    prompt: "impls/variant_name/prompts/01_step.txt"
+  another_step:
+    action: "variant_action"
+```
+
+**Rules:**
+- Each key under `overrides:` MUST match a step name in workflow.toml
+- Each override MUST specify `prompt` or `action` (at least one)
+- Steps NOT listed inherit from workflow.toml unchanged
+- Override prompt paths are relative to the workflow package root
 
 # Output Instructions
 
-Write ALL files listed above. ASCII-only for all files. Ensure the impls/default/ directory structure is created for the DEFAULT_IMPL_FILE.
+Write ALL files listed above. ASCII-only for all files.
 
 # Required Output Folder Structure
 
@@ -59,26 +82,24 @@ The output folder ({out}) IS the workflow package folder that will be deployed/p
 ```
 output/
     standards/
-        COMPOSITION_STANDARD.md  ← composition standard (abstract step interfaces)
-    impls/
-        default/
-            default.impl.md      ← required (component mapping)
-            actions.py           ← optional (impl-specific actions)
-            prompts/             ← optional (impl-specific prompts)
+        COMPOSITION_STANDARD.md  <- composition standard (abstract step interfaces)
+    impls/                       <- OPTIONAL: only if alternative variants exist
+        {variant_name}/
+            impl.yaml            <- partial overrides (only steps that differ)
+            actions.py           <- optional variant-specific actions
+            prompts/             <- optional variant-specific prompts
+                *.txt
     Specs/
-        *.md                     ← requirement docs for this generator
-    workflow.toml                ← workflow definition
-    context_extensions.py        ← artifact key registration
-    actions.py                   ← shared actions (all impls can reuse)
-    prompts/                     ← shared prompts (all impls can reuse)
+        *.md                     <- requirement docs for this generator
+    workflow.toml                <- step sequence + DEFAULT implementation
+    context_extensions.py        <- artifact key registration
+    actions.py                   <- shared actions (all impls can reuse)
+    prompts/                     <- shared prompts (all impls can reuse)
         *.txt
-    README.md                    ← workflow documentation
+    README.md                    <- workflow documentation
 ```
 
-All implementation groups under `impls/` MUST follow this pattern:
-- `{impl_name}.impl.md` (required) -- component mapping
-- `actions.py` (optional) -- impl-specific actions
-- `prompts/` (optional) -- impl-specific prompts
+IMPORTANT: The `impls/` directory is OPTIONAL. Only create it if the composition spec identifies alternative output variants. The default implementation lives entirely in `workflow.toml` — there is NO `impls/default/` directory.
 
 # Required Artifact Keys
 
@@ -92,9 +113,8 @@ When reporting artifacts in meta.json, use EXACTLY these keys (no variations):
 | prompts/ (directory) | WORKFLOW_PROMPTS_DIR |
 | README.md | WORKFLOW_README_FILE |
 | standards/COMPOSITION_STANDARD.md | COMPOSITION_STANDARD_FILE |
-| impls/default/default.impl.md | DEFAULT_IMPL_FILE |
 
-Do NOT invent artifact keys like `WORKFLOW_PROMPTS_INDEX_FILE` or `STANDARDS_COMPOSITION_STANDARD_FILE`. Use the exact keys from the table above.
+Do NOT invent artifact keys like `DEFAULT_IMPL_FILE`, `WORKFLOW_PROMPTS_INDEX_FILE`, or `STANDARDS_COMPOSITION_STANDARD_FILE`. Use the exact keys from the table above.
 
 # Forbidden Content
 
@@ -103,3 +123,4 @@ Do NOT invent artifact keys like `WORKFLOW_PROMPTS_INDEX_FILE` or `STANDARDS_COM
 - Do NOT hardcode absolute paths in register_artifact_keys()
 - Do NOT include non-ASCII characters
 - Do NOT skip any deliverable files
+- Do NOT create an `impls/default/` directory — workflow.toml IS the default implementation

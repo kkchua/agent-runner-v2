@@ -1,14 +1,10 @@
 # Objective
 
-Final gatekeep of the generated workflow package and all deliverables. Approve only if complete, correct, and ready for promotion.
+Final gatekeep of the generated workflow package. Before approving, you must try to find reasons to REJECT.
 
 # MANDATORY: BASE_COMPOSITION_STANDARD_v1.0.md Section 10
 
-You MUST verify compliance with BASE_COMPOSITION_STANDARD_v1.0.md Section 10 ({BASE_COMPOSITION_STANDARD}). REJECT if:
-- Any of the four required deliverables is missing (Section 10.1)
-- File names or directory structure do not match (Section 10.2)
-- Codename "{CODENAME}" is not used consistently
-- Builder identity is referenced anywhere
+You MUST verify compliance with BASE_COMPOSITION_STANDARD_v1.0.md Section 10 ({BASE_COMPOSITION_STANDARD}).
 
 # Reference Inputs
 
@@ -16,28 +12,52 @@ You MUST verify compliance with BASE_COMPOSITION_STANDARD_v1.0.md Section 10 ({B
 - COMPOSITION_STANDARD_FILE: {COMPOSITION_STANDARD_FILE}
 - REVIEW_PACKAGE_FILE: {REVIEW_PACKAGE_FILE}
 
-# Gatekeep Tasks
+# Self-Challenge Protocol
 
-1. **Completeness** -- All files present: workflow.toml, context_extensions.py, actions.py, prompts/, README.md, composition standard, `impls/default/` folder
-2. **Correctness** -- Routing valid, artifact keys match, Python/TOML syntax valid
-3. **Identity Isolation** -- No builder leakage, target codename "{CODENAME}" used throughout
-4. **Deliverable Quality** -- Composition standard is self-contained and valid
-5. **Review Feedback Resolution** -- All issues addressed
-6. **Input Contract** (BASE_COMPOSITION_STANDARD Section 6.5):
-   - All input document artifact keys use `_FILE` suffix in workflow.toml and context_extensions.py
-7. **Output Delivery Contract** (BASE_COMPOSITION_STANDARD Section 6.6):
-   - Output delivery location declared, delivery step present
-8. **Runtime Implementation Model** (BASE_COMPOSITION_STANDARD Section 13.8):
-   - `impls/default/default.impl.md` exists with component mapping for all steps
-   - Shared actions.py and prompts/ at workflow root
-   - Composition standard defines abstract step interfaces
+## Step 1: Runtime Execution Test
+
+Mentally execute the full workflow as the daemon would:
+1. Parse workflow.toml — does it load? Are all step names, routing, and artifact bindings valid?
+2. Start at init_step — follow the routing chain. Does it reach stepCompletion without cycles or dead ends?
+3. For each step — resolve its prompt file path. Does the file exist? Check that all `{placeholder}` keys are provided by context_extensions.py.
+4. For each action step — verify the action name matches a function in actions.py.
+5. Check artifact flow — every step's required_inputs are produced by prior steps.
+6. Check the override pattern — every step has `prompt` or `action` in workflow.toml. No `impls/default/` exists. If `impls/` has variants, each has valid `impl.yaml` with partial overrides.
+
+Note every point where the simulation fails.
+
+## Step 2: Devil's Advocate
+
+Argue REJECT. Find the strongest case against approving this package:
+- What cross-file references are broken (artifact keys mismatched between workflow.toml and context_extensions.py)?
+- What prompt placeholders reference keys that do not exist?
+- What action names do not match registered functions?
+- Would the runtime fail at any step during execution?
+- Is there builder identity leakage?
+
+## Step 3: Review Feedback Check
+
+Read the review ({REVIEW_PACKAGE_FILE}). Were all identified issues addressed? If the review said REJECT, are the specific defects fixed?
+
+## Step 4: Verdict
+
+After challenging, give your final verdict:
+- **APPROVE** — The package survived all challenges. It is executable and ready for promotion.
+- **REJECT** — The package has unresolved defects. State what must be fixed.
 
 # Output Instructions
 
 Write to: {GATEKEEP_PACKAGE_FILE}
 Markdown with YAML frontmatter: doc_type: "gatekeep_package", verdict: "APPROVE" or "REJECT", identity_locked: true. ASCII-only.
 
+Structure your gatekeep as:
+1. Runtime Simulation Results (step-by-step trace, note failures)
+2. Devil's Advocate Argument
+3. Review Feedback Resolution (issues addressed or not)
+4. Final Verdict + reasoning
+
 # Forbidden Content
 
-- Do NOT approve if critical issues remain
+- Do NOT approve if mental execution failed at any step
+- Do NOT approve if the devil's advocate found genuine blocking issues
 - Do NOT include non-ASCII characters

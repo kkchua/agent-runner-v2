@@ -193,7 +193,7 @@ role_policy = "architect_standard"
 
 [step.artifacts]
 required_inputs = ["COMPOSITION_SPEC_FILE", "REQUIREMENT_ANALYSIS_FILE"]
-produces = ["RUNTIME_IMPL_FILE", "DEFAULT_IMPL_FILE"]
+produces = ["RUNTIME_IMPL_FILE"]
 result_meta_key = "RUNTIME_IMPL_FILE"
 
 [[step]]
@@ -426,7 +426,7 @@ enable_notifications = true
 requires_human_approval_after = true
 
 [step.artifacts]
-required_inputs = ["WORKFLOW_MANIFEST_FILE", "COMPOSITION_STANDARD_FILE", "DEFAULT_IMPL_FILE"]
+required_inputs = ["WORKFLOW_MANIFEST_FILE", "COMPOSITION_STANDARD_FILE"]
 produces = ["PROMOTION_REPORT_FILE"]
 result_meta_key = "PROMOTION_REPORT_FILE"
 
