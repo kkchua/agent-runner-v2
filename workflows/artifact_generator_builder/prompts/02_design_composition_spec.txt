@@ -38,7 +38,12 @@ Produce a composition specification containing:
    - How can new runtime implementations plug in?
    - What contracts must new implementations follow?
 
-6. **Self-Validation** -- Verify spec is complete and consistent
+6. **Output Variants** -- At least one alternative implementation:
+   - Identify at least one distinct output variant (e.g., different style, format, or target platform)
+   - For each variant, specify which steps differ from the default and how
+   - This validates the override pattern — the variant will become an `impls/{name}/impl.yaml`
+
+7. **Self-Validation** -- Verify spec is complete and consistent
 
 # Self-Critic
 
