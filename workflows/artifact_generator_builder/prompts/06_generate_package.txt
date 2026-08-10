@@ -43,9 +43,12 @@ Per BASE_COMPOSITION_STANDARD_v1.0.md Section 10.1, produce:
 
 Uses codename: "{CODENAME}", identity_locked: true. ASCII-only.
 
-## Part C: Alternative Implementations (if applicable)
+## Part C: Alternative Implementations (REQUIRED)
 
-If the composition spec or runtime implementation design identifies alternative output variants, create `impls/{name}/` directories with partial overrides:
+The composition spec identifies at least one output variant. You MUST create the `impls/{name}/` directory and declare it in workflow.toml for each variant.
+
+1. Create `impls/{name}/` directories with partial overrides
+2. Declare each implementation in workflow.toml using `[[workflow.implementation]]`
 
 Each alternative implementation directory contains:
 - `impl.yaml` (required) -- ONLY the steps that differ from the default workflow.toml
@@ -65,11 +68,23 @@ overrides:
     action: "variant_action"
 ```
 
+**workflow.toml declaration** (add after `[workflow]` section):
+
+```toml
+[[workflow.implementation]]
+name = "variant_name"
+description = "Brief description of this variant"
+label = "Display Label"
+```
+
+The `default` implementation (workflow.toml itself) is always implicitly available — do NOT list it. Each `name` MUST match an `impls/{name}/` directory.
+
 **Rules:**
 - Each key under `overrides:` MUST match a step name in workflow.toml
 - Each override MUST specify `prompt` or `action` (at least one)
 - Steps NOT listed inherit from workflow.toml unchanged
 - Override prompt paths are relative to the workflow package root
+- Every `[[workflow.implementation]]` name MUST have a matching `impls/{name}/` directory
 
 # Output Instructions
 
@@ -83,7 +98,7 @@ The output folder ({out}) IS the workflow package folder that will be deployed/p
 output/
     standards/
         COMPOSITION_STANDARD.md  <- composition standard (abstract step interfaces)
-    impls/                       <- OPTIONAL: only if alternative variants exist
+    impls/                       <- REQUIRED: at least one alternative variant
         {variant_name}/
             impl.yaml            <- partial overrides (only steps that differ)
             actions.py           <- optional variant-specific actions
@@ -99,7 +114,7 @@ output/
     README.md                    <- workflow documentation
 ```
 
-IMPORTANT: The `impls/` directory is OPTIONAL. Only create it if the composition spec identifies alternative output variants. The default implementation lives entirely in `workflow.toml` — there is NO `impls/default/` directory.
+IMPORTANT: The `impls/` directory MUST contain at least one alternative implementation. The default implementation lives entirely in `workflow.toml` — there is NO `impls/default/` directory. Each alternative MUST have a matching `[[workflow.implementation]]` entry in workflow.toml.
 
 # Required Artifact Keys
 

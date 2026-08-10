@@ -23,6 +23,7 @@ Mentally execute the full workflow as the daemon would:
 4. For each action step — verify the action name matches a function in actions.py.
 5. Check artifact flow — every step's required_inputs are produced by prior steps.
 6. Check the override pattern — every step has `prompt` or `action` in workflow.toml. No `impls/default/` exists. If `impls/` has variants, each has valid `impl.yaml` with partial overrides.
+7. Check implementation declarations — if `impls/` directories exist, each MUST have a matching `[[workflow.implementation]]` entry in workflow.toml. The `default` name MUST NOT appear in the declarations. Each `name` field MUST match an actual `impls/{name}/` directory.
 
 Note every point where the simulation fails.
 
