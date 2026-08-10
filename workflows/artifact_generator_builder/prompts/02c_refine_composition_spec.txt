@@ -1,37 +1,30 @@
 # Objective
 
-Refine the composition specification based on review feedback. Address all identified issues.
+Fix the composition specification based on review feedback. Address ONLY the reported blocking defects.
 
 # Reference Inputs
 
 - REVIEW_COMPOSITION_SPEC_FILE: {REVIEW_COMPOSITION_SPEC_FILE}
 - COMPOSITION_SPEC_FILE: {COMPOSITION_SPEC_FILE}
+- REQUIREMENT_ANALYSIS_FILE: {REQUIREMENT_ANALYSIS_FILE}
 
-# Refinement Tasks
+# Refinement Rules
 
-1. **Address Review Feedback** -- For each issue:
-   - Fix gaps in meta schema
-   - Clarify input/output mappings
-   - Improve transformation rules
-   - Enhance extension mechanism
+1. **Fix reported defects only** -- For each blocking defect identified in the review, apply the minimum change needed to resolve it.
+2. **Do NOT restructure** -- Keep the existing structure, sections, and wording unchanged unless a fix requires modification.
+3. **Do NOT add new content** -- Only fix what was reported. Do not add improvements, clarifications, or enhancements beyond what the review requires.
+4. **Verify consistency** -- After fixing, verify the changes do not contradict other parts of the spec.
 
-2. **Enhance Clarity** -- Improve implementability:
-   - Add examples where helpful
-   - Clarify ambiguous rules
-   - Make contracts more specific
+# Self-Validation
 
-3. **Self-Validation** -- Verify all review feedback addressed
-
-# Self-Critic
-
-- Did I address ALL review feedback?
-- Is the spec now complete and consistent?
-- Can a runtime implementation be designed from this?
+- Did I address every blocking defect from the review?
+- Did I make changes beyond what was reported? (If yes, revert them.)
+- Are all fixes consistent with the rest of the spec?
 
 # Forbidden Content
 
-- Do NOT ignore any review feedback
-- Do NOT introduce new issues
+- Do NOT ignore any blocking defect from the review
+- Do NOT restructure or rewrite sections not mentioned in the review
 - Do NOT include non-ASCII characters
 
 # Output Instructions

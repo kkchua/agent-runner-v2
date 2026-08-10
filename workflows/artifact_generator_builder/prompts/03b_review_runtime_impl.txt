@@ -1,6 +1,6 @@
 # Objective
 
-You are a strict critic reviewing a runtime implementation design. Your job is to find hidden errors, challenge assumptions, and verify the design is actually implementable — not just that it has the right sections.
+Review a runtime implementation design for implementability. Verify the design correctly follows the composition spec and can be used to generate the workflow package.
 
 # Reference Inputs
 
@@ -8,39 +8,34 @@ You are a strict critic reviewing a runtime implementation design. Your job is t
 - COMPOSITION_SPEC_FILE: {COMPOSITION_SPEC_FILE}
 - CODENAME: {CODENAME}
 
-# Self-Challenge Protocol
+# Review Protocol
 
-Follow these steps IN ORDER. Do NOT skip to the verdict.
+Follow these steps IN ORDER.
 
-## Step 1: Hidden Error Hunt
+## Step 1: Accuracy Check
 
-Read the runtime implementation design carefully. Then list:
-- **2 hidden errors** — algorithms that will not work as described, data flow contradictions, or step-to-prompt/action assignments that are inconsistent with the composition spec
-- **1 weak assumption** — something the design assumes about the runtime environment, input data, or output format but does not verify
-- **1 missing fact** — an error condition, edge case, or configuration scenario that the design ignores
+Compare the runtime impl against the composition spec. Look for:
+- Algorithms that contradict the spec's transformation rules
+- Step-to-prompt/action assignments inconsistent with the spec's step interfaces
+- Data flow contradictions between the design and the spec
 
-For each item, quote the specific text and explain WHY it is wrong or missing.
+For each issue found, quote the specific text and explain the discrepancy.
 
 ## Step 2: Functional Viability
 
-Ask yourself: "If I were writing code from this design alone, could I do it?"
+Ask: "If I were writing code from this design alone, could I do it?"
 
-- Does every step have a clear prompt template or action function assignment? (These go directly into workflow.toml.)
+- Does every step have a clear prompt template or action function assignment?
 - Can I trace the complete data flow from input loading through transformation to output generation?
 - Are the algorithms specific enough to implement without guessing?
-- Does the extension interface actually support adding `impls/{name}/impl.yaml` overrides without modifying the core?
+- Does the extension interface support adding `impls/{name}/impl.yaml` overrides?
 
-If any answer is "no" or "I'd have to guess," that is a defect.
+If any answer is "no" or "I'd have to guess," that is a blocking defect.
 
-## Step 3: Devil's Advocate
+## Step 3: Verdict
 
-Argue AGAINST this design. Pretend you are an opposing expert who wants to prove this implementation will fail. What is the strongest argument you can make?
-
-## Step 4: Verdict
-
-After completing steps 1-3, give your verdict:
-- **PASS** — The design is implementable. Any issues found are minor and will not block package generation.
-- **REJECT** — The design has defects that will cause implementation to fail. State what must be fixed.
+- **PASS** — The design is implementable. Minor observations may be noted but do not block the next phase.
+- **REJECT** — The design has blocking defects (impossible algorithms, missing assignments, data flow gaps) that will cause package generation to fail. State what must be fixed.
 
 # Output Instructions
 
@@ -48,13 +43,13 @@ Write to: {REVIEW_RUNTIME_IMPL_FILE}
 Markdown with YAML frontmatter: doc_type: "review_runtime_impl", verdict: "PASS" or "REJECT", identity_locked: true. ASCII-only.
 
 Structure your review as:
-1. Hidden Errors (numbered list with quotes)
+1. Accuracy Issues (blocking defects only, with quotes)
 2. Functional Viability Assessment (pass/fail for each question)
-3. Devil's Advocate Argument
+3. Minor Observations (non-blocking, for awareness)
 4. Final Verdict + reasoning
 
 # Forbidden Content
 
-- Do NOT approve if you found genuine hidden errors in Step 1
+- Do NOT reject for minor wording issues or theoretical concerns that would not cause implementation failure
 - Do NOT invent requirements not present in the composition spec
 - Do NOT include non-ASCII characters
