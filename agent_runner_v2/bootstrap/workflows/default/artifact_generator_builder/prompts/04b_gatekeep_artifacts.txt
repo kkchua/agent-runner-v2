@@ -1,6 +1,6 @@
 # Objective
 
-Final gatekeep of the artifact contract. Approve only if it's complete and consistent.
+Final gatekeep of the artifact contract. Before approving, you must try to find reasons to REJECT.
 
 # Reference Inputs
 
@@ -8,43 +8,49 @@ Final gatekeep of the artifact contract. Approve only if it's complete and consi
 - RUNTIME_IMPL_FILE: {RUNTIME_IMPL_FILE}
 - BASE_COMPOSITION_STANDARD: {BASE_COMPOSITION_STANDARD}
 
-# Gatekeep Tasks
+# Self-Challenge Protocol
 
-1. **Completeness** -- All artifacts covered:
-   - All input artifacts from requirement
-   - All output artifacts from requirement
-   - All intermediate artifacts needed
+## Step 1: Runtime Execution Test
 
-2. **Consistency** -- No conflicts:
-   - No duplicate artifact keys
-   - Path patterns don't conflict
-   - Relationships are valid
+Mentally simulate the runtime processing this artifact contract:
+- For each input artifact — can the runner resolve its path? Does the key follow naming conventions (`_FILE` for documents, `_DIR` for directories)?
+- For each output artifact — does some step produce it? Is the path pattern unambiguous?
+- For each intermediate artifact — is it produced before it is consumed? Does any step reference an artifact that does not exist?
 
-3. **Compliance** -- Matches runtime impl:
-   - Runtime impl references match contract
-   - Composition spec mappings match contract
+Note every point where the simulation fails.
 
-4. **Input Artifact Naming** (BASE_COMPOSITION_STANDARD Section 6.5):
-   - All input document artifact keys use `_FILE` suffix (e.g., SOURCE_TEXT_FILE, not SOURCE_TEXT)
-   - All directory input artifact keys use `_DIR` suffix
-   - Intermediate and output artifacts do NOT use `_FILE` suffix unless they are user-submitted files
+## Step 2: Devil's Advocate
 
-5. **Output Delivery** (BASE_COMPOSITION_STANDARD Section 6.6):
-   - Final output artifacts declare a delivery location
-   - Output catalog distinguishes final deliverables from intermediate artifacts
+Argue REJECT. Find the strongest case against approving this contract:
+- Are there duplicate or conflicting artifact keys?
+- Are there artifacts that are declared but never produced or consumed?
+- Do the naming conventions break anywhere (`_FILE` suffix missing on inputs, or wrongly applied to outputs)?
+- Would the runtime fail to resolve any path?
 
-# Self-Critic
+## Step 3: Cross-Reference Check
 
-- Is this ready for step design?
-- Are there any missing artifacts?
-- Are there any conflicts?
+Compare the artifact contract against the runtime implementation:
+- Does every artifact referenced in the runtime impl exist in the contract?
+- Does every contract artifact have a corresponding reference in the runtime impl?
 
-# Forbidden Content
+## Step 4: Verdict
 
-- Do NOT approve if critical issues remain
-- Do NOT include non-ASCII characters
+After challenging, give your final verdict:
+- **APPROVE** — The contract survived all challenges. All artifacts are consistent, complete, and resolvable.
+- **REJECT** — The contract has unresolved defects. State what must be fixed.
 
 # Output Instructions
 
 Write to: {GATEKEEP_ARTIFACTS_FILE}
 Markdown with YAML frontmatter: doc_type: "gatekeep_artifacts", verdict: "APPROVE" or "REJECT", identity_locked: true. ASCII-only.
+
+Structure your gatekeep as:
+1. Runtime Simulation Results (where it failed or succeeded)
+2. Devil's Advocate Argument
+3. Cross-Reference Check Results
+4. Final Verdict + reasoning
+
+# Forbidden Content
+
+- Do NOT approve if the devil's advocate found genuine blocking issues
+- Do NOT include non-ASCII characters

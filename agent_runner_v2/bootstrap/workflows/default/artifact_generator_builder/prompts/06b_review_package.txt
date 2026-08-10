@@ -1,14 +1,10 @@
 # Objective
 
-Review the generated workflow package and all deliverables for completeness, correctness, and compliance with design artifacts.
+You are a strict critic reviewing a generated workflow package. Your job is to find hidden errors, challenge assumptions, and verify the package is actually executable — not just that the files exist.
 
 # MANDATORY: BASE_COMPOSITION_STANDARD_v1.0.md Section 10
 
-You MUST verify compliance with BASE_COMPOSITION_STANDARD_v1.0.md Section 10 ({BASE_COMPOSITION_STANDARD}). REJECT if:
-- Any of the four required deliverables is missing (Section 10.1)
-- File names do not match the required patterns (Section 10.2)
-- Codename "{CODENAME}" is not used consistently
-- Builder identity is referenced anywhere
+You MUST verify compliance with BASE_COMPOSITION_STANDARD_v1.0.md Section 10 ({BASE_COMPOSITION_STANDARD}).
 
 # Reference Inputs
 
@@ -17,32 +13,53 @@ You MUST verify compliance with BASE_COMPOSITION_STANDARD_v1.0.md Section 10 ({B
 - COMPOSITION_STANDARD_FILE: {COMPOSITION_STANDARD_FILE}
 - CODENAME: {CODENAME}
 
-# Review Tasks
+# Self-Challenge Protocol
 
-1. **Workflow Package** -- workflow.toml steps/routing match design, artifact bindings match contract, context_extensions.py valid, actions.py complete, prompts correct, README accurate
-2. **Identity Isolation** -- All files use {CODENAME}, zero builder identity leakage
-3. **Composition Standard Deliverable** -- Adapts base standard for this domain. Uses codename "{CODENAME}"
-4. **Input Contract Compliance** (BASE_COMPOSITION_STANDARD Section 6.5):
-   - All input document artifact keys in workflow.toml use `_FILE` suffix
-   - context_extensions.py registers input artifacts with `_FILE` suffix
-   - Prompt placeholders reference the correct `_FILE` keys
-5. **Output Delivery Contract** (BASE_COMPOSITION_STANDARD Section 6.6):
-   - Output artifacts declare delivery locations in context_extensions.py
-   - Workflow includes a delivery/promotion step
-   - README documents output destination
-6. **Runtime Implementation Model** (BASE_COMPOSITION_STANDARD Section 13.8):
-   - File structure includes `impls/default/` folder with default.impl.md
-   - Default implementation maps all steps to concrete prompts/actions
-   - Shared actions.py and prompts/ exist at workflow root
-   - Composition standard defines abstract step interfaces
+Follow these steps IN ORDER. Do NOT skip to the verdict.
+
+## Step 1: Hidden Error Hunt
+
+Read ALL generated files. Then list:
+- **2 hidden errors** — broken cross-references between files, artifact key mismatches between workflow.toml and context_extensions.py, prompt placeholders that reference nonexistent keys, action names that do not match registered functions
+- **1 weak assumption** — something the package assumes about the runtime environment but does not verify
+- **1 missing fact** — a file, artifact key, or routing entry that should exist but does not
+
+For each item, quote the specific text and file, and explain WHY it is wrong.
+
+## Step 2: Functional Viability — Mental Execution
+
+Mentally execute the workflow as the daemon would:
+1. Parse workflow.toml — does it load without errors?
+2. Start at init_step — follow the routing chain to completion
+3. For each step — resolve its prompt file path, verify the file exists, check that all `{placeholder}` keys in the prompt are provided by context_extensions.py
+4. For each action step — verify the action name matches a function in actions.py
+5. Check artifact flow — every step's required_inputs are produced by prior steps
+
+If any step fails this mental execution, that is a defect.
+
+## Step 3: Devil's Advocate
+
+Argue AGAINST this package. Pretend you are an opposing expert who wants to prove this package will fail at runtime. What is the strongest argument you can make?
+
+## Step 4: Verdict
+
+After completing steps 1-3, give your verdict:
+- **PASS** — The package is executable. Any issues found are cosmetic and will not cause runtime failures.
+- **REJECT** — The package has defects that will cause runtime failures. State what must be fixed.
 
 # Output Instructions
 
 Write to: {REVIEW_PACKAGE_FILE}
 Markdown with YAML frontmatter: doc_type: "review_package", verdict: "PASS" or "REJECT", identity_locked: true. ASCII-only.
 
+Structure your review as:
+1. Hidden Errors (numbered list with file paths and quotes)
+2. Mental Execution Trace (step-by-step, note where it fails)
+3. Devil's Advocate Argument
+4. Final Verdict + reasoning
+
 # Forbidden Content
 
-- Do NOT approve if builder identity leaked
-- Do NOT approve if files are missing
+- Do NOT approve if mental execution failed at any step
+- Do NOT approve if you found genuine hidden errors in Step 1
 - Do NOT include non-ASCII characters

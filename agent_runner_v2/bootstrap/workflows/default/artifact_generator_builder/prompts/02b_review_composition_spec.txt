@@ -1,6 +1,6 @@
 # Objective
 
-Review the composition specification for completeness, consistency, and alignment with the requirement analysis.
+You are a strict critic reviewing a composition specification. Your job is to find hidden errors, challenge assumptions, and verify the spec is actually implementable — not just that it has the right sections.
 
 # Reference Inputs
 
@@ -8,60 +8,53 @@ Review the composition specification for completeness, consistency, and alignmen
 - REQUIREMENT_ANALYSIS_FILE: {REQUIREMENT_ANALYSIS_FILE}
 - BASE_COMPOSITION_STANDARD: {BASE_COMPOSITION_STANDARD}
 
-# Review Tasks
+# Self-Challenge Protocol
 
-1. **Completeness Check** -- All sections present:
-   - Meta schema defined
-   - Input mapping specified
-   - Output mapping specified
-   - Transformation rules clear
-   - Extension mechanism defined
-   - Abstract step interfaces defined (per BASE_COMPOSITION_STANDARD Section 13.8)
+Follow these steps IN ORDER. Do NOT skip to the verdict.
 
-2. **Consistency Check** -- Internal consistency:
-   - Meta schema supports all required transformations
-   - Input mapping covers all input artifacts
-   - Output mapping produces all required output artifacts
-   - No contradictions between sections
+## Step 1: Hidden Error Hunt
 
-3. **Feasibility Check** -- Can this be implemented?
-   - Are transformation rules implementable?
-   - Are there any ambiguous or impossible requirements?
-   - Does the extension mechanism make sense?
+Read the composition spec carefully. Then list:
+- **2 hidden errors** — transformation rules that contradict the requirement analysis, step interfaces that are impossible to implement, or input/output mappings that do not align
+- **1 weak assumption** — something the spec assumes about the runtime or data flow but does not verify
+- **1 missing fact** — an edge case, error condition, or constraint that the spec ignores
 
-4. **Standards Compliance** -- Follows BASE_COMPOSITION_STANDARD:
-   - Three-layer architecture respected
-   - Component schema patterns followed
-   - Proper separation of concerns
+For each item, quote the specific text and explain WHY it is wrong or missing.
 
-5. **Input Contract Compliance** (BASE_COMPOSITION_STANDARD Section 6.5):
-   - All input document artifact keys use `_FILE` suffix
-   - All directory input artifact keys use `_DIR` suffix
-   - Input formats are documented
+## Step 2: Functional Viability
 
-6. **Output Delivery Contract** (BASE_COMPOSITION_STANDARD Section 6.6):
-   - Output delivery location is declared
-   - Output catalog documents which artifact keys are final deliverables
-   - Output file formats are specified
+Ask yourself: "If I were implementing a runtime from this spec alone, could I do it?"
 
-7. **Abstract Step Interface Check** (BASE_COMPOSITION_STANDARD Section 13.8):
-   - Each workflow step is defined as an abstract interface
-   - Each step declares: purpose, input contract, output contract, constraints
-   - Step interfaces are implementation-agnostic (WHAT, not HOW)
+- Can I map every input artifact to a specific step that consumes it?
+- Can I map every output artifact to a specific step that produces it?
+- Are the abstract step interfaces specific enough to write a prompt or action for?
+- Does the three-layer architecture (Input -> Transformation -> Output) actually hold, or are layers mixed?
 
-# Self-Critic
+If any answer is "no" or "I'd have to guess," that is a defect.
 
-- Did I check against the requirement analysis?
-- Did I verify feasibility?
-- Is my feedback specific and actionable?
+## Step 3: Devil's Advocate
 
-# Forbidden Content
+Argue AGAINST this spec. Pretend you are an opposing expert who wants to prove this composition spec is flawed. What is the strongest argument you can make?
 
-- Do NOT approve if critical issues exist
-- Do NOT invent new requirements
-- Do NOT include non-ASCII characters
+## Step 4: Verdict
+
+After completing steps 1-3, give your verdict:
+- **PASS** — The spec is implementable. Any issues found are minor and will not block runtime implementation.
+- **REJECT** — The spec has defects that will cause implementation to fail. State what must be fixed.
 
 # Output Instructions
 
 Write to: {REVIEW_COMPOSITION_SPEC_FILE}
 Markdown with YAML frontmatter: doc_type: "review_composition_spec", verdict: "PASS" or "REJECT", identity_locked: true. ASCII-only.
+
+Structure your review as:
+1. Hidden Errors (numbered list with quotes)
+2. Functional Viability Assessment (pass/fail for each question)
+3. Devil's Advocate Argument
+4. Final Verdict + reasoning
+
+# Forbidden Content
+
+- Do NOT approve if you found genuine hidden errors in Step 1
+- Do NOT invent requirements not present in the input artifacts
+- Do NOT include non-ASCII characters

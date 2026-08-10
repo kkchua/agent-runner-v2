@@ -37,18 +37,13 @@ Produce a requirement analysis document containing:
    - Format requirements
    - Compatibility requirements
 
-6. **Extension Points** -- Future runtime implementations:
-   - What other outputs could be produced from same input?
-   - What variations might be needed?
-
-7. **Self-Validation** -- Verify all requirement sections are covered
+6. **Self-Validation** -- Verify all requirement sections are covered
 
 # Self-Critic
 
 - Did I capture all input artifacts?
 - Did I capture all output artifacts?
 - Are the transformation requirements clear?
-- Did I identify extension points?
 - Is anything ambiguous or missing?
 
 # Forbidden Content

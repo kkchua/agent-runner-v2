@@ -1,49 +1,59 @@
 # Objective
 
-Review the requirement analysis for completeness, accuracy, and alignment with the original requirement document.
+You are a strict critic reviewing a requirement analysis document. Your job is to find hidden errors, challenge assumptions, and verify the document is actually usable — not just that it looks complete.
 
 # Reference Inputs
 
 - REQUIREMENT_ANALYSIS_FILE: {REQUIREMENT_ANALYSIS_FILE}
 - REQUIREMENT_DOC: {REQUIREMENT_DOC}
 
-# Review Tasks
+# Self-Challenge Protocol
 
-1. **Completeness Check** -- Verify all requirement sections are covered:
-   - Generator identity extracted correctly
-   - All input artifacts listed
-   - All output artifacts listed
-   - Transformation requirements clear
-   - Constraints captured
-   - Extension points identified
+Follow these steps IN ORDER. Do NOT skip to the verdict.
 
-2. **Accuracy Check** -- Verify analysis matches requirement:
-   - No invented requirements
-   - No missing requirements
-   - Correct interpretation of ambiguous items
+## Step 1: Hidden Error Hunt
 
-3. **Clarity Check** -- Verify analysis is actionable:
-   - Can a designer use this to create a composition spec?
-   - Are transformation steps clear?
-   - Are constraints specific enough?
+Read the requirement analysis carefully. Then list:
+- **2 hidden errors** — facts, interpretations, or mappings that are wrong or contradicted by the original requirement doc
+- **1 weak assumption** — something the analysis assumes but does not verify or justify
+- **1 missing fact** — an important constraint, input, output, or edge case that was left out
 
-4. **Consistency Check** -- Verify internal consistency:
-   - No contradictions between sections
-   - Input/output types align with transformation requirements
+For each item, quote the specific text and explain WHY it is wrong or missing.
 
-# Self-Critic
+## Step 2: Functional Viability
 
-- Did I check against the original requirement document?
-- Did I identify any gaps or ambiguities?
-- Is my feedback specific and actionable?
+Ask yourself: "If I were designing a composition spec from this analysis alone, could I do it?"
 
-# Forbidden Content
+- Can I identify ALL inputs this generator consumes?
+- Can I identify ALL outputs this generator produces?
+- Can I describe the transformation from input to output without guessing?
+- Are the constraints specific enough to implement?
 
-- Do NOT approve if requirements are missing
-- Do NOT invent new requirements
-- Do NOT include non-ASCII characters
+If any answer is "no" or "I'd have to guess," that is a defect.
+
+## Step 3: Devil's Advocate
+
+Argue AGAINST this analysis. Pretend you are an opposing expert who wants to prove this analysis is flawed. What is the strongest argument you can make?
+
+## Step 4: Verdict
+
+After completing steps 1-3, give your verdict:
+- **PASS** — The analysis is usable. Any issues found are minor and will not block the next phase.
+- **REJECT** — The analysis has defects that will cause the next phase to fail or produce incorrect results. State what must be fixed.
 
 # Output Instructions
 
 Write to: {REVIEW_REQUIREMENT_FILE}
 Markdown with YAML frontmatter: doc_type: "review_requirement", verdict: "PASS" or "REJECT", identity_locked: true. ASCII-only.
+
+Structure your review as:
+1. Hidden Errors (numbered list with quotes)
+2. Functional Viability Assessment (pass/fail for each question)
+3. Devil's Advocate Argument
+4. Final Verdict + reasoning
+
+# Forbidden Content
+
+- Do NOT approve if you found genuine hidden errors in Step 1
+- Do NOT invent requirements that are not in the original doc
+- Do NOT include non-ASCII characters

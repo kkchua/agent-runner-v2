@@ -34,3 +34,7 @@ Build an artifact generator that transforms a folder of markdown documents into 
 - Must preserve code block syntax highlighting
 - Must generate responsive HTML (mobile-friendly)
 - Output must be self-contained (no external dependencies)
+
+## Standard Reference
+
+See BASE_COMPOSITION_STANDARD_v1.0.md for all structural decisions (artifact keys, output variants, implementation declarations, file structure).
