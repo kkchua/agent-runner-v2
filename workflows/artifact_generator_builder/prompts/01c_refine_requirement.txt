@@ -1,37 +1,30 @@
 # Objective
 
-Refine the requirement analysis based on review feedback. Address all identified gaps, ambiguities, or inaccuracies.
+Fix the requirement analysis based on review feedback. Address ONLY the reported blocking defects.
 
 # Reference Inputs
 
 - REVIEW_REQUIREMENT_FILE: {REVIEW_REQUIREMENT_FILE}
 - REQUIREMENT_ANALYSIS_FILE: {REQUIREMENT_ANALYSIS_FILE}
+- REQUIREMENT_DOC: {REQUIREMENT_DOC}
 
-# Refinement Tasks
+# Refinement Rules
 
-1. **Address Review Feedback** -- For each issue identified:
-   - Fix gaps in input/output specifications
-   - Clarify ambiguous transformation requirements
-   - Add missing constraints
-   - Correct any inaccuracies
+1. **Fix reported defects only** -- For each blocking defect identified in the review, apply the minimum change needed to resolve it.
+2. **Do NOT restructure** -- Keep the existing structure, sections, and wording unchanged unless a fix requires modification.
+3. **Do NOT add new content** -- Only fix what was reported. Do not add improvements, clarifications, or enhancements beyond what the review requires.
+4. **Verify against source** -- After fixing, verify each change against the original requirement doc to ensure accuracy.
 
-2. **Enhance Clarity** -- Improve actionability:
-   - Make transformation steps more specific
-   - Add examples where helpful
-   - Clarify extension points
+# Self-Validation
 
-3. **Self-Validation** -- Verify all review feedback addressed
-
-# Self-Critic
-
-- Did I address ALL review feedback?
-- Is the analysis now complete and accurate?
-- Can a designer use this to create a composition spec?
+- Did I address every blocking defect from the review?
+- Did I make changes beyond what was reported? (If yes, revert them.)
+- Are all fixes traceable to the original requirement doc?
 
 # Forbidden Content
 
-- Do NOT ignore any review feedback
-- Do NOT introduce new issues
+- Do NOT ignore any blocking defect from the review
+- Do NOT restructure or rewrite sections not mentioned in the review
 - Do NOT include non-ASCII characters
 
 # Output Instructions

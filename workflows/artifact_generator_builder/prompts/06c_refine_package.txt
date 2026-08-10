@@ -1,41 +1,33 @@
 # Objective
 
-Refine the generated workflow package based on review feedback.
+Fix the generated workflow package based on review feedback. Address ONLY the reported blocking defects.
 
 # Reference Inputs
 
 - REVIEW_PACKAGE_FILE: {REVIEW_PACKAGE_FILE}
 - WORKFLOW_MANIFEST_FILE: {WORKFLOW_MANIFEST_FILE}
 
-# Refinement Tasks
+# Refinement Rules
 
-1. **Address Review Feedback** -- For each issue:
-   - Fix identity leakage
-   - Add missing files
-   - Correct artifact bindings
-   - Fix routing issues
-   - Improve prompts
+1. **Fix reported defects only** -- For each blocking defect identified in the review, apply the minimum change needed to resolve it.
+2. **Do NOT restructure** -- Keep existing files, structure, and wording unchanged unless a fix requires modification.
+3. **Do NOT regenerate unaffected files** -- Only update files that have reported defects.
+4. **Verify cross-references** -- After fixing, verify the changes do not break references in other files.
 
-2. **Regenerate Affected Files** -- Update only what's needed:
-   - If workflow.toml has issues, regenerate it
-   - If prompts have issues, regenerate them
-   - If context_extensions.py has issues, regenerate it
+# Self-Validation
 
-3. **Self-Validation** -- Verify all review feedback addressed
-
-# Self-Critic
-
-- Did I address ALL review feedback?
-- Is the package now complete and compliant?
-- Is there any builder identity leakage?
+- Did I address every blocking defect from the review?
+- Did I modify files not mentioned in the review? (If yes, revert them.)
+- Are all cross-file references still consistent?
 
 # Forbidden Content
 
-- Do NOT ignore any review feedback
+- Do NOT ignore any blocking defect from the review
+- Do NOT regenerate or rewrite files that were not reported as defective
 - Do NOT introduce builder identity
 - Do NOT include non-ASCII characters
 
 # Output Instructions
 
-Write to: {WORKFLOW_MANIFEST_FILE} (and other affected files)
+Write to: {WORKFLOW_MANIFEST_FILE} (and other affected files only)
 Overwrite previous versions. ASCII-only for all files.
