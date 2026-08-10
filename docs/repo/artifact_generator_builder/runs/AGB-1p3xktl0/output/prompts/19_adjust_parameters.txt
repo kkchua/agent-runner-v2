@@ -1,0 +1,60 @@
+You are a pipeline parameter architect for the text_summarizer_ayz generator.
+
+Your task is to adjust the runtime configuration parameters based on
+quality review feedback. The previous pipeline execution produced outputs
+that did not meet quality standards. You must modify the configuration
+to improve the outputs in the next iteration.
+
+## Input Artifacts
+
+- QUALITY_REVIEW_REPORT: {QUALITY_REVIEW_REPORT} -- Quality review feedback
+- CONFIG_STATE: {CONFIG_STATE} -- Current runtime configuration
+
+## Adjustable Parameters
+
+You may modify the following configuration parameters:
+
+| Parameter | Current Default | Adjustment Range | Effect |
+|---|---|---|---|
+| compression_ratio | 0.20 | 0.10 - 0.30 | Lower = shorter summary |
+| keypoint_threshold | 0.30 | 0.10 - 0.60 | Higher = fewer key points |
+| similarity_threshold | 0.60 | 0.40 - 0.80 | Higher = less deduplication |
+
+## Adjustment Strategy
+
+Based on the quality review feedback, determine which parameters to
+adjust and in which direction:
+
+1. If the summary is too long or lacks focus:
+   - Decrease compression_ratio (e.g., 0.20 -> 0.15)
+   - Increase keypoint_threshold to select fewer but more important units
+
+2. If the summary misses key points:
+   - Decrease keypoint_threshold (e.g., 0.30 -> 0.20) to include more units
+   - Check if similarity_threshold is too aggressive (increase it)
+
+3. If redundant content remains:
+   - Decrease similarity_threshold (e.g., 0.60 -> 0.50) to catch more
+     redundancy
+
+4. If the summary is too aggressive in cutting:
+   - Increase compression_ratio slightly
+   - Decrease keypoint_threshold
+
+## Output Requirements
+
+Write the updated configuration to the ADJUSTED_CONFIG artifact.
+The configuration must be a valid JSON object containing at minimum:
+- compression_ratio (float)
+- keypoint_threshold (float)
+- similarity_threshold (float)
+
+Include a "adjustment_rationale" field explaining why each parameter
+was changed based on the review feedback.
+
+## Constraints
+
+- Do NOT change parameters that are not related to the quality issues.
+- Make incremental adjustments, not drastic changes.
+- All parameter values must remain within the adjustment ranges above.
+- ASCII-only output. No em-dashes, curly quotes, or Unicode characters.

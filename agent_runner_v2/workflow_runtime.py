@@ -41,12 +41,13 @@ def load_group(
     *,
     workspace_root: Path | None = None,
     workflow_root: Path | None = None,
+    impl_name: str | None = None,
 ) -> dict[str, Any]:
     if workflow_root is not None:
         pkg_dir = workflow_root / group_name
         manifest = pkg_dir / "workflow.toml"
         if manifest.is_file():
-            bundle = load_workflow_package(pkg_dir)
+            bundle = load_workflow_package(pkg_dir, impl_name=impl_name)
             group_dict = bundle_to_template_group_dict(bundle)
             group_dict["_workflow_bundle"] = bundle
             return group_dict
@@ -155,23 +156,25 @@ def build_config_from_request(
     workspace_root: Path | None = None,
     workflow_root: Path | None = None,
     step_execution_spec: dict[str, Any] | None = None,
+    impl_name: str | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     """Build group_cfg and step_cfg from request with fallback to spec.
-    
+
     This is the unified config builder used by both manual and daemon modes.
     It tries workflow package loading first (same as manual mode), then falls
     back to building from step_execution_spec (daemon/backend compatibility).
-    
+
     Args:
         template_group: Template group identifier
         step_name: Step name to configure
         workspace_root: Workspace directory for plugin workflows
         workflow_root: Workflow bundle root directory
         step_execution_spec: Backend execution spec for fallback
-        
+        impl_name: Optional implementation name for override resolution
+
     Returns:
         Tuple of (group_cfg, step_cfg) dictionaries
-        
+
     Raises:
         ValueError: If neither workflow package nor spec can provide config
     """
@@ -181,6 +184,7 @@ def build_config_from_request(
             template_group,
             workspace_root=workspace_root,
             workflow_root=workflow_root,
+            impl_name=impl_name,
         )
         step_cfg = group_cfg.get("step_configs", {}).get(step_name)
         if step_cfg:

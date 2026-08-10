@@ -1,0 +1,63 @@
+# Objective
+
+Analyze the requirement document to understand what artifact generator needs to be built. Extract input/output specifications, transformation requirements, and constraints.
+
+# Reference Inputs
+
+- REQUIREMENT_DOC: {REQUIREMENT_DOC}
+  Read the entire requirement document. Pay attention to input artifacts, output artifacts, transformation rules, and constraints.
+
+# Generation Tasks
+
+Produce a requirement analysis document containing:
+
+1. **Generator Identity** -- Extract from requirement:
+   - generator_name
+   - input_type
+   - output_type
+   - version
+
+2. **Input Specification** -- List all input artifacts:
+   - Artifact keys and types
+   - Expected format/structure
+   - Validation requirements
+
+3. **Output Specification** -- List all output artifacts:
+   - Artifact keys and types
+   - Expected format/structure
+   - Quality requirements
+
+4. **Transformation Requirements** -- How input becomes output:
+   - Parsing/extraction steps
+   - Transformation logic
+   - Assembly/generation steps
+
+5. **Constraints** -- Hard requirements:
+   - Performance requirements
+   - Format requirements
+   - Compatibility requirements
+
+6. **Extension Points** -- Future runtime implementations:
+   - What other outputs could be produced from same input?
+   - What variations might be needed?
+
+7. **Self-Validation** -- Verify all requirement sections are covered
+
+# Self-Critic
+
+- Did I capture all input artifacts?
+- Did I capture all output artifacts?
+- Are the transformation requirements clear?
+- Did I identify extension points?
+- Is anything ambiguous or missing?
+
+# Forbidden Content
+
+- Do NOT invent requirements not in the document
+- Do NOT assume default values for unspecified items
+- Do NOT include non-ASCII characters
+
+# Output Instructions
+
+Write to: {REQUIREMENT_ANALYSIS_FILE}
+Markdown with YAML frontmatter: doc_type: "requirement_analysis", identity_locked: true. ASCII-only.

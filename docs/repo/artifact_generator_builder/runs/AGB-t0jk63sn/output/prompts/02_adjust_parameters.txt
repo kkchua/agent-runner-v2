@@ -1,0 +1,68 @@
+# Objective
+
+Adjust the pipeline parameters based on quality review feedback. The quality review has determined that the generated summary does not meet quality standards. Your task is to analyze the review feedback and produce an adjusted RuntimeConfig that will improve the summary quality on the next pipeline execution.
+
+This step is activated only when the quality review rejects the summary. The adjusted configuration will cause the pipeline to re-execute from the parse_input stage with modified parameters.
+
+# Reference Inputs
+
+The following artifacts are available:
+
+- QUALITY_REVIEW_REPORT: {QUALITY_REVIEW_REPORT} -- The quality review report explaining why the summary was rejected and what adjustments are recommended
+- RUNTIME_CONFIG: {RUNTIME_CONFIG} -- The current RuntimeConfig used by the pipeline
+
+# Tasks
+
+1. Read the QUALITY_REVIEW_REPORT to understand the specific quality issues identified.
+2. Read the current RUNTIME_CONFIG to understand the parameter values used.
+3. Analyze the review feedback and determine which parameters should be adjusted:
+   a. importance_threshold: Controls which sentences are selected as KeyPoints.
+      - Lowering (e.g., 0.5 -> 0.3) includes more sentences, producing a potentially more comprehensive summary
+      - Raising (e.g., 0.5 -> 0.7) includes fewer but more important sentences, producing a more focused summary
+   b. redundancy_similarity_threshold: Controls how aggressively redundant content is detected.
+      - Lowering (e.g., 0.7 -> 0.5) is more aggressive, removing more similar content
+      - Raising (e.g., 0.7 -> 0.9) is less aggressive, keeping more content
+   c. target_compression_ratio: Controls the word budget for the summary.
+      - This value must remain at or below 0.20 (CON-001 constraint)
+      - Adjusting downward produces shorter summaries
+   d. Do NOT modify: input_path, output_path, output_format_override, scorer_impl, detector_impl, selector_impl, renderer_impl, max_recovery_attempts
+4. Produce the adjusted RuntimeConfig as a JSON file with all original fields plus the modified values.
+5. Document what was changed and why.
+
+# Self-Critic
+
+- Have I read the QUALITY_REVIEW_REPORT carefully before making changes?
+- Are my parameter adjustments directly responsive to the specific issues raised in the review?
+- Have I kept the target_compression_ratio at or below 0.20?
+- Have I preserved all fields from the original RUNTIME_CONFIG?
+- Are the adjusted values reasonable and within expected ranges?
+- Have I documented the rationale for each change?
+- Am I making minimal changes to address the specific issues, not over-engineering?
+
+# Forbidden Content
+
+- Do NOT modify the input_path or output_path.
+- Do NOT set target_compression_ratio above 0.20.
+- Do NOT change extension implementation names (scorer_impl, detector_impl, etc.) unless explicitly recommended by the review.
+- Do NOT add new fields to the RuntimeConfig.
+- Do NOT modify any artifact files other than producing ADJUSTED_CONFIG.
+- Do NOT use non-ASCII characters (no em-dashes, curly quotes, or Unicode).
+
+# Output Instructions
+
+Write the adjusted configuration to: {ADJUSTED_CONFIG}
+
+The output must be a JSON file containing all RuntimeConfig fields:
+- input_path (unchanged from original)
+- output_path (unchanged from original)
+- target_compression_ratio (may be adjusted, must be <= 0.20)
+- importance_threshold (may be adjusted, range 0.0-1.0)
+- redundancy_similarity_threshold (may be adjusted, range 0.0-1.0)
+- max_recovery_attempts (unchanged from original)
+- output_format_override (unchanged from original)
+- scorer_impl (unchanged from original)
+- detector_impl (unchanged from original)
+- selector_impl (unchanged from original)
+- renderer_impl (unchanged from original)
+
+Also include a "_adjustment_notes" field documenting what was changed and why.
