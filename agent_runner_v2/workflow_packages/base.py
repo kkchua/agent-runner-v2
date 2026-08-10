@@ -122,6 +122,9 @@ class WorkflowBundle:
     description: str = ""
     visibility: str = ""
 
+    # Alternative implementation declarations from [[workflow.implementation]]
+    implementations: list[dict[str, str]] = field(default_factory=list)
+
     def get_step(self, name: str) -> StepConfig:
         """Look up a step by name. Raises KeyError if missing."""
         return self.steps[name]

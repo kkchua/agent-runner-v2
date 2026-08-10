@@ -353,6 +353,16 @@ def _parse_bundle(
     # --- Package-local actions ------------------------------------------
     custom_actions = _load_package_actions(bundle_root)
 
+    # --- Alternative implementations from [[workflow.implementation]] ----
+    implementations: list[dict[str, str]] = []
+    for impl_entry in wf.get("implementation", []):
+        if isinstance(impl_entry, dict) and "name" in impl_entry:
+            implementations.append({
+                "name": str(impl_entry["name"]),
+                "description": str(impl_entry.get("description", "")),
+                "label": str(impl_entry.get("label", impl_entry["name"])),
+            })
+
     return WorkflowBundle(
         name=name,
         version=version,
@@ -370,6 +380,7 @@ def _parse_bundle(
         custom_actions=custom_actions,
         description=description,
         visibility=visibility,
+        implementations=implementations,
     )
 
 
@@ -504,6 +515,9 @@ def bundle_to_template_group_dict(bundle: WorkflowBundle) -> dict[str, Any]:
     }
     if bundle.visibility:
         group["visibility"] = bundle.visibility
+
+    if bundle.implementations:
+        group["implementation"] = list(bundle.implementations)
 
     if bundle.governance and bundle.governance.artifact_registry:
         group["artifact_registry"] = [

@@ -1,0 +1,79 @@
+# Step: score_importance
+# Implements: TR-S3 Importance Scoring
+# Layer 2: Transformation (second phase)
+#
+# Input artifact: ANALYZED_STRUCTURE
+# Output artifact: SCORED_SEGMENTS
+
+You are a content significance analyst. Your task is to score each analyzed
+segment by its informational importance within the document.
+
+## Input
+
+You will receive an ANALYZED_STRUCTURE JSON artifact from the previous step.
+It contains:
+- analyzed_segments: segments with region and redundancy information
+- redundancy_clusters: clusters of redundant segments
+- text_segments_with_regions: segments with region assignments
+
+## Task: Importance Scoring (TR-S3)
+
+Score each AnalyzedSegment by informational significance using this formula:
+
+    raw_score = thesis_bonus + position_bonus + uniqueness_bonus + assertion_bonus
+
+Scoring components:
+- thesis_bonus (0.0 or 0.3):
+    +0.3 if segment is in intro or conclusion region AND likely contains the
+    document thesis. Otherwise 0.0.
+
+- position_bonus (0.1 or 0.2):
+    +0.2 for segments in intro or conclusion regions.
+    +0.1 for segments in body region.
+
+- uniqueness_bonus (0.0 or 0.3):
+    +0.3 if segment is NOT redundant (is_redundant = false).
+    +0.0 if segment IS redundant (is_redundant = true).
+
+- assertion_bonus (0.1 or 0.2):
+    +0.2 if segment introduces a new, unique assertion.
+    +0.1 if segment elaborates on an existing assertion.
+
+After computing raw scores, normalize all scores to the range [0.0, 1.0]:
+    normalized_score = raw_score / max(raw_scores)
+
+## Output Format
+
+Produce a JSON object with this structure:
+
+{
+    "scored_segments": [
+        {
+            "segment_id": "<reference to segment>",
+            "importance_score": 0.85,
+            "is_redundant": false,
+            "redundancy_cluster_id": null,
+            "is_core_message": false,
+            "original_content": "<verbatim text>"
+        }
+    ]
+}
+
+Each scored segment preserves all fields from the input analyzed_segment,
+with importance_score updated to the computed value.
+
+## Invariants to Verify
+
+Before finalizing:
+1. All importance_score values must be in [0.0, 1.0]
+2. At least one segment must have a non-zero score
+3. Non-redundant segments should generally score higher than redundant ones
+4. Intro/conclusion segments should generally score higher than body segments
+
+## Constraints
+
+- Do NOT modify original_content
+- Do NOT modify is_redundant or redundancy_cluster_id
+- Do NOT assign is_core_message yet
+- Preserve all segment_id references from the input
+- Scores must be rounded to 4 decimal places

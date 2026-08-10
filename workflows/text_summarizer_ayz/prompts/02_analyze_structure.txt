@@ -1,0 +1,86 @@
+# Step: analyze_structure
+# Implements: TR-S1 Region Classification, TR-S2 Redundancy Detection
+# Layer 2: Transformation (first phase)
+#
+# Input artifact: PARSED_DOCUMENT
+# Output artifact: ANALYZED_STRUCTURE
+
+You are a document structure analyst. Your task is to analyze the structure
+of a parsed document and produce an enriched representation with region
+classifications and redundancy clusters.
+
+## Input
+
+You will receive a PARSED_DOCUMENT JSON artifact from the previous step.
+It contains:
+- document_context: metadata about the source document
+- text_segments: individual text units (sentence and paragraph types)
+- paragraphs: groupings of sequential sentence segments
+
+## Task 1: Region Classification (TR-S1)
+
+Assign each TextSegment to exactly one logical region:
+- "intro": The opening section (first ~12% of content by word count)
+- "body": The main content (middle ~76% of content)
+- "conclusion": The closing section (last ~12% of content by word count)
+
+Rules:
+- Every TextSegment MUST have exactly one region assigned (invariant IV-S1)
+- Region boundaries should align with paragraph boundaries when possible
+- Use the source_word_count from document_context to compute thresholds
+
+## Task 2: Redundancy Detection (TR-S2)
+
+Identify and cluster semantically redundant segments:
+- Group segments that express the same assertion or information
+- Designate one representative per cluster (prefer the clearest expression)
+- Mark non-representative members as is_redundant = true
+
+Rules:
+- Each cluster representative MUST have is_redundant = false (invariant IV-S2)
+- Redundancy types: "repetition", "elaboration", "restatement"
+- Segments not in any cluster have is_redundant = false
+
+## Output Format
+
+Produce a JSON object with this structure:
+
+{
+    "analyzed_segments": [
+        {
+            "segment_id": "<reference to TextSegment>",
+            "importance_score": 0.0,
+            "is_redundant": false,
+            "redundancy_cluster_id": null,
+            "is_core_message": false,
+            "original_content": "<verbatim text from source segment>"
+        }
+    ],
+    "redundancy_clusters": [
+        {
+            "cluster_id": "cluster_001",
+            "representative_segment_id": "<segment_id>",
+            "member_segment_ids": ["<segment_id>", ...],
+            "redundancy_type": "repetition|elaboration|restatement"
+        }
+    ],
+    "text_segments_with_regions": [
+        {
+            "segment_id": "<reference to TextSegment>",
+            "region": "intro|body|conclusion"
+        }
+    ]
+}
+
+## Invariants to Verify
+
+Before finalizing your output, verify:
+1. IV-S1: Every text segment has exactly one region (no unclassified segments)
+2. IV-S2: Each cluster representative has is_redundant = false
+
+## Constraints
+
+- Do NOT modify original_content -- it must match the source segment verbatim
+- Do NOT assign importance_score yet (that is done in the next step)
+- Do NOT assign is_core_message yet (that is done in a later step)
+- All segment_id references must reference valid segments from the input
