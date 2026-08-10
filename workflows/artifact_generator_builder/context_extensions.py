@@ -5,7 +5,15 @@ The ArtifactGeneratorBuilderExtensions class provides the bridge between
 artifact key definitions and the filesystem paths the runner uses.
 
 This workflow builds artifact generators that follow the mandatory pattern:
-Input → Composition Spec → Runtime Implementation → Output
+Input -> Composition Spec -> Runtime Implementation -> Output
+
+Every AGB run produces three deliverables:
+1. Generator-specific Composition Standard (COMPOSITION_STANDARD_FILE)
+2. Default Runtime Implementation (DEFAULT_IMPL_FILE)
+3. Workflow Package (workflow.toml, context_extensions.py, actions.py, prompts/, README.md)
+
+The codename is read from the requirement doc's YAML frontmatter and used
+to name the deliverable files and determine the promote target directory.
 """
 
 from pathlib import Path
@@ -22,6 +30,34 @@ from agent_runner_v2.workflow_packages.extensions_base import (
 )
 
 
+def _read_codename_from_requirement_doc(state: dict[str, Any]) -> str:
+    """Extract codename from the requirement doc's YAML frontmatter.
+
+    Falls back to 'unknown_generator' if the requirement doc cannot be
+    read or does not contain a codename field.
+    """
+    artifacts = state.get("artifacts") or {}
+    req_doc_path = artifacts.get("REQUIREMENT_DOC", "")
+    if not req_doc_path:
+        return "unknown_generator"
+    req_path = Path(req_doc_path)
+    if not req_path.exists():
+        return "unknown_generator"
+    try:
+        content = req_path.read_text(encoding="utf-8")
+    except Exception:
+        return "unknown_generator"
+    for line in content.splitlines():
+        line = line.strip()
+        if line.startswith("codename:"):
+            value = line.split(":", 1)[1].strip().strip('"').strip("'")
+            if value:
+                return value
+        if line == "---" and content.index(line) > 0:
+            break
+    return "unknown_generator"
+
+
 class ArtifactGeneratorBuilderExtensions(WorkflowExtensions):
     """Artifact key registration and path resolution for Artifact Generator Builder."""
 
@@ -35,6 +71,10 @@ class ArtifactGeneratorBuilderExtensions(WorkflowExtensions):
         Path templates use ``{job_id}`` and ``{seq}`` placeholders that
         the runner resolves at execution time. All paths are relative
         to the workspace root.
+
+        Deliverable files (COMPOSITION_STANDARD_FILE,
+        DEFAULT_IMPL_FILE) use a ``{codename}`` placeholder resolved at
+        runtime from the requirement doc's frontmatter.
         """
         repo = "docs/repo/artifact_generator_builder"
         run = f"{repo}/runs/{{job_id}}"
@@ -67,7 +107,9 @@ class ArtifactGeneratorBuilderExtensions(WorkflowExtensions):
             "STEP_SEQUENCE_FILE": f"{run}/STEP_SEQUENCE-{{seq}}.md",
             "GATEKEEP_STEPS_FILE": f"{run}/GATEKEEP_STEPS-{{seq}}.md",
 
-            # -- Phase 6: Generate Package --
+            # -- Phase 6: Generate Package + Deliverables --
+            "COMPOSITION_STANDARD_FILE": f"{out}/standards/COMPOSITION_STANDARD.md",
+            "DEFAULT_IMPL_FILE": f"{out}/impls/default/default.impl.md",
             "WORKFLOW_MANIFEST_FILE": f"{out}/workflow.toml",
             "WORKFLOW_EXTENSIONS_FILE": f"{out}/context_extensions.py",
             "WORKFLOW_ACTIONS_FILE": f"{out}/actions.py",
@@ -96,6 +138,10 @@ class ArtifactGeneratorBuilderExtensions(WorkflowExtensions):
             project_root or get_workspace_root() or Path.cwd()
         )
 
+        # Read codename from requirement doc frontmatter
+        codename = _read_codename_from_requirement_doc(state)
+        result["CODENAME"] = codename
+
         # Governance and platform runtime roots
         result["GOVERNANCE_RUNTIME_ROOT"] = str(
             get_governance_runtime_root()
@@ -106,7 +152,7 @@ class ArtifactGeneratorBuilderExtensions(WorkflowExtensions):
 
         # Base composition standard path (from governance)
         result["BASE_COMPOSITION_STANDARD"] = str(
-            get_governance_runtime_root() / "COMPOSITION_SYSTEM_STANDARD.md"
+            get_governance_runtime_root() / "BASE_COMPOSITION_STANDARD_v1.0.md"
         )
 
         # Resolve input spec filenames from operator console to Specs/ paths
@@ -117,14 +163,16 @@ class ArtifactGeneratorBuilderExtensions(WorkflowExtensions):
         # Resolve all artifact keys to absolute paths
         artifacts = state.get("artifacts") or {}
         for key, rel_path in self.register_artifact_keys().items():
-            # Already resolved by resolve_input_specs() — don't overwrite
+            # Already resolved by resolve_input_specs() -- don't overwrite
             if key in result:
                 continue
             existing = artifacts.get(key)
             if existing and Path(existing).is_absolute():
                 result[key] = existing
                 continue
-            result[key] = str(workspace_root / rel_path)
+            # Resolve {codename} placeholder in path templates
+            resolved_path = rel_path.replace("{codename}", codename)
+            result[key] = str(workspace_root / resolved_path)
 
         return result
 

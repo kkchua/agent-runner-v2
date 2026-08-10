@@ -1,0 +1,57 @@
+# Objective
+
+Design the step sequence for the generated workflow. Define all steps, their routing, and artifact flow.
+
+# Reference Inputs
+
+- ARTIFACT_CONTRACT_FILE: {ARTIFACT_CONTRACT_FILE}
+- RUNTIME_IMPL_FILE: {RUNTIME_IMPL_FILE}
+- COMPOSITION_SPEC_FILE: {COMPOSITION_SPEC_FILE}
+
+# Generation Tasks
+
+Produce a step sequence design containing:
+
+1. **Step Definitions** -- All steps in the workflow:
+   - Step names (clear, descriptive)
+   - Step types (prompt-driven or action-driven)
+   - Role policies for prompt steps
+
+2. **Routing Logic** -- How steps connect:
+   - onsuccess routing (next step)
+   - on_reject_refine routing (review loops)
+   - Failure handling
+
+3. **Artifact Flow** -- What each step produces:
+   - required_inputs for each step
+   - produces for each step
+   - result_meta_key for each step
+
+4. **Review Loops** -- Quality assurance:
+   - Which steps have review/gatekeep?
+   - Max iterations for refinement
+   - Exhaustion handling
+
+5. **Human Approval** -- Where human intervention is needed:
+   - Which steps require approval?
+   - What triggers approval requests?
+
+6. **Self-Validation** -- Verify routing is valid, no dangling references
+
+# Self-Critic
+
+- Is routing valid (no cycles, no dangling refs)?
+- Are all artifacts produced before consumed?
+- Are review loops properly configured?
+- Does this follow the runtime implementation?
+
+# Forbidden Content
+
+- Do NOT create routing cycles
+- Do NOT reference undefined artifacts
+- Do NOT include non-ASCII characters
+
+# Output Instructions
+
+Write to: {STEP_SEQUENCE_FILE}
+Markdown with YAML frontmatter: doc_type: "step_sequence", identity_locked: true. ASCII-only.

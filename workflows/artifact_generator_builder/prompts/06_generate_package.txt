@@ -1,6 +1,15 @@
 # Objective
 
-Generate the complete executable workflow package from all prior design artifacts. This produces workflow.toml, context_extensions.py, actions.py, prompts/, and README.md.
+Generate the complete executable workflow package and all required deliverables from all prior design artifacts.
+
+# MANDATORY: BASE_COMPOSITION_STANDARD_v1.0.md Section 10
+
+You MUST follow BASE_COMPOSITION_STANDARD_v1.0.md Section 10 ({BASE_COMPOSITION_STANDARD}). This section defines:
+- The three required deliverables (Section 10.1) -- you MUST produce all three
+- The required file structure (Section 10.2) -- all filenames and directories MUST match
+- The codename rules -- you MUST use "{CODENAME}" as the identity, NOT generate your own
+
+Failure to produce all three deliverables with correct naming is a REJECT.
 
 # Reference Inputs
 
@@ -9,67 +18,88 @@ Generate the complete executable workflow package from all prior design artifact
 - RUNTIME_IMPL_FILE: {RUNTIME_IMPL_FILE}
 - COMPOSITION_SPEC_FILE: {COMPOSITION_SPEC_FILE}
 - REQUIREMENT_ANALYSIS_FILE: {REQUIREMENT_ANALYSIS_FILE}
+- REQUIREMENT_DOC: {REQUIREMENT_DOC}
+- DEFAULT_IMPL_FILE: {DEFAULT_IMPL_FILE}
+- BASE_COMPOSITION_STANDARD: {BASE_COMPOSITION_STANDARD}
+- CODENAME: {CODENAME}
 
 # Generation Tasks
 
-### File 1: workflow.toml
-Generate from STEP_SEQUENCE_FILE:
-- Copy step definitions EXACTLY (names, types, routing)
-- Set required_inputs and produces from ARTIFACT_CONTRACT_FILE
-- Set role_policy for prompt-driven steps
-- Set on_reject_refine for review loops
-- CRITICAL: workflow name must be from REQUIREMENT_ANALYSIS_FILE, NOT the builder's name
+## Part A: Workflow Package
 
-### File 2: context_extensions.py
-Generate WorkflowExtensions subclass:
-- workflow_name matching the target workflow name
-- register_artifact_keys() for ALL artifacts from ARTIFACT_CONTRACT_FILE
-- build_context_extensions() resolving to absolute paths
-- Proper imports and class structure
+Generate the executable workflow files per the step sequence and artifact contract:
+1. workflow.toml -- step definitions, routing, artifact bindings (name = {CODENAME})
+2. context_extensions.py -- artifact key registration, path resolution
+3. actions.py -- @action implementations for action-driven steps
+4. prompts/ -- one .txt per prompt-driven step
+5. README.md -- target workflow documentation
+6. Specs/ -- copy the requirement doc ({REQUIREMENT_DOC}) to this folder for the generated workflow
 
-### File 3: actions.py
-Generate @action implementations for action-driven steps:
-- Function signatures matching step requirements
-- Proper error handling
-- Type hints
+## Part B: Deliverables
 
-### Files 4-N: Prompt Templates
-Create one .txt file per prompt-driven step in prompts/ directory:
-- Each prompt must reference correct artifact keys
-- Each prompt must have Objective, Reference Inputs, Tasks, Self-Critic, Forbidden Content, Output Instructions
-- CRITICAL: Prompts must NOT reference the builder's identity
+Per BASE_COMPOSITION_STANDARD_v1.0.md Section 10.1, produce:
 
-### File: README.md
-Describe the target workflow:
-- Purpose and functionality
-- Input/output artifacts
-- How to use the workflow
-- Extension points
+1. {COMPOSITION_STANDARD_FILE} -- Generator-specific composition standard adapted from {BASE_COMPOSITION_STANDARD} (doc_type: "composition_standard")
 
-# Self-Critic
+2. {DEFAULT_IMPL_FILE} -- Default runtime implementation component mapping (doc_type: "default_impl"). This file MUST be placed inside the impls/default/ directory. Each implementation group under impls/ MUST have:
+   - {impl_name}.impl.md (required) -- component mapping from abstract steps to concrete prompts/actions
+   - actions.py (optional) -- impl-specific action functions
+   - prompts/ (optional) -- impl-specific prompt templates
 
-- Did I use the TARGET identity, not the builder's?
-- Did I copy artifact bindings VERBATIM from the contract?
-- Does every prompt step have a matching .txt file?
-- Are all artifact keys registered in context_extensions.py?
-- Are all prompts free of builder identity references?
-
-# Forbidden Content
-
-- Do NOT use the builder's workflow name
-- Do NOT use the builder's standard name
-- Do NOT put runtime imports inside TYPE_CHECKING
-- Do NOT hardcode absolute paths in register_artifact_keys()
-- Do NOT include non-ASCII characters
-- Do NOT skip any prompt files
+Uses codename: "{CODENAME}", identity_locked: true. ASCII-only.
 
 # Output Instructions
 
-Write ALL files:
-1. {WORKFLOW_MANIFEST_FILE} -- workflow.toml
-2. {WORKFLOW_EXTENSIONS_FILE} -- context_extensions.py
-3. {WORKFLOW_ACTIONS_FILE} -- actions.py
-4. {WORKFLOW_PROMPTS_DIR} -- prompts/ directory with .txt files
-5. {WORKFLOW_README_FILE} -- README.md
+Write ALL files listed above. ASCII-only for all files. Ensure the impls/default/ directory structure is created for the DEFAULT_IMPL_FILE.
 
-ASCII-only for all files.
+# Required Output Folder Structure
+
+The output folder ({out}) IS the workflow package folder that will be deployed/published. It MUST have this structure:
+
+```
+output/
+    standards/
+        COMPOSITION_STANDARD.md  ← composition standard (abstract step interfaces)
+    impls/
+        default/
+            default.impl.md      ← required (component mapping)
+            actions.py           ← optional (impl-specific actions)
+            prompts/             ← optional (impl-specific prompts)
+    Specs/
+        *.md                     ← requirement docs for this generator
+    workflow.toml                ← workflow definition
+    context_extensions.py        ← artifact key registration
+    actions.py                   ← shared actions (all impls can reuse)
+    prompts/                     ← shared prompts (all impls can reuse)
+        *.txt
+    README.md                    ← workflow documentation
+```
+
+All implementation groups under `impls/` MUST follow this pattern:
+- `{impl_name}.impl.md` (required) -- component mapping
+- `actions.py` (optional) -- impl-specific actions
+- `prompts/` (optional) -- impl-specific prompts
+
+# Required Artifact Keys
+
+When reporting artifacts in meta.json, use EXACTLY these keys (no variations):
+
+| File | Artifact Key |
+|------|--------------|
+| workflow.toml | WORKFLOW_MANIFEST_FILE |
+| context_extensions.py | WORKFLOW_EXTENSIONS_FILE |
+| actions.py | WORKFLOW_ACTIONS_FILE |
+| prompts/ (directory) | WORKFLOW_PROMPTS_DIR |
+| README.md | WORKFLOW_README_FILE |
+| standards/COMPOSITION_STANDARD.md | COMPOSITION_STANDARD_FILE |
+| impls/default/default.impl.md | DEFAULT_IMPL_FILE |
+
+Do NOT invent artifact keys like `WORKFLOW_PROMPTS_INDEX_FILE` or `STANDARDS_COMPOSITION_STANDARD_FILE`. Use the exact keys from the table above.
+
+# Forbidden Content
+
+- Do NOT use the builder's identity -- use {CODENAME}
+- Do NOT put runtime imports inside TYPE_CHECKING
+- Do NOT hardcode absolute paths in register_artifact_keys()
+- Do NOT include non-ASCII characters
+- Do NOT skip any deliverable files

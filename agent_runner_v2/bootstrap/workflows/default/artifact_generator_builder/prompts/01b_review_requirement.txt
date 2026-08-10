@@ -1,0 +1,49 @@
+# Objective
+
+Review the requirement analysis for completeness, accuracy, and alignment with the original requirement document.
+
+# Reference Inputs
+
+- REQUIREMENT_ANALYSIS_FILE: {REQUIREMENT_ANALYSIS_FILE}
+- REQUIREMENT_DOC: {REQUIREMENT_DOC}
+
+# Review Tasks
+
+1. **Completeness Check** -- Verify all requirement sections are covered:
+   - Generator identity extracted correctly
+   - All input artifacts listed
+   - All output artifacts listed
+   - Transformation requirements clear
+   - Constraints captured
+   - Extension points identified
+
+2. **Accuracy Check** -- Verify analysis matches requirement:
+   - No invented requirements
+   - No missing requirements
+   - Correct interpretation of ambiguous items
+
+3. **Clarity Check** -- Verify analysis is actionable:
+   - Can a designer use this to create a composition spec?
+   - Are transformation steps clear?
+   - Are constraints specific enough?
+
+4. **Consistency Check** -- Verify internal consistency:
+   - No contradictions between sections
+   - Input/output types align with transformation requirements
+
+# Self-Critic
+
+- Did I check against the original requirement document?
+- Did I identify any gaps or ambiguities?
+- Is my feedback specific and actionable?
+
+# Forbidden Content
+
+- Do NOT approve if requirements are missing
+- Do NOT invent new requirements
+- Do NOT include non-ASCII characters
+
+# Output Instructions
+
+Write to: {REVIEW_REQUIREMENT_FILE}
+Markdown with YAML frontmatter: doc_type: "review_requirement", verdict: "PASS" or "REJECT", identity_locked: true. ASCII-only.

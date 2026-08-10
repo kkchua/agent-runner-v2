@@ -28,14 +28,28 @@ else:
     except ImportError:
         tomllib = None  # type: ignore[assignment]
 
+try:
+    import yaml
+except ImportError:
+    yaml = None  # type: ignore[assignment]
 
-def load_workflow_package(package_dir: Path) -> WorkflowBundle:
+
+def load_workflow_package(
+    package_dir: Path,
+    *,
+    impl_name: str | None = None,
+) -> WorkflowBundle:
     """Parse *package_dir/workflow.toml* and return a validated WorkflowBundle.
 
     Parameters
     ----------
     package_dir :
         Root directory of the workflow package (must contain ``workflow.toml``).
+    impl_name :
+        Optional implementation name.  When provided, the loader reads
+        ``impls/{impl_name}/impl.yaml`` and applies step-level overrides
+        (prompt/action swaps) on top of the workflow.toml defaults.
+        The ``"default"`` impl name is equivalent to ``None``.
 
     Returns
     -------
@@ -64,7 +78,177 @@ def load_workflow_package(package_dir: Path) -> WorkflowBundle:
     raw = manifest_path.read_bytes()
     data = tomllib.loads(raw.decode("utf-8"))
 
-    return _parse_bundle(data, manifest_path, package_dir)
+    bundle = _parse_bundle(data, manifest_path, package_dir)
+
+    # --- Apply implementation overrides ----------------------------------
+    if impl_name and impl_name != "default":
+        bundle = _apply_impl_overrides(bundle, impl_name)
+
+    return bundle
+
+
+# ---------------------------------------------------------------------------
+# Implementation override support
+# ---------------------------------------------------------------------------
+
+_IMPL_ACTIONS_CACHE: dict[str, dict[str, Any]] = {}
+
+
+def _load_impl_overrides(bundle_root: Path, impl_name: str) -> dict[str, Any]:
+    """Load ``impls/{impl_name}/impl.yaml`` and return the parsed dict.
+
+    Raises
+    ------
+    FileNotFoundError
+        If the impl.yaml does not exist.
+    ValueError
+        If PyYAML is not installed or the file is malformed.
+    """
+    if yaml is None:
+        raise ImportError(
+            "PyYAML is required for implementation overrides. "
+            "Install with: pip install pyyaml"
+        )
+
+    impl_dir = bundle_root / "impls" / impl_name
+    impl_file = impl_dir / "impl.yaml"
+
+    if not impl_file.is_file():
+        raise FileNotFoundError(
+            f"Implementation '{impl_name}' not found — "
+            f"no impl.yaml at {impl_file}"
+        )
+
+    with open(impl_file, "r", encoding="utf-8") as f:
+        data = yaml.safe_load(f)
+
+    if not isinstance(data, dict):
+        raise ValueError(
+            f"impl.yaml for '{impl_name}' must be a YAML mapping, "
+            f"got {type(data).__name__}"
+        )
+
+    return data
+
+
+def _apply_impl_overrides(
+    bundle: WorkflowBundle,
+    impl_name: str,
+) -> WorkflowBundle:
+    """Apply impl.yaml overrides to a bundle's step configs.
+
+    Reads ``impls/{impl_name}/impl.yaml``, validates override entries,
+    and returns a new WorkflowBundle with overridden StepConfig instances.
+    Also loads impl-specific actions (if any) and merges them with the
+    bundle's custom actions.
+
+    Raises
+    ------
+    ValueError
+        If an override references a nonexistent step or has no prompt/action.
+    """
+    from dataclasses import replace
+
+    overrides_data = _load_impl_overrides(bundle.bundle_root, impl_name)
+    overrides = overrides_data.get("overrides", {})
+
+    if not isinstance(overrides, dict):
+        raise ValueError(
+            f"impl.yaml 'overrides:' must be a mapping, "
+            f"got {type(overrides).__name__}"
+        )
+
+    new_steps = dict(bundle.steps)
+
+    for step_name, step_override in overrides.items():
+        # Validate step exists
+        if step_name not in bundle.steps:
+            raise ValueError(
+                f"impl.yaml override references unknown step '{step_name}'. "
+                f"Available steps: {', '.join(bundle.step_order)}"
+            )
+
+        if not isinstance(step_override, dict):
+            raise ValueError(
+                f"Override for step '{step_name}' must be a mapping, "
+                f"got {type(step_override).__name__}"
+            )
+
+        new_prompt = step_override.get("prompt")
+        new_action = step_override.get("action")
+
+        if not new_prompt and not new_action:
+            raise ValueError(
+                f"Override for step '{step_name}' must specify "
+                f"at least one of: prompt, action"
+            )
+
+        # Build replacement kwargs
+        changes: dict[str, Any] = {}
+        if new_prompt:
+            changes["prompt_file"] = str(new_prompt)
+        if new_action:
+            changes["action"] = str(new_action)
+
+        new_steps[step_name] = replace(new_steps[step_name], **changes)
+
+    # Load impl-specific actions and merge (impl actions take priority)
+    impl_actions = _load_impl_actions(bundle.bundle_root, impl_name)
+    new_custom_actions = dict(bundle.custom_actions)
+    new_custom_actions.update(impl_actions)
+
+    return replace(bundle, steps=new_steps, custom_actions=new_custom_actions)
+
+
+def _load_impl_actions(
+    bundle_root: Path,
+    impl_name: str,
+) -> dict[str, Any]:
+    """Import ``impls/{impl_name}/actions.py`` and return registered actions.
+
+    Returns an empty dict when no actions.py exists for the implementation.
+    Results are cached per (bundle_root, impl_name) pair.
+    """
+    impl_actions_file = bundle_root / "impls" / impl_name / "actions.py"
+    if not impl_actions_file.is_file():
+        return {}
+
+    cache_key = f"{bundle_root.resolve()}::{impl_name}"
+    if cache_key in _IMPL_ACTIONS_CACHE:
+        return dict(_IMPL_ACTIONS_CACHE[cache_key])
+
+    try:
+        import importlib.util  # noqa: PLC0415
+
+        from .actions import REGISTERED_ACTIONS  # noqa: PLC0415
+
+        before = dict(REGISTERED_ACTIONS)
+
+        spec = importlib.util.spec_from_file_location(
+            f"impl_{impl_name}_actions", impl_actions_file
+        )
+        if spec is None or spec.loader is None:
+            return {}
+        mod = importlib.util.module_from_spec(spec)
+        sys.modules[mod.__name__] = mod
+        spec.loader.exec_module(mod)
+
+        new_actions = {
+            name: func
+            for name, func in REGISTERED_ACTIONS.items()
+            if name not in before or before.get(name) is not func
+        }
+
+        _IMPL_ACTIONS_CACHE[cache_key] = dict(new_actions)
+        return new_actions
+
+    except Exception:
+        import logging  # noqa: PLC0415
+
+        logging.getLogger(__name__).exception(
+            "Failed to load impl actions from %s", impl_actions_file
+        )
+        return {}
 
 
 # ---------------------------------------------------------------------------
