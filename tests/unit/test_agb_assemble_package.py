@@ -503,3 +503,195 @@ class TestGeneratedWorkflowMetadata:
         assert wf.get("visibility") == "canonical"
         assert wf.get("layer") == "layer3"
         assert wf.get("platform") == "agent-runner-v2"
+
+
+class TestExtendMode:
+    """Verify extend mode copies existing workflow and adds new implementations."""
+
+    def test_extend_mode_copies_existing_workflow(self, tmp_path):
+        """Extend mode copies existing workflow.toml and context_extensions.py."""
+        from actions import assemble_package
+
+        # Create existing workflow
+        existing_dir = tmp_path / "existing_workflow"
+        existing_dir.mkdir()
+        _write(existing_dir / "workflow.toml", '[workflow]\nname = "test_workflow"\n')
+        _write(existing_dir / "context_extensions.py", "# existing extensions\n")
+        _write(existing_dir / "actions.py", "# existing actions\n")
+
+        # Create Analysis JSON with extend_mode
+        analysis = {
+            "identity": {"name": "test_workflow", "job_prefix": "TST", "version": "1.0.0"},
+            "domain_steps": [
+                {
+                    "name": "do_thing",
+                    "type": "action",
+                    "action_name": "do_thing",
+                    "required_inputs": [],
+                    "produces": ["OUTPUT"],
+                },
+            ],
+            "artifact_keys": {"inputs": [], "intermediate": [], "outputs": []},
+            "implementations": [
+                {
+                    "name": "new_impl",
+                    "description": "New implementation",
+                    "overrides": {"do_thing": {"action": "do_thing_v2"}},
+                },
+            ],
+            "extend_mode": True,
+        }
+        analysis_path = tmp_path / "extend_analysis.json"
+        _write(analysis_path, json.dumps(analysis))
+
+        result = assemble_package(
+            context={},
+            state={"artifacts": {
+                "ANALYSIS_JSON_FILE": str(analysis_path),
+                "EXISTING_WORKFLOW_DIR": str(existing_dir),
+            }},
+            step_cfg={},
+            project_root=tmp_path,
+        )
+
+        assert result.status == "APPROVED"
+        assert "Extended workflow" in result.remark
+
+        # Verify files were copied
+        out_dir = Path(result.artifacts["WORKFLOW_MANIFEST_FILE"]).parent
+        assert (out_dir / "workflow.toml").exists()
+        assert (out_dir / "context_extensions.py").exists()
+        assert (out_dir / "actions.py").exists()
+
+        # Verify new impl declaration was added
+        toml_content = (out_dir / "workflow.toml").read_text(encoding="utf-8")
+        assert "[[workflow.implementation]]" in toml_content
+        assert 'name = "new_impl"' in toml_content
+
+    def test_extend_mode_generates_new_impl_yaml(self, tmp_path):
+        """Extend mode generates impl.yaml for new implementations only."""
+        from actions import assemble_package
+
+        # Create existing workflow with existing impl
+        existing_dir = tmp_path / "existing_workflow"
+        existing_dir.mkdir()
+        _write(existing_dir / "workflow.toml", '[workflow]\nname = "test_workflow"\n')
+        existing_impls = existing_dir / "impls" / "existing_impl"
+        existing_impls.mkdir(parents=True)
+        _write(existing_impls / "impl.yaml", "name: existing_impl\ndescription: Existing\n")
+
+        # Create Analysis JSON with extend_mode
+        analysis = {
+            "identity": {"name": "test_workflow", "job_prefix": "TST", "version": "1.0.0"},
+            "domain_steps": [
+                {
+                    "name": "do_thing",
+                    "type": "action",
+                    "action_name": "do_thing",
+                    "required_inputs": [],
+                    "produces": ["OUTPUT"],
+                },
+            ],
+            "artifact_keys": {"inputs": [], "intermediate": [], "outputs": []},
+            "implementations": [
+                {
+                    "name": "new_impl",
+                    "description": "New implementation",
+                    "overrides": {"do_thing": {"action": "do_thing_v2"}},
+                },
+            ],
+            "extend_mode": True,
+        }
+        analysis_path = tmp_path / "extend_analysis.json"
+        _write(analysis_path, json.dumps(analysis))
+
+        result = assemble_package(
+            context={},
+            state={"artifacts": {
+                "ANALYSIS_JSON_FILE": str(analysis_path),
+                "EXISTING_WORKFLOW_DIR": str(existing_dir),
+            }},
+            step_cfg={},
+            project_root=tmp_path,
+        )
+
+        assert result.status == "APPROVED"
+        out_dir = Path(result.artifacts["WORKFLOW_MANIFEST_FILE"]).parent
+
+        # Verify existing impl was copied
+        assert (out_dir / "impls" / "existing_impl" / "impl.yaml").exists()
+
+        # Verify new impl was generated
+        new_impl_yaml = out_dir / "impls" / "new_impl" / "impl.yaml"
+        assert new_impl_yaml.exists()
+        content = new_impl_yaml.read_text(encoding="utf-8")
+        parsed = yaml.safe_load(content)
+        assert parsed["name"] == "new_impl"
+        assert "do_thing" in parsed["overrides"]
+
+    def test_extend_mode_rejects_without_existing_workflow_dir(self, tmp_path):
+        """Extend mode rejects when EXISTING_WORKFLOW_DIR is missing."""
+        from actions import assemble_package
+
+        analysis = {
+            "identity": {"name": "test", "job_prefix": "TST", "version": "1.0.0"},
+            "domain_steps": [
+                {
+                    "name": "do_thing",
+                    "type": "action",
+                    "action_name": "do_thing",
+                    "required_inputs": [],
+                    "produces": ["OUTPUT"],
+                },
+            ],
+            "artifact_keys": {"inputs": [], "intermediate": [], "outputs": []},
+            "implementations": [],
+            "extend_mode": True,
+        }
+        analysis_path = tmp_path / "extend_analysis.json"
+        _write(analysis_path, json.dumps(analysis))
+
+        result = assemble_package(
+            context={},
+            state={"artifacts": {"ANALYSIS_JSON_FILE": str(analysis_path)}},
+            step_cfg={},
+            project_root=tmp_path,
+        )
+
+        assert result.status == "REJECTED"
+        assert result.reject_code == "MISSING_EXISTING_WORKFLOW"
+
+    def test_extend_mode_rejects_with_nonexistent_dir(self, tmp_path):
+        """Extend mode rejects when existing workflow directory doesn't exist."""
+        from actions import assemble_package
+
+        analysis = {
+            "identity": {"name": "test", "job_prefix": "TST", "version": "1.0.0"},
+            "domain_steps": [
+                {
+                    "name": "do_thing",
+                    "type": "action",
+                    "action_name": "do_thing",
+                    "required_inputs": [],
+                    "produces": ["OUTPUT"],
+                },
+            ],
+            "artifact_keys": {"inputs": [], "intermediate": [], "outputs": []},
+            "implementations": [],
+            "extend_mode": True,
+        }
+        analysis_path = tmp_path / "extend_analysis.json"
+        _write(analysis_path, json.dumps(analysis))
+
+        result = assemble_package(
+            context={},
+            state={"artifacts": {
+                "ANALYSIS_JSON_FILE": str(analysis_path),
+                "EXISTING_WORKFLOW_DIR": str(tmp_path / "nonexistent"),
+            }},
+            step_cfg={},
+            project_root=tmp_path,
+        )
+
+        assert result.status == "REJECTED"
+        assert result.reject_code == "EXISTING_WORKFLOW_NOT_FOUND"

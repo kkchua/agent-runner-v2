@@ -156,16 +156,84 @@ No intermediate design documents (composition spec, runtime impl, artifact contr
 | Token cost | ~280K | ~60K (estimated) |
 | Duration | ~72 min | ~30 min (estimated) |
 
-## 8. Future Extensibility
+## 8. Extend Mode: Adding Implementations to Existing Workflows
 
-### Add Implementation to Existing Generator
+AGB v3 supports **extend mode** — adding new implementations to an existing generated workflow without regenerating the entire package.
 
+### How It Works
+
+**Input:** 
+- `REQUIREMENT_DOC` — describes the NEW implementation to add
+- `EXISTING_WORKFLOW_DIR` — path to the existing workflow package (e.g., `workflows/text_summarizer/`)
+
+**Output:** 
+- Same workflow package with new `impls/{new_name}/` directory added
+- Updated `workflow.toml` with new `[[workflow.implementation]]` declaration
+- Existing `actions.py`, `prompts/`, `context_extensions.py` remain unchanged
+
+### Extend Mode Pipeline
+
+The same 10-step pipeline runs, but each step behaves differently in extend mode:
+
+| Step | New Workflow Mode | Extend Mode |
+|------|------------------|-------------|
+| 1. analyze_requirement | Design full domain structure | Read existing workflow.toml, analyze ONLY new impl |
+| 2. plan_domain_logic | Plan all actions + prompts | Plan ONLY new impl overrides |
+| 3. challenge_plan | Challenge full domain plan | Challenge ONLY new impl design |
+| 4. implement_domain | Write actions.py + prompts/ | Write ONLY `impls/{new_name}/` files |
+| 5. critic_impl | Review full implementation | Review ONLY new impl files |
+| 6. assemble_package | Generate all files from scratch | Copy existing files, add new impl declarations |
+| 7. review_package | Review full package | Review merged package |
+| 8. validate_structure | Validate new package | Validate merged package |
+| 9. gatekeep_package | Gatekeep new package | Gatekeep merged package |
+| 10. promote_package | Promote to workflows/ | Merge into existing workflows/ |
+
+### Analysis JSON Schema (Extend Mode)
+
+In extend mode, the Analysis JSON includes:
+
+```json
+{
+  "identity": { ... },           // Copied from existing workflow.toml
+  "domain_steps": [ ... ],       // Copied from existing workflow.toml
+  "artifact_keys": { ... },      // Copied from existing workflow.toml
+  "implementations": [           // ONLY the new implementation(s)
+    {
+      "name": "new_impl_name",
+      "description": "...",
+      "overrides": { ... }
+    }
+  ],
+  "extend_mode": true            // Flag to indicate extend mode
+}
 ```
-Input: requirement doc (new impl) + existing workflow package
-Output: same package + new impls/{new_name}/ directory + updated workflow.toml
+
+### Implementation Details
+
+**assemble_package (extend mode):**
+1. Reads existing `workflow.toml` from `EXISTING_WORKFLOW_DIR`
+2. Appends new `[[workflow.implementation]]` sections
+3. Copies existing `context_extensions.py`, `actions.py`, `prompts/`
+4. Copies existing `impls/` directory (if present)
+5. Generates `impl.yaml` for NEW implementations only
+
+**promote_workflow_package (extend mode):**
+1. If target `workflows/{codename}/` doesn't exist, copies from existing
+2. Updates `workflow.toml` with merged version (existing + new impls)
+3. Merges new `impls/{new_name}/` into existing `impls/`
+4. Does NOT overwrite existing `actions.py`, `prompts/`, `context_extensions.py`
+
+### Usage Example
+
+```bash
+# Submit an extend mode job via operator console:
+# - Workflow: artifact_generator_builder
+# - Input artifacts:
+#   - REQUIREMENT_DOC: new_impl_requirement.md
+#   - EXISTING_WORKFLOW_DIR: workflows/text_summarizer/
 ```
 
-Only the delta is generated — new impl's actions + prompts + impl.yaml. Base workflow untouched.
+The new requirement doc should describe ONLY the new implementation strategy, not the full workflow.
 
 ### Self-Bootstrap
 

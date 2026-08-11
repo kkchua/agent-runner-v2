@@ -12,7 +12,7 @@ steps, and what validations each action performs.
 
 - ANALYSIS_JSON_FILE: {ANALYSIS_JSON_FILE}
   The Analysis JSON produced by step 1. Contains identity, domain_steps,
-  artifact_keys, and implementations. This is your primary input.
+  artifact_keys, and implementations. Check for "extend_mode": true flag.
 
 - REQUIREMENT_DOC: {REQUIREMENT_DOC}
   The original requirement document. Use this to understand domain context
@@ -22,7 +22,37 @@ steps, and what validations each action performs.
   Reference for action interface contract (Section 5) and multi-impl model
   (Section 4).
 
-# Planning Protocol
+- EXISTING_WORKFLOW_DIR: {EXISTING_WORKFLOW_DIR}
+  OPTIONAL — If provided, you are in EXTEND MODE. The existing workflow's
+  actions.py and prompts/ are already implemented. Plan ONLY the new
+  implementation's overrides.
+
+# Mode Detection
+
+**Check if Analysis JSON has "extend_mode": true:**
+
+- **If extend_mode is false or absent** → NEW WORKFLOW MODE
+  Follow the full Planning Protocol below. Plan all action steps, prompt steps,
+  and implementation overrides.
+
+- **If extend_mode is true** → EXTEND MODE
+  1. The domain_steps and artifact_keys are ALREADY IMPLEMENTED in the existing
+     workflow. Do NOT plan them again.
+  2. Read the existing workflow's actions.py and prompts/ to understand what
+     already exists: `{EXISTING_WORKFLOW_DIR}/actions.py` and
+     `{EXISTING_WORKFLOW_DIR}/prompts/`
+  3. Plan ONLY the new implementation's overrides:
+     - Which steps are overridden by the new impl?
+     - For each override: what changes (different prompt instructions? different
+       action logic?)?
+     - What files need to be written? (impls/{new_name}/actions.py,
+       impls/{new_name}/prompts/)
+  4. Skip Step 2 (Plan Each Action Step) and Step 3 (Plan Each Prompt Step) —
+     those are already implemented.
+  5. Go directly to Step 4 (Plan Implementation Overrides) and focus ONLY on
+     the new implementation.
+
+# Planning Protocol (NEW WORKFLOW MODE)
 
 ## Step 1: Validate Analysis JSON Against Requirement
 
