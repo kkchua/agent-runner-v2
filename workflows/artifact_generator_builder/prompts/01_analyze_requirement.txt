@@ -138,36 +138,6 @@ Think about what alternative strategies exist for the domain:
 - Different output formats (e.g., "markdown" vs "json")
 - Different processing strategies (e.g., "batch" vs "incremental")
 
-## Step 5: Detect Capability Gaps
-
-Scan every requirement in the document and check whether the platform can
-fulfill it with Python standard library alone. A capability gap exists when
-a requirement needs an external library, tool, or service that is NOT part
-of the standard library.
-
-Common capability gaps:
-- **File format parsing**: .pdf needs PyPDF2/pdfplumber, .docx needs
-  python-docx, .xlsx needs openpyxl, .pptx needs python-pptx, etc.
-  Plain .txt and .md have no gap (standard library suffices).
-- **External API calls**: need API keys, network access, SDK libraries.
-- **Specialized processing**: image manipulation (Pillow), video (ffmpeg),
-  audio (pydub), NLP (spacy/nltk), etc.
-
-For EACH gap found, record:
-- **requirement**: What the requirement doc asks for (verbatim quote).
-- **missing_capability**: What the platform cannot do without help.
-- **proposed_solution**: Exact library/tool name + install command
-  (e.g., "pip install PyPDF2" or "pip install python-docx").
-- **blocking**: true if the requirement CANNOT be met without this
-  library, false if it is an optional enhancement.
-
-Rules:
-- Do NOT silently drop requirements you cannot implement. If the requirement
-  doc says "support .pdf input", you MUST record a capability gap if PDF
-  parsing needs an external library.
-- If a requirement can be met with standard library alone, no gap is needed.
-- If multiple requirements share the same library, group them under one gap.
-
 # Output Instructions
 
 Write the Analysis JSON to: {ANALYSIS_JSON_FILE}
@@ -184,19 +154,9 @@ Structure:
     "intermediate": [ ... ],
     "outputs": [ ... ]
   },
-  "implementations": [ ... ],
-  "capability_gaps": [
-    {
-      "requirement": "verbatim quote from requirement doc",
-      "missing_capability": "what is missing",
-      "proposed_solution": "pip install <library>",
-      "blocking": true
-    }
-  ]
+  "implementations": [ ... ]
 }
 ```
-
-If no capability gaps exist, output an empty array: `"capability_gaps": []`.
 
 # Self-Validation
 
@@ -212,8 +172,6 @@ Before writing the output, verify:
 - [ ] At least one alternative implementation is defined
 - [ ] No implementation is named "default"
 - [ ] Implementation overrides reference valid step names
-- [ ] Every requirement in the doc that needs external libraries has a capability_gap entry
-- [ ] Every capability_gap has a proposed_solution with exact install command
 - [ ] No requirement was silently dropped — all requirements from the doc are accounted for
 
 # Forbidden Content

@@ -43,30 +43,6 @@ For every planned action function, ask:
   for format Y. What happens for format Z? Does the function crash, return
   garbage, or silently skip?"
 
-## Step 1b: Attack Capability Gap Coverage
-
-Read the Analysis JSON's `capability_gaps` array. For EACH gap:
-
-- **Missing setup action**: "The capability_gap says 'PDF parsing needs
-  PyPDF2' but the plan has no install_dependencies step. The action will
-  crash with ImportError when it tries to import PyPDF2."
-- **Incomplete solution**: "The capability_gap lists PyPDF2 but the plan
-  only installs pdfplumber. Wrong library — the action code imports PyPDF2."
-- **Silently dropped requirement**: "The requirement doc says 'support .pdf
-  and .docx input' but the plan only handles .txt and .md. The capability_gap
-  exists but the plan ignores it. This is a BLOCKING gap — the workflow
-  does not meet the requirement."
-- **Blocking gap without intervention flag**: "The capability_gap is marked
-  blocking=true but the plan doesn't flag it for human intervention. The
-  workflow will proceed and silently produce partial results."
-
-Severity rules for capability gap attacks:
-- If a blocking capability_gap has no setup action AND no blocker flag →
-  severity is BLOCKING.
-- If a blocking capability_gap has a setup action but the wrong library →
-  severity is BLOCKING.
-- If a non-blocking capability_gap is unaddressed → severity is MAJOR.
-
 ## Step 2: Attack Each Prompt Plan
 
 For every planned prompt template, ask:

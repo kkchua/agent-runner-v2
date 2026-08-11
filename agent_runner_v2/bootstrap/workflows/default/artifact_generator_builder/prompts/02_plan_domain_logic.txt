@@ -76,9 +76,9 @@ For every domain_step with type="action", specify:
 - **Output artifacts**: Which artifact keys it writes.
 - **Core logic**: Describe the algorithm in pseudocode or detailed steps.
 - **Format handling**: If the action processes files, specify which formats
-  are supported and how each is parsed. Do NOT claim format support you
-  cannot implement — if real parsing logic is not feasible, exclude that
-  format.
+  are supported and how each is parsed. Do NOT claim format support without
+  real parsing logic. If a format requires an external library, declare it
+  in requirements.txt.
 
 ### Validation Rules
 - What input validations does this action perform at its boundary?
@@ -184,6 +184,7 @@ Before writing the output, verify:
 - [ ] Implementation overrides are specific — each lists exactly which steps differ and how
 - [ ] All artifact key references match the Analysis JSON's artifact_keys definitions
 - [ ] No infrastructure planning (workflow.toml, context_extensions.py) is included
+- [ ] No format is silently dropped — all required input types have a plan
 
 # Forbidden Content
 
