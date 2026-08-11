@@ -202,7 +202,7 @@ def validate_structure(*, context, state, step_cfg, project_root):
     report = render_report(result, job_id=job_id)
     report_path.write_text(report, encoding="utf-8")
 
-    errors = [f for f in result.findings if f.severity == "error"]
+    errors = [f for f in result.findings if f.level == "error"]
     if errors:
         error_summary = "; ".join(f"{f.code}: {f.message}" for f in errors[:5])
         return ActionResult(
