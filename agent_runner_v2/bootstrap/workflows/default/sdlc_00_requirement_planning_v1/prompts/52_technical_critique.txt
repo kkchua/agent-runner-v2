@@ -1,0 +1,102 @@
+Objective
+
+Perform a technical critique of the task specification, focusing on test scope sufficiency, technical feasibility, and codebase accuracy.
+
+Layer Boundary
+
+- This workflow belongs to Layer 3 and operates on top of the Layer 2 platform contract.
+- Critique only the task specification, not implementation or execution artifacts.
+- Treat Layer 1 governance and Layer 2 platform constitution as read-only authority.
+
+Reference Inputs
+
+- Read `TASK_FILE` (the task specification to critique).
+- Read `BACKLOG_FILE` (approved backlog for traceability verification).
+- Read codebase context from `docs/repo/codebase/current/` to validate technical claims.
+- Read Layer 1 governance at `GOVERNANCE_RUNTIME_ROOT` for metadata compliance.
+- Read Layer 2 platform constitution at `PLATFORM_RUNTIME_ROOT` for platform contract compliance.
+
+Critique Criteria
+
+Evaluate the task specification against these criteria:
+
+1. **Test Scope Sufficiency**:
+   - Does the test scope cover all acceptance criteria?
+   - Are edge cases included in the test scope?
+   - Are test cases specific enough to be automated?
+   - Each acceptance criterion maps to at least one test case
+   - Test scope includes both positive and negative scenarios
+
+2. **Technical Feasibility**:
+   - Run code checks: import referenced modules, verify APIs exist with correct signatures
+   - Verify that referenced functions, classes, and methods exist in the codebase
+   - Confirm that proposed technical approach is implementable with current dependencies
+   - Check that file paths and module references resolve correctly
+
+3. **Codebase Accuracy**:
+   - Are file paths and line number references accurate against the current codebase?
+   - Do referenced files actually exist at the stated locations?
+   - Are module imports and package structures correct?
+   - Variable names and function signatures match the actual codebase
+
+4. **Technical Approach Validity**:
+   - Is the technical approach implementable as described?
+   - Are there hidden dependencies or prerequisites not documented?
+   - Does the approach respect existing architectural patterns?
+   - Are there simpler alternatives that should be considered?
+
+5. **Scope Boundary Correctness**:
+   - Are scope boundaries (in/out) correctly drawn?
+   - No scope creep beyond the backlog work item
+   - No scope gaps that would prevent acceptance criteria from being met
+   - In-scope and out-of-scope items are mutually exclusive
+
+6. **Constraint Verification**:
+   - Do constraints (TC-*) actually hold when verified against the code?
+   - Performance constraints are measurable and testable
+   - Security constraints are specific and enforceable
+   - Compatibility constraints reference actual version requirements
+
+7. **API and SDK Verification**:
+   - Verify API and SDK usage against the actual installed library version
+   - Check referenced modules, function signatures, and patterns against the codebase
+   - Do not rely on training data for library APIs -- they may have changed
+
+Critique Output
+
+Generate a critique document with YAML frontmatter and the following sections:
+
+YAML Frontmatter:
+  template_id: "SYS-03-CR"
+  version: "1.0.0"
+  doc_type: "review_artifact"
+  lifecycle_status: "draft"
+
+Document Sections:
+1. **Decision**: APPROVED or REJECTED
+2. **Summary**: Brief overview of critique findings
+3. **Findings**: Detailed list of issues (if any), categorized as:
+   - **Critical**: Must fix (infeasible approach, missing test coverage for acceptance criteria, wrong file paths)
+   - **Major**: Should fix (insufficient edge case coverage, weak constraints, missing scope boundaries)
+   - **Minor**: Nice to fix (naming inconsistencies, documentation gaps)
+4. **Recommendations**: Specific actions to address findings
+
+If APPROVED:
+   - Test scope covers all acceptance criteria with edge cases
+   - Technical approach is feasible and verified against codebase
+   - All file paths and references are accurate
+   - Constraints are valid and verifiable
+
+If REJECTED:
+   - Provide specific, actionable feedback
+   - Cite exact sections, file paths, or constraints that are incorrect
+   - Explain what must be fixed for the critique to be approved
+
+Output Instructions
+
+- Write the critique document to `CRITIQUE_FILE_SUGGESTED` path.
+- Use ASCII-only characters.
+- Include YAML frontmatter with the fields specified above.
+- Use plain text section headings.
+- Provide direct citations to offending text when rejected.
+- Be specific and actionable in feedback.

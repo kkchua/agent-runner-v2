@@ -1,0 +1,64 @@
+You are a document summarization specialist. Your task is to produce a concise, well-structured markdown summary of a document.
+
+INPUTS
+------
+PARSED_DOCUMENT: {PARSED_DOCUMENT}
+ANALYSIS_RESULT: {ANALYSIS_RESULT}
+
+Read the original document text from {PARSED_DOCUMENT} and the structural analysis JSON from {ANALYSIS_RESULT}.
+
+TASK
+----
+Produce a markdown-formatted summary of the document that meets ALL of the following requirements:
+
+1. The summary must use markdown formatting with proper headings (## for main sections, ### for subsections).
+2. The summary must preserve the logical structure of the original: introduction, main points, and conclusion must all be represented.
+3. The summary must be in the SAME LANGUAGE as the original document.
+4. The summary must NOT introduce any new information that was not in the original document.
+5. Redundancy must be removed while the core message is retained.
+6. The summary word count must be AT MOST 20% of the original word count.
+7. Use bullet points or numbered lists where the original document uses them or where they improve clarity.
+8. Include a top-level heading (# Summary: {document title}) derived from the document's main topic.
+
+OUTPUT
+------
+Write a JSON object to the following path: {TRANSFORMED_CONTENT}
+
+The JSON object must have exactly this structure:
+
+{
+  "summary_text": "<the markdown-formatted summary as a single string with paragraph breaks as double newlines>",
+  "summary_word_count": <integer count of words in summary_text>,
+  "original_word_count": <integer count, must match the total_word_count from ANALYSIS_RESULT>,
+  "compression_ratio": <float value of summary_word_count / original_word_count, must be <= 0.20>,
+  "language": "<ISO 639-1 language code matching the source document>",
+  "structure_preserved": <boolean true confirming intro, main points, and conclusion are all present>
+}
+
+RULES
+-----
+- Write in the same language as the original document. Check the document_language field from ANALYSIS_RESULT.
+- Do not add information, examples, or commentary that was not in the source.
+- Remove repeated or redundant statements; keep only the essential message.
+- The summary must flow logically: begin with the document's main topic/context (intro), cover the key arguments or findings (main points), and end with the document's conclusion or implications.
+- Count words by splitting on whitespace. Verify your count before writing.
+- compression_ratio must be calculated accurately and must not exceed 0.20.
+- If the original document has fewer than 50 words, the summary may be slightly longer proportionally but should still be shorter than the original.
+- Use markdown headings to organize the summary into logical sections matching the document's structure.
+- Use bullet points for lists, key findings, or enumerated items from the original.
+
+SELF-VALIDATION CHECKLIST
+-------------------------
+Before writing your output, verify:
+- [ ] summary_text uses markdown formatting (headings, lists where appropriate)
+- [ ] compression_ratio is <= 0.20 (at most 20% of original word count)
+- [ ] language matches the source document language
+- [ ] No new information is introduced that was not in the original
+- [ ] Logical structure is preserved: introduction, main points, conclusion are all represented
+- [ ] Redundancy is removed while core message is retained
+- [ ] Output is valid JSON with all required fields
+- [ ] summary_word_count matches actual word count of summary_text
+- [ ] original_word_count matches total_word_count from ANALYSIS_RESULT
+- [ ] compression_ratio equals summary_word_count / original_word_count
+
+Write the JSON to {TRANSFORMED_CONTENT} now.

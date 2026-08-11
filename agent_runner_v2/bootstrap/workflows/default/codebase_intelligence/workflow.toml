@@ -1,0 +1,129 @@
+# Workflow: Codebase Intelligence Generator
+# Auto-assembled by AGB from Analysis JSON.
+
+[workflow]
+name = "codebase_intelligence"
+version = "1.0.0"
+label = "Codebase Intelligence Generator"
+job_prefix = "CODEINT"
+init_step = "scan_codebase"
+description = "Generates multiple intelligence reports from codebase including audience-specific meta content, structural health analysis, and security audit findings."
+default_max_rejects = 3
+visibility = "canonical"
+layer = "layer3"
+platform = "agent-runner-v2"
+
+[[workflow.implementation]]
+name = "executive_summary"
+description = "Produces high-level executive summaries with strategic recommendations instead of detailed technical findings"
+label = "Executive Summary"
+
+[[workflow.implementation]]
+name = "technical_deep_dive"
+description = "Produces exhaustive technical analysis with code-level evidence, dependency graphs, and remediation code samples"
+label = "Technical Deep Dive"
+
+[[workflow.implementation]]
+name = "security_focused"
+description = "Prioritizes security and compliance analysis with expanded vulnerability scanning and audit-ready output"
+label = "Security Focused"
+
+[[step]]
+name = "scan_codebase"
+action = "scan_codebase_files"
+enable_notifications = false
+requires_human_approval_after = false
+onsuccess = "build_import_graph"
+
+[step.artifacts]
+required_inputs = ["CODEBASE_DOCS_DIR", "SOURCE_CODE_DIR"]
+produces = ["CODEBASE_INVENTORY"]
+result_meta_key = "CODEBASE_INVENTORY"
+
+[[step]]
+name = "build_import_graph"
+action = "build_import_graph"
+enable_notifications = false
+requires_human_approval_after = false
+onsuccess = "generate_audience_meta"
+
+[step.artifacts]
+required_inputs = ["CODEBASE_INVENTORY"]
+produces = ["IMPORT_GRAPH"]
+result_meta_key = "IMPORT_GRAPH"
+
+[[step]]
+name = "generate_audience_meta"
+prompt = "prompts/03_generate_audience_meta.txt"
+enable_notifications = false
+requires_human_approval_after = false
+onsuccess = "analyze_health"
+
+[step.coder]
+role_policy = "architect_standard"
+
+[step.artifacts]
+required_inputs = ["CODEBASE_INVENTORY", "CODEBASE_DOCS_DIR"]
+produces = ["AUDIENCE_META_FILE"]
+result_meta_key = "AUDIENCE_META_FILE"
+
+[[step]]
+name = "analyze_health"
+prompt = "prompts/04_analyze_health.txt"
+enable_notifications = false
+requires_human_approval_after = false
+onsuccess = "analyze_security"
+
+[step.coder]
+role_policy = "architect_standard"
+
+[step.artifacts]
+required_inputs = ["CODEBASE_INVENTORY", "IMPORT_GRAPH"]
+produces = ["HEALTH_FINDINGS_FILE"]
+result_meta_key = "HEALTH_FINDINGS_FILE"
+
+[[step]]
+name = "analyze_security"
+prompt = "prompts/05_analyze_security.txt"
+enable_notifications = false
+requires_human_approval_after = false
+onsuccess = "generate_findings_report"
+
+[step.coder]
+role_policy = "reviewer_standard"
+
+[step.artifacts]
+required_inputs = ["CODEBASE_INVENTORY", "SOURCE_CODE_DIR"]
+produces = ["SECURITY_FINDINGS_FILE"]
+result_meta_key = "SECURITY_FINDINGS_FILE"
+
+[[step]]
+name = "generate_findings_report"
+prompt = "prompts/06_generate_findings_report.txt"
+enable_notifications = false
+requires_human_approval_after = false
+onsuccess = "validate_outputs"
+
+[step.coder]
+role_policy = "architect_standard"
+
+[step.artifacts]
+required_inputs = ["HEALTH_FINDINGS_FILE", "SECURITY_FINDINGS_FILE", "AUDIENCE_META_FILE"]
+produces = ["FINDINGS_REPORT_FILE"]
+result_meta_key = "FINDINGS_REPORT_FILE"
+
+[[step]]
+name = "validate_outputs"
+action = "validate_intelligence_outputs"
+enable_notifications = false
+requires_human_approval_after = false
+onsuccess = "step_completion"
+
+[step.artifacts]
+required_inputs = ["AUDIENCE_META_FILE", "HEALTH_FINDINGS_FILE", "SECURITY_FINDINGS_FILE", "FINDINGS_REPORT_FILE"]
+produces = ["VALIDATION_REPORT_FILE"]
+result_meta_key = "VALIDATION_REPORT_FILE"
+
+[[step]]
+name = "step_completion"
+action = "step_completion"

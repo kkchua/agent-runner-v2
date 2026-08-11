@@ -1,0 +1,12 @@
+name: executive_summary
+description: "Produces high-level executive summaries with strategic recommendations instead of detailed technical findings"
+
+overrides:
+  generate_audience_meta:
+    prompt: "impls/executive_summary/prompts/03_generate_audience_meta.txt"
+  analyze_health:
+    prompt: "impls/executive_summary/prompts/04_analyze_health.txt"
+  analyze_security:
+    prompt: "impls/executive_summary/prompts/05_analyze_security.txt"
+  generate_findings_report:
+    prompt: "impls/executive_summary/prompts/06_generate_findings_report.txt"

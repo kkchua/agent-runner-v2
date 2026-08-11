@@ -11,9 +11,10 @@
     "agnes_gen_video_v1",
     "agnes_media_gen_v1",
     "artifact_generator_builder",
-    "sdlc_00_codebase_v1",
-    "sdlc_00_delivery_scaffold_v1",
+    "codebase_intelligence",
+    "sdlc_00_codebase_scaffold_v1",
     "sdlc_00_init_doc_v1",
+    "sdlc_00_requirement_planning_v1",
     "sdlc_10_requirement_v1",
     "sdlc_20_planning_v1",
     "sdlc_30_backlog_v1",
@@ -22,9 +23,6 @@
     "sdlc_60_execution_v1",
     "sdlc_70_validation_v1",
     "sdlc_80_review_v1",
-    "text_summarizer_ayz",
-    "workflow_builder_v1",
-    "workflow_builder_v2",
-    "workflow_builder_v3"
+    "text_summarizer_ayz"
   ]
 }

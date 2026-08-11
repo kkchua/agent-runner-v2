@@ -1,0 +1,135 @@
+# Codebase Security Analysis
+
+You are performing a security audit of a codebase. You will analyze the codebase
+across 5 security phases and produce findings with severity ratings, evidence
+(with redacted secrets), and remediation recommendations.
+
+## Inputs
+
+- CODEBASE_INVENTORY: {CODEBASE_INVENTORY}
+  Path to a JSON file containing the codebase inventory with file metadata,
+  module list, and package structure. Use this to identify which files to examine.
+
+- SOURCE_CODE_DIR: {SOURCE_CODE_DIR}
+  Path to the directory containing Python source code files. Read source files
+  from this directory to perform security analysis.
+
+## Instructions
+
+Read the CODEBASE_INVENTORY to identify target files, then read source files from
+SOURCE_CODE_DIR. Focus on Python files (.py) and configuration files.
+
+Analyze the codebase across these 5 security phases:
+
+### Phase 1: Secret Detection
+
+Scan source files for hardcoded secrets:
+- API keys, tokens, passwords (patterns like sk-*, pk-*, key_*, *_KEY, *_SECRET)
+- Private keys (BEGIN RSA PRIVATE KEY, BEGIN EC PRIVATE KEY)
+- Database connection strings with credentials
+- OAuth client secrets
+
+CRITICAL RULE: Actual secret values MUST be redacted in all findings.
+Show only the type and redacted value, e.g., "API key: sk-***REDACTED***"
+
+### Phase 2: Dependency Audit
+
+Analyze imports for risky patterns:
+- Use of pickle for loading untrusted data (deserialization risk)
+- Use of eval() or exec() (code injection risk)
+- Use of deprecated or insecure modules (telnetlib, ftplib without TLS)
+- Import patterns that suggest outdated dependency practices
+
+### Phase 3: Code Pattern Scan
+
+Identify insecure coding patterns:
+- SQL injection risks (string concatenation in SQL queries)
+- Path traversal (os.path.join with user input, missing path validation)
+- Unchecked user input passed to system commands (subprocess, os.system)
+- Unsafe deserialization (yaml.load without SafeLoader, pickle.loads)
+- Missing input validation on external data
+
+### Phase 4: Authentication Review
+
+If auth-related code exists, review for weaknesses:
+- Missing authentication checks on sensitive endpoints
+- Weak token handling (predictable tokens, missing expiry)
+- Hardcoded credentials in auth logic
+- Missing rate limiting indicators
+- Insecure password handling (plaintext storage, weak hashing)
+
+### Phase 5: Infrastructure Check
+
+Review configuration and deployment files:
+- Debug mode enabled in production configurations
+- Permissive CORS settings
+- Missing HTTPS enforcement
+- Insecure default configurations
+- Environment variable handling (secrets in code vs env vars)
+- TLS/SSL configuration issues
+
+## Finding Format
+
+Each finding must follow this exact structure:
+
+```
+### S-NNN: [Title]
+
+- **Phase**: [One of the 5 phases]
+- **Severity**: [critical / high / medium / low / info]
+- **Evidence**: [File path, line number, code snippet with secrets REDACTED]
+- **Impact**: [Security risk if not addressed]
+- **Recommendation**: [Concrete remediation with secure alternative]
+```
+
+Severity criteria:
+- **critical**: Direct security vulnerability exploitable by attackers; immediate action required
+- **high**: Significant security weakness; address within days
+- **medium**: Security concern that could become exploitable; address within sprint
+- **low**: Minor security hygiene issue; address within quarter
+- **info**: Security observation or best practice recommendation
+
+## CRITICAL: Secret Redaction
+
+NEVER output actual secret values in findings. For any detected secret:
+- Show the secret type (API key, password, token, private key)
+- Show the file path and line number
+- Redact the value: "API key: sk-***REDACTED***"
+- If showing a code snippet, replace the actual value with ***REDACTED***
+
+## Document Structure
+
+Your output document must have:
+
+1. **Summary Section** (at the top)
+   - Total findings count
+   - Count by severity level
+   - Count by phase
+   - Overall security posture assessment (1-2 sentences)
+
+2. **Findings by Phase**
+   - Group findings under each phase heading
+   - Each phase must have at least one finding or an explicit "no issues found" statement
+
+## Validation Checklist
+
+Before writing the output, verify:
+
+- [ ] All 5 phases are addressed
+- [ ] No actual secret values appear in the output (all redacted)
+- [ ] Every finding cites a specific file path and line number from the source code
+- [ ] Finding IDs are sequential (S-001, S-002, ...)
+- [ ] Severity ratings follow security industry standard criteria
+- [ ] No hallucinated vulnerabilities -- only report what exists in the code
+- [ ] Code snippets in evidence are truncated to relevant lines only (3-5 lines max)
+- [ ] Summary section accurately reflects finding counts
+- [ ] Document is self-contained
+- [ ] All redacted secrets use consistent format (***REDACTED***)
+
+## Output
+
+Write the complete Markdown document to: {SECURITY_FINDINGS_FILE}
+
+The document must be valid Markdown. Use ## for phase headings, ### for
+individual findings. Use code formatting for file paths, module names, and
+code snippets. Ensure all secrets are redacted before writing.

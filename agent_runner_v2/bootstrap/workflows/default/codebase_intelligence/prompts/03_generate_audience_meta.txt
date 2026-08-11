@@ -1,0 +1,84 @@
+# Audience Meta Content Generation
+
+You are analyzing a codebase to produce audience-specific intelligence content.
+Your output provides different views of the same codebase for different stakeholders.
+
+## Inputs
+
+- CODEBASE_INVENTORY: {CODEBASE_INVENTORY}
+  Path to a JSON file containing the full codebase inventory with file metadata,
+  package structure, module counts, and file previews.
+
+- CODEBASE_DOCS_DIR: {CODEBASE_DOCS_DIR}
+  Path to the directory containing codebase documentation files. Read selected
+  documentation files from this directory to extract detailed content for the
+  audience meta sections.
+
+## Instructions
+
+Read the CODEBASE_INVENTORY JSON to understand the codebase structure. Then read
+selected documentation files from CODEBASE_DOCS_DIR to gather content detail.
+
+Produce a Markdown document with the following sections:
+
+### 1. Overview
+
+Write a high-level description of the codebase purpose, scope, and architecture.
+Summarize what the codebase does, its primary components, and how they relate.
+This section should be accessible to any technical reader.
+
+### 2. For Developers
+
+Write a technical view of the codebase:
+- Module structure and package hierarchy (reference actual packages from the inventory)
+- Key APIs, entry points, and public interfaces (reference actual modules)
+- How to navigate the codebase (directory layout, key files)
+- Build and test instructions (if evident from the codebase structure)
+
+### 3. For Architects
+
+Write a structural view of the codebase:
+- Component boundaries and their interactions
+- Dependency patterns (reference actual module relationships from the inventory)
+- Design decisions evident in the code structure (layering, separation of concerns)
+- Extension points and plugin interfaces (if present)
+- Technology choices and their architectural implications
+
+### 4. For Executives
+
+Write a strategic view of the codebase:
+- What the codebase does in business terms (non-technical language)
+- Team and effort indicators (file counts, package counts suggest complexity)
+- Technology choices and their strategic implications (maintainability, risk)
+- Overall maturity indicators (documentation coverage, code organization quality)
+
+### 5. Codebase Statistics
+
+Provide a summary of key metrics:
+- Total documentation files and their distribution by category
+- Total source files and Python modules
+- Package count and hierarchy depth
+- Documentation coverage indicators
+
+## Validation Checklist
+
+Before writing the output, verify:
+
+- [ ] All audience sections are present (Overview, Developers, Architects, Executives, Statistics)
+- [ ] Content in each section is appropriate for that audience technical depth
+- [ ] All claims reference actual files, packages, or modules from CODEBASE_INVENTORY
+- [ ] No fabricated module names, APIs, or features not present in the inventory
+- [ ] Document is self-contained -- readable without access to source files
+- [ ] File path references use actual paths from the inventory
+- [ ] Overview section accurately summarizes the entire codebase scope
+- [ ] Developer section references real package paths and module names
+- [ ] Architect section describes real dependency patterns from the data
+- [ ] Executive section avoids jargon and explains technical concepts in business terms
+
+## Output
+
+Write the complete Markdown document to: {AUDIENCE_META_FILE}
+
+The document must be valid Markdown with proper heading hierarchy (## for main
+sections, ### for subsections). Use code formatting for module names and file
+paths. Include bullet lists and tables where appropriate for readability.
