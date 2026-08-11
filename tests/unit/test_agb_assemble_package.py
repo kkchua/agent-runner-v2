@@ -5,8 +5,10 @@ context_extensions.py, and impl.yaml files from an Analysis JSON.
 """
 from __future__ import annotations
 
+import ast
 import json
 import sys
+import tomllib
 from pathlib import Path
 from unittest.mock import MagicMock
 
@@ -351,3 +353,92 @@ class TestToPascalCase:
     def test_mixed(self):
         from actions import _to_pascal_case
         assert _to_pascal_case("my_cool-workflow") == "MyCoolWorkflow"
+
+
+class TestGeneratedSyntaxValidation:
+    """Verify generated files have valid syntax (B1, B2)."""
+
+    def test_generated_toml_parses(self, out_dir, mock_state):
+        """Generated workflow.toml is valid TOML."""
+        from actions import assemble_package
+
+        result = assemble_package(
+            context={}, state=mock_state, step_cfg={}, project_root=out_dir.parent,
+        )
+        assert result.status == "APPROVED"
+        manifest_path = Path(result.artifacts["WORKFLOW_MANIFEST_FILE"])
+        content = manifest_path.read_text(encoding="utf-8")
+        parsed = tomllib.loads(content)
+        assert "workflow" in parsed
+        assert "step" in parsed
+
+    def test_generated_python_compiles(self, out_dir, mock_state):
+        """Generated context_extensions.py is valid Python."""
+        from actions import assemble_package
+
+        result = assemble_package(
+            context={}, state=mock_state, step_cfg={}, project_root=out_dir.parent,
+        )
+        assert result.status == "APPROVED"
+        ext_path = Path(result.artifacts["WORKFLOW_EXTENSIONS_FILE"])
+        content = ext_path.read_text(encoding="utf-8")
+        ast.parse(content)
+
+
+class TestRolePolicyValidation:
+    """Verify prompt steps without role_policy are rejected (A3)."""
+
+    def test_prompt_step_missing_role_policy_rejected(self, tmp_path):
+        """Prompt step without role_policy is rejected."""
+        from actions import assemble_package
+
+        analysis = {
+            "identity": {"name": "test", "job_prefix": "TST", "version": "1.0.0"},
+            "domain_steps": [
+                {
+                    "name": "analyze",
+                    "type": "prompt",
+                    "prompt_file": "analyze.txt",
+                    # missing role_policy
+                    "required_inputs": [],
+                    "produces": ["RESULT"],
+                },
+            ],
+            "artifact_keys": {"inputs": [], "intermediate": [], "outputs": []},
+            "implementations": [],
+        }
+        analysis_path = tmp_path / "bad_role.json"
+        _write(analysis_path, json.dumps(analysis))
+
+        result = assemble_package(
+            context={},
+            state={"artifacts": {"ANALYSIS_JSON_FILE": str(analysis_path)}},
+            step_cfg={},
+            project_root=tmp_path,
+        )
+        assert result.status == "REJECTED"
+        assert result.reject_code == "MISSING_ROLE_POLICY"
+
+
+class TestTomlStrEscaping:
+    """Verify _toml_str handles special characters (B3)."""
+
+    def test_escapes_newline(self):
+        from actions import _toml_str
+        assert "\\n" in _toml_str("line1\nline2")
+
+    def test_escapes_carriage_return(self):
+        from actions import _toml_str
+        assert "\\r" in _toml_str("line1\rline2")
+
+    def test_escapes_tab(self):
+        from actions import _toml_str
+        assert "\\t" in _toml_str("col1\tcol2")
+
+    def test_escapes_backslash(self):
+        from actions import _toml_str
+        assert "\\\\" in _toml_str("path\\to\\file")
+
+    def test_escapes_double_quote(self):
+        from actions import _toml_str
+        assert '\\"' in _toml_str('say "hello"')

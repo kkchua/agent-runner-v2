@@ -603,12 +603,10 @@ document into a workflow package. It follows the SDLC quality flow scoped to
 5.  critic_impl          (prompt)  — Review code logic + prompt quality
     ↕ refine loop (max 2)
 6.  assemble_package     (ACTION)  — Build workflow.toml + context_extensions.py + impl.yaml
-7.  run_tests            (ACTION)  — Unit tests must pass
-    ↕ reject → back to step 4
-8.  review_package       (prompt)  — Holistic review of assembled package
-9.  validate_structure   (ACTION)  — Deterministic structural validation
-10. gatekeep_package     (prompt)  — Final pass/fail gate
-11. promote_package      (ACTION)  — Deploy + generate README.md
+7.  review_package       (prompt)  — Holistic review of assembled package
+8.  validate_structure   (ACTION)  — Deterministic structural validation
+9.  gatekeep_package     (prompt)  — Final pass/fail gate
+10. promote_package      (ACTION)  — Deploy + generate README.md
 ```
 
 ### 9.2 SDLC Quality Flow
@@ -620,9 +618,9 @@ The pipeline follows the standard SDLC delivery pattern:
 | Analysis | 1 | Understand domain |
 | Plan ↔ Challenge | 2 ↔ 3 | Design domain logic, then attack it |
 | Implement ↔ Critic | 4 ↔ 5 | Write code + prompts, then review them |
-| Execution | 6–7 | Assemble + test |
-| Review → Validate → Gatekeep | 8–10 | Quality gates |
-| Promote → Publish | 11 | Deploy |
+| Execution | 6 | Assemble package |
+| Review → Validate → Gatekeep | 7–9 | Quality gates |
+| Promote → Publish | 10 | Deploy |
 
 ### 9.3 Scope of Quality Gates
 

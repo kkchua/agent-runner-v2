@@ -7,9 +7,8 @@
 #   2-3. Plan ↔ Challenge   — design domain logic, then attack it
 #   4-5. Implement ↔ Critic — write actions + prompts, then review them
 #   6. Assemble         — mechanically build structural files (ACTION)
-#   7. Test             — unit tests must pass (ACTION)
-#   8-10. Review → Validate → Gatekeep — quality gates
-#   11. Promote          — deploy + generate README (ACTION)
+#   7-9. Review → Validate → Gatekeep — quality gates
+#   10. Promote          — deploy + generate README (ACTION)
 
 [workflow]
 name = "artifact_generator_builder"
@@ -158,7 +157,7 @@ result_meta_key = "WORKFLOW_MANIFEST_FILE"
 
 [[step]]
 name = "review_package"
-prompt = "prompts/08_review_package.txt"
+prompt = "prompts/07_review_package.txt"
 enable_notifications = true
 requires_human_approval_after = false
 onsuccess = "validate_structure"
@@ -200,7 +199,7 @@ result_meta_key = "VALIDATION_FINDINGS_FILE"
 
 [[step]]
 name = "gatekeep_package"
-prompt = "prompts/10_gatekeep_package.txt"
+prompt = "prompts/09_gatekeep_package.txt"
 enable_notifications = true
 requires_human_approval_after = false
 onsuccess = "promote_package"
@@ -233,8 +232,8 @@ onsuccess = "step_completion"
 
 [step.artifacts]
 required_inputs = ["WORKFLOW_MANIFEST_FILE", "WORKFLOW_ACTIONS_FILE", "WORKFLOW_EXTENSIONS_FILE", "WORKFLOW_PROMPTS_DIR"]
-produces = ["PROMOTION_REPORT_FILE"]
-result_meta_key = "PROMOTION_REPORT_FILE"
+produces = ["WORKFLOW_PACKAGE_DIR"]
+result_meta_key = "WORKFLOW_PACKAGE_DIR"
 
 [step.config]
 artifact_key = "WORKFLOW_PACKAGE_DIR"
