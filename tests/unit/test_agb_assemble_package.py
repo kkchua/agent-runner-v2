@@ -12,6 +12,7 @@ import tomllib
 from pathlib import Path
 from unittest.mock import MagicMock
 
+import yaml
 import pytest
 
 # Add workflows dir to path so we can import the actions module
@@ -442,3 +443,63 @@ class TestTomlStrEscaping:
     def test_escapes_double_quote(self):
         from actions import _toml_str
         assert '\\"' in _toml_str('say "hello"')
+
+
+class TestGeneratedImplYaml:
+    """Verify generated impl.yaml is valid YAML (R3-5)."""
+
+    def test_impl_yaml_parses(self, out_dir, mock_state):
+        """Generated impl.yaml is valid YAML."""
+        from actions import assemble_package
+
+        result = assemble_package(
+            context={}, state=mock_state, step_cfg={}, project_root=out_dir.parent,
+        )
+        assert result.status == "APPROVED"
+        impl_yaml = out_dir / "impls" / "key_points" / "impl.yaml"
+        assert impl_yaml.exists()
+        content = impl_yaml.read_text(encoding="utf-8")
+        parsed = yaml.safe_load(content)
+        assert parsed["name"] == "key_points"
+        assert "overrides" in parsed
+        assert "render_output" in parsed["overrides"]
+
+
+class TestGeneratedContextExtensions:
+    """Verify generated context_extensions.py includes governance vars (R3-1)."""
+
+    def test_governance_vars_injected(self, out_dir, mock_state):
+        """Generated context_extensions.py injects BASE_COMPOSITION_STANDARD etc."""
+        from actions import assemble_package
+
+        result = assemble_package(
+            context={}, state=mock_state, step_cfg={}, project_root=out_dir.parent,
+        )
+        assert result.status == "APPROVED"
+        ext_path = Path(result.artifacts["WORKFLOW_EXTENSIONS_FILE"])
+        content = ext_path.read_text(encoding="utf-8")
+        assert "GOVERNANCE_RUNTIME_ROOT" in content
+        assert "PLATFORM_RUNTIME_ROOT" in content
+        assert "BASE_COMPOSITION_STANDARD" in content
+        assert "get_governance_runtime_root" in content
+
+
+class TestGeneratedWorkflowMetadata:
+    """Verify generated workflow.toml includes metadata fields (R3-8)."""
+
+    def test_metadata_fields_present(self, out_dir, mock_state):
+        """Generated workflow.toml includes default_max_rejects, visibility, etc."""
+        from actions import assemble_package
+
+        result = assemble_package(
+            context={}, state=mock_state, step_cfg={}, project_root=out_dir.parent,
+        )
+        assert result.status == "APPROVED"
+        manifest_path = Path(result.artifacts["WORKFLOW_MANIFEST_FILE"])
+        content = manifest_path.read_text(encoding="utf-8")
+        parsed = tomllib.loads(content)
+        wf = parsed["workflow"]
+        assert wf.get("default_max_rejects") == 3
+        assert wf.get("visibility") == "canonical"
+        assert wf.get("layer") == "layer3"
+        assert wf.get("platform") == "agent-runner-v2"

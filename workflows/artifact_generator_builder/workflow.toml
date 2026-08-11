@@ -125,6 +125,7 @@ role_policy = "reviewer_standard"
 
 [step.artifacts]
 required_inputs = ["WORKFLOW_ACTIONS_FILE", "WORKFLOW_PROMPTS_DIR", "DOMAIN_PLAN_FILE"]
+optional_inputs = ["IMPL_CRITIQUE_FILE"]
 produces = ["IMPL_CRITIQUE_FILE"]
 result_meta_key = "IMPL_CRITIQUE_FILE"
 
