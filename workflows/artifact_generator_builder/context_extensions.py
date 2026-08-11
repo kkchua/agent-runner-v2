@@ -131,6 +131,7 @@ class ArtifactGeneratorBuilderExtensions(WorkflowExtensions):
 
         # Resolve all artifact keys to absolute paths
         artifacts = state.get("artifacts") or {}
+        job_id = str(state.get("job_id") or "")
         for key, rel_path in self.register_artifact_keys().items():
             if key in result:
                 continue
@@ -139,6 +140,8 @@ class ArtifactGeneratorBuilderExtensions(WorkflowExtensions):
                 result[key] = existing
                 continue
             resolved_path = rel_path.replace("{codename}", codename)
+            if job_id:
+                resolved_path = resolved_path.replace("{job_id}", job_id)
             result[key] = str(workspace_root / resolved_path)
 
         return result

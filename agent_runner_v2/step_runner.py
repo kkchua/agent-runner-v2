@@ -873,7 +873,7 @@ def _backfill_declared_produced_artifacts(
             project_root=project_root,
             runtime_root=JOBS_ROOT,
         )
-        if resolved.exists() and resolved.is_file():
+        if resolved.exists():
             normalized[artifact_key] = _path_for_report(resolved, project_root)
     return normalized
 
