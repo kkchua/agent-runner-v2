@@ -79,8 +79,22 @@ from agent_runner_v2.workflow_packages.actions import action
 @action("action_name_here")
 def action_name_here(*, context, state, step_cfg, project_root):
     """One-line description of what this action does."""
-    artifacts = state.get("artifacts", {})
     project_root = Path(project_root)
+
+    # Read input paths from context (resolved by context_extensions.py)
+    input_path = context.get("INPUT_KEY")
+
+    # Resolve output path from context (NOT state["artifacts"])
+    output_path_str = context.get("OUTPUT_KEY")
+    if not output_path_str:
+        return ActionResult(
+            status="REJECTED",
+            remark="OUTPUT_KEY output path not found in context",
+            artifacts={},
+            reject_code="MISSING_OUTPUT_PATH",
+        )
+    output_path = Path(output_path_str)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
 
     # ... implementation ...
 
@@ -123,9 +137,11 @@ def action_name_here(*, context, state, step_cfg, project_root):
    No dead-code branches where all paths return the same value. Every REJECTED
    path MUST have a distinct reject_code.
 
-8. **Artifact writes**: When writing output artifacts, the function MUST write
-   to the path specified by the artifact key in state["artifacts"]. Create
-   parent directories as needed.
+8. **Artifact writes**: When writing output artifacts, the function MUST read
+   the output path from `context` (not `state["artifacts"]`). The context dict
+   contains resolved absolute paths for all artifact keys (set by
+   context_extensions.py). Use `context.get("OUTPUT_KEY")` to get the output
+   path. Create parent directories as needed.
 
 ## Part B: Write Prompt Files
 
@@ -179,22 +195,30 @@ strategy described in the Domain Plan.
 
 Write to: {WORKFLOW_REQUIREMENTS_FILE}
 
-If any action in actions.py imports an external (non-stdlib) library, you MUST
-create a requirements.txt file listing ALL external dependencies. One package
+You MUST always create a requirements.txt file, even if the workflow has no
+external dependencies. This file is a declared artifact and the validator
+will check for its existence.
+
+If external libraries are used in actions.py, list ALL of them — one package
 per line, with version pins where appropriate.
 
-Example:
+Example (with dependencies):
 ```
 PyPDF2>=3.0.0
 python-docx>=1.0.0
 openpyxl>=3.1.0
 ```
 
+If no external dependencies are needed, write a file with a single comment:
+```
+# No external dependencies required — all imports are from the Python standard library.
+```
+
 Rules:
 - Only include packages that are actually imported in actions.py
 - Do NOT include Python standard library modules (json, pathlib, shutil, etc.)
 - Use `>=` version pins for minimum versions when known
-- If no external dependencies are needed, do NOT create requirements.txt
+- The file MUST exist at {WORKFLOW_REQUIREMENTS_FILE} even if empty/commented
 
 # meta.json Reporting
 

@@ -74,6 +74,7 @@ class ArtifactGeneratorBuilderExtensions(WorkflowExtensions):
         "PLAN_CHALLENGE_FILE": "PLAN_CHALLENGE-{seq}.md",
         # Steps 4-5: Implement <-> Critic
         "WORKFLOW_ACTIONS_FILE": "actions.py",
+        "WORKFLOW_REQUIREMENTS_FILE": "requirements.txt",
         "WORKFLOW_PROMPTS_DIR": "prompts/",
         "IMPL_CRITIQUE_FILE": "IMPL_CRITIQUE-{seq}.md",
         # Step 6: Assemble

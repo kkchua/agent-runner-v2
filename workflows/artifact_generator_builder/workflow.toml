@@ -107,7 +107,7 @@ role_policy = "architect_standard"
 
 [step.artifacts]
 required_inputs = ["DOMAIN_PLAN_FILE", "ANALYSIS_JSON_FILE", "REQUIREMENT_DOC"]
-produces = ["WORKFLOW_ACTIONS_FILE", "WORKFLOW_PROMPTS_DIR"]
+produces = ["WORKFLOW_ACTIONS_FILE", "WORKFLOW_PROMPTS_DIR", "WORKFLOW_REQUIREMENTS_FILE"]
 result_meta_key = "WORKFLOW_ACTIONS_FILE"
 
 # =============================================================================

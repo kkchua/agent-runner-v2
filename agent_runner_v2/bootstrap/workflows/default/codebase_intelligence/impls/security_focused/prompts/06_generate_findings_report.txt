@@ -1,0 +1,133 @@
+# Audit-Ready Consolidated Security Report
+
+You are producing an audit-ready consolidated report that prioritizes security
+and compliance findings. The report format is designed to serve as evidence for
+security audits (SOC 2, ISO 27001, internal compliance reviews).
+
+## Inputs
+
+- AUDIENCE_META_FILE: {AUDIENCE_META_FILE}
+  Path to a Markdown document containing audience-specific meta content
+  (developer, architect, executive views of the codebase).
+
+- HEALTH_FINDINGS_FILE: {HEALTH_FINDINGS_FILE}
+  Path to a Markdown document containing structural health analysis findings
+  across 5 dimensions.
+
+- SECURITY_FINDINGS_FILE: {SECURITY_FINDINGS_FILE}
+  Path to a Markdown document containing expanded security audit findings with
+  CWE classification, OWASP mapping, and compliance framework alignment.
+
+## Instructions
+
+Read all three input documents. Produce an audit-ready report that consolidates
+findings with emphasis on security and compliance posture.
+
+## Document Structure
+
+### 1. Compliance Dashboard
+
+Present a compliance status overview:
+
+| Framework | Status | Critical Issues | High Issues | Gaps |
+|-----------|--------|----------------|-------------|------|
+| SOC 2     | [Compliant/Partial/Non-Compliant] | N | N | [Key gaps] |
+| ISO 27001 | [Compliant/Partial/Non-Compliant] | N | N | [Key gaps] |
+| GDPR      | [Ready/At Risk/Non-Compliant] | N | N | [Key gaps] |
+| OWASP Top 10 | [Covered/Partially/Not Covered] | N | N | [Uncovered categories] |
+
+### 2. Risk Matrix
+
+Present findings on a likelihood vs impact matrix:
+
+| | Low Impact | Medium Impact | High Impact | Critical Impact |
+|---|-----------|---------------|-------------|-----------------|
+| High Likelihood | [findings] | [findings] | [findings] | [findings] |
+| Medium Likelihood | [findings] | [findings] | [findings] | [findings] |
+| Low Likelihood | [findings] | [findings] | [findings] | [findings] |
+
+List finding IDs (S-NNN, H-NNN) in each cell.
+
+### 3. Security Executive Summary
+
+2-3 paragraphs covering:
+- Overall security posture
+- Critical compliance gaps
+- Top risk areas requiring immediate attention
+- Audit readiness assessment (ready / needs work / not ready)
+
+### 4. Detailed Findings by Compliance Domain
+
+Organize findings by compliance framework rather than by security phase:
+
+#### SOC 2 Findings
+- All findings affecting SOC 2 Trust Service Criteria
+- Grouped by criteria (CC6.1, CC6.3, CC7.1, CC8.1)
+- Each finding with full detail from SECURITY_FINDINGS_FILE
+
+#### ISO 27001 Findings
+- All findings affecting ISO 27001 Annex A controls
+- Grouped by control family (A.9, A.10, A.12, A.14, A.18)
+- Each finding with full detail
+
+#### GDPR Findings
+- All findings affecting GDPR articles
+- Grouped by article (Art. 5, Art. 25, Art. 32)
+- Each finding with data protection impact assessment
+
+#### Health-Related Findings
+- Structural health findings that affect security posture
+- Focus on findings with security implications (circular deps affecting
+  isolation, coupling affecting blast radius, etc.)
+
+### 5. Remediation Plans with Effort Estimates
+
+For each critical and high finding:
+- Finding ID and title
+- Compliance impact
+- Remediation plan (step-by-step)
+- Effort estimate in person-days
+- Priority ranking
+- Dependencies between remediation items
+
+### 6. Evidence Chain for Audit Trail
+
+For audit evidence, provide:
+- List of all files analyzed (from CODEBASE_INVENTORY)
+- Analysis methodology description
+- Tools and techniques used
+- Timestamps of analysis
+- Scope and limitations
+
+### 7. Attestation-Ready Formatting
+
+Include sections formatted for auditor consumption:
+- Management assertion summary
+- Scope of analysis
+- Criteria used (CWE, OWASP, SOC 2 TSC, ISO 27001 Annex A)
+- Findings summary by risk level
+- Remediation commitment timeline
+
+## Validation Checklist
+
+Before writing the output, verify:
+
+- [ ] Compliance dashboard is complete and accurate
+- [ ] Risk matrix includes all findings
+- [ ] Executive summary accurately reflects security posture
+- [ ] All findings organized by compliance domain
+- [ ] Every critical and high finding has a remediation plan with effort estimate
+- [ ] Evidence chain lists all analyzed files
+- [ ] Attestation sections are present and properly formatted
+- [ ] No contradictions between dashboard and detailed findings
+- [ ] Document is self-contained and audit-ready
+- [ ] All finding IDs trace back to source documents
+
+## Output
+
+Write the complete Markdown document to: {FINDINGS_REPORT_FILE}
+
+Write in audit-ready format. Use tables for dashboards and matrices. Include
+complete compliance mappings. Ensure the document can serve as evidence for
+external auditors. Structure it so an auditor can find any finding, its
+compliance impact, and its remediation plan without reading the entire document.

@@ -1,0 +1,12 @@
+name: technical_deep_dive
+description: "Produces exhaustive technical analysis with code-level evidence, dependency graphs, and remediation code samples"
+
+overrides:
+  generate_audience_meta:
+    prompt: "impls/technical_deep_dive/prompts/03_generate_audience_meta.txt"
+  analyze_health:
+    prompt: "impls/technical_deep_dive/prompts/04_analyze_health.txt"
+  analyze_security:
+    prompt: "impls/technical_deep_dive/prompts/05_analyze_security.txt"
+  generate_findings_report:
+    prompt: "impls/technical_deep_dive/prompts/06_generate_findings_report.txt"

@@ -386,7 +386,66 @@ global `ACTION_REGISTRY`. The dispatch order is:
 
 ## 6. Artifact Contracts
 
-### 6.1 Input Artifact Naming Convention
+### 6.1 Universal Path Convention
+
+All workflows SHALL use the universal `input/` and `output/` convention for
+artifact path resolution. This convention applies to ALL workflows — builders,
+generators, and any other type. No workflow shall use alternative path
+conventions (no `Specs/` folders, no `docs/repo/.../runs/` paths).
+
+```
+{workspace_root}/
+    input/                          ← all input artifacts
+    output/{job_id}/                ← all output artifacts (per-job, isolated)
+```
+
+| Concept | Path | Description |
+|---------|------|-------------|
+| **Inputs** | `{workspace_root}/input/{filename}` | User-provided files, requirement docs, source data |
+| **Outputs** | `{workspace_root}/output/{job_id}/{filename}` | Generated artifacts, intermediate results, final deliverables |
+
+The `{job_id}` segment in the output path provides per-job isolation —
+multiple runs of the same workflow do not overwrite each other's outputs.
+
+### 6.2 Two-Dict Pattern
+
+Every workflow's `context_extensions.py` SHALL declare two class-level
+dictionaries and use the platform's universal resolvers:
+
+```python
+class MyWorkflowExtensions(WorkflowExtensions):
+    workflow_name = "my_workflow"
+
+    # Input artifacts: resolved to {workspace_root}/input/
+    INPUT_ARTIFACTS: dict[str, str] = {
+        "SOURCE_DOCUMENT_FILE": "",       # key → default filename (or "" for none)
+    }
+
+    # Output artifacts: resolved to {workspace_root}/output/{job_id}/
+    OUTPUT_ARTIFACTS: dict[str, str] = {
+        "SUMMARY_FILE": "SUMMARY_FILE.md",           # key → filename pattern
+        "ANALYSIS_JSON": "ANALYSIS_JSON-{seq}.json",  # {seq} = sequence number
+    }
+
+    def build_context_extensions(self, *, state, step, step_cfg, ctx, project_root=None):
+        result = {}
+        workspace_root = Path(project_root or get_workspace_root() or Path.cwd())
+        # ... system reference paths (GOVERNANCE_RUNTIME_ROOT, etc.) ...
+        resolve_input_artifacts(result, state, workspace_root, self.INPUT_ARTIFACTS)
+        resolve_output_artifacts(result, state, workspace_root, self.OUTPUT_ARTIFACTS)
+        return result
+```
+
+**Resolution rules:**
+
+- **Input resolver** (`resolve_input_artifacts`): Extracts the filename from
+  the artifact value in state (or uses the dict default), resolves to
+  `{workspace_root}/input/{filename}`.
+- **Output resolver** (`resolve_output_artifacts`): Replaces `{seq}` in the
+  pattern with the zero-padded sequence number, resolves to
+  `{workspace_root}/output/{job_id}/{filename}`.
+
+### 6.3 Input Artifact Naming Convention
 
 All input artifacts that represent user-provided files or directories SHALL use
 standardized suffixes:
@@ -401,33 +460,23 @@ Every workflow MUST declare its input artifacts with correct suffixes so that
 caller interfaces (operator console, CLI) can distinguish file inputs from
 other values.
 
-### 6.2 Output Delivery Contract
+### 6.4 Output Delivery Contract
 
 Every workflow SHALL declare where final output artifacts are delivered:
 
-1. **Dedicated output location** — Final deliverables SHALL be written to a
-   declared output location, separate from intermediate working artifacts
+1. **Dedicated output location** — Final deliverables SHALL be written to
+   `{workspace_root}/output/{job_id}/`, separate from input artifacts
 2. **Output catalog** — The workflow SHALL document which artifact keys represent
    final deliverables and their file formats
 3. **Delivery step** — The workflow SHALL include a delivery phase (or equivalent)
    that places final artifacts into the declared output location after validation
 
-### 6.3 Artifact Key Registration
+### 6.5 Artifact Key Registration
 
-Every artifact key used in `workflow.toml` step definitions MUST be registered
-in `context_extensions.py` via `register_artifact_keys()`. The registration
-maps each key to a relative path template:
-
-```python
-def register_artifact_keys(self, *, job_id, mode):
-    return {
-        "SOURCE_DOCUMENT_FILE": f"jobs/{job_id}/input/{{filename}}",
-        "PARSED_DOCUMENT": f"jobs/{job_id}/intermediate/PARSED_DOCUMENT.json",
-        "SUMMARY_FILE": f"jobs/{job_id}/output/SUMMARY_FILE.md",
-    }
-```
-
-Path templates MAY use `{job_id}` and other runtime placeholders.
+Every artifact key used in `workflow.toml` step definitions MUST be declared
+in either `INPUT_ARTIFACTS` or `OUTPUT_ARTIFACTS` in `context_extensions.py`.
+The `register_artifact_keys()` method is provided for backward compatibility
+but the two-dict pattern is the authoritative source.
 
 ---
 
@@ -527,13 +576,10 @@ mechanically construct `workflow.toml`, `context_extensions.py`, and
 
   "artifact_keys": {
     "inputs": [
-      {"key": "string", "pattern": "string — relative path template"}
-    ],
-    "intermediate": [
-      {"key": "string", "pattern": "string — relative path template"}
+      {"key": "string", "pattern": "string — filename or filename template"}
     ],
     "outputs": [
-      {"key": "string", "pattern": "string — relative path template"}
+      {"key": "string", "pattern": "string — filename or filename pattern (may use {seq})"}
     ]
   },
 
@@ -573,14 +619,15 @@ mechanically construct `workflow.toml`, `context_extensions.py`, and
 |-------------|--------|
 | `identity` | `[workflow]` section in workflow.toml; class name in context_extensions.py |
 | `domain_steps` | `[[step]]` sections in workflow.toml (assembler adds `onsuccess` chaining) |
-| `artifact_keys` | `register_artifact_keys()` in context_extensions.py; `[step.artifacts]` in workflow.toml |
+| `artifact_keys` | `INPUT_ARTIFACTS` + `OUTPUT_ARTIFACTS` dicts in context_extensions.py; `[step.artifacts]` in workflow.toml |
 | `implementations` | `[[workflow.implementation]]` in workflow.toml; `impls/{name}/impl.yaml` files |
 
 ### 8.4 What the Assembler Adds Automatically
 
 - `onsuccess` routing — chains steps in declared order
 - Terminal `step_completion` step — always appended
-- `build_context_extensions()` body — generic template resolves all registered keys
+- `INPUT_ARTIFACTS` + `OUTPUT_ARTIFACTS` dicts — from `artifact_keys` inputs/outputs
+- `build_context_extensions()` body — uses `resolve_input_artifacts()` and `resolve_output_artifacts()`
 - `install_to_global()` / `sync_to_backend()` — always NO_OP
 - Import statements, class skeleton — all boilerplate
 

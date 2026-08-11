@@ -87,8 +87,9 @@ every external (non-stdlib) library used. Then verify:
   - No extra packages listed in requirements.txt that aren't imported
   - Version pins are reasonable (not pinned to exact old versions)
 
-- **If no external libraries are used**: requirements.txt should NOT exist.
-  If it does, that's a minor finding (unnecessary file).
+- **If no external libraries are used**: requirements.txt SHOULD exist with a
+  comment indicating no external dependencies. This is expected — the file is
+  always created as a declared artifact.
 
 - **Format coverage check**: Every input file type mentioned in the
   requirement doc (e.g., .pdf, .docx, .xlsx) MUST have corresponding

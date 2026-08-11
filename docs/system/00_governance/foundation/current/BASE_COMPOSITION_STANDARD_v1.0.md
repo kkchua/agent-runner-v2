@@ -595,20 +595,9 @@ mechanically construct `workflow.toml`, `context_extensions.py`, and
         }
       }
     }
-  ],
-
-  "capability_gaps": [
-    {
-      "requirement": "string — verbatim quote from requirement doc",
-      "missing_capability": "string — what the platform cannot do",
-      "proposed_solution": "string — exact install command (e.g., pip install PyPDF2)",
-      "blocking": "boolean — true if requirement cannot be met without this"
-    }
   ]
 }
 ```
-
-If no capability gaps exist, the array SHALL be empty: `"capability_gaps": []`.
 
 ### 8.2 Field Constraints
 
@@ -623,9 +612,6 @@ If no capability gaps exist, the array SHALL be empty: `"capability_gaps": []`.
 | `domain_steps[].role_policy` | REQUIRED when type="prompt" |
 | `artifact_keys.inputs[].key` | MUST end with `_FILE` or `_DIR` |
 | `implementations[].name` | MUST be unique. MUST NOT be "default". |
-| `capability_gaps[].requirement` | MUST be a verbatim quote from the requirement doc |
-| `capability_gaps[].proposed_solution` | MUST include exact install command (e.g., `pip install PyPDF2`) |
-| `capability_gaps[].blocking` | MUST be true if the requirement cannot be met without the library |
 
 ### 8.3 What the Assembler Produces
 
@@ -657,7 +643,6 @@ document into a workflow package. It follows the SDLC quality flow scoped to
 
 ```
 1.  analyze_requirement  (prompt)  — Read requirement doc, produce Analysis JSON
-1b. check_capability_gaps (ACTION) — Verify blocking capability gaps are resolved
 2.  plan_domain_logic    (prompt)  — Design what actions + prompts are needed
 3.  challenge_plan       (prompt)  — Attack the plan: missing edges, weak validations
     ↕ refine loop (max 2)
@@ -716,52 +701,6 @@ Output: same package + new impls/{new_name}/ directory + updated workflow.toml
 
 Only the delta is generated — new impl's actions + prompts + impl.yaml.
 Base workflow is untouched.
-
-### 9.6 Capability Gap Detection and Escalation
-
-When a requirement document specifies capabilities that need external
-libraries or tools not available in the Python standard library, the AGB
-pipeline MUST detect and escalate these gaps rather than silently dropping
-the requirements.
-
-**Detection (Step 1 — analyze_requirement):**
-The analyzer scans every requirement and checks whether it can be fulfilled
-with standard library alone. If not, it records a `capability_gap` entry in
-the Analysis JSON with the missing capability, proposed solution (install
-command), and whether the gap is blocking.
-
-**Early intervention (Step 1b — check_capability_gaps):**
-A lightweight action step that runs immediately after analysis. It reads
-the `capability_gaps` array and attempts to import each blocking library.
-If any library is not importable, the action returns REJECTED with
-`CAPABILITY_GAP_BLOCKING` — routing the job to AWAITING_INTERVENTION
-immediately, before wasting tokens on planning or implementation. The
-rejection remark includes exact install commands for the human.
-
-When the human resumes after installing libraries, the action re-checks
-imports and returns APPROVED, allowing the pipeline to proceed.
-
-**Planning (Step 2 — plan_domain_logic):**
-The planner MUST address every capability gap by either:
-- Adding a setup action step that installs the required library (preferred), or
-- Flagging the gap as unresolvable, recommending human intervention.
-
-**Challenge (Step 3 — challenge_plan):**
-The adversary verifies that every capability gap is addressed. A blocking
-gap with no setup action and no blocker flag is a BLOCKING attack.
-
-**Implementation (Step 4 — implement_domain):**
-If a capability gap has a setup action, the implementer MUST use the
-library in the parsing logic. Silently dropping a format that has a gap
-entry is forbidden.
-
-**Gatekeep (Step 9 — gatekeep_package):**
-The gatekeep verifies requirement completeness. If a blocking capability
-gap has no setup action, or if the requirement doc specifies input types
-that no action handles, the gatekeep REJECTs with a message that includes
-the proposed solution (e.g., "pip install PyPDF2"). After refine loop
-exhaustion, the job enters AWAITING_INTERVENTION with instructions for
-the human to install the library and retry.
 
 ---
 

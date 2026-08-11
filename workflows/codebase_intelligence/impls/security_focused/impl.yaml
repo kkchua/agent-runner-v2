@@ -1,0 +1,8 @@
+name: security_focused
+description: "Prioritizes security and compliance analysis with expanded vulnerability scanning and audit-ready output"
+
+overrides:
+  analyze_security:
+    prompt: "impls/security_focused/prompts/05_analyze_security.txt"
+  generate_findings_report:
+    prompt: "impls/security_focused/prompts/06_generate_findings_report.txt"

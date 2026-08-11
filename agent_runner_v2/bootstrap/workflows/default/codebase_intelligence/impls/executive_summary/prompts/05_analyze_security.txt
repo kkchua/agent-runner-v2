@@ -1,0 +1,94 @@
+# Executive Security Risk Summary
+
+You are producing a security risk summary for executive consumption. Instead of
+per-vulnerability detail, produce risk categories with business impact framing
+and remediation priorities.
+
+## Inputs
+
+- CODEBASE_INVENTORY: {CODEBASE_INVENTORY}
+  Path to a JSON file containing the codebase inventory with file metadata,
+  module list, and package structure. Use this to identify which files to examine.
+
+- SOURCE_CODE_DIR: {SOURCE_CODE_DIR}
+  Path to the directory containing Python source code files. Read source files
+  to perform security analysis.
+
+## Instructions
+
+Read the CODEBASE_INVENTORY and selected source files from SOURCE_CODE_DIR.
+Produce an executive security risk summary organized by risk category.
+
+CRITICAL RULE: Actual secret values MUST be redacted in all findings.
+
+## Document Structure
+
+### 1. Security Posture Overview
+
+One paragraph summarizing the overall security posture:
+- Overall risk level (Low / Medium / High / Critical)
+- Key risk areas
+- Immediate action required (if any)
+
+### 2. Risk Categories
+
+Organize findings by business risk category:
+
+#### Data Breach Risk
+- What data exposure risks exist?
+- Hardcoded secrets, exposed credentials, unencrypted data
+- Business consequence: regulatory fines, reputational damage, customer trust loss
+- Priority: Immediate / Short-term / Low
+
+#### Compliance Risk
+- What compliance-related issues exist?
+- Missing audit trails, insecure data handling, weak access controls
+- Business consequence: regulatory non-compliance, audit failures
+- Priority: Immediate / Short-term / Low
+
+#### Operational Risk
+- What operational risks exist?
+- Unpatched dependencies, debug configurations, missing HTTPS
+- Business consequence: service disruption, security incidents
+- Priority: Immediate / Short-term / Low
+
+#### Supply Chain Risk
+- What dependency-related risks exist?
+- Use of insecure libraries, outdated packages, trust boundary issues
+- Business consequence: vulnerability exploitation, compromised builds
+- Priority: Immediate / Short-term / Low
+
+### 3. Remediation Priorities
+
+Ranked list of top 3-5 actions, each with:
+- Action description (plain language)
+- Risk category addressed
+- Business impact of taking action
+- Effort estimate (Small / Medium / Large)
+- Timeline recommendation
+
+### 4. Summary Statistics
+
+- Total security observations by risk category
+- Count of critical/high/medium/low items
+- Comparison to previous assessment (if applicable)
+
+## Validation Checklist
+
+Before writing the output, verify:
+
+- [ ] All risk categories are addressed
+- [ ] No actual secret values appear in the output (all redacted)
+- [ ] Business consequences are concrete and specific
+- [ ] Every finding traces to actual source code evidence
+- [ ] Recommendations are framed as business decisions
+- [ ] Priority levels are consistent
+- [ ] No hallucinated vulnerabilities
+- [ ] Document is self-contained and readable by executives
+
+## Output
+
+Write the complete Markdown document to: {SECURITY_FINDINGS_FILE}
+
+Write in executive risk briefing style. Use tables and bullet points. Frame
+everything in terms of business risk and investment decisions.

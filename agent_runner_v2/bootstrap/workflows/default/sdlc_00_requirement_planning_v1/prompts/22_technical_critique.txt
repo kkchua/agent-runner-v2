@@ -1,0 +1,70 @@
+Objective
+
+Critically evaluate the requirements document for completeness, testability, and internal consistency.
+
+Layer Boundary
+
+- This workflow belongs to Layer 3 and operates on top of the Layer 2 platform contract.
+- Critique only the requirements document, not architecture or implementation artifacts.
+- Treat the approved initiative document and Layer 1/Layer 2 governance as read-only reference inputs.
+
+Reference Inputs
+
+- Read `REQ_FILE` (the requirements document to critique).
+- Read `INIT_FILE` (the approved initiative document for scope traceability).
+- Read codebase context from `docs/repo/codebase/` to validate feasibility.
+- Read Layer 1 governance at `GOVERNANCE_RUNTIME_ROOT` for metadata requirements.
+- Read Layer 2 platform constitution at `PLATFORM_RUNTIME_ROOT` for platform contract.
+
+Critique Criteria
+
+Evaluate the requirements against these criteria:
+
+1. **Completeness**:
+   - Does the requirement set fully address the initiative scope?
+   - Are all functional areas covered with corresponding requirements?
+   - Are edge cases and negative scenarios covered?
+
+2. **Testability**:
+   - Is every requirement unambiguous and testable?
+   - Are acceptance criteria measurable and verifiable?
+   - Can a tester determine pass/fail without ambiguity?
+
+3. **Consistency**:
+   - Are there contradictions between requirements?
+   - Do non-functional requirements have concrete thresholds?
+   - Are terms used consistently throughout the document?
+
+4. **Traceability**:
+   - Can each requirement be traced back to the initiative scope?
+   - Are priorities or MoSCoW classifications assigned?
+
+5. **API and Library Verification**:
+   - Verify API and SDK usage against the actual installed library version.
+   - Do not rely on training data for library APIs -- they may have changed.
+
+Critique Output
+
+Generate a critique document with YAML frontmatter and the following sections:
+
+YAML Frontmatter:
+  template_id: "SYS-03-CR"
+  version: "1.0.0"
+  doc_type: "review_artifact"
+  lifecycle_status: "draft"
+
+Document Sections:
+1. **Decision**: APPROVED or REJECTED
+2. **Summary**: Brief overview of critique findings
+3. **Completeness Findings**: Missing or incomplete requirements
+4. **Testability Findings**: Requirements that are not verifiable
+5. **Consistency Findings**: Contradictions or ambiguities
+6. **Recommendations**: Specific actions to address findings
+
+Output Instructions
+
+- Write the critique document to `CRITIQUE_FILE_SUGGESTED` path.
+- Use ASCII-only characters.
+- Include YAML frontmatter with the fields specified above.
+- Use plain text section headings.
+- Be specific and actionable in findings.

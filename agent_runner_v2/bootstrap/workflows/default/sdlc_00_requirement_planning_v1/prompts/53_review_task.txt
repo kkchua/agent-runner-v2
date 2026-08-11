@@ -1,0 +1,109 @@
+Objective
+
+Review the task specification for completeness, clarity, and compliance with governance standards.
+
+Layer Boundary
+
+- This workflow belongs to Layer 3 and operates on top of the Layer 2 platform contract.
+- Review only the task specification, not implementation or execution artifacts.
+- Treat Layer 1 governance and Layer 2 platform constitution as read-only authority.
+
+Reference Inputs
+
+- Read `TASK_FILE` (the task specification to review).
+- Read `CRITIQUE_FILE_SUGGESTED` (the technical critique findings).
+- Read `BACKLOG_FILE` (approved backlog for traceability verification).
+- Read codebase context from `docs/repo/codebase/current/` to validate scope understanding.
+- Read Layer 1 governance at `GOVERNANCE_RUNTIME_ROOT` for metadata compliance.
+- Read Layer 2 platform constitution at `PLATFORM_RUNTIME_ROOT` for platform contract compliance.
+
+Review Criteria
+
+Evaluate the task specification against these criteria:
+
+1. **Completeness**:
+   - All required sections are present and substantive
+   - Task Overview clearly states the scope
+   - Backlog Traceability links back to BACKLOG_FILE
+   - Task Scope is detailed and specific
+   - Acceptance Criteria are measurable
+   - Technical Approach is coherent
+   - Files and Components are identified
+   - Dependencies are documented
+   - Risk Factors are assessed
+   - Open Questions are captured (if any)
+
+2. **Clarity**:
+   - Language is clear and unambiguous
+   - No contradictory statements
+   - Technical terms are defined or standard
+   - Scope boundaries are explicit
+
+3. **Traceability**:
+   - TASK preserves the intent of BACKLOG_FILE
+   - No scope creep or invented requirements
+   - Assumptions are explicitly recorded
+   - Source backlog is referenced
+
+4. **Metadata Compliance**:
+   - YAML frontmatter includes all required fields
+   - For each field, quote the ACTUAL value found in the document before judging compliance
+   - template_id is "SYS-03-TK"
+   - lifecycle_status is "draft"
+   - layer is "layer3"
+   - platform is "agent-runner-v2"
+
+5. **Technical Accuracy**:
+   - Code snippets, API references, and file paths are verified against the actual codebase
+   - Library/SDK usage matches the installed version (check source or docs, not training data)
+   - Variable names, function signatures, and control patterns are consistent with existing code
+
+6. **Encoding Compliance**:
+   - ASCII-only content (no em-dashes, curly quotes, Unicode)
+   - Plain text section headings (no backticks or formatting)
+
+7. **Governance Compliance**:
+   - No Layer 1 governance redefinition
+   - No Layer 2 platform contract redefinition
+   - No implementation code or execution results
+   - No implementation planning details
+
+8. **Critique Resolution**:
+   - The document contains a "Critique Resolution" section
+   - Each finding from `CRITIQUE_FILE_SUGGESTED` has a corresponding resolution
+   - Resolutions are substantive (not just "acknowledged" without action)
+   - The resolutions actually address the technical concerns raised in the critique
+   - If a finding was not addressed, there is a valid justification for why
+
+Review Output
+
+Generate a review document with:
+
+1. **Decision**: APPROVED or REJECTED
+2. **Summary**: Brief overview of review findings
+3. **Findings**: Detailed list of issues (if any), categorized as:
+   - **Critical**: Must fix before approval (missing required sections, metadata errors)
+   - **Major**: Should fix (unclear scope, missing acceptance criteria)
+   - **Minor**: Nice to fix (style issues, minor clarifications)
+4. **Recommendations**: Specific actions to address findings
+
+If APPROVED:
+- All required sections are present and substantive
+- Metadata is compliant
+- Encoding is ASCII-only
+- No governance violations
+- Critique Resolution section is present and addresses all findings from the critique
+
+If REJECTED:
+- Provide specific, actionable feedback
+- Cite exact sections or text that need changes
+- Explain what must be fixed for approval
+- Reject if Critique Resolution section is missing or does not address the critique findings
+
+Output Instructions
+
+- Write the review document to `REVIEW_FILE_SUGGESTED` path.
+- Use ASCII-only characters.
+- Use plain text section headings.
+- Provide direct citations to offending text when rejecting.
+- Be specific and actionable in feedback.

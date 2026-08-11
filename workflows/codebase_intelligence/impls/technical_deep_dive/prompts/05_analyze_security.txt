@@ -1,0 +1,142 @@
+# Exhaustive Security Analysis
+
+You are performing an exhaustive security audit of a codebase. Produce per-
+vulnerability analysis with full code context, CWE classification, OWASP mapping,
+and exact remediation code samples.
+
+## Inputs
+
+- CODEBASE_INVENTORY: {CODEBASE_INVENTORY}
+  Path to a JSON file containing the codebase inventory with file metadata,
+  module list, and package structure. Use this to identify which files to examine.
+
+- SOURCE_CODE_DIR: {SOURCE_CODE_DIR}
+  Path to the directory containing Python source code files. Read ALL source
+  files exhaustively for security analysis.
+
+## Instructions
+
+Read the CODEBASE_INVENTORY and then read ALL source files from SOURCE_CODE_DIR.
+Produce an exhaustive security analysis with full code context for every finding.
+
+CRITICAL RULE: Actual secret values MUST be redacted in all findings.
+
+## Document Structure
+
+### 1. Per-Vulnerability Analysis
+
+For each vulnerability found, provide:
+
+#### Finding S-NNN: [Title]
+
+- **Phase**: [One of the 5 security phases]
+- **Severity**: [critical / high / medium / low / info]
+- **CWE Classification**: [CWE-ID and name, e.g., CWE-798 Use of Hard-coded Credentials]
+- **OWASP Mapping**: [OWASP Top 10 category, e.g., A07:2021 Identification and Authentication Failures]
+- **File**: [exact file path]
+- **Line**: [exact line number]
+
+**Full Code Context** (10+ lines around the issue):
+```python
+# Show complete context with ***REDACTED*** for secrets
+```
+
+**Issue Description**:
+Detailed technical explanation of why this is a vulnerability.
+
+**Proof-of-Concept Exploitation Scenario**:
+Step-by-step description of how an attacker could exploit this issue.
+
+**Before Code**:
+```python
+# Current vulnerable code
+```
+
+**After Code**:
+```python
+# Remediated code with secure alternative
+```
+
+**Impact**: Security risk with concrete consequences.
+
+**Remediation Steps**: Step-by-step plan to fix the issue.
+
+### 2. Phase 1: Secret Detection (Exhaustive)
+
+Scan every source file for:
+- Hardcoded API keys, tokens, passwords
+- Private keys (RSA, EC, etc.)
+- Database connection strings with credentials
+- OAuth secrets
+- Symmetric encryption keys
+
+For each finding: show full code context, redacted value, CWE classification.
+
+### 3. Phase 2: Dependency Audit (Exhaustive)
+
+For every import in the codebase:
+- Assess if the module is known-insecure for the usage pattern
+- Check for pickle, eval, exec usage
+- Identify deprecated module usage
+- Analyze trust boundaries for deserialization
+
+### 4. Phase 3: Code Pattern Scan (Exhaustive)
+
+For every file, check:
+- SQL injection patterns
+- Path traversal patterns
+- Command injection patterns
+- Unsafe deserialization
+- Missing input validation
+- Race conditions
+
+### 5. Phase 4: Authentication Review (Exhaustive)
+
+If auth code exists:
+- Map the complete authentication flow
+- Identify every auth check point
+- Verify token handling security
+- Check for hardcoded credentials
+- Assess session management
+
+### 6. Phase 5: Infrastructure Check (Exhaustive)
+
+Review all configuration files:
+- Debug mode settings
+- CORS configuration
+- HTTPS enforcement
+- Environment variable handling
+- TLS/SSL configuration
+
+## Summary Section
+
+At the top of the document:
+- Total findings by severity
+- Total findings by phase
+- CWE distribution
+- OWASP coverage map
+- Overall security posture
+
+## Validation Checklist
+
+Before writing the output, verify:
+
+- [ ] All 5 phases are exhaustively analyzed
+- [ ] No actual secret values appear in the output (all redacted)
+- [ ] Every finding has CWE classification
+- [ ] Every finding has OWASP mapping (where applicable)
+- [ ] Every finding includes 10+ lines of code context
+- [ ] Every finding has before/after code samples
+- [ ] Proof-of-concept scenarios are realistic
+- [ ] Finding IDs are sequential
+- [ ] No hallucinated vulnerabilities
+- [ ] All file:line references are accurate
+- [ ] Document is self-contained
+
+## Output
+
+Write the complete Markdown document to: {SECURITY_FINDINGS_FILE}
+
+Write with maximum technical detail. Include extensive code blocks. Every
+vulnerability must have full context, classification, exploitation scenario,
+and remediation code. This is a complete security reference document.

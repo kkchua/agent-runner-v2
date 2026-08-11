@@ -1,0 +1,70 @@
+Objective
+
+Critically evaluate the solution architecture plan for design soundness, codebase alignment, and technical viability.
+
+Layer Boundary
+
+- This workflow belongs to Layer 3 and operates on top of the Layer 2 platform contract.
+- Critique only the planning document, not implementation artifacts.
+- Treat the approved requirements, Layer 1 governance, and Layer 2 platform constitution as read-only reference inputs.
+
+Reference Inputs
+
+- Read `PLAN_FILE` (the solution architecture plan to critique).
+- Read `REQ_FILE` (the approved requirements document for traceability).
+- Read codebase context from `docs/repo/codebase/` to validate feasibility.
+- Read Layer 1 governance at `GOVERNANCE_RUNTIME_ROOT` for metadata requirements.
+- Read Layer 2 platform constitution at `PLATFORM_RUNTIME_ROOT` for platform contract.
+
+Critique Criteria
+
+Evaluate the plan against these criteria:
+
+1. **Codebase Alignment**:
+   - Do referenced modules, components, and APIs actually exist in the codebase?
+   - Does the plan account for existing codebase conventions?
+   - Are there naming conflicts with existing code?
+
+2. **Design Soundness**:
+   - Are the chosen design patterns appropriate for the problem?
+   - Is the component decomposition clean and well-bounded?
+   - Are there simpler alternatives overlooked?
+
+3. **Technical Viability**:
+   - Are performance/scalability claims grounded in reality?
+   - Are there technical risks not addressed in the plan?
+   - Does the plan introduce unnecessary complexity?
+
+4. **Requirements Coverage**:
+   - Does the plan address all requirements from the REQ document?
+   - Are there requirements that lack a corresponding design element?
+
+5. **API and Library Verification**:
+   - Verify API and SDK usage against the actual installed library version.
+   - Do not rely on training data for library APIs -- they may have changed.
+
+Critique Output
+
+Generate a critique document with YAML frontmatter and the following sections:
+
+YAML Frontmatter:
+  template_id: "SYS-03-CR"
+  version: "1.0.0"
+  doc_type: "review_artifact"
+  lifecycle_status: "draft"
+
+Document Sections:
+1. **Decision**: APPROVED or REJECTED
+2. **Summary**: Brief overview of critique findings
+3. **Codebase Alignment Findings**: Mismatches with existing code
+4. **Design Soundness Findings**: Pattern or decomposition issues
+5. **Viability Findings**: Technical risks or unrealistic claims
+6. **Recommendations**: Specific actions to address findings
+
+Output Instructions
+
+- Write the critique document to `CRITIQUE_FILE_SUGGESTED` path.
+- Use ASCII-only characters.
+- Include YAML frontmatter with the fields specified above.
+- Use plain text section headings.
+- Be specific and actionable in findings.

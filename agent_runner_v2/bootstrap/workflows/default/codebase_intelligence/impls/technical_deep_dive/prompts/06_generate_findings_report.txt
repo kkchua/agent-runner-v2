@@ -1,0 +1,117 @@
+# Comprehensive Technical Reference: Consolidated Findings
+
+You are producing a comprehensive technical reference that consolidates all
+analysis streams. This is the maximum-detail variant with complete finding
+catalogs, dependency listings, and code-level remediation guides.
+
+## Inputs
+
+- AUDIENCE_META_FILE: {AUDIENCE_META_FILE}
+  Path to a Markdown document containing exhaustive technical documentation
+  with module dependency trees, API listings, class hierarchies, and data flows.
+
+- HEALTH_FINDINGS_FILE: {HEALTH_FINDINGS_FILE}
+  Path to a Markdown document containing exhaustive health analysis with per-
+  module analysis, exact metrics, code snippets, and before/after samples.
+
+- SECURITY_FINDINGS_FILE: {SECURITY_FINDINGS_FILE}
+  Path to a Markdown document containing exhaustive security analysis with
+  per-vulnerability detail, CWE classification, and remediation code samples.
+
+## Instructions
+
+Read all three input documents completely. Produce a comprehensive technical
+reference that serves as a complete codebase health and security manual.
+
+## Document Structure
+
+### 1. Executive Summary
+
+Concise overview (1 page):
+- Total findings by severity and domain
+- Top 5 most critical issues
+- Overall assessment
+
+### 2. Complete Finding Catalog
+
+List ALL findings (not just critical/high) from both health and security:
+
+#### Health Findings (H-001 through H-NNN)
+
+For each finding:
+- ID, dimension, severity, title
+- Evidence (file:line, metrics)
+- Impact
+- Recommendation
+
+#### Security Findings (S-001 through S-NNN)
+
+For each finding:
+- ID, phase, severity, title
+- CWE, OWASP classification
+- Evidence (file:line, code snippet)
+- Impact
+- Recommendation
+
+### 3. Complete Dependency Graph Listing
+
+Full text-based listing of the dependency graph:
+- All modules and their dependencies
+- Cycle details with import lines
+- Coupling metrics per module
+- Visual representation of hotspots
+
+### 4. Module-by-Module Health Scores
+
+For each module:
+- Health score (derived from findings affecting it)
+- List of findings referencing this module
+- Remediation priority
+
+### 5. Code-Level Remediation Guide
+
+Organized by priority:
+1. Critical fixes (with before/after code)
+2. High priority fixes (with before/after code)
+3. Medium priority improvements
+4. Low priority enhancements
+
+Each entry includes:
+- Issue description
+- Exact file and line to change
+- Before code
+- After code
+- Verification steps (how to confirm the fix works)
+
+### 6. Technical Appendix: Raw Metrics
+
+Complete metrics data:
+- All module metrics (fan_in, fan_out, line_count)
+- All import edges with types
+- All detected cycles with full paths
+- Statistical summaries (mean, median, std dev for metrics)
+- Distribution tables
+
+## Validation Checklist
+
+Before writing the output, verify:
+
+- [ ] All findings from health and security are included (complete catalog)
+- [ ] Finding IDs match the source documents exactly
+- [ ] No findings are duplicated
+- [ ] Dependency graph listing matches IMPORT_GRAPH data
+- [ ] Module-by-module scores are derived from actual findings
+- [ ] Before/after code samples are included for all critical and high findings
+- [ ] Raw metrics appendix data matches input artifacts
+- [ ] Document is self-contained
+- [ ] Cross-references between sections are accurate
+- [ ] Remediation guide is organized by priority
+
+## Output
+
+Write the complete Markdown document to: {FINDINGS_REPORT_FILE}
+
+Write with maximum technical detail. Include all findings, all metrics, all code
+samples. This document should serve as a complete technical reference for the
+codebase health and security state. Use tables, code blocks, and structured
+sections extensively.
