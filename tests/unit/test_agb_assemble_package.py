@@ -483,6 +483,39 @@ class TestGeneratedContextExtensions:
         assert "BASE_COMPOSITION_STANDARD" in content
         assert "get_governance_runtime_root" in content
 
+    def test_two_dict_pattern_generated(self, out_dir, mock_state):
+        """Generated context_extensions.py uses INPUT_ARTIFACTS and OUTPUT_ARTIFACTS dicts."""
+        from actions import assemble_package
+
+        result = assemble_package(
+            context={}, state=mock_state, step_cfg={}, project_root=out_dir.parent,
+        )
+        assert result.status == "APPROVED"
+        ext_path = Path(result.artifacts["WORKFLOW_EXTENSIONS_FILE"])
+        content = ext_path.read_text(encoding="utf-8")
+        # Two-dict pattern
+        assert "INPUT_ARTIFACTS" in content
+        assert "OUTPUT_ARTIFACTS" in content
+        # Universal resolvers
+        assert "resolve_input_artifacts" in content
+        assert "resolve_output_artifacts" in content
+        # Input keys go to INPUT_ARTIFACTS
+        assert '"SOURCE_DOCUMENT_FILE"' in content
+        # Output keys go to OUTPUT_ARTIFACTS
+        assert '"SUMMARY_FILE"' in content
+
+    def test_no_old_resolve_input_specs(self, out_dir, mock_state):
+        """Generated context_extensions.py does NOT use old resolve_input_specs."""
+        from actions import assemble_package
+
+        result = assemble_package(
+            context={}, state=mock_state, step_cfg={}, project_root=out_dir.parent,
+        )
+        assert result.status == "APPROVED"
+        ext_path = Path(result.artifacts["WORKFLOW_EXTENSIONS_FILE"])
+        content = ext_path.read_text(encoding="utf-8")
+        assert "resolve_input_specs" not in content
+
 
 class TestGeneratedWorkflowMetadata:
     """Verify generated workflow.toml includes metadata fields (R3-8)."""
@@ -695,3 +728,88 @@ class TestExtendMode:
 
         assert result.status == "REJECTED"
         assert result.reject_code == "EXISTING_WORKFLOW_NOT_FOUND"
+
+
+class TestUniversalResolvers:
+    """Test resolve_input_artifacts and resolve_output_artifacts."""
+
+    def test_resolve_input_with_value(self, tmp_path):
+        """Input resolver resolves artifact value to input/ directory."""
+        from agent_runner_v2.workflow_packages.extensions_base import (
+            resolve_input_artifacts,
+        )
+
+        result = {}
+        state = {"artifacts": {"SOURCE_FILE": "/some/path/document.pdf"}}
+        resolve_input_artifacts(result, state, tmp_path, {"SOURCE_FILE": ""})
+
+        assert result["SOURCE_FILE"] == str(tmp_path / "input" / "document.pdf")
+
+    def test_resolve_input_with_default(self, tmp_path):
+        """Input resolver uses default filename when value is empty."""
+        from agent_runner_v2.workflow_packages.extensions_base import (
+            resolve_input_artifacts,
+        )
+
+        result = {}
+        state = {"artifacts": {}}
+        resolve_input_artifacts(result, state, tmp_path, {"REQUIREMENT_DOC": "requirement.md"})
+
+        assert result["REQUIREMENT_DOC"] == str(tmp_path / "input" / "requirement.md")
+
+    def test_resolve_input_empty_optional(self, tmp_path):
+        """Input resolver returns empty string for optional inputs with no value."""
+        from agent_runner_v2.workflow_packages.extensions_base import (
+            resolve_input_artifacts,
+        )
+
+        result = {}
+        state = {"artifacts": {}}
+        resolve_input_artifacts(result, state, tmp_path, {"OPTIONAL_DIR": ""})
+
+        assert result["OPTIONAL_DIR"] == ""
+
+    def test_resolve_output_basic(self, tmp_path):
+        """Output resolver resolves to output/{job_id}/ directory."""
+        from agent_runner_v2.workflow_packages.extensions_base import (
+            resolve_output_artifacts,
+        )
+
+        result = {}
+        state = {"job_id": "AGB-test123", "seq": 1}
+        resolve_output_artifacts(
+            result, state, tmp_path,
+            {"SUMMARY_FILE": "SUMMARY_FILE.md"},
+        )
+
+        assert result["SUMMARY_FILE"] == str(tmp_path / "output" / "AGB-test123" / "SUMMARY_FILE.md")
+
+    def test_resolve_output_with_seq(self, tmp_path):
+        """Output resolver replaces {seq} with zero-padded sequence number."""
+        from agent_runner_v2.workflow_packages.extensions_base import (
+            resolve_output_artifacts,
+        )
+
+        result = {}
+        state = {"job_id": "AGB-test123", "seq": 3}
+        resolve_output_artifacts(
+            result, state, tmp_path,
+            {"ANALYSIS_JSON": "ANALYSIS_JSON-{seq}.json"},
+        )
+
+        assert result["ANALYSIS_JSON"] == str(tmp_path / "output" / "AGB-test123" / "ANALYSIS_JSON-003.json")
+
+    def test_resolve_output_default_seq(self, tmp_path):
+        """Output resolver defaults seq to 001 when not in state."""
+        from agent_runner_v2.workflow_packages.extensions_base import (
+            resolve_output_artifacts,
+        )
+
+        result = {}
+        state = {"job_id": "AGB-test123"}
+        resolve_output_artifacts(
+            result, state, tmp_path,
+            {"REPORT": "REPORT-{seq}.md"},
+        )
+
+        assert result["REPORT"] == str(tmp_path / "output" / "AGB-test123" / "REPORT-001.md")

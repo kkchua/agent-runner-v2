@@ -373,6 +373,7 @@ def publish_bootstrap_bundle(
         "shared_registry_copied": bool(copied_registry),
         "plugin_workflows_copied": [p.name for p in copied],
     }
+    package_root.mkdir(parents=True, exist_ok=True)
     (package_root / "bootstrap_publish_manifest.json").write_text(
         json.dumps(publish_manifest, indent=2, ensure_ascii=False) + "\n",
         encoding="utf-8",

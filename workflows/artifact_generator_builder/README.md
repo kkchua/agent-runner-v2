@@ -43,14 +43,14 @@ The platform infrastructure (step runner, routing, artifact system) is predefine
 
 ### Input
 
-Provide a requirement document (`REQUIREMENT_DOC`) specifying:
+Provide a requirement document (`REQUIREMENT_DOC`) in `input/`:
 
 - **Input** — What content the generator accepts
 - **Output** — What content the generator produces
 - **Transformation requirements** — Business rules
 - **Constraints** — Hard requirements
 
-See `Specs/sample_requirement.md` for an example.
+See `input/sample_requirement.md` for an example.
 
 ### Output
 
@@ -87,10 +87,10 @@ Generated workflows support alternative implementations via the override pattern
 | File | Purpose |
 |------|---------|
 | `workflow.toml` | 10-step SDLC-scoped pipeline |
-| `context_extensions.py` | Artifact key registration |
+| `context_extensions.py` | Two-dict artifact resolution (INPUT_ARTIFACTS + OUTPUT_ARTIFACTS) |
 | `actions.py` | assemble_package, validate_structure, promote actions |
 | `prompts/` | 7 prompt templates |
-| `Specs/` | Requirement documents |
+| `input/` | Requirement documents |
 
 ## Governance
 

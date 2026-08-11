@@ -129,7 +129,7 @@ AGB produces a single deliverable: the **workflow package**.
 ```
 workflows/{codename}/
     workflow.toml              # assembled by action
-    context_extensions.py      # assembled by action
+    context_extensions.py      # assembled by action (two-dict pattern)
     actions.py                 # LLM-generated
     prompts/                   # LLM-generated
         *.txt
@@ -140,6 +140,20 @@ workflows/{codename}/
             prompts/           # LLM-generated (override prompts)
     README.md                  # generated during promote
 ```
+
+### Path Convention
+
+All workflows follow the universal `input/` and `output/{job_id}/` convention:
+
+```
+{workspace_root}/
+    input/                          ← all input artifacts
+    output/{job_id}/                ← all output artifacts (per-job, isolated)
+```
+
+The generated `context_extensions.py` uses two class-level dicts
+(`INPUT_ARTIFACTS`, `OUTPUT_ARTIFACTS`) with universal resolvers
+(`resolve_input_artifacts`, `resolve_output_artifacts`).
 
 No intermediate design documents (composition spec, runtime impl, artifact contract) are generated.
 

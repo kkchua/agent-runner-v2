@@ -7,8 +7,6 @@ perform specific operations without LLM involvement.
 from __future__ import annotations
 
 import shutil
-import subprocess
-import sys
 from datetime import datetime
 from pathlib import Path
 
@@ -20,24 +18,28 @@ from agent_runner_v2.workflow_packages.actions import action
 def promote_workflow_package(*, context, state, step_cfg, project_root):
     """Promote all deliverables to workflows/{codename}/.
 
-    Packages the generated workflow according to the Composition System
-    Standard required file structure (Section 10.2):
+    Packages the generated workflow package:
 
         workflows/{codename}/
-            standards/COMPOSITION_STANDARD.md
             workflow.toml
             context_extensions.py
             actions.py
             prompts/
             README.md
-            Specs/
             impls/              (optional — only if alternative impls exist)
 
     The codename is read from the generated workflow.toml manifest.
     Existing target directories are backed up before overwriting.
+    If README.md does not exist, one is generated from workflow.toml metadata.
+
+    EXTEND MODE: If EXISTING_WORKFLOW_DIR is provided, merge new implementations
+    into the existing workflow instead of overwriting. Only new impls/ are added,
+    and workflow.toml is updated in place.
     """
     artifacts = state.get("artifacts", {})
     project_root = Path(project_root)
+    existing_workflow_dir = artifacts.get("EXISTING_WORKFLOW_DIR", "")
+    extend_mode = bool(existing_workflow_dir)
 
     # Source: the directory containing workflow.toml
     manifest_path = artifacts.get("WORKFLOW_MANIFEST_FILE", "")
@@ -75,6 +77,57 @@ def promote_workflow_package(*, context, state, step_cfg, project_root):
     # Target: workflows/{codename}/
     target_dir = project_root / "workflows" / codename
 
+    # -------------------------------------------------------------------------
+    # EXTEND MODE: Merge new implementations into existing workflow
+    # -------------------------------------------------------------------------
+    if extend_mode:
+        existing_dir = Path(existing_workflow_dir)
+        if not existing_dir.exists():
+            return ActionResult(
+                status="REJECTED",
+                remark=f"Existing workflow directory not found: {existing_dir}",
+                artifacts={},
+                reject_code="EXISTING_WORKFLOW_NOT_FOUND",
+            )
+
+        # If target_dir doesn't exist yet, copy from existing_dir first
+        if not target_dir.exists():
+            shutil.copytree(existing_dir, target_dir)
+            print(f"[promote_workflow_package] Initialized target from existing: {existing_dir} -> {target_dir}", flush=True)
+
+        # Update workflow.toml (replace with merged version from source_dir)
+        src_toml = source_dir / "workflow.toml"
+        if src_toml.exists():
+            shutil.copy2(src_toml, target_dir / "workflow.toml")
+            print(f"[promote_workflow_package] Updated workflow.toml with new impl declarations", flush=True)
+
+        # Merge new impls/ into existing impls/
+        src_impls = source_dir / "impls"
+        dst_impls = target_dir / "impls"
+        if src_impls.exists():
+            dst_impls.mkdir(parents=True, exist_ok=True)
+            # Copy each new impl directory
+            for impl_dir in src_impls.iterdir():
+                if impl_dir.is_dir():
+                    dst_impl_dir = dst_impls / impl_dir.name
+                    if dst_impl_dir.exists():
+                        shutil.rmtree(dst_impl_dir)
+                    shutil.copytree(impl_dir, dst_impl_dir)
+                    print(f"[promote_workflow_package] Added new impl: {impl_dir.name}", flush=True)
+
+        remark = f"Extended workflow '{codename}' at {target_dir} with new implementations."
+        print(f"[promote_workflow_package] {remark}", flush=True)
+
+        return ActionResult(
+            status="APPROVED",
+            remark=remark,
+            artifacts={"WORKFLOW_PACKAGE_DIR": str(target_dir)},
+        )
+
+    # -------------------------------------------------------------------------
+    # NEW WORKFLOW MODE: Full promotion with backup
+    # -------------------------------------------------------------------------
+
     # Backup existing target
     backup_status = "No backup needed"
     if target_dir.exists():
@@ -87,6 +140,13 @@ def promote_workflow_package(*, context, state, step_cfg, project_root):
     target_dir.mkdir(parents=True, exist_ok=True)
 
     promoted = []
+
+    # --- Generate README.md if not present ---
+    readme_src = source_dir / "README.md"
+    if not readme_src.exists():
+        readme_content = _generate_readme(manifest, source_dir)
+        readme_src.write_text(readme_content, encoding="utf-8")
+        print(f"[promote_workflow_package] Generated README.md for '{codename}'", flush=True)
 
     # --- Workflow package files (root of workflows/{codename}/) ---
     always_copy = ["workflow.toml", "context_extensions.py", "README.md"]
@@ -114,16 +174,6 @@ def promote_workflow_package(*, context, state, step_cfg, project_root):
             shutil.copytree(src, dst)
             promoted.append(f"{dirname}/")
 
-    # --- Deliverable 1: Composition Standard -> standards/ ---
-    comp_std_path = artifacts.get("COMPOSITION_STANDARD_FILE", "")
-    if comp_std_path:
-        src = Path(comp_std_path)
-        if src.exists():
-            standards_dir = target_dir / "standards"
-            standards_dir.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(src, standards_dir / src.name)
-            promoted.append(f"standards/{src.name}")
-
     # --- Alternative implementations -> impls/ (optional) ---
     impls_src = source_dir / "impls"
     if impls_src.is_dir():
@@ -150,8 +200,481 @@ def promote_workflow_package(*, context, state, step_cfg, project_root):
     return ActionResult(
         status="APPROVED",
         remark=remark,
-        artifacts={"PROMOTION_REPORT_FILE": str(target_dir)},
+        artifacts={"WORKFLOW_PACKAGE_DIR": str(target_dir)},
     )
+
+
+@action("assemble_package")
+def assemble_package(*, context, state, step_cfg, project_root):
+    """Deterministically build workflow.toml, context_extensions.py, and impl.yaml
+    from the Analysis JSON produced by analyze_requirement.
+
+    This action is the mechanical assembler — no LLM involved. It reads the
+    Analysis JSON and produces the structural files that plug domain-specific
+    actions and prompts into the predefined platform infrastructure.
+    """
+    import json
+    import re
+
+    artifacts = state.get("artifacts", {})
+    analysis_path = artifacts.get("ANALYSIS_JSON_FILE", "")
+    if not analysis_path:
+        return ActionResult(
+            status="REJECTED",
+            remark="ANALYSIS_JSON_FILE artifact not found in state.",
+            artifacts={},
+            reject_code="MISSING_ANALYSIS_JSON",
+        )
+
+    analysis_file = Path(analysis_path)
+    if not analysis_file.exists():
+        return ActionResult(
+            status="REJECTED",
+            remark=f"Analysis JSON not found: {analysis_file}",
+            artifacts={},
+            reject_code="MISSING_ANALYSIS_JSON",
+        )
+
+    try:
+        analysis = json.loads(analysis_file.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, UnicodeDecodeError) as e:
+        return ActionResult(
+            status="REJECTED",
+            remark=f"Failed to parse Analysis JSON: {e}",
+            artifacts={},
+            reject_code="PARSE_ERROR",
+        )
+
+    identity = analysis.get("identity", {})
+    domain_steps = analysis.get("domain_steps", [])
+    artifact_keys = analysis.get("artifact_keys", {})
+    implementations = analysis.get("implementations", [])
+    extend_mode = analysis.get("extend_mode", False)
+    existing_workflow_dir = artifacts.get("EXISTING_WORKFLOW_DIR", "")
+
+    if not identity or not domain_steps:
+        return ActionResult(
+            status="REJECTED",
+            remark="Analysis JSON missing required 'identity' or 'domain_steps'.",
+            artifacts={},
+            reject_code="INVALID_ANALYSIS",
+        )
+
+    # Validate prompt steps have required role_policy
+    for step in domain_steps:
+        if step["type"] == "prompt" and not step.get("role_policy"):
+            return ActionResult(
+                status="REJECTED",
+                remark=f"Prompt step '{step['name']}' is missing required 'role_policy'.",
+                artifacts={},
+                reject_code="MISSING_ROLE_POLICY",
+            )
+
+    # Determine output directory (same dir as actions.py)
+    actions_path = artifacts.get("WORKFLOW_ACTIONS_FILE", "")
+    if actions_path:
+        out_dir = Path(actions_path).parent
+    else:
+        job_id = str(state.get("job_id", "unknown"))
+        out_dir = (
+            Path(project_root)
+            / "docs/repo/artifact_generator_builder/runs"
+            / job_id / "output"
+        )
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    produced = {}
+
+    # -------------------------------------------------------------------------
+    # EXTEND MODE: Copy existing workflow files and add new implementation
+    # -------------------------------------------------------------------------
+    if extend_mode:
+        if not existing_workflow_dir:
+            return ActionResult(
+                status="REJECTED",
+                remark="EXISTING_WORKFLOW_DIR artifact required for extend mode.",
+                artifacts={},
+                reject_code="MISSING_EXISTING_WORKFLOW",
+            )
+
+        existing_dir = Path(existing_workflow_dir)
+        if not existing_dir.exists():
+            return ActionResult(
+                status="REJECTED",
+                remark=f"Existing workflow directory not found: {existing_dir}",
+                artifacts={},
+                reject_code="EXISTING_WORKFLOW_NOT_FOUND",
+            )
+
+        # Copy existing workflow.toml and append new implementation declarations
+        existing_toml = existing_dir / "workflow.toml"
+        if not existing_toml.exists():
+            return ActionResult(
+                status="REJECTED",
+                remark=f"Existing workflow.toml not found: {existing_toml}",
+                artifacts={},
+                reject_code="EXISTING_TOML_NOT_FOUND",
+            )
+
+        # Read existing TOML content
+        toml_content = existing_toml.read_text(encoding="utf-8")
+
+        # Append new implementation declarations
+        for impl in implementations:
+            toml_content += "\n[[workflow.implementation]]\n"
+            toml_content += f'name = "{_toml_str(impl["name"])}"\n'
+            toml_content += f'description = "{_toml_str(impl.get("description", ""))}"\n'
+            if impl.get("label"):
+                toml_content += f'label = "{_toml_str(impl["label"])}"\n'
+
+        manifest_path = out_dir / "workflow.toml"
+        manifest_path.write_text(toml_content, encoding="utf-8")
+        produced["WORKFLOW_MANIFEST_FILE"] = str(manifest_path)
+
+        # Copy existing context_extensions.py
+        existing_ext = existing_dir / "context_extensions.py"
+        if existing_ext.exists():
+            shutil.copy2(existing_ext, out_dir / "context_extensions.py")
+            produced["WORKFLOW_EXTENSIONS_FILE"] = str(out_dir / "context_extensions.py")
+
+        # Copy existing actions.py if not provided (extend mode may not regenerate it)
+        if not actions_path or not Path(actions_path).exists():
+            existing_actions = existing_dir / "actions.py"
+            if existing_actions.exists():
+                shutil.copy2(existing_actions, out_dir / "actions.py")
+                produced["WORKFLOW_ACTIONS_FILE"] = str(out_dir / "actions.py")
+
+        # Copy existing prompts/ if not provided
+        existing_prompts_src = existing_dir / "prompts"
+        out_prompts = out_dir / "prompts"
+        if not out_prompts.exists() and existing_prompts_src.exists():
+            shutil.copytree(existing_prompts_src, out_prompts)
+            produced["WORKFLOW_PROMPTS_DIR"] = str(out_prompts)
+
+        # Copy existing impls/ directory if present
+        existing_impls = existing_dir / "impls"
+        out_impls = out_dir / "impls"
+        if existing_impls.exists():
+            if out_impls.exists():
+                shutil.rmtree(out_impls)
+            shutil.copytree(existing_impls, out_impls)
+
+        # Generate impl.yaml for NEW implementations only
+        for impl in implementations:
+            impl_dir = out_impls / impl["name"]
+            impl_dir.mkdir(parents=True, exist_ok=True)
+
+            overrides = impl.get("overrides", {})
+            yaml_lines = []
+            yaml_lines.append(f'name: {impl["name"]}')
+            desc = impl.get("description", "").replace("\\", "\\\\").replace('"', '\\"').replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t")
+            yaml_lines.append(f'description: "{desc}"')
+            yaml_lines.append("")
+            yaml_lines.append("overrides:")
+            for step_name, step_overrides in overrides.items():
+                yaml_lines.append(f"  {step_name}:")
+                if "prompt" in step_overrides:
+                    yaml_lines.append(f'    prompt: "{step_overrides["prompt"]}"')
+                if "action" in step_overrides:
+                    yaml_lines.append(f'    action: "{step_overrides["action"]}"')
+            yaml_lines.append("")
+
+            impl_yaml_path = impl_dir / "impl.yaml"
+            impl_yaml_path.write_text("\n".join(yaml_lines), encoding="utf-8")
+
+        produced["IMPL_OVERRIDE_FILES"] = str(out_impls) if out_impls.exists() else ""
+
+        remark = (
+            f"Extended workflow '{identity['name']}' with {len(implementations)} new implementation(s). "
+            f"Copied existing workflow files and added new impl declarations."
+        )
+        print(f"[assemble_package] {remark}", flush=True)
+
+        return ActionResult(
+            status="APPROVED",
+            remark=remark,
+            artifacts=produced,
+        )
+
+    # -------------------------------------------------------------------------
+    # NEW WORKFLOW MODE: Generate all files from scratch
+    # -------------------------------------------------------------------------
+    toml_lines = []
+    toml_lines.append(f'# Workflow: {identity.get("label", identity["name"])}')
+    toml_lines.append(f'# Auto-assembled by AGB from Analysis JSON.')
+    toml_lines.append("")
+    toml_lines.append("[workflow]")
+    toml_lines.append(f'name = "{_toml_str(identity["name"])}"')
+    toml_lines.append(f'version = "{_toml_str(identity.get("version", "1.0.0"))}"')
+    toml_lines.append(f'label = "{_toml_str(identity.get("label", identity["name"]))}"')
+    toml_lines.append(f'job_prefix = "{_toml_str(identity["job_prefix"])}"')
+    toml_lines.append(f'init_step = "{_toml_str(domain_steps[0]["name"])}"')
+    if identity.get("description"):
+        toml_lines.append(f'description = "{_toml_str(identity["description"])}"')
+    toml_lines.append('default_max_rejects = 3')
+    toml_lines.append('visibility = "canonical"')
+    toml_lines.append('layer = "layer3"')
+    toml_lines.append('platform = "agent-runner-v2"')
+    toml_lines.append("")
+
+    # Implementation declarations
+    for impl in implementations:
+        toml_lines.append("[[workflow.implementation]]")
+        toml_lines.append(f'name = "{_toml_str(impl["name"])}"')
+        toml_lines.append(f'description = "{_toml_str(impl.get("description", ""))}"')
+        if impl.get("label"):
+            toml_lines.append(f'label = "{_toml_str(impl["label"])}"')
+        toml_lines.append("")
+
+    # Step definitions
+    for i, step in enumerate(domain_steps):
+        toml_lines.append("[[step]]")
+        toml_lines.append(f'name = "{_toml_str(step["name"])}"')
+
+        if step["type"] == "action":
+            toml_lines.append(f'action = "{_toml_str(step["action_name"])}"')
+        else:
+            toml_lines.append(f'prompt = "prompts/{_toml_str(step["prompt_file"])}"')
+
+        toml_lines.append("enable_notifications = false")
+        toml_lines.append("requires_human_approval_after = false")
+
+        # onsuccess: chain to next step, or terminal
+        if i < len(domain_steps) - 1:
+            toml_lines.append(f'onsuccess = "{domain_steps[i + 1]["name"]}"')
+        else:
+            toml_lines.append('onsuccess = "step_completion"')
+
+        # Coder config for prompt steps
+        if step["type"] == "prompt" and step.get("role_policy"):
+            toml_lines.append("")
+            toml_lines.append("[step.coder]")
+            toml_lines.append(f'role_policy = "{step["role_policy"]}"')
+
+        # Artifact bindings
+        req_inputs = step.get("required_inputs", [])
+        produces = step.get("produces", [])
+        if req_inputs or produces:
+            toml_lines.append("")
+            toml_lines.append("[step.artifacts]")
+            if req_inputs:
+                keys_str = ", ".join(f'"{k}"' for k in req_inputs)
+                toml_lines.append(f"required_inputs = [{keys_str}]")
+            if produces:
+                keys_str = ", ".join(f'"{k}"' for k in produces)
+                toml_lines.append(f"produces = [{keys_str}]")
+            # result_meta_key = first produced key
+            if produces:
+                toml_lines.append(f'result_meta_key = "{produces[0]}"')
+
+        toml_lines.append("")
+
+    # Terminal step
+    toml_lines.append("[[step]]")
+    toml_lines.append('name = "step_completion"')
+    toml_lines.append('action = "step_completion"')
+    toml_lines.append("")
+
+    manifest_path = out_dir / "workflow.toml"
+    manifest_path.write_text("\n".join(toml_lines), encoding="utf-8")
+    produced["WORKFLOW_MANIFEST_FILE"] = str(manifest_path)
+
+    # -------------------------------------------------------------------------
+    # 2. Generate context_extensions.py
+    # -------------------------------------------------------------------------
+    class_name = _to_pascal_case(identity["name"]) + "Extensions"
+    all_keys = {}
+    for cat in ("inputs", "intermediate", "outputs"):
+        for entry in artifact_keys.get(cat, []):
+            all_keys[entry["key"]] = entry["pattern"]
+
+    ext_lines = []
+    ext_lines.append(f'"""Context extensions for {identity.get("label", identity["name"])}."""')
+    ext_lines.append("")
+    ext_lines.append("from __future__ import annotations")
+    ext_lines.append("")
+    ext_lines.append("from pathlib import Path")
+    ext_lines.append("from typing import Any")
+    ext_lines.append("")
+    ext_lines.append("from agent_runner_v2.runtime_context import get_governance_runtime_root, get_platform_runtime_root, get_workspace_root")
+    ext_lines.append("from agent_runner_v2.workflow_packages.extensions_base import WorkflowExtensions")
+    ext_lines.append("")
+    ext_lines.append("")
+    ext_lines.append(f"class {class_name}(WorkflowExtensions):")
+    ext_lines.append(f'    workflow_name = "{identity["name"]}"')
+    ext_lines.append("")
+    ext_lines.append("    def register_artifact_keys(")
+    ext_lines.append('        self, *, job_id: str = "{job_id}", mode: str = "{mode}"')
+    ext_lines.append("    ) -> dict[str, str]:")
+    ext_lines.append("        return {")
+    for key, pattern in all_keys.items():
+        # Use plain string — {job_id} and other braces are runner placeholders, not Python expressions
+        ext_lines.append(f'            "{key}": "{pattern}",')
+    ext_lines.append("        }")
+    ext_lines.append("")
+    ext_lines.append("    def build_context_extensions(")
+    ext_lines.append("        self, *, state, step, step_cfg, ctx, project_root=None,")
+    ext_lines.append("    ) -> dict[str, str]:")
+    ext_lines.append("        result: dict[str, str] = {}")
+    ext_lines.append("        root = Path(project_root or get_workspace_root() or Path.cwd()).resolve()")
+    ext_lines.append('        artifacts = state.get("artifacts") or {}')
+    ext_lines.append('        job_dir = state.get("job_dir") or ""')
+    ext_lines.append("        job_path = Path(job_dir) if job_dir else root")
+    ext_lines.append("        result[\"GOVERNANCE_RUNTIME_ROOT\"] = str(get_governance_runtime_root())")
+    ext_lines.append("        result[\"PLATFORM_RUNTIME_ROOT\"] = str(get_platform_runtime_root())")
+    ext_lines.append("        result[\"BASE_COMPOSITION_STANDARD\"] = str(")
+    ext_lines.append("            get_governance_runtime_root() / \"BASE_COMPOSITION_STANDARD_v1.0.md\"")
+    ext_lines.append("        )")
+    ext_lines.append("        for key, rel in self.register_artifact_keys().items():")
+    ext_lines.append("            existing = artifacts.get(key, \"\")")
+    ext_lines.append("            if existing:")
+    ext_lines.append("                result[key] = existing")
+    ext_lines.append("            elif key.endswith(('_FILE', '_DIR')) and '{' in rel:")
+    ext_lines.append("                continue")
+    ext_lines.append("            else:")
+    ext_lines.append("                result[key] = str(job_path / rel.replace(\"{job_id}/\", \"\"))")
+    ext_lines.append("        return result")
+    ext_lines.append("")
+    ext_lines.append("    def install_to_global(self, *, workspace_root, runner_home):")
+    ext_lines.append('        return {"status": "NO_OP"}')
+    ext_lines.append("")
+    ext_lines.append("    def sync_to_backend(self, *, workspace_root):")
+    ext_lines.append('        return {"status": "NO_OP"}')
+    ext_lines.append("")
+
+    extensions_path = out_dir / "context_extensions.py"
+    extensions_path.write_text("\n".join(ext_lines), encoding="utf-8")
+    produced["WORKFLOW_EXTENSIONS_FILE"] = str(extensions_path)
+
+    # -------------------------------------------------------------------------
+    # 3. Generate impl.yaml files
+    # -------------------------------------------------------------------------
+    impl_paths = []
+    for impl in implementations:
+        impl_dir = out_dir / "impls" / impl["name"]
+        impl_dir.mkdir(parents=True, exist_ok=True)
+
+        overrides = impl.get("overrides", {})
+        yaml_lines = []
+        yaml_lines.append(f'name: {impl["name"]}')
+        desc = impl.get("description", "").replace("\\", "\\\\").replace('"', '\\"').replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t")
+        yaml_lines.append(f'description: "{desc}"')
+        yaml_lines.append("")
+        yaml_lines.append("overrides:")
+        for step_name, step_overrides in overrides.items():
+            yaml_lines.append(f"  {step_name}:")
+            if "prompt" in step_overrides:
+                yaml_lines.append(f'    prompt: "{step_overrides["prompt"]}"')
+            if "action" in step_overrides:
+                yaml_lines.append(f'    action: "{step_overrides["action"]}"')
+        yaml_lines.append("")
+
+        impl_yaml_path = impl_dir / "impl.yaml"
+        impl_yaml_path.write_text("\n".join(yaml_lines), encoding="utf-8")
+        impl_paths.append(str(impl_yaml_path))
+
+    produced["IMPL_OVERRIDE_FILES"] = str(out_dir / "impls") if impl_paths else ""
+
+    remark = (
+        f"Assembled workflow package for '{identity['name']}': "
+        f"workflow.toml ({len(domain_steps)} steps + terminal), "
+        f"context_extensions.py ({len(all_keys)} artifact keys), "
+        f"{len(implementations)} implementation(s)"
+    )
+    print(f"[assemble_package] {remark}", flush=True)
+
+    return ActionResult(
+        status="APPROVED",
+        remark=remark,
+        artifacts=produced,
+    )
+
+
+def _to_pascal_case(name: str) -> str:
+    """Convert a snake_case or hyphen-case name to PascalCase."""
+    return "".join(
+        word.capitalize() for word in name.replace("-", "_").split("_") if word
+    )
+
+
+def _toml_str(value: str) -> str:
+    """Escape a string for safe embedding in a TOML basic string (double-quoted)."""
+    return (
+        value.replace("\\", "\\\\")
+        .replace('"', '\\"')
+        .replace("\n", "\\n")
+        .replace("\r", "\\r")
+        .replace("\t", "\\t")
+    )
+
+
+def _generate_readme(manifest: dict, source_dir: Path) -> str:
+    """Generate a README.md from workflow.toml metadata."""
+    wf = manifest.get("workflow", {})
+    name = wf.get("name", "unknown")
+    label = wf.get("label", name)
+    version = wf.get("version", "1.0.0")
+    description = wf.get("description", "")
+
+    # Collect step info
+    steps = manifest.get("step", [])
+    step_lines = []
+    for i, step in enumerate(steps, 1):
+        sname = step.get("name", "?")
+        if "action" in step:
+            stype = "action"
+            detail = step["action"]
+        elif "prompt" in step:
+            stype = "prompt"
+            detail = step["prompt"]
+        else:
+            stype = "?"
+            detail = ""
+        step_lines.append(f"| {i} | {sname} | {stype} | {detail} |")
+
+    # Collect implementations
+    impls = manifest.get("workflow", {}).get("implementation", [])
+    impl_section = ""
+    if impls:
+        impl_section = "\n## Implementations\n\n"
+        impl_section += "| Name | Description |\n"
+        impl_section += "|------|-------------|\n"
+        impl_section += "| default | Default implementation (workflow.toml) |\n"
+        for impl in impls:
+            impl_section += f"| {impl.get('name', '?')} | {impl.get('description', '')} |\n"
+
+    steps_table = "\n".join(step_lines) if step_lines else "| — | No steps defined | — | — |"
+
+    return f"""# {label}
+
+{description}
+
+**Version:** {version}
+
+## Pipeline Steps
+
+| # | Step | Type | Detail |
+|---|------|------|--------|
+{steps_table}
+{impl_section}
+## Usage
+
+```bash
+ukbe-run-agent run --template-group {name}
+```
+
+## File Structure
+
+```
+{name}/
+    workflow.toml
+    context_extensions.py
+    actions.py
+    prompts/
+    impls/          (if alternative implementations exist)
+    README.md
+```
+"""
 
 
 @action("validate_structure")
@@ -194,10 +717,21 @@ def validate_structure(*, context, state, step_cfg, project_root):
         actions_path=Path(actions_path) if actions_path else None,
     )
 
+    # Use context-resolved path for the validation findings report
     job_id = str(state.get("job_id", "unknown"))
-    run_root = project_root / "docs" / "repo" / "artifact_generator_builder" / "runs" / job_id
-    run_root.mkdir(parents=True, exist_ok=True)
-    report_path = run_root / f"VALIDATION_FINDINGS-{datetime.now().strftime('%Y%m%d')}-001.md"
+    report_path_str = context.get("VALIDATION_FINDINGS_FILE", "")
+    if not report_path_str:
+        report_path_str = artifacts.get("VALIDATION_FINDINGS_FILE", "")
+    if report_path_str:
+        report_path = Path(report_path_str)
+        if not report_path.is_absolute():
+            report_path = project_root / report_path
+    else:
+        # Fallback: construct from job_id
+        run_root = project_root / "docs" / "repo" / "artifact_generator_builder" / "runs" / job_id
+        report_path = run_root / f"VALIDATION_FINDINGS-{datetime.now().strftime('%Y%m%d')}-001.md"
+
+    report_path.parent.mkdir(parents=True, exist_ok=True)
 
     report = render_report(result, job_id=job_id)
     report_path.write_text(report, encoding="utf-8")
@@ -219,106 +753,3 @@ def validate_structure(*, context, state, step_cfg, project_root):
     )
 
 
-@action("run_tests")
-def run_tests(*, context, state, step_cfg, project_root):
-    """Run the generated pytest test file against the generated actions.py.
-
-    Executes pytest on {TEST_FILE} and captures results.
-    Writes a test results report to {TEST_RESULTS_FILE}.
-
-    If tests fail, returns REJECTED so the workflow routes back to
-    implement_package to fix the action code.
-    """
-    artifacts = state.get("artifacts", {})
-    project_root = Path(project_root)
-
-    test_file = artifacts.get("TEST_FILE", "")
-    if not test_file:
-        return ActionResult(
-            status="REJECTED",
-            remark="TEST_FILE artifact not found in state.",
-            artifacts={},
-            reject_code="MISSING_TESTS",
-        )
-
-    test_path = Path(test_file)
-    if not test_path.is_file():
-        return ActionResult(
-            status="REJECTED",
-            remark=f"Test file not found: {test_path}",
-            artifacts={},
-            reject_code="MISSING_TESTS",
-        )
-
-    actions_file = artifacts.get("WORKFLOW_ACTIONS_FILE", "")
-    actions_dir = str(Path(actions_file).parent) if actions_file else ""
-
-    # Build pytest command
-    python_exe = sys.executable
-    cmd = [python_exe, "-m", "pytest", str(test_path), "-v", "--tb=short", "--no-header"]
-
-    env = None
-    if actions_dir:
-        import os
-        env = os.environ.copy()
-        env["PYTHONPATH"] = actions_dir + os.pathsep + env.get("PYTHONPATH", "")
-
-    try:
-        proc = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            timeout=120,
-            cwd=actions_dir or None,
-            env=env,
-        )
-        output = proc.stdout + "\n" + proc.stderr
-        exit_code = proc.returncode
-    except subprocess.TimeoutExpired:
-        output = "pytest timed out after 120 seconds"
-        exit_code = -1
-    except Exception as exc:
-        output = f"Failed to run pytest: {exc}"
-        exit_code = -1
-
-    # Write test results report
-    job_id = str(state.get("job_id", "unknown"))
-    run_root = project_root / "docs" / "repo" / "artifact_generator_builder" / "runs" / job_id
-    run_root.mkdir(parents=True, exist_ok=True)
-    report_path = run_root / f"TEST_RESULTS-{datetime.now().strftime('%Y%m%d')}-001.md"
-
-    passed = exit_code == 0
-    report_lines = [
-        "---",
-        'doc_type: "test_results"',
-        f'lifecycle_status: "final"',
-        f'job_id: "{job_id}"',
-        "---",
-        "",
-        "# Action Test Results",
-        "",
-        f"- **Passed:** {'YES' if passed else 'NO'}",
-        f"- **Exit Code:** {exit_code}",
-        "",
-        "## pytest Output",
-        "",
-        "```",
-        output.strip(),
-        "```",
-        "",
-    ]
-    report_path.write_text("\n".join(report_lines), encoding="utf-8")
-
-    if passed:
-        return ActionResult(
-            status="APPROVED",
-            remark="All action tests passed.",
-            artifacts={"TEST_RESULTS_FILE": str(report_path)},
-        )
-    else:
-        return ActionResult(
-            status="REJECTED",
-            remark=f"Action tests failed (exit code {exit_code}). See report: {report_path}",
-            artifacts={"TEST_RESULTS_FILE": str(report_path)},
-            reject_code="TESTS_FAILED",
-        )

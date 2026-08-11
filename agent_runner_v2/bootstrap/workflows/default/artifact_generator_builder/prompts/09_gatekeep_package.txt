@@ -76,39 +76,6 @@ For each @action function in actions.py:
   - Output is written to the correct artifact paths
   - Error paths return REJECTED with meaningful reject_codes
 
-## Step 3b: Verify Requirement Completeness — Capability Gaps
-
-Read the Analysis JSON's `capability_gaps` array. For EACH gap where
-blocking=true:
-
-- **Is there a setup action?** Check if workflow.toml has a step that
-  installs the required library (e.g., install_dependencies action that
-  runs pip install). If YES, verify:
-  - The setup step appears BEFORE any step that uses the library
-  - The actions.py imports the library in the functions that need it
-  - The parsing logic uses the library (not just claims to support the format)
-
-- **If no setup action exists**, this is an automatic REJECT. The workflow
-  claims to support a requirement but lacks the means to do so. The
-  rejection remark MUST include:
-  - The exact requirement that is unmet
-  - The missing capability
-  - The proposed solution from the capability_gap (e.g., "pip install PyPDF2")
-  - Instruction: "Install the required library and retry, or remove the
-    requirement from the requirement document."
-
-- **If a capability_gap is blocking=true but the plan flagged it as
-  unresolvable**, this is also REJECT — the workflow cannot proceed until
-  the human resolves the gap.
-
-Also verify:
-- Every input file type mentioned in the requirement doc (e.g., .pdf, .docx,
-  .xlsx) has corresponding parsing logic in actions.py OR a capability_gap
-  entry with a setup action.
-- If the requirement doc says "support .pdf input" but actions.py only
-  handles .txt and .md, this is a BLOCKING finding — the workflow does not
-  meet the requirement.
-
 ## Step 4: Verify Functional Viability — Prompt Execution
 
 For each prompt file referenced in workflow.toml:
@@ -182,7 +149,6 @@ Structure your gatekeep as:
 | Structural validation (Step 9) | PASS / FAIL | <details> |
 | Package review (Step 8) | PASS / FAIL | <details> |
 | Action importability | PASS / FAIL | <details> |
-| Requirement completeness (capability gaps) | PASS / FAIL | <details> |
 | Prompt executability | PASS / FAIL | <details> |
 | Routing correctness | PASS / FAIL | <details> |
 | Multi-impl model | PASS / FAIL | <details> |
@@ -216,20 +182,16 @@ Structure your gatekeep as:
   - Prompts that reference non-existent artifact keys
   - Routing that cannot reach step_completion
   - Implementation overrides that reference non-existent steps or files
-  - Blocking capability_gaps with no setup action or unresolvable flag
-  - Required input types from the requirement doc not handled by any action
 
 # Self-Validation
 
 Before writing the output, verify:
 
-- [ ] All 8 verification checks have been performed
+- [ ] All 7 verification checks have been performed
 - [ ] Every check has evidence (not just "looks OK")
 - [ ] The verdict is consistent with the findings (APPROVE only if all checks pass)
 - [ ] BLOCKING findings are truly blocking (would prevent execution)
 - [ ] The verdict reasoning is explicit and justified
-- [ ] Every blocking capability_gap has been verified (setup action exists or flagged)
-- [ ] All input file types from the requirement doc are handled or have a gap entry
 
 # Forbidden Content
 

@@ -386,7 +386,66 @@ global `ACTION_REGISTRY`. The dispatch order is:
 
 ## 6. Artifact Contracts
 
-### 6.1 Input Artifact Naming Convention
+### 6.1 Universal Path Convention
+
+All workflows SHALL use the universal `input/` and `output/` convention for
+artifact path resolution. This convention applies to ALL workflows — builders,
+generators, and any other type. No workflow shall use alternative path
+conventions (no `Specs/` folders, no `docs/repo/.../runs/` paths).
+
+```
+{workspace_root}/
+    input/                          ← all input artifacts
+    output/{job_id}/                ← all output artifacts (per-job, isolated)
+```
+
+| Concept | Path | Description |
+|---------|------|-------------|
+| **Inputs** | `{workspace_root}/input/{filename}` | User-provided files, requirement docs, source data |
+| **Outputs** | `{workspace_root}/output/{job_id}/{filename}` | Generated artifacts, intermediate results, final deliverables |
+
+The `{job_id}` segment in the output path provides per-job isolation —
+multiple runs of the same workflow do not overwrite each other's outputs.
+
+### 6.2 Two-Dict Pattern
+
+Every workflow's `context_extensions.py` SHALL declare two class-level
+dictionaries and use the platform's universal resolvers:
+
+```python
+class MyWorkflowExtensions(WorkflowExtensions):
+    workflow_name = "my_workflow"
+
+    # Input artifacts: resolved to {workspace_root}/input/
+    INPUT_ARTIFACTS: dict[str, str] = {
+        "SOURCE_DOCUMENT_FILE": "",       # key → default filename (or "" for none)
+    }
+
+    # Output artifacts: resolved to {workspace_root}/output/{job_id}/
+    OUTPUT_ARTIFACTS: dict[str, str] = {
+        "SUMMARY_FILE": "SUMMARY_FILE.md",           # key → filename pattern
+        "ANALYSIS_JSON": "ANALYSIS_JSON-{seq}.json",  # {seq} = sequence number
+    }
+
+    def build_context_extensions(self, *, state, step, step_cfg, ctx, project_root=None):
+        result = {}
+        workspace_root = Path(project_root or get_workspace_root() or Path.cwd())
+        # ... system reference paths (GOVERNANCE_RUNTIME_ROOT, etc.) ...
+        resolve_input_artifacts(result, state, workspace_root, self.INPUT_ARTIFACTS)
+        resolve_output_artifacts(result, state, workspace_root, self.OUTPUT_ARTIFACTS)
+        return result
+```
+
+**Resolution rules:**
+
+- **Input resolver** (`resolve_input_artifacts`): Extracts the filename from
+  the artifact value in state (or uses the dict default), resolves to
+  `{workspace_root}/input/{filename}`.
+- **Output resolver** (`resolve_output_artifacts`): Replaces `{seq}` in the
+  pattern with the zero-padded sequence number, resolves to
+  `{workspace_root}/output/{job_id}/{filename}`.
+
+### 6.3 Input Artifact Naming Convention
 
 All input artifacts that represent user-provided files or directories SHALL use
 standardized suffixes:
@@ -401,33 +460,23 @@ Every workflow MUST declare its input artifacts with correct suffixes so that
 caller interfaces (operator console, CLI) can distinguish file inputs from
 other values.
 
-### 6.2 Output Delivery Contract
+### 6.4 Output Delivery Contract
 
 Every workflow SHALL declare where final output artifacts are delivered:
 
-1. **Dedicated output location** — Final deliverables SHALL be written to a
-   declared output location, separate from intermediate working artifacts
+1. **Dedicated output location** — Final deliverables SHALL be written to
+   `{workspace_root}/output/{job_id}/`, separate from input artifacts
 2. **Output catalog** — The workflow SHALL document which artifact keys represent
    final deliverables and their file formats
 3. **Delivery step** — The workflow SHALL include a delivery phase (or equivalent)
    that places final artifacts into the declared output location after validation
 
-### 6.3 Artifact Key Registration
+### 6.5 Artifact Key Registration
 
-Every artifact key used in `workflow.toml` step definitions MUST be registered
-in `context_extensions.py` via `register_artifact_keys()`. The registration
-maps each key to a relative path template:
-
-```python
-def register_artifact_keys(self, *, job_id, mode):
-    return {
-        "SOURCE_DOCUMENT_FILE": f"jobs/{job_id}/input/{{filename}}",
-        "PARSED_DOCUMENT": f"jobs/{job_id}/intermediate/PARSED_DOCUMENT.json",
-        "SUMMARY_FILE": f"jobs/{job_id}/output/SUMMARY_FILE.md",
-    }
-```
-
-Path templates MAY use `{job_id}` and other runtime placeholders.
+Every artifact key used in `workflow.toml` step definitions MUST be declared
+in either `INPUT_ARTIFACTS` or `OUTPUT_ARTIFACTS` in `context_extensions.py`.
+The `register_artifact_keys()` method is provided for backward compatibility
+but the two-dict pattern is the authoritative source.
 
 ---
 
@@ -527,13 +576,10 @@ mechanically construct `workflow.toml`, `context_extensions.py`, and
 
   "artifact_keys": {
     "inputs": [
-      {"key": "string", "pattern": "string — relative path template"}
-    ],
-    "intermediate": [
-      {"key": "string", "pattern": "string — relative path template"}
+      {"key": "string", "pattern": "string — filename or filename template"}
     ],
     "outputs": [
-      {"key": "string", "pattern": "string — relative path template"}
+      {"key": "string", "pattern": "string — filename or filename pattern (may use {seq})"}
     ]
   },
 
@@ -549,9 +595,20 @@ mechanically construct `workflow.toml`, `context_extensions.py`, and
         }
       }
     }
+  ],
+
+  "capability_gaps": [
+    {
+      "requirement": "string — verbatim quote from requirement doc",
+      "missing_capability": "string — what the platform cannot do",
+      "proposed_solution": "string — exact install command (e.g., pip install PyPDF2)",
+      "blocking": "boolean — true if requirement cannot be met without this"
+    }
   ]
 }
 ```
+
+If no capability gaps exist, the array SHALL be empty: `"capability_gaps": []`.
 
 ### 8.2 Field Constraints
 
@@ -566,6 +623,9 @@ mechanically construct `workflow.toml`, `context_extensions.py`, and
 | `domain_steps[].role_policy` | REQUIRED when type="prompt" |
 | `artifact_keys.inputs[].key` | MUST end with `_FILE` or `_DIR` |
 | `implementations[].name` | MUST be unique. MUST NOT be "default". |
+| `capability_gaps[].requirement` | MUST be a verbatim quote from the requirement doc |
+| `capability_gaps[].proposed_solution` | MUST include exact install command (e.g., `pip install PyPDF2`) |
+| `capability_gaps[].blocking` | MUST be true if the requirement cannot be met without the library |
 
 ### 8.3 What the Assembler Produces
 
@@ -573,14 +633,15 @@ mechanically construct `workflow.toml`, `context_extensions.py`, and
 |-------------|--------|
 | `identity` | `[workflow]` section in workflow.toml; class name in context_extensions.py |
 | `domain_steps` | `[[step]]` sections in workflow.toml (assembler adds `onsuccess` chaining) |
-| `artifact_keys` | `register_artifact_keys()` in context_extensions.py; `[step.artifacts]` in workflow.toml |
+| `artifact_keys` | `INPUT_ARTIFACTS` + `OUTPUT_ARTIFACTS` dicts in context_extensions.py; `[step.artifacts]` in workflow.toml |
 | `implementations` | `[[workflow.implementation]]` in workflow.toml; `impls/{name}/impl.yaml` files |
 
 ### 8.4 What the Assembler Adds Automatically
 
 - `onsuccess` routing — chains steps in declared order
 - Terminal `step_completion` step — always appended
-- `build_context_extensions()` body — generic template resolves all registered keys
+- `INPUT_ARTIFACTS` + `OUTPUT_ARTIFACTS` dicts — from `artifact_keys` inputs/outputs
+- `build_context_extensions()` body — uses `resolve_input_artifacts()` and `resolve_output_artifacts()`
 - `install_to_global()` / `sync_to_backend()` — always NO_OP
 - Import statements, class skeleton — all boilerplate
 
@@ -654,6 +715,41 @@ Output: same package + new impls/{new_name}/ directory + updated workflow.toml
 
 Only the delta is generated — new impl's actions + prompts + impl.yaml.
 Base workflow is untouched.
+
+### 9.6 Capability Gap Detection and Escalation
+
+When a requirement document specifies capabilities that need external
+libraries or tools not available in the Python standard library, the AGB
+pipeline MUST detect and escalate these gaps rather than silently dropping
+the requirements.
+
+**Detection (Step 1 — analyze_requirement):**
+The analyzer scans every requirement and checks whether it can be fulfilled
+with standard library alone. If not, it records a `capability_gap` entry in
+the Analysis JSON with the missing capability, proposed solution (install
+command), and whether the gap is blocking.
+
+**Planning (Step 2 — plan_domain_logic):**
+The planner MUST address every capability gap by either:
+- Adding a setup action step that installs the required library (preferred), or
+- Flagging the gap as unresolvable, recommending human intervention.
+
+**Challenge (Step 3 — challenge_plan):**
+The adversary verifies that every capability gap is addressed. A blocking
+gap with no setup action and no blocker flag is a BLOCKING attack.
+
+**Implementation (Step 4 — implement_domain):**
+If a capability gap has a setup action, the implementer MUST use the
+library in the parsing logic. Silently dropping a format that has a gap
+entry is forbidden.
+
+**Gatekeep (Step 9 — gatekeep_package):**
+The gatekeep verifies requirement completeness. If a blocking capability
+gap has no setup action, or if the requirement doc specifies input types
+that no action handles, the gatekeep REJECTs with a message that includes
+the proposed solution (e.g., "pip install PyPDF2"). After refine loop
+exhaustion, the job enters AWAITING_INTERVENTION with instructions for
+the human to install the library and retry.
 
 ---
 

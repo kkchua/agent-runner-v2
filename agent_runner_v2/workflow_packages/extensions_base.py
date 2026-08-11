@@ -150,31 +150,14 @@ def resolve_input_specs(
     workflow_name: str,
     spec_keys: list[str],
 ) -> None:
-    """Resolve spec filenames to workflow Specs/ directory paths.
+    """Deprecated: use resolve_input_artifacts() instead.
 
-    Call from ``build_context_extensions()`` for input artifact keys
-    that accept spec filenames from the operator console.
-
-    The Specs/ directory is the authoritative source for workflow specs.
-    Whether the value is a bare filename, an absolute path (from backend
-    resolution), or a relative path, only the filename is extracted and
-    resolved to ``{runner_home}/workflows/{workflow_name}/Specs/``.
-
-    Blank/empty values resolve to ``Specs/default_spec.md``.
-
-    Only the listed *spec_keys* are touched. Output artifact keys are
-    never affected.
-
-    Args:
-        result: The context extensions dict being built. Modified in place.
-        state: Job state dict containing ``artifacts``.
-        workflow_name: Workflow package name (used to locate Specs/ dir).
-        spec_keys: Artifact keys that hold input spec filenames.
+    Kept for backward compatibility with existing workflows that still
+    call this function.  New workflows MUST use the two-dict pattern
+    with resolve_input_artifacts() and resolve_output_artifacts().
     """
-    # runner_home = get_runner_home()
-    # specs_dir = runner_home / "workflows" / workflow_name / "Specs"
     specs_dir = get_runner_home() / "workflows" / "default" / workflow_name / "Specs"
-    
+
     artifacts = state.get("artifacts") or {}
 
     for key in spec_keys:
@@ -186,13 +169,85 @@ def resolve_input_specs(
             artifacts[key] = resolved
             continue
 
-        # Always extract just the filename — Specs/ dir is authoritative.
-        # Handles bare filenames, backend-resolved absolute paths, and
-        # relative paths uniformly.
         filename = Path(value).name
         resolved = str(specs_dir / filename)
         result[key] = resolved
-        # Write back to state["artifacts"] so missing_artifacts sees the
-        # resolved path. This allows the workflow to overwrite the
-        # daemon-populated filename with the full Specs/ path.
         artifacts[key] = resolved
+
+
+def resolve_input_artifacts(
+    result: dict[str, str],
+    state: dict[str, Any],
+    workspace_root: Path,
+    input_artifacts: dict[str, str],
+) -> None:
+    """Resolve input artifact keys to ``{workspace_root}/input/`` paths.
+
+    Universal input resolver for the two-dict pattern.  Every workflow
+    MUST call this from ``build_context_extensions()`` to resolve its
+    input artifact keys.
+
+    Resolution rules:
+    - If the artifact value in state is a non-empty string, extract the
+      filename and resolve to ``input/{filename}``.
+    - If the value is empty/blank and the dict entry is non-empty, use
+      the dict entry as the default filename.
+    - If both are empty, set the result to an empty string (optional
+      artifact — the step may handle absence gracefully).
+
+    Args:
+        result: The context extensions dict being built. Modified in place.
+        state: Job state dict containing ``artifacts``.
+        workspace_root: The workspace root path (job execution root).
+        input_artifacts: Class-level INPUT_ARTIFACTS dict mapping
+            artifact keys to default filenames (or "" for no default).
+    """
+    input_dir = Path(workspace_root) / "input"
+    artifacts = state.get("artifacts") or {}
+
+    for key, default_name in input_artifacts.items():
+        value = artifacts.get(key, "")
+
+        if value and value.strip():
+            filename = Path(value).name
+        elif default_name:
+            filename = default_name
+        else:
+            result[key] = ""
+            continue
+
+        resolved = str(input_dir / filename)
+        result[key] = resolved
+        artifacts[key] = resolved
+
+
+def resolve_output_artifacts(
+    result: dict[str, str],
+    state: dict[str, Any],
+    workspace_root: Path,
+    output_artifacts: dict[str, str],
+) -> None:
+    """Resolve output artifact keys to ``{workspace_root}/output/{job_id}/`` paths.
+
+    Universal output resolver for the two-dict pattern.  Every workflow
+    MUST call this from ``build_context_extensions()`` to resolve its
+    output artifact keys.
+
+    Each pattern may contain ``{seq}`` which is replaced with the
+    current sequence number from state (``state["seq"]``, defaulting
+    to ``"001"``).
+
+    Args:
+        result: The context extensions dict being built. Modified in place.
+        state: Job state dict containing ``job_id`` and ``seq``.
+        workspace_root: The workspace root path (job execution root).
+        output_artifacts: Class-level OUTPUT_ARTIFACTS dict mapping
+            artifact keys to filename patterns.
+    """
+    job_id = str(state.get("job_id") or "unknown")
+    seq = str(state.get("seq") or "001").zfill(3)
+    output_dir = Path(workspace_root) / "output" / job_id
+
+    for key, pattern in output_artifacts.items():
+        resolved_name = pattern.replace("{seq}", seq)
+        result[key] = str(output_dir / resolved_name)
