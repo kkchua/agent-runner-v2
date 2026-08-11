@@ -81,7 +81,7 @@ class ArtifactGeneratorBuilderExtensions(WorkflowExtensions):
             # -- Step 6: Assemble --
             "WORKFLOW_MANIFEST_FILE": f"{out}/workflow.toml",
             "WORKFLOW_EXTENSIONS_FILE": f"{out}/context_extensions.py",
-            "IMPL_OVERRIDE_FILES": f"{out}/impl_overrides.json",
+            "IMPL_OVERRIDE_FILES": f"{out}/impls/",
 
             # -- Steps 7-9: Review → Validate → Gatekeep --
             "PACKAGE_REVIEW_FILE": f"{run}/PACKAGE_REVIEW-{{seq}}.md",

@@ -241,6 +241,10 @@ def assemble_package(*, context, state, step_cfg, project_root):
     toml_lines.append(f'init_step = "{_toml_str(domain_steps[0]["name"])}"')
     if identity.get("description"):
         toml_lines.append(f'description = "{_toml_str(identity["description"])}"')
+    toml_lines.append('default_max_rejects = 3')
+    toml_lines.append('visibility = "canonical"')
+    toml_lines.append('layer = "layer3"')
+    toml_lines.append('platform = "agent-runner-v2"')
     toml_lines.append("")
 
     # Implementation declarations
@@ -322,7 +326,7 @@ def assemble_package(*, context, state, step_cfg, project_root):
     ext_lines.append("from pathlib import Path")
     ext_lines.append("from typing import Any")
     ext_lines.append("")
-    ext_lines.append("from agent_runner_v2.runtime_context import get_workspace_root")
+    ext_lines.append("from agent_runner_v2.runtime_context import get_governance_runtime_root, get_platform_runtime_root, get_workspace_root")
     ext_lines.append("from agent_runner_v2.workflow_packages.extensions_base import WorkflowExtensions")
     ext_lines.append("")
     ext_lines.append("")
@@ -346,6 +350,11 @@ def assemble_package(*, context, state, step_cfg, project_root):
     ext_lines.append('        artifacts = state.get("artifacts") or {}')
     ext_lines.append('        job_dir = state.get("job_dir") or ""')
     ext_lines.append("        job_path = Path(job_dir) if job_dir else root")
+    ext_lines.append("        result[\"GOVERNANCE_RUNTIME_ROOT\"] = str(get_governance_runtime_root())")
+    ext_lines.append("        result[\"PLATFORM_RUNTIME_ROOT\"] = str(get_platform_runtime_root())")
+    ext_lines.append("        result[\"BASE_COMPOSITION_STANDARD\"] = str(")
+    ext_lines.append("            get_governance_runtime_root() / \"BASE_COMPOSITION_STANDARD_v1.0.md\"")
+    ext_lines.append("        )")
     ext_lines.append("        for key, rel in self.register_artifact_keys().items():")
     ext_lines.append("            existing = artifacts.get(key, \"\")")
     ext_lines.append("            if existing:")
@@ -378,7 +387,7 @@ def assemble_package(*, context, state, step_cfg, project_root):
         overrides = impl.get("overrides", {})
         yaml_lines = []
         yaml_lines.append(f'name: {impl["name"]}')
-        desc = impl.get("description", "").replace("\\", "\\\\").replace('"', '\\"')
+        desc = impl.get("description", "").replace("\\", "\\\\").replace('"', '\\"').replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t")
         yaml_lines.append(f'description: "{desc}"')
         yaml_lines.append("")
         yaml_lines.append("overrides:")
@@ -431,8 +440,6 @@ def _toml_str(value: str) -> str:
 
 def _generate_readme(manifest: dict, source_dir: Path) -> str:
     """Generate a README.md from workflow.toml metadata."""
-    import tomllib
-
     wf = manifest.get("workflow", {})
     name = wf.get("name", "unknown")
     label = wf.get("label", name)
