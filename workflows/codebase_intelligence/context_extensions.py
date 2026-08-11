@@ -18,8 +18,8 @@ class CodebaseIntelligenceExtensions(WorkflowExtensions):
 
     # -- Input artifacts: resolved to {workspace_root}/input/ --
     INPUT_ARTIFACTS: dict[str, str] = {
-        "CODEBASE_DOCS_DIR": "codebase/docs",
-        "SOURCE_CODE_DIR": "codebase/src",
+        "CODEBASE_DOCS_DIR": "docs/repo/codebase/current",
+        "SOURCE_CODE_DIR": "",
     }
 
     # -- Output artifacts: resolved to {workspace_root}/output/{job_id}/ --
