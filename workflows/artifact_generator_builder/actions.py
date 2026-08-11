@@ -31,9 +31,15 @@ def promote_workflow_package(*, context, state, step_cfg, project_root):
     The codename is read from the generated workflow.toml manifest.
     Existing target directories are backed up before overwriting.
     If README.md does not exist, one is generated from workflow.toml metadata.
+
+    EXTEND MODE: If EXISTING_WORKFLOW_DIR is provided, merge new implementations
+    into the existing workflow instead of overwriting. Only new impls/ are added,
+    and workflow.toml is updated in place.
     """
     artifacts = state.get("artifacts", {})
     project_root = Path(project_root)
+    existing_workflow_dir = artifacts.get("EXISTING_WORKFLOW_DIR", "")
+    extend_mode = bool(existing_workflow_dir)
 
     # Source: the directory containing workflow.toml
     manifest_path = artifacts.get("WORKFLOW_MANIFEST_FILE", "")
@@ -70,6 +76,57 @@ def promote_workflow_package(*, context, state, step_cfg, project_root):
 
     # Target: workflows/{codename}/
     target_dir = project_root / "workflows" / codename
+
+    # -------------------------------------------------------------------------
+    # EXTEND MODE: Merge new implementations into existing workflow
+    # -------------------------------------------------------------------------
+    if extend_mode:
+        existing_dir = Path(existing_workflow_dir)
+        if not existing_dir.exists():
+            return ActionResult(
+                status="REJECTED",
+                remark=f"Existing workflow directory not found: {existing_dir}",
+                artifacts={},
+                reject_code="EXISTING_WORKFLOW_NOT_FOUND",
+            )
+
+        # If target_dir doesn't exist yet, copy from existing_dir first
+        if not target_dir.exists():
+            shutil.copytree(existing_dir, target_dir)
+            print(f"[promote_workflow_package] Initialized target from existing: {existing_dir} -> {target_dir}", flush=True)
+
+        # Update workflow.toml (replace with merged version from source_dir)
+        src_toml = source_dir / "workflow.toml"
+        if src_toml.exists():
+            shutil.copy2(src_toml, target_dir / "workflow.toml")
+            print(f"[promote_workflow_package] Updated workflow.toml with new impl declarations", flush=True)
+
+        # Merge new impls/ into existing impls/
+        src_impls = source_dir / "impls"
+        dst_impls = target_dir / "impls"
+        if src_impls.exists():
+            dst_impls.mkdir(parents=True, exist_ok=True)
+            # Copy each new impl directory
+            for impl_dir in src_impls.iterdir():
+                if impl_dir.is_dir():
+                    dst_impl_dir = dst_impls / impl_dir.name
+                    if dst_impl_dir.exists():
+                        shutil.rmtree(dst_impl_dir)
+                    shutil.copytree(impl_dir, dst_impl_dir)
+                    print(f"[promote_workflow_package] Added new impl: {impl_dir.name}", flush=True)
+
+        remark = f"Extended workflow '{codename}' at {target_dir} with new implementations."
+        print(f"[promote_workflow_package] {remark}", flush=True)
+
+        return ActionResult(
+            status="APPROVED",
+            remark=remark,
+            artifacts={"WORKFLOW_PACKAGE_DIR": str(target_dir)},
+        )
+
+    # -------------------------------------------------------------------------
+    # NEW WORKFLOW MODE: Full promotion with backup
+    # -------------------------------------------------------------------------
 
     # Backup existing target
     backup_status = "No backup needed"
@@ -192,6 +249,8 @@ def assemble_package(*, context, state, step_cfg, project_root):
     domain_steps = analysis.get("domain_steps", [])
     artifact_keys = analysis.get("artifact_keys", {})
     implementations = analysis.get("implementations", [])
+    extend_mode = analysis.get("extend_mode", False)
+    existing_workflow_dir = artifacts.get("EXISTING_WORKFLOW_DIR", "")
 
     if not identity or not domain_steps:
         return ActionResult(
@@ -227,7 +286,118 @@ def assemble_package(*, context, state, step_cfg, project_root):
     produced = {}
 
     # -------------------------------------------------------------------------
-    # 1. Generate workflow.toml
+    # EXTEND MODE: Copy existing workflow files and add new implementation
+    # -------------------------------------------------------------------------
+    if extend_mode:
+        if not existing_workflow_dir:
+            return ActionResult(
+                status="REJECTED",
+                remark="EXISTING_WORKFLOW_DIR artifact required for extend mode.",
+                artifacts={},
+                reject_code="MISSING_EXISTING_WORKFLOW",
+            )
+
+        existing_dir = Path(existing_workflow_dir)
+        if not existing_dir.exists():
+            return ActionResult(
+                status="REJECTED",
+                remark=f"Existing workflow directory not found: {existing_dir}",
+                artifacts={},
+                reject_code="EXISTING_WORKFLOW_NOT_FOUND",
+            )
+
+        # Copy existing workflow.toml and append new implementation declarations
+        existing_toml = existing_dir / "workflow.toml"
+        if not existing_toml.exists():
+            return ActionResult(
+                status="REJECTED",
+                remark=f"Existing workflow.toml not found: {existing_toml}",
+                artifacts={},
+                reject_code="EXISTING_TOML_NOT_FOUND",
+            )
+
+        # Read existing TOML content
+        toml_content = existing_toml.read_text(encoding="utf-8")
+
+        # Append new implementation declarations
+        for impl in implementations:
+            toml_content += "\n[[workflow.implementation]]\n"
+            toml_content += f'name = "{_toml_str(impl["name"])}"\n'
+            toml_content += f'description = "{_toml_str(impl.get("description", ""))}"\n'
+            if impl.get("label"):
+                toml_content += f'label = "{_toml_str(impl["label"])}"\n'
+
+        manifest_path = out_dir / "workflow.toml"
+        manifest_path.write_text(toml_content, encoding="utf-8")
+        produced["WORKFLOW_MANIFEST_FILE"] = str(manifest_path)
+
+        # Copy existing context_extensions.py
+        existing_ext = existing_dir / "context_extensions.py"
+        if existing_ext.exists():
+            shutil.copy2(existing_ext, out_dir / "context_extensions.py")
+            produced["WORKFLOW_EXTENSIONS_FILE"] = str(out_dir / "context_extensions.py")
+
+        # Copy existing actions.py if not provided (extend mode may not regenerate it)
+        if not actions_path or not Path(actions_path).exists():
+            existing_actions = existing_dir / "actions.py"
+            if existing_actions.exists():
+                shutil.copy2(existing_actions, out_dir / "actions.py")
+                produced["WORKFLOW_ACTIONS_FILE"] = str(out_dir / "actions.py")
+
+        # Copy existing prompts/ if not provided
+        existing_prompts_src = existing_dir / "prompts"
+        out_prompts = out_dir / "prompts"
+        if not out_prompts.exists() and existing_prompts_src.exists():
+            shutil.copytree(existing_prompts_src, out_prompts)
+            produced["WORKFLOW_PROMPTS_DIR"] = str(out_prompts)
+
+        # Copy existing impls/ directory if present
+        existing_impls = existing_dir / "impls"
+        out_impls = out_dir / "impls"
+        if existing_impls.exists():
+            if out_impls.exists():
+                shutil.rmtree(out_impls)
+            shutil.copytree(existing_impls, out_impls)
+
+        # Generate impl.yaml for NEW implementations only
+        for impl in implementations:
+            impl_dir = out_impls / impl["name"]
+            impl_dir.mkdir(parents=True, exist_ok=True)
+
+            overrides = impl.get("overrides", {})
+            yaml_lines = []
+            yaml_lines.append(f'name: {impl["name"]}')
+            desc = impl.get("description", "").replace("\\", "\\\\").replace('"', '\\"').replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t")
+            yaml_lines.append(f'description: "{desc}"')
+            yaml_lines.append("")
+            yaml_lines.append("overrides:")
+            for step_name, step_overrides in overrides.items():
+                yaml_lines.append(f"  {step_name}:")
+                if "prompt" in step_overrides:
+                    yaml_lines.append(f'    prompt: "{step_overrides["prompt"]}"')
+                if "action" in step_overrides:
+                    yaml_lines.append(f'    action: "{step_overrides["action"]}"')
+            yaml_lines.append("")
+
+            impl_yaml_path = impl_dir / "impl.yaml"
+            impl_yaml_path.write_text("\n".join(yaml_lines), encoding="utf-8")
+
+        produced["IMPL_OVERRIDE_FILES"] = str(out_impls) if out_impls.exists() else ""
+
+        remark = (
+            f"Extended workflow '{identity['name']}' with {len(implementations)} new implementation(s). "
+            f"Copied existing workflow files and added new impl declarations."
+        )
+        print(f"[assemble_package] {remark}", flush=True)
+
+        return ActionResult(
+            status="APPROVED",
+            remark=remark,
+            artifacts=produced,
+        )
+
+    # -------------------------------------------------------------------------
+    # NEW WORKFLOW MODE: Generate all files from scratch
     # -------------------------------------------------------------------------
     toml_lines = []
     toml_lines.append(f'# Workflow: {identity.get("label", identity["name"])}')

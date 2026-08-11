@@ -7,6 +7,24 @@ Plan as your blueprint — you are NOT designing, you are implementing.
 The infrastructure files (workflow.toml, context_extensions.py, impl.yaml) are
 assembled mechanically by the assemble_package action. You do NOT write those.
 
+# Mode Detection
+
+**Check if Analysis JSON has "extend_mode": true:**
+
+- **If extend_mode is false or absent** → NEW WORKFLOW MODE
+  Follow the full Implementation Protocol below. Write Part A (actions.py),
+  Part B (prompts/), and Part C (impl-specific files).
+
+- **If extend_mode is true** → EXTEND MODE
+  1. The shared actions.py and prompts/ are ALREADY IMPLEMENTED in the existing
+     workflow at `{EXISTING_WORKFLOW_DIR}`. Do NOT rewrite them.
+  2. Skip Part A and Part B entirely.
+  3. Go directly to Part C and write ONLY the new implementation's files:
+     - `impls/{new_impl_name}/actions.py` (if action overrides exist)
+     - `impls/{new_impl_name}/prompts/{prompt_filename}` (if prompt overrides exist)
+  4. Read the existing workflow's code to ensure your overrides are compatible
+     with the shared actions and prompts.
+
 # MANDATORY: Follow the Domain Plan
 
 Read {DOMAIN_PLAN_FILE} completely before writing any code. For each planned

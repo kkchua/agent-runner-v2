@@ -65,6 +65,7 @@ class ArtifactGeneratorBuilderExtensions(WorkflowExtensions):
         return {
             # -- Input --
             "REQUIREMENT_DOC": "Specs/sample_requirement.md",
+            "EXISTING_WORKFLOW_DIR": "",  # Optional: path to existing workflow for extend mode
 
             # -- Step 1: Analyze --
             "ANALYSIS_JSON_FILE": f"{out}/ANALYSIS_JSON-{{seq}}.json",

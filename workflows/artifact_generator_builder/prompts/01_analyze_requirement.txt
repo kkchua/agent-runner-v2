@@ -24,7 +24,36 @@ Section 8.2 MUST be satisfied.
 - BASE_COMPOSITION_STANDARD: {BASE_COMPOSITION_STANDARD}
   Authoritative schema definition for the Analysis JSON.
 
-# Analysis Protocol
+- EXISTING_WORKFLOW_DIR: {EXISTING_WORKFLOW_DIR}
+  OPTIONAL — If provided, you are in EXTEND MODE. This path points to an
+  existing workflow package. Read its workflow.toml to extract the identity,
+  domain_steps, and artifact_keys. The REQUIREMENT_DOC describes ONLY the new
+  implementation to add — do NOT redesign the domain logic.
+
+# Mode Detection
+
+**Check if EXISTING_WORKFLOW_DIR is provided and non-empty:**
+
+- **If EXISTING_WORKFLOW_DIR is empty or not provided** → NEW WORKFLOW MODE
+  Follow the full Analysis Protocol below. Design the complete domain structure.
+
+- **If EXISTING_WORKFLOW_DIR is provided** → EXTEND MODE
+  1. Read `{EXISTING_WORKFLOW_DIR}/workflow.toml` to extract:
+     - identity (name, job_prefix, version, label, description, codename)
+     - domain_steps (the existing step sequence)
+     - artifact_keys (inputs, intermediate, outputs)
+     - existing implementations (to avoid name conflicts)
+  2. Read REQUIREMENT_DOC to understand ONLY the new implementation being added.
+  3. Produce an Analysis JSON with:
+     - identity: copied from existing workflow.toml
+     - domain_steps: copied from existing workflow.toml
+     - artifact_keys: copied from existing workflow.toml
+     - implementations: ONLY the new implementation(s) being added
+     - extend_mode: true (flag to indicate this is an extension)
+  4. Do NOT redesign domain_steps or artifact_keys — they are fixed.
+  5. The new implementation name MUST NOT conflict with existing implementations.
+
+# Analysis Protocol (NEW WORKFLOW MODE only)
 
 ## Step 1: Extract Identity
 
