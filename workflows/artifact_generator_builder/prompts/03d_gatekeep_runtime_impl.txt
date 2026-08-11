@@ -1,41 +1,61 @@
 # Objective
 
-Final gatekeep of the runtime implementation design. Before approving, you must try to find reasons to REJECT.
+You are a JUDGE. A runtime implementation design was produced, attacked by a critic, and the designer responded to every attack. Your job is to determine whether each response is SOLID or WEAK.
+
+You do NOT attack the design yourself. You do NOT rebut the critic. You evaluate whether the designer's responses adequately address the attacks.
+
+# MANDATORY: BASE_COMPOSITION_STANDARD_v1.0.md Section 10
+
+You MUST verify compliance with BASE_COMPOSITION_STANDARD_v1.0.md Section 10 ({BASE_COMPOSITION_STANDARD}).
 
 # Reference Inputs
 
 - RUNTIME_IMPL_FILE: {RUNTIME_IMPL_FILE}
-- REVIEW_RUNTIME_IMPL_FILE: {REVIEW_RUNTIME_IMPL_FILE}
-- BASE_COMPOSITION_STANDARD: {BASE_COMPOSITION_STANDARD}
+- CHALLENGE_RUNTIME_IMPL_FILE: {CHALLENGE_RUNTIME_IMPL_FILE}
+- RESPONSE_RUNTIME_IMPL_FILE: {RESPONSE_RUNTIME_IMPL_FILE}
 
-# Self-Challenge Protocol
+# Judgment Protocol
 
-## Step 1: Runtime Execution Test
+## Step 1: Evaluate Each Attack-Response Pair
 
-Mentally simulate a developer implementing this design:
-- Pick each step — can you write the prompt template or action function without guessing?
-- Trace the data flow — does every input get consumed and every output get produced?
-- Check the override pattern — could someone create `impls/{name}/impl.yaml` to swap a step's prompt or action without touching the core design?
+For EACH attack in the challenge document, read the designer's response and judge:
 
-Note every point where the simulation stalls or requires a guess.
+**SOLVED** — The response provides concrete code-level evidence that the implementation handles the case. The proof traces the code path correctly, the fix includes specific pseudocode changes, or the acknowledgment is honest with acceptable risk.
 
-## Step 2: Devil's Advocate
+**UNSOLVED** — The response is one of:
+- Vague: "The function handles this" without tracing the code path
+- Incorrect: The proof traces a code path that doesn't exist or doesn't work
+- Incomplete: The fix addresses the symptom but not the root cause (e.g., adds a try/except that swallows the error instead of handling the root cause)
+- Missing: The designer skipped this attack
 
-Argue REJECT. Find the strongest case against approving this design:
-- What step assignments are ambiguous or missing?
-- What data flow gaps exist (inputs never consumed, outputs never produced)?
-- Would the override pattern actually work, or are there hidden coupling issues?
-- Are there algorithms that look correct on paper but would fail with real data?
+## Step 2: Special Checks for Code-Level Responses
 
-## Step 3: Review Feedback Check
+For PROOF responses:
+- Does the traced code path actually exist in the design?
+- Does the trace account for error paths, not just the happy path?
+- Would the code actually produce the claimed output for the given input?
 
-Read the review ({REVIEW_RUNTIME_IMPL_FILE}). Were all identified issues addressed? If the review said REJECT, are the specific defects fixed?
+For FIX responses:
+- Does the fix include specific pseudocode or algorithm changes?
+- Does the fix prevent the failure mode identified in the attack?
+- Does the fix introduce any new issues?
+
+For ACKNOWLEDGE responses:
+- Is the deferral to testing credible? Will the test phase actually catch this?
+- Is the documented risk acceptable?
+
+## Step 3: Count and Classify
+
+Tally:
+- Total attacks
+- SOLVED count
+- UNSOLVED count
+- BREAKDOWN: How many UNSOLVED are BLOCKING severity?
 
 ## Step 4: Verdict
 
-After challenging, give your final verdict:
-- **APPROVE** — The design survived all challenges. It is implementable and complete.
-- **REJECT** — The design has unresolved defects. State what must be fixed.
+- **APPROVE** — All BLOCKING and MAJOR attacks are SOLVED. Minor attacks may remain UNSOLVED if the risk is documented and acceptable.
+- **REJECT** — Any BLOCKING attack is UNSOLVED, or more than 2 MAJOR attacks are UNSOLVED. The design goes back to `design_runtime_impl` for another round.
 
 # Output Instructions
 
@@ -43,12 +63,37 @@ Write to: {GATEKEEP_RUNTIME_IMPL_FILE}
 Markdown with YAML frontmatter: doc_type: "gatekeep_runtime_impl", verdict: "APPROVE" or "REJECT", identity_locked: true. ASCII-only.
 
 Structure your gatekeep as:
-1. Runtime Simulation Results (where it stalled or succeeded)
-2. Devil's Advocate Argument
-3. Review Feedback Resolution (issues addressed or not)
-4. Final Verdict + reasoning
 
-# Forbidden Content
+```
+---
+doc_type: "gatekeep_runtime_impl"
+verdict: "APPROVE" / "REJECT"
+identity_locked: true
+---
 
-- Do NOT approve if the devil's advocate found genuine blocking issues
-- Do NOT include non-ASCII characters
+# Gatekeep: Runtime Implementation
+
+## Judgment Table
+
+| Attack | Severity | Response Type | Verdict | Reasoning |
+|--------|----------|---------------|---------|-----------|
+| 1: <title> | BLOCKING/MAJOR/MINOR | PROOF/FIX/ACK | SOLVED/UNSOLVED | <1-2 sentence reasoning> |
+| 2: ... | ... | ... | ... | ... |
+
+## Summary
+- SOLVED: <count> / <total>
+- UNSOLVED BLOCKING: <count>
+- UNSOLVED MAJOR: <count>
+
+## Final Verdict
+<APPROVE or REJECT with reasoning>
+```
+
+# Rules
+
+- Do NOT argue against the critic's attacks. Evaluate the designer's response to each attack.
+- Do NOT raise new attacks. Your job is to judge existing attack-response pairs.
+- A PROOF is SOLVED only if the code path trace is correct and accounts for error paths.
+- A FIX is SOLVED only if it includes specific pseudocode that addresses the root cause.
+- An ACKNOWLEDGE is SOLVED only if the testing phase will credibly catch the issue.
+- Do NOT include non-ASCII characters.

@@ -17,7 +17,7 @@ Both implementations share the same input. The operator selects which output to 
 
 ## Input
 
-A text document (.txt or .md) containing long-form content to be summarized.
+A text document (.txt or .md or .pdf or .docx) containing long-form content to be summarized.
 
 ## Output
 

@@ -1160,6 +1160,110 @@ When no implementation is specified, the `default` implementation is used
 7. Each `[[workflow.implementation]]` name MUST have a matching `impls/{name}/` directory with a valid `impl.yaml`
 8. `default` MUST NOT appear in `[[workflow.implementation]]` — it is always implicit
 
+### 13.9 Action Interface Contract
+
+Every action-driven step references a function via `action = "action_name"` in
+`workflow.toml`. That function MUST be implemented in `actions.py` (shared) or
+`impls/{name}/actions.py` (implementation-specific) and MUST conform to the
+platform's action interface contract.
+
+#### Required Imports
+
+```python
+from agent_runner_v2.workflow_packages.actions import action
+from agent_runner_v2.action_result import ActionResult
+```
+
+#### Decorator
+
+Every action function MUST be decorated with `@action("action_name")` where
+`action_name` matches the `action = "..."` value in `workflow.toml`. Without the
+decorator, the runner cannot discover the function and the workflow will fail
+with `Unknown runner action`.
+
+```python
+@action("my_action_name")
+def my_action_name(context, state, step_cfg, project_root):
+    ...
+```
+
+#### Function Signature
+
+Every action function MUST accept exactly these four keyword arguments:
+
+| Parameter | Type | Description |
+|---|---|---|
+| `context` | `dict[str, str]` | Resolved artifact paths and prompt context variables. Read artifact paths from here (e.g., `context.get("INPUT_FILE")`). |
+| `state` | `dict[str, Any]` | Job state including `state["artifacts"]` (artifact key → path mapping). Write resolved paths back here so downstream steps see them. |
+| `step_cfg` | `dict[str, Any]` | The step configuration from `workflow.toml` (produces, required_inputs, coder settings, etc.). |
+| `project_root` | `Path` | Absolute path to the project/workspace root directory. |
+
+#### Return Type
+
+Every action function MUST return an `ActionResult`:
+
+```python
+return ActionResult(
+    status="APPROVED",          # "APPROVED" or "REJECTED"
+    remark="Brief description", # Human-readable summary
+    artifacts={                 # Dict of artifact_key → path for produced artifacts
+        "OUTPUT_KEY": "/path/to/output"
+    },
+    reject_code=None,           # Optional failure code when status="REJECTED"
+)
+```
+
+Returning a plain `dict` instead of `ActionResult` will cause a runtime error
+(`AttributeError: 'dict' object has no attribute 'status'`).
+
+#### Complete Example
+
+```python
+from pathlib import Path
+from typing import Any
+
+from agent_runner_v2.workflow_packages.actions import action
+from agent_runner_v2.action_result import ActionResult
+
+
+@action("parse_input_document")
+def parse_input_document(
+    context: dict[str, str],
+    state: dict[str, Any],
+    step_cfg: dict[str, Any],
+    project_root: Path,
+) -> ActionResult:
+    input_file = context.get("INPUT_FILE", "")
+    if not input_file:
+        return ActionResult(
+            status="REJECTED",
+            remark="INPUT_FILE not provided",
+            artifacts={},
+            reject_code="MISSING_INPUT",
+        )
+
+    # ... processing logic ...
+
+    return ActionResult(
+        status="APPROVED",
+        remark=f"Parsed {input_file} successfully",
+        artifacts={"PARSED_DOCUMENT": "/path/to/parsed.json"},
+    )
+```
+
+#### Implementation-Specific Actions
+
+When an implementation overrides an action-driven step via `impl.yaml`, the
+override action name MUST reference a function decorated with `@action()` in
+either:
+
+1. The shared `actions.py` (root of workflow package), or
+2. The implementation-specific `impls/{name}/actions.py`
+
+Implementation-specific actions follow the same interface contract. The loader
+merges impl-specific actions with shared actions, with impl actions taking
+priority on name conflicts.
+
 ---
 
 ## 14. References

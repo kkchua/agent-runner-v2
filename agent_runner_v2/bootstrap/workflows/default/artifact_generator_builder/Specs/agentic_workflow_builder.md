@@ -77,6 +77,5 @@ The transformation process involves:
 The generator should support:
 - **Custom tool integrations** — Add new tool actions beyond Agnes API (e.g., other AI APIs, file operations)
 - **Custom interaction patterns** — Add new user interaction patterns beyond approval gates
-- **Custom role policies** — Add new coder role policies beyond the standard set
 - **Multi-language support** — Handle JiMeng markdown in Chinese, English, or mixed languages
 - **Workflow composition** — Generated workflows can reference other generated workflows as sub-workflows

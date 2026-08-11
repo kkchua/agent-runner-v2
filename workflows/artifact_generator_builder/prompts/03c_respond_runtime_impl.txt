@@ -1,0 +1,98 @@
+# Objective
+
+Your runtime implementation design has been ATTACKED. The challenge document lists specific failure scenarios where your code will break at runtime. You must DEFEND each attack with concrete evidence, or ADMIT the flaw and provide a fix.
+
+You are NOT allowed to hand-wave. "The implementation will handle this" is NOT a valid response. You must show HOW, with code-level evidence.
+
+# Reference Inputs
+
+- CHALLENGE_RUNTIME_IMPL_FILE: {CHALLENGE_RUNTIME_IMPL_FILE}
+- RUNTIME_IMPL_FILE: {RUNTIME_IMPL_FILE}
+
+# Response Protocol
+
+For EACH attack in the challenge document, you MUST provide one of three responses:
+
+## Response Type: PROOF
+The attack is wrong or overstated. Provide code-level evidence showing the implementation handles this case correctly.
+
+Format:
+```
+### Response to Attack N: <title>
+**Type:** PROOF
+**Evidence:**
+1. The function <name> at <location> handles this case:
+   - Line/step X checks for <condition>
+   - If <attack scenario> occurs, the code path is: ...
+   - The result is <correct behavior> because...
+2. Trace: input=<attack input> -> step 1 produces=<intermediate> -> step 2 produces=<output>
+3. Therefore the function correctly handles this case.
+```
+
+## Response Type: FIX
+The attack is valid. The implementation has a gap. Provide a concrete code-level fix.
+
+Format:
+```
+### Response to Attack N: <title>
+**Type:** FIX
+**Admission:** The function <name> does not handle <specific case>. When <attack scenario> occurs, <failure mode> happens because <root cause>.
+**Fix:** Modify <function/algorithm> to add:
+```
+<specific pseudocode or logic change>
+```
+**Verification:** After the fix, when <attack scenario> occurs:
+- The code now <new behavior>
+- The result is <correct outcome>
+- The invariant <name> is preserved because...
+```
+
+## Response Type: ACKNOWLEDGE
+The attack is valid but the fix belongs in the testing/validation layer, not the design.
+
+Format:
+```
+### Response to Attack N: <title>
+**Type:** ACKNOWLEDGE
+**Admission:** The design does not prevent <specific case> at the algorithm level.
+**Deferral:** The testing phase will verify this case. If the test fails, the implement_package step will fix it.
+**Risk:** If the test doesn't cover this case, the consequence is <specific impact>.
+```
+
+# Rules
+
+- You MUST respond to EVERY attack. Skipping an attack is NOT allowed.
+- PROOF responses must include a code path trace. "The function handles this" without tracing the code is REJECTED.
+- FIX responses must include specific pseudocode or algorithm changes. "Add error handling" is NOT a fix. "Add after line 5: if extracted_text is empty and file extension is .pdf, return ActionResult(status=REJECTED, reject_code=SCANNED_PDF_NOT_SUPPORTED)" IS a fix.
+- ACKNOWLEDGE responses are limited to at most 2 attacks.
+- Do NOT attack the challenger. Do not argue that the attack is invalid without providing a code trace.
+- Do NOT include non-ASCII characters.
+
+# Output Instructions
+
+Write to: {RESPONSE_RUNTIME_IMPL_FILE}
+Markdown with YAML frontmatter: doc_type: "response_runtime_impl", identity_locked: true. ASCII-only.
+
+Structure your response as:
+
+```
+---
+doc_type: "response_runtime_impl"
+identity_locked: true
+---
+
+# Response to Challenge: Runtime Implementation
+
+## Response to Attack 1: <title>
+**Type:** PROOF / FIX / ACKNOWLEDGE
+<evidence or fix>
+
+## Response to Attack 2: <title>
+...
+
+## Summary
+- Attacks defended (PROOF): <count>
+- Attacks fixed (FIX): <count>
+- Attacks acknowledged (ACKNOWLEDGE): <count>
+- Total: <count>
+```
