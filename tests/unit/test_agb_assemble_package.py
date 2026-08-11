@@ -1,0 +1,353 @@
+"""Tests for the AGB assemble_package action.
+
+Verifies that assemble_package deterministically builds workflow.toml,
+context_extensions.py, and impl.yaml files from an Analysis JSON.
+"""
+from __future__ import annotations
+
+import json
+import sys
+from pathlib import Path
+from unittest.mock import MagicMock
+
+import pytest
+
+# Add workflows dir to path so we can import the actions module
+sys.path.insert(
+    0,
+    str(Path(__file__).resolve().parents[2] / "workflows" / "artifact_generator_builder"),
+)
+
+from agent_runner_v2.action_result import ActionResult
+
+
+def _write(path: Path, content: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(content, encoding="utf-8")
+
+
+SAMPLE_ANALYSIS = {
+    "identity": {
+        "name": "text_summarizer_test",
+        "job_prefix": "TXTSUM",
+        "version": "1.0.0",
+        "label": "Text Summarizer Test",
+        "description": "Test summarizer workflow",
+        "codename": "text_summarizer_test",
+    },
+    "domain_steps": [
+        {
+            "name": "parse_input",
+            "type": "action",
+            "action_name": "parse_input_document",
+            "required_inputs": ["SOURCE_DOCUMENT_FILE"],
+            "produces": ["PARSED_DOCUMENT"],
+        },
+        {
+            "name": "analyze_structure",
+            "type": "prompt",
+            "prompt_file": "02_analyze.txt",
+            "role_policy": "architect_standard",
+            "required_inputs": ["PARSED_DOCUMENT"],
+            "produces": ["ANALYSIS_RESULT"],
+        },
+        {
+            "name": "render_output",
+            "type": "action",
+            "action_name": "render_prose_output",
+            "required_inputs": ["ANALYSIS_RESULT"],
+            "produces": ["SUMMARY_FILE"],
+        },
+    ],
+    "artifact_keys": {
+        "inputs": [
+            {"key": "SOURCE_DOCUMENT_FILE", "pattern": "input/{filename}"},
+        ],
+        "intermediate": [
+            {"key": "PARSED_DOCUMENT", "pattern": "intermediate/PARSED_DOCUMENT.json"},
+            {"key": "ANALYSIS_RESULT", "pattern": "intermediate/ANALYSIS_RESULT.json"},
+        ],
+        "outputs": [
+            {"key": "SUMMARY_FILE", "pattern": "output/SUMMARY_FILE.md"},
+        ],
+    },
+    "implementations": [
+        {
+            "name": "key_points",
+            "description": "Produces key points list",
+            "label": "Key Points",
+            "overrides": {
+                "render_output": {"action": "render_list_output"},
+            },
+        },
+    ],
+}
+
+
+@pytest.fixture
+def out_dir(tmp_path):
+    """Create a temporary output directory with a sample Analysis JSON."""
+    analysis_path = tmp_path / "output" / "ANALYSIS_JSON-001.json"
+    _write(analysis_path, json.dumps(SAMPLE_ANALYSIS, indent=2))
+    return tmp_path / "output"
+
+
+@pytest.fixture
+def mock_state(out_dir):
+    """Mock job state with artifact paths."""
+    return {
+        "job_id": "TEST-001",
+        "artifacts": {
+            "ANALYSIS_JSON_FILE": str(out_dir / "ANALYSIS_JSON-001.json"),
+            "WORKFLOW_ACTIONS_FILE": str(out_dir / "actions.py"),
+        },
+    }
+
+
+class TestAssemblePackage:
+    """Tests for the assemble_package action."""
+
+    def test_generates_workflow_toml(self, out_dir, mock_state):
+        """assemble_package produces a valid workflow.toml."""
+        from actions import assemble_package
+
+        result = assemble_package(
+            context={},
+            state=mock_state,
+            step_cfg={},
+            project_root=out_dir.parent,
+        )
+
+        assert result.status == "APPROVED"
+        manifest_path = Path(result.artifacts["WORKFLOW_MANIFEST_FILE"])
+        assert manifest_path.exists()
+
+        content = manifest_path.read_text(encoding="utf-8")
+        assert 'name = "text_summarizer_test"' in content
+        assert 'job_prefix = "TXTSUM"' in content
+        assert 'init_step = "parse_input"' in content
+        assert 'action = "parse_input_document"' in content
+        assert 'prompt = "prompts/02_analyze.txt"' in content
+        assert 'onsuccess = "step_completion"' in content
+        assert 'name = "step_completion"' in content
+
+    def test_generates_context_extensions(self, out_dir, mock_state):
+        """assemble_package produces context_extensions.py with correct class."""
+        from actions import assemble_package
+
+        result = assemble_package(
+            context={},
+            state=mock_state,
+            step_cfg={},
+            project_root=out_dir.parent,
+        )
+
+        assert result.status == "APPROVED"
+        ext_path = Path(result.artifacts["WORKFLOW_EXTENSIONS_FILE"])
+        assert ext_path.exists()
+
+        content = ext_path.read_text(encoding="utf-8")
+        assert "class TextSummarizerTestExtensions(WorkflowExtensions):" in content
+        assert 'workflow_name = "text_summarizer_test"' in content
+        assert '"SOURCE_DOCUMENT_FILE"' in content
+        assert '"PARSED_DOCUMENT"' in content
+        assert '"SUMMARY_FILE"' in content
+
+    def test_generates_impl_yaml(self, out_dir, mock_state):
+        """assemble_package produces impl.yaml for each implementation."""
+        from actions import assemble_package
+
+        result = assemble_package(
+            context={},
+            state=mock_state,
+            step_cfg={},
+            project_root=out_dir.parent,
+        )
+
+        assert result.status == "APPROVED"
+        impl_yaml = out_dir / "impls" / "key_points" / "impl.yaml"
+        assert impl_yaml.exists()
+
+        content = impl_yaml.read_text(encoding="utf-8")
+        assert "name: key_points" in content
+        assert "render_output:" in content
+        assert 'action: "render_list_output"' in content
+
+    def test_workflow_toml_has_impl_declaration(self, out_dir, mock_state):
+        """workflow.toml includes [[workflow.implementation]] declarations."""
+        from actions import assemble_package
+
+        result = assemble_package(
+            context={},
+            state=mock_state,
+            step_cfg={},
+            project_root=out_dir.parent,
+        )
+
+        content = Path(result.artifacts["WORKFLOW_MANIFEST_FILE"]).read_text()
+        assert "[[workflow.implementation]]" in content
+        assert 'name = "key_points"' in content
+
+    def test_step_chaining(self, out_dir, mock_state):
+        """Steps are chained in declared order via onsuccess."""
+        from actions import assemble_package
+
+        result = assemble_package(
+            context={},
+            state=mock_state,
+            step_cfg={},
+            project_root=out_dir.parent,
+        )
+
+        content = Path(result.artifacts["WORKFLOW_MANIFEST_FILE"]).read_text()
+        # parse_input → analyze_structure
+        assert 'onsuccess = "analyze_structure"' in content
+        # analyze_structure → render_output
+        assert 'onsuccess = "render_output"' in content
+        # render_output → step_completion (last domain step)
+        lines = content.split("\n")
+        render_idx = next(
+            i for i, l in enumerate(lines) if 'name = "render_output"' in l
+        )
+        # Find onsuccess after render_output
+        for line in lines[render_idx:]:
+            if "onsuccess" in line:
+                assert '"step_completion"' in line
+                break
+
+    def test_missing_analysis_json_rejected(self, tmp_path):
+        """assemble_package rejects when ANALYSIS_JSON_FILE is missing."""
+        from actions import assemble_package
+
+        result = assemble_package(
+            context={},
+            state={"artifacts": {}},
+            step_cfg={},
+            project_root=tmp_path,
+        )
+
+        assert result.status == "REJECTED"
+        assert result.reject_code == "MISSING_ANALYSIS_JSON"
+
+    def test_invalid_json_rejected(self, tmp_path):
+        """assemble_package rejects when Analysis JSON is malformed."""
+        from actions import assemble_package
+
+        bad_json = tmp_path / "bad.json"
+        _write(bad_json, "not valid json {{{")
+
+        result = assemble_package(
+            context={},
+            state={"artifacts": {"ANALYSIS_JSON_FILE": str(bad_json)}},
+            step_cfg={},
+            project_root=tmp_path,
+        )
+
+        assert result.status == "REJECTED"
+        assert result.reject_code == "PARSE_ERROR"
+
+    def test_empty_domain_steps_rejected(self, tmp_path):
+        """assemble_package rejects when domain_steps is empty."""
+        from actions import assemble_package
+
+        analysis = {"identity": {"name": "test"}, "domain_steps": []}
+        analysis_path = tmp_path / "empty.json"
+        _write(analysis_path, json.dumps(analysis))
+
+        result = assemble_package(
+            context={},
+            state={"artifacts": {"ANALYSIS_JSON_FILE": str(analysis_path)}},
+            step_cfg={},
+            project_root=tmp_path,
+        )
+
+        assert result.status == "REJECTED"
+        assert result.reject_code == "INVALID_ANALYSIS"
+
+    def test_artifact_bindings_in_toml(self, out_dir, mock_state):
+        """Step artifact bindings (required_inputs, produces) appear in TOML."""
+        from actions import assemble_package
+
+        result = assemble_package(
+            context={},
+            state=mock_state,
+            step_cfg={},
+            project_root=out_dir.parent,
+        )
+
+        content = Path(result.artifacts["WORKFLOW_MANIFEST_FILE"]).read_text()
+        assert '"SOURCE_DOCUMENT_FILE"' in content
+        assert '"PARSED_DOCUMENT"' in content
+        assert '"SUMMARY_FILE"' in content
+        assert "required_inputs" in content
+        assert "produces" in content
+
+    def test_coder_role_policy_in_toml(self, out_dir, mock_state):
+        """Prompt steps include [step.coder] with role_policy."""
+        from actions import assemble_package
+
+        result = assemble_package(
+            context={},
+            state=mock_state,
+            step_cfg={},
+            project_root=out_dir.parent,
+        )
+
+        content = Path(result.artifacts["WORKFLOW_MANIFEST_FILE"]).read_text()
+        assert "[step.coder]" in content
+        assert 'role_policy = "architect_standard"' in content
+
+    def test_no_impls_produces_no_impl_dir(self, tmp_path):
+        """When no implementations declared, no impls/ directory created."""
+        from actions import assemble_package
+
+        analysis = {
+            "identity": {
+                "name": "simple_workflow",
+                "job_prefix": "SIM",
+                "version": "1.0.0",
+            },
+            "domain_steps": [
+                {
+                    "name": "do_thing",
+                    "type": "action",
+                    "action_name": "do_thing",
+                    "required_inputs": [],
+                    "produces": ["OUTPUT"],
+                },
+            ],
+            "artifact_keys": {"inputs": [], "intermediate": [], "outputs": []},
+            "implementations": [],
+        }
+        analysis_path = tmp_path / "simple.json"
+        _write(analysis_path, json.dumps(analysis))
+
+        result = assemble_package(
+            context={},
+            state={"artifacts": {"ANALYSIS_JSON_FILE": str(analysis_path)}},
+            step_cfg={},
+            project_root=tmp_path,
+        )
+
+        assert result.status == "APPROVED"
+        assert not (tmp_path / "impls").exists()
+
+
+class TestToPascalCase:
+    """Tests for the _to_pascal_case helper."""
+
+    def test_snake_case(self):
+        from actions import _to_pascal_case
+        assert _to_pascal_case("text_summarizer") == "TextSummarizer"
+
+    def test_single_word(self):
+        from actions import _to_pascal_case
+        assert _to_pascal_case("hello") == "Hello"
+
+    def test_hyphenated(self):
+        from actions import _to_pascal_case
+        assert _to_pascal_case("my-workflow") == "MyWorkflow"
+
+    def test_mixed(self):
+        from actions import _to_pascal_case
+        assert _to_pascal_case("my_cool-workflow") == "MyCoolWorkflow"

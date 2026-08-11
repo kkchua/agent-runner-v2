@@ -1,18 +1,9 @@
-"""Context extensions for Artifact Generator Builder.
+"""Context extensions for Artifact Generator Builder v3.
 
 Registers artifact keys and resolves them to absolute paths at runtime.
-The ArtifactGeneratorBuilderExtensions class provides the bridge between
-artifact key definitions and the filesystem paths the runner uses.
 
-This workflow builds artifact generators that follow the mandatory pattern:
-Input -> Composition Spec -> Runtime Implementation -> Output
-
-Every AGB run produces two deliverables:
-1. Generator-specific Composition Standard (COMPOSITION_STANDARD_FILE)
-2. Workflow Package (workflow.toml, context_extensions.py, actions.py, prompts/, README.md)
-
-The codename is read from the requirement doc's YAML frontmatter and used
-to name the deliverable files and determine the promote target directory.
+AGB v3 pipeline: LLM generates domain logic (actions + prompts),
+infrastructure assembled mechanically. Single deliverable: workflow package.
 """
 
 from pathlib import Path
@@ -21,7 +12,7 @@ from typing import Any
 from agent_runner_v2.runtime_context import (
     get_governance_runtime_root,
     get_platform_runtime_root,
-    get_workspace_root
+    get_workspace_root,
 )
 from agent_runner_v2.workflow_packages.extensions_base import (
     WorkflowExtensions,
@@ -30,11 +21,7 @@ from agent_runner_v2.workflow_packages.extensions_base import (
 
 
 def _read_codename_from_requirement_doc(state: dict[str, Any]) -> str:
-    """Extract codename from the requirement doc's YAML frontmatter.
-
-    Falls back to 'unknown_generator' if the requirement doc cannot be
-    read or does not contain a codename field.
-    """
+    """Extract codename from the requirement doc's YAML frontmatter."""
     artifacts = state.get("artifacts") or {}
     req_doc_path = artifacts.get("REQUIREMENT_DOC", "")
     if not req_doc_path:
@@ -58,23 +45,14 @@ def _read_codename_from_requirement_doc(state: dict[str, Any]) -> str:
 
 
 class ArtifactGeneratorBuilderExtensions(WorkflowExtensions):
-    """Artifact key registration and path resolution for Artifact Generator Builder."""
+    """Artifact key registration and path resolution for AGB v3."""
 
     workflow_name = "artifact_generator_builder"
 
     def register_artifact_keys(
         self, *, job_id: str = "{job_id}", mode: str = "{mode}"
     ) -> dict[str, str]:
-        """Return a mapping of artifact keys to relative path templates.
-
-        Path templates use ``{job_id}`` and ``{seq}`` placeholders that
-        the runner resolves at execution time. All paths are relative
-        to the workspace root.
-
-        Deliverable files (COMPOSITION_STANDARD_FILE) use a
-        ``{codename}`` placeholder resolved at runtime from the
-        requirement doc's frontmatter.
-        """
+        """Return a mapping of artifact keys to relative path templates."""
         repo = "docs/repo/artifact_generator_builder"
         run = f"{repo}/runs/{{job_id}}"
         out = f"{run}/output"
@@ -83,40 +61,29 @@ class ArtifactGeneratorBuilderExtensions(WorkflowExtensions):
             # -- Input --
             "REQUIREMENT_DOC": "Specs/sample_requirement.md",
 
-            # -- Phase 1: Requirement Study --
-            "REQUIREMENT_ANALYSIS_FILE": f"{run}/REQUIREMENT_ANALYSIS-{{seq}}.md",
+            # -- Step 1: Analyze --
+            "ANALYSIS_JSON_FILE": f"{out}/ANALYSIS_JSON-{{seq}}.json",
 
-            # -- Phase 2: Design (adversarial challenge) --
-            "COMPOSITION_SPEC_FILE": f"{out}/COMPOSITION_SPEC-{{seq}}.md",
-            "CHALLENGE_COMPOSITION_SPEC_FILE": f"{run}/CHALLENGE_COMPOSITION_SPEC-{{seq}}.md",
-            "RESPONSE_COMPOSITION_SPEC_FILE": f"{run}/RESPONSE_COMPOSITION_SPEC-{{seq}}.md",
-            "GATEKEEP_COMPOSITION_SPEC_FILE": f"{run}/GATEKEEP_COMPOSITION_SPEC-{{seq}}.md",
+            # -- Steps 2-3: Plan ↔ Challenge --
+            "DOMAIN_PLAN_FILE": f"{out}/DOMAIN_PLAN-{{seq}}.md",
+            "PLAN_CHALLENGE_FILE": f"{run}/PLAN_CHALLENGE-{{seq}}.md",
 
-            "RUNTIME_IMPL_FILE": f"{out}/RUNTIME_IMPL-{{seq}}.md",
-            "CHALLENGE_RUNTIME_IMPL_FILE": f"{run}/CHALLENGE_RUNTIME_IMPL-{{seq}}.md",
-            "RESPONSE_RUNTIME_IMPL_FILE": f"{run}/RESPONSE_RUNTIME_IMPL-{{seq}}.md",
-            "GATEKEEP_RUNTIME_IMPL_FILE": f"{run}/GATEKEEP_RUNTIME_IMPL-{{seq}}.md",
-
-            "ARTIFACT_CONTRACT_FILE": f"{run}/ARTIFACT_CONTRACT-{{seq}}.md",
-
-            # -- Phase 3: Planning --
-            "IMPLEMENTATION_PLAN_FILE": f"{run}/IMPLEMENTATION_PLAN-{{seq}}.md",
-
-            # -- Phase 4: Implementation --
-            "COMPOSITION_STANDARD_FILE": f"{out}/standards/COMPOSITION_STANDARD.md",
-            "WORKFLOW_MANIFEST_FILE": f"{out}/workflow.toml",
-            "WORKFLOW_EXTENSIONS_FILE": f"{out}/context_extensions.py",
+            # -- Steps 4-5: Implement ↔ Critic --
             "WORKFLOW_ACTIONS_FILE": f"{out}/actions.py",
             "WORKFLOW_PROMPTS_DIR": f"{out}/prompts/",
-            "WORKFLOW_README_FILE": f"{out}/README.md",
+            "IMPL_CRITIQUE_FILE": f"{run}/IMPL_CRITIQUE-{{seq}}.md",
+
+            # -- Step 6: Assemble --
+            "WORKFLOW_MANIFEST_FILE": f"{out}/workflow.toml",
+            "WORKFLOW_EXTENSIONS_FILE": f"{out}/context_extensions.py",
+            "IMPL_OVERRIDE_FILES": f"{out}/impl_overrides.json",
+
+            # -- Steps 7-9: Review → Validate → Gatekeep --
+            "PACKAGE_REVIEW_FILE": f"{run}/PACKAGE_REVIEW-{{seq}}.md",
             "VALIDATION_FINDINGS_FILE": f"{run}/VALIDATION_FINDINGS-{{seq}}.md",
+            "GATEKEEP_PACKAGE_FILE": f"{run}/GATEKEEP_PACKAGE-{{seq}}.md",
 
-            # -- Phase 5: Testing --
-            "TEST_CRITERIA_FILE": f"{run}/TEST_CRITERIA-{{seq}}.md",
-            "TEST_FILE": f"{out}/test_actions.py",
-            "TEST_RESULTS_FILE": f"{run}/TEST_RESULTS-{{seq}}.md",
-
-            # -- Phase 6: Promote --
+            # -- Step 11: Promote --
             "PROMOTION_REPORT_FILE": f"{run}/PROMOTION_REPORT-{{seq}}.md",
             "WORKFLOW_PACKAGE_DIR": f"{out}/",
         }
@@ -161,14 +128,12 @@ class ArtifactGeneratorBuilderExtensions(WorkflowExtensions):
         # Resolve all artifact keys to absolute paths
         artifacts = state.get("artifacts") or {}
         for key, rel_path in self.register_artifact_keys().items():
-            # Already resolved by resolve_input_specs() -- don't overwrite
             if key in result:
                 continue
             existing = artifacts.get(key)
             if existing and Path(existing).is_absolute():
                 result[key] = existing
                 continue
-            # Resolve {codename} placeholder in path templates
             resolved_path = rel_path.replace("{codename}", codename)
             result[key] = str(workspace_root / resolved_path)
 

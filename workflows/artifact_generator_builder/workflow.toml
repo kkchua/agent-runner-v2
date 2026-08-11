@@ -1,20 +1,22 @@
-# Artifact Generator Builder v2
-# SDLC-driven workflow with adversarial design challenge and TDD verification.
+# Artifact Generator Builder v3
+# SDLC-scoped pipeline — LLM generates domain logic only (actions + prompts).
+# Infrastructure (workflow.toml, context_extensions.py) assembled mechanically.
 #
-# Phases:
-#   1. Requirement Study    — understand WHAT to build
-#   2. Design + Challenge   — decide HOW, then shatter and defend
-#   3. Planning             — break into concrete tasks
-#   4. Implementation       — build it, validate structure
-#   5. Testing              — prove it works with real tests
-#   6. Promote              — deploy to workflows/{codename}/
+# Pipeline:
+#   1. Analyze          — understand requirement, produce Analysis JSON
+#   2-3. Plan ↔ Challenge   — design domain logic, then attack it
+#   4-5. Implement ↔ Critic — write actions + prompts, then review them
+#   6. Assemble         — mechanically build structural files (ACTION)
+#   7. Test             — unit tests must pass (ACTION)
+#   8-10. Review → Validate → Gatekeep — quality gates
+#   11. Promote          — deploy + generate README (ACTION)
 
 [workflow]
 name = "artifact_generator_builder"
-version = "2.0.0"
+version = "3.0.0"
 label = "Artifact Generator Builder"
 job_prefix = "AGB"
-description = "Builds artifact generators using SDLC phases: requirement study, adversarial design challenge, planning, implementation, and TDD verification."
+description = "Builds workflow packages from requirement documents. LLM generates domain logic (actions + prompts), infrastructure assembled mechanically."
 visibility = "canonical"
 default_max_rejects = 3
 init_step = "analyze_requirement"
@@ -26,7 +28,7 @@ include_in_prompts = true
 prompt_targets = ["all"]
 
 # =============================================================================
-# Phase 1: Requirement Study
+# Step 1: Analyze Requirement
 # =============================================================================
 
 [[step]]
@@ -34,289 +36,192 @@ name = "analyze_requirement"
 prompt = "prompts/01_analyze_requirement.txt"
 enable_notifications = true
 requires_human_approval_after = false
-onsuccess = "design_composition_spec"
+onsuccess = "plan_domain_logic"
 
 [step.coder]
 role_policy = "architect_standard"
 
 [step.artifacts]
 required_inputs = ["REQUIREMENT_DOC"]
-produces = ["REQUIREMENT_ANALYSIS_FILE"]
-result_meta_key = "REQUIREMENT_ANALYSIS_FILE"
+produces = ["ANALYSIS_JSON_FILE"]
+result_meta_key = "ANALYSIS_JSON_FILE"
 
 # =============================================================================
-# Phase 2: Design + Adversarial Challenge (Composition Spec)
+# Step 2: Plan Domain Logic
 # =============================================================================
 
 [[step]]
-name = "design_composition_spec"
-prompt = "prompts/02_design_composition_spec.txt"
+name = "plan_domain_logic"
+prompt = "prompts/02_plan_domain_logic.txt"
 enable_notifications = true
 requires_human_approval_after = false
-onsuccess = "challenge_composition_spec"
+onsuccess = "challenge_plan"
 
 [step.coder]
 role_policy = "architect_standard"
 
 [step.artifacts]
-required_inputs = ["REQUIREMENT_ANALYSIS_FILE", "REQUIREMENT_DOC"]
-produces = ["COMPOSITION_SPEC_FILE"]
-result_meta_key = "COMPOSITION_SPEC_FILE"
+required_inputs = ["ANALYSIS_JSON_FILE", "REQUIREMENT_DOC"]
+produces = ["DOMAIN_PLAN_FILE"]
+result_meta_key = "DOMAIN_PLAN_FILE"
+
+# =============================================================================
+# Step 3: Challenge Plan
+# =============================================================================
 
 [[step]]
-name = "challenge_composition_spec"
-prompt = "prompts/02b_challenge_composition_spec.txt"
+name = "challenge_plan"
+prompt = "prompts/03_challenge_plan.txt"
 enable_notifications = true
 requires_human_approval_after = false
-onsuccess = "respond_composition_spec"
+onsuccess = "implement_domain"
 
 [step.coder]
 role_policy = "reviewer_standard"
 
 [step.artifacts]
-required_inputs = ["COMPOSITION_SPEC_FILE", "REQUIREMENT_ANALYSIS_FILE"]
-produces = ["CHALLENGE_COMPOSITION_SPEC_FILE"]
-result_meta_key = "CHALLENGE_COMPOSITION_SPEC_FILE"
-
-[[step]]
-name = "respond_composition_spec"
-prompt = "prompts/02c_respond_composition_spec.txt"
-enable_notifications = true
-requires_human_approval_after = false
-onsuccess = "gatekeep_composition_spec"
-
-[step.coder]
-role_policy = "architect_standard"
-
-[step.artifacts]
-required_inputs = ["CHALLENGE_COMPOSITION_SPEC_FILE", "COMPOSITION_SPEC_FILE"]
-produces = ["RESPONSE_COMPOSITION_SPEC_FILE"]
-result_meta_key = "RESPONSE_COMPOSITION_SPEC_FILE"
-
-[[step]]
-name = "gatekeep_composition_spec"
-prompt = "prompts/02d_gatekeep_composition_spec.txt"
-enable_notifications = true
-requires_human_approval_after = false
-onsuccess = "design_runtime_impl"
-
-[step.coder]
-role_policy = "gatekeeper_standard"
-
-[step.artifacts]
-required_inputs = ["COMPOSITION_SPEC_FILE", "CHALLENGE_COMPOSITION_SPEC_FILE", "RESPONSE_COMPOSITION_SPEC_FILE"]
-produces = ["GATEKEEP_COMPOSITION_SPEC_FILE"]
-result_meta_key = "GATEKEEP_COMPOSITION_SPEC_FILE"
+required_inputs = ["DOMAIN_PLAN_FILE", "ANALYSIS_JSON_FILE"]
+produces = ["PLAN_CHALLENGE_FILE"]
+result_meta_key = "PLAN_CHALLENGE_FILE"
 
 [step.on_reject_refine]
-step = "design_composition_spec"
-artifact = "GATEKEEP_COMPOSITION_SPEC_FILE"
+step = "plan_domain_logic"
+artifact = "PLAN_CHALLENGE_FILE"
 max_iterations = 2
-exhausted_failure_code = "COMPOSITION_SPEC_GATEKEEP_EXHAUSTED"
+exhausted_failure_code = "PLAN_CHALLENGE_EXHAUSTED"
 exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
 
 # =============================================================================
-# Phase 2 (cont): Design + Adversarial Challenge (Runtime Implementation)
+# Step 4: Implement Domain Logic
 # =============================================================================
 
 [[step]]
-name = "design_runtime_impl"
-prompt = "prompts/03_design_runtime_impl.txt"
+name = "implement_domain"
+prompt = "prompts/04_implement_domain.txt"
 enable_notifications = true
 requires_human_approval_after = false
-onsuccess = "challenge_runtime_impl"
+onsuccess = "critic_impl"
 
 [step.coder]
 role_policy = "architect_standard"
 
 [step.artifacts]
-required_inputs = ["COMPOSITION_SPEC_FILE", "REQUIREMENT_ANALYSIS_FILE"]
-produces = ["RUNTIME_IMPL_FILE"]
-result_meta_key = "RUNTIME_IMPL_FILE"
+required_inputs = ["DOMAIN_PLAN_FILE", "ANALYSIS_JSON_FILE", "REQUIREMENT_DOC"]
+produces = ["WORKFLOW_ACTIONS_FILE", "WORKFLOW_PROMPTS_DIR"]
+result_meta_key = "WORKFLOW_ACTIONS_FILE"
+
+# =============================================================================
+# Step 5: Critic Implementation
+# =============================================================================
 
 [[step]]
-name = "challenge_runtime_impl"
-prompt = "prompts/03b_challenge_runtime_impl.txt"
+name = "critic_impl"
+prompt = "prompts/05_critic_impl.txt"
 enable_notifications = true
 requires_human_approval_after = false
-onsuccess = "respond_runtime_impl"
+onsuccess = "assemble_package"
 
 [step.coder]
 role_policy = "reviewer_standard"
 
 [step.artifacts]
-required_inputs = ["RUNTIME_IMPL_FILE", "COMPOSITION_SPEC_FILE"]
-produces = ["CHALLENGE_RUNTIME_IMPL_FILE"]
-result_meta_key = "CHALLENGE_RUNTIME_IMPL_FILE"
-
-[[step]]
-name = "respond_runtime_impl"
-prompt = "prompts/03c_respond_runtime_impl.txt"
-enable_notifications = true
-requires_human_approval_after = false
-onsuccess = "gatekeep_runtime_impl"
-
-[step.coder]
-role_policy = "architect_standard"
-
-[step.artifacts]
-required_inputs = ["CHALLENGE_RUNTIME_IMPL_FILE", "RUNTIME_IMPL_FILE"]
-produces = ["RESPONSE_RUNTIME_IMPL_FILE"]
-result_meta_key = "RESPONSE_RUNTIME_IMPL_FILE"
-
-[[step]]
-name = "gatekeep_runtime_impl"
-prompt = "prompts/03d_gatekeep_runtime_impl.txt"
-enable_notifications = true
-requires_human_approval_after = false
-onsuccess = "define_artifact_contract"
-
-[step.coder]
-role_policy = "gatekeeper_standard"
-
-[step.artifacts]
-required_inputs = ["RUNTIME_IMPL_FILE", "CHALLENGE_RUNTIME_IMPL_FILE", "RESPONSE_RUNTIME_IMPL_FILE"]
-produces = ["GATEKEEP_RUNTIME_IMPL_FILE"]
-result_meta_key = "GATEKEEP_RUNTIME_IMPL_FILE"
+required_inputs = ["WORKFLOW_ACTIONS_FILE", "WORKFLOW_PROMPTS_DIR", "DOMAIN_PLAN_FILE"]
+produces = ["IMPL_CRITIQUE_FILE"]
+result_meta_key = "IMPL_CRITIQUE_FILE"
 
 [step.on_reject_refine]
-step = "design_runtime_impl"
-artifact = "GATEKEEP_RUNTIME_IMPL_FILE"
+step = "implement_domain"
+artifact = "IMPL_CRITIQUE_FILE"
 max_iterations = 2
-exhausted_failure_code = "RUNTIME_IMPL_GATEKEEP_EXHAUSTED"
+exhausted_failure_code = "IMPL_CRITIC_EXHAUSTED"
 exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
 
 # =============================================================================
-# Phase 2 (cont): Define Artifact Contract
+# Step 6: Assemble Package (ACTION)
 # =============================================================================
 
 [[step]]
-name = "define_artifact_contract"
-prompt = "prompts/04_define_artifacts.txt"
+name = "assemble_package"
+action = "assemble_package"
 enable_notifications = true
 requires_human_approval_after = false
-onsuccess = "plan_implementation"
-
-[step.coder]
-role_policy = "architect_standard"
+onsuccess = "review_package"
 
 [step.artifacts]
-required_inputs = ["RUNTIME_IMPL_FILE", "COMPOSITION_SPEC_FILE", "REQUIREMENT_ANALYSIS_FILE"]
-produces = ["ARTIFACT_CONTRACT_FILE"]
-result_meta_key = "ARTIFACT_CONTRACT_FILE"
+required_inputs = ["ANALYSIS_JSON_FILE", "WORKFLOW_ACTIONS_FILE", "WORKFLOW_PROMPTS_DIR"]
+produces = ["WORKFLOW_MANIFEST_FILE", "WORKFLOW_EXTENSIONS_FILE", "IMPL_OVERRIDE_FILES"]
+result_meta_key = "WORKFLOW_MANIFEST_FILE"
 
 # =============================================================================
-# Phase 3: Planning
+# Step 7: Review Package
 # =============================================================================
 
 [[step]]
-name = "plan_implementation"
-prompt = "prompts/05_plan_implementation.txt"
-enable_notifications = true
-requires_human_approval_after = false
-onsuccess = "implement_package"
-
-[step.coder]
-role_policy = "architect_standard"
-
-[step.artifacts]
-required_inputs = ["ARTIFACT_CONTRACT_FILE", "RUNTIME_IMPL_FILE", "COMPOSITION_SPEC_FILE"]
-produces = ["IMPLEMENTATION_PLAN_FILE"]
-result_meta_key = "IMPLEMENTATION_PLAN_FILE"
-
-# =============================================================================
-# Phase 4: Implementation
-# =============================================================================
-
-[[step]]
-name = "implement_package"
-prompt = "prompts/06_implement_package.txt"
+name = "review_package"
+prompt = "prompts/08_review_package.txt"
 enable_notifications = true
 requires_human_approval_after = false
 onsuccess = "validate_structure"
 
 [step.coder]
-role_policy = "architect_standard"
+role_policy = "reviewer_standard"
 
 [step.artifacts]
-required_inputs = ["IMPLEMENTATION_PLAN_FILE", "ARTIFACT_CONTRACT_FILE", "RUNTIME_IMPL_FILE", "COMPOSITION_SPEC_FILE", "REQUIREMENT_ANALYSIS_FILE"]
-produces = ["WORKFLOW_MANIFEST_FILE", "WORKFLOW_EXTENSIONS_FILE", "WORKFLOW_ACTIONS_FILE", "WORKFLOW_PROMPTS_DIR", "WORKFLOW_README_FILE", "COMPOSITION_STANDARD_FILE"]
-result_meta_key = "WORKFLOW_MANIFEST_FILE"
+required_inputs = ["WORKFLOW_MANIFEST_FILE", "WORKFLOW_ACTIONS_FILE", "WORKFLOW_EXTENSIONS_FILE", "WORKFLOW_PROMPTS_DIR", "ANALYSIS_JSON_FILE"]
+produces = ["PACKAGE_REVIEW_FILE"]
+result_meta_key = "PACKAGE_REVIEW_FILE"
+
+[step.on_reject_refine]
+step = "implement_domain"
+artifact = "PACKAGE_REVIEW_FILE"
+max_iterations = 2
+exhausted_failure_code = "PACKAGE_REVIEW_EXHAUSTED"
+exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
+
+# =============================================================================
+# Step 8: Validate Structure (ACTION)
+# =============================================================================
 
 [[step]]
 name = "validate_structure"
 action = "validate_structure"
 enable_notifications = true
 requires_human_approval_after = false
-onsuccess = "define_test_criteria"
+onsuccess = "gatekeep_package"
 
 [step.artifacts]
-required_inputs = ["WORKFLOW_MANIFEST_FILE", "WORKFLOW_ACTIONS_FILE"]
+required_inputs = ["WORKFLOW_MANIFEST_FILE", "WORKFLOW_ACTIONS_FILE", "WORKFLOW_EXTENSIONS_FILE"]
 produces = ["VALIDATION_FINDINGS_FILE"]
 result_meta_key = "VALIDATION_FINDINGS_FILE"
 
-[step.on_reject_refine]
-step = "implement_package"
-artifact = "VALIDATION_FINDINGS_FILE"
-max_iterations = 2
-exhausted_failure_code = "STRUCTURE_VALIDATION_EXHAUSTED"
-exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
-
 # =============================================================================
-# Phase 5: Testing (TDD Quality Gate)
+# Step 9: Gatekeep Package
 # =============================================================================
 
 [[step]]
-name = "define_test_criteria"
-prompt = "prompts/07_define_test_criteria.txt"
-enable_notifications = true
-requires_human_approval_after = false
-onsuccess = "generate_tests"
-
-[step.coder]
-role_policy = "architect_standard"
-
-[step.artifacts]
-required_inputs = ["WORKFLOW_ACTIONS_FILE", "WORKFLOW_MANIFEST_FILE", "IMPLEMENTATION_PLAN_FILE", "COMPOSITION_STANDARD_FILE"]
-produces = ["TEST_CRITERIA_FILE"]
-result_meta_key = "TEST_CRITERIA_FILE"
-
-[[step]]
-name = "generate_tests"
-prompt = "prompts/07b_generate_tests.txt"
-enable_notifications = true
-requires_human_approval_after = false
-onsuccess = "run_tests"
-
-[step.coder]
-role_policy = "architect_standard"
-
-[step.artifacts]
-required_inputs = ["TEST_CRITERIA_FILE", "WORKFLOW_ACTIONS_FILE", "WORKFLOW_MANIFEST_FILE"]
-produces = ["TEST_FILE"]
-result_meta_key = "TEST_FILE"
-
-[[step]]
-name = "run_tests"
-action = "run_tests"
+name = "gatekeep_package"
+prompt = "prompts/10_gatekeep_package.txt"
 enable_notifications = true
 requires_human_approval_after = false
 onsuccess = "promote_package"
 
+[step.coder]
+role_policy = "gatekeeper_standard"
+
 [step.artifacts]
-required_inputs = ["TEST_FILE", "WORKFLOW_ACTIONS_FILE"]
-produces = ["TEST_RESULTS_FILE"]
-result_meta_key = "TEST_RESULTS_FILE"
+required_inputs = ["WORKFLOW_MANIFEST_FILE", "WORKFLOW_ACTIONS_FILE", "VALIDATION_FINDINGS_FILE", "PACKAGE_REVIEW_FILE", "ANALYSIS_JSON_FILE"]
+produces = ["GATEKEEP_PACKAGE_FILE"]
+result_meta_key = "GATEKEEP_PACKAGE_FILE"
 
 [step.on_reject_refine]
-step = "implement_package"
-artifact = "TEST_RESULTS_FILE"
+step = "implement_domain"
+artifact = "GATEKEEP_PACKAGE_FILE"
 max_iterations = 2
-exhausted_failure_code = "TESTS_EXHAUSTED"
+exhausted_failure_code = "GATEKEEP_EXHAUSTED"
 exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
 
 # =============================================================================
-# Phase 6: Promote
+# Step 10: Promote Package (ACTION)
 # =============================================================================
 
 [[step]]
@@ -327,7 +232,7 @@ requires_human_approval_after = false
 onsuccess = "step_completion"
 
 [step.artifacts]
-required_inputs = ["WORKFLOW_MANIFEST_FILE", "COMPOSITION_STANDARD_FILE"]
+required_inputs = ["WORKFLOW_MANIFEST_FILE", "WORKFLOW_ACTIONS_FILE", "WORKFLOW_EXTENSIONS_FILE", "WORKFLOW_PROMPTS_DIR"]
 produces = ["PROMOTION_REPORT_FILE"]
 result_meta_key = "PROMOTION_REPORT_FILE"
 

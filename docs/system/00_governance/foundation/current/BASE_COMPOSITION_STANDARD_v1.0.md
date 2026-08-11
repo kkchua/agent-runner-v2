@@ -1,714 +1,456 @@
-# Composition System Standard v1
+# Base Composition Standard
 
-> **Abstract:** This document defines the universal pattern for LEGO-like
-> composition systems — a standardized approach to building complex deliverables
-> from reusable, composable components. This pattern is domain-agnostic and can
-> be applied to any field where modular assembly produces value: video production
-> manuscripts, software applications, content creation, podcast production, and
-> more.
+> **Abstract:** This standard defines the workflow package contract — the
+> structure, interfaces, and rules that every workflow package MUST satisfy
+> to be executable on the agent-runner-v2 platform. It also defines how the
+> Artifact Generator Builder (AGB) produces workflow packages from requirement
+> documents.
 >
 > **Status:** DRAFT
-> **Version:** 1.1
+> **Version:** 2.0
 > **Effective Date:** 2026-08-14
+> **Supersedes:** v1.1 (2026-08-14)
 
 ---
 
 ## 1. Purpose
 
-Complex deliverables (manuscripts, applications, content packages) are often
-created from scratch for each instance, leading to inconsistency, slow production,
-and difficulty scaling. A **composition-based approach** solves this by:
+The agent-runner-v2 platform executes workflows defined as **workflow packages** —
+a fixed set of files that describe a sequence of steps, their routing, and their
+domain logic. This standard defines:
 
-- Defining standardized **components** (reusable building blocks)
-- Providing a **composition format** (how components snap together)
-- Generating **resolved outputs** (complete deliverables with all references expanded)
+1. The **workflow package contract** — what files exist, what they contain, and
+   how they interrelate (Sections 2–6)
+2. The **requirement document specification** — what input AGB expects (Section 7)
+3. The **Analysis JSON schema** — the contract between requirement analysis and
+   mechanical assembly (Section 8)
+4. The **AGB pipeline** — how the platform generates workflow packages (Section 9)
 
-This standard defines the universal pattern that any domain can adopt.
-
----
-
-## 2. The Three-Layer Architecture
-
-All composition systems follow a three-layer architecture. This architecture supports two distinct patterns:
-
-### Pattern 1: Component Assembly
-
-Pre-defined components are assembled into a deliverable.
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│ Layer 1: COMPONENT LIBRARY                                   │
-│ Standardized building blocks with unified schema             │
-│ Example: hook, scene, voice_style, visual_direction          │
-└─────────────────────────────────────────────────────────────┘
-                            ↓
-┌─────────────────────────────────────────────────────────────┐
-│ Layer 2: COMPOSITION DEFINITIONS                             │
-│ Declarative assembly instructions referencing components     │
-│ Example: "Use hook-dramatic-001 + scene-problem-001 + ..."   │
-└─────────────────────────────────────────────────────────────┘
-                            ↓
-┌─────────────────────────────────────────────────────────────┐
-│ Layer 3: RESOLVED OUTPUTS                                    │
-│ Complete deliverables with all references expanded           │
-│ Example: Full manuscript with all creative directions        │
-└─────────────────────────────────────────────────────────────┘
-```
-
-**Use case:** Video campaign manuscripts, software blueprints, content packages — where you have a library of pre-defined components that are assembled in different combinations.
-
-### Pattern 2: Input Transformation
-
-Input content is transformed into output content through a pipeline.
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│ Layer 1: INPUT PARSING                                       │
-│ Parse input into structured intermediate representation      │
-│ Example: Document → Sections → Paragraphs → Sentences        │
-└─────────────────────────────────────────────────────────────┘
-                            ↓
-┌─────────────────────────────────────────────────────────────┐
-│ Layer 2: TRANSFORMATION                                      │
-│ Analyze, transform, and compose intermediate results         │
-│ Example: Sentences → KeyPoints → RedundancyClusters → Blocks │
-└─────────────────────────────────────────────────────────────┘
-                            ↓
-┌─────────────────────────────────────────────────────────────┐
-│ Layer 3: OUTPUT RENDERING                                    │
-│ Render final output from transformed components              │
-│ Example: Summary, Bullet Points, Key Phrases, Q&A            │
-└─────────────────────────────────────────────────────────────┘
-```
-
-**Use case:** Text summarization, content conversion, format transformation — where input content is processed through a pipeline to produce different output types.
-
-**Key difference:** Pattern 1 assembles pre-existing components. Pattern 2 transforms input content into new output content. Both follow the same 3-layer architecture, but the nature of each layer differs.
-
-### Separation of Concerns
-
-**Pattern 1 (Assembly):**
-- **Components** define WHAT the building blocks are
-- **Compositions** define HOW they fit together
-- **Outputs** are the RESULT (assembled deliverables)
-
-**Pattern 2 (Transformation):**
-- **Input Parsing** defines HOW to decompose input into structured form
-- **Transformation** defines HOW to analyze and compose intermediate results
-- **Output Rendering** defines HOW to produce final deliverables
-
-Both patterns support **multiple output types** through different runtime implementations (see Section 13).
+The platform infrastructure (step runner, routing engine, artifact system,
+daemon, backend) is **predefined and stable**. Workflow packages plug into this
+infrastructure — they do not redesign it.
 
 ---
 
-## 3. Universal Component Schema
+## 2. Workflow Package Structure
 
-All components, regardless of domain or type, conform to a unified schema.
-
-### 3.1 Common Properties
-
-Every component has these properties:
-
-| Property | Type | Required | Description |
-|---|---|---|---|
-| `component_id` | string | Yes | Unique identifier within the component library |
-| `component_type` | enum | Yes | Domain-specific type (e.g., `hook`, `scene`, `api_endpoint`) |
-| `name` | string | Yes | Human-readable display name |
-| `version` | string | Yes | Semantic version (e.g., `1.0.0`) |
-| `duration_range` | string | No | Applicable duration/scope (domain-specific) |
-| `platforms` | array | No | Target platforms/contexts (domain-specific) |
-| `tags` | array | No | Classification tags for search/filter |
-| `description` | string | Yes | What this component does and when to use it |
-
-### 3.2 Type-Specific Properties
-
-Each `component_type` defines additional type-specific properties. These are
-domain-defined and extend the common schema.
-
-**Example (Video Manuscript Domain):**
-```yaml
-component_type: hook
-hook_style: dramatic_reveal
-hook_script: "What if everything you knew was wrong?"
-visual_cue: "Product silhouette in darkness"
-energy_level: high
-```
-
-**Example (Software Domain):**
-```yaml
-component_type: api_endpoint
-http_method: POST
-path: /api/users
-auth_required: true
-request_schema: { ... }
-response_schema: { ... }
-```
-
-### 3.3 Component File Format
-
-Components are stored as markdown files with YAML frontmatter:
-
-```markdown
----
-component_id: "hook-dramatic-reveal-001"
-component_type: "hook"
-name: "Dramatic Reveal Hook"
-version: "1.0.0"
-duration_range: "3-5s"
-platforms: [tiktok, reels, shorts]
-tags: [dramatic, suspense, product]
-description: "Opens with a mysterious silhouette reveal, building curiosity"
-
-# Type-specific properties
-hook_style: visual_reveal
-hook_script: "What if everything you knew about {product_name} was wrong?"
-visual_cue: "Close-up of product silhouette in darkness, single spotlight"
-energy_level: high
----
-
-# Dramatic Reveal Hook
-
-Additional documentation, usage notes, examples...
-```
-
-### 3.4 Validation Rules
-
-Components must pass these validation checks:
-
-- **Required fields present:** component_id, component_type, name, version, description
-- **Valid component_type:** Must be a recognized type for the domain
-- **Unique component_id:** No duplicates within the library
-- **Type-specific schema conformance:** All required properties for the declared type must be present
-- **Semantic version format:** Must follow `MAJOR.MINOR.PATCH` pattern
-
-Invalid components are flagged but do not block the workflow. They are included
-in the inventory with status "invalid" and specific validation errors.
-
-### 3.5 Extensibility Model
-
-New component types can be added without breaking existing compositions:
-
-1. Define the new type's specific properties
-2. Document the type in the domain's component schema
-3. Existing compositions continue to work (they reference by component_id, not type)
-4. New compositions can reference the new type
-
-The common properties (component_id, component_type, name, version, tags, description)
-remain stable across all types.
-
----
-
-## 4. Composition Format Standard
-
-Compositions define how components are assembled into deliverables. They are
-declarative assembly instructions.
-
-### 4.1 Composition Structure
-
-Compositions are YAML files with this structure:
-
-```yaml
-composition_id: "unique-identifier"
-name: "Human-readable composition name"
-target_metadata: { ... }  # Domain-specific (duration, platform, etc.)
-
-component_bindings:
-  binding_name:
-    component_id: "referenced-component-id"
-    overrides:
-      property_name: "override value with {placeholder}"
-  
-  another_binding:
-    component_id: "another-component-id"
-    # No overrides — use component as-is
-  
-  list_binding:
-    - component_id: "first-component"
-      overrides: { ... }
-    - component_id: "second-component"
-      # No overrides
-```
-
-### 4.2 Composition Rules
-
-**References, not duplicates:**
-Components are referenced by `component_id`, not copied. The workflow resolves
-references against the component library at generation time.
-
-**Overrides:**
-Allow per-composition customization without modifying the component. Overrides
-must conform to the component type's schema. Overrides are merged with the
-component's base properties (override wins on conflict).
-
-**Placeholders:**
-`{placeholder}` values in overrides are resolved from external data sources
-(e.g., Product Master, configuration files, user input). Unresolved placeholders
-are flagged in the output as `{UNRESOLVED: field_name}`.
-
-**Optional bindings:**
-Not all component types are required in every composition. A composition may
-omit certain bindings if they're not needed for that deliverable.
-
-**Ordering:**
-Some bindings are ordered lists (e.g., scenes in a manuscript, pages in an app).
-Others are singletons (e.g., voice_style, visual_direction). The domain defines
-which is which.
-
-### 4.3 Composition Validation
-
-Compositions must pass these checks:
-
-- **All referenced component_ids exist** in the component library
-- **Overrides conform to component type schema** (no invalid properties)
-- **Required bindings present** (domain-defined)
-- **Placeholders are resolvable** from available data sources
-- **Ordering constraints satisfied** (e.g., scenes have sequential ordering)
-
-Invalid compositions are flagged but do not block the workflow. Missing components
-are noted as gaps in the output.
-
----
-
-## 5. Output Format Standard
-
-The resolved output is a complete, self-contained deliverable with all component
-references expanded, overrides applied, and placeholders filled.
-
-### 5.1 Output Structure
-
-Outputs are markdown files with YAML frontmatter:
-
-```yaml
----
-composition_id: "unique-identifier"
-composition_name: "Human-readable name"
-metadata: { ... }  # Domain-specific (duration, platform, etc.)
-component_count: 12
-generation_date: "2026-08-07"
-lifecycle_status: "draft"
----
-```
-
-Followed by structured sections that present the resolved components in a
-human-readable, downstream-consumable format.
-
-### 5.2 Resolution Rules
-
-**All references expanded:**
-Every `component_id` reference is replaced with the full component content
-(common properties + type-specific properties + overrides applied).
-
-**Placeholders resolved:**
-Every `{placeholder}` is replaced with the value from the external data source.
-Unresolved placeholders are marked as `{UNRESOLVED: field_name}`.
-
-**Self-contained:**
-The output contains all information needed to understand and use the deliverable.
-No need to reference the component library or composition file.
-
-**Downstream-agnostic:**
-The output describes WHAT the deliverable is, not HOW to produce it. Downstream
-workflows extract their specific concerns from the output.
-
-### 5.3 Output Quality Requirements
-
-- **No dangling references:** All component_ids resolved
-- **No unresolved placeholders:** All placeholders filled or explicitly flagged
-- **Schema conformance:** Overrides applied correctly
-- **Completeness:** All required sections present (domain-defined)
-- **Consistency:** No contradictions between sections
-
----
-
-## 6. Universal Workflow Pattern
-
-All composition-based workflows follow this pattern:
-
-### 6.1 Workflow Phases
-
-1. **Scan phase:** Discover and validate all components in the library. Build
-   component inventory with type classification and validation status.
-
-2. **Plan phase:** Read all compositions, resolve component references against
-   the inventory, identify overrides and placeholder bindings. Produce a
-   resolution plan.
-
-3. **Generate phase:** For each composition, resolve all components and
-   placeholders, apply overrides, assemble the complete output.
-
-4. **Review phase:** Quality review of generated outputs against constraints
-   and quality requirements.
-
-5. **Refine phase:** Fix issues found in review (conditional).
-
-### 6.2 Workflow Type
-
-**Mixed:** Action step for component scanning and validation, prompt-driven
-steps for output generation and review.
-
-### 6.3 Input Artifacts
-
-| Artifact Key | Description | Required? |
-|---|---|---|
-| `COMPONENT_LIBRARY_DIR` | Directory containing component files | Yes |
-| `COMPOSITIONS_DIR` | Directory containing composition definitions | Yes |
-| `DATA_SOURCE_DIR` | Directory containing placeholder resolution data | Yes (domain-specific) |
-
-### 6.4 Output Artifacts
-
-| Artifact Key | Description |
-|---|---|
-| `COMPONENT_INVENTORY_FILE` | Catalog of all discovered components |
-| `RESOLUTION_PLAN_FILE` | Plan mapping compositions to components |
-| `OUTPUT_FILE` | The assembled deliverable |
-| `REVIEW_FILE_SUGGESTED` | Quality review |
-
-### 6.5 Input Artifact Contract
-
-All composition-based workflows SHALL follow a consistent input artifact
-naming convention so that callers (operator consoles, CLI, or automated
-pipelines) can distinguish between file inputs and inline text inputs.
-
-**File input artifacts** — Any input that represents a user-provided
-document or file MUST use the `_FILE` suffix in its artifact key. This
-suffix is the universal signal that the input is a file to be selected,
-not inline text to be typed.
-
-| Artifact Key | Kind |
-|---|---|
-| `*_FILE` | File input — caller provides a file path |
-| `*_DIR` | Directory input — caller provides a directory path |
-| Other keys | Inline or pipeline-internal values |
-
-Every workflow MUST declare its input artifacts with correct suffixes.
-The composition standard SHALL document which inputs are file inputs
-and what formats they accept.
-
-### 6.6 Output Delivery Contract
-
-Every composition-based workflow SHALL declare where final output
-artifacts are delivered. The output destination is the contract between
-the generating workflow and its consumers.
-
-**Requirements:**
-
-1. **Dedicated output location** — Final deliverables SHALL be written
-   to a declared output location, separate from intermediate working
-   artifacts.
-
-2. **Output catalog** — The composition standard SHALL document which
-   artifact keys represent final deliverables and their file formats.
-
-3. **Delivery step** — The workflow SHALL include a delivery phase
-   (or equivalent) that places final artifacts into the declared
-   output location after all validation passes.
-
----
-
-## 7. Domain Examples
-
-### 7.1 Video Campaign Manuscripts
-
-**Component types:**
-- `hook` — Opening sequence (hook_style, hook_script, visual_cue, energy_level)
-- `scene` — Content segment (scene_purpose, scene_script, visual_direction, duration_target)
-- `voice_style` — Voiceover direction (voice_tone, pace, emphasis_pattern, voice_character)
-- `visual_direction` — Visual treatment (visual_style, color_palette, lighting_mood, camera_work, aspect_ratio)
-- `audio_mood` — Audio direction (mood, tempo, instrumentation, volume_balance)
-- `text_style` — On-screen text (text_treatment, font_style, text_animation, text_color_scheme)
-- `transition` — Scene transitions (transition_type, transition_duration, transition_energy)
-
-**Composition:** References components by ID, overrides specific properties,
-resolves `{product_name}`, `{pain_point}` from Product Master.
-
-**Output:** Complete video production manuscript with Opening, Voice Direction,
-Visual Treatment, Scene-by-Scene Breakdown, Audio Direction, Text Overlay,
-Production Notes.
-
-**Reference:** `video_campaign_manuscript_v1` workflow spec.
-
-### 7.2 Software Applications
-
-**Component types:**
-- `ui_page` — Application screen (page_type, layout, route, auth_required)
-- `ui_component` — Reusable UI element (component_kind, props, events, styling)
-- `api_endpoint` — REST/GraphQL endpoint (http_method, path, auth_required, request_schema, response_schema)
-- `data_model` — Entity definition (entity_name, fields, relations, constraints)
-- `service_module` — Business logic unit (service_name, operations, dependencies)
-- `integration` — Third-party connection (integration_type, endpoint, auth_method, payload_format)
-- `infrastructure` — Cross-cutting concern (concern_type, configuration, scope)
-
-**Composition:** References components by ID, overrides specific properties,
-resolves `{app_name}`, `{db_host}`, `{api_key}` from configuration.
-
-**Output:** Complete application blueprint with UI Structure, API Specification,
-Data Model, Service Architecture, Integration Points, Infrastructure Config.
-
-**Downstream workflows:**
-- `app_blueprint_to_scaffold_v1` — Generate project structure
-- `app_blueprint_to_api_v1` — Generate backend API code
-- `app_blueprint_to_frontend_v1` — Generate UI code
-- `app_blueprint_to_tests_v1` — Generate test suites
-- `app_blueprint_to_docs_v1` — Generate documentation
-
-**Status:** Conceptual — not yet implemented.
-
-### 7.3 Content Creation (Future)
-
-**Component types:**
-- `article_section` — Content section (section_type, heading, content, word_count_target)
-- `tone` — Writing style (tone_type, formality, voice, audience)
-- `visual_style` — Image/visual direction (visual_style, color_palette, mood)
-- `cta` — Call-to-action (cta_type, message, link, placement)
-
-**Output:** Complete content package (article, social posts, visuals).
-
-### 7.4 Podcast Production (Future)
-
-**Component types:**
-- `segment` — Podcast segment (segment_type, script, duration_target, guest_prompt)
-- `music_bed` — Background music (mood, tempo, instrumentation, volume)
-- `ad_slot` — Advertisement placement (ad_type, duration, placement, script)
-- `intro_outro` — Show opening/closing (script, music_cue, duration)
-
-**Output:** Complete podcast episode script with timing, music cues, ad placements.
-
----
-
-## 8. Downstream Workflow Pattern
-
-Composition outputs feed into downstream workflows that generate specific
-deliverables.
-
-### 8.1 Extraction Contracts
-
-Downstream workflows extract their specific concerns from the output:
-
-**Example (Video Manuscript → Voiceover Generation):**
-- Extract all `scene_script` fields in order
-- Combine with `voice_style` properties for delivery direction
-- Generate voiceover audio
-
-**Example (Software Blueprint → API Generation):**
-- Extract all `api_endpoint` components
-- Combine with `data_model` definitions for schema validation
-- Generate API route handlers, request validation, response formatting
-
-### 8.2 Platform-Specific Considerations
-
-Outputs may include platform-specific notes or variations:
-
-**Example (Video Manuscript):**
-- TikTok: Add trending sound reference
-- Reels: Ensure first frame is visually striking for grid preview
-- Shorts: Vertical crop safe — no critical elements in top/bottom 10%
-
-**Example (Software Blueprint):**
-- Web: Responsive design considerations
-- Mobile: Touch interaction patterns
-- Desktop: Keyboard shortcuts, menu bars
-
----
-
-## 9. Governance
-
-### 9.1 Proposing New Component Types
-
-To add a new component type to a domain:
-
-1. Define the type's specific properties (name, type, required/optional, description)
-2. Document the type in the domain's component schema
-3. Provide at least one example component
-4. Update the domain's workflow spec to recognize the new type
-5. Ensure backward compatibility (existing compositions continue to work)
-
-### 9.2 Versioning
-
-**Component versions:** Semantic versioning (MAJOR.MINOR.PATCH)
-- MAJOR: Breaking changes to type-specific schema
-- MINOR: New optional properties added
-- PATCH: Documentation fixes, no schema changes
-
-**Standard version:** This document is versioned separately. Changes to the
-universal pattern (common properties, composition format, output format) require
-a standard version increment.
-
-### 9.3 Compatibility Rules
-
-- **Backward compatible:** New component types can be added without breaking existing compositions
-- **Forward compatible:** Compositions can reference components that don't exist yet (flagged as gaps)
-- **Schema evolution:** Type-specific properties can be added (MINOR) but not removed or changed incompatibly (MAJOR)
-
----
-
-## 10. Meta-Workflow Builder Factory
-
-This standard enables a **factory pattern** for generating artifact generators.
-The **Artifact Generator Builder (AGB)** workflow reads a requirement document
-and produces a complete artifact generator with all required deliverables.
-
-**Input:** Requirement document (with codename, input artifacts, output artifacts, transformation requirements, constraints)
-**Output:** Three required deliverables (see Section 10.1)
-
-**Implementation:** `artifact_generator_builder` (AGB) workflow
-
-### 10.1 Required Deliverables
-
-Every AGB run MUST produce exactly two deliverables:
-
-| # | Deliverable | Filename Pattern | Description |
-|---|-------------|------------------|-------------|
-| 1 | Composition Standard | `standards/COMPOSITION_STANDARD.md` | The generator-specific composition standard -- step contracts (purpose, input/output, constraints), transformation rules, invariants, extension interfaces, input/output contracts. Derived from this base standard (Section 1-9) tailored to the generator's domain. |
-| 2 | Workflow Package | `workflow.toml`, `context_extensions.py`, `actions.py`, `prompts/`, `README.md`, `impls/` | The executable workflow package. The `workflow.toml` IS the default implementation -- every step has its prompt or action assigned. At least one alternative implementation MUST be provided via `impls/{name}/impl.yaml` to validate the override pattern (see Section 13.8). |
-
-All deliverables share the same **codename** assigned in the requirement
-document frontmatter. The codename is NOT generated by the LLM -- it is
-assigned by the human author of the requirement document.
-
-### 10.2 Required Generator File Structure
-
-After promotion, every AGB-generated generator MUST follow this file structure:
+Every workflow package SHALL be a directory containing these files:
 
 ```
 workflows/{codename}/
-    standards/
-        COMPOSITION_STANDARD.md       ← step contracts & invariants
-    impls/
-        {impl_name}/                  ← one folder per alternative impl
-            impl.yaml                 ← step overrides (partial mapping)
-            prompts/                  ← impl-specific prompts (optional)
-            actions.py                ← impl-specific actions (optional)
-    workflow.toml                     ← step sequence + DEFAULT implementation
-    context_extensions.py
-    actions.py                        ← shared actions (all impls can use)
-    prompts/                          ← shared prompts (all impls can use)
+    workflow.toml                 # Step sequence + default implementation
+    context_extensions.py        # Artifact key registration + path resolution
+    actions.py                   # Domain-specific action functions
+    prompts/                     # Prompt templates for LLM-driven steps
         *.txt
-    README.md
-    Specs/
-        *.md                          ← requirement docs for this generator
+    impls/                       # Alternative implementations (optional)
+        {impl_name}/
+            impl.yaml            # Step overrides (partial)
+            actions.py           # Impl-specific actions (optional)
+            prompts/             # Impl-specific prompts (optional)
+                *.txt
+    README.md                    # Human-readable documentation
 ```
 
-This structure is MANDATORY. All AGB-generated generators must have:
-- `standards/` -- contains the generator-specific composition standard (step contracts)
-- `workflow.toml` -- the step sequence AND default implementation (every step has prompt= or action= assigned). MUST include `[[workflow.implementation]]` declarations for all alternative implementations.
-- `impls/` -- contains at least one alternative runtime implementation (REQUIRED, not optional)
-- `impls/{name}/impl.yaml` -- override file that maps only the steps that differ from the default (see Section 13.8)
-- Root files -- shared actions, prompts, and the executable workflow package
+### 2.1 File Responsibilities
 
-### 10.3 AGB Run Behavior
+| File | Responsibility | Generated By |
+|------|---------------|--------------|
+| `workflow.toml` | Step sequence, routing, artifact bindings, default implementation | Assembler (mechanical) |
+| `context_extensions.py` | Artifact key registration, path resolution | Assembler (mechanical) |
+| `actions.py` | Domain-specific action logic | LLM (creative) |
+| `prompts/*.txt` | Domain-specific LLM instructions | LLM (creative) |
+| `impls/{name}/impl.yaml` | Step overrides for alternative implementations | Assembler (mechanical) |
+| `impls/{name}/actions.py` | Override action logic | LLM (creative) |
+| `impls/{name}/prompts/*.txt` | Override prompt templates | LLM (creative) |
+| `README.md` | Workflow documentation | Promote action |
 
-During an AGB run, ALL artifacts (intermediate and final) are written to the
-AGB's own run directory:
+### 2.2 Separation of Concerns
 
-```
-docs/repo/artifact_generator_builder/runs/{job_id}/
-    REQUIREMENT_ANALYSIS-01.md
-    COMPOSITION_SPEC-01.md        (intermediate design artifact)
-    RUNTIME_IMPL-01.md            (intermediate design artifact)
-    ARTIFACT_CONTRACT-01.md
-    STEP_SEQUENCE-01.md
-    output/
-        standards/
-            COMPOSITION_STANDARD.md
-        workflow.toml
-        context_extensions.py
-        actions.py
-        prompts/
-        README.md
-```
+The platform infrastructure is **fixed**. The LLM generates only the
+**domain-specific content** that plugs into the predefined structure:
 
-The promote action (Phase 7) then packages and publishes the deliverables
-from `output/` to `workflows/{codename}/` following the structure in Section 10.2.
-
-### 10.4 Factory Workflow Phases
-
-| Phase | Description | Key Output |
-|-------|-------------|------------|
-| 1. Analyze Requirement | Understand input/output specifications, read codename from requirement doc | REQUIREMENT_ANALYSIS_FILE |
-| 2. Design Composition Spec | Define step contracts, transformation rules, meta schema, invariants | COMPOSITION_SPEC_FILE |
-| 3. Design Runtime Implementation | Design the default executor that follows the spec | RUNTIME_IMPL_FILE |
-| 4. Define Artifacts | Specify all artifact keys and paths | ARTIFACT_CONTRACT_FILE |
-| 5. Design Steps | Define workflow steps and routing | STEP_SEQUENCE_FILE |
-| 6. Generate Package | Produce workflow files (workflow.toml as default impl) + composition standard | WORKFLOW_PACKAGE + COMPOSITION_STANDARD_FILE |
-| 7. Promote Package | Package deliverables to workflows/{codename}/ | PROMOTION_REPORT_FILE |
-
-### 10.5 Example
-
-**Input (Requirement Doc):**
-```markdown
----
-codename: "text_summarizer"
-generator_name: "Text Summarizer"
-version: "1.0.0"
----
-
-## Purpose
-Transforms long text into concise summary and key points.
-
-## Input
-A text document (.txt or .md) containing long-form content.
-
-## Output
-1. Condensed summary — prose summary at most 20% of original word count.
-2. Key points list — ordered list of extracted key points with importance scores.
-
-## Constraints
-- Max 20% compression ratio
-- Same language as input
-- No new information
-
-## Standard Reference
-See BASE_COMPOSITION_STANDARD_v1.0.md for all structural decisions.
-```
-
-**Output (after promote):**
-```
-workflows/text_summarizer/
-    standards/COMPOSITION_STANDARD.md
-    impls/
-        {variant_name}/        ← at least one alternative (REQUIRED)
-            impl.yaml
-    workflow.toml              ← default implementation
-    context_extensions.py
-    actions.py
-    prompts/
-    README.md
-```
-
-### 10.6 Self-Bootstrap
-
-AGB can build itself. The self-bootstrap requirement specifies:
-
-- **Input:** Requirement documents
-- **Output:** Artifact generators (deliverables per Section 10.1)
-
-This creates a recursive chain where AGB can produce improved versions of itself.
-
-**Status:** Implemented -- `workflows/artifact_generator_builder/`
+| Layer | What | Who |
+|-------|------|-----|
+| **Infrastructure** | step_runner, routing, artifact system, daemon, backend | Platform (fixed) |
+| **Structural files** | workflow.toml, context_extensions.py, impl.yaml | Assembler (mechanical) |
+| **Domain logic** | actions.py, prompts/*.txt | LLM (creative) |
 
 ---
 
-## 11. Authoring a Requirement Document
+## 3. Workflow Manifest Contract (workflow.toml)
 
-A **Requirement Document** is the input to the Artifact Generator Builder (AGB). It is a pure business description of what generator to build — it describes WHAT, never HOW.
+The `workflow.toml` file defines the step sequence, routing, artifact bindings,
+and default implementation for a workflow.
 
-### 11.1 Separation of Concerns
+### 3.1 Workflow Header
 
-The requirement document and this standard have distinct responsibilities:
+The `[workflow]` section declares workflow-level metadata:
 
-| Concern | Who owns it |
+```toml
+[workflow]
+name = "text_summarizer_ayz"          # REQUIRED — MUST match directory name
+version = "1.0.0"                      # REQUIRED — semantic version
+label = "Text Summarizer"              # REQUIRED — human-readable display name
+job_prefix = "TXTSUM"                  # REQUIRED — used for job ID generation
+init_step = "parse_input"             # REQUIRED — MUST match first step's name
+description = "Transforms long text into condensed output"
+default_max_rejects = 3                # OPTIONAL — default 3
+```
+
+| Field | Required | Constraint |
+|-------|----------|------------|
+| `name` | YES | MUST match the workflow directory name |
+| `version` | YES | Semantic version (MAJOR.MINOR.PATCH) |
+| `label` | YES | Human-readable display name |
+| `job_prefix` | YES | 2-10 uppercase characters, used for job ID prefix |
+| `init_step` | YES | MUST match the `name` of the first `[[step]]` |
+| `description` | NO | Human-readable description |
+| `default_max_rejects` | NO | Integer, defaults to 3 |
+
+### 3.2 Step Definitions
+
+Each step is declared as a `[[step]]` array of tables. Steps are executed in
+the order defined by `onsuccess` chaining, starting from `init_step`.
+
+#### Step-Level Keys
+
+These keys MUST appear at step level, BEFORE any `[step.*]` sub-table:
+
+```toml
+[[step]]
+name = "parse_input"                   # REQUIRED — unique step identifier
+action = "parse_input_document"        # One-of: action name (for action-driven steps)
+enable_notifications = false           # OPTIONAL — default false
+requires_human_approval_after = false  # OPTIONAL — default false
+onsuccess = "analyze_structure"        # OPTIONAL — next step name
+```
+
+A step MUST have EITHER `prompt` (prompt-driven) OR `action` (action-driven),
+never both.
+
+#### Prompt-Driven Steps
+
+```toml
+[[step]]
+name = "analyze_structure"
+prompt = "prompts/02_analyze_structure.txt"   # Relative to workflow root
+onsuccess = "transform_content"
+
+[step.coder]
+role_policy = "architect_standard"           # Coder role policy
+
+[step.artifacts]
+required_inputs = ["PARSED_DOCUMENT"]
+produces = ["ANALYSIS_RESULT"]
+result_meta_key = "ANALYSIS_RESULT"
+```
+
+#### Action-Driven Steps
+
+```toml
+[[step]]
+name = "render_output"
+action = "render_prose_output"
+onsuccess = "step_completion"
+
+[step.artifacts]
+required_inputs = ["TRANSFORMED_CONTENT", "PARSED_DOCUMENT"]
+produces = ["SUMMARY_FILE"]
+result_meta_key = "SUMMARY_FILE"
+```
+
+#### Step Artifacts
+
+The `[step.artifacts]` sub-table declares artifact bindings:
+
+| Field | Required | Type | Description |
+|-------|----------|------|-------------|
+| `required_inputs` | NO | list[str] | Artifact keys required before this step runs |
+| `produces` | NO | list[str] | Artifact keys this step produces |
+| `result_meta_key` | NO | str | Key for meta.json sidecar result |
+| `optional_inputs` | NO | list[str] | Artifact keys optionally used |
+
+#### Step Coder
+
+The `[step.coder]` sub-table (prompt-driven steps only) configures coder selection:
+
+| Field | Required | Type | Description |
+|-------|----------|------|-------------|
+| `role_policy` | NO | str | Role policy name (e.g., "architect_standard") |
+| `default` | NO | str | Default coder name |
+| `allowed` | NO | list[str] | Allowed coder names |
+
+#### Reject Refine
+
+The `[step.on_reject_refine]` sub-table configures refinement loops for
+**prompt-driven steps only**:
+
+```toml
+[step.on_reject_refine]
+step = "implement_domain"              # Step to route back to
+artifact = "VALIDATION_FINDINGS_FILE"  # Artifact for rejection check
+max_iterations = 2                     # Max refinement loops
+exhausted_failure_code = "TESTS_EXHAUSTED"
+exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
+```
+
+Action-driven steps SHALL NOT use `on_reject_refine`. Action failures route
+to human intervention.
+
+### 3.3 Terminal Step
+
+Every workflow MUST end with a terminal step:
+
+```toml
+[[step]]
+name = "step_completion"
+action = "step_completion"
+```
+
+This uses the platform's global `step_completion` action.
+
+### 3.4 Implementation Declarations
+
+When a workflow has alternative implementations, it MUST declare them:
+
+```toml
+[[workflow.implementation]]
+name = "key_points"
+description = "Produces ordered list of extracted key points"
+label = "Key Points"
+```
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `name` | YES | Matches `impls/{name}/` directory. MUST be unique. |
+| `description` | YES | What this variant does |
+| `label` | NO | Display label for UI. Defaults to `name`. |
+
+The `default` implementation (workflow.toml itself) is always implicit and
+MUST NOT be listed.
+
+### 3.5 Validation Rules
+
+1. `name` in `[workflow]` MUST match the directory name
+2. `init_step` MUST match the first step's `name`
+3. Every step MUST have either `prompt` or `action`, never both
+4. Every step MUST have `onsuccess` pointing to a valid step name (except terminal)
+5. `result_meta_key` values SHOULD be unique across steps
+6. All artifact keys in `required_inputs` and `produces` MUST be registered in
+   `context_extensions.py`
+7. Each `[[workflow.implementation]]` name MUST have a matching `impls/{name}/`
+   directory with a valid `impl.yaml`
+8. `default` MUST NOT appear in `[[workflow.implementation]]`
+
+---
+
+## 4. Multi-Implementation Model
+
+The multi-implementation model uses an **override pattern** — the workflow.toml
+defines the default implementation (all steps assigned), and `impls/{name}/impl.yaml`
+files provide partial overrides for steps that differ.
+
+### 4.1 Core Principle
+
+```
+workflow.toml          = step sequence + DEFAULT implementation (all steps assigned)
+impls/{name}/impl.yaml = OVERRIDES ONLY (partial — only steps that differ)
+
+Runtime resolution: workflow.toml defaults + impl overrides = effective config
+```
+
+### 4.2 Override Format (impl.yaml)
+
+```yaml
+name: key_points
+description: "Produces ordered list of extracted key points"
+
+overrides:
+  transform_content:
+    prompt: "impls/key_points/prompts/03_transform_key_points.txt"
+
+  render_output:
+    action: "render_list_output"
+```
+
+**Rules:**
+
+1. Each key under `overrides:` MUST match a step name in `workflow.toml`
+2. Each override entry MUST specify `prompt` or `action`
+3. Steps NOT listed inherit from `workflow.toml` unchanged
+4. Override `prompt` paths are relative to the workflow root
+5. Override `action` names reference functions in impl-specific or shared `actions.py`
+
+### 4.3 Shared vs Implementation-Specific Components
+
+| Component | Location | Used By |
+|-----------|----------|---------|
+| Shared prompts | `prompts/*.txt` | All implementations (default) |
+| Shared actions | `actions.py` (root) | All implementations (default) |
+| Impl-specific prompts | `impls/{name}/prompts/*.txt` | Only that implementation |
+| Impl-specific actions | `impls/{name}/actions.py` | Only that implementation |
+
+Implementations SHOULD reuse shared components and only provide impl-specific
+components when the behavior MUST differ.
+
+### 4.4 Runtime Resolution Algorithm
+
+```python
+def resolve_step(step_name, workflow_toml, selected_impl):
+    config = workflow_toml.get_step(step_name)
+    if selected_impl and selected_impl != "default":
+        impl_overrides = load_yaml(f"impls/{selected_impl}/impl.yaml")
+        if step_name in impl_overrides.get("overrides", {}):
+            config.update(impl_overrides["overrides"][step_name])
+    return config
+```
+
+### 4.5 Design Constraints
+
+1. `workflow.toml` is always complete — every step has `prompt =` or `action =`
+2. `impl.yaml` is always partial — only lists steps that differ
+3. No `impl.yaml` for default — the default is `workflow.toml` itself
+4. Step sequence is fixed — implementations cannot add, remove, or reorder steps
+5. At least one alternative implementation is REQUIRED for AGB-generated workflows
+
+### 4.6 Validation Rules
+
+1. `impl.yaml` override keys MUST reference existing step names in `workflow.toml`
+2. Each override entry MUST specify at least one of `prompt` or `action`
+3. Override `prompt` paths MUST reference existing files
+4. Override `action` names MUST reference existing functions
+5. Implementation names MUST be unique within a workflow
+
+---
+
+## 5. Action Interface Contract
+
+Every action-driven step references a function via `action = "action_name"` in
+`workflow.toml`. That function MUST conform to this contract.
+
+### 5.1 Required Imports
+
+```python
+from agent_runner_v2.workflow_packages.actions import action
+from agent_runner_v2.action_result import ActionResult
+```
+
+### 5.2 Decorator
+
+Every action function MUST be decorated with `@action("action_name")` where
+`action_name` matches the `action = "..."` value in `workflow.toml`:
+
+```python
+@action("my_action_name")
+def my_action_name(context, state, step_cfg, project_root):
+    ...
+```
+
+### 5.3 Function Signature
+
+Every action function MUST accept exactly these four keyword-only arguments:
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `context` | `dict[str, str]` | Resolved artifact paths and context variables |
+| `state` | `dict[str, Any]` | Job state including `state["artifacts"]` |
+| `step_cfg` | `dict[str, Any]` | Step configuration from `workflow.toml` |
+| `project_root` | `Path` | Absolute path to the project root |
+
+### 5.4 Return Type
+
+Every action function MUST return an `ActionResult`:
+
+```python
+return ActionResult(
+    status="APPROVED",           # "APPROVED" or "REJECTED"
+    remark="Brief description",  # Human-readable summary
+    artifacts={                  # artifact_key → path for produced artifacts
+        "OUTPUT_KEY": "/path/to/output"
+    },
+    reject_code=None,            # Machine-readable failure code when REJECTED
+)
+```
+
+### 5.5 Dispatch Priority
+
+Package-local actions (in the workflow's `actions.py`) take priority over the
+global `ACTION_REGISTRY`. The dispatch order is:
+
+1. Package-local `actions.py` (imported via `@action` decorator)
+2. Implementation-specific `impls/{name}/actions.py`
+3. Global `ACTION_REGISTRY` (platform built-in actions)
+
+---
+
+## 6. Artifact Contracts
+
+### 6.1 Input Artifact Naming Convention
+
+All input artifacts that represent user-provided files or directories SHALL use
+standardized suffixes:
+
+| Suffix | Kind | Example |
+|--------|------|---------|
+| `_FILE` | File input — caller provides a file path | `SOURCE_DOCUMENT_FILE` |
+| `_DIR` | Directory input — caller provides a directory path | `INPUT_FOLDER_DIR` |
+| No suffix | Inline or pipeline-internal value | `PARSED_DOCUMENT` |
+
+Every workflow MUST declare its input artifacts with correct suffixes so that
+caller interfaces (operator console, CLI) can distinguish file inputs from
+other values.
+
+### 6.2 Output Delivery Contract
+
+Every workflow SHALL declare where final output artifacts are delivered:
+
+1. **Dedicated output location** — Final deliverables SHALL be written to a
+   declared output location, separate from intermediate working artifacts
+2. **Output catalog** — The workflow SHALL document which artifact keys represent
+   final deliverables and their file formats
+3. **Delivery step** — The workflow SHALL include a delivery phase (or equivalent)
+   that places final artifacts into the declared output location after validation
+
+### 6.3 Artifact Key Registration
+
+Every artifact key used in `workflow.toml` step definitions MUST be registered
+in `context_extensions.py` via `register_artifact_keys()`. The registration
+maps each key to a relative path template:
+
+```python
+def register_artifact_keys(self, *, job_id, mode):
+    return {
+        "SOURCE_DOCUMENT_FILE": f"jobs/{job_id}/input/{{filename}}",
+        "PARSED_DOCUMENT": f"jobs/{job_id}/intermediate/PARSED_DOCUMENT.json",
+        "SUMMARY_FILE": f"jobs/{job_id}/output/SUMMARY_FILE.md",
+    }
+```
+
+Path templates MAY use `{job_id}` and other runtime placeholders.
+
+---
+
+## 7. Requirement Document Specification
+
+A **requirement document** is the input to the Artifact Generator Builder (AGB).
+It describes WHAT generator to build — never HOW.
+
+### 7.1 Separation of Concerns
+
+| Concern | Who Owns It |
 |---------|-------------|
 | What input content exists | Requirement document |
 | What output is desired | Requirement document |
 | Transformation rules and constraints | Requirement document |
-| Artifact key naming and registration | This standard (AGB LLM follows it) |
-| Output variant identification | This standard (AGB LLM follows it) |
-| Implementation declarations | This standard (AGB LLM follows it) |
-| File structure and naming conventions | This standard (AGB LLM follows it) |
+| Workflow structure, artifact keys, routing | Platform (predefined) |
+| Action logic and prompt content | LLM (generated by AGB) |
 
-The requirement document MUST reference this standard as the authority for all structural and technical decisions. It shall NOT define artifact keys, naming conventions, output variants, implementation patterns, or any other structural rules — those belong exclusively to this standard. The requirement document describes WHAT to build; this standard defines HOW to structure it.
+The requirement document MUST NOT define artifact keys, routing logic, step
+sequences, or any other structural concern. It describes content and constraints
+only.
 
-### 11.2 Document Structure
+### 7.2 Document Structure
 
 The requirement document is a markdown file with YAML frontmatter:
 
@@ -721,598 +463,225 @@ version: "1.0.0"
 ```
 
 | Frontmatter Field | Required | Description |
-|---|---|---|
-| `codename` | Yes | Unique identifier for the generated workflow. Used as directory name, file prefixes, and identity throughout all deliverables. Assigned by the human author -- NOT generated by the LLM. |
-| `generator_name` | Yes | Human-readable display name for the generator. |
-| `version` | Yes | Semantic version of the generator. |
+|-------------------|----------|-------------|
+| `codename` | YES | Unique identifier. Assigned by human author, NOT generated by LLM. |
+| `generator_name` | YES | Human-readable display name |
+| `version` | YES | Semantic version |
 
 Followed by these sections:
 
-| Section | Purpose | Example |
-|---------|---------|---------|
-| **Purpose** | What the generator does | "Transforms long text into concise summary" |
-| **Input** | What content the generator accepts (describe the content, not artifact keys) | "A folder of markdown documents" or "A text document (.txt or .md)" |
-| **Output** | What the generator produces (describe the desired results, not artifact keys) | "A styled HTML report with table of contents" |
-| **Transformation Requirements** | How input becomes output (business rules, not implementation) | "Merge multiple files into single report, auto-generate TOC from headings" |
-| **Constraints** | Hard requirements | "Must handle UTF-8", "Output must be self-contained" |
-| **Standard Reference** | Pointer to this standard for structural decisions | "See BASE_COMPOSITION_STANDARD_v1.0.md" |
+| Section | Purpose |
+|---------|---------|
+| **Purpose** | What the generator does |
+| **Input** | What content the generator accepts (describe content, not artifact keys) |
+| **Output** | What the generator produces (describe results, not artifact keys) |
+| **Transformation Requirements** | Business rules for how input becomes output |
+| **Constraints** | Hard requirements (compression ratios, language rules, format limits) |
 
-### 11.3 Key Principles
+### 7.3 Key Principles
 
-**Describe content, not structure.** The requirement doc describes what input content looks like and what output is desired. It does NOT define artifact keys, file naming, or directory structure. The AGB reads this standard and determines all structural details.
+1. **Describe content, not structure.** The requirement doc describes what input
+   content looks like and what output is desired. It does NOT define artifact
+   keys, file naming, or directory structure.
 
-**Define constraints, not implementation.** The requirement doc specifies WHAT must be achieved (e.g., "max 20% compression", "must be mobile-friendly"), not HOW to achieve it. The composition spec and runtime implementation (generated by AGB) define the HOW.
+2. **Define constraints, not implementation.** The requirement doc specifies WHAT
+   must be achieved, not HOW. The LLM decides implementation details.
 
-**Be complete about business rules.** All transformation logic, quality requirements, and constraints must be explicit. The AGB LLM uses these to design the composition spec and runtime implementation.
-
-### 11.4 Example
-
-See `workflows/artifact_generator_builder/Specs/simple_text_summarizer.md` for a complete example.
-
-### 11.5 Relationship to Composition Spec and Runtime Implementation
-
-```
-Requirement Document (human-written, business-only)
-    ↓ AGB Phase 1-2
-Composition Spec (generated, identifies output variants and artifact keys)
-    ↓ AGB Phase 3
-Runtime Implementation (generated, concrete executor)
-    ↓ AGB Phase 4-6
-Workflow Package (generated, executable workflow with impl declarations)
-```
-
-The requirement document is the **source of truth** for what the generator should do. The composition spec and runtime implementation are **derived artifacts** that satisfy the requirement. All structural decisions (artifact keys, output variants, implementation declarations) are made by the AGB LLM guided by this standard.
+3. **Be complete about business rules.** All transformation logic, quality
+   requirements, and constraints MUST be explicit.
 
 ---
 
-## 13. Composition Spec vs Runtime Implementation
+## 8. Analysis JSON Schema
 
-A **Composition Spec** and a **Runtime Implementation** serve distinct but complementary roles in the composition system architecture.
+The Analysis JSON is the **contract** between the `analyze_requirement` step
+(which reads the requirement document) and the `assemble_package` action
+(which builds structural files). It contains all information needed to
+mechanically construct `workflow.toml`, `context_extensions.py`, and
+`impl.yaml` files.
 
-### 13.1 Separation of Concerns
+### 8.1 Schema Definition
 
-| Aspect | Composition Spec | Runtime Implementation |
-|--------|-----------------|----------------------|
-| **Purpose** | Defines WHAT the transformation does | Defines HOW the transformation executes |
-| **Nature** | Declarative contract | Concrete executor |
-| **Contains** | Meta schema, invariants, constraints, interfaces | Algorithms, data structures, code logic |
-| **Changes when** | Requirements change | Performance/implementation details change |
-| **Stability** | Stable across implementations | May have multiple implementations |
+```json
+{
+  "identity": {
+    "name": "string — workflow name, MUST match codename",
+    "job_prefix": "string — 2-10 uppercase chars for job ID generation",
+    "version": "string — semantic version",
+    "label": "string — human-readable display name",
+    "description": "string — one-line description",
+    "codename": "string — unique identifier from requirement doc"
+  },
 
-### 13.2 Composition Spec (The Contract)
+  "domain_steps": [
+    {
+      "name": "string — unique step identifier",
+      "type": "action | prompt",
+      "action_name": "string — required when type=action",
+      "prompt_file": "string — required when type=prompt, filename only",
+      "role_policy": "string — optional, required when type=prompt",
+      "required_inputs": ["ARTIFACT_KEY", "..."],
+      "produces": ["ARTIFACT_KEY", "..."]
+    }
+  ],
 
-The Composition Spec defines:
+  "artifact_keys": {
+    "inputs": [
+      {"key": "string", "pattern": "string — relative path template"}
+    ],
+    "intermediate": [
+      {"key": "string", "pattern": "string — relative path template"}
+    ],
+    "outputs": [
+      {"key": "string", "pattern": "string — relative path template"}
+    ]
+  },
 
-1. **Meta Schema** — The intermediate representation (Layer 1, Layer 2, Layer 3 components)
-2. **Input Mapping** — How input artifacts map to Layer 1 components
-3. **Transformation Rules** — The stages that transform Layer 1 → Layer 2 → Layer 3
-4. **Invariants** — Conditions that must hold at each stage
-5. **Constraints** — Hard requirements (e.g., compression ratio ≤ 20%)
-6. **Extension Interfaces** — Protocol definitions for pluggable components
-7. **Output Contract** — What the output must satisfy (not how it's formatted)
-
-**The spec is output-type-agnostic.** It defines the transformation contract, not the specific output format. The spec should use generic output interfaces that different runtime implementations can satisfy.
-
-**Example (Generic Output Contract):**
-```
-OutputDocument (interface)
-  - output_type: enum (summary, bullet_points, key_phrases, etc.)
-  - content_structure: varies by output_type
-  - validation_rules: varies by output_type
-  - metadata: dict
-```
-
-### 13.3 Runtime Implementation (The Executor)
-
-The Runtime Implementation defines:
-
-1. **Pipeline Architecture** — How stages are organized and executed
-2. **Algorithms** — Concrete implementations of each transformation stage
-3. **Data Structures** — How components are represented in memory
-4. **Extension Implementations** — Concrete classes that satisfy the spec's Protocol interfaces
-5. **Error Handling** — Recovery mechanisms and failure modes
-6. **Configuration** — Runtime parameters and their defaults
-7. **Output Rendering** — How Layer 3 components are serialized to disk
-
-**Multiple runtime implementations can satisfy the same composition spec.** Each implementation may produce different output types or use different algorithms, as long as all invariants and constraints are satisfied.
-
-**Example (Multiple Implementations):**
-```
-SummaryRuntime       → produces SummaryDocument       → SUMMARY_FILE
-BulletPointRuntime   → produces BulletPointDocument   → BULLET_POINT_FILE
-KeyPhraseRuntime     → produces KeyPhraseList         → KEY_PHRASE_FILE
-```
-
-All three satisfy the same composition spec (same input parsing, same Layer 1/Layer 2 transformation), but produce different outputs via different Layer 3 components and different output rendering.
-
-### 13.4 Output-Type-Agnostic Design
-
-The composition spec should **not hardcode a specific output type**. Instead, it should define a generic output contract that supports multiple output types through different runtime implementations.
-
-**Anti-pattern (Output-Type-Specific):**
-```
-Layer 3: SummaryDocument (hardcoded)
-Output: SUMMARY_FILE (hardcoded)
+  "implementations": [
+    {
+      "name": "string — implementation identifier",
+      "description": "string — what this variant does",
+      "label": "string — optional display label",
+      "overrides": {
+        "step_name": {
+          "prompt": "string — override prompt path",
+          "action": "string — override action name"
+        }
+      }
+    }
+  ]
+}
 ```
 
-This design only supports summary output. To support bullet points or key phrases, you would need a completely different composition spec.
-
-**Correct pattern (Output-Type-Agnostic):**
-```
-Layer 3: OutputDocument (interface)
-  - output_type: enum (summary, bullet_points, key_phrases, etc.)
-  - content_blocks: array
-  - validation_rules: varies by output_type
-
-Runtime Implementation chooses:
-  - SummaryRuntime → SummaryDocument → SUMMARY_FILE
-  - BulletPointRuntime → BulletPointDocument → BULLET_POINT_FILE
-```
-
-This design supports multiple output types from the same composition spec. The requirement document specifies which output type is desired, and the appropriate runtime implementation is selected.
-
-### 13.5 Extension Points
-
-The composition spec defines **extension points** where runtime implementations can vary:
-
-| Extension Point | Purpose | Example Variations |
-|----------------|---------|-------------------|
-| InputParser | Parse different input formats | .txt, .md, .pdf, .docx |
-| TransformationAlgorithm | Different algorithms for the same stage | TF-IDF vs TextRank for importance scoring |
-| OutputRenderer | Render different output formats | Text, Markdown, JSON, YAML, HTML |
-| ValidationStrategy | Different validation approaches | Rule-based vs ML-based validation |
-
-Each extension point is defined as a Protocol interface in the composition spec. Runtime implementations provide concrete classes that satisfy these interfaces.
-
-### 13.6 Relationship to Requirement Document
-
-The **requirement document** specifies:
-- Input artifacts (what content to transform)
-- Output type (summary, bullet points, key phrases, etc.)
-- Transformation requirements (what the transformation should achieve)
-- Constraints (hard requirements)
-
-The **composition spec** is derived from the requirement document and defines:
-- Meta schema (intermediate representation)
-- Transformation rules (stages and invariants)
-- Extension interfaces (pluggable components)
-- Output contract (generic interface, not specific format)
-
-The **runtime implementation** is designed to satisfy the composition spec and produces:
-- Concrete output (specific format based on output type)
-- Output file (SUMMARY_FILE, BULLET_POINT_FILE, etc.)
-
-### 13.7 Design Checklist
-
-When authoring a composition spec, ensure:
-
-- [ ] Layer 3 defines a generic output interface, not a specific output type
-- [ ] Extension interfaces are defined as Protocols, not concrete classes
-- [ ] Multiple runtime implementations can satisfy the spec via overrides
-- [ ] Output type is determined by the requirement document, not hardcoded in the spec
-- [ ] Invariants and constraints are output-type-agnostic (apply to all output types)
-- [ ] Extension points are clearly documented with example variations
-- [ ] Each step has a step contract (purpose, input/output, constraints)
-- [ ] Input artifacts use `_FILE` suffix for file inputs (Section 6.5)
-- [ ] Output delivery location is declared (Section 6.6)
-- [ ] `workflow.toml` assigns `prompt =` or `action =` for every step (default implementation is complete)
-- [ ] Alternative implementations use `impl.yaml` with partial overrides only (Section 13.8)
-
-### 13.8 Runtime Implementation Model
-
-The runtime implementation model uses an **override pattern** — like CSS
-cascading or config inheritance. The `workflow.toml` IS the default
-implementation: every step has its `prompt =` or `action =` assigned.
-Alternative implementations provide an `impl.yaml` that overrides ONLY
-the steps that differ. Steps not mentioned in `impl.yaml` inherit their
-behavior from `workflow.toml` unchanged.
-
-#### Core Principle
-
-```
-workflow.toml       = step sequence + DEFAULT implementation (all steps assigned)
-impls/{name}/impl.yaml = OVERRIDES ONLY (partial — only steps that differ)
-
-Runtime resolution: workflow.toml defaults + impl overrides = effective config
-```
-
-This means:
-- The default implementation requires NO separate mapping file — `workflow.toml` already contains all assignments
-- Alternative implementations only specify what CHANGES, not the full mapping
-- Adding a new implementation is proportional to what differs, not the workflow size
-
-#### workflow.toml as Default Implementation
-
-The `workflow.toml` defines the step sequence AND the default implementation.
-Every step MUST have either `prompt = "path/to/prompt.txt"` (for prompt-driven
-steps) or `action = "action_name"` (for action-driven steps). There are no
-"abstract" or unassigned steps in `workflow.toml` — it is always a complete,
-executable definition.
-
-```toml
-[[step]]
-name = "analyze_input"
-type = "prompt"
-prompt = "prompts/01_analyze_input.txt"    # ← default implementation
-role_policy = "analyst"
-onsuccess = "transform_content"
-
-[[step]]
-name = "transform_content"
-type = "prompt"
-prompt = "prompts/02_transform.txt"        # ← default implementation
-role_policy = "transformer"
-onsuccess = "render_output"
-
-[[step]]
-name = "render_output"
-type = "action"
-action = "render_media"                    # ← default implementation
-```
-
-The `workflow.toml` is both the contract with the backend/daemon AND the
-default implementation. No separate "default impl mapping" file is needed.
-
-#### Implementation Override Format (impl.yaml)
-
-Alternative implementations use `impls/{name}/impl.yaml` to override specific
-steps. The file contains ONLY the steps that differ from the default:
-
-```yaml
-# impls/anime/impl.yaml
-name: anime
-description: "Anime-style output variant"
-
-overrides:
-  analyze_input:
-    prompt: "impls/anime/prompts/01_analyze_input.txt"
-
-  render_output:
-    action: "render_anime"
-```
-
-**Rules:**
-
-1. Each key under `overrides:` MUST match a step name in `workflow.toml`
-2. Each override entry MUST specify `prompt` (for prompt-driven steps) or `action` (for action-driven steps)
-3. Steps NOT listed in `overrides:` use the `workflow.toml` default unchanged
-4. Override `prompt` paths are relative to the workflow root
-5. Override `action` names reference functions in either the impl's own `actions.py` or the shared `actions.py`
-
-**Minimal override** — change just one step:
-
-```yaml
-# impls/watercolor/impl.yaml
-name: watercolor
-
-overrides:
-  render_output:
-    action: "render_watercolor"
-```
-
-#### File Structure
-
-```
-workflows/{codename}/
-    workflow.toml                 ← step sequence + DEFAULT implementation
-    context_extensions.py
-    actions.py                    ← shared action functions
-    prompts/                      ← shared prompt templates
-        *.txt
-    standards/
-        COMPOSITION_STANDARD.md   ← step contracts & invariants
-    impls/
-        anime/
-            impl.yaml             ← overrides for anime variant
-            prompts/              ← anime-specific prompt templates (optional)
-                01_analyze_input.txt
-            actions.py            ← anime-specific actions (optional)
-        watercolor/
-            impl.yaml             ← overrides for watercolor variant
-            actions.py            ← watercolor-specific actions (optional)
-```
-
-**Shared vs impl-specific components:**
-
-| Component | Location | Used by |
-|-----------|----------|---------|
-| Shared prompts | `prompts/*.txt` | All implementations (default fallback) |
-| Shared actions | `actions.py` (root) | All implementations (default fallback) |
-| Impl-specific prompts | `impls/{name}/prompts/*.txt` | Only that implementation |
-| Impl-specific actions | `impls/{name}/actions.py` | Only that implementation |
-
-Implementations SHOULD reuse shared components and only provide
-impl-specific components when the behavior MUST differ.
-
-#### Runtime Resolution Algorithm
-
-At runtime, the step runner SHALL resolve each step's effective configuration
-using this algorithm:
-
-```
-1. Load workflow.toml → get step sequence and default assignments
-2. If selected_impl is not "default":
-     Load impls/{selected_impl}/impl.yaml → get override mappings
-3. For each step:
-     effective_config = workflow.toml step config
-     If step has override in impl.yaml:
-       Merge override into effective_config (override wins)
-     Execute step with effective_config
-```
-
-**Python pseudocode:**
-
-```python
-def resolve_step(step_name, workflow_toml, selected_impl):
-    """Resolve effective config for a step."""
-    # Start with workflow.toml default
-    config = workflow_toml.get_step(step_name)
-
-    # Apply impl overrides if not using default
-    if selected_impl and selected_impl != "default":
-        impl_overrides = load_yaml(f"impls/{selected_impl}/impl.yaml")
-        if step_name in impl_overrides.get("overrides", {}):
-            config.update(impl_overrides["overrides"][step_name])
-
-    return config
-```
-
-**Resolution example** — workflow with 3 steps, anime impl overrides 1:
-
-| Step | workflow.toml (default) | anime impl.yaml | Effective config |
-|------|------------------------|-----------------|------------------|
-| analyze_input | prompt = "prompts/01_analyze.txt" | prompt = "impls/anime/prompts/01_analyze.txt" | **impls/anime/prompts/01_analyze.txt** |
-| transform_content | prompt = "prompts/02_transform.txt" | *(not listed)* | **prompts/02_transform.txt** |
-| render_output | action = "render_media" | *(not listed)* | **render_media** |
-
-Only `analyze_input` uses the anime-specific prompt. The other two steps
-use the shared defaults unchanged.
-
-#### Implementation Selection
-
-Implementations are selected at workflow invocation time. The workflow.toml
-MUST declare all available implementations so that operator consoles and
-CLI tools can discover them.
-
-**Declaration in workflow.toml:**
-
-When a workflow has alternative implementations, it MUST declare them in
-a `[[workflow.implementation]]` array of tables. The `default`
-implementation (workflow.toml itself) is always implicitly available and
-does NOT need to be listed.
-
-```toml
-[workflow]
-name = "image_generator"
-# ... other workflow fields ...
-
-[[workflow.implementation]]
-name = "anime"
-description = "Anime-style output variant"
-label = "Anime Style"
-
-[[workflow.implementation]]
-name = "watercolor"
-description = "Watercolor painting style with soft edges"
-label = "Watercolor"
-```
-
-**Field specification:**
-
-| Field | Required | Description |
-|-------|----------|-------------|
-| `name` | Yes | Matches the `impls/{name}/` directory name. Must be unique. |
-| `description` | Yes | Human-readable description of what this variant does. |
-| `label` | No | Short display label for UI dropdowns. Defaults to `name`. |
-
-**Discovery flow:**
-
-```
-workflow.toml declares [[workflow.implementation]]
-        |
-        v
-sync_workflows.py sends full workflow definition to backend
-        |
-        v
-Backend stores and returns workflow metadata (including implementations)
-        |
-        v
-Operator console extracts implementations list → shows dropdown
-        |
-        v
-User selects implementation → sent as impl_name
-        |
-        v
-Runtime resolves: load_workflow_package(pkg_dir, impl_name=selected)
-```
-
-**CLI selection:**
-```bash
-ukbe-run-agent run --template-group {codename} --impl anime
-```
-
-**Operator console selection:**
-
-The submit page reads the workflow's `implementations` list from backend
-metadata and renders a dropdown. The `default` option (no overrides) is
-always first. User selection is sent as `impl_name` in the run request.
-
-When no implementation is specified, the `default` implementation is used
-(which is `workflow.toml` with no overrides).
-
-#### Design Constraints
-
-1. **workflow.toml is always complete** — every step MUST have `prompt =` or `action =`. There are no abstract or unassigned steps.
-2. **impl.yaml is always partial** — it only lists steps that differ. An empty `overrides: {}` is valid (identical to default).
-3. **No impl.yaml for default** — the `default` implementation is `workflow.toml` itself. The `impls/default/` folder is NOT required.
-4. **Step sequence is fixed** — implementations cannot add, remove, or reorder steps. They can only change WHAT fulfills each step.
-5. **Shared components are the fallback** — if an impl doesn't override a step, the shared prompt/action from workflow.toml is used.
-6. **At least one alternative implementation is required** — every AGB-generated workflow MUST include at least one `impls/{name}/` directory with a valid `impl.yaml` and a matching `[[workflow.implementation]]` declaration in workflow.toml. This validates the override pattern end-to-end. The composition spec (Phase 2) MUST identify at least one output variant.
-
-#### Validation Rules
-
-1. `workflow.toml` MUST have `prompt` or `action` for every step
-2. `impl.yaml` override keys MUST reference existing step names in `workflow.toml`
-3. Each override entry MUST specify at least one of `prompt` or `action`
-4. Override `prompt` paths MUST reference existing files
-5. Override `action` names MUST reference existing functions (in shared or impl-specific `actions.py`)
-6. Implementation names MUST be unique within a workflow
-7. Each `[[workflow.implementation]]` name MUST have a matching `impls/{name}/` directory with a valid `impl.yaml`
-8. `default` MUST NOT appear in `[[workflow.implementation]]` — it is always implicit
-
-### 13.9 Action Interface Contract
-
-Every action-driven step references a function via `action = "action_name"` in
-`workflow.toml`. That function MUST be implemented in `actions.py` (shared) or
-`impls/{name}/actions.py` (implementation-specific) and MUST conform to the
-platform's action interface contract.
-
-#### Required Imports
-
-```python
-from agent_runner_v2.workflow_packages.actions import action
-from agent_runner_v2.action_result import ActionResult
-```
-
-#### Decorator
-
-Every action function MUST be decorated with `@action("action_name")` where
-`action_name` matches the `action = "..."` value in `workflow.toml`. Without the
-decorator, the runner cannot discover the function and the workflow will fail
-with `Unknown runner action`.
-
-```python
-@action("my_action_name")
-def my_action_name(context, state, step_cfg, project_root):
-    ...
-```
-
-#### Function Signature
-
-Every action function MUST accept exactly these four keyword arguments:
-
-| Parameter | Type | Description |
-|---|---|---|
-| `context` | `dict[str, str]` | Resolved artifact paths and prompt context variables. Read artifact paths from here (e.g., `context.get("INPUT_FILE")`). |
-| `state` | `dict[str, Any]` | Job state including `state["artifacts"]` (artifact key → path mapping). Write resolved paths back here so downstream steps see them. |
-| `step_cfg` | `dict[str, Any]` | The step configuration from `workflow.toml` (produces, required_inputs, coder settings, etc.). |
-| `project_root` | `Path` | Absolute path to the project/workspace root directory. |
-
-#### Return Type
-
-Every action function MUST return an `ActionResult`:
-
-```python
-return ActionResult(
-    status="APPROVED",          # "APPROVED" or "REJECTED"
-    remark="Brief description", # Human-readable summary
-    artifacts={                 # Dict of artifact_key → path for produced artifacts
-        "OUTPUT_KEY": "/path/to/output"
-    },
-    reject_code=None,           # Optional failure code when status="REJECTED"
-)
-```
-
-Returning a plain `dict` instead of `ActionResult` will cause a runtime error
-(`AttributeError: 'dict' object has no attribute 'status'`).
-
-#### Complete Example
-
-```python
-from pathlib import Path
-from typing import Any
-
-from agent_runner_v2.workflow_packages.actions import action
-from agent_runner_v2.action_result import ActionResult
-
-
-@action("parse_input_document")
-def parse_input_document(
-    context: dict[str, str],
-    state: dict[str, Any],
-    step_cfg: dict[str, Any],
-    project_root: Path,
-) -> ActionResult:
-    input_file = context.get("INPUT_FILE", "")
-    if not input_file:
-        return ActionResult(
-            status="REJECTED",
-            remark="INPUT_FILE not provided",
-            artifacts={},
-            reject_code="MISSING_INPUT",
-        )
-
-    # ... processing logic ...
-
-    return ActionResult(
-        status="APPROVED",
-        remark=f"Parsed {input_file} successfully",
-        artifacts={"PARSED_DOCUMENT": "/path/to/parsed.json"},
-    )
-```
-
-#### Implementation-Specific Actions
-
-When an implementation overrides an action-driven step via `impl.yaml`, the
-override action name MUST reference a function decorated with `@action()` in
-either:
-
-1. The shared `actions.py` (root of workflow package), or
-2. The implementation-specific `impls/{name}/actions.py`
-
-Implementation-specific actions follow the same interface contract. The loader
-merges impl-specific actions with shared actions, with impl actions taking
-priority on name conflicts.
+### 8.2 Field Constraints
+
+| Field | Constraint |
+|-------|------------|
+| `identity.name` | MUST match `identity.codename` |
+| `identity.job_prefix` | 2-10 uppercase characters |
+| `domain_steps[].name` | Unique within the array |
+| `domain_steps[].type` | "action" or "prompt" |
+| `domain_steps[].action_name` | REQUIRED when type="action" |
+| `domain_steps[].prompt_file` | REQUIRED when type="prompt". Filename only (no directory). |
+| `domain_steps[].role_policy` | REQUIRED when type="prompt" |
+| `artifact_keys.inputs[].key` | MUST end with `_FILE` or `_DIR` |
+| `implementations[].name` | MUST be unique. MUST NOT be "default". |
+
+### 8.3 What the Assembler Produces
+
+| JSON Source | Output |
+|-------------|--------|
+| `identity` | `[workflow]` section in workflow.toml; class name in context_extensions.py |
+| `domain_steps` | `[[step]]` sections in workflow.toml (assembler adds `onsuccess` chaining) |
+| `artifact_keys` | `register_artifact_keys()` in context_extensions.py; `[step.artifacts]` in workflow.toml |
+| `implementations` | `[[workflow.implementation]]` in workflow.toml; `impls/{name}/impl.yaml` files |
+
+### 8.4 What the Assembler Adds Automatically
+
+- `onsuccess` routing — chains steps in declared order
+- Terminal `step_completion` step — always appended
+- `build_context_extensions()` body — generic template resolves all registered keys
+- `install_to_global()` / `sync_to_backend()` — always NO_OP
+- Import statements, class skeleton — all boilerplate
 
 ---
 
-## 14. References
+## 9. AGB Pipeline
 
-- **Artifact Generator Builder workflow:** `workflows/artifact_generator_builder/`
-- **AGB sample requirement doc:** `workflows/artifact_generator_builder/Specs/sample_requirement.md`
-- **AGB simple test case:** `workflows/artifact_generator_builder/Specs/simple_text_summarizer.md`
-- **Workflow package system:** `agent_runner_v2/workflow_packages/`
-- **Workflow extensions base:** `agent_runner_v2/workflow_packages/extensions_base.py`
+The Artifact Generator Builder (AGB) is a workflow that transforms a requirement
+document into a workflow package. It follows the SDLC quality flow scoped to
+**domain logic only** — the infrastructure is predefined.
+
+### 9.1 Pipeline Steps
+
+```
+1.  analyze_requirement  (prompt)  — Read requirement doc, produce Analysis JSON
+2.  plan_domain_logic    (prompt)  — Design what actions + prompts are needed
+3.  challenge_plan       (prompt)  — Attack the plan: missing edges, weak validations
+    ↕ refine loop (max 2)
+4.  implement_domain     (prompt)  — Write actions.py + prompt .txt files
+5.  critic_impl          (prompt)  — Review code logic + prompt quality
+    ↕ refine loop (max 2)
+6.  assemble_package     (ACTION)  — Build workflow.toml + context_extensions.py + impl.yaml
+7.  run_tests            (ACTION)  — Unit tests must pass
+    ↕ reject → back to step 4
+8.  review_package       (prompt)  — Holistic review of assembled package
+9.  validate_structure   (ACTION)  — Deterministic structural validation
+10. gatekeep_package     (prompt)  — Final pass/fail gate
+11. promote_package      (ACTION)  — Deploy + generate README.md
+```
+
+### 9.2 SDLC Quality Flow
+
+The pipeline follows the standard SDLC delivery pattern:
+
+| Phase | Steps | Pattern |
+|-------|-------|---------|
+| Analysis | 1 | Understand domain |
+| Plan ↔ Challenge | 2 ↔ 3 | Design domain logic, then attack it |
+| Implement ↔ Critic | 4 ↔ 5 | Write code + prompts, then review them |
+| Execution | 6–7 | Assemble + test |
+| Review → Validate → Gatekeep | 8–10 | Quality gates |
+| Promote → Publish | 11 | Deploy |
+
+### 9.3 Scope of Quality Gates
+
+All review, validation, and gatekeep steps focus **only on domain logic**:
+
+| Gate | Reviews | Does NOT Review |
+|------|---------|-----------------|
+| challenge_plan | Missing edge cases, weak validations, wrong artifact bindings | Workflow structure (predefined) |
+| critic_impl | Code logic, error handling, prompt clarity, constraint enforcement | workflow.toml syntax (assembled mechanically) |
+| review_package | Holistic quality of actions + prompts | Infrastructure assembly |
+| validate_structure | File existence, syntax, artifact consistency | Domain logic correctness |
+| gatekeep_package | Functional viability — can the workflow actually run? | Structural compliance (already validated) |
+
+### 9.4 Deliverables
+
+AGB produces a single deliverable: the **workflow package**.
+
+No intermediate design documents (composition spec, runtime implementation,
+artifact contract) are generated. The Analysis JSON is the only intermediate
+artifact, and it is consumed mechanically by the assembler.
+
+### 9.5 Future Extensibility: Add Implementation
+
+A future AGB mode will support adding a new implementation to an existing
+workflow package:
+
+```
+Input: requirement doc (new impl) + existing workflow package
+Output: same package + new impls/{new_name}/ directory + updated workflow.toml
+```
+
+Only the delta is generated — new impl's actions + prompts + impl.yaml.
+Base workflow is untouched.
 
 ---
 
-## Appendix A: Glossary
+## 10. Governance
 
-**Component:** A reusable building block with a standardized schema.
+### 10.1 Versioning
 
-**Composition:** A declarative assembly instruction that references components by ID.
+**This standard:** Semantic versioning (MAJOR.MINOR.PATCH). Changes to the
+workflow package contract (Sections 2–6) require a MAJOR increment.
 
-**Output:** A resolved, self-contained deliverable with all references expanded.
+**Workflow packages:** Semantic versioning independent of this standard.
 
-**Component Library:** A collection of components for a specific domain.
+### 10.2 Compatibility Rules
 
-**Resolution:** The process of expanding component references, applying overrides, and filling placeholders.
+- **Backward compatible:** New optional fields may be added to the Analysis JSON
+  schema without breaking existing assemblers
+- **Forward compatible:** Assemblers SHOULD ignore unknown fields in the
+  Analysis JSON gracefully
+- **Schema evolution:** Required fields may be added (MAJOR), optional fields
+  may be added (MINOR), field semantics changes require (MAJOR)
 
-**Override:** A per-composition customization that modifies a component's properties.
+### 10.3 Proposing Changes
 
-**Placeholder:** A `{variable}` reference resolved from external data at generation time.
+Changes to this standard MUST:
 
----
-
-## Appendix B: Checklist for Adopting This Standard
-
-When creating a new domain-specific composition system:
-
-- [ ] Define domain-specific component types and their properties
-- [ ] Document the component schema (common + type-specific)
-- [ ] Define the composition format (which bindings, ordering rules)
-- [ ] Define the output format (required sections, metadata)
-- [ ] Identify external data sources for placeholder resolution
-- [ ] Define downstream extraction contracts
-- [ ] Create at least one example component and composition
-- [ ] Define step contracts for each workflow step (purpose, input/output, constraints)
-- [ ] Apply input artifact naming convention (Section 6.5 — `_FILE` suffix)
-- [ ] Declare output delivery location (Section 6.6)
-- [ ] Ensure `workflow.toml` is a complete default implementation (every step has prompt= or action=)
-- [ ] Create alternative impl.yaml files for any output variants (partial overrides only, Section 13.8)
-- [ ] Write a workflow spec following this standard
-- [ ] Test with the workflow builder
-
----
-
-**End of Standard**
+1. Be validated against at least one real workflow package
+2. Preserve backward compatibility where possible
+3. Update the assembler implementation to match
+4. Be reviewed against the existing workflow catalog for impact
