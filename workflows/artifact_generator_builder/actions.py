@@ -20,21 +20,19 @@ from agent_runner_v2.workflow_packages.actions import action
 def promote_workflow_package(*, context, state, step_cfg, project_root):
     """Promote all deliverables to workflows/{codename}/.
 
-    Packages the generated workflow according to the Composition System
-    Standard required file structure (Section 10.2):
+    Packages the generated workflow package:
 
         workflows/{codename}/
-            standards/COMPOSITION_STANDARD.md
             workflow.toml
             context_extensions.py
             actions.py
             prompts/
             README.md
-            Specs/
             impls/              (optional — only if alternative impls exist)
 
     The codename is read from the generated workflow.toml manifest.
     Existing target directories are backed up before overwriting.
+    If README.md does not exist, one is generated from workflow.toml metadata.
     """
     artifacts = state.get("artifacts", {})
     project_root = Path(project_root)
@@ -228,33 +226,33 @@ def assemble_package(*, context, state, step_cfg, project_root):
     toml_lines.append(f'# Auto-assembled by AGB from Analysis JSON.')
     toml_lines.append("")
     toml_lines.append("[workflow]")
-    toml_lines.append(f'name = "{identity["name"]}"')
-    toml_lines.append(f'version = "{identity.get("version", "1.0.0")}"')
-    toml_lines.append(f'label = "{identity.get("label", identity["name"])}"')
-    toml_lines.append(f'job_prefix = "{identity["job_prefix"]}"')
-    toml_lines.append(f'init_step = "{domain_steps[0]["name"]}"')
+    toml_lines.append(f'name = "{_toml_str(identity["name"])}"')
+    toml_lines.append(f'version = "{_toml_str(identity.get("version", "1.0.0"))}"')
+    toml_lines.append(f'label = "{_toml_str(identity.get("label", identity["name"]))}"')
+    toml_lines.append(f'job_prefix = "{_toml_str(identity["job_prefix"])}"')
+    toml_lines.append(f'init_step = "{_toml_str(domain_steps[0]["name"])}"')
     if identity.get("description"):
-        toml_lines.append(f'description = "{identity["description"]}"')
+        toml_lines.append(f'description = "{_toml_str(identity["description"])}"')
     toml_lines.append("")
 
     # Implementation declarations
     for impl in implementations:
         toml_lines.append("[[workflow.implementation]]")
-        toml_lines.append(f'name = "{impl["name"]}"')
-        toml_lines.append(f'description = "{impl.get("description", "")}"')
+        toml_lines.append(f'name = "{_toml_str(impl["name"])}"')
+        toml_lines.append(f'description = "{_toml_str(impl.get("description", ""))}"')
         if impl.get("label"):
-            toml_lines.append(f'label = "{impl["label"]}"')
+            toml_lines.append(f'label = "{_toml_str(impl["label"])}"')
         toml_lines.append("")
 
     # Step definitions
     for i, step in enumerate(domain_steps):
         toml_lines.append("[[step]]")
-        toml_lines.append(f'name = "{step["name"]}"')
+        toml_lines.append(f'name = "{_toml_str(step["name"])}"')
 
         if step["type"] == "action":
-            toml_lines.append(f'action = "{step["action_name"]}"')
+            toml_lines.append(f'action = "{_toml_str(step["action_name"])}"')
         else:
-            toml_lines.append(f'prompt = "prompts/{step["prompt_file"]}"')
+            toml_lines.append(f'prompt = "prompts/{_toml_str(step["prompt_file"])}"')
 
         toml_lines.append("enable_notifications = false")
         toml_lines.append("requires_human_approval_after = false")
@@ -328,8 +326,8 @@ def assemble_package(*, context, state, step_cfg, project_root):
     ext_lines.append("    ) -> dict[str, str]:")
     ext_lines.append("        return {")
     for key, pattern in all_keys.items():
-        # Use plain string — {job_id} and {filename} are runner placeholders, not Python expressions
-        ext_lines.append(f'            "{key}": "jobs/{{job_id}}/{pattern}",')
+        # Use plain string — {job_id} and other braces are runner placeholders, not Python expressions
+        ext_lines.append(f'            "{key}": "{pattern}",')
     ext_lines.append("        }")
     ext_lines.append("")
     ext_lines.append("    def build_context_extensions(")
@@ -407,6 +405,11 @@ def _to_pascal_case(name: str) -> str:
     return "".join(
         word.capitalize() for word in name.replace("-", "_").split("_") if word
     )
+
+
+def _toml_str(value: str) -> str:
+    """Escape a string for safe embedding in a TOML basic string (double-quoted)."""
+    return value.replace("\\", "\\\\").replace('"', '\\"').replace("\n", "\\n")
 
 
 def _generate_readme(manifest: dict, source_dir: Path) -> str:
@@ -520,10 +523,21 @@ def validate_structure(*, context, state, step_cfg, project_root):
         actions_path=Path(actions_path) if actions_path else None,
     )
 
+    # Use context-resolved path for the validation findings report
     job_id = str(state.get("job_id", "unknown"))
-    run_root = project_root / "docs" / "repo" / "artifact_generator_builder" / "runs" / job_id
-    run_root.mkdir(parents=True, exist_ok=True)
-    report_path = run_root / f"VALIDATION_FINDINGS-{datetime.now().strftime('%Y%m%d')}-001.md"
+    report_path_str = context.get("VALIDATION_FINDINGS_FILE", "")
+    if not report_path_str:
+        report_path_str = artifacts.get("VALIDATION_FINDINGS_FILE", "")
+    if report_path_str:
+        report_path = Path(report_path_str)
+        if not report_path.is_absolute():
+            report_path = project_root / report_path
+    else:
+        # Fallback: construct from job_id
+        run_root = project_root / "docs" / "repo" / "artifact_generator_builder" / "runs" / job_id
+        report_path = run_root / f"VALIDATION_FINDINGS-{datetime.now().strftime('%Y%m%d')}-001.md"
+
+    report_path.parent.mkdir(parents=True, exist_ok=True)
 
     report = render_report(result, job_id=job_id)
     report_path.write_text(report, encoding="utf-8")

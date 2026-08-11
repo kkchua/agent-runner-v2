@@ -139,7 +139,7 @@ Before writing the output, verify:
 - [ ] Every domain_step has either action_name (type=action) or prompt_file + role_policy (type=prompt)
 - [ ] All domain_step names are unique
 - [ ] Data flow is valid: each step's required_inputs are produced by prior steps or are workflow inputs
-- [ ] All artifact key names end with _FILE or _DIR
+- [ ] Input artifact key names end with _FILE or _DIR (intermediate/output keys have no suffix constraint)
 - [ ] At least one alternative implementation is defined
 - [ ] No implementation is named "default"
 - [ ] Implementation overrides reference valid step names
