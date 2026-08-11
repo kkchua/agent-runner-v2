@@ -34,7 +34,7 @@ Input artifact A → AGB Generator (actions + LLM) → output artifact B.
 
 The `assemble_package` action reads the Analysis JSON and produces all structural files deterministically.
 
-## 4. Pipeline (11 Steps)
+## 4. Pipeline (10 Steps)
 
 ```
 1.  analyze_requirement  (prompt)  — Read requirement doc, produce Analysis JSON
@@ -45,12 +45,10 @@ The `assemble_package` action reads the Analysis JSON and produces all structura
 5.  critic_impl          (prompt)  — Review code logic + prompt quality
     ↕ refine loop (max 2)
 6.  assemble_package     (ACTION)  — Build workflow.toml + context_extensions.py + impl.yaml
-7.  run_tests            (ACTION)  — Unit tests must pass
-    ↕ reject → back to step 4
-8.  review_package       (prompt)  — Holistic review of assembled package
-9.  validate_structure   (ACTION)  — Deterministic structural validation
-10. gatekeep_package     (prompt)  — Final pass/fail gate
-11. promote_package      (ACTION)  — Deploy + generate README.md
+7.  review_package       (prompt)  — Holistic review of assembled package
+8.  validate_structure   (ACTION)  — Deterministic structural validation
+9.  gatekeep_package     (prompt)  — Final pass/fail gate
+10. promote_package      (ACTION)  — Deploy + generate README.md
 ```
 
 ### SDLC Quality Flow
@@ -60,9 +58,9 @@ The `assemble_package` action reads the Analysis JSON and produces all structura
 | Analysis | 1 | Understand domain |
 | Plan ↔ Challenge | 2 ↔ 3 | Design domain logic, then attack it |
 | Implement ↔ Critic | 4 ↔ 5 | Write code + prompts, then review them |
-| Execution | 6–7 | Assemble + test |
-| Review → Validate → Gatekeep | 8–10 | Quality gates |
-| Promote → Publish | 11 | Deploy |
+| Execution | 6 | Assemble package |
+| Review → Validate → Gatekeep | 7–9 | Quality gates |
+| Promote → Publish | 10 | Deploy |
 
 ### Scope of Quality Gates
 
@@ -149,7 +147,7 @@ No intermediate design documents (composition spec, runtime impl, artifact contr
 
 | Aspect | v2 (old) | v3 (new) |
 |--------|----------|----------|
-| Steps | 18 | 11 |
+| Steps | 18 | 10 |
 | LLM generates | Everything (workflow.toml, context_extensions.py, actions.py, prompts, composition standard) | Only actions.py + prompts |
 | Infrastructure | LLM-designed | Predefined, assembled mechanically |
 | Quality pattern | Adversarial challenge/respond/gatekeep (2 cycles) | SDLC plan↔challenge, implement↔critic |

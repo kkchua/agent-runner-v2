@@ -33,14 +33,19 @@ def _read_codename_from_requirement_doc(state: dict[str, Any]) -> str:
         content = req_path.read_text(encoding="utf-8")
     except Exception:
         return "unknown_generator"
+    in_frontmatter = False
     for line in content.splitlines():
-        line = line.strip()
-        if line.startswith("codename:"):
-            value = line.split(":", 1)[1].strip().strip('"').strip("'")
+        stripped = line.strip()
+        if stripped == "---":
+            if not in_frontmatter:
+                in_frontmatter = True
+                continue
+            else:
+                break
+        if in_frontmatter and stripped.startswith("codename:"):
+            value = stripped.split(":", 1)[1].strip().strip('"').strip("'")
             if value:
                 return value
-        if line == "---" and content.index(line) > 0:
-            break
     return "unknown_generator"
 
 
@@ -83,8 +88,7 @@ class ArtifactGeneratorBuilderExtensions(WorkflowExtensions):
             "VALIDATION_FINDINGS_FILE": f"{run}/VALIDATION_FINDINGS-{{seq}}.md",
             "GATEKEEP_PACKAGE_FILE": f"{run}/GATEKEEP_PACKAGE-{{seq}}.md",
 
-            # -- Step 11: Promote --
-            "PROMOTION_REPORT_FILE": f"{run}/PROMOTION_REPORT-{{seq}}.md",
+            # -- Step 10: Promote --
             "WORKFLOW_PACKAGE_DIR": f"{out}/",
         }
 

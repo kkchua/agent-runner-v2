@@ -7,8 +7,6 @@ perform specific operations without LLM involvement.
 from __future__ import annotations
 
 import shutil
-import subprocess
-import sys
 from datetime import datetime
 from pathlib import Path
 
@@ -145,7 +143,7 @@ def promote_workflow_package(*, context, state, step_cfg, project_root):
     return ActionResult(
         status="APPROVED",
         remark=remark,
-        artifacts={"PROMOTION_REPORT_FILE": str(target_dir)},
+        artifacts={"WORKFLOW_PACKAGE_DIR": str(target_dir)},
     )
 
 
@@ -202,6 +200,16 @@ def assemble_package(*, context, state, step_cfg, project_root):
             artifacts={},
             reject_code="INVALID_ANALYSIS",
         )
+
+    # Validate prompt steps have required role_policy
+    for step in domain_steps:
+        if step["type"] == "prompt" and not step.get("role_policy"):
+            return ActionResult(
+                status="REJECTED",
+                remark=f"Prompt step '{step['name']}' is missing required 'role_policy'.",
+                artifacts={},
+                reject_code="MISSING_ROLE_POLICY",
+            )
 
     # Determine output directory (same dir as actions.py)
     actions_path = artifacts.get("WORKFLOW_ACTIONS_FILE", "")
@@ -342,6 +350,8 @@ def assemble_package(*, context, state, step_cfg, project_root):
     ext_lines.append("            existing = artifacts.get(key, \"\")")
     ext_lines.append("            if existing:")
     ext_lines.append("                result[key] = existing")
+    ext_lines.append("            elif key.endswith(('_FILE', '_DIR')) and '{' in rel:")
+    ext_lines.append("                continue")
     ext_lines.append("            else:")
     ext_lines.append("                result[key] = str(job_path / rel.replace(\"{job_id}/\", \"\"))")
     ext_lines.append("        return result")
@@ -368,7 +378,8 @@ def assemble_package(*, context, state, step_cfg, project_root):
         overrides = impl.get("overrides", {})
         yaml_lines = []
         yaml_lines.append(f'name: {impl["name"]}')
-        yaml_lines.append(f'description: "{impl.get("description", "")}"')
+        desc = impl.get("description", "").replace("\\", "\\\\").replace('"', '\\"')
+        yaml_lines.append(f'description: "{desc}"')
         yaml_lines.append("")
         yaml_lines.append("overrides:")
         for step_name, step_overrides in overrides.items():
@@ -409,7 +420,13 @@ def _to_pascal_case(name: str) -> str:
 
 def _toml_str(value: str) -> str:
     """Escape a string for safe embedding in a TOML basic string (double-quoted)."""
-    return value.replace("\\", "\\\\").replace('"', '\\"').replace("\n", "\\n")
+    return (
+        value.replace("\\", "\\\\")
+        .replace('"', '\\"')
+        .replace("\n", "\\n")
+        .replace("\r", "\\r")
+        .replace("\t", "\\t")
+    )
 
 
 def _generate_readme(manifest: dict, source_dir: Path) -> str:
@@ -559,106 +576,3 @@ def validate_structure(*, context, state, step_cfg, project_root):
     )
 
 
-@action("run_tests")
-def run_tests(*, context, state, step_cfg, project_root):
-    """Run the generated pytest test file against the generated actions.py.
-
-    Executes pytest on {TEST_FILE} and captures results.
-    Writes a test results report to {TEST_RESULTS_FILE}.
-
-    If tests fail, returns REJECTED so the workflow routes back to
-    implement_package to fix the action code.
-    """
-    artifacts = state.get("artifacts", {})
-    project_root = Path(project_root)
-
-    test_file = artifacts.get("TEST_FILE", "")
-    if not test_file:
-        return ActionResult(
-            status="REJECTED",
-            remark="TEST_FILE artifact not found in state.",
-            artifacts={},
-            reject_code="MISSING_TESTS",
-        )
-
-    test_path = Path(test_file)
-    if not test_path.is_file():
-        return ActionResult(
-            status="REJECTED",
-            remark=f"Test file not found: {test_path}",
-            artifacts={},
-            reject_code="MISSING_TESTS",
-        )
-
-    actions_file = artifacts.get("WORKFLOW_ACTIONS_FILE", "")
-    actions_dir = str(Path(actions_file).parent) if actions_file else ""
-
-    # Build pytest command
-    python_exe = sys.executable
-    cmd = [python_exe, "-m", "pytest", str(test_path), "-v", "--tb=short", "--no-header"]
-
-    env = None
-    if actions_dir:
-        import os
-        env = os.environ.copy()
-        env["PYTHONPATH"] = actions_dir + os.pathsep + env.get("PYTHONPATH", "")
-
-    try:
-        proc = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            timeout=120,
-            cwd=actions_dir or None,
-            env=env,
-        )
-        output = proc.stdout + "\n" + proc.stderr
-        exit_code = proc.returncode
-    except subprocess.TimeoutExpired:
-        output = "pytest timed out after 120 seconds"
-        exit_code = -1
-    except Exception as exc:
-        output = f"Failed to run pytest: {exc}"
-        exit_code = -1
-
-    # Write test results report
-    job_id = str(state.get("job_id", "unknown"))
-    run_root = project_root / "docs" / "repo" / "artifact_generator_builder" / "runs" / job_id
-    run_root.mkdir(parents=True, exist_ok=True)
-    report_path = run_root / f"TEST_RESULTS-{datetime.now().strftime('%Y%m%d')}-001.md"
-
-    passed = exit_code == 0
-    report_lines = [
-        "---",
-        'doc_type: "test_results"',
-        f'lifecycle_status: "final"',
-        f'job_id: "{job_id}"',
-        "---",
-        "",
-        "# Action Test Results",
-        "",
-        f"- **Passed:** {'YES' if passed else 'NO'}",
-        f"- **Exit Code:** {exit_code}",
-        "",
-        "## pytest Output",
-        "",
-        "```",
-        output.strip(),
-        "```",
-        "",
-    ]
-    report_path.write_text("\n".join(report_lines), encoding="utf-8")
-
-    if passed:
-        return ActionResult(
-            status="APPROVED",
-            remark="All action tests passed.",
-            artifacts={"TEST_RESULTS_FILE": str(report_path)},
-        )
-    else:
-        return ActionResult(
-            status="REJECTED",
-            remark=f"Action tests failed (exit code {exit_code}). See report: {report_path}",
-            artifacts={"TEST_RESULTS_FILE": str(report_path)},
-            reject_code="TESTS_FAILED",
-        )
