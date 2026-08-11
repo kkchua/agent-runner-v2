@@ -156,6 +156,18 @@ If an override specifies a different prompt, write the file to:
 Follow the same prompt rules as Part B. The prompt MUST implement the variant
 strategy described in the Domain Plan.
 
+# meta.json Reporting
+
+When writing your meta.json sidecar, report ONLY these artifact keys:
+
+- `WORKFLOW_ACTIONS_FILE` — path to the shared actions.py
+- `WORKFLOW_PROMPTS_DIR` — path to the prompts/ directory
+
+Do NOT report implementation-specific files (impls/*/actions.py, impls/*/prompts/)
+in meta.json. Those are tracked by the assemble_package step (step 6) under
+`IMPL_OVERRIDE_FILES`. Reporting undeclared artifact keys causes a
+STEP_CONTRACT_MISMATCH rejection.
+
 # Self-Validation
 
 Before reporting completion, verify:
