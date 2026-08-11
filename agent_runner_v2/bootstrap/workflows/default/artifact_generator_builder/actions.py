@@ -6,6 +6,7 @@ perform specific operations without LLM involvement.
 """
 from __future__ import annotations
 
+import json
 import shutil
 from datetime import datetime
 from pathlib import Path
@@ -151,7 +152,7 @@ def promote_workflow_package(*, context, state, step_cfg, project_root):
     # --- Workflow package files (root of workflows/{codename}/) ---
     always_copy = ["workflow.toml", "context_extensions.py", "README.md"]
     conditional_copy = ["actions.py", ".env.sample", "config.json.sample"]
-    copy_dirs = ["prompts", "Specs"]
+    copy_dirs = ["prompts"]
 
     for filename in always_copy:
         src = source_dir / filename
@@ -278,8 +279,8 @@ def assemble_package(*, context, state, step_cfg, project_root):
         job_id = str(state.get("job_id", "unknown"))
         out_dir = (
             Path(project_root)
-            / "docs/repo/artifact_generator_builder/runs"
-            / job_id / "output"
+            / "output"
+            / job_id
         )
     out_dir.mkdir(parents=True, exist_ok=True)
 
@@ -480,13 +481,29 @@ def assemble_package(*, context, state, step_cfg, project_root):
     produced["WORKFLOW_MANIFEST_FILE"] = str(manifest_path)
 
     # -------------------------------------------------------------------------
-    # 2. Generate context_extensions.py
+    # 2. Generate context_extensions.py (two-dict pattern)
     # -------------------------------------------------------------------------
     class_name = _to_pascal_case(identity["name"]) + "Extensions"
-    all_keys = {}
-    for cat in ("inputs", "intermediate", "outputs"):
+
+    # Split artifact_keys into INPUT_ARTIFACTS and OUTPUT_ARTIFACTS
+    # Inputs: keys ending with _FILE or _DIR from "inputs" category
+    # Outputs: everything from "outputs" + "intermediate" categories
+    input_keys = {}
+    for entry in artifact_keys.get("inputs", []):
+        key = entry["key"]
+        pattern = entry["pattern"]
+        filename = _extract_filename(pattern, key)
+        input_keys[key] = filename
+
+    output_keys = {}
+    for cat in ("intermediate", "outputs"):
         for entry in artifact_keys.get(cat, []):
-            all_keys[entry["key"]] = entry["pattern"]
+            key = entry["key"]
+            pattern = entry["pattern"]
+            filename = _extract_filename(pattern, key)
+            output_keys[key] = filename
+
+    all_keys = {**input_keys, **output_keys}
 
     ext_lines = []
     ext_lines.append(f'"""Context extensions for {identity.get("label", identity["name"])}."""')
@@ -497,42 +514,58 @@ def assemble_package(*, context, state, step_cfg, project_root):
     ext_lines.append("from typing import Any")
     ext_lines.append("")
     ext_lines.append("from agent_runner_v2.runtime_context import get_governance_runtime_root, get_platform_runtime_root, get_workspace_root")
-    ext_lines.append("from agent_runner_v2.workflow_packages.extensions_base import WorkflowExtensions")
+    ext_lines.append("from agent_runner_v2.workflow_packages.extensions_base import (")
+    ext_lines.append("    WorkflowExtensions,")
+    ext_lines.append("    resolve_input_artifacts,")
+    ext_lines.append("    resolve_output_artifacts,")
+    ext_lines.append(")")
     ext_lines.append("")
     ext_lines.append("")
     ext_lines.append(f"class {class_name}(WorkflowExtensions):")
     ext_lines.append(f'    workflow_name = "{identity["name"]}"')
     ext_lines.append("")
+
+    # INPUT_ARTIFACTS dict
+    ext_lines.append("    # -- Input artifacts: resolved to {workspace_root}/input/ --")
+    ext_lines.append("    INPUT_ARTIFACTS: dict[str, str] = {")
+    for key, filename in input_keys.items():
+        ext_lines.append(f'        "{key}": "{filename}",')
+    ext_lines.append("    }")
+    ext_lines.append("")
+
+    # OUTPUT_ARTIFACTS dict
+    ext_lines.append("    # -- Output artifacts: resolved to {workspace_root}/output/{job_id}/ --")
+    ext_lines.append("    OUTPUT_ARTIFACTS: dict[str, str] = {")
+    for key, filename in output_keys.items():
+        ext_lines.append(f'        "{key}": "{filename}",')
+    ext_lines.append("    }")
+    ext_lines.append("")
+
+    # register_artifact_keys (backward compat)
     ext_lines.append("    def register_artifact_keys(")
     ext_lines.append('        self, *, job_id: str = "{job_id}", mode: str = "{mode}"')
     ext_lines.append("    ) -> dict[str, str]:")
-    ext_lines.append("        return {")
-    for key, pattern in all_keys.items():
-        # Use plain string — {job_id} and other braces are runner placeholders, not Python expressions
-        ext_lines.append(f'            "{key}": "{pattern}",')
-    ext_lines.append("        }")
+    ext_lines.append("        combined: dict[str, str] = {}")
+    ext_lines.append("        for key in self.INPUT_ARTIFACTS:")
+    ext_lines.append('            combined[key] = "input/"')
+    ext_lines.append("        for key, pattern in self.OUTPUT_ARTIFACTS.items():")
+    ext_lines.append('            combined[key] = f"output/{job_id}/{pattern}"')
+    ext_lines.append("        return combined")
     ext_lines.append("")
+
+    # build_context_extensions using two resolvers
     ext_lines.append("    def build_context_extensions(")
     ext_lines.append("        self, *, state, step, step_cfg, ctx, project_root=None,")
     ext_lines.append("    ) -> dict[str, str]:")
     ext_lines.append("        result: dict[str, str] = {}")
-    ext_lines.append("        root = Path(project_root or get_workspace_root() or Path.cwd()).resolve()")
-    ext_lines.append('        artifacts = state.get("artifacts") or {}')
-    ext_lines.append('        job_dir = state.get("job_dir") or ""')
-    ext_lines.append("        job_path = Path(job_dir) if job_dir else root")
+    ext_lines.append("        workspace_root = Path(project_root or get_workspace_root() or Path.cwd()).resolve()")
     ext_lines.append("        result[\"GOVERNANCE_RUNTIME_ROOT\"] = str(get_governance_runtime_root())")
     ext_lines.append("        result[\"PLATFORM_RUNTIME_ROOT\"] = str(get_platform_runtime_root())")
     ext_lines.append("        result[\"BASE_COMPOSITION_STANDARD\"] = str(")
     ext_lines.append("            get_governance_runtime_root() / \"BASE_COMPOSITION_STANDARD_v1.0.md\"")
     ext_lines.append("        )")
-    ext_lines.append("        for key, rel in self.register_artifact_keys().items():")
-    ext_lines.append("            existing = artifacts.get(key, \"\")")
-    ext_lines.append("            if existing:")
-    ext_lines.append("                result[key] = existing")
-    ext_lines.append("            elif key.endswith(('_FILE', '_DIR')) and '{' in rel:")
-    ext_lines.append("                continue")
-    ext_lines.append("            else:")
-    ext_lines.append("                result[key] = str(job_path / rel.replace(\"{job_id}/\", \"\"))")
+    ext_lines.append("        resolve_input_artifacts(result, state, workspace_root, self.INPUT_ARTIFACTS)")
+    ext_lines.append("        resolve_output_artifacts(result, state, workspace_root, self.OUTPUT_ARTIFACTS)")
     ext_lines.append("        return result")
     ext_lines.append("")
     ext_lines.append("    def install_to_global(self, *, workspace_root, runner_home):")
@@ -588,6 +621,41 @@ def assemble_package(*, context, state, step_cfg, project_root):
         remark=remark,
         artifacts=produced,
     )
+
+
+def _extract_filename(pattern: str, key: str) -> str:
+    """Extract a filename from an artifact pattern for the two-dict convention.
+
+    The Analysis JSON may contain patterns like:
+    - "input/{filename}"       → extract "{filename}" or derive from key
+    - "output/SUMMARY_FILE.md" → extract "SUMMARY_FILE.md"
+    - "SUMMARY_FILE.md"        → use as-is
+    - "{filename}"              → use as-is
+
+    For input keys, returns the filename template (may contain placeholders).
+    For output keys, returns the filename pattern (may contain {seq}).
+    """
+    if not pattern:
+        return ""
+    # Strip known directory prefixes
+    for prefix in ("input/", "output/", "intermediate/"):
+        if pattern.startswith(prefix):
+            pattern = pattern[len(prefix):]
+            break
+    # If the pattern is just a placeholder like "{filename}", derive from key
+    if pattern.startswith("{") and pattern.endswith("}"):
+        placeholder_inner = pattern[1:-1]
+        if placeholder_inner == "filename":
+            # Derive a sensible default from the key name
+            if key.endswith("_FILE"):
+                return f"{key}.dat"
+            elif key.endswith("_DIR"):
+                return ""
+            else:
+                return f"{key}.dat"
+        return pattern
+    # Use the remaining pattern as-is (it's a filename or filename with placeholders)
+    return pattern
 
 
 def _to_pascal_case(name: str) -> str:
@@ -727,8 +795,8 @@ def validate_structure(*, context, state, step_cfg, project_root):
         if not report_path.is_absolute():
             report_path = project_root / report_path
     else:
-        # Fallback: construct from job_id
-        run_root = project_root / "docs" / "repo" / "artifact_generator_builder" / "runs" / job_id
+        # Fallback: construct from job_id using output/{job_id}/ convention
+        run_root = project_root / "output" / job_id
         report_path = run_root / f"VALIDATION_FINDINGS-{datetime.now().strftime('%Y%m%d')}-001.md"
 
     report_path.parent.mkdir(parents=True, exist_ok=True)

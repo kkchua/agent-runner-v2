@@ -5,7 +5,7 @@
 # Pipeline:
 #   1. Analyze          — understand requirement, produce Analysis JSON
 #   2-3. Plan ↔ Challenge   — design domain logic, then attack it
-#   4-5. Implement ↔ Critic — write actions + prompts, then review them
+#   4-5. Implement ↔ Critic — write actions + prompts + requirements.txt, then review
 #   6. Assemble         — mechanically build structural files (ACTION)
 #   7-9. Review → Validate → Gatekeep — quality gates
 #   10. Promote          — deploy + generate README (ACTION)
@@ -35,7 +35,7 @@ name = "analyze_requirement"
 prompt = "prompts/01_analyze_requirement.txt"
 enable_notifications = true
 requires_human_approval_after = false
-onsuccess = "check_capability_gaps"
+onsuccess = "plan_domain_logic"
 
 [step.coder]
 role_policy = "architect_standard"
@@ -44,23 +44,6 @@ role_policy = "architect_standard"
 required_inputs = ["REQUIREMENT_DOC"]
 optional_inputs = ["EXISTING_WORKFLOW_DIR"]
 produces = ["ANALYSIS_JSON_FILE"]
-result_meta_key = "ANALYSIS_JSON_FILE"
-
-# =============================================================================
-# Step 1b: Check Capability Gaps (ACTION)
-# =============================================================================
-
-[[step]]
-name = "check_capability_gaps"
-action = "check_capability_gaps"
-enable_notifications = true
-requires_human_approval_after = false
-onsuccess = "plan_domain_logic"
-# No on_reject_refine — action rejection routes to AWAITING_INTERVENTION
-
-[step.artifacts]
-required_inputs = ["ANALYSIS_JSON_FILE"]
-produces = []
 result_meta_key = "ANALYSIS_JSON_FILE"
 
 # =============================================================================

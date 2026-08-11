@@ -172,6 +172,7 @@ Before writing the output, verify:
 - [ ] At least one alternative implementation is defined
 - [ ] No implementation is named "default"
 - [ ] Implementation overrides reference valid step names
+- [ ] No requirement was silently dropped — all requirements from the doc are accounted for
 
 # Forbidden Content
 

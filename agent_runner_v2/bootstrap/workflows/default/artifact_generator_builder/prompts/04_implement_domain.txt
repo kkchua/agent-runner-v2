@@ -114,9 +114,10 @@ def action_name_here(*, context, state, step_cfg, project_root):
    it MUST contain real extraction logic for that format.
 
 6. **No false format claims**: If the function cannot genuinely parse a format
-   (e.g., binary PDF with no text layer), do NOT claim to support it. Remove
-   unsupported formats from the format map rather than adding try/except
-   wrappers that silently produce garbage.
+   (e.g., binary PDF with no text layer), do NOT claim to support it. If a
+   format requires an external library, implement real parsing logic using
+   that library and declare the dependency in requirements.txt. Do NOT
+   silently drop formats that the requirement doc asks for.
 
 7. **Meaningful error paths**: Every branch MUST produce a meaningful result.
    No dead-code branches where all paths return the same value. Every REJECTED
@@ -174,12 +175,34 @@ If an override specifies a different prompt, write the file to:
 Follow the same prompt rules as Part B. The prompt MUST implement the variant
 strategy described in the Domain Plan.
 
+## Part D: Write requirements.txt
+
+Write to: {WORKFLOW_REQUIREMENTS_FILE}
+
+If any action in actions.py imports an external (non-stdlib) library, you MUST
+create a requirements.txt file listing ALL external dependencies. One package
+per line, with version pins where appropriate.
+
+Example:
+```
+PyPDF2>=3.0.0
+python-docx>=1.0.0
+openpyxl>=3.1.0
+```
+
+Rules:
+- Only include packages that are actually imported in actions.py
+- Do NOT include Python standard library modules (json, pathlib, shutil, etc.)
+- Use `>=` version pins for minimum versions when known
+- If no external dependencies are needed, do NOT create requirements.txt
+
 # meta.json Reporting
 
 When writing your meta.json sidecar, report ONLY these artifact keys:
 
 - `WORKFLOW_ACTIONS_FILE` — path to the shared actions.py
 - `WORKFLOW_PROMPTS_DIR` — path to the prompts/ directory
+- `WORKFLOW_REQUIREMENTS_FILE` — path to requirements.txt (only if external deps exist)
 
 Do NOT report implementation-specific files (impls/*/actions.py, impls/*/prompts/)
 in meta.json. Those are tracked by the assemble_package step (step 6) under
