@@ -114,13 +114,9 @@ def action_name_here(*, context, state, step_cfg, project_root):
    it MUST contain real extraction logic for that format.
 
 6. **No false format claims**: If the function cannot genuinely parse a format
-   (e.g., binary PDF with no text layer), do NOT claim to support it. However,
-   if the Analysis JSON's `capability_gaps` lists this format AND the Domain
-   Plan includes a setup action that installs the required library, you MUST
-   implement real parsing logic using that library. Example: if capability_gaps
-   says "PDF needs PyPDF2" and the plan has an install_dependencies step, then
-   the parse function MUST import PyPDF2 and use it to extract text. Do NOT
-   silently drop formats that have a capability_gap + setup action.
+   (e.g., binary PDF with no text layer), do NOT claim to support it. Remove
+   unsupported formats from the format map rather than adding try/except
+   wrappers that silently produce garbage.
 
 7. **Meaningful error paths**: Every branch MUST produce a meaningful result.
    No dead-code branches where all paths return the same value. Every REJECTED

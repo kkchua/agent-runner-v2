@@ -65,33 +65,6 @@ Before planning, verify the Analysis JSON is complete and correct:
 
 Report any gaps or inconsistencies before proceeding.
 
-## Step 1b: Address Capability Gaps
-
-Check if the Analysis JSON contains a non-empty `capability_gaps` array.
-If it does, you MUST address EVERY gap in your plan. For each gap:
-
-**Option A — Plan a setup action** (preferred for installable libraries):
-Add an action step at the beginning of the domain_steps sequence that
-installs the required library. Example:
-- Step name: `install_dependencies`
-- Type: action
-- Action: `install_dependencies`
-- Purpose: Run `pip install PyPDF2 python-docx` to install required libraries
-- This step MUST appear before any step that uses the library.
-
-**Option B — Flag as unresolvable** (when the gap cannot be solved by pip):
-If the gap requires external services, API keys, or tools that cannot be
-installed via pip, document this in the plan as a BLOCKER and recommend
-human intervention. The gatekeep step will catch this and route to
-AWAITING_INTERVENTION.
-
-Rules:
-- Do NOT skip a capability gap. Every gap must have Option A or Option B.
-- Do NOT silently drop the requirement. If the requirement says "support .pdf"
-  and you cannot plan PDF parsing, the gap MUST be addressed.
-- If you add a setup action, update the domain_steps in your plan to include
-  it (note: the Analysis JSON's domain_steps may need to be extended).
-
 ## Step 2: Plan Each Action Step
 
 For every domain_step with type="action", specify:
@@ -103,10 +76,9 @@ For every domain_step with type="action", specify:
 - **Output artifacts**: Which artifact keys it writes.
 - **Core logic**: Describe the algorithm in pseudocode or detailed steps.
 - **Format handling**: If the action processes files, specify which formats
-  are supported and how each is parsed. If a format requires an external
-  library, reference the capability_gap entry and the setup action that
-  installs it. Do NOT claim format support without either (a) real parsing
-  logic using standard library, or (b) a capability_gap + setup action.
+  are supported and how each is parsed. Do NOT claim format support you
+  cannot implement — if real parsing logic is not feasible, exclude that
+  format.
 
 ### Validation Rules
 - What input validations does this action perform at its boundary?
@@ -212,8 +184,6 @@ Before writing the output, verify:
 - [ ] Implementation overrides are specific — each lists exactly which steps differ and how
 - [ ] All artifact key references match the Analysis JSON's artifact_keys definitions
 - [ ] No infrastructure planning (workflow.toml, context_extensions.py) is included
-- [ ] Every capability_gap from the Analysis JSON is addressed (setup action or blocker flag)
-- [ ] No format is silently dropped — all required input types have a plan
 
 # Forbidden Content
 

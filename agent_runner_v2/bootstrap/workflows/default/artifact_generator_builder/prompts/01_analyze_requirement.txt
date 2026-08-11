@@ -1,58 +1,181 @@
 # Objective
 
-Analyze the requirement document to understand what artifact generator needs to be built. Extract input/output specifications, transformation requirements, and constraints.
+Analyze the requirement document and produce the **Analysis JSON** — the single
+contract artifact that drives the entire downstream pipeline. The assembler
+(step 6) reads this JSON to mechanically construct workflow.toml,
+context_extensions.py, and impl.yaml files. No other design documents are
+produced.
+
+You are extracting domain structure from the requirement and encoding it in a
+machine-readable schema defined by BASE_COMPOSITION_STANDARD v2.0 Section 8.
+
+# MANDATORY: BASE_COMPOSITION_STANDARD Section 8
+
+You MUST read {BASE_COMPOSITION_STANDARD} Section 8 (Analysis JSON Schema) and
+produce output that conforms exactly to that schema. Every field constraint in
+Section 8.2 MUST be satisfied.
 
 # Reference Inputs
 
 - REQUIREMENT_DOC: {REQUIREMENT_DOC}
-  Read the entire requirement document. Pay attention to input artifacts, output artifacts, transformation rules, and constraints.
+  Read the entire requirement document. Extract domain identity, step
+  decomposition, artifact key definitions, and implementation variants.
 
-# Generation Tasks
+- BASE_COMPOSITION_STANDARD: {BASE_COMPOSITION_STANDARD}
+  Authoritative schema definition for the Analysis JSON.
 
-Produce a requirement analysis document containing:
+- EXISTING_WORKFLOW_DIR: {EXISTING_WORKFLOW_DIR}
+  OPTIONAL — If provided, you are in EXTEND MODE. This path points to an
+  existing workflow package. Read its workflow.toml to extract the identity,
+  domain_steps, and artifact_keys. The REQUIREMENT_DOC describes ONLY the new
+  implementation to add — do NOT redesign the domain logic.
 
-1. **Generator Identity** -- Extract from requirement:
-   - generator_name
-   - input_type
-   - output_type
-   - version
+# Mode Detection
 
-2. **Input Specification** -- List all input artifacts:
-   - Artifact keys and types
-   - Expected format/structure
-   - Validation requirements
+**Check if EXISTING_WORKFLOW_DIR is provided and non-empty:**
 
-3. **Output Specification** -- List all output artifacts:
-   - Artifact keys and types
-   - Expected format/structure
-   - Quality requirements
+- **If EXISTING_WORKFLOW_DIR is empty or not provided** → NEW WORKFLOW MODE
+  Follow the full Analysis Protocol below. Design the complete domain structure.
 
-4. **Transformation Requirements** -- How input becomes output:
-   - Parsing/extraction steps
-   - Transformation logic
-   - Assembly/generation steps
+- **If EXISTING_WORKFLOW_DIR is provided** → EXTEND MODE
+  1. Read `{EXISTING_WORKFLOW_DIR}/workflow.toml` to extract:
+     - identity (name, job_prefix, version, label, description, codename)
+     - domain_steps (the existing step sequence)
+     - artifact_keys (inputs, intermediate, outputs)
+     - existing implementations (to avoid name conflicts)
+  2. Read REQUIREMENT_DOC to understand ONLY the new implementation being added.
+  3. Produce an Analysis JSON with:
+     - identity: copied from existing workflow.toml
+     - domain_steps: copied from existing workflow.toml
+     - artifact_keys: copied from existing workflow.toml
+     - implementations: ONLY the new implementation(s) being added
+     - extend_mode: true (flag to indicate this is an extension)
+  4. Do NOT redesign domain_steps or artifact_keys — they are fixed.
+  5. The new implementation name MUST NOT conflict with existing implementations.
 
-5. **Constraints** -- Hard requirements:
-   - Performance requirements
-   - Format requirements
-   - Compatibility requirements
+# Analysis Protocol (NEW WORKFLOW MODE only)
 
-6. **Self-Validation** -- Verify all requirement sections are covered
+## Step 1: Extract Identity
 
-# Self-Critic
+Read the requirement document's YAML frontmatter and body. Extract:
 
-- Did I capture all input artifacts?
-- Did I capture all output artifacts?
-- Are the transformation requirements clear?
-- Is anything ambiguous or missing?
+- **codename**: MUST be read from the requirement doc's YAML frontmatter
+  `codename:` field. This is the single source of truth.
+- **name**: MUST equal codename (Section 8.2 constraint).
+- **job_prefix**: 2-10 uppercase characters for job ID generation.
+- **version**: Semantic version from the requirement doc, default "1.0.0".
+- **label**: Human-readable display name.
+- **description**: One-line description of what this workflow does.
 
-# Forbidden Content
+## Step 2: Decompose into Domain Steps
 
-- Do NOT invent requirements not in the document
-- Do NOT assume default values for unspecified items
-- Do NOT include non-ASCII characters
+Analyze the requirement and decompose the work into an ordered sequence of
+domain steps. For each step, determine:
+
+- **name**: Unique snake_case identifier.
+- **type**: `"action"` for deterministic code-driven steps (input parsing,
+  output rendering, data transforms, format conversions) or `"prompt"` for
+  LLM-driven steps (analysis, transformation, generation, review).
+- **action_name**: Required when type="action". The function name that will
+  be decorated with @action in actions.py.
+- **prompt_file**: Required when type="prompt". Filename only (no directory
+  prefix). The prompt template that will be written to prompts/.
+- **role_policy**: Required when type="prompt". Coder role policy name
+  (e.g., "architect_standard", "reviewer_standard").
+- **required_inputs**: List of artifact keys this step needs.
+- **produces**: List of artifact keys this step produces.
+
+### Action vs Prompt Decision Rules
+
+Use **action** when the step:
+- Parses input files (text, JSON, CSV, structured data)
+- Renders/formats output files
+- Performs deterministic data transforms
+- Validates data against rules
+- Copies, moves, or organizes files
+
+Use **prompt** when the step:
+- Requires LLM reasoning to analyze content
+- Generates creative or transformed text
+- Makes judgment calls about quality or completeness
+- Produces domain-specific intelligence from raw data
+
+### Data Flow Validation
+
+Steps MUST form a valid chain:
+- The first step's required_inputs MUST be satisfied by workflow-level inputs.
+- Each subsequent step's required_inputs MUST be produced by prior steps.
+- The final step MUST produce at least one output artifact key.
+
+## Step 3: Define Artifact Keys
+
+Categorize ALL artifact keys into three groups:
+
+- **inputs**: Artifacts provided as workflow input (from operator console).
+  Keys MUST end with `_FILE` or `_DIR` (Section 8.2 constraint).
+- **intermediate**: Artifacts produced by one step and consumed by another.
+  These are internal pipeline data.
+- **outputs**: Final deliverable artifacts produced by the workflow.
+
+For each key, provide a **pattern** — a relative path template describing
+where the file will be stored (e.g., `output/{codename}_parsed.json`).
+
+## Step 4: Define Implementations
+
+You MUST define at least one alternative implementation (Section 4.5 of
+BASE_COMPOSITION_STANDARD requires this for AGB-generated workflows).
+
+For each implementation:
+- **name**: Unique identifier. MUST NOT be "default" (Section 8.2).
+- **description**: What this variant does differently.
+- **label**: Optional display label.
+- **overrides**: A mapping of step_name → {prompt or action override}.
+  Only list steps that DIFFER from the default. Steps not listed inherit
+  from workflow.toml unchanged.
+
+Think about what alternative strategies exist for the domain:
+- Different analysis approaches (e.g., "detailed" vs "summary")
+- Different output formats (e.g., "markdown" vs "json")
+- Different processing strategies (e.g., "batch" vs "incremental")
 
 # Output Instructions
 
-Write to: {REQUIREMENT_ANALYSIS_FILE}
-Markdown with YAML frontmatter: doc_type: "requirement_analysis", identity_locked: true. ASCII-only.
+Write the Analysis JSON to: {ANALYSIS_JSON_FILE}
+
+The output MUST be valid JSON conforming to the schema in Section 8.1.
+Structure:
+
+```json
+{
+  "identity": { ... },
+  "domain_steps": [ ... ],
+  "artifact_keys": {
+    "inputs": [ ... ],
+    "intermediate": [ ... ],
+    "outputs": [ ... ]
+  },
+  "implementations": [ ... ]
+}
+```
+
+# Self-Validation
+
+Before writing the output, verify:
+
+- [ ] identity.codename matches the requirement doc's YAML frontmatter
+- [ ] identity.name equals identity.codename
+- [ ] identity.job_prefix is 2-10 uppercase characters
+- [ ] Every domain_step has either action_name (type=action) or prompt_file + role_policy (type=prompt)
+- [ ] All domain_step names are unique
+- [ ] Data flow is valid: each step's required_inputs are produced by prior steps or are workflow inputs
+- [ ] Input artifact key names end with _FILE or _DIR (intermediate/output keys have no suffix constraint)
+- [ ] At least one alternative implementation is defined
+- [ ] No implementation is named "default"
+- [ ] Implementation overrides reference valid step names
+
+# Forbidden Content
+
+- Do NOT invent requirements not present in the requirement document.
+- Do NOT design infrastructure files (workflow.toml, context_extensions.py) — the assembler handles those.
+- Do NOT include non-ASCII characters.
+- Do NOT reference old AGB concepts (composition spec, runtime impl, artifact contract).

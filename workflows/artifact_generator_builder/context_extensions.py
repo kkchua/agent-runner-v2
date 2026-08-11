@@ -4,6 +4,10 @@ Registers artifact keys and resolves them to absolute paths at runtime.
 
 AGB v3 pipeline: LLM generates domain logic (actions + prompts),
 infrastructure assembled mechanically. Single deliverable: workflow package.
+
+Uses the universal two-dict pattern:
+    INPUT_ARTIFACTS  → {workspace_root}/input/{filename}
+    OUTPUT_ARTIFACTS → {workspace_root}/output/{job_id}/{filename}
 """
 
 from pathlib import Path
@@ -16,7 +20,8 @@ from agent_runner_v2.runtime_context import (
 )
 from agent_runner_v2.workflow_packages.extensions_base import (
     WorkflowExtensions,
-    resolve_input_specs,
+    resolve_input_artifacts,
+    resolve_output_artifacts,
 )
 
 
@@ -54,44 +59,49 @@ class ArtifactGeneratorBuilderExtensions(WorkflowExtensions):
 
     workflow_name = "artifact_generator_builder"
 
+    # -- Input artifacts: resolved to {workspace_root}/input/ --
+    INPUT_ARTIFACTS: dict[str, str] = {
+        "REQUIREMENT_DOC": "",
+        "EXISTING_WORKFLOW_DIR": "",
+    }
+
+    # -- Output artifacts: resolved to {workspace_root}/output/{job_id}/ --
+    OUTPUT_ARTIFACTS: dict[str, str] = {
+        # Step 1: Analyze
+        "ANALYSIS_JSON_FILE": "ANALYSIS_JSON-{seq}.json",
+        # Steps 2-3: Plan <-> Challenge
+        "DOMAIN_PLAN_FILE": "DOMAIN_PLAN-{seq}.md",
+        "PLAN_CHALLENGE_FILE": "PLAN_CHALLENGE-{seq}.md",
+        # Steps 4-5: Implement <-> Critic
+        "WORKFLOW_ACTIONS_FILE": "actions.py",
+        "WORKFLOW_PROMPTS_DIR": "prompts/",
+        "IMPL_CRITIQUE_FILE": "IMPL_CRITIQUE-{seq}.md",
+        # Step 6: Assemble
+        "WORKFLOW_MANIFEST_FILE": "workflow.toml",
+        "WORKFLOW_EXTENSIONS_FILE": "context_extensions.py",
+        "IMPL_OVERRIDE_FILES": "impls/",
+        # Steps 7-9: Review -> Validate -> Gatekeep
+        "PACKAGE_REVIEW_FILE": "PACKAGE_REVIEW-{seq}.md",
+        "VALIDATION_FINDINGS_FILE": "VALIDATION_FINDINGS-{seq}.md",
+        "GATEKEEP_PACKAGE_FILE": "GATEKEEP_PACKAGE-{seq}.md",
+        # Step 10: Promote
+        "WORKFLOW_PACKAGE_DIR": "",
+    }
+
     def register_artifact_keys(
         self, *, job_id: str = "{job_id}", mode: str = "{mode}"
     ) -> dict[str, str]:
-        """Return a mapping of artifact keys to relative path templates."""
-        repo = "docs/repo/artifact_generator_builder"
-        run = f"{repo}/runs/{{job_id}}"
-        out = f"{run}/output"
+        """Return a combined mapping of all artifact keys to path templates.
 
-        return {
-            # -- Input --
-            "REQUIREMENT_DOC": "Specs/sample_requirement.md",
-            "EXISTING_WORKFLOW_DIR": "",  # Optional: path to existing workflow for extend mode
-
-            # -- Step 1: Analyze --
-            "ANALYSIS_JSON_FILE": f"{out}/ANALYSIS_JSON-{{seq}}.json",
-
-            # -- Steps 2-3: Plan ↔ Challenge --
-            "DOMAIN_PLAN_FILE": f"{out}/DOMAIN_PLAN-{{seq}}.md",
-            "PLAN_CHALLENGE_FILE": f"{run}/PLAN_CHALLENGE-{{seq}}.md",
-
-            # -- Steps 4-5: Implement ↔ Critic --
-            "WORKFLOW_ACTIONS_FILE": f"{out}/actions.py",
-            "WORKFLOW_PROMPTS_DIR": f"{out}/prompts/",
-            "IMPL_CRITIQUE_FILE": f"{run}/IMPL_CRITIQUE-{{seq}}.md",
-
-            # -- Step 6: Assemble --
-            "WORKFLOW_MANIFEST_FILE": f"{out}/workflow.toml",
-            "WORKFLOW_EXTENSIONS_FILE": f"{out}/context_extensions.py",
-            "IMPL_OVERRIDE_FILES": f"{out}/impls/",
-
-            # -- Steps 7-9: Review → Validate → Gatekeep --
-            "PACKAGE_REVIEW_FILE": f"{run}/PACKAGE_REVIEW-{{seq}}.md",
-            "VALIDATION_FINDINGS_FILE": f"{run}/VALIDATION_FINDINGS-{{seq}}.md",
-            "GATEKEEP_PACKAGE_FILE": f"{run}/GATEKEEP_PACKAGE-{{seq}}.md",
-
-            # -- Step 10: Promote --
-            "WORKFLOW_PACKAGE_DIR": f"{out}/",
-        }
+        Kept for backward compatibility. The actual resolution is done
+        by resolve_input_artifacts() and resolve_output_artifacts().
+        """
+        combined: dict[str, str] = {}
+        for key in self.INPUT_ARTIFACTS:
+            combined[key] = "input/"
+        for key, pattern in self.OUTPUT_ARTIFACTS.items():
+            combined[key] = f"output/{{job_id}}/{pattern}"
+        return combined
 
     def build_context_extensions(
         self,
@@ -112,38 +122,26 @@ class ArtifactGeneratorBuilderExtensions(WorkflowExtensions):
         codename = _read_codename_from_requirement_doc(state)
         result["CODENAME"] = codename
 
-        # Governance and platform runtime roots
+        # Governance and platform runtime roots (system references)
         result["GOVERNANCE_RUNTIME_ROOT"] = str(
             get_governance_runtime_root()
         )
         result["PLATFORM_RUNTIME_ROOT"] = str(
             get_platform_runtime_root()
         )
-
-        # Base composition standard path (from governance)
         result["BASE_COMPOSITION_STANDARD"] = str(
             get_governance_runtime_root() / "BASE_COMPOSITION_STANDARD_v1.0.md"
         )
 
-        # Resolve input spec filenames from operator console to Specs/ paths
-        resolve_input_specs(
-            result, state, self.workflow_name, ["REQUIREMENT_DOC"]
+        # Resolve input artifacts → {workspace_root}/input/
+        resolve_input_artifacts(
+            result, state, workspace_root, self.INPUT_ARTIFACTS
         )
 
-        # Resolve all artifact keys to absolute paths
-        artifacts = state.get("artifacts") or {}
-        job_id = str(state.get("job_id") or "")
-        for key, rel_path in self.register_artifact_keys().items():
-            if key in result:
-                continue
-            existing = artifacts.get(key)
-            if existing and Path(existing).is_absolute():
-                result[key] = existing
-                continue
-            resolved_path = rel_path.replace("{codename}", codename)
-            if job_id:
-                resolved_path = resolved_path.replace("{job_id}", job_id)
-            result[key] = str(workspace_root / resolved_path)
+        # Resolve output artifacts → {workspace_root}/output/{job_id}/
+        resolve_output_artifacts(
+            result, state, workspace_root, self.OUTPUT_ARTIFACTS
+        )
 
         return result
 
