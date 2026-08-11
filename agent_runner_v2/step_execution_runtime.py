@@ -49,11 +49,9 @@ def prepare_step_execution(
     cli_coder: str | None = None,
     hooks: "StepExecutionHooks",
 ) -> PreparedStepExecution:
-    missing_required = hooks._missing_artifacts(step_cfg.get("required_inputs", []), state)
-    if missing_required:
-        raise FileNotFoundError(
-            f"Cannot run step {step!r}. Missing required input artifact(s): {', '.join(missing_required)}"
-        )
+    # Note: missing_artifacts check moved to AFTER build_context so that
+    # context_extensions.py can resolve input paths first (e.g., INPUT_FILE
+    # from bare filename to full path in input/ subdirectory).
 
     hooks.check_preflight_artifact_status(step_cfg=step_cfg, state=state)
     hooks.ensure_planning_task_queue_integrity(state, step=step)
@@ -64,6 +62,13 @@ def prepare_step_execution(
 
     context = hooks.build_context(state, step=step, step_cfg=step_cfg, project_root=project_root)
     context["WORKFLOW_KEY_OVERRIDE"] = workflow_key_override or ""
+
+    # Now check for missing required inputs AFTER context_extensions has resolved paths
+    missing_required = hooks._missing_artifacts(step_cfg.get("required_inputs", []), state)
+    if missing_required:
+        raise FileNotFoundError(
+            f"Cannot run step {step!r}. Missing required input artifact(s): {', '.join(missing_required)}"
+        )
 
     meta_from_ctx = step_cfg.get("result_meta_key_from_context")
     if not meta_from_ctx:

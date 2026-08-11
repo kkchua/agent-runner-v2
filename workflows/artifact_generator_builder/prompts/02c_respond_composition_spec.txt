@@ -1,0 +1,94 @@
+# Objective
+
+Your design has been ATTACKED. The challenge document lists specific failure scenarios where your composition spec breaks down. You must DEFEND each attack with concrete evidence, or ADMIT the flaw and provide a fix.
+
+You are NOT allowed to hand-wave. "The implementation will handle this" is NOT a valid response. You must show HOW, with evidence.
+
+# Reference Inputs
+
+- CHALLENGE_COMPOSITION_SPEC_FILE: {CHALLENGE_COMPOSITION_SPEC_FILE}
+- COMPOSITION_SPEC_FILE: {COMPOSITION_SPEC_FILE}
+
+# Response Protocol
+
+For EACH attack in the challenge document, you MUST provide one of three responses:
+
+## Response Type: PROOF
+The attack is wrong or overstated. Provide step-by-step evidence showing the design handles this case correctly.
+
+Format:
+```
+### Response to Attack N: <title>
+**Type:** PROOF
+**Evidence:**
+1. The spec states X (cite section/line)
+2. When input is <attack scenario>, the data flow is:
+   - Stage 1 receives... produces...
+   - Stage 2 receives... produces...
+   - At each stage, the invariant holds because...
+3. Therefore the design correctly handles this case.
+```
+
+## Response Type: FIX
+The attack is valid. The design has a gap. Provide a concrete fix.
+
+Format:
+```
+### Response to Attack N: <title>
+**Type:** FIX
+**Admission:** The design does not handle <specific case>. The attack correctly identifies that <failure mode>.
+**Fix:** Add/modify <specific section> to include:
+- <concrete change to the design>
+- <how it prevents the failure>
+- <what invariant now enforces the fix>
+```
+
+## Response Type: ACKNOWLEDGE
+The attack is valid but cannot be fully resolved at the composition spec level. Acknowledge the limitation and document how it will be handled downstream.
+
+Format:
+```
+### Response to Attack N: <title>
+**Type:** ACKNOWLEDGE
+**Admission:** The design does not handle <specific case> at this level.
+**Deferral:** This will be handled at the <runtime impl / implementation / testing> level by <specific mechanism>.
+**Risk:** If the downstream mechanism fails, the consequence is <specific impact>.
+```
+
+# Rules
+
+- You MUST respond to EVERY attack. Skipping an attack is NOT allowed.
+- PROOF responses must include a data flow trace or specific spec citation. "The design handles this" without evidence is REJECTED.
+- FIX responses must include a concrete change, not a vague promise. "We'll add error handling" is NOT a fix. "Add to Stage 1 step 3: if text extraction returns empty string, check for scanned PDF indicators (no extractable text, image-only pages), raise FORMAT_UNSUPPORTED with code SCANNED_PDF" IS a fix.
+- ACKNOWLEDGE responses are limited to at most 2 attacks. If you need to acknowledge more than 2, your design has fundamental issues.
+- Do NOT attack the challenger. Do not argue that the attack is invalid without providing proof.
+- Do NOT include non-ASCII characters.
+
+# Output Instructions
+
+Write to: {RESPONSE_COMPOSITION_SPEC_FILE}
+Markdown with YAML frontmatter: doc_type: "response_composition_spec", identity_locked: true. ASCII-only.
+
+Structure your response as:
+
+```
+---
+doc_type: "response_composition_spec"
+identity_locked: true
+---
+
+# Response to Challenge: Composition Spec
+
+## Response to Attack 1: <title>
+**Type:** PROOF / FIX / ACKNOWLEDGE
+<evidence or fix>
+
+## Response to Attack 2: <title>
+...
+
+## Summary
+- Attacks defended (PROOF): <count>
+- Attacks fixed (FIX): <count>
+- Attacks acknowledged (ACKNOWLEDGE): <count>
+- Total: <count>
+```

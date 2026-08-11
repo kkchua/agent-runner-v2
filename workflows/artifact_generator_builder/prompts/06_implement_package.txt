@@ -1,0 +1,127 @@
+# Objective
+
+Implement the workflow package by following the implementation plan task-by-task. Each task has acceptance criteria — your implementation MUST satisfy every criterion.
+
+You are NOT designing. You are NOT deciding what to build. The plan tells you WHAT to build and the acceptance criteria tell you WHEN it's done. Follow the plan.
+
+# MANDATORY: BASE_COMPOSITION_STANDARD_v1.0.md Section 10
+
+You MUST follow BASE_COMPOSITION_STANDARD_v1.0.md Section 10 ({BASE_COMPOSITION_STANDARD}). This section defines:
+- The two required deliverables (Section 10.1)
+- The required file structure (Section 10.2)
+- The codename rules — you MUST use "{CODENAME}" as the identity
+- The override pattern (Section 13.8) — workflow.toml IS the default implementation
+
+# Reference Inputs
+
+- IMPLEMENTATION_PLAN_FILE: {IMPLEMENTATION_PLAN_FILE}
+- ARTIFACT_CONTRACT_FILE: {ARTIFACT_CONTRACT_FILE}
+- RUNTIME_IMPL_FILE: {RUNTIME_IMPL_FILE}
+- COMPOSITION_SPEC_FILE: {COMPOSITION_SPEC_FILE}
+- REQUIREMENT_ANALYSIS_FILE: {REQUIREMENT_DOC}
+- BASE_COMPOSITION_STANDARD: {BASE_COMPOSITION_STANDARD}
+- CODENAME: {CODENAME}
+
+# Implementation Protocol
+
+## Step 1: Read the Plan
+
+Read {IMPLEMENTATION_PLAN_FILE} completely. For each task, note:
+- What file/function to create
+- Dependencies (must be completed before this task)
+- Acceptance criteria (what tests will verify)
+
+## Step 2: Implement Task-by-Task
+
+Work through tasks in dependency order. For each task:
+
+1. Create the file or function as specified
+2. Verify each acceptance criterion is met
+3. Move to the next task
+
+### Critical Rules for Action Functions
+
+Each action function MUST:
+- Import `from agent_runner_v2.workflow_packages.actions import action` and `from agent_runner_v2.action_result import ActionResult`
+- Be decorated with `@action("action_name")`
+- Use signature `(context, state, step_cfg, project_root)`
+- Return `ActionResult(status=..., remark=..., artifacts=...)`
+- **Contain a COMPLETE, WORKING implementation.** No stubs, no placeholder fallbacks, no unsupported format claims.
+- **If the function claims to support a format (e.g., .pdf, .docx), it MUST contain real extraction logic for that format.** Not just a try/except that reads binary as text. If you cannot implement real support for a format, do NOT claim to support it — remove it from the format map.
+- **Every branch must produce a meaningful result.** No dead-code branches where all paths return the same value.
+
+### Critical Rules for Prompt Files
+
+Each prompt file MUST:
+- Reference only artifact keys that exist in context_extensions.py
+- Include all algorithm instructions from the runtime impl
+- Use `{placeholder}` syntax for artifact references
+
+### Critical Rules for workflow.toml
+
+The workflow.toml MUST:
+- Have every step assigned to either `prompt` or `action`
+- Have every step's `required_inputs` produced by prior steps
+- Have routing that reaches step_completion without cycles
+- Declare `[[workflow.implementation]]` for each variant (not `default`)
+- Include `required_inputs` on the init step for operator console file pickers
+
+## Step 3: Self-Check Against Acceptance Criteria
+
+After implementing all tasks, go back to the plan. For EACH acceptance criterion:
+- Can you verify it's met? Point to the specific code/file that satisfies it.
+- If not met, fix it before proceeding.
+
+## Step 4: Produce Deliverables
+
+Per BASE_COMPOSITION_STANDARD_v1.0.md Section 10.1, also produce:
+- {COMPOSITION_STANDARD_FILE} — copy from design phase output
+
+Uses codename: "{CODENAME}", identity_locked: true. ASCII-only.
+
+# Output Instructions
+
+Write ALL files listed in the implementation plan. ASCII-only for all files.
+
+# Required Output Folder Structure
+
+```
+output/
+    standards/
+        COMPOSITION_STANDARD.md
+    impls/                       (if variants exist)
+        {variant_name}/
+            impl.yaml
+            actions.py           (optional)
+            prompts/             (optional)
+                *.txt
+    Specs/
+        *.md
+    workflow.toml
+    context_extensions.py
+    actions.py
+    prompts/
+        *.txt
+    README.md
+```
+
+# Required Artifact Keys
+
+| File | Artifact Key |
+|------|--------------|
+| workflow.toml | WORKFLOW_MANIFEST_FILE |
+| context_extensions.py | WORKFLOW_EXTENSIONS_FILE |
+| actions.py | WORKFLOW_ACTIONS_FILE |
+| prompts/ (directory) | WORKFLOW_PROMPTS_DIR |
+| README.md | WORKFLOW_README_FILE |
+| standards/COMPOSITION_STANDARD.md | COMPOSITION_STANDARD_FILE |
+
+# Forbidden Content
+
+- Do NOT use the builder's identity — use {CODENAME}
+- Do NOT put runtime imports inside TYPE_CHECKING
+- Do NOT hardcode absolute paths in register_artifact_keys()
+- Do NOT include non-ASCII characters
+- Do NOT skip any task from the implementation plan
+- Do NOT create an `impls/default/` directory
+- Do NOT write stub implementations — every function must have real logic

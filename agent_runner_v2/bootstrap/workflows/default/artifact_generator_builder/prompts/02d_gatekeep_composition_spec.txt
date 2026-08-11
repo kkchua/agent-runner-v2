@@ -1,40 +1,45 @@
 # Objective
 
-Final gatekeep of the composition specification. Before approving, you must try to find reasons to REJECT.
+You are a JUDGE. A design was produced, attacked by a critic, and the designer responded to every attack. Your job is to determine whether each response is SOLID or WEAK.
+
+You do NOT attack the design yourself. You do NOT rebut the critic. You evaluate whether the designer's responses adequately address the attacks.
+
+# MANDATORY: BASE_COMPOSITION_STANDARD_v1.0.md Section 10
+
+You MUST verify compliance with BASE_COMPOSITION_STANDARD_v1.0.md Section 10 ({BASE_COMPOSITION_STANDARD}).
 
 # Reference Inputs
 
 - COMPOSITION_SPEC_FILE: {COMPOSITION_SPEC_FILE}
-- REVIEW_COMPOSITION_SPEC_FILE: {REVIEW_COMPOSITION_SPEC_FILE}
-- BASE_COMPOSITION_STANDARD: {BASE_COMPOSITION_STANDARD}
+- CHALLENGE_COMPOSITION_SPEC_FILE: {CHALLENGE_COMPOSITION_SPEC_FILE}
+- RESPONSE_COMPOSITION_SPEC_FILE: {RESPONSE_COMPOSITION_SPEC_FILE}
 
-# Self-Challenge Protocol
+# Judgment Protocol
 
-## Step 1: Runtime Execution Test
+## Step 1: Evaluate Each Attack-Response Pair
 
-Mentally simulate a runtime implementation consuming this spec:
-- Pick each abstract step interface — can you write a concrete prompt or action for it without guessing?
-- Trace the data flow from input to output — does every artifact get consumed and produced exactly once?
-- Check the extension mechanism — could someone add an alternative implementation without modifying the spec?
+For EACH attack in the challenge document, read the designer's response and judge:
 
-Note every point where the simulation stalls or requires a guess.
+**SOLVED** — The response provides concrete evidence that the design handles the case. The proof traces the data flow correctly, the fix addresses the root cause, or the acknowledgment is honest with acceptable risk.
 
-## Step 2: Devil's Advocate
+**UNSOLVED** — The response is one of:
+- Vague: "The implementation will handle this" without showing how
+- Incorrect: The proof traces a code path that doesn't actually work
+- Incomplete: The fix addresses the symptom but not the root cause
+- Missing: The designer skipped this attack
 
-Argue REJECT. Find the strongest case against approving this spec:
-- What step interfaces are too vague to implement?
-- What data flow gaps exist (artifacts produced but never consumed, or consumed but never produced)?
-- Are there hidden dependencies between steps that the spec does not declare?
+## Step 2: Count and Classify
 
-## Step 3: Review Feedback Check
+Tally:
+- Total attacks
+- SOLVED count
+- UNSOLVED count
+- BREAKDOWN: How many UNSOLVED are BLOCKING severity?
 
-Read the review ({REVIEW_COMPOSITION_SPEC_FILE}). Were all identified issues addressed? If the review said REJECT, are the specific defects fixed?
+## Step 3: Verdict
 
-## Step 4: Verdict
-
-After challenging, give your final verdict:
-- **APPROVE** — The spec survived all challenges. It is implementable and complete.
-- **REJECT** — The spec has unresolved defects. State what must be fixed.
+- **APPROVE** — All BLOCKING and MAJOR attacks are SOLVED. Minor attacks may remain UNSOLVED if the risk is documented and acceptable.
+- **REJECT** — Any BLOCKING attack is UNSOLVED, or more than 2 MAJOR attacks are UNSOLVED. The design goes back to `design_composition_spec` for another round.
 
 # Output Instructions
 
@@ -42,12 +47,37 @@ Write to: {GATEKEEP_COMPOSITION_SPEC_FILE}
 Markdown with YAML frontmatter: doc_type: "gatekeep_composition_spec", verdict: "APPROVE" or "REJECT", identity_locked: true. ASCII-only.
 
 Structure your gatekeep as:
-1. Runtime Simulation Results (where it stalled or succeeded)
-2. Devil's Advocate Argument
-3. Review Feedback Resolution (issues addressed or not)
-4. Final Verdict + reasoning
 
-# Forbidden Content
+```
+---
+doc_type: "gatekeep_composition_spec"
+verdict: "APPROVE" / "REJECT"
+identity_locked: true
+---
 
-- Do NOT approve if the devil's advocate found genuine blocking issues
-- Do NOT include non-ASCII characters
+# Gatekeep: Composition Spec
+
+## Judgment Table
+
+| Attack | Severity | Response Type | Verdict | Reasoning |
+|--------|----------|---------------|---------|-----------|
+| 1: <title> | BLOCKING/MAJOR/MINOR | PROOF/FIX/ACK | SOLVED/UNSOLVED | <1-2 sentence reasoning> |
+| 2: ... | ... | ... | ... | ... |
+
+## Summary
+- SOLVED: <count> / <total>
+- UNSOLVED BLOCKING: <count>
+- UNSOLVED MAJOR: <count>
+
+## Final Verdict
+<APPROVE or REJECT with reasoning>
+```
+
+# Rules
+
+- Do NOT argue against the critic's attacks. Evaluate the designer's response to each attack.
+- Do NOT raise new attacks. Your job is to judge existing attack-response pairs.
+- A PROOF is SOLVED only if the data flow trace is correct and complete.
+- A FIX is SOLVED only if the fix addresses the root cause, not just the symptom.
+- An ACKNOWLEDGE is SOLVED only if the deferred risk is acceptable and the downstream mechanism is credible.
+- Do NOT include non-ASCII characters.

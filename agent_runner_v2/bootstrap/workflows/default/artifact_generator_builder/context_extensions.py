@@ -83,40 +83,40 @@ class ArtifactGeneratorBuilderExtensions(WorkflowExtensions):
             # -- Input --
             "REQUIREMENT_DOC": "Specs/sample_requirement.md",
 
-            # -- Phase 1: Analyze Requirement --
+            # -- Phase 1: Requirement Study --
             "REQUIREMENT_ANALYSIS_FILE": f"{run}/REQUIREMENT_ANALYSIS-{{seq}}.md",
-            "REVIEW_REQUIREMENT_FILE": f"{run}/REVIEW_REQUIREMENT-{{seq}}.md",
-            "GATEKEEP_REQUIREMENT_FILE": f"{run}/GATEKEEP_REQUIREMENT-{{seq}}.md",
 
-            # -- Phase 2: Design Composition Spec --
+            # -- Phase 2: Design (adversarial challenge) --
             "COMPOSITION_SPEC_FILE": f"{out}/COMPOSITION_SPEC-{{seq}}.md",
-            "REVIEW_COMPOSITION_SPEC_FILE": f"{run}/REVIEW_COMPOSITION_SPEC-{{seq}}.md",
+            "CHALLENGE_COMPOSITION_SPEC_FILE": f"{run}/CHALLENGE_COMPOSITION_SPEC-{{seq}}.md",
+            "RESPONSE_COMPOSITION_SPEC_FILE": f"{run}/RESPONSE_COMPOSITION_SPEC-{{seq}}.md",
             "GATEKEEP_COMPOSITION_SPEC_FILE": f"{run}/GATEKEEP_COMPOSITION_SPEC-{{seq}}.md",
 
-            # -- Phase 3: Design Runtime Implementation --
             "RUNTIME_IMPL_FILE": f"{out}/RUNTIME_IMPL-{{seq}}.md",
-            "REVIEW_RUNTIME_IMPL_FILE": f"{run}/REVIEW_RUNTIME_IMPL-{{seq}}.md",
+            "CHALLENGE_RUNTIME_IMPL_FILE": f"{run}/CHALLENGE_RUNTIME_IMPL-{{seq}}.md",
+            "RESPONSE_RUNTIME_IMPL_FILE": f"{run}/RESPONSE_RUNTIME_IMPL-{{seq}}.md",
             "GATEKEEP_RUNTIME_IMPL_FILE": f"{run}/GATEKEEP_RUNTIME_IMPL-{{seq}}.md",
 
-            # -- Phase 4: Define Artifacts --
             "ARTIFACT_CONTRACT_FILE": f"{run}/ARTIFACT_CONTRACT-{{seq}}.md",
-            "GATEKEEP_ARTIFACTS_FILE": f"{run}/GATEKEEP_ARTIFACTS-{{seq}}.md",
 
-            # -- Phase 5: Design Steps --
-            "STEP_SEQUENCE_FILE": f"{run}/STEP_SEQUENCE-{{seq}}.md",
-            "GATEKEEP_STEPS_FILE": f"{run}/GATEKEEP_STEPS-{{seq}}.md",
+            # -- Phase 3: Planning --
+            "IMPLEMENTATION_PLAN_FILE": f"{run}/IMPLEMENTATION_PLAN-{{seq}}.md",
 
-            # -- Phase 6: Generate Package + Deliverables --
+            # -- Phase 4: Implementation --
             "COMPOSITION_STANDARD_FILE": f"{out}/standards/COMPOSITION_STANDARD.md",
             "WORKFLOW_MANIFEST_FILE": f"{out}/workflow.toml",
             "WORKFLOW_EXTENSIONS_FILE": f"{out}/context_extensions.py",
             "WORKFLOW_ACTIONS_FILE": f"{out}/actions.py",
             "WORKFLOW_PROMPTS_DIR": f"{out}/prompts/",
             "WORKFLOW_README_FILE": f"{out}/README.md",
-            "REVIEW_PACKAGE_FILE": f"{run}/REVIEW_PACKAGE-{{seq}}.md",
-            "GATEKEEP_PACKAGE_FILE": f"{run}/GATEKEEP_PACKAGE-{{seq}}.md",
+            "VALIDATION_FINDINGS_FILE": f"{run}/VALIDATION_FINDINGS-{{seq}}.md",
 
-            # -- Phase 7: Promote Package --
+            # -- Phase 5: Testing --
+            "TEST_CRITERIA_FILE": f"{run}/TEST_CRITERIA-{{seq}}.md",
+            "TEST_FILE": f"{out}/test_actions.py",
+            "TEST_RESULTS_FILE": f"{run}/TEST_RESULTS-{{seq}}.md",
+
+            # -- Phase 6: Promote --
             "PROMOTION_REPORT_FILE": f"{run}/PROMOTION_REPORT-{{seq}}.md",
             "WORKFLOW_PACKAGE_DIR": f"{out}/",
         }
