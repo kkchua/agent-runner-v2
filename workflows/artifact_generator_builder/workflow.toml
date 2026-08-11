@@ -35,7 +35,7 @@ name = "analyze_requirement"
 prompt = "prompts/01_analyze_requirement.txt"
 enable_notifications = true
 requires_human_approval_after = false
-onsuccess = "plan_domain_logic"
+onsuccess = "check_capability_gaps"
 
 [step.coder]
 role_policy = "architect_standard"
@@ -44,6 +44,23 @@ role_policy = "architect_standard"
 required_inputs = ["REQUIREMENT_DOC"]
 optional_inputs = ["EXISTING_WORKFLOW_DIR"]
 produces = ["ANALYSIS_JSON_FILE"]
+result_meta_key = "ANALYSIS_JSON_FILE"
+
+# =============================================================================
+# Step 1b: Check Capability Gaps (ACTION)
+# =============================================================================
+
+[[step]]
+name = "check_capability_gaps"
+action = "check_capability_gaps"
+enable_notifications = true
+requires_human_approval_after = false
+onsuccess = "plan_domain_logic"
+# No on_reject_refine — action rejection routes to AWAITING_INTERVENTION
+
+[step.artifacts]
+required_inputs = ["ANALYSIS_JSON_FILE"]
+produces = []
 result_meta_key = "ANALYSIS_JSON_FILE"
 
 # =============================================================================

@@ -657,6 +657,7 @@ document into a workflow package. It follows the SDLC quality flow scoped to
 
 ```
 1.  analyze_requirement  (prompt)  — Read requirement doc, produce Analysis JSON
+1b. check_capability_gaps (ACTION) — Verify blocking capability gaps are resolved
 2.  plan_domain_logic    (prompt)  — Design what actions + prompts are needed
 3.  challenge_plan       (prompt)  — Attack the plan: missing edges, weak validations
     ↕ refine loop (max 2)
@@ -728,6 +729,17 @@ The analyzer scans every requirement and checks whether it can be fulfilled
 with standard library alone. If not, it records a `capability_gap` entry in
 the Analysis JSON with the missing capability, proposed solution (install
 command), and whether the gap is blocking.
+
+**Early intervention (Step 1b — check_capability_gaps):**
+A lightweight action step that runs immediately after analysis. It reads
+the `capability_gaps` array and attempts to import each blocking library.
+If any library is not importable, the action returns REJECTED with
+`CAPABILITY_GAP_BLOCKING` — routing the job to AWAITING_INTERVENTION
+immediately, before wasting tokens on planning or implementation. The
+rejection remark includes exact install commands for the human.
+
+When the human resumes after installing libraries, the action re-checks
+imports and returns APPROVED, allowing the pipeline to proceed.
 
 **Planning (Step 2 — plan_domain_logic):**
 The planner MUST address every capability gap by either:
