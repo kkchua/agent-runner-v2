@@ -1951,6 +1951,10 @@ def _apply_workflow_package_context_hooks(
                     # Context extensions provide authoritative path resolution.
                     # Always inject them — they override backend-resolved paths.
                     ctx[k] = v
+                    # Write resolved path back to state so _missing_artifacts
+                    # sees the resolved path, not the bare filename.
+                    if k in artifacts and artifacts[k]:
+                        artifacts[k] = v
                 logger.info(
                     "[ctx_hooks] injected %d keys: %s",
                     len(extensions),

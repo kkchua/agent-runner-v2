@@ -1,0 +1,12 @@
+name: builder
+description: "Produces executable agent-runner-v2 workflow packages as output. Builder-type workflows are meta-workflows that generate other workflows."
+label: "Workflow Builder"
+
+# Builder implementation produces workflow packages (workflow.toml, actions.py, prompts/, etc.)
+# instead of variable content artifacts.
+
+# Implementation-specific guidance files
+guidance:
+  input_artifacts: "impls/builder/INPUT_ARTIFACTS.md"
+  output_artifacts: "impls/builder/OUTPUT_ARTIFACTS.md"
+  specialized_steps: "impls/builder/SPECIALIZED_STEPS.md"

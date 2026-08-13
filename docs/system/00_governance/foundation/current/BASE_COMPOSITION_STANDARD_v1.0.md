@@ -704,6 +704,103 @@ Base workflow is untouched.
 
 ---
 
+## 11. Platform Communication & Handshaking Protocol
+
+This section defines the **strict protocol** for data exchange between the three
+core platform components: **Backend API**, **Daemon/Worker**, and **CLI/Runner**.
+All parties MUST adhere to these contracts. Deviations (e.g., key mismatches,
+undocumented aliases) are considered platform bugs.
+
+### 11.1 The Golden Rule: Key Consistency
+JSON keys used in API payloads **MUST** match exactly across all layers.
+- **NEVER** use aliases (e.g., do not map `implementation_name` to `impl_name`).
+- **NEVER** rely on case-insensitive lookups (e.g., `impl_name` vs `IMPL_NAME`).
+- **ALWAYS** use the canonical key names defined in this section.
+
+### 11.2 Data Flow Map
+```
+[Operator Console] --(JSON)--> [Backend API]
+                                    |
+                               (Database)
+                                    |
+[Daemon] <--(JSON Claim Resp)-- [Backend API]
+    |
+    +--(CLI Flags)---> [CLI / Runner]
+                            |
+                       (Group Config)
+```
+
+### 11.3 Backend API Contracts
+
+#### 11.3.1 Job Submission (`POST /api/runs`)
+The Backend MUST store BCS context in the `context_payload` column.
+- **Canonical Keys:** `implementation_name`, `prompt_selections`.
+- **Rule:** If the request contains these fields, they MUST be written to `context_payload`.
+
+#### 11.3.2 Worker Claim Response (`POST /api/workers/{id}/claim`)
+When the Daemon claims work, the Backend MUST return the BCS context.
+The response structure for `run` MUST include:
+```json
+{
+  "work_type": "EXECUTE_STEP",
+  "run": {
+    "run_id": "...",
+    "run_code": "...",
+    "workflow_name": "...",
+    "project_root": "...",
+    // BCS Context - REQUIRED
+    "implementation_name": "string | null",
+    "prompt_selections": "object | {}"
+  },
+  "step_run": { ... }
+}
+```
+- **Rule:** The Backend MUST extract these from `context_payload` and flatten them into the `run` object of the response. The Daemon relies on these top-level keys.
+
+### 11.4 Daemon <-> CLI Handshake
+
+The Daemon is responsible for translating Backend data into CLI flags.
+
+#### 11.4.1 Implementation Flag
+If `implementation_name` is present and not empty, the Daemon MUST append:
+```bash
+--impl-name "<value>"
+```
+- **Rule:** The Daemon MUST NOT pass this flag if the value is empty/null.
+
+#### 11.4.2 Prompt Selections
+Prompt selections are passed via the `AGENT_RUNNER_BACKEND_STATE_FILE` environment variable (JSON file), which the CLI reads. The Daemon MUST ensure the claim response includes `prompt_selections` in the state file if applicable.
+
+### 11.5 CLI <-> Runtime Contract
+
+The CLI (`run_agent.py`) receives `--impl-name` and passes it to `_load_group()`.
+
+#### 11.5.1 Group Config Resolution
+- **Input:** `impl_name` (string).
+- **Output:** `group_cfg` dictionary.
+- **Contract:** The Runtime MUST resolve the implementation and populate `group_cfg["implementation_name"]` with the exact string provided.
+- **Rule:** The BCS slot resolver (`resolve_prompt_slot`) reads from `group_cfg["implementation_name"]`.
+
+### 11.6 Logging Standards (The Paper Trail)
+Every boundary in the data flow MUST log the exact data being passed.
+This is mandatory for debugging data drops.
+
+1.  **Backend API:** Log incoming request payload (sanitized).
+2.  **Daemon:**
+    -   Log `run` object received from Backend Claim.
+    -   Log constructed `cli_args` before spawning child.
+3.  **CLI:** Log received arguments (`template_group`, `impl_name`).
+
+### 11.7 Summary of Canonical Keys
+| Concept | Key Name | Used By |
+|---------|----------|---------|
+| Implementation Name | `implementation_name` | **ALL** (Backend, Daemon, CLI, Runtime) |
+| Prompt Selections | `prompt_selections` | **ALL** |
+| Workflow Name | `workflow_name` | **ALL** |
+| Job ID / Code | `run_code` | **ALL** |
+
+---
+
 ## 10. Governance
 
 ### 10.1 Versioning

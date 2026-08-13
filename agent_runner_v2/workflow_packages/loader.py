@@ -148,9 +148,11 @@ def _apply_impl_overrides(
         If an override references a nonexistent step or has no prompt/action.
     """
     from dataclasses import replace
+    import re
 
     overrides_data = _load_impl_overrides(bundle.bundle_root, impl_name)
     overrides = overrides_data.get("overrides", {})
+    prompt_slots = overrides_data.get("prompt_slots", {})
 
     if not isinstance(overrides, dict):
         raise ValueError(
@@ -159,6 +161,9 @@ def _apply_impl_overrides(
         )
 
     new_steps = dict(bundle.steps)
+
+    # Regex to match {{ slot.ID }}
+    slot_pattern = re.compile(r"^\{\{\s*slot\.([\w-]+)\s*\}\}$")
 
     for step_name, step_override in overrides.items():
         # Validate step exists
@@ -185,8 +190,49 @@ def _apply_impl_overrides(
 
         # Build replacement kwargs
         changes: dict[str, Any] = {}
+        
         if new_prompt:
-            changes["prompt_file"] = str(new_prompt)
+            prompt_str = str(new_prompt)
+            match = slot_pattern.match(prompt_str)
+            
+            if match:
+                # It's a slot reference {{ slot.ID }}
+                slot_id = match.group(1)
+                
+                # Validate slot exists in prompt_slots
+                if slot_id not in prompt_slots:
+                    raise ValueError(
+                        f"impl.yaml references prompt slot '{slot_id}' "
+                        f"but it is not defined in 'prompt_slots'."
+                    )
+                
+                slot_config = prompt_slots[slot_id]
+                if not isinstance(slot_config, dict) or "default" not in slot_config or "options" not in slot_config:
+                    raise ValueError(
+                        f"Prompt slot '{slot_id}' is malformed. "
+                        f"Must have 'default' and 'options'."
+                    )
+                
+                # Find the default option's file
+                default_name = slot_config["default"]
+                default_file = None
+                for opt in slot_config.get("options", []):
+                    if opt.get("name") == default_name:
+                        default_file = opt.get("file")
+                        break
+                
+                if not default_file:
+                    raise ValueError(
+                        f"Default option '{default_name}' for slot '{slot_id}' "
+                        f"not found in options."
+                    )
+                
+                changes["prompt_slot_id"] = slot_id
+                changes["prompt_file"] = str(default_file)
+            else:
+                # Legacy direct file path
+                changes["prompt_file"] = prompt_str
+
         if new_action:
             changes["action"] = str(new_action)
 
@@ -197,7 +243,7 @@ def _apply_impl_overrides(
     new_custom_actions = dict(bundle.custom_actions)
     new_custom_actions.update(impl_actions)
 
-    return replace(bundle, steps=new_steps, custom_actions=new_custom_actions)
+    return replace(bundle, steps=new_steps, custom_actions=new_custom_actions, impl_prompt_slots=prompt_slots)
 
 
 def _load_impl_actions(

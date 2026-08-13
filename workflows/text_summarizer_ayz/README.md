@@ -1,6 +1,6 @@
 # Text Summarizer
 
-Transforms long text into condensed summary or key points list
+Transforms long text documents into concise summaries or ranked key points
 
 **Version:** 1.0.0
 
@@ -11,7 +11,7 @@ Transforms long text into condensed summary or key points list
 | 1 | parse_input | action | parse_input_document |
 | 2 | analyze_structure | prompt | prompts/02_analyze_structure.txt |
 | 3 | transform_content | prompt | prompts/03_transform_content.txt |
-| 4 | render_output | action | render_output_document |
+| 4 | render_output | action | render_prose_output |
 | 5 | step_completion | action | step_completion |
 
 ## Implementations

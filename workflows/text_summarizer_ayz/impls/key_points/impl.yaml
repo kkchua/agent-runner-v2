@@ -5,4 +5,4 @@ overrides:
   transform_content:
     prompt: "impls/key_points/prompts/03_transform_key_points.txt"
   render_output:
-    action: "render_list_output"
+    action: "render_key_points_output"

@@ -86,6 +86,9 @@ class StepConfig:
     # Post-action hook (e.g. "generate_site_pdf" after LLM step)
     post_action: str | None = None
 
+    # Prompt Slot ID (for dynamic prompt resolution via impl.yaml)
+    prompt_slot_id: str | None = None
+
     # Pass-through for any unrecognised fields (preserves forward compat)
     extra: dict[str, Any] = field(default_factory=dict)
 
@@ -124,6 +127,10 @@ class WorkflowBundle:
 
     # Alternative implementation declarations from [[workflow.implementation]]
     implementations: list[dict[str, str]] = field(default_factory=list)
+
+    # Prompt slot definitions from the active implementation (impl.yaml)
+    # Maps slot_id -> {label, default, options: [{name, file, description}]}
+    impl_prompt_slots: dict[str, Any] = field(default_factory=dict)
 
     def get_step(self, name: str) -> StepConfig:
         """Look up a step by name. Raises KeyError if missing."""

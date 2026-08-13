@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import re
 import shutil
+import yaml  # Required for loading impl.yaml
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -35,6 +37,61 @@ class PreparedStepExecution:
     prompt_path: Path | None = None
     prompt_text: str = ""
     checksum: str = ""
+
+
+def resolve_prompt_slot(
+    step_cfg: dict[str, Any],
+    state: dict[str, Any],
+    group_cfg: dict[str, Any],
+    bundle: Any | None,
+) -> str | None:
+    """Resolve a BCS prompt slot reference to a concrete file path."""
+    print("[BCS] resolve_prompt_slot START", flush=True)
+    prompt_file_val = step_cfg.get("prompt_file")
+    print(f"[BCS] Prompt File: {prompt_file_val}", flush=True)
+    
+    # Check if prompt_file contains a slot reference like {{ slot.ID }} anywhere
+    slot_pattern = re.search(r"\{\{\s*slot\.([\w-]+)\s*\}\}", str(prompt_file_val))
+    if slot_pattern:
+        slot_id = slot_pattern.group(1)
+        print(f"[BCS] Slot detected: {slot_id}", flush=True)
+        
+        # Look for implementation_name in group_cfg (runtime context)
+        impl_name = group_cfg.get("implementation_name")
+        print(f"[BCS] Impl Name: {impl_name}", flush=True)
+        
+        if bundle and impl_name:
+            impl_yaml_path = bundle.bundle_root / "impls" / impl_name / "impl.yaml"
+            print(f"[BCS] Check: {impl_yaml_path} -> {impl_yaml_path.exists()}", flush=True)
+            if impl_yaml_path.exists():
+                try:
+                    with open(impl_yaml_path, "r", encoding="utf-8") as f:
+                        impl_data = yaml.safe_load(f)
+                    prompt_slots = impl_data.get("prompt_slots", {})
+                    slot_config = prompt_slots.get(slot_id)
+                    
+                    if slot_config:
+                        prompt_sels = state.get("prompt_selections", {})
+                        selected_name = prompt_sels.get(slot_id)
+                        default_name = slot_config.get("default")
+                        options = slot_config.get("options", [])
+                        valid_names = {opt.get("name") for opt in options}
+                        
+                        if selected_name not in valid_names:
+                            selected_name = default_name
+                        
+                        for opt in options:
+                            if opt.get("name") == selected_name:
+                                file_path = opt.get("file")
+                                if file_path:
+                                    # Resolve relative to impl dir
+                                    file_path = file_path.replace("/", "\\")
+                                    res = bundle.bundle_root / "impls" / impl_name / file_path
+                                    print(f"[BCS] RESOLVED: {res}", flush=True)
+                                    return str(res)
+                except Exception as e:
+                    print(f"[BCS] Error: {e}", flush=True)
+    return None
 
 
 def prepare_step_execution(
@@ -104,6 +161,15 @@ def prepare_step_execution(
     coder_used, coder_alias, coder_role, coder_config = _normalize_resolved_coder(resolved)
 
     model_id = (coder_config or {}).get("model_id") or (coder_config or {}).get("model") or None
+    
+    # --- BCS: Dynamic Prompt Slot Resolution ---
+    bundle = group_cfg.get("_workflow_bundle")
+    resolved_path = resolve_prompt_slot(step_cfg, state, group_cfg, bundle)
+    if resolved_path:
+        step_cfg = dict(step_cfg) # Copy to avoid mutating original
+        step_cfg["prompt_file"] = resolved_path
+        print(f"[BCS] Resolved prompt slot: {step_cfg.get('prompt_file')}", flush=True)
+
     prompt_path = hooks.resolve_prompt_path(step_cfg=step_cfg, coder=coder_used, model_id=model_id)
     if not prompt_path.exists():
         raise FileNotFoundError(f"Prompt file not found: {prompt_path}")

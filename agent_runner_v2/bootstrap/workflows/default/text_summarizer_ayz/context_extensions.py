@@ -23,10 +23,10 @@ class TextSummarizerAyzExtensions(WorkflowExtensions):
 
     # -- Output artifacts: resolved to {workspace_root}/output/{job_id}/ --
     OUTPUT_ARTIFACTS: dict[str, str] = {
-        "PARSED_DOCUMENT": "PARSED_DOCUMENT.txt",
-        "ANALYSIS_RESULT": "ANALYSIS_RESULT.json",
+        "PARSED_DOCUMENT": "PARSED_DOCUMENT.json",
+        "STRUCTURAL_ANALYSIS": "STRUCTURAL_ANALYSIS.json",
         "TRANSFORMED_CONTENT": "TRANSFORMED_CONTENT.json",
-        "OUTPUT_FILE": "{input_stem}-{seq}.md",
+        "OUTPUT_FILE": "OUTPUT_FILE.md",
     }
 
     def register_artifact_keys(
@@ -52,14 +52,41 @@ class TextSummarizerAyzExtensions(WorkflowExtensions):
         resolve_input_artifacts(result, state, workspace_root, self.INPUT_ARTIFACTS)
         resolve_output_artifacts(result, state, workspace_root, self.OUTPUT_ARTIFACTS)
 
-        # Derive OUTPUT_FILE filename from input filename: {input_stem}-{seq}.md
-        source_path = result.get("SOURCE_DOCUMENT_FILE", "")
+        # -- Dynamic Output Naming: use source doc filename + impl suffix --
+        artifacts = state.get("artifacts") or {}
+        source_path = artifacts.get("SOURCE_DOCUMENT_FILE", "")
         if source_path:
-            stem = Path(source_path).stem
-            job_id = str(state.get("job_id") or "unknown")
-            seq = str(state.get("seq") or "001").zfill(3)
-            output_dir = Path(workspace_root) / "output" / job_id
-            result["OUTPUT_FILE"] = str(output_dir / f"{stem}-{seq}.md")
+            source_filename = Path(source_path).stem
+            result["source_doc_filename"] = source_filename
+
+            # Determine output suffix from implementation name
+            impl_name = artifacts.get("IMPLEMENTATION", "default")
+            impl_suffix_map = {
+                "default": "_summary",
+                "key_points": "_bulletpoint",
+            }
+            output_suffix = impl_suffix_map.get(impl_name, f"_{impl_name}")
+
+            # Override the static output path with the dynamic filename
+            job_id = state.get("job_id", "unknown")
+            result["OUTPUT_FILE"] = str(
+                workspace_root / "output" / job_id / f"{source_filename}{output_suffix}.md"
+            )
+
+        # -- Inject file content for prompt steps --
+        parsed_path = result.get("PARSED_DOCUMENT", "")
+        if parsed_path and Path(parsed_path).is_file():
+            try:
+                result["PARSED_DOCUMENT_CONTENT"] = Path(parsed_path).read_text(encoding="utf-8")
+            except Exception:
+                result["PARSED_DOCUMENT_CONTENT"] = "(unable to read PARSED_DOCUMENT)"
+
+        struct_path = result.get("STRUCTURAL_ANALYSIS", "")
+        if struct_path and Path(struct_path).is_file():
+            try:
+                result["STRUCTURAL_ANALYSIS_CONTENT"] = Path(struct_path).read_text(encoding="utf-8")
+            except Exception:
+                result["STRUCTURAL_ANALYSIS_CONTENT"] = "(unable to read STRUCTURAL_ANALYSIS)"
 
         return result
 

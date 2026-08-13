@@ -150,7 +150,7 @@ Write each prompt template to: {WORKFLOW_PROMPTS_DIR}{prompt_filename}
 ### MANDATORY Prompt Rules
 
 1. **Input section**: Every prompt MUST clearly list what inputs the LLM
-   receives, using `{PLACEHOLDER}` syntax for artifact paths.
+   receives, using curly-brace syntax for artifact paths (e.g., `{ARTIFACT_KEY_NAME}`).
    Example: `PARSED_DOCUMENT: {PARSED_DOCUMENT}`
 
 2. **Output section**: Every prompt MUST specify exactly where to write the
@@ -164,9 +164,10 @@ Write each prompt template to: {WORKFLOW_PROMPTS_DIR}{prompt_filename}
    section before the output instructions. The checklist items MUST be
    specific to the domain (not generic "check your work").
 
-5. **Placeholder consistency**: Every `{PLACEHOLDER}` referenced in the prompt
-   MUST correspond to an artifact key in the Analysis JSON's artifact_keys.
-   Do not reference keys that don't exist.
+5. **Placeholder consistency**: Every artifact placeholder (text in curly braces
+   like `{ARTIFACT_KEY}`) referenced in the prompt MUST correspond to an actual
+   artifact key in the Analysis JSON's artifact_keys. Do not use generic example
+   text like `{PLACEHOLDER}` — only reference real artifact keys that exist.
 
 6. **Forbidden content in prompts**:
    - Do NOT reference infrastructure files (workflow.toml, context_extensions.py)

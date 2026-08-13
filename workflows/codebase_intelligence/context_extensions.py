@@ -8,19 +8,12 @@ from typing import Any
 from agent_runner_v2.runtime_context import get_governance_runtime_root, get_platform_runtime_root, get_workspace_root
 from agent_runner_v2.workflow_packages.extensions_base import (
     WorkflowExtensions,
-    resolve_input_artifacts,
     resolve_output_artifacts,
 )
 
 
 class CodebaseIntelligenceExtensions(WorkflowExtensions):
     workflow_name = "codebase_intelligence"
-
-    # -- Input artifacts: resolved to {workspace_root}/input/ --
-    INPUT_ARTIFACTS: dict[str, str] = {
-        "CODEBASE_DOCS_DIR": "docs/repo/codebase/current",
-        "SOURCE_CODE_DIR": "",
-    }
 
     # -- Output artifacts: resolved to {workspace_root}/output/{job_id}/ --
     OUTPUT_ARTIFACTS: dict[str, str] = {
@@ -37,8 +30,9 @@ class CodebaseIntelligenceExtensions(WorkflowExtensions):
         self, *, job_id: str = "{job_id}", mode: str = "{mode}"
     ) -> dict[str, str]:
         combined: dict[str, str] = {}
-        for key in self.INPUT_ARTIFACTS:
-            combined[key] = "input/"
+        # Input directories — predefined defaults, not user inputs
+        combined["CODEBASE_DOCS_DIR"] = "docs/repo/codebase/current"
+        combined["SOURCE_CODE_DIR"] = "."
         for key, pattern in self.OUTPUT_ARTIFACTS.items():
             combined[key] = f"output/{job_id}/{pattern}"
         return combined
@@ -53,7 +47,13 @@ class CodebaseIntelligenceExtensions(WorkflowExtensions):
         result["BASE_COMPOSITION_STANDARD"] = str(
             get_governance_runtime_root() / "BASE_COMPOSITION_STANDARD_v1.0.md"
         )
-        resolve_input_artifacts(result, state, workspace_root, self.INPUT_ARTIFACTS)
+        # Input directories — use predefined defaults (workspace-relative)
+        result["CODEBASE_DOCS_DIR"] = str(workspace_root / "docs" / "repo" / "codebase" / "current")
+        result["SOURCE_CODE_DIR"] = str(workspace_root)
+        # Update state artifacts so _missing_artifacts sees valid paths
+        artifacts = state.get("artifacts") or {}
+        artifacts["CODEBASE_DOCS_DIR"] = result["CODEBASE_DOCS_DIR"]
+        artifacts["SOURCE_CODE_DIR"] = result["SOURCE_CODE_DIR"]
         resolve_output_artifacts(result, state, workspace_root, self.OUTPUT_ARTIFACTS)
         return result
 

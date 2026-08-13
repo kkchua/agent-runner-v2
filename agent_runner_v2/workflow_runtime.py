@@ -50,6 +50,8 @@ def load_group(
             bundle = load_workflow_package(pkg_dir, impl_name=impl_name)
             group_dict = bundle_to_template_group_dict(bundle)
             group_dict["_workflow_bundle"] = bundle
+            if impl_name:
+                group_dict["implementation_name"] = impl_name
             return group_dict
         if pkg_dir.is_dir():
             raise FileNotFoundError(

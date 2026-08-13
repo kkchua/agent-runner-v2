@@ -55,7 +55,7 @@ Section 8.2 MUST be satisfied.
 
 # Analysis Protocol (NEW WORKFLOW MODE only)
 
-## Step 1: Extract Identity
+## Step 1: Extract Identity and Type
 
 Read the requirement document's YAML frontmatter and body. Extract:
 
@@ -66,6 +66,13 @@ Read the requirement document's YAML frontmatter and body. Extract:
 - **version**: Semantic version from the requirement doc, default "1.0.0".
 - **label**: Human-readable display name.
 - **description**: One-line description of what this workflow does.
+- **type**: Read from the `type:` field in frontmatter. Valid values:
+  - `"builder"` — This workflow produces workflow packages (workflow.toml, actions.py, etc.)
+  - `"generator"` — This workflow produces variable artifacts (reports, media, documents)
+  - If not specified, default to `"generator"`.
+- **subtype**: Optional. Read from `subtype:` field if present. Indicates domain-specific specialization (e.g., "jimeng", "comfyui").
+
+Include `type` and `subtype` in the identity section of the Analysis JSON.
 
 ## Step 2: Decompose into Domain Steps
 
@@ -147,7 +154,16 @@ Structure:
 
 ```json
 {
-  "identity": { ... },
+  "identity": {
+    "name": "...",
+    "codename": "...",
+    "job_prefix": "...",
+    "version": "...",
+    "label": "...",
+    "description": "...",
+    "implementation": "builder|generator",
+    "subtype": "optional-subtype-name"
+  },
   "domain_steps": [ ... ],
   "artifact_keys": {
     "inputs": [ ... ],
@@ -158,6 +174,12 @@ Structure:
 }
 ```
 
+**For implementation="builder"**: The output artifacts should be workflow package files:
+- WORKFLOW_TOML, ACTIONS_PY, CONTEXT_EXTENSIONS_PY, PROMPTS_DIR, IMPLS_DIR, README_MD, REQUIREMENTS_TXT
+- Reference implementation guidance at: workflows/artifact_generator_builder/impls/builder/OUTPUT_ARTIFACTS.md
+
+**For implementation="generator"** (or not specified): The output artifacts are variable (defined by the requirement doc).
+
 # Self-Validation
 
 Before writing the output, verify:
@@ -165,6 +187,9 @@ Before writing the output, verify:
 - [ ] identity.codename matches the requirement doc's YAML frontmatter
 - [ ] identity.name equals identity.codename
 - [ ] identity.job_prefix is 2-10 uppercase characters
+- [ ] identity.implementation is "builder" or "generator" (default to "generator" if not specified)
+- [ ] identity.subtype is included if present in frontmatter
+- [ ] If implementation="builder", output artifacts include workflow package files (WORKFLOW_TOML, ACTIONS_PY, etc.)
 - [ ] Every domain_step has either action_name (type=action) or prompt_file + role_policy (type=prompt)
 - [ ] All domain_step names are unique
 - [ ] Data flow is valid: each step's required_inputs are produced by prior steps or are workflow inputs

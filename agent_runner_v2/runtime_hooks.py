@@ -248,12 +248,14 @@ class RuntimeHooks:
         group_name: str,
         workspace_root: Path | None = None,
         workflow_root: Path | None = None,
+        impl_name: str | None = None,
     ) -> dict[str, Any]:
         """Load workflow group configuration."""
         return self._get_workflow_runtime().load_group(
             group_name,
             workspace_root=workspace_root,
             workflow_root=workflow_root,
+            impl_name=impl_name,
         )
 
     def validate_static_reference_files(
