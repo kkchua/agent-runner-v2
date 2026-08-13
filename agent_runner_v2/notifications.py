@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Any
 
 from .runtime_context import PROJECT_ROOT
+from .qwenpaw_client import notify_qwenpaw_agent
 
 
 # ---------------------------------------------------------------------------
@@ -39,16 +40,15 @@ def _load_env_file():
         
         # Also try PROJECT_ROOT if available
         try:
-            from .runtime_context import PROJECT_ROOT as _proj_root
-            if _proj_root:
-                possible_paths.insert(0, Path(_proj_root) / ".env")
+            if PROJECT_ROOT:
+                possible_paths.insert(0, Path(str(PROJECT_ROOT)) / ".env")
         except Exception:
             pass
         
         for env_path in possible_paths:
             if env_path.exists():
                 print(f"[notifications] Loading .env from {env_path.resolve()}", flush=True)
-                load_dotenv(env_path)
+                load_dotenv(env_path, override=True)
                 return
         
         print(f"[notifications] No .env file found in searched locations", flush=True)
@@ -392,6 +392,151 @@ def _pushover_api_call(api_token: str, user_key: str, title: str, message: str, 
 
 
 # ---------------------------------------------------------------------------
+# Telegram Bot API
+# ---------------------------------------------------------------------------
+
+def _resolve_telegram_credentials() -> tuple[str | None, str | None]:
+    """Resolve Telegram credentials from .env or config.json.
+
+    Priority:
+    1. TELEGRAM_GROUPCHAT_ID (Env var)
+    2. TELEGRAM_CHAT_ID (Env var)
+    3. config.json (Fallback)
+
+    Returns (bot_token, chat_id) or (None, None) if not found.
+    """
+    _load_env_file()
+
+    bot_token = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip() or None
+    
+    # Priority 1: Group Chat ID
+    chat_id = os.environ.get("TELEGRAM_GROUPCHAT_ID", "").strip() or None
+    
+    # Priority 2: Private Chat ID
+    if not chat_id:
+        chat_id = os.environ.get("TELEGRAM_CHAT_ID", "").strip() or None
+
+    if bot_token and chat_id:
+        return bot_token, chat_id
+
+    # Priority 3: Global config.json
+    try:
+        config_path = Path.home() / ".ukbe-runner" / "config.json"
+        if config_path.exists():
+            config = json.loads(config_path.read_text(encoding="utf-8"))
+            telegram_cfg = config.get("notification", {}).get("telegram", {})
+
+            if not bot_token:
+                bot_token = telegram_cfg.get("bot_token", "").strip() or None
+            if not chat_id:
+                chat_id = telegram_cfg.get("chat_id", "").strip() or None
+    except Exception as exc:
+        print(f"[notifications] Failed to load config.json for Telegram credentials: {exc}", flush=True)
+
+    return bot_token, chat_id
+
+
+def _is_telegram_enabled() -> bool:
+    """Check if Telegram notifications are enabled in config."""
+    try:
+        config_path = Path.home() / ".ukbe-runner" / "config.json"
+        if not config_path.exists():
+            return False
+        config = json.loads(config_path.read_text(encoding="utf-8"))
+        return bool(config.get("notification", {}).get("telegram", {}).get("enabled", False))
+    except Exception:
+        return False
+
+
+def _format_telegram_message(status: str, context: dict[str, Any]) -> str:
+    """Build Telegram message in HTML parse_mode.
+
+    Reuses the same title/message logic as Pushover but formats for Telegram HTML.
+    """
+    job_id = context.get("job_id", "unknown")
+    workflow_name = context.get("workflow_name", "unknown")
+
+    if status in ("COMPLETED", "STEP_COMPLETED"):
+        emoji = "✅"
+        label = "Workflow" if status == "COMPLETED" else "Step"
+    elif status in ("FAILED", "STEP_FAILED", "STEP_REJECTED"):
+        emoji = "❌"
+        label = "Workflow" if status == "FAILED" else "Step"
+    elif status == "WAITING_FOR_HUMAN_INTERVENTION":
+        emoji = "⚠️"
+        label = "Workflow"
+    elif status == "WAITING_FOR_HUMAN_MAXRETRIED":
+        emoji = "🔄"
+        label = "Workflow"
+    else:
+        emoji = "ℹ️"
+        label = "Workflow"
+
+    lines = [f"{emoji} <b>{label} {status}</b>", f"<b>Workflow:</b> {workflow_name}", f"<b>Job ID:</b> <code>{job_id}</code>"]
+
+    step_name = context.get("step_name") or context.get("current_step")
+    if step_name and status.startswith("STEP_"):
+        lines.append(f"<b>Step:</b> {step_name}")
+
+    if status in ("FAILED", "WAITING_FOR_HUMAN_INTERVENTION", "WAITING_FOR_HUMAN_MAXRETRIED"):
+        failed_step = context.get("last_failure_step") or context.get("current_step")
+        if failed_step:
+            lines.append(f"<b>Failed at step:</b> {failed_step}")
+        failure_reason = context.get("last_failure_reason")
+        if failure_reason:
+            reason = failure_reason[:200] + "..." if len(failure_reason) > 200 else failure_reason
+            lines.append(f"<b>Reason:</b> {reason}")
+        failure_code = context.get("last_failure_code")
+        if failure_code:
+            lines.append(f"<b>Error code:</b> <code>{failure_code}</code>")
+
+    duration_seconds = _extract_duration_seconds(status, context)
+    if duration_seconds is not None:
+        minutes, seconds = divmod(duration_seconds, 60)
+        if minutes > 0:
+            lines.append(f"<b>Duration:</b> {int(minutes)}m {int(seconds)}s")
+        else:
+            lines.append(f"<b>Duration:</b> {int(seconds)}s")
+
+    return "\n".join(lines)
+
+
+def _telegram_api_call(bot_token: str, chat_id: str, text: str) -> bool:
+    """Send message via Telegram Bot API.
+
+    Args:
+        bot_token: Telegram bot token
+        chat_id: Target chat/group/channel ID
+        text: Message text (HTML parse_mode)
+
+    Returns:
+        True if successful, False otherwise
+    """
+    url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+    payload = {"chat_id": chat_id, "text": text, "parse_mode": "HTML"}
+    data = urllib.parse.urlencode(payload).encode("utf-8")
+
+    try:
+        req = urllib.request.Request(url, data=data, method="POST")
+        req.add_header("Content-Type", "application/x-www-form-urlencoded")
+
+        with urllib.request.urlopen(req, timeout=10) as response:
+            result = json.loads(response.read().decode("utf-8"))
+
+            if result.get("ok"):
+                return True
+            else:
+                print(f"[notifications] Telegram API returned error: {result.get('description', 'Unknown error')}", flush=True)
+                return False
+    except urllib.error.HTTPError as exc:
+        print(f"[notifications] Telegram HTTP error {exc.code}: {exc.reason}", flush=True)
+        return False
+    except Exception as exc:
+        print(f"[notifications] Telegram API call failed: {exc}", flush=True)
+        return False
+
+
+# ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
 
@@ -411,39 +556,55 @@ def send_notification(status: str, context: dict[str, Any]) -> bool:
         # Load configuration
         config = _load_notification_config()
 
-        # Check if notifications are enabled
+        # Check if notifications are enabled globally
         if not config.get("enabled", False):
             print(f"[notifications] Notifications are disabled in config.json", flush=True)
             return False
 
-        # Resolve credentials
+        job_id = context.get("job_id", "unknown")
+        print(f"[notifications] Sending notification: status={status}, job_id={job_id}", flush=True)
+
+        any_success = False
+
+        # --- Pushover channel ---
         api_token, user_key = _resolve_credentials()
-        if not api_token or not user_key:
-            print(f"[notifications] WARNING: Pushover credentials not configured", flush=True)
-            print(f"[notifications] Resolved credentials - token: {api_token is not None}, user_key: {user_key is not None}", flush=True)
-            return False
+        if api_token and user_key:
+            title, message, priority = _build_message(status, context, config)
+            api_url = config.get("notify_api_url", "https://api.pushover.net/1/messages.json")
+            extras = context.pop("_pushover_extras", None)
 
-        print(f"[notifications] Sending notification: status={status}, job_id={context.get('job_id', 'unknown')}", flush=True)
-
-        # Build message
-        title, message, priority = _build_message(status, context, config)
-
-        # Get API URL from config
-        api_url = config.get("notify_api_url", "https://api.pushover.net/1/messages.json")
-
-        # Get extras (emergency retry/expire)
-        extras = context.pop("_pushover_extras", None)
-
-        # Send notification
-        success = _pushover_api_call(api_token, user_key, title, message, priority, api_url, extras)
-
-        if success:
-            print(f"[notifications] Notification sent successfully: {status} for job {context.get('job_id', 'unknown')}", flush=True)
+            if _pushover_api_call(api_token, user_key, title, message, priority, api_url, extras):
+                print(f"[notifications] Pushover sent: {status} for job {job_id}", flush=True)
+                any_success = True
+            else:
+                print(f"[notifications] Pushover failed: {status} for job {job_id}", flush=True)
         else:
-            print(f"[notifications] Notification failed to send: {status} for job {context.get('job_id', 'unknown')}", flush=True)
+            print(f"[notifications] Pushover credentials not configured, skipping", flush=True)
 
-        return success
-    
+        # --- QwenPaw Console channel ---
+        if _is_telegram_enabled():
+            bot_token, chat_id = _resolve_telegram_credentials()
+            if bot_token and chat_id:
+                text = _format_telegram_message(status, context)
+
+                # 1. Send to Telegram (for the user)
+                if _telegram_api_call(bot_token, chat_id, text):
+                    print(f"[notifications] Telegram sent: {status} for job {job_id}", flush=True)
+                    any_success = True
+                else:
+                    print(f"[notifications] Telegram failed: {status} for job {job_id}", flush=True)
+                
+                # 2. Send to QwenPaw Console (for the agent)
+                # TODO: Re-enable when agent monitoring is ready
+                # if notify_qwenpaw_agent(text):
+                #     print(f"[notifications] QwenPaw Console sent: {status} for job {job_id}", flush=True)
+                #     any_success = True
+                # else:
+                #     print(f"[notifications] QwenPaw Console failed: {status} for job {job_id}", flush=True)
+                pass
+
+        return any_success
+
     except Exception as exc:
         # Never let notification failures affect workflow execution
         print(f"[notifications] Notification failed: {exc}", flush=True)

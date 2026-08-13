@@ -1183,7 +1183,7 @@ def resolve_next_seq(directory: Path, prefix: str) -> str:
 
 
 # ============================================================================
-# SDLC Slug Extraction
+# SDLC Slug and Date Extraction
 # ============================================================================
 
 def extract_slug_from_path(file_path: str) -> str:
@@ -1220,3 +1220,40 @@ def extract_slug_from_path(file_path: str) -> str:
     if match:
         return match.group(1)
     return filename
+
+
+def extract_date_from_path(file_path: str) -> str:
+    """Extract the date from an SDLC artifact filename.
+
+    Pattern: ``{TYPE}-{date}-{seq}_{slug}.md`` → returns ``{date}``.
+    Falls back to today's date if extraction fails.
+
+    Examples::
+
+        extract_date_from_path(".../DRAFT-INIT-20260806-001_incremental-codebase-doc-update.md")
+        → "20260806"
+
+        extract_date_from_path(".../INIT-20260722-001_console-sdlc10-support.md")
+        → "20260722"
+
+        extract_date_from_path("")
+        → today's date (YYYYMMDD)
+
+    Parameters:
+        file_path: Path or filename string to extract the date from.
+
+    Returns:
+        The date substring (YYYYMMDD) or today's date as fallback.
+    """
+    import re
+    import datetime as dt
+    if not file_path:
+        return dt.datetime.now().strftime("%Y%m%d")
+    filename = Path(file_path).stem
+    if not filename:
+        return dt.datetime.now().strftime("%Y%m%d")
+    # Pattern: TYPE-YYYYMMDD-SEQ_slug
+    match = re.search(r"-(\d{8})-", filename)
+    if match:
+        return match.group(1)
+    return dt.datetime.now().strftime("%Y%m%d")

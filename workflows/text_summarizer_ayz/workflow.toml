@@ -7,7 +7,7 @@ version = "1.0.0"
 label = "Text Summarizer"
 job_prefix = "TXTSUM"
 init_step = "parse_input"
-description = "Transforms long text into condensed summary or key points list"
+description = "Transforms long text documents into concise summaries or ranked key points"
 default_max_rejects = 3
 visibility = "canonical"
 layer = "layer3"
@@ -42,8 +42,8 @@ role_policy = "architect_standard"
 
 [step.artifacts]
 required_inputs = ["PARSED_DOCUMENT"]
-produces = ["ANALYSIS_RESULT"]
-result_meta_key = "ANALYSIS_RESULT"
+produces = ["STRUCTURAL_ANALYSIS"]
+result_meta_key = "STRUCTURAL_ANALYSIS"
 
 [[step]]
 name = "transform_content"
@@ -56,19 +56,19 @@ onsuccess = "render_output"
 role_policy = "architect_standard"
 
 [step.artifacts]
-required_inputs = ["PARSED_DOCUMENT", "ANALYSIS_RESULT"]
+required_inputs = ["PARSED_DOCUMENT", "STRUCTURAL_ANALYSIS"]
 produces = ["TRANSFORMED_CONTENT"]
 result_meta_key = "TRANSFORMED_CONTENT"
 
 [[step]]
 name = "render_output"
-action = "render_output_document"
+action = "render_prose_output"
 enable_notifications = false
 requires_human_approval_after = false
 onsuccess = "step_completion"
 
 [step.artifacts]
-required_inputs = ["TRANSFORMED_CONTENT", "PARSED_DOCUMENT"]
+required_inputs = ["TRANSFORMED_CONTENT"]
 produces = ["OUTPUT_FILE"]
 result_meta_key = "OUTPUT_FILE"
 

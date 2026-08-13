@@ -174,7 +174,11 @@ def _initialize_state_from_backend(
         # Preserve __run_control for stop detection
         if "__run_control" in context:
             state.setdefault("context_payload", {})["__run_control"] = context["__run_control"]
-    
+        # Extract impl_name for implementation override propagation
+        impl = str(context.get("impl_name") or context.get("IMPL_NAME") or "").strip()
+        if impl:
+            state["impl_name"] = impl
+
     return state
 
 

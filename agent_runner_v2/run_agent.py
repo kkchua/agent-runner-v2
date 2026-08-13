@@ -557,6 +557,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument("--single-step", action="store_true",
                    help="Run exactly the step specified by --job, ignoring auto-resolve logic. "
                         "Intended for backend worker integration. Outputs structured JSON for the worker to parse.")
+    p.add_argument("--impl-name", default="",
+                   help="Implementation name override (e.g. key_points). Loads impls/{name}/impl.yaml overrides.")
     ns = p.parse_args(raw[1:] if command == "run" else raw)
     ns.command = "run"
     return ns
@@ -757,7 +759,28 @@ def main(argv: list[str] | None = None) -> int:
     original_current_step: str | None = None
 
     try:
-        group_cfg = _load_group(args.template_group, workspace_root=workspace_root, workflow_root=workflow_bundle_root)
+        # Extract impl_name from CLI args.
+        # Note: state is None here; daemon mode relies on --impl-name flag which is set
+        # from context_payload. Manual mode has no impl_name unless explicitly passed.
+        impl_name = args.impl_name or ""
+        impl_name = impl_name.strip() or None
+        
+        # --- [DEBUG] Log received CLI args ---
+        _cli_logger = logging.getLogger("agent_runner_v2.cli")
+        _cli_logger.info("[CLI_INPUT] Received template_group=%s, impl_name=%s, mode=%s", 
+                         args.template_group, impl_name, args.mode)
+
+        group_cfg = _load_group(
+            args.template_group,
+            workspace_root=workspace_root,
+            workflow_root=workflow_bundle_root,
+            impl_name=impl_name,
+        )
+        
+        # --- [DEBUG] Log loaded group_cfg implementation_name ---
+        _cli_logger.info("[CLI_GROUP] Loaded group_cfg, implementation_name=%s", 
+                         group_cfg.get("implementation_name"))
+
         _validate_static_reference_files(workspace_root, group_cfg, template_group=args.template_group)
 
         # Register artifact keys from all discovered workflow packages
@@ -1450,6 +1473,7 @@ def _load_group(
     group_name: str,
     workspace_root: Path | None = None,
     workflow_root: Path | None = None,
+    impl_name: str | None = None,
 ) -> dict:
     """Load a template group configuration.
 
@@ -1461,6 +1485,7 @@ def _load_group(
         group_name: Template group name to load.
         workspace_root: Optional workspace root path.
         workflow_root: Optional workflow bundle root path.
+        impl_name: Optional implementation name override for step-level overrides.
 
     Returns:
         Template group configuration dict.
@@ -1469,6 +1494,7 @@ def _load_group(
         group_name,
         workspace_root=workspace_root,
         workflow_root=workflow_root,
+        impl_name=impl_name,
     )
 
 

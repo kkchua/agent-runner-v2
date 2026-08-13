@@ -53,7 +53,7 @@ def _resolve_backend_url(cfg: dict, cli_url: str) -> str:
 # Format conversion: runner TEMPLATE_GROUPS → V2 backend definition
 # ---------------------------------------------------------------------------
 
-def convert_to_v2_format(group_dict: dict) -> dict:
+def convert_to_v2_format(group_dict: dict, *, bundle_dir: Path | None = None) -> dict:
     """Convert runner's TEMPLATE_GROUPS format to V2 backend definition format.
 
     Runner format (from bundle_to_template_group_dict):
@@ -88,9 +88,32 @@ def convert_to_v2_format(group_dict: dict) -> dict:
             step_def["artifacts"] = artifacts
         definition["steps"][step_name] = step_def
 
-    # Pass through implementation declarations
+    # Pass through implementation declarations and their prompt slots
     if group_dict.get("implementation"):
-        definition["implementation"] = group_dict["implementation"]
+        import yaml as _yaml  # Import here to avoid top-level dependency if not needed
+        
+        definition["implementations"] = []
+        for impl in group_dict["implementation"]:
+            impl_name = impl["name"]
+            impl_data = {
+                "name": impl_name,
+                "label": impl.get("label", impl_name),
+                "description": impl.get("description", ""),
+                "prompt_slots": {}
+            }
+            
+            # Try to load impl.yaml to extract prompt_slots for UI dropdowns
+            impl_yaml_path = bundle_dir / "impls" / impl_name / "impl.yaml"
+            if impl_yaml_path.exists():
+                try:
+                    with open(impl_yaml_path, "r", encoding="utf-8") as f:
+                        yaml_data = _yaml.safe_load(f)
+                    if isinstance(yaml_data, dict):
+                        impl_data["prompt_slots"] = yaml_data.get("prompt_slots", {})
+                except Exception:
+                    pass  # Ignore errors in parsing optional impl.yaml
+            
+            definition["implementations"].append(impl_data)
 
     return definition
 
@@ -322,7 +345,7 @@ def main(argv: list[str] | None = None) -> int:
                 continue
 
         group_dict = _strip_bundle_refs(workflows[workflow_name])
-        v2_definition = convert_to_v2_format(group_dict)
+        v2_definition = convert_to_v2_format(group_dict, bundle_dir=bundle_dir)
 
         # Extract artifact path directories for init step required inputs
         init_input_dirs = _extract_init_input_dirs(bundle_dir, workflows[workflow_name])

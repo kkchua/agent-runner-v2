@@ -265,9 +265,49 @@ def _fetch_and_write_backend_state(
 # Child process spawning
 # ---------------------------------------------------------------------------
 
+def _build_cli_args(
+    *,
+    run_data: dict,
+    step_data: dict,
+    project_root: str,
+    job_id_to_pass: str,
+    python_executable: str = sys.executable,
+) -> list[str]:
+    """Construct CLI arguments from backend claim data.
+
+    This function is extracted for unit testing to verify data flow.
+    """
+    run_code = str(run_data.get("run_code", ""))
+    workflow_name = str(run_data.get("workflow_name", ""))
+    step_name = str(step_data.get("step_name", ""))
+    
+    args = [
+        python_executable, "-m", "agent_runner_v2.run_agent", "run",
+        "--project-root", project_root,
+        "--template-group", workflow_name,
+        "--mode", "daemon",
+        "--job-id", job_id_to_pass,
+        "--job-no", run_code,
+        "--job", step_name,
+    ]
+
+    # BCS Section 11.4: Extract implementation_name
+    # The Golden Rule: NO aliases (impl_name/IMPL_NAME) allowed.
+    impl_name = str(run_data.get("implementation_name") or "").strip()
+    
+    if impl_name:
+        args.extend(["--impl-name", impl_name])
+    
+    if not job_id_to_pass:
+        args.extend(["--start-step", step_name])
+
+    return args
+
+
 def _spawn_child(
     *,
-    claim: dict,
+    run_data: dict,
+    step_data: dict,
     runtime_root: Path,
     cli_pythonpath: str | None,
     logger: DaemonLogger,
@@ -276,19 +316,17 @@ def _spawn_child(
 ) -> ChildExecution:
     """Spawn a CLI child process with pre-execution backend state sync.
 
-    Before spawning, fetches the full run state from the backend and writes
-    it to backend_state.json. The CLI merges this into local job.json to
-    ensure it starts with fresh backend-authoritative state.
-
-    Constructs date-based paths for job, queue, and runtime directories,
-    passing them to the CLI via environment variables.
+    Receives raw run/step data from the Backend claim response directly.
     """
     from .job_state import job_dir as compute_job_dir
 
-    run = claim["run"]
-    step_run = claim["step_run"]
-    step_run_id = str(step_run["id"])
-    run_id = str(run["id"])
+    run = run_data
+    step_run = step_data
+    
+    # Use native Backend keys (run_id / step_run_id)
+    run_id = str(run.get("run_id") or run.get("id", ""))
+    step_run_id = str(step_run.get("step_run_id") or step_run.get("id", ""))
+    
     run_code = str(run.get("run_code", ""))
     workflow_name = str(run.get("workflow_name", ""))
     step_name = str(step_run.get("step_name", ""))
@@ -351,6 +389,30 @@ def _spawn_child(
         "--job-no", run_code,
         "--job", step_name,
     ]
+
+    # --- BCS Section 11.6: Log received backend payload ---
+    logger.log("info", "daemon_backend_payload_received", message="Run payload from backend API", details={
+        "run_id": run_id,
+        "workflow": workflow_name,
+        "run_keys": list(run.keys()),
+        # Canonical keys per BCS Section 11.7
+        "implementation_name": run.get("implementation_name"),
+        "prompt_selections": run.get("prompt_selections"),
+    })
+
+    # BCS Section 11.4: Extract implementation_name from flattened run object
+    # The Golden Rule: NO aliases (impl_name/IMPL_NAME) allowed.
+    impl_name = str(run.get("implementation_name") or "").strip()
+    
+    # --- BCS Section 11.6: Log CLI args before spawning ---
+    if impl_name:
+        cli_args.extend(["--impl-name", impl_name])
+    
+    logger.log("info", "daemon_cli_args", message="Spawning CLI child", details={
+        "run_id": run_id,
+        "cli_args": cli_args,
+        "impl_name_resolved": impl_name,
+    })
 
     if not job_id_to_pass:
         cli_args.extend(["--start-step", step_name])
@@ -700,7 +762,6 @@ def run_supervisor(*, config: SupervisorConfig, v2_url: str) -> int:
                 elif work_type == "EXECUTE_STEP":
                     run_data = work.get("run", {})
                     step_data = work.get("step_run", {})
-                    run_id = str(run_data.get("run_id", ""))
                     run_code = str(run_data.get("run_code", ""))
                     step_run_id = str(step_data.get("step_run_id", ""))
                     step_name = str(step_data.get("step_name", ""))
@@ -710,23 +771,10 @@ def run_supervisor(*, config: SupervisorConfig, v2_url: str) -> int:
                         "run_code": run_code, "step": step_name, "work_type": work_type,
                     })
 
-                    claim = {
-                        "run": {
-                            "id": run_id,
-                            "run_code": run_code,
-                            "workflow_name": workflow_name,
-                            "project_root": run_data.get("project_root"),
-                            "job_dir": run_data.get("job_dir"),
-                        },
-                        "step_run": {
-                            "id": step_run_id,
-                            "step_name": step_name,
-                        },
-                    }
-
                     try:
                         child = _spawn_child(
-                            claim=claim,
+                            run_data=run_data,
+                            step_data=step_data,
                             runtime_root=config.runtime_dir,
                             cli_pythonpath=config.cli_pythonpath,
                             logger=logger,

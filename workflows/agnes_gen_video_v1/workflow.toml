@@ -3,7 +3,7 @@ name = "agnes_gen_video_v1"
 version = "1.0.0"
 label = "Agnes Video Generation v1"
 job_prefix = "AGVID"
-description = "Generate videos from images using Agnes Video V2.0 API. Extracts prompts from PNG metadata and calls video generation API."
+description = "Generate videos from images using pluggable video generation providers."
 visibility = "canonical"
 default_max_rejects = 3
 init_step = "generate_videos"
@@ -11,6 +11,19 @@ init_step = "generate_videos"
 # Layer 2 platform contract references
 layer = "layer3"
 platform = "agent-runner-v2"
+
+# ============================================================================
+# Implementations
+# ============================================================================
+[[workflow.implementation]]
+name = "agnes_v2"
+description = "Generates videos using Agnes Video V2.0 API"
+label = "Agnes V2.0"
+
+[[workflow.implementation]]
+name = "happyhorse_v1_1"
+description = "Generates videos using HappyHorse-1.1-i2v API"
+label = "HappyHorse v1.1"
 
 [workflow.governance]
 include_in_prompts = true
@@ -22,7 +35,7 @@ prompt_targets = ["all"]
 # ============================================================================
 [[step]]
 name = "generate_videos"
-action = "generate_videos_from_images"
+action = "generate_videos_default"
 enable_notifications = true
 requires_human_approval_after = false
 onsuccess = "archive_step_03"
