@@ -1,0 +1,120 @@
+# Objective
+
+Address the challenge findings by updating the implementation plan document.
+Read the challenge document, analyze each attack, and revise the implementation
+plan to resolve the issues raised.
+
+You are NOT obligated to accept every finding. Some attacks may be incorrect,
+based on misunderstandings, or targeting non-issues. Your job is to evaluate
+each finding honestly and respond with evidence.
+
+# Layer Boundary
+
+- This workflow belongs to Layer 3 and operates on top of the Layer 2 platform contract.
+- Treat Layer 1 governance and Layer 2 platform constitution as read-only reference inputs.
+
+# Reference Inputs
+
+- Read {IMPL_FILE} (the implementation plan document to update).
+- Read {CHALLENGE_FILE_SUGGESTED} (the challenge findings to address).
+- Read {TASK_FILE} (the upstream task document for traceability reference).
+- Read codebase context from `docs/repo/codebase/current/` to validate proposed changes.
+- Read Layer 1 governance at {GOVERNANCE_RUNTIME_ROOT} for metadata requirements.
+- Read Layer 2 platform constitution at {PLATFORM_RUNTIME_ROOT} for platform contract.
+
+# Address Challenge Protocol
+
+For each finding in the challenge document:
+
+## Step 1: Read the finding carefully
+
+Understand what issue was raised and why. Identify the specific claim being made.
+
+## Step 2: Evaluate the finding independently
+
+Determine if the finding is:
+
+a. **Valid and should be addressed** -- The attack identifies a real gap or flaw.
+b. **Already addressed** -- The plan already handles this (cite where).
+c. **Out of scope** -- Belongs to execution/validation, not planning.
+d. **Incorrect or based on misunderstanding** -- The attack is wrong. Provide
+   counter-evidence from the actual codebase or filesystem.
+
+IMPORTANT: For code-related findings (path calculations, function names, line
+numbers, API signatures), you MUST independently verify by reading the actual
+source file before deciding whether to accept or reject the finding. Do NOT
+accept a finding just because it sounds plausible.
+
+## Step 3: Address valid findings
+
+Update the relevant section of {IMPL_FILE}:
+
+- If the challenge identifies missing information, add it.
+- If the challenge identifies incorrect information, correct it.
+- If the challenge identifies unclear scope, clarify it.
+- If the challenge identifies technical risks, add mitigation notes.
+
+## Step 4: Document your changes
+
+Add a "Challenge Resolution" section at the end of the implementation plan
+document with:
+
+- Each finding from the challenge
+- Your evaluation (valid / already addressed / out of scope / incorrect)
+- Your resolution (what you changed, or why you did not change)
+- The section of the document that was affected
+- Evidence for your evaluation (file paths, code quotes, filesystem state)
+
+## Step 5: Verify consistency
+
+After making changes:
+
+- Ensure all sections still flow logically.
+- Ensure no contradictions were introduced.
+- Ensure the document still meets the required structure.
+- Ensure Acceptance Criteria Tests (Section 1) are updated if affected.
+
+# Output Instructions
+
+- Update {IMPL_FILE} in place with the revised content.
+- Preserve the YAML frontmatter (do not change template_id, authority, etc.).
+- Preserve all sections that do not need changes.
+- Add a "Challenge Resolution" section documenting how each finding was addressed.
+- Use ASCII-only characters.
+- Use plain text section headings.
+
+# Challenge Resolution Section Format
+
+Add this section at the end of the document:
+
+```
+## Challenge Resolution
+
+### Attack 1: [Brief description of the attack]
+**Evaluation:** Valid / Already addressed / Out of scope / Incorrect
+**Resolution:** [What was changed, or why no change was made]
+**Evidence:** [File paths, code quotes, or filesystem state that supports your evaluation]
+**Affected section:** [Which section was updated]
+
+### Attack 2: [Brief description of the attack]
+...
+```
+
+# Self-Validation
+
+Before writing the output, verify:
+
+- [ ] Every attack from the challenge has a corresponding resolution
+- [ ] Each resolution includes evidence (not just "acknowledged")
+- [ ] Code-related findings were verified against actual source files
+- [ ] The document still flows logically after changes
+- [ ] No contradictions were introduced
+- [ ] Acceptance Criteria Tests are updated if affected by changes
+
+# Forbidden Content
+
+- Removing the Challenge Resolution section
+- Non-ASCII characters
+- Layer 1 governance redefinition
+- Layer 2 platform contract redefinition
+- Accepting findings without verification
