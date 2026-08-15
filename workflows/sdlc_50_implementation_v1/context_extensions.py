@@ -20,8 +20,8 @@ class Sdlc50ImplementationExtensions(WorkflowExtensions):
         return {
             "TASK_FILE": f"{SDLC_DELIVERY_BASE}/40_tasks/TASK-{date_str}-{{seq}}_{{slug}}.md",
             "IMPL_FILE": f"{SDLC_DELIVERY_BASE}/50_implementations/IMPL-{date_str}-001-{{seq}}_{{slug}}.md",
-            "CRITIQUE_FILE_SUGGESTED": f"{SDLC_DELIVERY_BASE}/80_reviews/{{slug}}-CRITIQUE-50-impl.md",
-            "REVIEW_FILE_SUGGESTED": f"{SDLC_DELIVERY_BASE}/80_reviews/{{slug}}-REV-50-impl.md",
+            "CHALLENGE_FILE_SUGGESTED": f"{SDLC_DELIVERY_BASE}/80_reviews/{{slug}}-CHALLENGE-50-impl.md",
+            "GATEKEEP_FILE_SUGGESTED": f"{SDLC_DELIVERY_BASE}/80_reviews/{{slug}}-GATEKEEP-50-impl.md",
         }
 
     def build_context_extensions(self, *, state: dict[str, Any], step: str, step_cfg: dict[str, Any], ctx: dict[str, str], project_root: Path | None = None) -> dict[str, str]:
@@ -33,7 +33,26 @@ class Sdlc50ImplementationExtensions(WorkflowExtensions):
         job_id = str(state.get("job_id", "unknown"))
         artifacts = state.get("artifacts") or {}
         slug = extract_slug_from_path(artifacts.get("TASK_FILE", ""))
+        
         for key, rel_path in self.register_artifact_keys(job_id=job_id).items():
+            # If the artifact already has a resolved value in job state — whether
+            # it is an input passed from a previous workflow (e.g. TASK_FILE) or
+            # an output produced by an earlier step of this job (e.g. IMPL_FILE) —
+            # preserve it verbatim. Do NOT re-resolve {seq}: resolve_next_seq()
+            # scans the filesystem, so once the producing step's file exists
+            # (e.g. IMPL-{date}-001-001_slug.md), re-resolving would bump to
+            # 001-002 and downstream steps would look for a file that does not
+            # exist. {seq} is job-scoped and must be resolved exactly once.
+            existing = artifacts.get(key)
+            if existing:
+                if key == "TASK_FILE" and not Path(existing).is_absolute():
+                    # Bare filename input — resolve to the 40_tasks directory
+                    task_path = Path(existing)
+                    result[key] = str(effective_root / SDLC_DELIVERY_BASE / "40_tasks" / task_path.name)
+                else:
+                    result[key] = str(existing)
+                continue
+
             resolved = rel_path.replace("{slug}", slug)
             if "{seq}" in resolved:
                 path_dir, path_file = resolved.rsplit("/", 1)

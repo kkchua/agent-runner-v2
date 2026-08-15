@@ -1,0 +1,124 @@
+Objective
+
+Generate review, memory, and closure documents from the approved validation report.
+
+Layer Boundary
+
+- This workflow belongs to Layer 3 and operates on top of the Layer 2 platform contract.
+- Generate only review, memory, and closure documentation.
+- Treat Layer 1 governance and Layer 2 platform constitution as read-only reference inputs.
+
+Reference Inputs
+
+- Read {VAL_FILE} (approved validation report).
+- Read codebase context from docs/repo/codebase/current/ to understand repository structure.
+- Read Layer 1 governance at {GOVERNANCE_RUNTIME_ROOT} for metadata requirements.
+- Read Layer 2 platform constitution at {PLATFORM_RUNTIME_ROOT} for platform contract.
+
+Review Document Requirements
+
+The REV document must include:
+
+1. YAML Frontmatter (REQUIRED):
+   - template_id: "SYS-03-RV"
+   - version: "1.0.0"
+   - doc_type: "workflow_output"
+   - authority: "workflow-generated"
+   - scan_policy: "include"
+   - scan_reason: "final review for initiative completion"
+   - layer: "layer3"
+   - platform: "agent-runner-v2"
+   - lifecycle_status: "draft"
+   - effective_version: "{job_id}"
+   - managed_by: "workflow-generated"
+
+2. Required Sections (in this exact order):
+   - Review Overview - High-level summary of the review scope
+   - Validation Traceability - Link back to approved VAL document
+   - Initiative Summary - Summary of what was accomplished
+   - Deliverables Review - Review of all deliverables produced
+   - Quality Assessment - Overall quality assessment
+   - Stakeholder Feedback - Feedback from stakeholders (if available)
+   - Lessons Learned Summary - Key lessons captured
+   - Recommendations - Recommendations for future initiatives
+   - Open Questions - Unresolved items that need clarification
+
+Memory Document Requirements
+
+The MEM document must include:
+
+1. YAML Frontmatter (REQUIRED):
+   - template_id: "SYS-03-MM"
+   - version: "1.0.0"
+   - doc_type: "workflow_output"
+   - authority: "workflow-generated"
+   - scan_policy: "include"
+   - scan_reason: "lessons learned and memory capture"
+   - layer: "layer3"
+   - platform: "agent-runner-v2"
+   - lifecycle_status: "draft"
+   - effective_version: "{job_id}"
+   - managed_by: "workflow-generated"
+
+2. Required Sections (in this exact order):
+   - Memory Overview - High-level summary of lessons learned
+   - Validation Traceability - Link back to approved VAL document
+   - What Went Well - Positive outcomes and successes
+   - What Could Improve - Areas for improvement
+   - Technical Insights - Technical lessons learned
+   - Process Insights - Process lessons learned
+   - Actionable Recommendations - Specific actions for future initiatives
+   - Knowledge Artifacts - References to reusable knowledge
+
+Closure Document Requirements
+
+The CLOSE document must include:
+
+1. YAML Frontmatter (REQUIRED):
+   - template_id: "SYS-03-CL"
+   - version: "1.0.0"
+   - doc_type: "workflow_output"
+   - authority: "workflow-generated"
+   - scan_policy: "include"
+   - scan_reason: "initiative closure documentation"
+   - layer: "layer3"
+   - platform: "agent-runner-v2"
+   - lifecycle_status: "draft"
+   - effective_version: "{job_id}"
+   - managed_by: "workflow-generated"
+
+2. Required Sections (in this exact order):
+   - Closure Overview - High-level summary of closure status
+   - Validation Traceability - Link back to approved VAL document
+   - Initiative Completion Status - Confirmation of completion
+   - Deliverables Accepted - List of accepted deliverables
+   - Outstanding Items - Any remaining items (if any)
+   - Resource Release - Resources released from the initiative
+   - Archive References - References to archived artifacts
+   - Sign-Off - Sign-off confirmation
+
+Content Guidelines
+
+- Base all documents on the approved validation report
+- Normalize into canonical structure without inventing scope
+- Record explicit assumptions where information is missing
+- Capture lessons learned explicitly
+- Note any audit/compliance sensitivity
+- Verify API and SDK usage against the actual installed library version
+  by reading the source code or documentation in the virtual environment.
+  Do not rely on training data for library APIs -- they may have changed.
+
+Output Instructions
+
+- Write the review document to {REV_FILE} path.
+- Write the memory document to {MEM_FILE} path.
+- Write the closure document to {CLOSE_FILE} path.
+- Use plain text section headings.
+- Keep terminology consistent with Layer 1 and Layer 2 governance docs.
+
+Forbidden Content
+
+- Layer 1 governance redefinition or contradiction
+- Layer 2 platform contract redefinition
+- Implementation details or code changes
+- Content not supported by the approved validation report

@@ -1,0 +1,39 @@
+name: standard
+label: "Standard"
+description: "Default Layer 2 platform constitution generation with review, validation, and audit."
+
+# -----------------------------------------------------------------------
+# Prompt Slots Configuration
+# -----------------------------------------------------------------------
+prompt_slots:
+  generate_platform_core_docs:
+    label: "Generate Platform Constitution"
+    default: "standard"
+    options:
+      - name: "standard"
+        file: "prompts/generate_platform_core_docs/standard.txt"
+        description: "Generate 6 Layer 2 platform constitution documents from context inventory."
+
+  review_platform_core_docs:
+    label: "Review Platform Constitution"
+    default: "standard"
+    options:
+      - name: "standard"
+        file: "prompts/review_platform_core_docs/standard.txt"
+        description: "Internal quality review of all 6 platform documents."
+
+  refine_platform_core_docs:
+    label: "Refine Platform Constitution"
+    default: "standard"
+    options:
+      - name: "standard"
+        file: "prompts/refine_platform_core_docs/standard.txt"
+        description: "Address review/validation/audit findings by updating platform documents."
+
+  audit_platform_core_docs:
+    label: "Audit Platform Constitution"
+    default: "standard"
+    options:
+      - name: "standard"
+        file: "prompts/audit_platform_core_docs/standard.txt"
+        description: "Semantic audit with human approval gate before publish."

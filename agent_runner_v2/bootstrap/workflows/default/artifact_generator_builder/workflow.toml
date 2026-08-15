@@ -27,6 +27,20 @@ include_in_prompts = true
 prompt_targets = ["all"]
 
 # =============================================================================
+# Implementations
+# =============================================================================
+
+[[workflow.implementation]]
+name = "generator"
+description = "Produces variable content artifacts (reports, media, documents). Default implementation."
+label = "Content Generator"
+
+[[workflow.implementation]]
+name = "builder"
+description = "Produces executable agent-runner-v2 workflow packages as output."
+label = "Workflow Builder"
+
+# =============================================================================
 # Step 1: Analyze Requirement
 # =============================================================================
 

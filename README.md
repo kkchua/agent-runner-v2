@@ -121,6 +121,7 @@ V1 files are marked `[V1 DEPRECATED]` — do not use for new development.
 | Document | Purpose | When to Read |
 |----------|---------|--------------|
 | [AGENTS.md](AGENTS.md) | **Workflow package system** — workflow.toml structure, StepConfig, WorkflowBundle, BundleGovernance | When creating or modifying workflows |
+| [docs/system/00_governance/foundation/current/BASE_COMPOSITION_STANDARD_v1.0.md](docs/system/00_governance/foundation/current/BASE_COMPOSITION_STANDARD_v1.0.md) | **Base Composition Standard (BCS)** — impls, prompt slots, two-tier prompt resolution, action contracts | When designing workflows with multiple implementations or pluggable prompts |
 | [masterplan/WORKFLOW_EXTENSION_INTERFACE_PLAN.md](masterplan/WORKFLOW_EXTENSION_INTERFACE_PLAN.md) | **WorkflowExtensions pattern** — how workflows hook into the runner | When implementing custom workflow logic |
 
 **Workflow package structure:**

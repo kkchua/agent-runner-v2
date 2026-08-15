@@ -1,0 +1,47 @@
+name: standard
+label: "Standard Execution"
+description: "Default SDLC execution with adversarial challenge and pass/fail gate."
+
+# -----------------------------------------------------------------------
+# Prompt Slots Configuration
+# -----------------------------------------------------------------------
+prompt_slots:
+  execute_task:
+    label: "Task Execution"
+    default: "standard"
+    options:
+      - name: "standard"
+        file: "prompts/execute_task/standard.txt"
+        description: "State-aware execution with pre-check and test-first verification."
+
+  challenge_execution:
+    label: "Execution Challenge"
+    default: "standard"
+    options:
+      - name: "standard"
+        file: "prompts/challenge_execution/standard.txt"
+        description: "Adversarial attack on execution completeness and test accuracy."
+
+  address_challenges:
+    label: "Address Challenges"
+    default: "standard"
+    options:
+      - name: "standard"
+        file: "prompts/address_challenges/standard.txt"
+        description: "Evidence-based challenge resolution."
+
+  gatekeep_execution:
+    label: "Execution Gate"
+    default: "standard"
+    options:
+      - name: "standard"
+        file: "prompts/gatekeep_execution/standard.txt"
+        description: "Pass/fail gate verifying execution quality."
+
+  refine_execution:
+    label: "Execution Refinement"
+    default: "standard"
+    options:
+      - name: "standard"
+        file: "prompts/refine_execution/standard.txt"
+        description: "Address gatekeep findings."

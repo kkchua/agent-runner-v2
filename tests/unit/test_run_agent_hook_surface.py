@@ -100,8 +100,8 @@ def test_shared_runtime_deps_workflow_runtime_wrappers_match_direct_contract(mon
     def fake_ensure_delivery_folders(target_root):
         calls.append(("ensure_delivery_folders", (target_root,), {}))
 
-    def fake_load_group(group_name, *, workspace_root=None, workflow_root=None):
-        calls.append(("load_group", (group_name,), {"workspace_root": workspace_root, "workflow_root": workflow_root}))
+    def fake_load_group(group_name, *, workspace_root=None, workflow_root=None, impl_name=None):
+        calls.append(("load_group", (group_name,), {"workspace_root": workspace_root, "workflow_root": workflow_root, "impl_name": impl_name}))
         return {"group": group_name}
 
     def fake_validate_static_reference_files(workspace_root, *, group_cfg=None, template_group=""):
@@ -130,7 +130,7 @@ def test_shared_runtime_deps_workflow_runtime_wrappers_match_direct_contract(mon
     assert missing == ["Y"]
     assert calls == [
         ("ensure_delivery_folders", (workspace_root,), {}),
-        ("load_group", ("demo",), {"workspace_root": workspace_root, "workflow_root": workflow_root}),
+        ("load_group", ("demo",), {"workspace_root": workspace_root, "workflow_root": workflow_root, "impl_name": None}),
         ("validate_static_reference_files", (workspace_root,), {"group_cfg": group_cfg, "template_group": "demo"}),
         ("missing_artifacts", (["Y"], state), {}),
     ]
@@ -142,8 +142,8 @@ def test_run_agent_workflow_runtime_wrappers_match_direct_contract(monkeypatch, 
     def fake_ensure_delivery_folders(target_root):
         calls.append(("ensure_delivery_folders", (target_root,), {}))
 
-    def fake_load_group(group_name, *, workspace_root=None, workflow_root=None):
-        calls.append(("load_group", (group_name,), {"workspace_root": workspace_root, "workflow_root": workflow_root}))
+    def fake_load_group(group_name, *, workspace_root=None, workflow_root=None, impl_name=None):
+        calls.append(("load_group", (group_name,), {"workspace_root": workspace_root, "workflow_root": workflow_root, "impl_name": impl_name}))
         return {"group": group_name}
 
     def fake_validate_static_reference_files(workspace_root, *, group_cfg=None, template_group=""):
@@ -172,7 +172,7 @@ def test_run_agent_workflow_runtime_wrappers_match_direct_contract(monkeypatch, 
     assert missing == ["Z"]
     assert calls == [
         ("ensure_delivery_folders", (workspace_root,), {}),
-        ("load_group", ("demo",), {"workspace_root": workspace_root, "workflow_root": workflow_root}),
+        ("load_group", ("demo",), {"workspace_root": workspace_root, "workflow_root": workflow_root, "impl_name": None}),
         ("validate_static_reference_files", (workspace_root,), {"group_cfg": group_cfg, "template_group": "demo"}),
         ("missing_artifacts", (["Z"], state), {}),
     ]

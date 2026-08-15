@@ -34,7 +34,20 @@ class Sdlc20PlanningExtensions(WorkflowExtensions):
         # Extract slug from REQ_FILE (input from sdlc_10)
         artifacts = state.get("artifacts") or {}
         slug = extract_slug_from_path(artifacts.get("REQ_FILE", ""))
+        # Map input artifact keys to their expected subdirectories for bare filename resolution
+        _INPUT_DIRS = {
+            "REQ_FILE": "10_requirements",
+        }
+
         for key, rel_path in self.register_artifact_keys(job_id=job_id).items():
+            existing = artifacts.get(key)
+            if existing:
+                if key in _INPUT_DIRS and not Path(existing).is_absolute():
+                    result[key] = str(effective_root / SDLC_DELIVERY_BASE / _INPUT_DIRS[key] / Path(existing).name)
+                else:
+                    result[key] = str(existing)
+                continue
+
             resolved = rel_path.replace("{slug}", slug)
             if "{seq}" in resolved:
                 path_dir, path_file = resolved.rsplit("/", 1)

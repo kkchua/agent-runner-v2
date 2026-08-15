@@ -1,6 +1,7 @@
 """Implementation actions for agnes_gen_video_v1.impls.happyhorse_v1_1.
 
-Implements the generate_videos_happyhorse action using HappyHorse-1.1-i2v API.
+Implements the generate_videos_happyhorse action using HappyHorse-1.1-i2v API
+(DashScope-style async task submission).
 """
 from __future__ import annotations
 
@@ -104,14 +105,12 @@ class _VideoFromImageWorkItem:
     """Single video-from-image work item for concurrent processing."""
     png_path: Path
     t2i_prompt1: str
-    negative_prompt: str
     video_submit_endpoint: str
-    video_status_endpoint: str
+    video_status_endpoint_fmt: str  # format string with task_id placeholder
     vid_model: str
-    vid_width: int
-    vid_height: int
-    vid_num_frames: int
-    vid_frame_rate: int
+    vid_resolution: str
+    vid_ratio: str
+    vid_duration: int
     api_timeout: int
     api_max_retries: int
     retry_base_wait: int
@@ -121,52 +120,78 @@ class _VideoFromImageWorkItem:
 
 
 def _process_single_video_from_image(item: _VideoFromImageWorkItem) -> dict:
-    """Worker function for concurrent video-from-image generation using HappyHorse."""
+    """Worker function for concurrent video-from-image generation using HappyHorse (DashScope-style API)."""
     video_filename = item.png_path.stem + ".mp4"
-    image_b64 = base64.b64encode(item.png_path.read_bytes()).decode("utf-8")
+    image_b64 = f"data:image/png;base64,{base64.b64encode(item.png_path.read_bytes()).decode('utf-8')}"
 
-    # HappyHorse payload structure (single image, not keyframes)
+    # DashScope-style payload
     payload = {
         "model": item.vid_model,
-        "prompt": item.t2i_prompt1,
-        "image": f"data:image/png;base64,{image_b64}",
-        "negative_prompt": item.negative_prompt,
+        "input": {
+            "prompt": item.t2i_prompt1,
+            "media": [
+                {"type": "first_frame", "url": image_b64}
+            ]
+        },
+        "parameters": {
+            "resolution": item.vid_resolution,
+            "ratio": item.vid_ratio,
+            "duration": item.vid_duration,
+        }
     }
 
-    logger.info("generate_videos_happyhorse: %s submitting video (model=%s, %dx%d, frames=%d, fps=%d)",
-                item.png_path.name, item.vid_model, item.vid_width, item.vid_height, item.vid_num_frames, item.vid_frame_rate)
+    logger.info("generate_videos_happyhorse: %s submitting video (model=%s, res=%s, ratio=%s, duration=%ds)",
+                item.png_path.name, item.vid_model, item.vid_resolution, item.vid_ratio, item.vid_duration)
 
     if item.process_delay > 0:
         time.sleep(item.process_delay)
 
     api_key = item.key_pool.next_key()
-    headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
-    
-    submit_resp = _api_request_with_retry("POST", item.video_submit_endpoint, headers=headers, json_payload=payload,
-                                          timeout=item.api_timeout, max_retries=item.api_max_retries, retry_base_wait=item.retry_base_wait)
+    submit_headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+        "X-DashScope-Async": "enable",
+    }
+
+    submit_resp = _api_request_with_retry(
+        "POST", item.video_submit_endpoint, headers=submit_headers, json_payload=payload,
+        timeout=item.api_timeout, max_retries=item.api_max_retries, retry_base_wait=item.retry_base_wait,
+    )
     submit_data = submit_resp.json()
 
-    video_id = submit_data.get("video_id", "") or submit_data.get("id", "")
-    if not video_id:
-        raise ValueError(f"{item.png_path.name}: no video_id in submit response")
+    # DashScope response: {"output": {"task_id": "..."}}
+    task_id = submit_data.get("output", {}).get("task_id", "")
+    if not task_id:
+        raise ValueError(f"{item.png_path.name}: no task_id in submit response: {submit_data}")
 
-    status_url = f"{item.video_status_endpoint}?video_id={video_id}"
+    logger.info("generate_videos_happyhorse: %s task_id=%s, polling for completion...", item.png_path.name, task_id)
+
+    status_headers = {"Authorization": f"Bearer {api_key}"}
+    status_url = item.video_status_endpoint_fmt.format(task_id=task_id)
     video_download_url = ""
     max_poll_attempts = 120
-    poll_interval = 10
+    poll_interval = 15
 
     for poll_attempt in range(max_poll_attempts):
         time.sleep(poll_interval)
         try:
-            status_resp = requests.get(status_url, headers=headers, timeout=item.api_timeout)
+            status_resp = requests.get(status_url, headers=status_headers, timeout=item.api_timeout)
             status_resp.raise_for_status()
             status_data = status_resp.json()
-            vid_status = status_data.get("status", "")
-            if vid_status == "completed":
-                video_download_url = status_data.get("url", "") or status_data.get("video_url", "")
-                break
-            elif vid_status in ("failed", "error", "cancelled"):
-                raise RuntimeError(f"Video generation failed with status: {vid_status}")
+            task_status = status_data.get("output", {}).get("task_status", "")
+
+            if task_status == "SUCCEEDED":
+                output = status_data.get("output", {})
+                video_download_url = output.get("video_url", "")
+                if not video_download_url:
+                    results = output.get("results", [{}])
+                    if results:
+                        video_download_url = results[0].get("url", "")
+                if video_download_url:
+                    break
+                raise ValueError(f"{item.png_path.name}: SUCCEEDED but no video_url in response")
+            elif task_status == "FAILED":
+                raise RuntimeError(f"Video generation FAILED: {status_data}")
         except requests.exceptions.RequestException:
             if poll_attempt >= max_poll_attempts - 1:
                 raise RuntimeError(f"Polling timed out after {max_poll_attempts} attempts")
@@ -190,13 +215,12 @@ def _process_single_video_from_image(item: _VideoFromImageWorkItem) -> dict:
 
 @action("generate_videos_happyhorse")
 def generate_videos_happyhorse(*, context, state, step_cfg, project_root) -> ActionResult:
-    """Generate videos using HappyHorse-1.1-i2v API (Single Image-to-Video)."""
+    """Generate videos using HappyHorse-1.1-i2v API (DashScope-style async)."""
     load_env_from_project(project_root)
-    
-    # HappyHorse uses a different API key environment variable
+
     key_pool = ApiKeyPool("HAPPYHORSE_API_KEY", load_env=False)
-    base_url = os.environ.get("HAPPYHORSE_BASE_URL", "https://api.agnes-ai.com")
-    
+    base_url = os.environ.get("HAPPYHORSE_BASE_URL", "https://dashscope.aliyuncs.com")
+
     step_03_dir = Path(context.get("STEP_03_DIR", ""))
     step_04_dir = Path(context.get("STEP_04_DIR", ""))
     config_path = Path(context.get("MEDIA_CONFIG", ""))
@@ -212,18 +236,11 @@ def generate_videos_happyhorse(*, context, state, step_cfg, project_root) -> Act
 
     vid_config = config.get("video", {})
     vid_model = vid_config.get("model", "happyhorse-1.1-i2v")
-    vid_width = vid_config.get("width", 1024)
-    vid_height = vid_config.get("height", 576)
-    vid_num_frames = vid_config.get("num_frames", 72)
-    vid_frame_rate = vid_config.get("frame_rate", 24)
+    vid_resolution = vid_config.get("resolution", "480P")
+    vid_ratio = vid_config.get("ratio", "9:16")
+    vid_duration = vid_config.get("duration", 15)
     vid_prompt_prefix = vid_config.get("video_prompt_prefix", "")
     vid_prompt_postfix = vid_config.get("video_prompt_postfix", "")
-    negative_prompt_video = vid_config.get("negative_prompt_video", "")
-    negative_prompt_video_postfix = vid_config.get("negative_prompt_video_postfix", "")
-    
-    negative_prompt = negative_prompt_video
-    if negative_prompt_video_postfix:
-        negative_prompt = f"{negative_prompt} {negative_prompt_video_postfix}" if negative_prompt else negative_prompt_video_postfix
 
     process_delay = config.get("process_delay", 15)
     api_timeout = config.get("api_timeout", 500)
@@ -237,9 +254,9 @@ def generate_videos_happyhorse(*, context, state, step_cfg, project_root) -> Act
     if not png_files:
         return ActionResult(status="REJECTED", remark="No PNG files found in step_03_generatedimage.", artifacts={}, reject_code="NO_INPUTS")
 
-    # HappyHorse endpoints
-    video_submit_endpoint = f"{base_url.rstrip('/')}/v1/videos"
-    video_status_endpoint = f"{base_url.rstrip('/')}/agnesapi"
+    # DashScope-style endpoints
+    video_submit_endpoint = f"{base_url.rstrip('/')}/api/v1/services/aigc/video-generation/video-synthesis"
+    video_status_endpoint_fmt = f"{base_url.rstrip('/')}/api/v1/tasks/{{task_id}}"
 
     work_items = []
     pre_failures = []
@@ -254,12 +271,20 @@ def generate_videos_happyhorse(*, context, state, step_cfg, project_root) -> Act
         final_video_prompt = vid_prompt_prefix + t2i_prompt1 + vid_prompt_postfix
 
         work_items.append(_VideoFromImageWorkItem(
-            png_path=png_path, t2i_prompt1=final_video_prompt, negative_prompt=negative_prompt,
-            video_submit_endpoint=video_submit_endpoint, video_status_endpoint=video_status_endpoint,
-            vid_model=vid_model, vid_width=vid_width, vid_height=vid_height,
-            vid_num_frames=vid_num_frames, vid_frame_rate=vid_frame_rate,
-            api_timeout=api_timeout, api_max_retries=api_max_retries, retry_base_wait=retry_base_wait,
-            process_delay=process_delay, step_04_dir=step_04_dir, key_pool=key_pool,
+            png_path=png_path,
+            t2i_prompt1=final_video_prompt,
+            video_submit_endpoint=video_submit_endpoint,
+            video_status_endpoint_fmt=video_status_endpoint_fmt,
+            vid_model=vid_model,
+            vid_resolution=vid_resolution,
+            vid_ratio=vid_ratio,
+            vid_duration=vid_duration,
+            api_timeout=api_timeout,
+            api_max_retries=api_max_retries,
+            retry_base_wait=retry_base_wait,
+            process_delay=process_delay,
+            step_04_dir=step_04_dir,
+            key_pool=key_pool,
         ))
 
     if not work_items:

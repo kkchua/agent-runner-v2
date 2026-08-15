@@ -1,0 +1,108 @@
+Objective
+
+Execute the task per the approved implementation plan and document the execution results.
+
+Layer Boundary
+
+- This workflow belongs to Layer 3 and operates on top of the Layer 2 platform contract.
+- Execute only per the approved implementation plan, not inventing new scope.
+- Treat Layer 1 governance and Layer 2 platform constitution as read-only reference inputs.
+
+Reference Inputs
+
+- Read {IMPL_FILE} (approved implementation plan).
+- Read codebase context from docs/repo/codebase/current/ to understand repository structure.
+- Read Layer 1 governance at {GOVERNANCE_RUNTIME_ROOT} for metadata requirements.
+- Read Layer 2 platform constitution at {PLATFORM_RUNTIME_ROOT} for platform contract.
+
+Pre-Execution State Check (MANDATORY)
+
+Before writing ANY code, verify the current state of the codebase:
+
+1. Run the existing test suite to establish a baseline:
+   .venv\Scripts\python -m pytest tests/unit/ -x -q
+   Record the result (pass count, fail count, errors).
+
+2. Check if the work described in {IMPL_FILE} is ALREADY done:
+   - Use glob/grep to search for the files, functions, or classes the IMPL says to create.
+   - If they already exist with the expected content, the IMPL may describe already-completed work.
+   - Document this finding explicitly -- do not silently re-implement existing work.
+
+3. Identify the specific files and modules that will be affected:
+   - List files to create and files to modify.
+   - Read the current content of files to be modified.
+
+Execution Document Requirements
+
+The EXEC document must include:
+
+1. YAML Frontmatter (REQUIRED):
+   - template_id: "SYS-03-EX"
+   - version: "1.0.0"
+   - doc_type: "workflow_output"
+   - authority: "workflow-generated"
+   - scan_policy: "include"
+   - scan_reason: "execution record for task completion"
+   - layer: "layer3"
+   - platform: "agent-runner-v2"
+   - lifecycle_status: "draft"
+   - effective_version: "{job_id}"
+   - managed_by: "workflow-generated"
+
+2. Required Sections (in this exact order):
+
+   a. Pre-Execution State
+      - Baseline test results (from step 1 above)
+      - State check findings (from step 2 above)
+      - Files to create/modify (from step 3 above)
+
+   b. Implementation Traceability
+      - Link back to {IMPL_FILE} and its source {TASK_FILE}
+      - Map each IMPL step to execution actions
+
+   c. Code Changes Made
+      - Specific files changed with exact modifications
+      - For each file: what was added, modified, or removed
+
+   d. Test Files Created
+      - Test files written per the IMPL test implementation section
+      - Test coverage: which acceptance criteria each test verifies
+
+   e. Test Execution Results
+      - Post-implementation test run output (actual, not fabricated)
+      - Command used: .venv\Scripts\python -m pytest tests/unit/ -x -q
+      - Pass/fail counts with comparison to baseline
+      - Any new failures introduced
+
+   f. Issues Encountered
+      - Deviations from the plan with justification
+      - Unexpected errors or blockers
+
+   g. Verification
+      - How execution was verified against each acceptance criteria in {TASK_FILE}
+      - Explicit pass/fail for each criterion
+
+   h. Open Questions
+      - Unresolved items that need clarification
+
+3. Content Guidelines:
+   - Implement all code changes specified in {IMPL_FILE}
+   - Create test files in the codebase from the IMPL test implementation section
+   - Run the test suite AFTER implementation and record ACTUAL output
+   - Verify API and SDK usage against the actual installed library version
+     by reading source code or documentation in the virtual environment
+   - Do not rely on training data for library APIs
+
+Output Instructions
+
+- Write the execution document to {EXEC_FILE} path.
+- Use plain text section headings.
+- Keep terminology consistent with Layer 1 and Layer 2 governance docs.
+- Do not create validation artifacts or review documents.
+
+Forbidden Content
+
+- Layer 1 governance redefinition or contradiction
+- Layer 2 platform contract redefinition
+- Scope not covered by the approved implementation plan
+- Fabricated test results -- record only what actually happened

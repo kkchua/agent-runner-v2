@@ -1,6 +1,6 @@
 Objective
 
-Critically evaluate the initiative document for scope, feasibility, and technical soundness.
+Evaluate the initiative document for strategic value, problem validity, and high-level feasibility. This is an initiative-level review, NOT an implementation review.
 
 Layer Boundary
 
@@ -12,7 +12,6 @@ Reference Inputs
 
 - Read `INIT_FILE` (the initiative document to critique).
 - Read `DRAFT_INIT_FILE` (original draft for comparison).
-- Read codebase context from `docs/repo/codebase/` to validate feasibility.
 - Read Layer 1 governance at `GOVERNANCE_RUNTIME_ROOT` for metadata requirements.
 - Read Layer 2 platform constitution at `PLATFORM_RUNTIME_ROOT` for platform contract.
 
@@ -20,23 +19,34 @@ Critique Criteria
 
 Evaluate the initiative against these criteria:
 
-1. **Scope Validity**:
-   - Is the problem statement clear and well-motivated?
+1. **Strategic Value**:
+   - Is the objective clear and valuable?
+   - Does the problem statement describe a real pain point?
+   - Is this initiative worth pursuing now?
+
+2. **Scope Definition**:
+   - Is the scope well-defined with clear in-scope and out-of-scope boundaries?
+   - Are the expected outcomes specific and measurable?
    - Are assumptions explicit and reasonable?
-   - Is the scope achievable with available resources and constraints?
 
-2. **Technical Feasibility**:
-   - Are there early technical risks or blockers not addressed?
-   - Does the initiative overlap or conflict with existing system capabilities?
-   - Verify any referenced APIs, modules, or patterns against the actual codebase.
+3. **High-Level Feasibility**:
+   - Are there any fundamental technical blockers that make this impossible?
+   - Does the initiative conflict with existing system capabilities at a conceptual level?
+   - Are there any obvious dependencies that are missing?
 
-3. **Design Quality**:
-   - Is this the right approach? Are there better alternatives?
-   - Is the initiative implementable as described?
+4. **Design Direction**:
+   - Is the proposed approach reasonable at a high level?
+   - Are there obviously better alternatives that should be considered?
 
-4. **API and Library Verification**:
-   - Verify API and SDK usage against the actual installed library version.
-   - Do not rely on training data for library APIs -- they may have changed.
+What NOT to Critique
+
+Do NOT check implementation details at this stage. The following are NOT valid reasons to reject an initiative:
+- Exact workflow names, CLI flag names, or API paths (these are resolved during planning)
+- Specific file paths or directory structures (these are resolved during planning)
+- Backend registration details or deployment prerequisites (these are resolved during planning)
+- Code-level verification of referenced modules or functions (this is done during implementation)
+
+Remember: An initiative document is a high-level proposal that says WHAT needs to be done and WHY. The HOW is resolved in later phases (requirements, planning, implementation).
 
 Critique Output
 
@@ -51,9 +61,10 @@ YAML Frontmatter:
 Document Sections:
 1. **Decision**: APPROVED or REJECTED
 2. **Summary**: Brief overview of critique findings
-3. **Technical Findings**: Detailed list of issues found
-4. **Design Quality Assessment**: Is this the right approach?
-5. **Recommendations**: Specific actions to address findings
+3. **Strategic Assessment**: Is this initiative valuable and worth pursuing?
+4. **Scope Assessment**: Is the scope well-defined and achievable?
+5. **High-Level Risks**: Any fundamental blockers or concerns?
+6. **Recommendations**: Specific actions to strengthen the initiative (if APPROVED) or fix fundamental issues (if REJECTED)
 
 Output Instructions
 
@@ -62,3 +73,4 @@ Output Instructions
 - Include YAML frontmatter with the fields specified above.
 - Use plain text section headings.
 - Be specific and actionable in findings.
+- APPROVE unless there are fundamental strategic or scope issues.

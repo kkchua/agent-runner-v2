@@ -123,6 +123,50 @@ class TestResolvePromptSlot:
                 # Should fall back to standard because 'non_existent_option' is invalid
                 assert result.endswith("impls\\impl_a\\prompts\\step_1\\standard.txt") or result.endswith("impls/impl_a/prompts/step_1/standard.txt")
 
+    def test_shared_prompt_fallback(self):
+        """Should fall back to shared prompt when impl-specific prompt does not exist."""
+        step_cfg = {"prompt_file": "{{ slot.step_1_extract }}"}
+        state = {}
+        group_cfg = {"implementation_name": "impl_a"}
+
+        bundle = MagicMock()
+        bundle.bundle_root = Path(tempfile.mkdtemp())
+
+        # Create impl.yaml (so it IS found)
+        impl_dir = bundle.bundle_root / "impls" / "impl_a"
+        impl_dir.mkdir(parents=True, exist_ok=True)
+        impl_yaml = impl_dir / "impl.yaml"
+        impl_yaml.write_text("prompt_slots: {}", encoding="utf-8")
+
+        # Do NOT create the impl-specific prompt file
+        # (impls/impl_a/prompts/step_1/standard.txt does not exist)
+        # The shared prompt file also does not exist on disk, but the
+        # fallback should still resolve to bundle_root/prompts/... path.
+
+        mock_impl_data = {
+            "prompt_slots": {
+                "step_1_extract": {
+                    "label": "Step 1",
+                    "default": "standard",
+                    "options": [
+                        {"name": "standard", "file": "prompts/step_1/standard.txt"},
+                    ]
+                }
+            }
+        }
+
+        with patch("agent_runner_v2.step_execution_runtime.yaml") as mock_yaml, \
+             patch("builtins.open", mock_open(read_data="dummy")):
+            mock_yaml.safe_load.return_value = mock_impl_data
+
+            result = resolve_prompt_slot(step_cfg, state, group_cfg, bundle)
+
+            # Should resolve to shared path (bundle_root/prompts/...),
+            # NOT impl-specific path (bundle_root/impls/impl_a/prompts/...)
+            assert result is not None
+            assert "impls" not in str(result)
+            assert result.endswith("prompts\\step_1\\standard.txt") or result.endswith("prompts/step_1/standard.txt")
+
     def test_missing_impl_yaml(self):
         """Should return None if impl.yaml is not found."""
         step_cfg = {"prompt_file": "{{ slot.step_1_extract }}"}

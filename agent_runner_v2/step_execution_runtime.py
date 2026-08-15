@@ -84,10 +84,14 @@ def resolve_prompt_slot(
                             if opt.get("name") == selected_name:
                                 file_path = opt.get("file")
                                 if file_path:
-                                    # Resolve relative to impl dir
-                                    file_path = file_path.replace("/", "\\")
-                                    res = bundle.bundle_root / "impls" / impl_name / file_path
-                                    print(f"[BCS] RESOLVED: {res}", flush=True)
+                                    # Two-tier resolution: impl-specific first, then shared
+                                    impl_specific = bundle.bundle_root / "impls" / impl_name / file_path
+                                    if impl_specific.exists():
+                                        res = impl_specific
+                                        print(f"[BCS] RESOLVED (impl-specific): {res}", flush=True)
+                                    else:
+                                        res = bundle.bundle_root / file_path
+                                        print(f"[BCS] RESOLVED (shared fallback): {res}", flush=True)
                                     return str(res)
                 except Exception as e:
                     print(f"[BCS] Error: {e}", flush=True)

@@ -3,7 +3,7 @@ name = "agnes_media_gen_v1"
 version = "1.0.0"
 label = "Agnes Media Generation v1"
 job_prefix = "AMGEN"
-description = "End-to-end media generation pipeline: extract image descriptions via LLM vision, generate prompt variants, call Agnes Image 2.1 Flash API for images, call Agnes Video V2.0 API for image-to-video animations."
+description = "End-to-end media generation pipeline: extract image descriptions via LLM vision, generate prompt variants, call image/video APIs for generation."
 visibility = "canonical"
 default_max_rejects = 3
 init_step = "extract_descriptions"
@@ -11,6 +11,14 @@ init_step = "extract_descriptions"
 # Layer 2 platform contract references
 layer = "layer3"
 platform = "agent-runner-v2"
+
+# ============================================================================
+# Implementations
+# ============================================================================
+[[workflow.implementation]]
+name = "agnes_media_v1"
+description = "Generates images and videos using Agnes Media APIs"
+label = "Agnes Media v1"
 
 [workflow.governance]
 include_in_prompts = true
@@ -21,7 +29,7 @@ prompt_targets = ["all"]
 # ============================================================================
 [[step]]
 name = "extract_descriptions"
-prompt = "prompts/01_extract_descriptions.txt"
+prompt = "{{ slot.step_1_extract }}"
 enable_notifications = true
 requires_human_approval_after = false
 onsuccess = "archive_step_00"
@@ -61,7 +69,7 @@ result_meta_key = "ARCHIVE_STEP_00"
 # ============================================================================
 [[step]]
 name = "generate_prompts"
-prompt = "prompts/02_generate_prompts_v9.txt"
+prompt = "{{ slot.step_2_generate }}"
 enable_notifications = true
 requires_human_approval_after = false
 onsuccess = "archive_step_01"
@@ -103,7 +111,7 @@ result_meta_key = "ARCHIVE_STEP_01"
 # ============================================================================
 [[step]]
 name = "generate_images"
-action = "generate_images"
+action = "generate_images_default"
 enable_notifications = true
 requires_human_approval_after = true
 onsuccess = "archive_step_02"
@@ -135,7 +143,7 @@ result_meta_key = "ARCHIVE_STEP_02"
 # ============================================================================
 [[step]]
 name = "generate_videos"
-action = "generate_videos"
+action = "generate_videos_default"
 enable_notifications = true
 requires_human_approval_after = false
 onsuccess = "archive_step_03"

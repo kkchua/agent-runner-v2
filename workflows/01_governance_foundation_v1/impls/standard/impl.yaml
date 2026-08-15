@@ -1,0 +1,39 @@
+name: standard
+label: "Standard"
+description: "Default Layer 1 governance generation with review, validation, and audit."
+
+# -----------------------------------------------------------------------
+# Prompt Slots Configuration
+# -----------------------------------------------------------------------
+prompt_slots:
+  generate_governance_foundation_docs:
+    label: "Generate Governance Foundation"
+    default: "standard"
+    options:
+      - name: "standard"
+        file: "prompts/generate_governance_foundation_docs/standard.txt"
+        description: "Generate 6 Layer 1 governance documents from context inventory."
+
+  review_governance_foundation_docs:
+    label: "Review Governance Foundation"
+    default: "standard"
+    options:
+      - name: "standard"
+        file: "prompts/review_governance_foundation_docs/standard.txt"
+        description: "Internal quality review of all 6 governance documents."
+
+  refine_governance_foundation_docs:
+    label: "Refine Governance Foundation"
+    default: "standard"
+    options:
+      - name: "standard"
+        file: "prompts/refine_governance_foundation_docs/standard.txt"
+        description: "Address review/validation/audit findings by updating all 6 documents."
+
+  audit_governance_foundation_docs:
+    label: "Audit Governance Foundation"
+    default: "standard"
+    options:
+      - name: "standard"
+        file: "prompts/audit_governance_foundation_docs/standard.txt"
+        description: "Semantic audit with human approval gate before publish."

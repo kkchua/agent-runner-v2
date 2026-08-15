@@ -1,0 +1,94 @@
+# Objective
+
+Address the gatekeep findings by updating the implementation plan document.
+Read the gatekeep verdict, analyze each finding, and revise the implementation
+plan to resolve the issues raised.
+
+The gatekeep step rejected the implementation plan. Your job is to fix the
+specific issues identified so the plan can pass the gate on the next iteration.
+
+# Layer Boundary
+
+- This workflow belongs to Layer 3 and operates on top of the Layer 2 platform contract.
+- Treat Layer 1 governance and Layer 2 platform constitution as read-only reference inputs.
+
+# Reference Inputs
+
+- Read {IMPL_FILE} (the implementation plan document to update).
+- Read {GATEKEEP_FILE_SUGGESTED} (the gatekeep findings to address).
+- Read {TASK_FILE} (the upstream task document for traceability reference).
+- Read codebase context from `docs/repo/codebase/current/` to validate proposed changes.
+- Read Layer 1 governance at {GOVERNANCE_RUNTIME_ROOT} for metadata requirements.
+- Read Layer 2 platform constitution at {PLATFORM_RUNTIME_ROOT} for platform contract.
+
+# Refinement Protocol
+
+## Priority Order
+
+Address findings in this order:
+
+1. **All BLOCKING findings** -- These caused the rejection. Must be fixed.
+2. **All MAJOR findings** -- Should be fixed for plan quality.
+3. **MINOR findings** -- Address if time permits.
+
+## For Each Finding
+
+1. **Read the finding** -- understand the specific issue and evidence provided.
+2. **Verify against codebase** -- use read_file/grep to confirm the issue exists.
+3. **Fix the issue** -- update the relevant section of {IMPL_FILE}.
+4. **Document the fix** -- add to the Refinement Resolution section.
+
+## Key Areas to Check
+
+Based on the gatekeep protocol, pay special attention to:
+
+- **Necessity**: If the gatekeep found work is already done, update the State
+  Verification section and adjust scope.
+- **Test-Task Alignment**: If tests are missing or trivial, add meaningful
+  Acceptance Criteria Tests with concrete verification methods.
+- **Implementation Correctness**: If code references are wrong, fix them by
+  reading the actual source files.
+- **Challenge Resolution**: If BLOCKING challenges were unresolved, provide
+  substantive resolutions with evidence.
+- **Completeness**: If sections are missing, add them.
+
+# Output Instructions
+
+- Update {IMPL_FILE} in place with the revised content.
+- Preserve the YAML frontmatter (do not change template_id, authority, etc.).
+- Preserve all sections that do not need changes.
+- Add or update a "Refinement Resolution" section documenting how each gatekeep
+  finding was addressed.
+- Use ASCII-only characters.
+- Use plain text section headings.
+
+# Refinement Resolution Section Format
+
+```
+## Refinement Resolution (Iteration N)
+
+### Finding 1: [Brief description]
+**Severity:** BLOCKING / MAJOR / MINOR
+**Resolution:** [What was changed]
+**Evidence:** [Verification against codebase]
+**Affected section:** [Which section was updated]
+```
+
+# Self-Validation
+
+Before writing the output, verify:
+
+- [ ] All BLOCKING findings have been addressed with concrete changes
+- [ ] All MAJOR findings have been addressed or have valid justification
+- [ ] Code-related fixes were verified against actual source files
+- [ ] Acceptance Criteria Tests are updated if affected
+- [ ] The document still flows logically after changes
+- [ ] No contradictions were introduced
+
+# Forbidden Content
+
+- Removing the Refinement Resolution section
+- Non-ASCII characters
+- Layer 1 governance redefinition
+- Layer 2 platform contract redefinition
+- Ignoring BLOCKING findings

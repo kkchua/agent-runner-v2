@@ -1,4 +1,4 @@
-# sdlc_80_review_v1 — Final Review & Closure
+# sdlc_80_review_v1 — Final Review & Closure (BCS-compliant)
 
 ## Purpose
 
@@ -23,7 +23,7 @@ Generates review, memory, and closure documents from approved validation, produc
 | `MEM_FILE` | `80_reviews/MEM-{date}-{seq}_{slug}.md` |
 | `CLOSE_FILE` | `80_reviews/CLOSE-{date}-{seq}_{slug}.md` |
 | `CRITIQUE_FILE_SUGGESTED` | `80_reviews/{slug}-CRITIQUE-80-rev.md` |
-| `REVIEW_FILE_SUGGESTED` | `80_reviews/{job_id}-REV-80-all.md` |
+| `REVIEW_FILE_SUGGESTED` | `80_reviews/{slug}-REVIEW-80-all.md` |
 
 **Unique:** This workflow produces **3 artifacts** (REV + MEM + CLOSE) in a single run.
 
@@ -32,11 +32,18 @@ Generates review, memory, and closure documents from approved validation, produc
 | # | Step | Type | Coder | Description |
 |---|------|------|-------|-------------|
 | 1 | `generate_review` | Prompt | architect | Generate REV, MEM, and CLOSE documents |
-| 2 | `technical_critique` | Prompt | reviewer | Review all 3 documents (loop → step 4, max 2) |
+| 2 | `technical_critique` | Prompt | reviewer | Internal quality critique (loop → step 4, max 2) |
+| 2b | `address_critique` | Prompt | architect | Address critique findings in all 3 docs |
 | 3 | `review_all` | Prompt | reviewer | Human approval gate **[HUMAN GATE]** |
 | 4 | `refine_documents` | Prompt | architect | Fix all 3 docs per review (loop → step 3, max 2) |
 | 5 | `promote_all` | Action | — | Copy all 3 to `80_reviews/` |
 | 6 | `stepCompletion` | Action | — | Terminal |
+
+## Implementations
+
+| Name | Label | Description |
+|------|-------|-------------|
+| `standard` | Standard Review | Default SDLC review with technical critique and human approval gate |
 
 ## How to Run
 

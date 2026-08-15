@@ -1,0 +1,38 @@
+{
+  "prompts": {
+    "extract_desc": "standard",
+    "generate_prompts": "standard"
+  },
+  "actions": {
+    "render_image": "agnes_v1",
+    "render_video": "happyhorse_v1_1"
+  },
+  "review_images_before_video": true,
+  "api": {
+    "agnes_v1": {
+      "model": "agnes-image-2.1-flash",
+      "size": "1024x1024",
+      "ratio": "1:1"
+    },
+    "agnes_v2": {
+      "model": "agnes-video-v2.0",
+      "width": 1024,
+      "height": 576,
+      "num_frames": 72,
+      "frame_rate": 24
+    },
+    "happyhorse_v1_1": {
+      "model": "happyhorse-1.1-i2v",
+      "resolution": "480P",
+      "ratio": "9:16",
+      "duration": 15
+    }
+  },
+  "num_variants": 4,
+  "max_concurrent": 2,
+  "process_delay": 15,
+  "coder_timeout": 900,
+  "api_timeout": 500,
+  "api_max_retries": 5,
+  "retry_base_wait": 5
+}

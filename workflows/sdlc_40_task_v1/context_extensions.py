@@ -35,7 +35,20 @@ class Sdlc40TaskExtensions(WorkflowExtensions):
         work_item = str(artifacts.get("WORK_ITEM", "")).strip()
         if work_item:
             result["WORK_ITEM"] = work_item
+        # Map input artifact keys to their expected subdirectories for bare filename resolution
+        _INPUT_DIRS = {
+            "BACKLOG_FILE": "30_backlogs",
+        }
+
         for key, rel_path in self.register_artifact_keys(job_id=job_id).items():
+            existing = artifacts.get(key)
+            if existing:
+                if key in _INPUT_DIRS and not Path(existing).is_absolute():
+                    result[key] = str(effective_root / SDLC_DELIVERY_BASE / _INPUT_DIRS[key] / Path(existing).name)
+                else:
+                    result[key] = str(existing)
+                continue
+
             resolved = rel_path.replace("{work_item}", work_item)
             result[key] = str(effective_root / resolved)
         return result

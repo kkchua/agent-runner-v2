@@ -23,7 +23,7 @@ class Sdlc80ReviewExtensions(WorkflowExtensions):
             "MEM_FILE": f"{SDLC_DELIVERY_BASE}/80_reviews/MEM-{date_str}-{{seq}}_{{slug}}.md",
             "CLOSE_FILE": f"{SDLC_DELIVERY_BASE}/80_reviews/CLOSE-{date_str}-{{seq}}_{{slug}}.md",
             "CRITIQUE_FILE_SUGGESTED": f"{SDLC_DELIVERY_BASE}/80_reviews/{{slug}}-CRITIQUE-80-rev.md",
-            "REVIEW_FILE_SUGGESTED": f"{SDLC_DELIVERY_BASE}/80_reviews/{job_id}-REV-80-all.md",
+            "REVIEW_FILE_SUGGESTED": f"{SDLC_DELIVERY_BASE}/80_reviews/{{slug}}-REVIEW-80-all.md",
         }
 
     def build_context_extensions(self, *, state: dict[str, Any], step: str, step_cfg: dict[str, Any], ctx: dict[str, str], project_root: Path | None = None) -> dict[str, str]:
@@ -35,7 +35,20 @@ class Sdlc80ReviewExtensions(WorkflowExtensions):
         job_id = str(state.get("job_id", "unknown"))
         artifacts = state.get("artifacts") or {}
         slug = extract_slug_from_path(artifacts.get("VAL_FILE", ""))
+        # Map input artifact keys to their expected subdirectories for bare filename resolution
+        _INPUT_DIRS = {
+            "VAL_FILE": "70_validations",
+        }
+
         for key, rel_path in self.register_artifact_keys(job_id=job_id).items():
+            existing = artifacts.get(key)
+            if existing:
+                if key in _INPUT_DIRS and not Path(existing).is_absolute():
+                    result[key] = str(effective_root / SDLC_DELIVERY_BASE / _INPUT_DIRS[key] / Path(existing).name)
+                else:
+                    result[key] = str(existing)
+                continue
+
             resolved = rel_path.replace("{slug}", slug)
             if "{seq}" in resolved:
                 path_dir, path_file = resolved.rsplit("/", 1)
