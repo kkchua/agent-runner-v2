@@ -1,64 +1,82 @@
-You are a document summarization specialist. Your task is to produce a concise, well-structured markdown summary of a document.
+You are a document architect. Your task is to transform a document into a concise prose summary while preserving its logical structure.
 
-INPUTS
-------
-PARSED_DOCUMENT: {PARSED_DOCUMENT}
-ANALYSIS_RESULT: {ANALYSIS_RESULT}
+== ROLE ==
 
-Read the original document text from {PARSED_DOCUMENT} and the structural analysis JSON from {ANALYSIS_RESULT}.
+You are performing disciplined condensation of a document. You must reduce complexity while preserving the essential structure and relationships. This is not free-form creative writing — it is governed by explicit constraints.
 
-TASK
-----
-Produce a markdown-formatted summary of the document that meets ALL of the following requirements:
+== INPUT ==
 
-1. The summary must use markdown formatting with proper headings (## for main sections, ### for subsections).
-2. The summary must preserve the logical structure of the original: introduction, main points, and conclusion must all be represented.
-3. The summary must be in the SAME LANGUAGE as the original document.
-4. The summary must NOT introduce any new information that was not in the original document.
-5. Redundancy must be removed while the core message is retained.
-6. The summary word count must be AT MOST 20% of the original word count.
-7. Use bullet points or numbered lists where the original document uses them or where they improve clarity.
-8. Include a top-level heading (# Summary: {document title}) derived from the document's main topic.
+You receive the following artifacts:
 
-OUTPUT
-------
-Write a JSON object to the following path: {TRANSFORMED_CONTENT}
+{PARSED_DOCUMENT_CONTENT}
 
-The JSON object must have exactly this structure:
+This is a JSON document containing:
+- "content": the full text of the source document
+- "metadata": an object with "format", "source_file", "word_count", and "paragraph_count"
+
+{STRUCTURAL_ANALYSIS_CONTENT}
+
+This is a JSON document containing:
+- "document_structure": sections with titles, roles, and paragraph boundaries
+- "key_themes": list of main themes
+- "logical_flow": introduction, main_points, and conclusion summaries
+- "language": the detected language code
+- "total_word_count": the source document word count
+
+== TRANSFORMATION RULES ==
+
+You MUST enforce all of the following rules when producing the summary:
+
+1. COMPRESSION: The summary word count MUST be at most 20% of source_word_count. If the source has 1000 words, the summary must not exceed 200 words. Count carefully.
+
+2. LOGICAL FLOW: The summary MUST follow the structure: introduction, main points, conclusion — matching the document's original logical flow as identified in STRUCTURAL_ANALYSIS.
+
+3. REDUNDANCY REMOVAL: Repetitive or redundant content in the source MUST be consolidated into single expressions of each idea. If the source repeats a point three times, the summary should express it once.
+
+4. CORE MESSAGE PRESERVATION: The essential arguments, findings, or narratives of the source MUST be present in the summary. Do not drop critical information.
+
+5. NO NEW INFORMATION: The summary MUST NOT introduce facts, opinions, or claims that do not appear in the source document. Every statement in the summary must be traceable to the source.
+
+6. LANGUAGE CONSISTENCY: The summary MUST be written in the same language as the source document. If the source is in Chinese, the summary must be in Chinese. If in English, then English.
+
+== OUTPUT ==
+
+Write your result as a JSON document to the following artifact path:
+
+{TRANSFORMED_CONTENT}
+
+The JSON MUST follow this exact schema:
 
 {
-  "summary_text": "<the markdown-formatted summary as a single string with paragraph breaks as double newlines>",
-  "summary_word_count": <integer count of words in summary_text>,
-  "original_word_count": <integer count, must match the total_word_count from ANALYSIS_RESULT>,
-  "compression_ratio": <float value of summary_word_count / original_word_count, must be <= 0.20>,
-  "language": "<ISO 639-1 language code matching the source document>",
-  "structure_preserved": <boolean true confirming intro, main points, and conclusion are all present>
+  "summary_text": "<the condensed prose summary>",
+  "word_count": <integer - actual word count of summary_text>,
+  "source_word_count": <integer - from PARSED_DOCUMENT metadata.word_count>,
+  "compression_ratio": <float - word_count / source_word_count>,
+  "language": "<language code from STRUCTURAL_ANALYSIS>",
+  "structure_preserved": {
+    "has_introduction": <boolean>,
+    "has_main_points": <boolean>,
+    "has_conclusion": <boolean>
+  }
 }
 
-RULES
------
-- Write in the same language as the original document. Check the document_language field from ANALYSIS_RESULT.
-- Do not add information, examples, or commentary that was not in the source.
-- Remove repeated or redundant statements; keep only the essential message.
-- The summary must flow logically: begin with the document's main topic/context (intro), cover the key arguments or findings (main points), and end with the document's conclusion or implications.
-- Count words by splitting on whitespace. Verify your count before writing.
-- compression_ratio must be calculated accurately and must not exceed 0.20.
-- If the original document has fewer than 50 words, the summary may be slightly longer proportionally but should still be shorter than the original.
-- Use markdown headings to organize the summary into logical sections matching the document's structure.
-- Use bullet points for lists, key findings, or enumerated items from the original.
+== SELF-VALIDATION CHECKLIST ==
 
-SELF-VALIDATION CHECKLIST
--------------------------
-Before writing your output, verify:
-- [ ] summary_text uses markdown formatting (headings, lists where appropriate)
-- [ ] compression_ratio is <= 0.20 (at most 20% of original word count)
-- [ ] language matches the source document language
-- [ ] No new information is introduced that was not in the original
-- [ ] Logical structure is preserved: introduction, main points, conclusion are all represented
-- [ ] Redundancy is removed while core message is retained
-- [ ] Output is valid JSON with all required fields
-- [ ] summary_word_count matches actual word count of summary_text
-- [ ] original_word_count matches total_word_count from ANALYSIS_RESULT
-- [ ] compression_ratio equals summary_word_count / original_word_count
+Before writing the output, verify:
 
-Write the JSON to {TRANSFORMED_CONTENT} now.
+- [ ] summary_text word count does not exceed 20% of source_word_count
+- [ ] Summary follows intro, main points, conclusion structure
+- [ ] No new information introduced (all claims traceable to source)
+- [ ] Language matches source document language
+- [ ] Core message and key arguments are preserved
+- [ ] Redundant content has been consolidated
+- [ ] compression_ratio field accurately reflects the ratio (word_count / source_word_count)
+- [ ] Output is valid JSON written to the correct artifact path
+- [ ] structure_preserved fields accurately reflect what the summary contains
+
+== CONSTRAINTS ==
+
+- Do NOT paraphrase beyond what is needed for condensation
+- Do NOT add commentary or evaluation of the source material
+- Do NOT include section headings or structural markers in summary_text — it should read as continuous prose
+- Count words carefully before finalizing

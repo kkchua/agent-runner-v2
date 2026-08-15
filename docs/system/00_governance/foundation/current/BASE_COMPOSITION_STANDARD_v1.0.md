@@ -306,6 +306,18 @@ def resolve_step(step_name, workflow_toml, selected_impl):
     return config
 ```
 
+#### 4.4.1 Prompt File Resolution (Two-Tier)
+
+When a prompt slot option specifies a `file` path (e.g., `prompts/step_1/standard.txt`),
+the runtime resolves the absolute path using a two-tier fallback:
+
+1. **Impl-specific:** `workflow_root/impls/{active_impl}/{file}` — if this file exists, use it.
+2. **Shared fallback:** `workflow_root/{file}` — used when the impl-specific file does not exist.
+
+This allows implementations to share a common prompt pool at `prompts/` while
+optionally overriding individual prompts by placing a file at
+`impls/{name}/prompts/...`.
+
 ### 4.5 Design Constraints
 
 1. `workflow.toml` is always complete — every step has `prompt =` or `action =`

@@ -52,6 +52,45 @@ steps, and what validations each action performs.
   5. Go directly to Step 4 (Plan Implementation Overrides) and focus ONLY on
      the new implementation.
 
+# Implementation-Aware Planning (CRITICAL)
+
+**Check the identity.implementation field in Analysis JSON. This determines the ENTIRE output structure.**
+
+## If implementation="builder" — MANDATORY OUTPUT STRUCTURE:
+
+This workflow MUST produce **workflow package files** as its final output. The domain steps MUST be designed to generate these files:
+
+### Required Final Output Artifacts:
+- `WORKFLOW_TOML_FILE` → workflow.toml
+- `WORKFLOW_ACTIONS_FILE` → actions.py (with @action functions)
+- `WORKFLOW_EXTENSIONS_FILE` → context_extensions.py
+- `WORKFLOW_PROMPTS_DIR` → prompts/*.txt (LLM prompt templates)
+- `IMPL_OVERRIDE_FILES` → impls/*/ (alternative implementations)
+- `WORKFLOW_README_FILE` → README.md
+- `WORKFLOW_REQUIREMENTS_FILE` → requirements.txt
+
+### Required Domain Steps for Builder Type:
+The domain steps MUST include steps that produce the above files. Typical builder step sequence:
+
+1. **Parse input** → Extract structure from input requirement/spec
+2. **Analyze structure** → Analyze the input and determine target workflow design
+3. **Design target workflow** → Plan the target workflow's steps, artifacts, implementations
+4. **Generate workflow.toml** → Produce the workflow manifest file
+5. **Generate actions.py** → Produce Python action functions
+6. **Generate context_extensions.py** → Produce artifact key registration
+7. **Generate prompts** → Produce LLM prompt template files
+8. **Generate implementations** → Produce impls/ directory with overrides
+9. **Generate README** → Produce documentation
+10. **Assemble package** → Validate and package all files
+
+**DO NOT** produce analysis-only artifacts like PARSED_STRUCTURE, DOMAIN_ANALYSIS, TARGET_DESIGN as final outputs. These may be intermediate steps, but the FINAL output MUST be the workflow package files listed above.
+
+**Reference**: Read `impls/builder/SPECIALIZED_STEPS.md` for detailed guidance on each builder step.
+
+## If implementation="generator" (or not specified):
+
+This workflow produces **variable artifacts** (reports, media, documents, etc.). Plan domain steps based on the requirement doc's output specifications. Output artifacts are defined by the requirement doc.
+
 # Planning Protocol (NEW WORKFLOW MODE)
 
 ## Step 1: Validate Analysis JSON Against Requirement
@@ -183,12 +222,14 @@ Before writing the output, verify:
 - [ ] Data flow is complete — no step consumes an artifact that no prior step produces
 - [ ] Implementation overrides are specific — each lists exactly which steps differ and how
 - [ ] All artifact key references match the Analysis JSON's artifact_keys definitions
-- [ ] No infrastructure planning (workflow.toml, context_extensions.py) is included
 - [ ] No format is silently dropped — all required input types have a plan
+- [ ] **IMPLEMENTATION CHECK**: If implementation="builder", verify domain steps produce workflow package files (WORKFLOW_TOML_FILE, WORKFLOW_ACTIONS_FILE, WORKFLOW_EXTENSIONS_FILE, WORKFLOW_PROMPTS_DIR, IMPL_OVERRIDE_FILES, WORKFLOW_README_FILE, WORKFLOW_REQUIREMENTS_FILE)
+- [ ] **IMPLEMENTATION CHECK**: If implementation="generator", verify no infrastructure planning is included (workflow.toml, context_extensions.py are assembled mechanically)
 
 # Forbidden Content
 
-- Do NOT write workflow.toml, context_extensions.py, or impl.yaml — the assembler handles those.
+- For implementation="generator": Do NOT write workflow.toml, context_extensions.py, or impl.yaml — the assembler handles those.
+- For implementation="builder": These files ARE the output — plan steps to generate them.
 - Do NOT include non-ASCII characters.
 - Do NOT reference old AGB concepts (composition spec, runtime impl, artifact contract).
-- Do NOT plan infrastructure concerns (routing, step_completion, terminal steps).
+- Do NOT plan infrastructure concerns (routing, step_completion, terminal steps) — except for builder implementation where these are the output.

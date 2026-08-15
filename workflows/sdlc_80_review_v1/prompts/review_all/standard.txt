@@ -1,0 +1,106 @@
+Objective
+
+Review all review, memory, and closure documents for completeness, accuracy, and compliance with governance standards.
+
+Layer Boundary
+
+- This workflow belongs to Layer 3 and operates on top of the Layer 2 platform contract.
+- Review all three documents: REV, MEM, and CLOSE.
+- Treat Layer 1 governance and Layer 2 platform constitution as read-only authority.
+
+Reference Inputs
+
+- Read {REV_FILE} (the review document to review).
+- Read {MEM_FILE} (the memory document to review).
+- Read {CLOSE_FILE} (the closure document to review).
+- Read {CRITIQUE_FILE_SUGGESTED} (the technical critique findings).
+- Read {VAL_FILE} (approved validation report for traceability verification).
+- Read codebase context from docs/repo/codebase/current/ to validate results.
+- Read Layer 1 governance at {GOVERNANCE_RUNTIME_ROOT} for metadata compliance.
+- Read Layer 2 platform constitution at {PLATFORM_RUNTIME_ROOT} for platform contract compliance.
+
+Review Criteria
+
+Evaluate all three documents against these criteria:
+
+1. Completeness:
+   - All required sections are present and substantive in each document
+   - REV: Review Overview, Validation Traceability, Initiative Summary, Deliverables Review, Quality Assessment, Stakeholder Feedback, Lessons Learned Summary, Recommendations, Open Questions
+   - MEM: Memory Overview, Validation Traceability, What Went Well, What Could Improve, Technical Insights, Process Insights, Actionable Recommendations, Knowledge Artifacts
+   - CLOSE: Closure Overview, Validation Traceability, Initiative Completion Status, Deliverables Accepted, Outstanding Items, Resource Release, Archive References, Sign-Off
+
+2. Accuracy:
+   - All documents match the approved validation report
+   - Results are correctly documented
+   - No undocumented deviations
+
+3. Traceability:
+   - All documents link back to {VAL_FILE}
+   - Assumptions are explicitly recorded
+   - Source validation is referenced
+
+4. Metadata Compliance:
+   - YAML frontmatter includes all required fields in each document
+   - For each field, quote the ACTUAL value found in the document before judging compliance
+   - REV template_id is "SYS-03-RV"
+   - MEM template_id is "SYS-03-MM"
+   - CLOSE template_id is "SYS-03-CL"
+   - lifecycle_status is "draft" in all
+   - layer is "layer3" in all
+   - platform is "agent-runner-v2" in all
+
+5. Technical Accuracy:
+   - Code snippets, API references, and file paths are verified against the actual codebase
+   - Library/SDK usage matches the installed version (check source or docs, not training data)
+   - Variable names, function signatures, and control patterns are consistent with existing code
+
+6. Critique Resolution:
+   - All documents contain a "Critique Resolution" section
+   - Each finding from {CRITIQUE_FILE_SUGGESTED} has a corresponding resolution
+   - Resolutions are substantive (not just "acknowledged" without action)
+   - The resolutions actually address the technical concerns raised in the critique
+   - If a finding was not addressed, there is a valid justification for why
+
+7. Governance Compliance:
+   - No Layer 1 governance redefinition
+   - No Layer 2 platform contract redefinition
+   - No implementation details or code changes
+
+Review Output
+
+Generate a review document with:
+
+1. Decision: APPROVED or REJECTED
+2. Summary: Brief overview of review findings for all three documents
+3. Findings: Detailed list of issues (if any), categorized as:
+   - Critical: Must fix before approval (missing required sections, metadata errors)
+   - Major: Should fix (inaccurate content, missing traceability)
+   - Minor: Nice to fix (style issues, minor clarifications)
+4. Recommendations: Specific actions to address findings
+
+If APPROVED:
+- All required sections are present and substantive in all documents
+- Metadata is compliant in all documents
+- No governance violations
+- Critique Resolution section is present in all documents and addresses all findings from the critique
+
+If REJECTED:
+- Provide specific, actionable feedback
+- Cite exact sections or text that need changes
+- Explain what must be fixed for approval
+- Specify which document(s) need changes
+- Reject if Critique Resolution section is missing or does not address the critique findings
+
+Output Instructions
+
+- Write the review document to {REVIEW_FILE_SUGGESTED} path.
+- Use plain text section headings.
+- Provide direct citations to offending text when rejecting.
+- Be specific and actionable in feedback.
+- Clearly indicate which document each finding applies to.
+
+Forbidden Content
+
+- Metadata-only complaints (these are not gate criteria)
+- Soft suggestions without pass/fail verdict
+- Approving with caveats -- the verdict must be binary

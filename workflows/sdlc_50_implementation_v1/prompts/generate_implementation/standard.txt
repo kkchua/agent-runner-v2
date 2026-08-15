@@ -1,0 +1,140 @@
+# Objective
+
+Generate a structured implementation plan from the approved task specification.
+This plan is TDD-driven: you define testable acceptance criteria FIRST, then
+design the implementation to satisfy those criteria.
+
+# Layer Boundary
+
+- This workflow belongs to Layer 3 and operates on top of the Layer 2 platform contract.
+- Generate only implementation planning documentation, not execution artifacts.
+- Treat Layer 1 governance and Layer 2 platform constitution as read-only reference inputs.
+
+# Reference Inputs
+
+- Read {TASK_FILE} (approved task specification).
+- Read codebase context from `docs/repo/codebase/current/` to understand repository structure.
+- Read Layer 1 governance at {GOVERNANCE_RUNTIME_ROOT} for metadata requirements.
+- Read Layer 2 platform constitution at {PLATFORM_RUNTIME_ROOT} for platform contract.
+
+# Pre-Implementation State Check (MANDATORY)
+
+Before writing ANY plan content, verify the current state of the target files:
+
+1. Use glob/grep/read_file tools to check whether the files described in
+   TASK_FILE already exist on disk.
+2. For each acceptance criterion in the TASK, check if the corresponding
+   deliverable already exists and is complete.
+3. If ALL or MOST of the work is already done, state this clearly in the
+   State Verification section and adjust the plan scope to cover only what
+   remains.
+4. A plan that describes already-completed work as if it were new is NOT useful.
+   Be honest about what exists vs what needs to be created.
+
+# Implementation Document Requirements
+
+The IMPL document must include:
+
+## YAML Frontmatter (REQUIRED)
+
+- `template_id: "SYS-03-IM"`
+- `version: "1.0.0"`
+- `doc_type: "workflow_output"`
+- `authority: "workflow-generated"`
+- `scan_policy: "include"`
+- `scan_reason: "implementation plan for task execution"`
+- `layer: "layer3"`
+- `platform: "agent-runner-v2"`
+- `lifecycle_status: "draft"`
+- `effective_version: "{job_id}"`
+- `managed_by: "workflow-generated"`
+
+## Required Sections (in this exact order)
+
+### 1. Acceptance Criteria Tests (TDD -- write this FIRST)
+
+Define testable acceptance criteria derived from TASK_FILE. Each criterion must have:
+
+- **Test ID**: Unique identifier (e.g., ACT-01, ACT-02)
+- **Test Description**: What is being tested (derived from TASK acceptance criteria)
+- **Verification Method**: How to verify (specific command, file check, parse test, etc.)
+- **Expected Result**: What success looks like
+- **Current State**: EXISTS / PARTIAL / MISSING (from your Pre-Implementation State Check)
+
+This section defines what "done" means BEFORE you design how to get there.
+
+### 2. State Verification
+
+Document what currently exists on disk vs what needs to be created:
+
+- Files that already exist and are complete
+- Files that exist but need modification
+- Files that need to be created from scratch
+- Evidence of verification (file paths checked, content summaries)
+
+### 3. Implementation Overview
+
+High-level summary of the implementation approach. If work is already done,
+state this here and explain what remains.
+
+### 4. Task Traceability
+
+Link back to approved TASK and acceptance criteria. Map each TASK acceptance
+criterion to an Acceptance Criteria Test from Section 1.
+
+### 5. Step-by-Step Plan
+
+Ordered steps to implement the task. Each step must reference which Acceptance
+Criteria Tests it satisfies. Steps should be ordered to satisfy dependencies.
+
+### 6. Code Changes
+
+Specific files and changes required. Separate into:
+- Files to Create (new files)
+- Files to Modify (existing files with specific changes)
+- Files to Delete (if applicable)
+- Codebase Files Referenced (read-only)
+
+### 7. Test Implementation
+
+Actual test code implementing the test scope from TASK. This validates the
+Acceptance Criteria Tests from Section 1.
+
+### 8. Rollback Plan
+
+How to revert if implementation fails.
+
+### 9. Dependencies
+
+External dependencies and prerequisites.
+
+### 10. Open Questions
+
+Unresolved items that need clarification.
+
+## Content Guidelines
+
+- Base all planning on the approved task specification
+- Normalize into canonical structure without inventing scope
+- Record explicit assumptions where information is missing
+- Identify specific codebase files and components affected
+- Note any audit/compliance sensitivity
+- Verify API and SDK usage against the actual installed library version
+  by reading the source code or documentation in the virtual environment.
+  Do not rely on training data for library APIs -- they may have changed.
+
+# Output Instructions
+
+- Write the implementation document to {IMPL_FILE} path.
+- Use ASCII-only characters (no em-dashes, curly quotes, or Unicode).
+- Use plain text section headings (no backticks or formatting in headings).
+- Keep terminology consistent with Layer 1 and Layer 2 governance docs.
+- Do not create execution logs or validation artifacts.
+
+# Forbidden Content
+
+- Layer 1 governance redefinition or contradiction
+- Layer 2 platform contract redefinition
+- Actual feature implementation code or execution results (test code is permitted and required)
+- Execution logs or validation results
+- Content not supported by the approved task

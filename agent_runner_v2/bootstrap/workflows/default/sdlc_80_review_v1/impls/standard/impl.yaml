@@ -1,0 +1,47 @@
+name: standard
+label: "Standard Review"
+description: "Default SDLC review with technical critique and human approval gate."
+
+# -----------------------------------------------------------------------
+# Prompt Slots Configuration
+# -----------------------------------------------------------------------
+prompt_slots:
+  generate_review:
+    label: "Review Generation"
+    default: "standard"
+    options:
+      - name: "standard"
+        file: "prompts/generate_review/standard.txt"
+        description: "Generate REV, MEM, and CLOSE documents from approved VAL."
+
+  technical_critique:
+    label: "Technical Critique"
+    default: "standard"
+    options:
+      - name: "standard"
+        file: "prompts/technical_critique/standard.txt"
+        description: "Internal quality critique of all three documents."
+
+  address_critique:
+    label: "Address Critique"
+    default: "standard"
+    options:
+      - name: "standard"
+        file: "prompts/address_critique/standard.txt"
+        description: "Address critique findings by updating all three documents."
+
+  review_all:
+    label: "Review All Documents"
+    default: "standard"
+    options:
+      - name: "standard"
+        file: "prompts/review_all/standard.txt"
+        description: "Human approval gate — completeness, accuracy, and compliance review."
+
+  refine_documents:
+    label: "Document Refinement"
+    default: "standard"
+    options:
+      - name: "standard"
+        file: "prompts/refine_documents/standard.txt"
+        description: "Address review findings by refining all three documents."

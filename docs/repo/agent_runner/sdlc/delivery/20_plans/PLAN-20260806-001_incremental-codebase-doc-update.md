@@ -8,473 +8,525 @@ scan_reason: "solution architecture plan for initiative"
 layer: "layer3"
 platform: "agent-runner-v2"
 lifecycle_status: "Approved"
-effective_version: "SDLC20PLN-1qaeewl8"
+effective_version: "SDLC0RP-48s8745y"
 managed_by: "workflow-generated"
+source_document: "REQ-20260806-001_incremental-codebase-doc-update.md"
 ---
 
-# Plan: Incremental Codebase Documentation Updates with Git Hook Automation
-
-## Document Metadata
-
-- Document ID: PLAN-20260806-001
-- Source requirement: REQ-20260806-001_incremental-codebase-doc-update.md
-- Date of generation: 2026-08-06
-- Producing workflow: sdlc_20_planning_v1
-- Producing agent: Workflow Architect
+# Solution Architecture Plan: Incremental Codebase Documentation Updates with Git Hook Automation
 
 ## Plan Overview
 
-This plan defines the solution architecture for implementing incremental codebase documentation updates with git hook automation in the agent-runner-v2 platform. The solution replaces the full-scan model (for routine updates) with a targeted, change-aware incremental regeneration approach that keeps module-level docs synchronized with source code after each commit.
+This plan defines the solution architecture for automating incremental codebase documentation updates in agent-runner-v2 enabled repositories. The solution addresses the problem that the existing full-scan workflow (`sdlc_00_codebase_v1`) processes all 141+ module documentation files on every run, even when only a small number of source files have changed.
 
-The solution consists of three major components:
+The solution delivers three integrated capabilities:
 
-1. An action-only workflow (update_codebase_docs_v1) with four sequential steps for incremental documentation regeneration.
-2. Two CLI subcommands (install-codebase-hook, uninstall-codebase-hook) for git hook lifecycle management.
-3. A post-commit git hook shell script that detects relevant source code changes and triggers the workflow via backend submission.
+1. A reusable workflow package (`update_codebase_docs_v1`) that identifies source files changed since the last documentation update and regenerates only the affected module documentation files.
+2. CLI commands (`install-codebase-hook`, `uninstall-codebase-hook`) to manage post-commit git hooks in any target repository.
+3. A post-commit git hook mechanism that automatically triggers the incremental documentation update workflow when source code commits occur.
 
-The architecture reuses existing rendering functions from codebase_docs.py (build_snapshot, render_module_doc, render_inventory, render_change_impact) rather than reimplementing scan and render logic. The workflow follows the Layer 2 action step model, executing Python functions via the workflow package @action() decorator and runner_actions.py dispatch mechanism.
+The architecture reuses existing platform infrastructure (`codebase_docs.py` module functions, `BackendClient.submit_run()`, daemon execution) and follows the established workflow package conventions declared in BUNDLE_AUTHORING_CONTRACT.md. The solution complements `sdlc_00_codebase_v1` and does not modify it.
 
-**Work stream separation:** The solution has two independent work streams. Work stream 1 (workflow package generation) is handled by workflow_builder_v1 using the existing spec at docs/repo/workflow_builder/specs/incremental-codebase-update.md — this produces the update_codebase_docs_v1 workflow package (workflow.toml + actions.py). Work stream 2 (CLI commands and hook infrastructure) is the implementation scope of this plan — it covers the install-codebase-hook and uninstall-codebase-hook CLI subcommands, the post-commit hook script template, and the run_agent.py dispatch integration.
+### Design Principles
+
+- Reuse over reinvention: leverage existing `codebase_docs.py` functions and the existing workflow execution pipeline.
+- Non-blocking hook: the git hook must not add latency to the commit operation.
+- Idempotent operations: CLI install/uninstall and the workflow itself must be safe to run repeatedly.
+- Layer compliance: this plan operates within Layer 3 and treats Layer 1 governance and Layer 2 platform constitution as read-only.
+
+---
 
 ## Requirement Traceability
 
-This plan covers all functional and non-functional requirements from REQ-20260806-001. The traceability matrix maps requirements to architectural components.
+All solution components trace back to the approved requirement document (REQ-20260806-001) and its source initiative (INIT-20260806-001).
 
-### Functional Requirements Coverage
-
-| Requirement | Component | Plan Section |
+| Requirement | Solution Component | Plan Section |
 |---|---|---|
-| FR-001 (Incremental workflow) | update_codebase_docs_v1 workflow | Solution Architecture, Component Breakdown |
-| FR-002 (Changed file detection) | detect_changes action step | Data Flow |
-| FR-003 (Selective regeneration) | scan_affected_modules + regenerate_docs steps | Component Breakdown, Data Flow |
-| FR-004 (Install CLI) | codebase_hook_commands.py (install) | Component Breakdown |
-| FR-005 (Uninstall CLI) | codebase_hook_commands.py (uninstall) | Component Breakdown |
-| FR-006 (CLI targeting) | codebase_hook_commands.py (--repo flag) | Component Breakdown |
-| FR-007 (Post-commit hook) | post-commit hook script | Component Breakdown |
-| FR-008 (Backend submission) | Hook script via ukbe-run-agent submit | Integration Points |
-| FR-009 (Tracking file) | commit_and_track action step | Data Flow |
-| FR-010 (Auto-commit) | commit_and_track action step | Data Flow |
-| FR-011 (Missing tracking file) | detect_changes step early exit | Data Flow |
-| FR-012 (No relevant changes) | detect_changes step early exit | Data Flow |
-| FR-013 (Unreachable commit) | detect_changes step early exit | Data Flow |
-| FR-014 (Missing doc structure) | Validation in detect_changes + install command | Component Breakdown |
-| FR-015 (Hook logging) | Hook script error handling | Component Breakdown |
-| FR-016 (Concurrency prevention) | Hook script concurrency check | Integration Points |
-| FR-017 (Auto-commit failure) | commit_and_track step error handling | Data Flow |
-| FR-018 (Manifest update) | commit_and_track action step | Data Flow |
+| FR-001, FR-002, FR-008 | Workflow Package: `update_codebase_docs_v1` | Component Breakdown - Workflow Package |
+| FR-003, FR-004, FR-005, FR-006 | Incremental detection and selective rendering | Solution Architecture - Incremental Detection Strategy |
+| FR-007 | Auto-commit action step | Component Breakdown - Workflow Package - Step: Commit Changes |
+| FR-009, FR-010, FR-011, FR-012 | CLI commands in `run_agent.py` | Component Breakdown - CLI Commands |
+| FR-013, FR-014, FR-015, FR-016 | CLI install/uninstall validation logic | Component Breakdown - CLI Commands - Install Validation |
+| FR-017, FR-018, FR-019, FR-020 | Git hook script template and submission logic | Component Breakdown - Git Hook Script |
+| FR-021 | No-change detection and skip logic | Solution Architecture - Incremental Detection Strategy |
+| FR-022, FR-023, FR-024, FR-025 | Error handling guards | Solution Architecture - Error Handling |
+| NFR-001, NFR-003 | Incremental vs full-scan performance target | Solution Architecture - Performance Strategy |
+| NFR-002, NFR-014 | Lightweight non-blocking hook | Component Breakdown - Git Hook Script |
+| NFR-004, NFR-005 | Concurrency guard and tracking file preservation | Solution Architecture - Concurrency and State Management |
+| NFR-009, NFR-010, NFR-011, NFR-012 | Non-modification of existing full-scan workflow | Plan Overview - Design Principles |
+| SC-IN-001 through SC-IN-010 | All three components | Component Breakdown |
+| AC-001 through AC-016 | Validation approach | Risk Assessment, Integration Points |
 
-### Non-Functional Requirements Coverage
+### Initiative Traceability
 
-| Requirement | Design Decision | Plan Section |
-|---|---|---|
-| NFR-001 (Lightweight hook) | Hook only performs submission, no blocking | Component Breakdown |
-| NFR-002 (CLI idempotency) | Install checks for existing hook; uninstall checks for absence | Component Breakdown |
-| NFR-003 (Concurrency safety) | Backend-level active run check via list_runs() | Integration Points |
-| NFR-004 (Function reuse) | Direct import of codebase_docs.py functions | Solution Architecture |
-| NFR-005 (Action step compliance) | All steps use @action() decorator (package-local), resolved via runner_actions.py _resolve_action_fn() | Solution Architecture |
-| NFR-006 (Standard sidecar) | Runner writes sidecar from ActionResult | Solution Architecture |
-| NFR-007 (Hook packaging) | Hook stored in agent-runner-v2 package, copied during install | Component Breakdown |
-| NFR-008 (Performance) | Selective regeneration reduces scope to affected modules | Solution Architecture |
-| NFR-009 (Repo-agnostic) | No hardcoded repository paths; uses docs/repo/codebase/current/ contract | Solution Architecture |
-| NFR-010 (CLI pattern) | Follows run_agent.py if/elif dispatch convention | Component Breakdown |
+| Initiative Outcome | Solution Component |
+|---|---|
+| Outcome 1: Reusable workflow package | Component A: `update_codebase_docs_v1` |
+| Outcome 2: CLI hook management commands | Component B: `install-codebase-hook` / `uninstall-codebase-hook` |
+| Outcome 3: Automatic post-commit trigger | Component C: Git hook script |
+| Outcome 4: Zero manual intervention after setup | Integration of Components A, B, and C |
+| Outcome 5: Reduced execution time | Incremental detection strategy (50%+ reduction target) |
+| Outcome 6: Separation of incremental and full refresh | Explicit boundary with `sdlc_00_codebase_v1` |
+| Outcome 7: Tracking mechanism (`.last_sync_commit`) | State management via `.last_sync_commit` file |
+
+---
 
 ## Solution Architecture
 
-The solution architecture follows a three-component design that separates concerns between the automated trigger mechanism (git hook), the execution engine (daemon/backend), and the documentation logic (action steps).
+### High-Level Architecture
 
-### Architectural Pattern
-
-The solution uses a **trigger-execute** pattern:
-
-1. **Trigger layer**: The post-commit git hook detects source code changes and submits the workflow to the backend. This is a lightweight shell script that delegates all logic to the CLI.
-
-2. **Execution layer**: The daemon claims the submitted workflow and executes it through the standard action step lifecycle. Each step is a Python function registered via @action() decorator in the workflow package's actions.py, resolved by runner_actions.py _resolve_action_fn() (package-local first, then global fallback).
-
-3. **Logic layer**: The action steps reuse existing rendering functions from codebase_docs.py and add incremental logic (change detection, selective regeneration, tracking file management).
-
-### Key Architecture Decisions
-
-**AD-001: Action-only workflow (no LLM involvement)**
-
-The update_codebase_docs_v1 workflow uses only action steps. This eliminates LLM cost, latency, and non-determinism. All operations are deterministic Python functions. This decision is driven by NFR-005 and CON-007.
-
-**AD-002: Reuse of existing rendering functions**
-
-The incremental workflow imports and calls build_snapshot(), render_module_doc(), render_inventory(), and render_change_impact() directly from codebase_docs.py. This avoids code duplication and ensures output consistency with the full-scan workflow. The only new logic is the change detection and module selection filter. This decision is driven by CON-001 and DEP-001.
-
-**Known limitation:** build_snapshot() (codebase_docs.py:762) performs a full repository scan via _iter_repo_files() and _scan_python_module() regardless of the mode parameter. The mode value ("incremental" vs "reconcile") is stored in the snapshot dict but does not filter which files are scanned. Therefore, snapshot construction is O(all files) even for single-file changes. The performance benefit of the incremental approach comes solely from selective module doc rendering (render_module_doc() called only for affected modules), not from the snapshot construction phase. This is documented as a known limitation in Risk Assessment (RISK-006).
-
-**AD-003: CLI-based hook submission**
-
-The post-commit hook invokes `ukbe-run-agent submit --workflow-name update_codebase_docs_v1` via a shell command. The hook does not implement workflow execution logic. The CLI command internally uses BackendClient.submit_run(). This decision is driven by FR-008 and ASSUMPTION-003.
-
-**AD-004: Separate CLI command module**
-
-The install/uninstall hook commands are implemented in a new module (codebase_hook_commands.py) following the codebase_init_commands.py pattern. This separates hook management from the core CLI dispatch and keeps the command implementation self-contained. The dispatch entry point is added to run_agent.py using the established if/elif pattern.
-
-**AD-005: Tracking file at docs/repo/codebase/current/.last_sync_commit**
-
-The .last_sync_commit file is stored inside the codebase current directory. This co-locates the tracking state with the documentation it references, making it easy to find and manage. The file contains a single commit hash string.
-
-**AD-006: Component docs excluded from incremental regeneration**
-
-Component documents (03_components/) aggregate cross-module data and are not suitable for incremental regeneration based on single-commit file-level diffs. They remain the responsibility of the full-scan workflow (sdlc_00_codebase_v1). This is documented as OUT-002a in the requirements.
-
-**AD-007: Backend-level concurrency check**
-
-The hook checks for active runs of update_codebase_docs_v1 before submitting. This is done via BackendClient.list_runs() with workflow_name and status_group filters at the backend level, not via file-based locking. This prevents duplicate workflow executions when commits occur in rapid succession.
-
-### Workflow Step Architecture
-
-The update_codebase_docs_v1 workflow follows a four-step linear pipeline:
+The solution consists of three components that interact through the existing platform execution pipeline:
 
 ```
-detect_changes -> scan_affected_modules -> regenerate_docs -> commit_and_track -> stepCompletion
+[Developer commits code]
+         |
+         v
+[Post-commit git hook]  ---- (lightweight, non-blocking)
+         |
+         v
+[Backend workflow submission]  ---- (BackendClient.submit_run)
+         |
+         v
+[Daemon claims and executes workflow]  ---- (update_codebase_docs_v1)
+         |
+         +---> Detect changed files (git diff since .last_sync_commit)
+         +---> Build filtered snapshot for affected modules
+         +---> Render affected module docs
+         +---> Update inventory and change impact
+         +---> Update .last_sync_commit
+         +---> Auto-commit documentation changes
 ```
 
-Each step is an action step that receives context, state, step_cfg, and project_root, and returns an ActionResult.
+### Incremental Detection Strategy
+
+The core technical approach for incremental documentation updates:
+
+1. **Baseline Reference**: The `.last_sync_commit` file at the repository root stores the commit hash from the last successful documentation update. This file is created during the initial full-scan workflow or by the first successful incremental run.
+
+2. **Change Detection**: The workflow uses `git diff --name-only <last_sync_commit>..HEAD` to identify source files that have changed since the last documentation sync. This is a lightweight git operation that produces a list of changed file paths.
+
+3. **File-to-Document Mapping**: Each changed source file is mapped to its owner documentation path using the public `build_snapshot()` output. The snapshot's `items` list contains `ScanItem` records, each with a `rel_path` and `owner_doc_path` field. The incremental workflow builds the snapshot once and then uses this mapping to identify which documentation files correspond to changed source files. This approach uses only public APIs (`build_snapshot()` and the `ScanItem` dataclass) and avoids importing private implementation functions such as `_classify_file()` or `_module_doc_path()`. For Python source files under the package root, the owner doc path follows the pattern `docs/repo/codebase/current/02_modules/<slugified-path>.md`, which is produced by the classification logic inside `build_snapshot()`.
+
+4. **Selective Rendering**: Only the module documentation files corresponding to changed source files are regenerated using `render_module_doc()`. The `render_inventory()` function is called with the full snapshot to update the inventory listing. The `render_change_impact()` function is called with the actual `changed_files` list.
+
+5. **Snapshot Strategy**: The `build_snapshot()` function currently scans all repository files. For the incremental workflow, the approach is:
+   - Call `build_snapshot()` to obtain the full snapshot (this provides the module records needed for rendering).
+   - Filter the snapshot to identify only the affected module records.
+   - Call `render_module_doc()` only for affected modules.
+   - This approach avoids modifying `build_snapshot()` itself (preserving NFR-010) while achieving the performance target through selective rendering rather than selective scanning.
+
+   **Alternative considered**: Adding an optional `file_filter` parameter to `build_snapshot()`. This was rejected because it would modify the existing function's contract and risk backward compatibility with `sdlc_00_codebase_v1`. The selective rendering approach is sufficient for the 50% performance target since the expensive step is documentation rendering (AST parsing, text generation), not file listing.
+
+6. **Tracking Update**: After successful documentation regeneration and commit, the `.last_sync_commit` file is updated with the current HEAD commit hash.
+
+### Error Handling
+
+| Condition | Detection Method | Behavior | Requirement |
+|---|---|---|---|
+| No source changes detected | `git diff` returns empty list | Skip documentation update, log message, advance `.last_sync_commit` to HEAD | FR-021 |
+| Missing `.last_sync_commit` | File not found at expected path | Produce clear error message with recovery instructions (run full-scan first) | FR-022 |
+| Concurrent execution in progress | Lock file or backend workflow status check | Skip run, log message | FR-023 |
+| Missing `docs/repo/codebase/current/` | Directory not found | Produce clear error message or skip repository | FR-024 |
+| Backend unavailable (hook submission) | Connection timeout or error in hook script | Log error, do not block commit | FR-020, NFR-006 |
+
+### Concurrency and State Management
+
+- **Lock mechanism**: The workflow uses a lock file (e.g., `.ukbe-runner/incremental_codebase_update.lock`) to prevent concurrent executions. If the lock file exists and its timestamp is within a reasonable window, the workflow skips execution.
+- **Atomic tracking update**: The `.last_sync_commit` file is updated only after all documentation files have been successfully written and committed. This ensures the tracking reference always points to a state where documentation is in sync.
+- **Tracking file preservation**: The `uninstall-codebase-hook` command removes only the git hook script. The `.last_sync_commit` file is preserved across uninstall/reinstall cycles (NFR-005, FR-016).
+
+### Performance Strategy
+
+The 50% reduction target (NFR-001) is achieved through:
+
+1. **Selective rendering**: Only affected module docs are re-rendered. For a typical commit of 1-5 files, this means 1-5 module docs instead of 141+.
+2. **Lightweight change detection**: `git diff --name-only` is a fast operation that does not require reading file contents.
+3. **Skipping unnecessary work**: When no source files have changed (e.g., documentation-only commits), the workflow skips entirely.
+
+The `build_snapshot()` call still scans all files, but this is a fast operation (file listing and classification) compared to the AST parsing and text generation in `render_module_doc()`.
+
+---
 
 ## Component Breakdown
 
-### Component 1: update_codebase_docs_v1 Workflow
+### Component A: Workflow Package (`update_codebase_docs_v1`)
 
-**Type:** Action-only workflow package
+**Location**: `workflows/update_codebase_docs_v1/`
 
-**Responsibility:** Incremental documentation regeneration for changed source files.
-
-**Generation:** This workflow package is generated by workflow_builder_v1 from the existing spec at docs/repo/workflow_builder/specs/incremental-codebase-update.md. The spec is the single source of truth for the workflow's step sequence, action implementations, and artifact declarations. The builder produces both workflow.toml and actions.py under workflows/update_codebase_docs_v1/.
-
-**Steps (from spec):**
-
-| Step | Action Function | Responsibility |
-|---|---|---|
-| detect_changes | detect_changes | Read .last_sync_commit; git diff to find changed files; filter relevant types; early exit on no changes or missing/unreachable tracking file |
-| scan_affected_modules | scan_affected_modules | Map changed file paths to affected module names using codebase_docs.py classification logic |
-| regenerate_docs | regenerate_docs | Call build_snapshot(), render_module_doc() for affected modules only, render_inventory(), render_change_impact() |
-| commit_and_track | commit_and_track | Write HEAD hash to .last_sync_commit, update codebase_manifest.json, git add + commit atomically |
-
-**Action Registration:**
-
-Package-local via @action() decorator in the workflow package's actions.py (generated by workflow_builder_v1). The runner's _resolve_action_fn() (runner_actions.py:108-120) checks package-local actions first before falling back to the global ACTION_REGISTRY.
-
-### Component 2: CLI Hook Commands
-
-**Type:** CLI subcommands in run_agent.py
-
-**Responsibility:** Install and uninstall the post-commit git hook in target repositories.
-
-**New Module:** `agent_runner_v2/codebase_hook_commands.py`
-
-This module follows the pattern established by codebase_init_commands.py. It provides a main() function with argparse-based argument parsing.
-
-**Subcommands:**
-
-| Command | Purpose | Key Behavior |
-|---|---|---|
-| install-codebase-hook | Install post-commit hook | Validates docs/repo/codebase/current/ structure exists; copies hook script from package to .git/hooks/; idempotent |
-| uninstall-codebase-hook | Remove post-commit hook | Removes .git/hooks/post-commit if it is the agent-runner hook; preserves .last_sync_commit; idempotent |
-
-**CLI Flags:**
-
-Both commands support:
-- Default: current directory as target repository
-- `--repo /path/to/repo`: explicit target repository path
-
-**Hook Script Template:**
-
-The hook script is stored within the agent-runner-v2 package (e.g., `agent_runner_v2/data/hooks/post-commit`) and copied to the target repository's .git/hooks/ directory during installation. The install command marks the hook with a recognizable identifier (e.g., a comment header) so uninstall can distinguish it from user-created hooks.
-
-**Affected Source Files:**
-
-- New file: `agent_runner_v2/codebase_hook_commands.py` (CLI command implementation)
-- New file: `agent_runner_v2/data/hooks/post-commit` (hook script template)
-- Modified: `agent_runner_v2/run_agent.py` (add if-blocks for install-codebase-hook and uninstall-codebase-hook)
-
-### Component 3: Post-Commit Hook Script
-
-**Type:** Shell script (bash/git-bash compatible)
-
-**Responsibility:** Detect relevant source code changes after a commit and submit the incremental workflow to the backend.
-
-**Hook Script Logic:**
-
+**Structure**:
 ```
-1. Get the list of changed files in the current commit (git diff-tree)
-2. Filter to relevant file types (*.py, workflow.toml, pyproject.toml, requirements.txt, constants.py)
-3. If no relevant changes, exit 0 silently
-4. Check for active runs of update_codebase_docs_v1 (via CLI or backend query)
-5. If active run exists, log skip and exit 0
-6. Submit workflow via: ukbe-run-agent submit --workflow-name update_codebase_docs_v1
-7. Log result to .git/codebase-hook.log
-8. On failure, emit console warning
+workflows/update_codebase_docs_v1/
+  workflow.toml
+  bundle_governance.toml
+  bundle_governance/
+    core_governance.md
+    prompt_sop.md
+    prompt_layout.md
+    action_policy.md
+    review_audit_contract.md
+  actions.py
+  context_extensions.py
+  prompts/
+    (no prompt-driven steps expected; all steps are action-driven)
 ```
 
-**CLI Path Resolution Strategy:**
+**Workflow Steps** (declaration order):
 
-The hook script must resolve the `ukbe-run-agent` CLI binary to submit the workflow. On Windows, the executable is installed via pip as a console script entry point, which may or may not be on the system PATH. The hook uses the following resolution strategy:
+| Step Name | Type | Action | Purpose | Produces |
+|---|---|---|---|---|
+| `detect_changes` | action | `detect_incremental_changes` | Identify changed files since `.last_sync_commit`, validate preconditions | `INCREMENTAL_CHANGE_LIST` |
+| `render_incremental_docs` | action | `render_incremental_codebase_docs` | Build filtered snapshot, render affected module docs, update inventory and change impact | `INCREMENTAL_MODULE_DOCS`, `INCREMENTAL_INVENTORY`, `INCREMENTAL_CHANGE_IMPACT` |
+| `update_tracking` | action | `update_last_sync_commit` | Write current HEAD to `.last_sync_commit` | `TRACKING_UPDATE_MANIFEST` |
+| `commit_changes` | action | `commit_changes` | Auto-commit updated documentation files | (none) |
+| `stepCompletion` | action | `step_completion` | Close workflow | (none) |
 
-1. First, attempt direct invocation: `ukbe-run-agent submit --workflow-name update_codebase_docs_v1`
-2. If the CLI is not found on PATH, fall back to: `python -m agent_runner_v2 run_agent submit --workflow-name update_codebase_docs_v1`
-3. The install-codebase-hook command may optionally detect the CLI path during installation and embed it in the hook script template as a configurable variable, avoiding runtime PATH resolution.
+**Step Details**:
 
-This strategy ensures the hook works across platforms (Windows Git Bash, Linux, macOS) regardless of whether the CLI is installed as a console script or used via `python -m`.
+1. **`detect_incremental_changes`**: Reads `.last_sync_commit`, runs `git diff --name-only <ref>..HEAD`, builds a snapshot via `build_snapshot()` and uses the `items` list (each `ScanItem` has `rel_path` and `owner_doc_path`) to map changed files to their owner documentation paths. Filters to only files that have corresponding module documentation. If no changes detected, the workflow terminates early with a skip status. Error conditions: missing `.last_sync_commit` (FR-022), missing `docs/repo/codebase/current/` (FR-024).
 
-**Key Properties:**
+2. **`render_incremental_codebase_docs`**: Calls `build_snapshot()` for the full snapshot, filters to affected module records, calls `render_module_doc()` for each affected module, calls `render_inventory()` and `render_change_impact()` with the changed files list. Writes output files to `docs/repo/codebase/current/` in-place (overwriting affected module docs and updating inventory and change impact).
 
-- Lightweight and non-blocking (NFR-001): The hook performs only detection and submission, not workflow execution. Network call is the only blocking operation.
-- Hook identifies itself with a comment header for safe uninstall.
-- Hook logs success/failure to .git/codebase-hook.log for auditability.
+3. **`update_last_sync_commit`**: Writes the current HEAD commit hash to `.last_sync_commit` at the repository root.
 
-**Affected Source Files:**
+4. **`commit_changes`**: Uses the existing `commit_changes` action to auto-commit the updated documentation files.
 
-- New file: `agent_runner_v2/data/hooks/post-commit` (shared with Component 2)
+**Artifact Keys** (new):
+
+| Key | Path | Description |
+|---|---|---|
+| `INCREMENTAL_CHANGE_LIST` | `docs/repo/codebase/runs/{job_id}/incremental_change_list.json` | JSON list of changed files and their affected doc paths |
+| `INCREMENTAL_MODULE_DOCS` | `docs/repo/codebase/current/02_modules/*.md` (affected only) | Rendered module documentation files |
+| `INCREMENTAL_INVENTORY` | `docs/repo/codebase/current/01_inventory/codebase_inventory.md` | Updated inventory |
+| `INCREMENTAL_CHANGE_IMPACT` | `docs/repo/codebase/current/04_changes/{job_id}-reconcile.md` | Change impact report |
+| `TRACKING_UPDATE_MANIFEST` | `docs/repo/codebase/runs/{job_id}/tracking_update.json` | Record of `.last_sync_commit` update |
+
+### Component B: CLI Commands
+
+**Location**: New subcommands in `agent_runner_v2/run_agent.py` following the existing CLI structure.
+
+**Commands**:
+
+1. **`install-codebase-hook`**
+   - Default: operates on current working directory
+   - Flag: `--repo /path/to/repo` for arbitrary repositories
+   - Validation:
+     - Verify target is a git repository (`.git/` exists)
+     - Verify `docs/repo/codebase/current/` exists (FR-013)
+     - Check if hook is already installed (idempotent, FR-014)
+   - Action:
+     - Copy hook script template from `agent_runner_v2/` package to `.git/hooks/post-commit`
+     - Set executable permissions (Unix) or ensure compatibility (Windows)
+     - Preserve existing `.last_sync_commit` if present
+
+2. **`uninstall-codebase-hook`**
+   - Default: operates on current working directory
+   - Flag: `--repo /path/to/repo` for arbitrary repositories
+   - Validation:
+     - Check if hook exists (idempotent, FR-015)
+   - Action:
+     - Remove `.git/hooks/post-commit` (or the hook script if named differently)
+     - Preserve `.last_sync_commit` tracking file (FR-016)
+
+**Hook Script Template Storage**:
+- **Location**: `agent_runner_v2/data/hooks/post_commit_codebase_update.py`
+- The hook script is a Python script stored as package data within the `agent_runner_v2` package.
+- During installation, it is copied from the package data location to the target repository's `.git/hooks/post-commit`.
+- The script includes a shebang line (`#!/usr/bin/env python3`) and is made executable on Unix systems.
+- For Windows compatibility, the hook script is a Python script that can be invoked by git's hook mechanism (git on Windows supports `.py` hooks when Python is in PATH, or a small `.bat` wrapper can be generated).
+
+**Cross-Platform Strategy** (addressing Risk R-002):
+- The hook script template is written in Python for maximum portability.
+- On Unix (Linux/macOS), the script is installed directly as `.git/hooks/post-commit` with executable permissions.
+- On Windows, a small batch file wrapper (`.git/hooks/post-commit.bat` or `.git/hooks/post-commit`) invokes the Python script via the system Python interpreter.
+- The `install-codebase-hook` command detects the platform and generates the appropriate hook file.
+
+### Component C: Git Hook Script
+
+**Behavior**:
+
+1. After a commit, the hook script executes.
+2. It checks for daemon/backend availability (ASSUMPTION-003). If unavailable, logs a warning and exits without blocking the commit.
+3. It checks for concurrent execution by looking for the lock file (FR-023). If another update is in progress, exits silently.
+4. It submits the `update_codebase_docs_v1` workflow to the backend via `BackendClient.submit_run()` (or via CLI `ukbe-run-agent run update_codebase_docs_v1`).
+5. The hook exits immediately after submission (fire-and-forget), ensuring it does not block the commit operation (NFR-002, FR-020).
+
+**Hook Script Location**: `agent_runner_v2/data/hooks/post_commit_codebase_update.py`
+
+**Key Design Decisions**:
+- The hook submits the workflow to the backend rather than executing it inline. This keeps the hook lightweight and leverages the existing daemon execution pipeline.
+- The hook does not advance `.last_sync_commit`. That responsibility belongs to the workflow itself (after confirmed successful execution).
+- If the backend is unavailable, the commit is not blocked. The documentation update is deferred until the next successful hook execution or manual trigger.
+
+---
 
 ## Integration Points
 
-### IP-001: Hook to Backend via CLI
+### Integration Point 1: Workflow Package and `codebase_docs.py`
 
-The post-commit hook invokes `ukbe-run-agent submit --workflow-name update_codebase_docs_v1`. The CLI command (submit_commands.py) internally creates a BackendClient and calls submit_run(). The hook does not call any Python API directly.
+The workflow package's `render_incremental_codebase_docs` action imports and calls four functions from `codebase_docs.py`:
 
-**Data exchanged:**
-- Hook passes: workflow_name (fixed), optionally project-root or context overrides.
-- Backend returns: run_id, status.
-- Hook logs the result.
+| Function | Usage in Incremental Workflow |
+|---|---|
+| `build_snapshot(project_root, *, mode, job_id, step, workflow_name)` | Called with full project root to obtain module records and scan items for all files. The snapshot `items` list provides the file-to-document mapping via `ScanItem.owner_doc_path` fields. The `python_modules` list is filtered to identify affected module records. |
+| `render_module_doc(snapshot, module_record)` | Called once per affected module to generate updated documentation text. |
+| `render_inventory(snapshot, *, title)` | Called with the full snapshot to regenerate the complete inventory listing (since the inventory covers all modules, not just changed ones). |
+| `render_change_impact(snapshot, *, title, changed_files, docs_created, docs_updated, stale_docs)` | Called with the list of changed source files to produce the change impact report. |
 
-### IP-002: Backend to Daemon
+**Integration constraint**: The `build_snapshot()` function is not modified. The incremental filtering happens after the snapshot is built, in the action logic.
 
-The backend queues the submitted run. The daemon polls for work via claim_work() on V2BackendClient. When the daemon claims the run, it spawns a child process that executes the action steps sequentially.
+**Public API dependency note**: The file-to-document mapping uses only public APIs: the `build_snapshot()` function and the `ScanItem` dataclass (which exposes `rel_path` and `owner_doc_path`). The workflow does not import or call private implementation functions (`_classify_file()`, `_module_doc_path()`), avoiding coupling to internal implementation details. If the `ScanItem` fields or `build_snapshot()` output structure change in the future, only the action logic that reads snapshot items needs to be updated.
 
-**Data exchanged:**
-- Backend provides: workflow definition, step configuration, context variables.
-- Daemon reports: step outcomes via report_outcome().
+### Integration Point 2: Workflow Package and Backend/Daemon
 
-### IP-003: Workflow Steps to codebase_docs.py
+The workflow is submitted via `BackendClient.submit_run()` and executed by the daemon via the standard step execution pipeline:
+- `BackendClient.submit_run()` creates a job for `update_codebase_docs_v1`.
+- The daemon claims steps via `BackendClient.claim_step()`.
+- Each action step executes via `run_action()` in `step_runner.py`.
+- The `meta.json` sidecar is written per the v2 sidecar schema (CON-010).
 
-The action steps import and call functions from codebase_docs.py:
+### Integration Point 3: CLI Commands and Git Hook
 
-- build_snapshot(project_root, mode, job_id, step, workflow_name) -- builds a codebase snapshot dict
-- render_module_doc(snapshot, module_record) -- renders a single module doc
-- render_inventory(snapshot, title) -- renders the inventory file
-- render_change_impact(snapshot, title, changed_files, docs_created, docs_updated, stale_docs) -- renders change impact report
+The `install-codebase-hook` command copies the hook script template from the package to the target repository. The hook script, once installed, invokes the workflow submission mechanism.
 
-These functions are called with the same parameters as the full-scan workflow (sync_codebase_docs.py) to ensure output consistency.
+### Integration Point 4: Git Hook and Backend
 
-**Important note on build_snapshot():** The build_snapshot() function (codebase_docs.py:762) performs a full repository scan regardless of mode. It iterates ALL files via _iter_repo_files() and scans ALL Python modules via _scan_python_module(). The mode parameter does not filter the scan scope. This means the snapshot build step is O(all files) even for incremental runs. The performance improvement from the incremental approach is achieved through selective render_module_doc() calls for affected modules only, not through reduced snapshot scope. If render_inventory() requires the full snapshot (it iterates snapshot["items"]), this full scan is unavoidable without introducing a separate lighter snapshot builder. See OQ-003 and RISK-006.
+The hook script communicates with the backend via `BackendClient.submit_run()` or via the CLI command `ukbe-run-agent run update_codebase_docs_v1`. The preferred approach is CLI invocation because:
+- It avoids importing `agent_runner_v2` internals in the hook script.
+- It uses the same submission path as manual triggers.
+- It is more robust to package restructuring.
 
-### IP-004: Workflow Steps to Git
+### Integration Point 5: Path Resolution System
 
-The detect_changes step uses git diff to compare commits. The commit_and_track step uses git add and git commit. These are invoked via subprocess (consistent with how codebase_docs.py uses subprocess).
+The workflow uses the existing artifact key and path resolution system:
+- Artifact keys are registered in the workflow's `output_paths.py` or declared in `workflow.toml` `[step.artifacts]`.
+- Paths are resolved via `artifact_keys.py`, `path_primitives.py`, and `path_catalog.py` (CON-009).
+- The `.last_sync_commit` file path follows the repository root convention (not managed by the path catalog, as it is a per-repository tracking file, not a platform artifact).
 
-### IP-005: Concurrency Check
-
-The hook script (or a helper invoked by the hook) queries the backend for active runs using BackendClient.list_runs() with workflow_name="update_codebase_docs_v1" and status_group="active". If any active runs exist, the hook skips submission.
-
-Note: Since the hook is a shell script, the concurrency check is performed by invoking a CLI command that wraps the list_runs() call. Alternatively, the CLI could be extended with a lightweight check subcommand. The plan assumes the hook calls a CLI helper for this.
-
-### IP-006: CLI Commands to Package Data
-
-The install-codebase-hook command reads the hook script template from the agent-runner-v2 package data directory and writes it to the target repository's .git/hooks/ directory. This requires the hook script to be packaged with the agent-runner-v2 distribution.
+---
 
 ## Data Flow
 
-### Workflow Execution Data Flow
+### Flow 1: Normal Incremental Update
 
 ```
-[Post-commit Hook]
-  |
-  | git diff-tree (changed files)
-  | Filter to relevant types
-  | Check concurrency via CLI
-  | ukbe-run-agent submit
-  v
-[Backend API]
-  |
-  | Queue run for update_codebase_docs_v1
-  v
-[Daemon Worker]
-  |
-  | claim_work() -> step: detect_changes
-  v
-[Step 1: detect_changes]
-  | Input: .last_sync_commit (commit hash)
-  | Process: git diff <last_sync>..HEAD -> changed files list
-  | Filter: *.py, workflow.toml, pyproject.toml, requirements.txt, constants.py
-  | Output: changed_files list passed to next step via state
-  | Early exit: If .last_sync_commit missing -> exit with message (FR-011)
-  | Early exit: If commit unreachable -> exit with message (FR-013)
-  | Early exit: If no relevant changes -> exit success (FR-012)
-  v
-[Step 2: scan_affected_modules]
-  | Input: changed_files list
-  | Process: Map file paths to module names using codebase_docs.py classification
-  | Output: affected_modules list (module_record dicts or module names)
-  v
-[Step 3: regenerate_docs]
-  | Input: affected_modules list, project_root
-  | Process:
-  |   1. build_snapshot(project_root, mode="incremental", ...)
-  |   2. For each affected module: render_module_doc(snapshot, module_record)
-  |   3. render_inventory(snapshot, title=repo_name)
-  |   4. render_change_impact(snapshot, title=..., changed_files, ...)
-  | Output: Written files in docs/repo/codebase/current/
-  |   - 02_modules/<affected>.md (regenerated)
-  |   - 01_inventory/codebase_inventory.md (regenerated)
-  |   - 04_changes/<change_id>.md (new change impact report)
-  v
-[Step 4: commit_and_track]
-  | Input: project_root
-  | Process:
-  |   1. Get current HEAD commit hash (git rev-parse HEAD)
-  |   2. Write hash to docs/repo/codebase/current/.last_sync_commit
-  |   3. Update codebase_manifest.json with sync metadata
-  |   4. git add docs/repo/codebase/current/ (includes .last_sync_commit)
-  |   5. git commit -m "docs: incremental codebase update {job_id}"
-  | Output: Git commit with updated documentation and tracking file
-  | On failure: .last_sync_commit is not committed, retains previous committed
-  |   value. Next run re-detects same changes and retries (FR-017)
-  v
-[stepCompletion]
-  | Mark workflow as complete
-  | Runner writes meta.json sidecar automatically
+1. Developer runs: git commit -m "update module X"
+2. Post-commit hook fires
+3. Hook checks: daemon available? lock file absent?
+4. Hook invokes: ukbe-run-agent run update_codebase_docs_v1
+5. Workflow step: detect_incremental_changes
+   - Reads .last_sync_commit -> gets commit hash "abc123"
+   - Runs: git diff --name-only abc123..HEAD
+   - Result: ["agent_runner_v2/codebase_docs.py", "agent_runner_v2/run_agent.py"]
+    - Maps to doc paths using snapshot items (ScanItem.owner_doc_path):
+      - "agent-runner-v2-codebase-docs.md"
+      - "agent-runner-v2-run-agent.md"
+    - Writes INCREMENTAL_CHANGE_LIST artifact
+ 6. Workflow step: render_incremental_codebase_docs
+    - Uses snapshot from step 5 (or rebuilds if needed)
+    - Filters python_modules to affected records
+    - Calls render_module_doc() for each affected module
+   - Calls render_inventory() with full snapshot
+   - Calls render_change_impact() with changed files list
+   - Writes updated docs to docs/repo/codebase/current/02_modules/
+   - Writes updated inventory to docs/repo/codebase/current/01_inventory/
+   - Writes change impact to docs/repo/codebase/current/04_changes/
+7. Workflow step: update_last_sync_commit
+   - Gets current HEAD commit hash
+   - Writes to .last_sync_commit
+8. Workflow step: commit_changes
+   - Runs: git add docs/repo/codebase/current/
+   - Runs: git commit -m "docs: incremental codebase update [auto]"
+9. Workflow step: stepCompletion
 ```
 
-### Hook Trigger Data Flow
+### Flow 2: No Changes Detected
 
 ```
-[Developer runs git commit]
-  |
-  | Git triggers .git/hooks/post-commit
-  v
-[Post-commit Hook]
-  | git diff-tree --no-commit-id --name-only -r HEAD
-  | Filter to relevant file patterns
-  | If no relevant files -> exit 0
-  v
-[Concurrency Check]
-  | CLI command queries backend for active runs
-  | If active run exists -> log skip, exit 0
-  v
-[Workflow Submission]
-  | ukbe-run-agent submit --workflow-name update_codebase_docs_v1
-  | Log result to .git/codebase-hook.log
-  | If success -> log success, exit 0
-  | If failure -> log failure, emit console warning, exit 0
+1-4. Same as Flow 1
+5. Workflow step: detect_incremental_changes
+   - git diff --name-only returns empty list
+   - Workflow skips remaining steps with "no changes" status
 ```
 
-Note: The hook always exits 0 to avoid blocking the commit. Submission failure is logged but does not fail the commit (FR-015).
+### Flow 3: First Run (Missing Tracking File)
+
+```
+1-4. Same as Flow 1
+5. Workflow step: detect_incremental_changes
+   - .last_sync_commit not found
+   - Workflow fails with clear error message:
+     "No .last_sync_commit file found. Run the full-scan workflow
+      (sdlc_00_codebase_v1) first to establish the initial documentation set."
+```
+
+### Flow 4: Hook Installation
+
+```
+1. Developer runs: ukbe-run-agent install-codebase-hook --repo /path/to/repo
+2. CLI validates:
+   - .git/ exists in target repo
+   - docs/repo/codebase/current/ exists
+3. CLI copies hook script template to .git/hooks/post-commit
+4. CLI sets executable permissions (Unix) or creates .bat wrapper (Windows)
+5. CLI reports: "Hook installed successfully"
+```
+
+### Flow 5: Hook Uninstallation
+
+```
+1. Developer runs: ukbe-run-agent uninstall-codebase-hook --repo /path/to/repo
+2. CLI checks if hook exists at .git/hooks/post-commit
+3. CLI removes hook file
+4. CLI preserves .last_sync_commit (does not delete it)
+5. CLI reports: "Hook removed successfully"
+```
+
+---
 
 ## Risk Assessment
 
-This plan inherits all risks from REQ-20260806-001 and maps them to architectural mitigation strategies.
+### Risk PLAN-R-001: `build_snapshot()` Performance Overhead
 
-### RISK-001: Silent Hook Failure When Daemon Not Running
+**Description**: The `build_snapshot()` function scans all repository files even in incremental mode. For very large repositories, the scan itself may become a bottleneck.
 
-**Architectural Mitigation:** The hook script logs all submission results to .git/codebase-hook.log and emits a console message on failure. The .last_sync_commit file is only updated after successful workflow completion (Step 4), so the next commit will re-trigger the hook. This ensures eventual consistency without silent data loss.
+**Impact**: Medium -- affects NFR-001 (50% reduction target).
 
-### RISK-002: Concurrent Tracking File Races
+**Mitigation**: The snapshot scan is file listing and classification only (no AST parsing). The expensive operations are in `render_module_doc()` (AST parsing, text generation). Selective rendering of affected modules should achieve the 50% target even with full snapshot scanning. If needed in the future, `build_snapshot()` can be extended with an optional file filter parameter in a backward-compatible manner (new keyword-only argument with default `None`).
 
-**Architectural Mitigation:** The concurrency check in IP-005 prevents duplicate workflow submissions at the backend level. If two commits occur in rapid succession, the second hook invocation finds an active run and skips submission. The .last_sync_commit update is performed atomically within the workflow (Step 4), not by the hook.
+**Traces to**: NFR-001, FR-005, R-001
 
-### RISK-003: Incremental vs Full-Scan Output Divergence
+### Risk PLAN-R-002: Git Hook Cross-Platform Compatibility
 
-**Architectural Mitigation:** The incremental workflow uses the same build_snapshot() and render functions as the full-scan workflow. The snapshot is built from the current repository state, not from cached data. The only difference is the module selection filter. If divergence is detected during validation, the user can run sdlc_00_codebase_v1 for a full refresh.
+**Description**: Git hooks are platform-sensitive. The hook script must work on Windows, Linux, and macOS.
 
-### RISK-004: Auto-Commit Conflict with Branch Protection
+**Impact**: Medium -- affects FR-009, FR-017, AC-005, AC-010.
 
-**Architectural Mitigation:** The commit_and_track step (Step 4) writes .last_sync_commit and commits it atomically in the same git add + commit operation. If the commit fails, .last_sync_commit is not committed and retains its previous committed value on disk. The updated doc files remain as uncommitted changes in the working tree. On the next commit, the hook re-triggers and the workflow re-runs from the last successful sync point, re-detecting the same changes.
+**Mitigation**: The hook script is written in Python. On Unix, it is installed as an executable script with a shebang line. On Windows, a small batch file wrapper invokes the Python script. The `install-codebase-hook` command detects the platform using `sys.platform` and generates the appropriate hook file. Testing covers all three platforms.
 
-### RISK-005: Backend Workflow Registration Requirement
+**Traces to**: R-002, NFR-002
 
-**Architectural Mitigation:** The plan assumes the backend accepts the update_codebase_docs_v1 workflow name without pre-registration (ASSUMPTION-001). If this assumption fails, the submit command returns a "workflow not found" error (handled by _build_error_payload in submit_commands.py). The hook logs this error. Resolution requires backend workflow registration as a separate prerequisite.
+### Risk PLAN-R-003: Race Condition on `.last_sync_commit`
 
-### Additional Risk: Hook Script Portability
+**Description**: If two incremental runs overlap (despite the concurrency guard), they could both read the same `.last_sync_commit` value and produce conflicting documentation commits.
 
-**Description:** The hook script must work on Windows (Git Bash), Linux, and macOS. Shell script compatibility may vary.
+**Impact**: Medium -- affects NFR-004, FR-023.
 
-**Mitigation:** The hook script uses only POSIX-compatible commands (git, which/where for CLI resolution). On Windows, the hook can use a .bat wrapper or Git Bash sh script. The install command detects the platform and installs the appropriate script variant if needed.
+**Mitigation**: The concurrency guard uses a lock file with a timestamp. If the lock is older than a reasonable timeout (e.g., 10 minutes), it is considered stale and can be overridden. The lock file is created at the start of `detect_incremental_changes` and removed at the end of `commit_changes`. The `.last_sync_commit` update is the last write operation before commit, ensuring it reflects the actual HEAD after the documentation commit.
 
-### RISK-006: build_snapshot() Full Scan May Undermine Performance Target
+**Traces to**: R-003, NFR-004
 
-**Description:** The build_snapshot() function (codebase_docs.py:762-804) performs a full repository scan (all files, all Python modules) regardless of the mode parameter. This means the snapshot construction step is O(all files) even when only a single file has changed. The performance benefit of the incremental approach comes solely from selective render_module_doc() calls for affected modules, not from snapshot construction. For large repositories, the snapshot build time may dominate total execution time, potentially making the NFR-008 target (less than 50 percent of full-scan time for single-file changes) difficult to achieve.
+### Risk PLAN-R-004: Backend Unavailability During Hook Execution
 
-**Architectural Mitigation:** This is accepted as a known limitation for the initial implementation. The rationale is: (1) CON-001 mandates reuse of existing rendering functions rather than reimplementing scan logic; (2) render_inventory() iterates snapshot["items"], requiring the full snapshot for correct output; (3) the snapshot is built from current repository state (no caching), so correctness is maintained. If NFR-008 testing shows the full-scan bottleneck is significant, the backlog phase should evaluate whether a lighter snapshot builder (scanning only affected modules) can be introduced without breaking render_inventory() consistency. This evaluation is captured in OQ-003.
+**Description**: If the backend is unavailable when the hook fires, the documentation update is lost. The `.last_sync_commit` is not advanced (correct behavior), but documentation may accumulate drift.
+
+**Impact**: Low -- the next successful commit + hook execution will catch up.
+
+**Mitigation**: The hook checks daemon availability before submitting. If unavailable, it logs a warning and exits without blocking the commit. The `.last_sync_commit` is not advanced until the workflow completes successfully, so the next run will include all accumulated changes since the last successful sync. This provides natural catch-up behavior.
+
+**Traces to**: R-004, NFR-006
+
+### Risk PLAN-R-005: In-Place Overwrite of Existing Documentation
+
+**Description**: The incremental workflow writes directly to `docs/repo/codebase/current/`, overwriting existing module docs. If the rendering produces incorrect output, the existing documentation is lost.
+
+**Impact**: Low -- the full-scan workflow (`sdlc_00_codebase_v1`) can regenerate all documentation from scratch as a recovery mechanism.
+
+**Mitigation**: The `render_module_doc()` function is the same function used by the full-scan workflow. It produces deterministic output from the source code. Git history provides a full audit trail and rollback capability. The auto-commit message clearly identifies incremental updates for easy identification.
+
+**Traces to**: NFR-009, NFR-011
+
+---
 
 ## Dependencies
 
-### External Dependencies
+### Platform Dependencies
 
-| ID | Dependency | Source | Status |
-|---|---|---|---|
-| DEP-001 | codebase_docs.py rendering functions | agent_runner_v2/codebase_docs.py | Verified present |
-| DEP-002 | BackendClient.submit_run() and list_runs() | agent_runner_v2/v2/backend_client_v1.py | Verified present |
-| DEP-003 | Daemon execution infrastructure | agent_runner_v2/daemon_v2.py | Verified present |
-| DEP-004 | Standard docs/repo/codebase/current/ structure | Target repository | Prerequisite |
-| DEP-005 | Git repository with .git/hooks/ support | Target repository | Prerequisite |
-| DEP-006 | run_agent.py if/elif dispatch pattern | agent_runner_v2/run_agent.py | Verified present |
-| DEP-007 | ACTION_REGISTRY dispatch in runner_actions.py | agent_runner_v2/runner_actions.py | Verified present |
-| DEP-008 | codebase_init_commands.py CLI pattern | agent_runner_v2/codebase_init_commands.py | Verified present |
-| DEP-009 | sync_codebase_docs.py action pattern | agent_runner_v2/actions/sync_codebase_docs.py | Verified present |
-| DEP-010 | BackendClient.list_runs() filtering | agent_runner_v2/v2/backend_client_v1.py | Verified present |
-
-### Internal Dependencies (New)
-
-| ID | Dependency | Purpose |
+| ID | Dependency | Verification Status |
 |---|---|---|
-| NEW-DEP-001 | Workflow package actions: workflows/update_codebase_docs_v1/actions.py | Action functions for the 4 workflow steps (package-local via @action decorator) |
-| NEW-DEP-002 | New CLI module: codebase_hook_commands.py | Install/uninstall hook commands |
-| NEW-DEP-003 | Hook script template: data/hooks/post-commit | Packaged hook script for installation |
-| NEW-DEP-004 | Workflow package: workflows/update_codebase_docs_v1/ | Workflow manifest and package actions (generated by workflow_builder_v1 from spec) |
+| PLAN-DEP-001 | `codebase_docs.py` with `build_snapshot()`, `render_module_doc()`, `render_inventory()`, `render_change_impact()`, and `ScanItem` dataclass | Verified: functions confirmed present in source code at expected signatures; `ScanItem` at line 122 with `rel_path` and `owner_doc_path` fields |
+| PLAN-DEP-002 | `BackendClient.submit_run()` for workflow submission | Verified: present in `v2/backend_client_v1.py` |
+| PLAN-DEP-003 | `daemon_v2.py` for workflow execution | Verified: module confirmed present |
+| PLAN-DEP-004 | `@action()` decorator and `ActionResult` dataclass for action steps | Verified: present in `runner_actions.py` |
+| PLAN-DEP-005 | `commit_changes` action for auto-committing documentation | Verified: existing action used by `sdlc_00_codebase_scaffold_v1` |
+| PLAN-DEP-006 | Workflow package loader and registry | Verified: existing infrastructure in `workflow_packages/` |
+| PLAN-DEP-007 | Artifact key and path resolution system (`artifact_keys.py`, `path_primitives.py`, `path_catalog.py`) | Verified: existing infrastructure |
 
-### Prerequisites
+### Prerequisite Dependencies
 
-1. The target repository must have a populated docs/repo/codebase/current/ directory (created by codebase-init or sdlc_00_codebase_v1).
-2. The daemon must be running for hook-triggered workflow submissions to be processed.
-3. The backend must accept the update_codebase_docs_v1 workflow name for submission.
-4. The user must have git commit permissions on the target repository for auto-commit.
-5. The workflow spec at docs/repo/workflow_builder/specs/incremental-codebase-update.md must be processed through workflow_builder_v1 to generate the update_codebase_docs_v1 workflow package before the CLI/hook infrastructure can be tested end-to-end.
+| ID | Dependency | Notes |
+|---|---|---|
+| PLAN-DEP-008 | Target repository has initial codebase documentation from `sdlc_00_codebase_v1` or `codebase-init` | BC-001 |
+| PLAN-DEP-009 | Target repository has `docs/repo/codebase/current/` directory structure | FR-013 |
+| PLAN-DEP-010 | Target repository is a git repository with write access to `.git/hooks/` | DEP-009 |
+
+### Infrastructure Dependencies
+
+| ID | Dependency | Notes |
+|---|---|---|
+| PLAN-DEP-011 | Python 3.12+ runtime available in the target environment | Platform requirement |
+| PLAN-DEP-012 | `agent-runner-v2` package installed and accessible | DEP-010 |
+| PLAN-DEP-013 | Backend service running and reachable for workflow submission in daemon mode | DEP-011 |
+
+---
 
 ## Open Questions
 
-### OQ-001: Hook Script Concurrency Check Mechanism
+### OQ-001: Hook Script Exact Storage Path Within Package
 
-The hook script needs to check for active runs before submitting. Two options exist:
-(a) The hook calls a new CLI subcommand (e.g., `ukbe-run-agent check-active-run --workflow-name update_codebase_docs_v1`) that wraps BackendClient.list_runs().
-(b) The hook calls `ukbe-run-agent submit` and lets the backend handle duplicate rejection.
+**Status**: Deferred to implementation phase.
+**Description**: The exact path for the hook script template within the `agent_runner_v2/` package needs to be finalized. The proposed location is `agent_runner_v2/data/hooks/post_commit_codebase_update.py`. This requires verifying that the package data configuration (`pyproject.toml` or `setup.cfg`) includes the `data/hooks/` directory in the package distribution.
+**Affects**: FR-019, CON-011
+**Resolution approach**: Check the existing `pyproject.toml` for package data inclusion patterns and select a path consistent with them.
 
-The plan currently assumes option (a) for explicit control. The choice affects the hook script design and whether a new CLI subcommand is needed. This should be resolved during the backlog phase.
+### OQ-002: Concurrency Guard Implementation Detail
 
-### OQ-002: commit_and_track Action Implementation
+**Status**: Deferred to implementation phase.
+**Description**: The concurrency guard mechanism (lock file vs. backend workflow status check) needs to be finalized. A lock file at `.ukbe-runner/incremental_codebase_update.lock` is proposed, but the backend may also expose workflow status that can be queried. The lock file approach is simpler and does not require backend connectivity.
+**Affects**: FR-023, NFR-004
+**Resolution approach**: Evaluate during implementation. Default to lock file approach for simplicity.
 
-The commit_and_track step merges tracking file update and git commit into a single atomic action. The existing commit_changes action in sdlc_shared_actions.py already stages all of docs/repo/codebase/ and commits — it could be extended to also write .last_sync_commit before staging. Alternatively, a new action function specific to this workflow may be cleaner. The workflow spec (docs/repo/workflow_builder/specs/incremental-codebase-update.md) defines the required behavior. This should be resolved during the backlog phase.
+### OQ-003: Windows Hook Wrapper Strategy
 
-### OQ-003: build_snapshot() Mode Parameter and Full Scan Behavior
+**Status**: Deferred to implementation phase.
+**Description**: On Windows, git hooks can be `.bat` files or executable scripts. The strategy for generating a Windows-compatible hook wrapper needs to be validated on an actual Windows environment. Options: (a) `.bat` wrapper that calls `python <hook_script>`, (b) Python script with `.py` extension if git on Windows supports it, (c) Use `ukbe-run-agent` CLI directly in a `.bat` hook.
+**Affects**: R-002, FR-009
+**Resolution approach**: Test on Windows during implementation. Option (c) may be simplest -- the hook is a `.bat` file that runs `ukbe-run-agent run update_codebase_docs_v1`.
 
-The build_snapshot() function accepts a `mode` parameter. The full-scan workflow uses mode="reconcile". The incremental workflow needs to determine the appropriate mode value for incremental operation. However, the mode parameter does NOT affect the scan scope -- build_snapshot() always performs a full repository scan (iterating ALL files via _iter_repo_files() and ALL Python modules via _scan_python_module()). The mode value is stored in the snapshot dict but does not filter what files are scanned.
+### OQ-004: Benchmark Protocol for NFR-001
 
-This creates a known performance limitation: even for single-file changes, the snapshot construction is O(all files). The performance benefit of the incremental approach comes solely from selective render_module_doc() calls for affected modules.
+**Status**: To be defined during backlog phase.
+**Description**: The 50% reduction target (NFR-001) requires a defined benchmark protocol. The protocol should specify: test repository, baseline measurement (full-scan time), incremental measurement (1-5 file changes), system conditions, and measurement methodology (wall-clock time for full workflow execution).
+**Affects**: NFR-001, NFR-003, AC-012
+**Resolution approach**: Define benchmark protocol during backlog/task planning phase. Risk R-005 in the requirements document already identifies this as a planning-phase deliverable.
 
-If render_inventory() requires the full snapshot (it iterates snapshot["items"]), then the full scan is unavoidable for correct output. This may make the NFR-008 target (less than 50 percent of full-scan time for single-file changes) difficult to achieve for large repositories.
+### OQ-005: Manual Trigger Command Evaluation
 
-This should be resolved during the backlog phase. Options include: (a) accept the full scan as a known limitation and validate performance against NFR-008; (b) introduce a lighter snapshot builder for incremental mode that scans only affected modules, if render_inventory() can tolerate partial data; (c) investigate whether snapshot caching is feasible.
+**Status**: Evaluation deferred; not committed to scope.
+**Description**: The initiative notes (ASSUMPTION-004) suggest evaluating a manual trigger command for testing without committing. This is an evaluation item, not a committed requirement. If promoted to requirement, it must go through the initiative amendment process.
+**Affects**: ASSUMPTION-004
+**Resolution approach**: Evaluate during planning review. If the `ukbe-run-agent run update_codebase_docs_v1` CLI invocation is sufficient for manual testing, no additional command is needed.
 
-### OQ-004: Windows Hook Script Compatibility
-
-The post-commit hook script must work on Windows (where PowerShell is the default shell but Git uses bash for hooks). The plan assumes a bash-compatible shell script works under Git for Windows. If platform-specific variants are needed, the install command must detect the OS and install the appropriate script. This should be verified during implementation.
+---
 
 ## Critique Resolution
 
-### Finding 1: build_snapshot() full scan may undermine performance target (Major - V-001)
-**Resolution:** Addressed. Updated AD-002 to document the known limitation that build_snapshot() performs a full repository scan regardless of mode parameter. Updated IP-003 to explain the performance implications in detail. Added new risk RISK-006 documenting this as an accepted limitation with architectural mitigation rationale. Updated OQ-003 to reflect the verified behavior (mode does not filter scan scope) and enumerate the resolution options for the backlog phase. The plan now clearly states that the performance benefit comes from selective render_module_doc() calls, not from snapshot construction.
-**Affected section:** AD-002, IP-003, OQ-003, RISK-006 (new), Risk Assessment
+**Source Critique:** incremental-codebase-doc-update-CRITIQUE-20260806-001.md
+**Critique Decision:** APPROVED
+**Critique Date:** 2026-08-12
+**Critical Findings:** 0
+**Major Findings:** 0
+**Minor Observations:** 1 (non-blocking)
 
-### Finding 2: Open questions are well-scoped (Minor - D-001, Informational)
-**Resolution:** No change needed. The critique confirms the four open questions (OQ-001 through OQ-004) are appropriate for backlog-phase resolution. This finding is informational only and requires no plan revision.
-**Affected section:** None
+### Finding 1: Private Function Dependency on `_classify_file()` and `_module_doc_path()`
 
-### Finding 3: Hook CLI path resolution on Windows not formalized (Minor - T-001)
-**Resolution:** Addressed. Added a "CLI Path Resolution Strategy" subsection to Component 3 (Post-Commit Hook Script) documenting the three-tier resolution approach: (1) direct invocation via PATH, (2) fallback to `python -m agent_runner_v2`, (3) optional install-time CLI path detection and embedding in the hook template. This formalizes the path resolution strategy that was previously only mentioned in the portability risk mitigation.
-**Affected section:** Component 3: Post-Commit Hook Script
+**Finding summary:** The plan referenced `_classify_file()` and `_module_doc_path()` (private functions prefixed with underscore) in the Incremental Detection Strategy section for file-to-document mapping. The critique noted this creates a minor coupling risk to internal implementation details.
 
-### Finding 4: Action registration strategy ambiguity (Minor - T-002)
-**Resolution:** Addressed. Chose package-local @action() decorator registration as the sole strategy for this workflow's actions. Removed the dual-registration approach (both global ACTION_REGISTRY and package-local). Updated the "Action Registration" section to clearly state package-local registration via @action() decorator in workflows/update_codebase_docs_v1/actions.py. Updated the "Affected Source Files" list to remove the global action module (incremental_codebase_update.py) and the modification to runner_actions.py. Updated the internal dependencies table (NEW-DEP-001) to reference the workflow package actions. Updated NFR-005 traceability entry and the architectural pattern description to reflect the chosen approach.
-**Affected section:** Plan Overview, Architectural Pattern (execution layer), Action Registration, Affected Source Files, Internal Dependencies, NFR-005 traceability
+**Resolution:** The plan has been updated to eliminate the dependency on private functions. The file-to-document mapping is now described as using the public `build_snapshot()` output, specifically the `items` list of `ScanItem` records, where each record contains `rel_path` and `owner_doc_path` fields. This approach uses only public APIs: `build_snapshot()` and the `ScanItem` dataclass. No private function imports are required. The following sections were updated:
+
+1. **Incremental Detection Strategy - File-to-Document Mapping**: Replaced the reference to `_classify_file()` and `_module_doc_path()` with a description of using `build_snapshot()` output and `ScanItem.owner_doc_path` for mapping.
+2. **Step Details - `detect_incremental_changes`**: Updated to describe using the snapshot `items` list for file-to-document mapping.
+3. **Data Flow - Flow 1**: Updated step 5 to note that doc path mapping uses snapshot items.
+4. **Integration Point 1**: Added a "Public API dependency note" paragraph clarifying that only public APIs (`build_snapshot()` and `ScanItem`) are used, explicitly noting that private functions (`_classify_file()`, `_module_doc_path()`) are not imported.
+5. **Platform Dependencies - PLAN-DEP-001**: Updated to include `ScanItem` dataclass as a verified dependency, with its location and key fields documented.
+
+**Affected sections:** Incremental Detection Strategy, Component A Step Details, Data Flow, Integration Point 1, Platform Dependencies

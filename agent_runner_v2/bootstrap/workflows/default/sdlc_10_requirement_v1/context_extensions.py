@@ -89,7 +89,20 @@ class Sdlc10RequirementExtensions(WorkflowExtensions):
         init_path = artifacts.get("INIT_FILE", "")
         slug = extract_slug_from_path(init_path)
 
+        # Map input artifact keys to their expected subdirectories for bare filename resolution
+        _INPUT_DIRS = {
+            "INIT_FILE": "00_initiatives",
+        }
+
         for key, rel_path in self.register_artifact_keys(job_id=job_id).items():
+            existing = artifacts.get(key)
+            if existing:
+                if key in _INPUT_DIRS and not Path(existing).is_absolute():
+                    result[key] = str(effective_root / SDLC_DELIVERY_BASE / _INPUT_DIRS[key] / Path(existing).name)
+                else:
+                    result[key] = str(existing)
+                continue
+
             resolved = rel_path.replace("{slug}", slug)
             if "{seq}" in resolved:
                 path_dir, path_file = resolved.rsplit("/", 1)

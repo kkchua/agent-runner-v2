@@ -1,0 +1,47 @@
+name: standard
+label: "Standard Implementation"
+description: "Default SDLC implementation with TDD-driven planning and adversarial challenge."
+
+# -----------------------------------------------------------------------
+# Prompt Slots Configuration
+# -----------------------------------------------------------------------
+prompt_slots:
+  generate_implementation:
+    label: "Implementation Generation"
+    default: "standard"
+    options:
+      - name: "standard"
+        file: "prompts/generate_implementation/standard.txt"
+        description: "TDD-driven implementation plan with state verification."
+
+  challenge_implementation:
+    label: "Implementation Challenge"
+    default: "standard"
+    options:
+      - name: "standard"
+        file: "prompts/challenge_implementation/standard.txt"
+        description: "Adversarial attack on functional viability."
+
+  address_challenges:
+    label: "Address Challenges"
+    default: "standard"
+    options:
+      - name: "standard"
+        file: "prompts/address_challenges/standard.txt"
+        description: "Evidence-based challenge resolution."
+
+  gatekeep_implementation:
+    label: "Implementation Gate"
+    default: "standard"
+    options:
+      - name: "standard"
+        file: "prompts/gatekeep_implementation/standard.txt"
+        description: "Pass/fail gate verifying functional viability."
+
+  refine_implementation:
+    label: "Implementation Refinement"
+    default: "standard"
+    options:
+      - name: "standard"
+        file: "prompts/refine_implementation/standard.txt"
+        description: "Address gatekeep findings."

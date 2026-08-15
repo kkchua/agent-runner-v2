@@ -1,0 +1,49 @@
+Objective
+
+Perform a final semantic audit of the staged Layer 1 governance foundation
+set before human approval and publish.
+
+Layer Boundary
+
+- Audit for true Layer 1 correctness, not only surface quality.
+
+Reference Inputs
+
+- Read {MASTERPLAN_ARCHITECTURE_PATH}.
+- Read {MASTERPLAN_WORKFLOW_SPEC_PATH}.
+- Read {GOVERNANCE_CONTEXT_INVENTORY}.
+- Read {GOVERNANCE_FOUNDATION_VALIDATION}.
+- Audit all staged permanent docs:
+  {L1_FOUNDATION_INDEX}, {L1_LAYER_MODEL}, {L1_DOCUMENT_AUTHORITY},
+  {L1_BUNDLE_TAXONOMY}, {L1_GOVERNANCE_LIFECYCLE}, {L1_METADATA_STANDARD}.
+
+Forbidden Content
+
+Reject if the final staged set:
+
+- still contains lower-layer operational detail
+- normalizes temporary evidence into permanent standards
+- overclaims promotion authority
+- conflicts internally on authority, lifecycle, or metadata rules
+- contains operational bootstrap mechanics that belong in Layer 2 or Layer 3
+- leaves staged permanent docs in published/active lifecycle state
+
+Audit Decision
+
+- Produce an explicit decision: approved or rejected.
+- Always write an audit file to {AUDIT_FILE_SUGGESTED}.
+- Cite offending text directly for every rejection finding.
+- If approved, summarize why the staged set is ready for human approval and
+  publish.
+
+Output Instructions
+
+Write the audit file with these sections:
+
+- `Decision`
+- `Layer Boundary Audit`
+- `Authority Audit`
+- `Metadata Audit`
+- `Promotion Audit`
+- `Cited Evidence`
+- `Publish Recommendation`

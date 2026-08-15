@@ -449,56 +449,48 @@ def _is_telegram_enabled() -> bool:
 
 
 def _format_telegram_message(status: str, context: dict[str, Any]) -> str:
-    """Build Telegram message in HTML parse_mode.
+    """Build Telegram message in a standard, agent-parseable format.
 
-    Reuses the same title/message logic as Pushover but formats for Telegram HTML.
+    Example Output:
+    [Agent-Runner-V2 Notification]
+    workflow_name: text_summarizer_ayz
+    step_name: step 1
+    project_root: D:\\MyProjectSpace\\01_Workflows\\DocSummarizer
+    run_id: TXTSUM-3ru02bl7
+    status: completed
+
+    Please review the generated artifacts.
     """
-    job_id = context.get("job_id", "unknown")
+    job_id = context.get("job_id", context.get("run_code", "unknown"))
     workflow_name = context.get("workflow_name", "unknown")
-
-    if status in ("COMPLETED", "STEP_COMPLETED"):
-        emoji = "✅"
-        label = "Workflow" if status == "COMPLETED" else "Step"
-    elif status in ("FAILED", "STEP_FAILED", "STEP_REJECTED"):
-        emoji = "❌"
-        label = "Workflow" if status == "FAILED" else "Step"
-    elif status == "WAITING_FOR_HUMAN_INTERVENTION":
-        emoji = "⚠️"
-        label = "Workflow"
-    elif status == "WAITING_FOR_HUMAN_MAXRETRIED":
-        emoji = "🔄"
-        label = "Workflow"
-    else:
-        emoji = "ℹ️"
-        label = "Workflow"
-
-    lines = [f"{emoji} <b>{label} {status}</b>", f"<b>Workflow:</b> {workflow_name}", f"<b>Job ID:</b> <code>{job_id}</code>"]
-
     step_name = context.get("step_name") or context.get("current_step")
-    if step_name and status.startswith("STEP_"):
-        lines.append(f"<b>Step:</b> {step_name}")
+        
+    # project_root might not be in context for all notifications, 
+    # but for job completion it usually is or can be added.
+    
+    # Also try PROJECT_ROOT if available
+    project_base = "N/A"
+    try:
+        if PROJECT_ROOT:
+            project_base = PROJECT_ROOT
+    except Exception:
+        pass
+        
+    project_root = context.get("project_root", project_base) 
 
-    if status in ("FAILED", "WAITING_FOR_HUMAN_INTERVENTION", "WAITING_FOR_HUMAN_MAXRETRIED"):
-        failed_step = context.get("last_failure_step") or context.get("current_step")
-        if failed_step:
-            lines.append(f"<b>Failed at step:</b> {failed_step}")
-        failure_reason = context.get("last_failure_reason")
-        if failure_reason:
-            reason = failure_reason[:200] + "..." if len(failure_reason) > 200 else failure_reason
-            lines.append(f"<b>Reason:</b> {reason}")
-        failure_code = context.get("last_failure_code")
-        if failure_code:
-            lines.append(f"<b>Error code:</b> <code>{failure_code}</code>")
+    # Map status to lowercase for the standard format
+    status_str = status.lower()
 
-    duration_seconds = _extract_duration_seconds(status, context)
-    if duration_seconds is not None:
-        minutes, seconds = divmod(duration_seconds, 60)
-        if minutes > 0:
-            lines.append(f"<b>Duration:</b> {int(minutes)}m {int(seconds)}s")
-        else:
-            lines.append(f"<b>Duration:</b> {int(seconds)}s")
-
-    return "\n".join(lines)
+    return (
+        f"[Agent-Runner-V2 Notification]\n"
+        f"workflow_name: {workflow_name}\n"
+        f"step_name: {step_name}\n"        
+        f"project_root: {project_root}\n"
+        f"job_id: {job_id}\n"
+        f"status: {status_str}\n"
+        f"\n"
+        f"Please review the generated artifacts."
+    )
 
 
 def _telegram_api_call(bot_token: str, chat_id: str, text: str) -> bool:
@@ -581,27 +573,16 @@ def send_notification(status: str, context: dict[str, Any]) -> bool:
         else:
             print(f"[notifications] Pushover credentials not configured, skipping", flush=True)
 
-        # --- QwenPaw Console channel ---
+        # --- Telegram channel ---
         if _is_telegram_enabled():
             bot_token, chat_id = _resolve_telegram_credentials()
             if bot_token and chat_id:
                 text = _format_telegram_message(status, context)
-
-                # 1. Send to Telegram (for the user)
                 if _telegram_api_call(bot_token, chat_id, text):
                     print(f"[notifications] Telegram sent: {status} for job {job_id}", flush=True)
                     any_success = True
                 else:
                     print(f"[notifications] Telegram failed: {status} for job {job_id}", flush=True)
-                
-                # 2. Send to QwenPaw Console (for the agent)
-                # TODO: Re-enable when agent monitoring is ready
-                # if notify_qwenpaw_agent(text):
-                #     print(f"[notifications] QwenPaw Console sent: {status} for job {job_id}", flush=True)
-                #     any_success = True
-                # else:
-                #     print(f"[notifications] QwenPaw Console failed: {status} for job {job_id}", flush=True)
-                pass
 
         return any_success
 
