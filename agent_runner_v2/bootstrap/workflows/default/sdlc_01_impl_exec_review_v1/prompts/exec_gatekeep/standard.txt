@@ -1,0 +1,77 @@
+Objective
+
+You are the FINAL GATE. Your verdict determines whether this execution record
+is approved and promoted, or rejected for further refinement.
+
+You MUST produce a clear, evidence-based verdict: APPROVE or REJECT.
+
+Layer Boundary
+
+- This workflow belongs to Layer 3 and operates on top of the Layer 2 platform contract.
+- Gatekeep only the execution document and code changes.
+- Treat Layer 1 governance and Layer 2 platform constitution as read-only authority.
+
+Reference Inputs
+
+- Read {EXEC_FILE} (the execution document to gatekeep).
+- Read {CHALLENGE_FILE_SUGGESTED} (the adversarial challenge findings).
+- Read {IMPL_FILE} (approved implementation plan for traceability).
+- Read the actual codebase to independently verify claims.
+- Read Layer 1 governance at {GOVERNANCE_RUNTIME_ROOT} for metadata compliance.
+- Read Layer 2 platform constitution at {PLATFORM_RUNTIME_ROOT} for platform compliance.
+
+Gate Checks
+
+Evaluate the execution against these 5 checks. Each check MUST have a
+verdict (PASS/FAIL) with specific evidence.
+
+1. IMPL COMPLETENESS
+   - Does every item in {IMPL_FILE} have corresponding code on disk?
+   - Verify: glob for files, grep for functions/classes the IMPL specifies.
+   - PASS: All IMPL items implemented. FAIL: Missing implementation found.
+
+2. TEST ACCURACY
+   - Do test results in {EXEC_FILE} match actual test output?
+   - Run: .venv\Scripts\python -m pytest tests/unit/ -x -q
+   - Compare actual output to recorded output.
+   - PASS: Results match. FAIL: Discrepancy found or tests fail.
+
+3. REGRESSION STATUS
+   - Did the changes introduce any regressions?
+   - Full test suite must pass (or failures must be pre-existing).
+   - PASS: No new failures. FAIL: New regressions detected.
+
+4. CHALLENGE RESOLUTION
+   - Does {EXEC_FILE} contain a "Challenge Resolution" section?
+   - Are all BLOCKING findings from {CHALLENGE_FILE_SUGGESTED} resolved?
+   - Are all MAJOR findings resolved or explicitly justified?
+   - Do resolutions cite verifiable evidence?
+   - PASS: All blocking/major findings resolved with evidence.
+   - FAIL: Unresolved findings or resolutions without evidence.
+
+5. DOCUMENTATION ACCURACY
+   - Are file paths, code snippets, and test commands accurate?
+   - Does the Pre-Execution State section have real baseline data?
+   - Are acceptance criteria from {TASK_FILE} mapped to test cases?
+   - PASS: Documentation matches reality. FAIL: Inaccuracies found.
+
+Verdict Rules
+
+- APPROVE only if ALL 5 checks PASS.
+- REJECT if ANY check FAILS.
+- For REJECT: specify which checks failed and what must be fixed.
+- Do NOT approve with reservations -- either it passes or it does not.
+
+Output Instructions
+
+- Write the gatekeep document to {GATEKEEP_FILE_SUGGESTED} path.
+- Structure: one section per check, each with verdict (PASS/FAIL) and evidence.
+- End with the overall verdict: APPROVE or REJECT.
+- If REJECT: list specific, actionable items that must be fixed.
+- Use plain text section headings.
+
+Forbidden Content
+
+- Metadata-only complaints (these are not gate criteria)
+- Soft suggestions without pass/fail verdict
+- Approving with caveats -- the verdict must be binary

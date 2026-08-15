@@ -14,7 +14,7 @@ Reference Inputs
 - Read the sync log at SYNC_LOG.
 - Read the staged codebase inventory at CODEBASE_INVENTORY.
 - Read the staged change impact report at CODEBASE_CHANGE_IMPACT.
-- Read codebase documentation standards at {CODEBASE_DOC_ROOT}/00_standards/.
+- Read codebase documentation standards at {CODEBASE_DOC_ROOT}/current/00_standards/.
 
 Review Criteria
 

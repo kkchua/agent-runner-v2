@@ -1,6 +1,6 @@
 [workflow]
 name = "sdlc_30_backlog_v1"
-version = "1.0.0"
+version = "2.0.0"
 label = "SDLC Backlog v1"
 job_prefix = "SDLC30BLG"
 description = "Generate backlog from approved plan, producing approved BACKLOG document."
@@ -17,11 +17,20 @@ include_in_prompts = true
 prompt_targets = ["all"]
 
 # ============================================================================
+# Implementations (BCS)
+# ============================================================================
+
+[[workflow.implementation]]
+name = "standard"
+description = "Generate backlog from approved plan."
+label = "Standard"
+
+# ============================================================================
 # Step 1: Generate Backlog
 # ============================================================================
 [[step]]
 name = "generate_backlog"
-prompt = "prompts/01_generate_backlog.txt"
+prompt = "{{ slot.generate_backlog }}"
 enable_notifications = true
 onsuccess = "technical_critique"
 
@@ -38,7 +47,7 @@ role_policy = "architect_standard"
 # ============================================================================
 [[step]]
 name = "technical_critique"
-prompt = "prompts/02_technical_critique.txt"
+prompt = "{{ slot.technical_critique }}"
 enable_notifications = true
 onsuccess = "address_critique"
 
@@ -62,7 +71,7 @@ exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
 # ============================================================================
 [[step]]
 name = "address_critique"
-prompt = "prompts/02b_address_critique.txt"
+prompt = "{{ slot.address_critique }}"
 enable_notifications = true
 onsuccess = "review_backlog"
 
@@ -81,7 +90,7 @@ role_policy = "architect_standard"
 # ============================================================================
 [[step]]
 name = "review_backlog"
-prompt = "prompts/03_review_backlog.txt"
+prompt = "{{ slot.review_backlog }}"
 enable_notifications = true
 requires_human_approval_after = true
 onsuccess = "promote_backlog"
@@ -106,7 +115,7 @@ exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
 # ============================================================================
 [[step]]
 name = "refine_backlog"
-prompt = "prompts/04_refine_backlog.txt"
+prompt = "{{ slot.refine_backlog }}"
 enable_notifications = true
 
 onsuccess = "review_backlog"

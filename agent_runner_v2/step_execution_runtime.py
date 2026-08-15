@@ -57,7 +57,7 @@ def resolve_prompt_slot(
         print(f"[BCS] Slot detected: {slot_id}", flush=True)
         
         # Look for implementation_name in group_cfg (runtime context)
-        impl_name = group_cfg.get("implementation_name")
+        impl_name = group_cfg.get("implementation_name") or "standard"
         print(f"[BCS] Impl Name: {impl_name}", flush=True)
         
         if bundle and impl_name:
@@ -76,10 +76,10 @@ def resolve_prompt_slot(
                         default_name = slot_config.get("default")
                         options = slot_config.get("options", [])
                         valid_names = {opt.get("name") for opt in options}
-                        
+
                         if selected_name not in valid_names:
                             selected_name = default_name
-                        
+
                         for opt in options:
                             if opt.get("name") == selected_name:
                                 file_path = opt.get("file")
@@ -95,6 +95,15 @@ def resolve_prompt_slot(
                                     return str(res)
                 except Exception as e:
                     print(f"[BCS] Error: {e}", flush=True)
+
+        # Convention-based fallback: prompts/{slot_id}/standard.txt
+        if bundle:
+            convention_path = bundle.bundle_root / "prompts" / slot_id / "standard.txt"
+            if convention_path.exists():
+                print(f"[BCS] RESOLVED (convention fallback): {convention_path}", flush=True)
+                return str(convention_path)
+            print(f"[BCS] Convention fallback not found: {convention_path}", flush=True)
+
     return None
 
 

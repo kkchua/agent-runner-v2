@@ -1,0 +1,59 @@
+Objective
+
+Refine the validation document based on gatekeep findings.
+
+Layer Boundary
+
+- This workflow belongs to Layer 3 and operates on top of the Layer 2 platform contract.
+- Refine only the validation document, not review or closure artifacts.
+- Treat Layer 1 governance and Layer 2 platform constitution as read-only authority.
+
+Reference Inputs
+
+- Read {VAL_FILE} (the validation document to refine).
+- Read {GATEKEEP_FILE_SUGGESTED} (gatekeep findings with specific feedback).
+- Read {EXEC_FILE} (approved execution document for traceability verification).
+- Read the actual codebase to verify changes.
+
+Refinement Rules
+
+1. Address ALL Failed Gate Checks:
+   - Evidence Quality: add actual test output, verify all claims with evidence.
+   - Coverage Completeness: add validation for any missing acceptance criteria.
+   - Methodological Soundness: strengthen weak validation methods.
+   - Challenge Resolution: resolve any remaining unresolved findings.
+   - Documentation Accuracy: correct any inaccurate file paths, snippets, or commands.
+
+2. Verify Every Fix:
+   - After making changes, run the test suite again.
+   - Record actual test output, not expected output.
+   - Update the relevant sections of {VAL_FILE} with verified results.
+
+3. Preserve Original Intent:
+   - Do not invent new validation checks not grounded in the execution.
+   - Do not add review documents or closure artifacts.
+   - Maintain traceability to {EXEC_FILE}.
+
+4. Update the Challenge Resolution Section:
+   - Add entries for any new findings from {GATEKEEP_FILE_SUGGESTED}.
+   - Ensure all resolutions cite verifiable evidence.
+
+5. Verify Technical Accuracy:
+   - Verify API and SDK usage against the actual installed library version.
+   - Check code snippets and file paths against the actual codebase.
+
+Output Instructions
+
+- Update {VAL_FILE} in place with the refined content.
+- Preserve the YAML frontmatter.
+- Keep frontmatter fields present and consistent.
+- Use plain text section headings.
+- Do not change the document structure unless required by gatekeep findings.
+
+Forbidden Content
+
+- Layer 1 governance redefinition or contradiction
+- Layer 2 platform contract redefinition
+- Scope not covered by the approved execution document
+- Fabricated test output
+- Content not supported by the actual validation performed

@@ -1,6 +1,6 @@
 [workflow]
 name = "sdlc_00_codebase_scaffold_v1"
-version = "1.0.0"
+version = "2.0.0"
 label = "SDLC Codebase & Scaffold v1"
 job_prefix = "SDLC00CS"
 description = "Combined codebase sync and SDLC delivery scaffold generation with staging, review, and publish."
@@ -15,6 +15,15 @@ platform = "agent-runner-v2"
 [workflow.governance]
 include_in_prompts = true
 prompt_targets = ["all"]
+
+# ============================================================================
+# Implementations (BCS)
+# ============================================================================
+
+[[workflow.implementation]]
+name = "standard"
+description = "Combined codebase sync and SDLC delivery scaffold generation."
+label = "Standard"
 
 # ============================================================================
 # Phase 1: Codebase Sync
@@ -54,7 +63,7 @@ result_meta_key = "SYNC_LOG"
 # ============================================================================
 [[step]]
 name = "review_sync_log"
-prompt = "prompts/04_review_sync_log.txt"
+prompt = "{{ slot.review_sync_log }}"
 enable_notifications = true
 requires_human_approval_after = true
 onsuccess = "validate_codebase_docs"
@@ -79,7 +88,7 @@ exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
 # ============================================================================
 [[step]]
 name = "refine_codebase_docs"
-prompt = "prompts/05_refine_codebase_docs.txt"
+prompt = "{{ slot.refine_codebase_docs }}"
 enable_notifications = true
 onsuccess = "review_sync_log"
 
@@ -152,7 +161,7 @@ result_meta_key = "CODEBASE_PUBLISH_MANIFEST"
 # ============================================================================
 [[step]]
 name = "generate_templates"
-prompt = "prompts/01_generate_templates.txt"
+prompt = "{{ slot.generate_templates }}"
 enable_notifications = true
 onsuccess = "generate_agent_contracts"
 
@@ -175,7 +184,7 @@ exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
 # ============================================================================
 [[step]]
 name = "generate_agent_contracts"
-prompt = "prompts/02_generate_agent_contracts.txt"
+prompt = "{{ slot.generate_agent_contracts }}"
 enable_notifications = true
 onsuccess = "review_scaffold"
 
@@ -198,7 +207,7 @@ exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
 # ============================================================================
 [[step]]
 name = "review_scaffold"
-prompt = "prompts/03_review_scaffold.txt"
+prompt = "{{ slot.review_scaffold }}"
 enable_notifications = true
 requires_human_approval_after = true
 onsuccess = "publish_sdlc_scaffold"
@@ -223,7 +232,7 @@ exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
 # ============================================================================
 [[step]]
 name = "refine_scaffold"
-prompt = "prompts/04_refine_scaffold.txt"
+prompt = "{{ slot.refine_scaffold }}"
 enable_notifications = true
 onsuccess = "review_scaffold"
 

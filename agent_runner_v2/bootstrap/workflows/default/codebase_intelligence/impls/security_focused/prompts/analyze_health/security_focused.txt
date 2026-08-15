@@ -1,0 +1,116 @@
+# Codebase Health Analysis
+
+You are performing a structural health analysis of a codebase. You will analyze
+the codebase across 5 health dimensions and produce findings with severity ratings,
+evidence, and remediation recommendations.
+
+## Inputs
+
+- CODEBASE_INVENTORY: {CODEBASE_INVENTORY}
+  Path to a JSON file containing the codebase inventory with file metadata,
+  module information, line counts, and package structure.
+
+- IMPORT_GRAPH: {IMPORT_GRAPH}
+  Path to a JSON file containing the directed import dependency graph with nodes
+  (modules), edges (imports), cycles, and per-module metrics (fan_in, fan_out).
+
+## Instructions
+
+Read both JSON files to understand the codebase structure and dependency graph.
+Analyze the codebase across these 5 health dimensions:
+
+### Dimension 1: Circular Dependencies
+
+Examine IMPORT_GRAPH.cycles for detected dependency cycles.
+- Report each cycle with the full list of modules involved
+- Assess the severity based on cycle length and module importance
+- Longer cycles and cycles involving core modules are higher severity
+
+### Dimension 2: Coupling Analysis
+
+Use fan_in and fan_out metrics from IMPORT_GRAPH.nodes:
+- High fan_out modules (imports many others) indicate high coupling risk
+- High fan_in modules (many modules import them) indicate centrality -- changes
+  to these modules have widespread impact
+- Flag modules where fan_out significantly exceeds the median
+- Flag modules where fan_in is very high (potential bottleneck or god module)
+
+### Dimension 3: Dead Code Detection
+
+Identify modules with fan_in = 0 (nothing imports them):
+- Exclude known entry points (e.g., __main__, top-level scripts)
+- Exclude __init__.py files (package markers)
+- Modules that are never imported may be dead code
+- Consider module size -- large modules with fan_in=0 are more concerning
+
+### Dimension 4: Complexity Assessment
+
+Use line_count from CODEBASE_INVENTORY.source_files:
+- Flag modules with unusually high line counts (above 2x the median)
+- Large modules are likely complex and harder to maintain
+- Cross-reference with fan_out -- large modules with high fan_out are highest risk
+
+### Dimension 5: Import Discipline
+
+Analyze import patterns from IMPORT_GRAPH.edges:
+- Count relative vs absolute imports -- excessive relative imports can indicate
+  tight coupling within a package
+- Identify cross-package imports that skip intermediate levels
+- Flag imports of internal modules (modules not in the inventory) which may
+  indicate external dependencies
+
+## Finding Format
+
+Each finding must follow this exact structure:
+
+```
+### H-NNN: [Title]
+
+- **Dimension**: [One of the 5 dimensions]
+- **Severity**: [critical / high / medium / low / info]
+- **Evidence**: [Specific file paths, module names, metrics from the data]
+- **Impact**: [What happens if this issue is not addressed]
+- **Recommendation**: [Concrete remediation steps]
+```
+
+Severity criteria:
+- **critical**: Actively breaking or blocking development; immediate action required
+- **high**: Significant risk to maintainability or reliability; address within sprint
+- **medium**: Technical debt that compounds over time; address within quarter
+- **low**: Minor improvement opportunity; address when convenient
+- **info**: Informational observation; no action required but good to know
+
+## Document Structure
+
+Your output document must have:
+
+1. **Summary Section** (at the top)
+   - Total findings count
+   - Count by severity level
+   - Count by dimension
+   - Overall health assessment (1-2 sentences)
+
+2. **Findings by Dimension**
+   - Group findings under each dimension heading
+   - Each dimension must have at least one finding or an explicit "no issues found" statement
+
+## Validation Checklist
+
+Before writing the output, verify:
+
+- [ ] All 5 dimensions are addressed (each has at least one finding or explicit "no issues found" statement)
+- [ ] Every finding cites specific evidence from CODEBASE_INVENTORY or IMPORT_GRAPH data
+- [ ] Finding IDs are sequential (H-001, H-002, ...)
+- [ ] Severity ratings follow consistent criteria as defined above
+- [ ] No fabricated module names or metrics -- all data traces to input artifacts
+- [ ] Summary section accurately reflects finding counts
+- [ ] Document is self-contained -- all evidence is inline, not referencing external files the reader cannot access
+- [ ] Recommendations are actionable (specific files to change, patterns to adopt)
+
+## Output
+
+Write the complete Markdown document to: {HEALTH_FINDINGS_FILE}
+
+The document must be valid Markdown. Use ## for dimension headings, ### for
+individual findings. Use bullet lists for finding metadata. Include code
+formatting for module names and file paths.
