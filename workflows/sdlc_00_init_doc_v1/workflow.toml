@@ -18,6 +18,15 @@ include_in_prompts = true
 prompt_targets = ["all"]
 
 # ============================================================================
+# Implementations (BCS)
+# ============================================================================
+
+[[workflow.implementation]]
+name = "standard"
+description = "Capture and structure initiative from draft input."
+label = "Standard"
+
+# ============================================================================
 # Step 1: Generate Initiative
 # ============================================================================
 [[step]]

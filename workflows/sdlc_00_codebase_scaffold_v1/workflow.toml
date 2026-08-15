@@ -17,6 +17,15 @@ include_in_prompts = true
 prompt_targets = ["all"]
 
 # ============================================================================
+# Implementations (BCS)
+# ============================================================================
+
+[[workflow.implementation]]
+name = "standard"
+description = "Combined codebase sync and SDLC delivery scaffold generation."
+label = "Standard"
+
+# ============================================================================
 # Phase 1: Codebase Sync
 # ============================================================================
 
