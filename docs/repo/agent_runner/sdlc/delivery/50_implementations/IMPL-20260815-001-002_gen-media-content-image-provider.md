@@ -7,7 +7,7 @@ scan_policy: "include"
 scan_reason: "implementation plan for task execution"
 layer: "layer3"
 platform: "agent-runner-v2"
-lifecycle_status: "draft"
+lifecycle_status: "Approved"
 effective_version: "SDLC50IMP-7zblrwi8"
 managed_by: "workflow-generated"
 ---
@@ -196,12 +196,20 @@ Source references:
 - **Satisfies**: ACT-03, ACT-04, ACT-05, ACT-06, ACT-07, ACT-08
 - **Details**:
   - Test class: `TestCallApi`
-  - Test 1: `test_successful_image_generation` -- mock 200 response with valid data, verify return dict
+  - Test 1: `test_successful_image_generation` -- mock 200 response with valid data, verify return dict contains both `image_url` and `revised_prompt`
   - Test 2: `test_missing_image_url_raises_runtime_error` -- mock 200 response with empty data, verify RuntimeError
-  - Test 3: `test_http_error_raises_runtime_error` -- mock 500 response, verify RuntimeError
-  - Test 4: `test_correct_payload_structure` -- mock requests.post, inspect call args for model/prompt/size/ratio
-  - Test 5: `test_correct_endpoint_url` -- verify URL is `{base_url}/v1/images/generations`
-  - Test 6: `test_correct_headers` -- verify Authorization and Content-Type headers
+  - Test 3: `test_http_error_raises_runtime_error` -- mock 500 response with raise_for_status raising HTTPError, verify RuntimeError
+  - Test 4: `test_connection_error_raises_runtime_error` -- mock requests.post raising ConnectionError, verify RuntimeError
+  - Test 5: `test_timeout_error_raises_runtime_error` -- mock requests.post raising Timeout, verify RuntimeError
+  - Test 6: `test_json_decode_error_raises_runtime_error` -- mock resp.json() raising ValueError, verify RuntimeError
+  - Test 7: `test_correct_payload_structure` -- mock requests.post, inspect call args for model/prompt/size/ratio
+  - Test 8: `test_correct_endpoint_url` -- verify URL is `{base_url}/v1/images/generations`
+  - Test 9: `test_correct_headers` -- verify Authorization and Content-Type headers
+  - Test 10: `test_ratio_defaults_to_empty_string` -- verify ratio defaults when not in config
+  - Test 11: `test_timeout_parameter_passed` -- verify timeout=500 is passed to requests.post
+  - Test 12: `test_empty_base_url_raises_runtime_error` -- verify empty base_url raises RuntimeError
+  - Test 13: `test_missing_config_keys_raises_runtime_error` -- verify missing config keys raise RuntimeError
+  - Test 14: `test_trailing_slash_in_base_url_stripped` -- verify trailing slash handling
   - All tests use `unittest.mock.patch` to mock `requests.post`
 
 ### STEP-03: Run Tests and Verify
@@ -321,7 +329,7 @@ def call_api(prompt: str, config: dict, api_key: str, base_url: str) -> dict:
 
 #### File 2: workflows/gen_media_content_v1/tests/test_image_provider_agnes_v1.py
 
-New test module with 6 test cases covering all acceptance criteria.
+New test module with 14 test cases covering all acceptance criteria and challenge-identified edge cases.
 
 Structure:
 ```
@@ -359,7 +367,8 @@ The following test code implements the Acceptance Criteria Tests from Section 1.
 """Unit tests for agnes_v1 image rendering provider.
 
 Tests cover successful generation, error handling, payload structure,
-endpoint URL construction, and header validation.
+endpoint URL construction, header validation, input validation,
+network error handling, JSON decode error handling, and timeout.
 All HTTP calls are mocked; no real API keys or network access required.
 """
 from __future__ import annotations
@@ -383,7 +392,7 @@ class TestCallApi:
     """Tests for call_api function in agnes_v1 provider."""
 
     def test_successful_image_generation(self):
-        """ACT-03: Returns dict with image_url on successful 200 response."""
+        """ACT-03: Returns dict with image_url and revised_prompt on successful 200 response."""
         mock_resp = MagicMock()
         mock_resp.status_code = 200
         mock_resp.json.return_value = {
@@ -397,6 +406,7 @@ class TestCallApi:
             "workflows.gen_media_content_v1.api_actions.render_image.agnes_v1.requests"
         ) as mock_requests:
             mock_requests.post.return_value = mock_resp
+            mock_requests.exceptions = real_requests.exceptions
 
             result = call_api(
                 prompt="a cat in a garden",
@@ -408,6 +418,7 @@ class TestCallApi:
         assert "image_url" in result
         assert result["image_url"] == "https://example.com/generated.png"
         assert "revised_prompt" in result
+        assert result["revised_prompt"] == "a cat in a garden"
 
     def test_missing_image_url_raises_runtime_error(self):
         """ACT-04: Raises RuntimeError when image URL is missing from response."""
@@ -422,6 +433,7 @@ class TestCallApi:
             "workflows.gen_media_content_v1.api_actions.render_image.agnes_v1.requests"
         ) as mock_requests:
             mock_requests.post.return_value = mock_resp
+            mock_requests.exceptions = real_requests.exceptions
 
             with pytest.raises(RuntimeError):
                 call_api(
@@ -445,10 +457,74 @@ class TestCallApi:
             "workflows.gen_media_content_v1.api_actions.render_image.agnes_v1.requests"
         ) as mock_requests:
             mock_requests.post.return_value = mock_resp
+            mock_requests.exceptions = real_requests.exceptions
 
             with pytest.raises(RuntimeError):
                 call_api(
                     prompt="a mountain",
+                    config=config,
+                    api_key="test-key-123",
+                    base_url="https://apihub.agnes-ai.com",
+                )
+
+    def test_connection_error_raises_runtime_error(self):
+        """ACT-05 supplementary: Raises RuntimeError on network-level ConnectionError."""
+        config = {"model": "agnes-image-2.1-flash", "size": "1024x1024"}
+
+        with patch(
+            "workflows.gen_media_content_v1.api_actions.render_image.agnes_v1.requests"
+        ) as mock_requests:
+            mock_requests.post.side_effect = real_requests.exceptions.ConnectionError(
+                "Connection refused"
+            )
+            mock_requests.exceptions = real_requests.exceptions
+
+            with pytest.raises(RuntimeError, match="request failed"):
+                call_api(
+                    prompt="a river",
+                    config=config,
+                    api_key="test-key-123",
+                    base_url="https://apihub.agnes-ai.com",
+                )
+
+    def test_timeout_error_raises_runtime_error(self):
+        """ACT-05 supplementary: Raises RuntimeError on Timeout."""
+        config = {"model": "agnes-image-2.1-flash", "size": "1024x1024"}
+
+        with patch(
+            "workflows.gen_media_content_v1.api_actions.render_image.agnes_v1.requests"
+        ) as mock_requests:
+            mock_requests.post.side_effect = real_requests.exceptions.Timeout(
+                "Request timed out"
+            )
+            mock_requests.exceptions = real_requests.exceptions
+
+            with pytest.raises(RuntimeError, match="request failed"):
+                call_api(
+                    prompt="a forest",
+                    config=config,
+                    api_key="test-key-123",
+                    base_url="https://apihub.agnes-ai.com",
+                )
+
+    def test_json_decode_error_raises_runtime_error(self):
+        """ACT-04/ACT-05 supplementary: Raises RuntimeError on non-JSON response."""
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.raise_for_status = MagicMock()
+        mock_resp.json.side_effect = ValueError("No JSON found")
+
+        config = {"model": "agnes-image-2.1-flash", "size": "1024x1024"}
+
+        with patch(
+            "workflows.gen_media_content_v1.api_actions.render_image.agnes_v1.requests"
+        ) as mock_requests:
+            mock_requests.post.return_value = mock_resp
+            mock_requests.exceptions = real_requests.exceptions
+
+            with pytest.raises(RuntimeError, match="non-JSON"):
+                call_api(
+                    prompt="a lake",
                     config=config,
                     api_key="test-key-123",
                     base_url="https://apihub.agnes-ai.com",
@@ -469,6 +545,7 @@ class TestCallApi:
             "workflows.gen_media_content_v1.api_actions.render_image.agnes_v1.requests"
         ) as mock_requests:
             mock_requests.post.return_value = mock_resp
+            mock_requests.exceptions = real_requests.exceptions
 
             call_api(
                 prompt="a flower",
@@ -501,6 +578,7 @@ class TestCallApi:
             "workflows.gen_media_content_v1.api_actions.render_image.agnes_v1.requests"
         ) as mock_requests:
             mock_requests.post.return_value = mock_resp
+            mock_requests.exceptions = real_requests.exceptions
 
             call_api(
                 prompt="a tree",
@@ -528,6 +606,7 @@ class TestCallApi:
             "workflows.gen_media_content_v1.api_actions.render_image.agnes_v1.requests"
         ) as mock_requests:
             mock_requests.post.return_value = mock_resp
+            mock_requests.exceptions = real_requests.exceptions
 
             call_api(
                 prompt="a bird",
@@ -558,6 +637,7 @@ class TestCallApi:
             "workflows.gen_media_content_v1.api_actions.render_image.agnes_v1.requests"
         ) as mock_requests:
             mock_requests.post.return_value = mock_resp
+            mock_requests.exceptions = real_requests.exceptions
 
             call_api(
                 prompt="a sky",
@@ -569,6 +649,83 @@ class TestCallApi:
             call_kwargs = mock_requests.post.call_args
             payload = call_kwargs.kwargs.get("json") or call_kwargs[1].get("json")
             assert payload["ratio"] == ""
+
+    def test_timeout_parameter_passed(self):
+        """ACT-06 supplementary: Verifies timeout=500 is passed to requests.post."""
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.json.return_value = {
+            "data": [{"url": "https://example.com/img.png"}]
+        }
+        mock_resp.raise_for_status = MagicMock()
+
+        config = {"model": "agnes-image-2.1-flash", "size": "1024x1024"}
+
+        with patch(
+            "workflows.gen_media_content_v1.api_actions.render_image.agnes_v1.requests"
+        ) as mock_requests:
+            mock_requests.post.return_value = mock_resp
+            mock_requests.exceptions = real_requests.exceptions
+
+            call_api(
+                prompt="a cloud",
+                config=config,
+                api_key="test-key",
+                base_url="https://apihub.agnes-ai.com",
+            )
+
+            call_kwargs = mock_requests.post.call_args
+            timeout = call_kwargs.kwargs.get("timeout") or call_kwargs[1].get("timeout")
+            assert timeout == 500
+
+    def test_empty_base_url_raises_runtime_error(self):
+        """Input validation: Empty base_url raises RuntimeError."""
+        config = {"model": "agnes-image-2.1-flash", "size": "1024x1024"}
+
+        with pytest.raises(RuntimeError, match="base_url"):
+            call_api(
+                prompt="a star",
+                config=config,
+                api_key="test-key",
+                base_url="",
+            )
+
+    def test_missing_config_keys_raises_runtime_error(self):
+        """Input validation: Missing required config keys raises RuntimeError."""
+        with pytest.raises(RuntimeError, match="missing required keys"):
+            call_api(
+                prompt="a moon",
+                config={},
+                api_key="test-key",
+                base_url="https://apihub.agnes-ai.com",
+            )
+
+    def test_trailing_slash_in_base_url_stripped(self):
+        """ACT-07 supplementary: Trailing slash in base_url is handled correctly."""
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.json.return_value = {
+            "data": [{"url": "https://example.com/img.png"}]
+        }
+        mock_resp.raise_for_status = MagicMock()
+
+        config = {"model": "agnes-image-2.1-flash", "size": "1024x1024"}
+
+        with patch(
+            "workflows.gen_media_content_v1.api_actions.render_image.agnes_v1.requests"
+        ) as mock_requests:
+            mock_requests.post.return_value = mock_resp
+            mock_requests.exceptions = real_requests.exceptions
+
+            call_api(
+                prompt="a hill",
+                config=config,
+                api_key="test-key",
+                base_url="https://apihub.agnes-ai.com/",
+            )
+
+            call_url = mock_requests.post.call_args[0][0]
+            assert call_url == "https://apihub.agnes-ai.com/v1/images/generations"
 ```
 
 ## 8. Rollback Plan
@@ -618,3 +775,72 @@ This implementation uses only the `requests` library (already a project dependen
 - The `call_api()` function uses direct `requests.post()` without retry logic. Retry orchestration is the responsibility of the calling workflow action, not the provider module. This aligns with the TASK requirement for a "pure" function.
 - The `base_url` parameter may or may not have a trailing slash; the implementation strips it with `rstrip('/')` before appending the endpoint path.
 - The `revised_prompt` in the return dict is set to the input `prompt` value, as the TASK does not specify a separate revised prompt field in the API response.
+- The `call_api()` signature uses 4 parameters `(prompt, config, api_key, base_url)` per the TASK specification (TASK-20260815-001-03, Step 1a). The registry docstring at `render_image/__init__.py` line 4 mentions a 5-parameter signature including `image`, but that signature applies to video providers (image-to-video) where an input image is required. For text-to-image generation, no input image is needed. The `import_provider()` function does not enforce signatures.
+- Config dict is expected to contain at minimum "model" and "size" keys (per config.json.sample). The implementation validates these before accessing them to convert KeyError to RuntimeError.
+- All network-level exceptions (ConnectionError, Timeout, etc.) and JSON parsing errors are caught and converted to RuntimeError, providing a uniform error contract for callers.
+
+## 11. Challenge Resolution
+
+### Attack 1: Function Signature Mismatch - BLOCKING
+**Evaluation:** Incorrect (as a BLOCKING finding)
+**Resolution:** No code change made. The IMPL follows the TASK specification (TASK-20260815-001-03, Step 1a) which explicitly defines `call_api(prompt, config, api_key, base_url)` with 4 parameters. The registry docstring at `render_image/__init__.py` line 4 mentions 5 parameters including `image`, but this is a documentation inconsistency -- the docstring was inherited from the render_video template (where image-to-video DOES require an input image). For text-to-image generation, no input image is needed. The `import_provider()` function at `actions.py` line 230 only checks `hasattr(module, "call_api")` and does not enforce signature. The discrepancy is documented in the Assumptions section and in the STEP-01 note.
+**Evidence:** 
+- TASK-20260815-001-03 Step 1a: "call_api(prompt, config, api_key, base_url)" -- 4 parameters, no image
+- `workflows/gen_media_content_v1/actions.py` line 230: `if not hasattr(module, "call_api"):` -- checks existence only, not signature
+- `workflows/gen_media_content_v1/api_actions/render_image/__init__.py` line 4: docstring mentions 5-parameter signature (documentation only, not enforced)
+- `workflows/gen_media_content_v1/api_actions/render_video/__init__.py` line 4: same 5-parameter docstring (image-to-video needs input image)
+- No calling code exists yet in gen_media_content_v1 that invokes call_api with specific arguments (grep for `.call_api(` returned no results)
+**Affected section:** Section 5 STEP-01 (added note), Section 10 Assumptions (added note)
+
+### Attack 2: Missing Required Config Key Validation - MAJOR
+**Evaluation:** Valid
+**Resolution:** Added input validation at the start of call_api() that checks for required config keys "model" and "size" before accessing them. Missing keys now raise RuntimeError with a descriptive message listing the missing keys. Added test `test_missing_config_keys_raises_runtime_error`.
+**Evidence:** 
+- Original IMPL STEP-01 used `config["model"]` and `config["size"]` without pre-validation
+- TASK AC-04/AC-05 specify RuntimeError for errors; KeyError would violate this contract
+- Updated STEP-01 now includes: `missing_keys = [k for k in ("model", "size") if k not in config]`
+**Affected section:** Section 5 STEP-01, Section 6 File 1, Section 7 Test Implementation
+
+### Attack 3: Incomplete HTTP Exception Handling - MAJOR
+**Evaluation:** Valid
+**Resolution:** Wrapped the `requests.post()` and `resp.raise_for_status()` calls in a try/except that catches `requests.exceptions.RequestException` (the base class covering HTTPError, ConnectionError, Timeout, ConnectTimeout, ReadTimeout). Any caught exception is re-raised as RuntimeError. Added tests `test_connection_error_raises_runtime_error` and `test_timeout_error_raises_runtime_error`.
+**Evidence:** 
+- `requests.exceptions.RequestException` is the base class for all requests exceptions (ConnectionError, Timeout, HTTPError, etc.)
+- Original IMPL only called `resp.raise_for_status()` without catching network-level errors
+- Reference workflow uses `_api_request_with_retry` which handles these cases at a higher level; our pure function must handle them directly
+**Affected section:** Section 5 STEP-01, Section 6 File 1, Section 7 Test Implementation
+
+### Attack 4: Malformed base_url Handling - MAJOR
+**Evaluation:** Valid
+**Resolution:** Added validation at the start of call_api() that checks if base_url is empty or whitespace-only, raising RuntimeError with a descriptive message. Added test `test_empty_base_url_raises_runtime_error` and `test_trailing_slash_in_base_url_stripped` (the trailing slash test already passed but is now explicitly verified).
+**Evidence:** 
+- Original IMPL used `f"{base_url.rstrip('/')}/v1/images/generations"` without validating non-emptiness
+- An empty base_url would produce `/v1/images/generations` (invalid URL)
+- Added check: `if not base_url or not base_url.strip(): raise RuntimeError(...)`
+**Affected section:** Section 5 STEP-01, Section 6 File 1, Section 7 Test Implementation
+
+### Attack 5: JSON Decode Error Not Handled - MAJOR
+**Evaluation:** Valid
+**Resolution:** Wrapped `resp.json()` in a try/except that catches `ValueError` (the base class for JSONDecodeError in Python). If the response is not valid JSON, a RuntimeError is raised with a descriptive message. Added test `test_json_decode_error_raises_runtime_error`.
+**Evidence:** 
+- Original IMPL called `resp.json()` without error handling
+- If the API returns HTML or malformed JSON, JSONDecodeError would propagate instead of RuntimeError
+- `requests.exceptions.JSONDecodeError` is a subclass of `ValueError`
+**Affected section:** Section 5 STEP-01, Section 6 File 1, Section 7 Test Implementation
+
+### Attack 6: Missing Test for Revised Prompt - MINOR
+**Evaluation:** Incorrect
+**Resolution:** No change needed. The ACT-03 test at line 349 of the original document already includes `assert "revised_prompt" in result`. The challenge author misread the test code. The assertion was present from the original implementation. Additionally, the updated test now also asserts `result["revised_prompt"] == "a cat in a garden"` for completeness.
+**Evidence:** 
+- IMPL document line 349 (original): `assert "revised_prompt" in result`
+- The attack claims "IMPL Test Implementation ACT-03 (line 347-349): assert 'image_url' in result but no assert 'revised_prompt' in result" -- this is factually wrong; line 349 has the assertion
+**Affected section:** Section 7 Test Implementation (strengthened the existing assertion)
+
+### Attack 7: Missing Timeout Parameter Test - MINOR
+**Evaluation:** Valid
+**Resolution:** Added test `test_timeout_parameter_passed` that verifies `timeout=500` is passed as a keyword argument to `requests.post()`.
+**Evidence:** 
+- Original test suite had no test verifying the timeout parameter
+- The implementation specifies `timeout=500` but this was unverified
+- Added explicit assertion: `assert timeout == 500`
+**Affected section:** Section 5 STEP-02, Section 7 Test Implementation
