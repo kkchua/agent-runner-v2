@@ -1,12 +1,39 @@
 name: executive_summary
+label: "Executive Summary"
 description: "Produces high-level executive summaries with strategic recommendations instead of detailed technical findings"
 
-overrides:
+# -----------------------------------------------------------------------
+# Prompt Slots Configuration
+# -----------------------------------------------------------------------
+prompt_slots:
   generate_audience_meta:
-    prompt: "impls/executive_summary/prompts/03_generate_audience_meta.txt"
+    label: "Generate Audience Meta (Executive Summary)"
+    default: "executive_summary"
+    options:
+      - name: "executive_summary"
+        file: "impls/executive_summary/prompts/generate_audience_meta/executive_summary.txt"
+        description: "Generate audience meta content focused on executive-level insights and strategic recommendations."
+
   analyze_health:
-    prompt: "impls/executive_summary/prompts/04_analyze_health.txt"
+    label: "Analyze Health (Executive Summary)"
+    default: "executive_summary"
+    options:
+      - name: "executive_summary"
+        file: "impls/executive_summary/prompts/analyze_health/executive_summary.txt"
+        description: "Analyze codebase health with focus on high-level structural issues and strategic remediation priorities."
+
   analyze_security:
-    prompt: "impls/executive_summary/prompts/05_analyze_security.txt"
+    label: "Analyze Security (Executive Summary)"
+    default: "executive_summary"
+    options:
+      - name: "executive_summary"
+        file: "impls/executive_summary/prompts/analyze_security/executive_summary.txt"
+        description: "Analyze security findings with focus on business risk and strategic compliance implications."
+
   generate_findings_report:
-    prompt: "impls/executive_summary/prompts/06_generate_findings_report.txt"
+    label: "Generate Findings Report (Executive Summary)"
+    default: "executive_summary"
+    options:
+      - name: "executive_summary"
+        file: "impls/executive_summary/prompts/generate_findings_report/executive_summary.txt"
+        description: "Generate consolidated findings report tailored for executive audience with strategic recommendations."
