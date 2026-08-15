@@ -46,7 +46,7 @@ label = "Workflow Builder"
 
 [[step]]
 name = "analyze_requirement"
-prompt = "prompts/01_analyze_requirement.txt"
+prompt = "{{ slot.analyze_requirement }}"
 enable_notifications = true
 requires_human_approval_after = false
 onsuccess = "plan_domain_logic"
@@ -66,7 +66,7 @@ result_meta_key = "ANALYSIS_JSON_FILE"
 
 [[step]]
 name = "plan_domain_logic"
-prompt = "prompts/02_plan_domain_logic.txt"
+prompt = "{{ slot.plan_domain_logic }}"
 enable_notifications = true
 requires_human_approval_after = false
 onsuccess = "challenge_plan"
@@ -85,7 +85,7 @@ result_meta_key = "DOMAIN_PLAN_FILE"
 
 [[step]]
 name = "challenge_plan"
-prompt = "prompts/03_challenge_plan.txt"
+prompt = "{{ slot.challenge_plan }}"
 enable_notifications = true
 requires_human_approval_after = false
 onsuccess = "implement_domain"
@@ -111,7 +111,7 @@ exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
 
 [[step]]
 name = "implement_domain"
-prompt = "prompts/04_implement_domain.txt"
+prompt = "{{ slot.implement_domain }}"
 enable_notifications = true
 requires_human_approval_after = false
 onsuccess = "critic_impl"
@@ -130,7 +130,7 @@ result_meta_key = "WORKFLOW_ACTIONS_FILE"
 
 [[step]]
 name = "critic_impl"
-prompt = "prompts/05_critic_impl.txt"
+prompt = "{{ slot.critic_impl }}"
 enable_notifications = true
 requires_human_approval_after = false
 onsuccess = "assemble_package"
@@ -173,7 +173,7 @@ result_meta_key = "WORKFLOW_MANIFEST_FILE"
 
 [[step]]
 name = "review_package"
-prompt = "prompts/07_review_package.txt"
+prompt = "{{ slot.review_package }}"
 enable_notifications = true
 requires_human_approval_after = false
 onsuccess = "validate_structure"
@@ -215,7 +215,7 @@ result_meta_key = "VALIDATION_FINDINGS_FILE"
 
 [[step]]
 name = "gatekeep_package"
-prompt = "prompts/09_gatekeep_package.txt"
+prompt = "{{ slot.gatekeep_package }}"
 enable_notifications = true
 requires_human_approval_after = false
 onsuccess = "promote_package"

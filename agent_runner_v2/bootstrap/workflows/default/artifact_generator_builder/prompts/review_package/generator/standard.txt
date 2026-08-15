@@ -1,0 +1,163 @@
+# Objective
+
+Perform a **holistic review** of the complete assembled workflow package. This
+is post-assembly review — all structural files (workflow.toml,
+context_extensions.py, impl.yaml) have been mechanically assembled from the
+Analysis JSON. You review whether everything fits together correctly.
+
+You are NOT reviewing infrastructure assembly logic. You are reviewing whether
+the assembled package is internally consistent and functionally sound.
+
+# Reference Inputs
+
+- WORKFLOW_MANIFEST_FILE: {WORKFLOW_MANIFEST_FILE}
+  The assembled workflow.toml.
+
+- WORKFLOW_ACTIONS_FILE: {WORKFLOW_ACTIONS_FILE}
+  The generated actions.py with domain action functions.
+
+- WORKFLOW_EXTENSIONS_FILE: {WORKFLOW_EXTENSIONS_FILE}
+  The assembled context_extensions.py with artifact key registrations.
+
+- WORKFLOW_PROMPTS_DIR: {WORKFLOW_PROMPTS_DIR}
+  Directory containing all prompt template files.
+
+- ANALYSIS_JSON_FILE: {ANALYSIS_JSON_FILE}
+  The Analysis JSON that drove the assembly.
+
+- BASE_COMPOSITION_STANDARD: {BASE_COMPOSITION_STANDARD}
+  Reference for workflow manifest contract (Section 3), multi-impl model
+  (Section 4), and action interface contract (Section 5).
+
+# Review Protocol
+
+## Step 1: Verify Step Sequence Consistency
+
+- Does workflow.toml's step sequence match the Analysis JSON's domain_steps
+  in the same order?
+- Does init_step match the first step's name?
+- Does every step's onsuccess point to the next step (or step_completion for
+  the last)?
+- Are there any missing steps or extra steps?
+
+## Step 2: Verify Artifact Binding Consistency
+
+For every step in workflow.toml:
+
+- Does every key in `required_inputs` exist in context_extensions.py's
+  register_artifact_keys()?
+- Does every key in `produces` exist in register_artifact_keys()?
+- Is every `required_inputs` key produced by a prior step or declared as a
+  workflow input?
+- Is `result_meta_key` set to one of the step's `produces` keys?
+- Are there artifact keys registered in context_extensions.py that no step
+  produces or consumes? (Orphan keys.)
+
+## Step 3: Verify Action Implementations
+
+For every step with `action = "..."`:
+
+- Does a corresponding @action function exist in actions.py?
+- Does the function name match the action name exactly?
+- Does the function conform to the action interface contract (Section 5):
+  correct decorator, signature, return type?
+- Does the function read/write the artifact keys declared in the step's
+  required_inputs/produces?
+
+## Step 4: Verify Prompt Files
+
+For every step with `prompt = "prompts/..."`:
+
+- Does the referenced prompt file exist in the prompts/ directory?
+- Does the prompt reference only artifact keys that are registered in
+  context_extensions.py?
+- Does the prompt's input placeholders match the step's required_inputs?
+- Does the prompt's output instructions match the step's produces?
+
+## Step 5: Verify Implementation Overrides
+
+For each [[workflow.implementation]] in workflow.toml:
+
+- Does a matching impls/{name}/ directory exist?
+- Does impls/{name}/impl.yaml exist and parse correctly?
+- Does every override key in impl.yaml reference an existing step name?
+- Do override prompt paths reference existing files?
+- Do override action names reference existing functions?
+- Are shared steps (not overridden) compatible with the overridden steps'
+  output formats?
+
+## Step 6: Verify Codename and Identity
+
+- Does workflow.toml's [workflow].name match the Analysis JSON's
+  identity.name (codename)?
+- Does the job_prefix match the Analysis JSON?
+- Is the version correct?
+
+# Output Instructions
+
+Write to: {PACKAGE_REVIEW_FILE}
+
+Markdown with YAML frontmatter:
+
+```yaml
+---
+doc_type: "package_review"
+identity_locked: true
+---
+```
+
+Structure your review as:
+
+```
+# Package Review
+
+## 1. Step Sequence: PASS / FAIL
+(Details)
+
+## 2. Artifact Bindings: PASS / FAIL
+(Details)
+
+## 3. Action Implementations: PASS / FAIL
+(Details)
+
+## 4. Prompt Files: PASS / FAIL
+(Details)
+
+## 5. Implementation Overrides: PASS / FAIL
+(Details)
+
+## 6. Identity: PASS / FAIL
+(Details)
+
+## Summary
+- Checks passed: N / 6
+- Issues found: N
+- BLOCKING: N
+- MAJOR: N
+- MINOR: N
+
+## Findings
+(List any issues found, with severity)
+```
+
+# Self-Validation
+
+Before writing the output, verify:
+
+- [ ] All 6 review areas have been checked
+- [ ] Every step in workflow.toml has been verified against actions.py and prompts/
+- [ ] Every artifact key has been traced from producer to consumer
+- [ ] Every implementation override has been verified against actual files
+- [ ] Findings include specific evidence (file paths, line references, key names)
+- [ ] Severity ratings are justified
+
+# Rules
+
+- Report concrete findings with evidence. "Might be inconsistent" is not a
+  finding. "Step 'render_output' requires TRANSFORMED_CONTENT but no prior
+  step produces it" IS a finding.
+- Do NOT attack the assembly logic itself — the assembler is deterministic.
+  Focus on whether the assembled output is correct given the Analysis JSON.
+- Do NOT include non-ASCII characters.
+- Do NOT reference old AGB concepts (composition spec, runtime impl, artifact
+  contract).

@@ -1,8 +1,39 @@
 name: security_focused
+label: "Security Focused"
 description: "Prioritizes security and compliance analysis with expanded vulnerability scanning and audit-ready output"
 
-overrides:
+# -----------------------------------------------------------------------
+# Prompt Slots Configuration
+# -----------------------------------------------------------------------
+prompt_slots:
+  generate_audience_meta:
+    label: "Generate Audience Meta (Security Focused)"
+    default: "security_focused"
+    options:
+      - name: "security_focused"
+        file: "impls/security_focused/prompts/generate_audience_meta/security_focused.txt"
+        description: "Generate audience meta content with focus on security stakeholders, compliance requirements, and audit readiness."
+
+  analyze_health:
+    label: "Analyze Health (Security Focused)"
+    default: "security_focused"
+    options:
+      - name: "security_focused"
+        file: "impls/security_focused/prompts/analyze_health/security_focused.txt"
+        description: "Analyze codebase health with emphasis on security-related structural issues and compliance implications."
+
   analyze_security:
-    prompt: "impls/security_focused/prompts/05_analyze_security.txt"
+    label: "Analyze Security (Security Focused)"
+    default: "security_focused"
+    options:
+      - name: "security_focused"
+        file: "impls/security_focused/prompts/analyze_security/security_focused.txt"
+        description: "Comprehensive security analysis with expanded vulnerability scanning, compliance checks, and audit-ready findings."
+
   generate_findings_report:
-    prompt: "impls/security_focused/prompts/06_generate_findings_report.txt"
+    label: "Generate Findings Report (Security Focused)"
+    default: "security_focused"
+    options:
+      - name: "security_focused"
+        file: "impls/security_focused/prompts/generate_findings_report/security_focused.txt"
+        description: "Generate security-focused findings report with compliance mapping, risk ratings, and remediation priorities."

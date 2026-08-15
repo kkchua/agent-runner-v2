@@ -85,9 +85,9 @@ For each phase:
 5. If fails → investigate, ask opencode to fix
 
 ## Status
-- [ ] Phase 1
-- [ ] Phase 2
-- [ ] Phase 3
+- [x] Phase 1
+- [x] Phase 2
+- [x] Phase 3
 - [ ] Phase 4
 - [ ] Phase 5
 - [ ] Phase 6

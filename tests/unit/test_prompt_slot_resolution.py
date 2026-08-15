@@ -168,23 +168,82 @@ class TestResolvePromptSlot:
             assert result.endswith("prompts\\step_1\\standard.txt") or result.endswith("prompts/step_1/standard.txt")
 
     def test_missing_impl_yaml(self):
-        """Should return None if impl.yaml is not found."""
+        """Should fall back to convention path when impl.yaml is not found."""
         step_cfg = {"prompt_file": "{{ slot.step_1_extract }}"}
         state = {}
         group_cfg = {"implementation_name": "impl_a"}
+
         bundle = MagicMock()
-        bundle.bundle_root = Path(tempfile.gettempdir())
-        
-        with patch.object(Path, "exists", return_value=False):
-            result = resolve_prompt_slot(step_cfg, state, group_cfg, bundle)
-            assert result is None
+        tmpdir = Path(tempfile.mkdtemp())
+        bundle.bundle_root = tmpdir
+
+        # Create convention path: prompts/step_1_extract/standard.txt
+        convention_dir = tmpdir / "prompts" / "step_1_extract"
+        convention_dir.mkdir(parents=True, exist_ok=True)
+        convention_file = convention_dir / "standard.txt"
+        convention_file.write_text("test prompt", encoding="utf-8")
+
+        # impl.yaml does NOT exist
+        result = resolve_prompt_slot(step_cfg, state, group_cfg, bundle)
+        assert result is not None
+        assert str(result).endswith("standard.txt")
+        assert "prompts" in str(result)
 
     def test_missing_implementation_name(self):
-        """Should return None if implementation_name is not in context."""
+        """Should fall back to convention path when no implementation_name is set."""
         step_cfg = {"prompt_file": "{{ slot.step_1_extract }}"}
         state = {}
-        group_cfg = {} # No implementation_name
+        group_cfg = {}  # No implementation_name
+
         bundle = MagicMock()
-        
+        tmpdir = Path(tempfile.mkdtemp())
+        bundle.bundle_root = tmpdir
+
+        # Create convention path
+        convention_dir = tmpdir / "prompts" / "step_1_extract"
+        convention_dir.mkdir(parents=True, exist_ok=True)
+        convention_file = convention_dir / "standard.txt"
+        convention_file.write_text("test prompt", encoding="utf-8")
+
+        result = resolve_prompt_slot(step_cfg, state, group_cfg, bundle)
+        assert result is not None
+        assert str(result).endswith("standard.txt")
+
+    def test_convention_fallback_not_found(self):
+        """Should return None when neither impl.yaml nor convention path exists."""
+        step_cfg = {"prompt_file": "{{ slot.step_1_extract }}"}
+        state = {}
+        group_cfg = {}  # No implementation_name
+
+        bundle = MagicMock()
+        tmpdir = Path(tempfile.mkdtemp())
+        bundle.bundle_root = tmpdir
+
+        # No convention path created, no impl.yaml
         result = resolve_prompt_slot(step_cfg, state, group_cfg, bundle)
         assert result is None
+
+    def test_convention_fallback_with_impl_name_no_prompt_slots(self):
+        """Should fall back to convention when impl.yaml exists but has no prompt_slots."""
+        step_cfg = {"prompt_file": "{{ slot.my_step }}"}
+        state = {}
+        group_cfg = {"implementation_name": "standard"}
+
+        bundle = MagicMock()
+        tmpdir = Path(tempfile.mkdtemp())
+        bundle.bundle_root = tmpdir
+
+        # Create impl.yaml with no prompt_slots
+        impl_dir = tmpdir / "impls" / "standard"
+        impl_dir.mkdir(parents=True, exist_ok=True)
+        (impl_dir / "impl.yaml").write_text("name: standard\n", encoding="utf-8")
+
+        # Create convention path
+        convention_dir = tmpdir / "prompts" / "my_step"
+        convention_dir.mkdir(parents=True, exist_ok=True)
+        (convention_dir / "standard.txt").write_text("test", encoding="utf-8")
+
+        result = resolve_prompt_slot(step_cfg, state, group_cfg, bundle)
+        assert result is not None
+        assert "prompts" in str(result)
+        assert "my_step" in str(result)

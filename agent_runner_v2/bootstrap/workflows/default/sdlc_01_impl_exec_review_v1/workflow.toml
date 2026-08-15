@@ -1,0 +1,538 @@
+# SDLC Implementation, Execution, Review & Delivery v1 (BCS-compliant)
+# Combined pipeline: implementation planning through execution, validation, and review.
+# Uses prompt slots for swappable strategies and impl presets for configuration.
+#
+# Phase 1 — Implementation: TDD-driven impl plan with adversarial challenge + gate
+# Phase 2 — Execution: Execute impl plan with adversarial challenge + gate
+# Phase 3 — Validation: Validate execution with adversarial challenge + gate
+# Phase 4 — Review: Generate review/memory/closure docs with critique + human gate
+
+[workflow]
+name = "sdlc_01_impl_exec_review_v1"
+version = "2.0.0"
+label = "SDLC Impl/Exec/Review v1"
+job_prefix = "SDLC01IER"
+description = "Combined SDLC pipeline: implementation planning through execution, validation, and review with adversarial challenge gates at each phase."
+visibility = "canonical"
+default_max_rejects = 2
+init_step = "impl_generate"
+layer = "layer3"
+platform = "agent-runner-v2"
+
+# ============================================================================
+# Implementations (BCS)
+# ============================================================================
+
+[[workflow.implementation]]
+name = "standard"
+description = "Combined SDLC pipeline: implementation planning through execution, validation, and review with adversarial challenge gates at each phase."
+label = "Standard"
+
+[workflow.governance]
+include_in_prompts = true
+prompt_targets = ["all"]
+
+# ============================================================================
+# Phase 1: Implementation
+# ============================================================================
+
+# ============================================================================
+# Step 1.1: Generate Implementation (TDD-driven)
+# ============================================================================
+[[step]]
+name = "impl_generate"
+prompt = "{{ slot.impl_generate }}"
+enable_notifications = true
+onsuccess = "impl_challenge"
+
+[step.artifacts]
+required_inputs = ["TASK_FILE"]
+produces = ["IMPL_FILE"]
+result_meta_key = "IMPL_FILE"
+
+[step.coder]
+role_policy = "architect_standard"
+
+# ============================================================================
+# Step 1.2: Challenge Implementation (adversarial)
+# ============================================================================
+[[step]]
+name = "impl_challenge"
+prompt = "{{ slot.impl_challenge }}"
+enable_notifications = true
+onsuccess = "impl_address"
+
+[step.artifacts]
+required_inputs = ["IMPL_FILE", "TASK_FILE"]
+produces = ["CHALLENGE_FILE_SUGGESTED"]
+result_meta_key = "CHALLENGE_FILE_SUGGESTED"
+
+[step.coder]
+role_policy = "reviewer_standard"
+
+[step.on_reject_refine]
+step = "impl_generate"
+artifact = "IMPL_FILE"
+max_iterations = 2
+exhausted_failure_code = "IMPL_CHALLENGE_EXHAUSTED"
+exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
+
+# ============================================================================
+# Step 1.2b: Address Challenges (evidence-based)
+# ============================================================================
+[[step]]
+name = "impl_address"
+prompt = "{{ slot.impl_address }}"
+enable_notifications = true
+onsuccess = "impl_gatekeep"
+
+[step.artifacts]
+required_inputs = ["IMPL_FILE", "CHALLENGE_FILE_SUGGESTED", "TASK_FILE"]
+produces = ["IMPL_FILE"]
+target_artifact = "IMPL_FILE"
+edit_mode = "in_place"
+result_meta_key = "IMPL_FILE"
+
+[step.coder]
+role_policy = "architect_standard"
+
+# ============================================================================
+# Step 1.3: Gatekeep Implementation (pass/fail gate)
+# ============================================================================
+[[step]]
+name = "impl_gatekeep"
+prompt = "{{ slot.impl_gatekeep }}"
+enable_notifications = true
+requires_human_approval_after = true
+onsuccess = "promote_implementation"
+
+[step.artifacts]
+required_inputs = ["IMPL_FILE", "CHALLENGE_FILE_SUGGESTED", "TASK_FILE"]
+produces = ["GATEKEEP_FILE_SUGGESTED"]
+result_meta_key = "GATEKEEP_FILE_SUGGESTED"
+
+[step.coder]
+role_policy = "gatekeeper_standard"
+
+[step.on_reject_refine]
+step = "impl_refine"
+artifact = "IMPL_FILE"
+max_iterations = 2
+exhausted_failure_code = "IMPL_GATEKEEP_EXHAUSTED"
+exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
+
+# ============================================================================
+# Step 1.3b: Refine Implementation (conditional)
+# ============================================================================
+[[step]]
+name = "impl_refine"
+prompt = "{{ slot.impl_refine }}"
+enable_notifications = true
+onsuccess = "impl_gatekeep"
+
+[step.artifacts]
+required_inputs = ["IMPL_FILE", "GATEKEEP_FILE_SUGGESTED", "TASK_FILE"]
+produces = ["IMPL_FILE"]
+target_artifact = "IMPL_FILE"
+edit_mode = "in_place"
+result_meta_key = "IMPL_FILE"
+
+[step.coder]
+role_policy = "architect_standard"
+
+# ============================================================================
+# Step 1.4: Promote Implementation (ACTION)
+# ============================================================================
+[[step]]
+name = "promote_implementation"
+action = "promote_artifact"
+promotes = "IMPL_FILE"
+enable_notifications = true
+onsuccess = "exec_execute"
+
+[step.artifacts]
+required_inputs = ["IMPL_FILE"]
+source = "IMPL_FILE"
+dest = "IMPL_FILE"
+dest_dir = "docs/repo/agent_runner/sdlc/delivery/50_implementations"
+result_meta_key = "IMPL_FILE"
+
+# ============================================================================
+# Phase 2: Execution
+# ============================================================================
+
+# ============================================================================
+# Step 2.1: Execute Task (state-aware execution)
+# ============================================================================
+[[step]]
+name = "exec_execute"
+prompt = "{{ slot.exec_execute }}"
+enable_notifications = true
+onsuccess = "exec_challenge"
+
+[step.artifacts]
+required_inputs = ["IMPL_FILE"]
+produces = ["EXEC_FILE"]
+result_meta_key = "EXEC_FILE"
+
+[step.coder]
+role_policy = "architect_standard"
+
+# ============================================================================
+# Step 2.2: Challenge Execution (adversarial)
+# ============================================================================
+[[step]]
+name = "exec_challenge"
+prompt = "{{ slot.exec_challenge }}"
+enable_notifications = true
+onsuccess = "exec_address"
+
+[step.artifacts]
+required_inputs = ["EXEC_FILE", "IMPL_FILE"]
+produces = ["CHALLENGE_FILE_SUGGESTED"]
+result_meta_key = "CHALLENGE_FILE_SUGGESTED"
+
+[step.coder]
+role_policy = "reviewer_standard"
+
+[step.on_reject_refine]
+step = "exec_execute"
+artifact = "EXEC_FILE"
+max_iterations = 2
+exhausted_failure_code = "EXEC_CHALLENGE_EXHAUSTED"
+exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
+
+# ============================================================================
+# Step 2.2b: Address Challenges (evidence-based)
+# ============================================================================
+[[step]]
+name = "exec_address"
+prompt = "{{ slot.exec_address }}"
+enable_notifications = true
+onsuccess = "exec_gatekeep"
+
+[step.artifacts]
+required_inputs = ["EXEC_FILE", "CHALLENGE_FILE_SUGGESTED", "IMPL_FILE"]
+produces = ["EXEC_FILE"]
+target_artifact = "EXEC_FILE"
+edit_mode = "in_place"
+result_meta_key = "EXEC_FILE"
+
+[step.coder]
+role_policy = "architect_standard"
+
+# ============================================================================
+# Step 2.3: Gatekeep Execution (pass/fail gate)
+# ============================================================================
+[[step]]
+name = "exec_gatekeep"
+prompt = "{{ slot.exec_gatekeep }}"
+enable_notifications = true
+requires_human_approval_after = true
+onsuccess = "promote_execution"
+
+[step.artifacts]
+required_inputs = ["EXEC_FILE", "CHALLENGE_FILE_SUGGESTED", "IMPL_FILE"]
+produces = ["GATEKEEP_FILE_SUGGESTED"]
+result_meta_key = "GATEKEEP_FILE_SUGGESTED"
+
+[step.coder]
+role_policy = "gatekeeper_standard"
+
+[step.on_reject_refine]
+step = "exec_refine"
+artifact = "EXEC_FILE"
+max_iterations = 2
+exhausted_failure_code = "EXEC_GATEKEEP_EXHAUSTED"
+exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
+
+# ============================================================================
+# Step 2.3b: Refine Execution (conditional)
+# ============================================================================
+[[step]]
+name = "exec_refine"
+prompt = "{{ slot.exec_refine }}"
+enable_notifications = true
+onsuccess = "exec_gatekeep"
+
+[step.artifacts]
+required_inputs = ["EXEC_FILE", "GATEKEEP_FILE_SUGGESTED", "IMPL_FILE"]
+produces = ["EXEC_FILE"]
+target_artifact = "EXEC_FILE"
+edit_mode = "in_place"
+result_meta_key = "EXEC_FILE"
+
+[step.coder]
+role_policy = "architect_standard"
+
+# ============================================================================
+# Step 2.4: Promote Execution (ACTION)
+# ============================================================================
+[[step]]
+name = "promote_execution"
+action = "promote_artifact"
+promotes = "EXEC_FILE"
+enable_notifications = true
+onsuccess = "val_generate"
+
+[step.artifacts]
+required_inputs = ["EXEC_FILE"]
+source = "EXEC_FILE"
+dest = "EXEC_FILE"
+dest_dir = "docs/repo/agent_runner/sdlc/delivery/60_executions"
+result_meta_key = "EXEC_FILE"
+
+# ============================================================================
+# Phase 3: Validation
+# ============================================================================
+
+# ============================================================================
+# Step 3.1: Generate Validation (state-aware validation)
+# ============================================================================
+[[step]]
+name = "val_generate"
+prompt = "{{ slot.val_generate }}"
+enable_notifications = true
+onsuccess = "val_challenge"
+
+[step.artifacts]
+required_inputs = ["EXEC_FILE"]
+produces = ["VAL_FILE"]
+result_meta_key = "VAL_FILE"
+
+[step.coder]
+role_policy = "architect_standard"
+
+# ============================================================================
+# Step 3.2: Challenge Validation (adversarial)
+# ============================================================================
+[[step]]
+name = "val_challenge"
+prompt = "{{ slot.val_challenge }}"
+enable_notifications = true
+onsuccess = "val_address"
+
+[step.artifacts]
+required_inputs = ["VAL_FILE", "EXEC_FILE"]
+produces = ["CHALLENGE_FILE_SUGGESTED"]
+result_meta_key = "CHALLENGE_FILE_SUGGESTED"
+
+[step.coder]
+role_policy = "reviewer_standard"
+
+[step.on_reject_refine]
+step = "val_generate"
+artifact = "VAL_FILE"
+max_iterations = 2
+exhausted_failure_code = "VAL_CHALLENGE_EXHAUSTED"
+exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
+
+# ============================================================================
+# Step 3.2b: Address Challenges (evidence-based)
+# ============================================================================
+[[step]]
+name = "val_address"
+prompt = "{{ slot.val_address }}"
+enable_notifications = true
+onsuccess = "val_gatekeep"
+
+[step.artifacts]
+required_inputs = ["VAL_FILE", "CHALLENGE_FILE_SUGGESTED", "EXEC_FILE"]
+produces = ["VAL_FILE"]
+target_artifact = "VAL_FILE"
+edit_mode = "in_place"
+result_meta_key = "VAL_FILE"
+
+[step.coder]
+role_policy = "architect_standard"
+
+# ============================================================================
+# Step 3.3: Gatekeep Validation (pass/fail gate)
+# ============================================================================
+[[step]]
+name = "val_gatekeep"
+prompt = "{{ slot.val_gatekeep }}"
+enable_notifications = true
+requires_human_approval_after = true
+onsuccess = "promote_validation"
+
+[step.artifacts]
+required_inputs = ["VAL_FILE", "CHALLENGE_FILE_SUGGESTED", "EXEC_FILE"]
+produces = ["GATEKEEP_FILE_SUGGESTED"]
+result_meta_key = "GATEKEEP_FILE_SUGGESTED"
+
+[step.coder]
+role_policy = "gatekeeper_standard"
+
+[step.on_reject_refine]
+step = "val_refine"
+artifact = "VAL_FILE"
+max_iterations = 2
+exhausted_failure_code = "VAL_GATEKEEP_EXHAUSTED"
+exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
+
+# ============================================================================
+# Step 3.3b: Refine Validation (conditional)
+# ============================================================================
+[[step]]
+name = "val_refine"
+prompt = "{{ slot.val_refine }}"
+enable_notifications = true
+onsuccess = "val_gatekeep"
+
+[step.artifacts]
+required_inputs = ["VAL_FILE", "GATEKEEP_FILE_SUGGESTED", "EXEC_FILE"]
+produces = ["VAL_FILE"]
+target_artifact = "VAL_FILE"
+edit_mode = "in_place"
+result_meta_key = "VAL_FILE"
+
+[step.coder]
+role_policy = "architect_standard"
+
+# ============================================================================
+# Step 3.4: Promote Validation (ACTION)
+# ============================================================================
+[[step]]
+name = "promote_validation"
+action = "promote_artifact"
+promotes = "VAL_FILE"
+enable_notifications = true
+onsuccess = "rev_generate"
+
+[step.artifacts]
+required_inputs = ["VAL_FILE"]
+source = "VAL_FILE"
+dest = "VAL_FILE"
+dest_dir = "docs/repo/agent_runner/sdlc/delivery/70_validations"
+result_meta_key = "VAL_FILE"
+
+# ============================================================================
+# Phase 4: Review
+# ============================================================================
+
+# ============================================================================
+# Step 4.1: Generate Review Documents
+# ============================================================================
+[[step]]
+name = "rev_generate"
+prompt = "{{ slot.rev_generate }}"
+enable_notifications = true
+onsuccess = "rev_critique"
+
+[step.artifacts]
+required_inputs = ["VAL_FILE"]
+produces = ["REV_FILE", "MEM_FILE", "CLOSE_FILE"]
+result_meta_key = "REV_FILE"
+
+[step.coder]
+role_policy = "architect_standard"
+
+# ============================================================================
+# Step 4.2: Technical Critique
+# ============================================================================
+[[step]]
+name = "rev_critique"
+prompt = "{{ slot.rev_critique }}"
+enable_notifications = true
+onsuccess = "rev_address"
+
+[step.artifacts]
+required_inputs = ["REV_FILE", "MEM_FILE", "CLOSE_FILE"]
+produces = ["CRITIQUE_FILE_SUGGESTED"]
+result_meta_key = "CRITIQUE_FILE_SUGGESTED"
+
+[step.coder]
+role_policy = "reviewer_standard"
+
+[step.on_reject_refine]
+step = "rev_refine"
+artifact = "REV_FILE"
+max_iterations = 2
+exhausted_failure_code = "REVIEW_CRITIQUE_EXHAUSTED"
+exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
+
+# ============================================================================
+# Step 4.2b: Address Critique
+# ============================================================================
+[[step]]
+name = "rev_address"
+prompt = "{{ slot.rev_address }}"
+enable_notifications = true
+onsuccess = "rev_review"
+
+[step.artifacts]
+required_inputs = ["REV_FILE", "MEM_FILE", "CLOSE_FILE", "CRITIQUE_FILE_SUGGESTED"]
+produces = ["REV_FILE", "MEM_FILE", "CLOSE_FILE"]
+target_artifact = "REV_FILE"
+edit_mode = "in_place"
+result_meta_key = "REV_FILE"
+
+[step.coder]
+role_policy = "architect_standard"
+
+# ============================================================================
+# Step 4.3: Review All Documents (Human Gate)
+# ============================================================================
+[[step]]
+name = "rev_review"
+prompt = "{{ slot.rev_review }}"
+enable_notifications = true
+requires_human_approval_after = true
+onsuccess = "promote_all"
+
+[step.artifacts]
+required_inputs = ["REV_FILE", "MEM_FILE", "CLOSE_FILE", "CRITIQUE_FILE_SUGGESTED"]
+produces = ["REVIEW_FILE_SUGGESTED"]
+result_meta_key = "REVIEW_FILE_SUGGESTED"
+
+[step.coder]
+role_policy = "reviewer_standard"
+
+[step.on_reject_refine]
+step = "rev_refine"
+artifact = "REV_FILE"
+max_iterations = 2
+exhausted_failure_code = "REVIEW_REFINEMENT_EXHAUSTED"
+exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
+
+# ============================================================================
+# Step 4.3b: Refine Documents (conditional)
+# ============================================================================
+[[step]]
+name = "rev_refine"
+prompt = "{{ slot.rev_refine }}"
+enable_notifications = true
+onsuccess = "rev_review"
+
+[step.artifacts]
+required_inputs = ["REV_FILE", "MEM_FILE", "CLOSE_FILE", "REVIEW_FILE_SUGGESTED"]
+produces = ["REV_FILE", "MEM_FILE", "CLOSE_FILE"]
+target_artifact = "REV_FILE"
+edit_mode = "in_place"
+result_meta_key = "REV_FILE"
+
+[step.coder]
+role_policy = "architect_standard"
+
+# ============================================================================
+# Step 4.4: Promote All Documents (ACTION)
+# ============================================================================
+[[step]]
+name = "promote_all"
+action = "promote_all"
+promotes = ["REV_FILE", "MEM_FILE", "CLOSE_FILE"]
+enable_notifications = true
+onsuccess = "stepCompletion"
+
+[step.artifacts]
+required_inputs = ["REV_FILE", "MEM_FILE", "CLOSE_FILE"]
+dest_dir = "docs/repo/agent_runner/sdlc/delivery/80_reviews"
+result_meta_key = "REV_FILE"
+
+# ============================================================================
+# Step Completion
+# ============================================================================
+[[step]]
+name = "stepCompletion"
+action = "step_completion"
