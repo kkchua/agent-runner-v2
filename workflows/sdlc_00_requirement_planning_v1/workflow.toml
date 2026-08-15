@@ -17,6 +17,15 @@ include_in_prompts = true
 prompt_targets = ["all"]
 
 # ============================================================================
+# Implementations (BCS)
+# ============================================================================
+
+[[workflow.implementation]]
+name = "standard"
+description = "Combined SDLC pipeline: initiative intake through requirement, planning, backlog, and task generation."
+label = "Standard"
+
+# ============================================================================
 # Phase 1: Initiative Intake
 # ============================================================================
 
