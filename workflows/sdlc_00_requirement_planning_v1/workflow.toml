@@ -1,6 +1,6 @@
 [workflow]
 name = "sdlc_00_requirement_planning_v1"
-version = "1.0.0"
+version = "2.0.0"
 label = "SDLC Requirement & Planning v1"
 job_prefix = "SDLC0RP"
 description = "Combined SDLC pipeline: initiative intake through requirement, planning, backlog, and task generation with review gates at each phase."
@@ -25,7 +25,7 @@ prompt_targets = ["all"]
 # ============================================================================
 [[step]]
 name = "init_generate"
-prompt = "prompts/11_init_generate.txt"
+prompt = "{{ slot.init_generate }}"
 enable_notifications = true
 onsuccess = "init_technical_critique"
 
@@ -42,7 +42,7 @@ role_policy = "architect_standard"
 # ============================================================================
 [[step]]
 name = "init_technical_critique"
-prompt = "prompts/12_technical_critique.txt"
+prompt = "{{ slot.init_technical_critique }}"
 enable_notifications = true
 onsuccess = "init_address_critique"
 
@@ -66,7 +66,7 @@ exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
 # ============================================================================
 [[step]]
 name = "init_address_critique"
-prompt = "prompts/12b_address_critique.txt"
+prompt = "{{ slot.init_address_critique }}"
 enable_notifications = true
 onsuccess = "init_review"
 
@@ -85,7 +85,7 @@ role_policy = "architect_standard"
 # ============================================================================
 [[step]]
 name = "init_review"
-prompt = "prompts/13_review_init.txt"
+prompt = "{{ slot.init_review }}"
 enable_notifications = true
 requires_human_approval_after = true
 onsuccess = "promote_init"
@@ -110,7 +110,7 @@ exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
 # ============================================================================
 [[step]]
 name = "init_refine"
-prompt = "prompts/14_refine_init.txt"
+prompt = "{{ slot.init_refine }}"
 enable_notifications = true
 onsuccess = "init_review"
 
@@ -150,7 +150,7 @@ result_meta_key = "INIT_FILE"
 # ============================================================================
 [[step]]
 name = "req_generate"
-prompt = "prompts/21_req_generate.txt"
+prompt = "{{ slot.req_generate }}"
 enable_notifications = true
 onsuccess = "req_technical_critique"
 
@@ -167,7 +167,7 @@ role_policy = "architect_standard"
 # ============================================================================
 [[step]]
 name = "req_technical_critique"
-prompt = "prompts/22_technical_critique.txt"
+prompt = "{{ slot.req_technical_critique }}"
 enable_notifications = true
 onsuccess = "req_address_critique"
 
@@ -191,7 +191,7 @@ exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
 # ============================================================================
 [[step]]
 name = "req_address_critique"
-prompt = "prompts/22b_address_critique.txt"
+prompt = "{{ slot.req_address_critique }}"
 enable_notifications = true
 onsuccess = "req_review"
 
@@ -210,7 +210,7 @@ role_policy = "architect_standard"
 # ============================================================================
 [[step]]
 name = "req_review"
-prompt = "prompts/23_review_req.txt"
+prompt = "{{ slot.req_review }}"
 enable_notifications = true
 requires_human_approval_after = true
 onsuccess = "promote_req"
@@ -235,7 +235,7 @@ exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
 # ============================================================================
 [[step]]
 name = "req_refine"
-prompt = "prompts/24_refine_req.txt"
+prompt = "{{ slot.req_refine }}"
 enable_notifications = true
 onsuccess = "req_review"
 
@@ -275,7 +275,7 @@ result_meta_key = "REQ_FILE"
 # ============================================================================
 [[step]]
 name = "plan_generate"
-prompt = "prompts/31_plan_generate.txt"
+prompt = "{{ slot.plan_generate }}"
 enable_notifications = true
 onsuccess = "plan_technical_critique"
 
@@ -292,7 +292,7 @@ role_policy = "architect_standard"
 # ============================================================================
 [[step]]
 name = "plan_technical_critique"
-prompt = "prompts/32_technical_critique.txt"
+prompt = "{{ slot.plan_technical_critique }}"
 enable_notifications = true
 onsuccess = "plan_address_critique"
 
@@ -316,7 +316,7 @@ exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
 # ============================================================================
 [[step]]
 name = "plan_address_critique"
-prompt = "prompts/32b_address_critique.txt"
+prompt = "{{ slot.plan_address_critique }}"
 enable_notifications = true
 onsuccess = "plan_review"
 
@@ -335,7 +335,7 @@ role_policy = "architect_standard"
 # ============================================================================
 [[step]]
 name = "plan_review"
-prompt = "prompts/33_review_plan.txt"
+prompt = "{{ slot.plan_review }}"
 enable_notifications = true
 requires_human_approval_after = true
 onsuccess = "promote_plan"
@@ -360,7 +360,7 @@ exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
 # ============================================================================
 [[step]]
 name = "plan_refine"
-prompt = "prompts/34_refine_plan.txt"
+prompt = "{{ slot.plan_refine }}"
 enable_notifications = true
 onsuccess = "plan_review"
 
@@ -400,7 +400,7 @@ result_meta_key = "PLAN_FILE"
 # ============================================================================
 [[step]]
 name = "backlog_generate"
-prompt = "prompts/41_backlog_generate.txt"
+prompt = "{{ slot.backlog_generate }}"
 enable_notifications = true
 onsuccess = "backlog_technical_critique"
 
@@ -417,7 +417,7 @@ role_policy = "architect_standard"
 # ============================================================================
 [[step]]
 name = "backlog_technical_critique"
-prompt = "prompts/42_technical_critique.txt"
+prompt = "{{ slot.backlog_technical_critique }}"
 enable_notifications = true
 onsuccess = "backlog_address_critique"
 
@@ -441,7 +441,7 @@ exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
 # ============================================================================
 [[step]]
 name = "backlog_address_critique"
-prompt = "prompts/42b_address_critique.txt"
+prompt = "{{ slot.backlog_address_critique }}"
 enable_notifications = true
 onsuccess = "backlog_review"
 
@@ -460,7 +460,7 @@ role_policy = "architect_standard"
 # ============================================================================
 [[step]]
 name = "backlog_review"
-prompt = "prompts/43_review_backlog.txt"
+prompt = "{{ slot.backlog_review }}"
 enable_notifications = true
 requires_human_approval_after = true
 onsuccess = "promote_backlog"
@@ -485,7 +485,7 @@ exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
 # ============================================================================
 [[step]]
 name = "backlog_refine"
-prompt = "prompts/44_refine_backlog.txt"
+prompt = "{{ slot.backlog_refine }}"
 enable_notifications = true
 onsuccess = "backlog_review"
 
@@ -525,7 +525,7 @@ result_meta_key = "BACKLOG_FILE"
 # ============================================================================
 [[step]]
 name = "task_generate"
-prompt = "prompts/51_task_generate.txt"
+prompt = "{{ slot.task_generate }}"
 enable_notifications = true
 onsuccess = "task_technical_critique"
 
@@ -543,7 +543,7 @@ role_policy = "architect_standard"
 # ============================================================================
 [[step]]
 name = "task_technical_critique"
-prompt = "prompts/52_technical_critique.txt"
+prompt = "{{ slot.task_technical_critique }}"
 enable_notifications = true
 onsuccess = "task_address_critique"
 
@@ -567,7 +567,7 @@ exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
 # ============================================================================
 [[step]]
 name = "task_address_critique"
-prompt = "prompts/52b_address_critique.txt"
+prompt = "{{ slot.task_address_critique }}"
 enable_notifications = true
 onsuccess = "task_review"
 
@@ -586,7 +586,7 @@ role_policy = "architect_standard"
 # ============================================================================
 [[step]]
 name = "task_review"
-prompt = "prompts/53_review_task.txt"
+prompt = "{{ slot.task_review }}"
 enable_notifications = true
 requires_human_approval_after = true
 onsuccess = "promote_task"
@@ -611,7 +611,7 @@ exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
 # ============================================================================
 [[step]]
 name = "task_refine"
-prompt = "prompts/54_refine_task.txt"
+prompt = "{{ slot.task_refine }}"
 enable_notifications = true
 onsuccess = "task_review"
 

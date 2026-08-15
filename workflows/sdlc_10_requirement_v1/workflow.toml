@@ -1,7 +1,7 @@
 
 [workflow]
 name = "sdlc_10_requirement_v1"
-version = "1.0.0"
+version = "2.0.0"
 label = "SDLC Requirement Generation v1"
 job_prefix = "SDLC10REQ"
 description = "Generate structured requirements from approved initiative document, producing approved REQ document."
@@ -18,11 +18,20 @@ include_in_prompts = true
 prompt_targets = ["all"]
 
 # ============================================================================
+# Implementations (BCS)
+# ============================================================================
+
+[[workflow.implementation]]
+name = "standard"
+description = "Generate structured requirements from approved initiative document."
+label = "Standard"
+
+# ============================================================================
 # Step 1: Generate Requirements
 # ============================================================================
 [[step]]
 name = "generate_requirements"
-prompt = "prompts/01_generate_requirements.txt"
+prompt = "{{ slot.generate_requirements }}"
 enable_notifications = true
 onsuccess = "technical_critique"
 
@@ -39,7 +48,7 @@ role_policy = "architect_standard"
 # ============================================================================
 [[step]]
 name = "technical_critique"
-prompt = "prompts/02_technical_critique.txt"
+prompt = "{{ slot.technical_critique }}"
 enable_notifications = true
 onsuccess = "address_critique"
 
@@ -63,7 +72,7 @@ exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
 # ============================================================================
 [[step]]
 name = "address_critique"
-prompt = "prompts/02b_address_critique.txt"
+prompt = "{{ slot.address_critique }}"
 enable_notifications = true
 onsuccess = "review_requirements"
 
@@ -82,7 +91,7 @@ role_policy = "architect_standard"
 # ============================================================================
 [[step]]
 name = "review_requirements"
-prompt = "prompts/03_review_requirements.txt"
+prompt = "{{ slot.review_requirements }}"
 enable_notifications = true
 requires_human_approval_after = true
 onsuccess = "promote_requirements"
@@ -107,7 +116,7 @@ exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
 # ============================================================================
 [[step]]
 name = "refine_requirements"
-prompt = "prompts/04_refine_requirements.txt"
+prompt = "{{ slot.refine_requirements }}"
 enable_notifications = true
 
 onsuccess = "review_requirements"
