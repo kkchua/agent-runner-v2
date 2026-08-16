@@ -1,0 +1,146 @@
+# Objective
+
+Generate videos from the images in step_03 using the Agnes Video V2.0 API
+(image-to-video). You will read variant JSONs to get prompts and image URLs,
+submit video generation tasks, poll for completion, download videos to step_04,
+and write an index.json.
+
+# Reference Inputs
+
+- MEDIA_CONFIG: {MEDIA_CONFIG}
+  The workspace config.json. Contains `api.agnes_v2` section with model settings.
+
+- STEP_03_DIR: {STEP_03_DIR}
+  Directory containing generated PNG images and variant JSON files from the
+  image generation step.
+
+- STEP_04_DIR: {STEP_04_DIR}
+  Output directory for generated videos. Create if it does not exist.
+
+# Execution Protocol
+
+## Step 1: Load Configuration
+
+1. Read `config.json` from the workspace root (path in MEDIA_CONFIG).
+2. Extract the `api.agnes_v2` section:
+   - `model` — model name (default: "agnes-video-v2.0")
+   - `width` — video width in pixels (default: 1024)
+   - `height` — video height in pixels (default: 576)
+   - `num_frames` — number of frames (default: 72)
+   - `frame_rate` — frames per second (default: 24)
+3. If no `api.agnes_v2` section exists, use hardcoded defaults.
+
+## Step 2: Load API Key
+
+Read the `.env` file from the workspace root and extract `AGNES_API_KEY`.
+Strip any quotes and spaces from the value.
+
+Also read `AGNES_BASE_URL` if present (default: `https://apihub.agnes-ai.com`).
+
+**Important**: Embed the key directly in curl commands rather than using
+environment variable syntax.
+
+## Step 3: Read Input Data
+
+1. List all `*.json` files in STEP_03_DIR. **Skip `index.json`** — it is not
+   variant data.
+2. For each variant JSON, read it and extract the `variations` array.
+3. Build a lookup map: `image_filename` → `{t2v_prompt1, image_url}`
+4. List all `*.png` files in STEP_03_DIR — these are the actual images to
+   process. The user may have deleted some images before this step.
+5. For each PNG, look up its variation data using the filename.
+
+## Step 4: Submit All Video Tasks
+
+For each matched image, submit a video generation task via curl.
+Submit ALL tasks first before polling.
+
+```bash
+curl -s -X POST "<BASE_URL>/v1/videos" \
+  -H "Authorization: Bearer <API_KEY>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "<model>",
+    "prompt": "<t2v_prompt1>",
+    "image": "<image_url>",
+    "width": <width>,
+    "height": <height>,
+    "num_frames": <num_frames>,
+    "frame_rate": <frame_rate>
+  }'
+```
+
+Replace:
+- `<BASE_URL>` with the Agnes API base URL
+- `<API_KEY>` with the actual key value from .env
+- `<model>`, `<width>`, `<height>`, `<num_frames>`, `<frame_rate>` from config
+- `<t2v_prompt1>` with the video prompt from the variant data
+- `<image_url>` with the image URL from the variant data
+
+For each submit, extract `video_id` (or `id`) from the response.
+Record the mapping: `video_id` → `{image_filename, output_filename}`.
+
+Output filename: `<image_stem>.mp4` (e.g., `image001.png` → `image001.mp4`).
+
+If a submit fails, log the error and continue with the next image.
+
+## Step 5: Poll All Tasks
+
+For each `video_id`, poll until complete:
+
+```bash
+curl -s "<BASE_URL>/agnesapi?video_id=<video_id>" \
+  -H "Authorization: Bearer <API_KEY>"
+```
+
+Check `status`:
+- `completed` → extract `url` or `video_url`
+- `failed`, `error`, `cancelled` → log error, continue with next task
+- Other → wait 10 seconds, poll again
+
+Maximum 120 poll attempts per task (approximately 20 minutes).
+
+## Step 6: Download Videos
+
+For each completed task, download the video:
+
+```bash
+curl -s -o "<STEP_04_DIR>/<output_filename>" "<video_url>"
+```
+
+## Step 7: Write Index
+
+Write `index.json` to STEP_04_DIR:
+
+```json
+{
+  "step": "generate_videos",
+  "model": "agnes-video-v2.0",
+  "files": [
+    {"input": "image001.png", "output": "image001.mp4"},
+    {"input": "image002.png", "output": "image002.mp4"}
+  ]
+}
+```
+
+Only include successfully generated videos in the index.
+
+# Output
+
+Write the VIDEO_INDEX artifact path (STEP_04_DIR/index.json) as your output.
+
+# Self-Check
+
+Before completing, verify:
+
+- [ ] All PNG images in STEP_03_DIR were processed (or logged as failures)
+- [ ] `index.json` was written to STEP_04_DIR
+- [ ] Each entry in index.json maps an input PNG to an output MP4
+- [ ] Failed tasks were logged with error details
+- [ ] The VIDEO_INDEX artifact path is reported in the output
+
+# Forbidden
+
+- Do NOT call the Agnes Video API using Python requests/urllib — use curl only.
+- Do NOT skip the `index.json` exclusion when reading variant JSONs.
+- Do NOT use `image_url` from a source other than the variant JSON data.

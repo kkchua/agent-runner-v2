@@ -1,0 +1,138 @@
+# Objective
+
+Generate videos from the images in step_03 using the Alibaba Token Plan API.
+You will read variant JSONs to get prompts and image URLs, submit all video
+generation tasks, poll for completion, download videos to step_04, and write
+an index.json.
+
+# Reference Inputs
+
+- MEDIA_CONFIG: {MEDIA_CONFIG}
+  The workspace config.json. Contains `api.token_plan` section with model
+  settings keyed by model name.
+
+- STEP_03_DIR: {STEP_03_DIR}
+  Directory containing generated PNG images and variant JSON files from the
+  image generation step.
+
+- STEP_04_DIR: {STEP_04_DIR}
+  Output directory for generated videos. Create if it does not exist.
+
+# Execution Protocol
+
+## Step 1: Load Configuration
+
+1. Read `config.json` from the workspace root (path in MEDIA_CONFIG).
+2. Extract the `api.token_plan` section:
+   - `default_model` — which model to use (e.g., "happyhorse-1.1-i2v")
+   - `<model_name>` — model-specific settings (resolution, ratio, duration, watermark)
+3. If no `api.token_plan` section exists, use hardcoded defaults:
+   - model: happyhorse-1.1-t2v, resolution: 480P, ratio: 9:16, duration: 5, watermark: false
+
+**Note**: `watermark` must be a JSON boolean (`true`/`false`), NOT a string.
+
+## Step 2: Load API Key
+
+Read the `.env` file from the workspace root and extract `TOKEN_PLAN_API_KEY`.
+Strip any quotes and spaces from the value.
+
+**Important**: Embed the key directly in curl commands rather than using
+environment variable syntax (`%VAR%` or `$VAR`), as cmd.exe variable expansion
+can be unreliable.
+
+Example: If `.env` contains `TOKEN_PLAN_API_KEY=sk-xxx`, extract `sk-xxx`
+and use it inline: `curl -H "Authorization: Bearer sk-xxx" ...`
+
+## Step 3: Read Input Data
+
+1. List all `*.json` files in STEP_03_DIR. **Skip `index.json`** — it is not
+   variant data.
+2. For each variant JSON, read it and extract the `variations` array.
+3. Build a lookup map: `image_filename` → `{t2v_prompt1, t2i_prompt1, image_url}`
+4. List all `*.png` files in STEP_03_DIR — these are the actual images to
+   process. The user may have deleted some images before this step.
+5. For each PNG, look up its variation data using the filename.
+
+## Step 4: Phase 1 — Submit All Tasks
+
+For each matched image, submit a video generation task via curl.
+Do NOT poll yet — submit ALL tasks first for maximum parallelism.
+
+```bash
+curl -s -X POST "https://token-plan.ap-southeast-1.maas.aliyuncs.com/api/v1/services/aigc/video-generation/video-synthesis" \
+  -H "X-DashScope-Async: enable" \
+  -H "Authorization: Bearer <API_KEY>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "<model>",
+    "input": {"prompt": "<t2v_prompt1>", "media": [{"type": "first_frame", "url": "<image_url>"}]},
+    "parameters": {"resolution": "<resolution>", "ratio": "<ratio>", "duration": <duration>, "watermark": <watermark>}
+  }'
+```
+
+Replace `<API_KEY>` with the actual key value extracted from .env.
+
+For each submit, extract `output.task_id` from the response.
+Record the mapping: `task_id` → `{image_filename, output_filename}`.
+
+Output filename: `<image_stem>.mp4` (e.g., `image001.png` → `image001.mp4`).
+
+If a submit fails, log the error and continue with the next image.
+
+## Step 5: Phase 2 — Poll All Tasks
+
+For each `task_id`, poll until complete:
+
+```bash
+curl -s "https://token-plan.ap-southeast-1.maas.aliyuncs.com/api/v1/tasks/<task_id>" \
+  -H "Authorization: Bearer <API_KEY>"
+```
+
+Check `output.task_status`:
+- `SUCCEEDED` → extract `output.video_url` (or `output.results[0].url`)
+- `FAILED` → log error, continue with next task
+- Other → wait 15 seconds, poll again
+
+## Step 6: Phase 3 — Download Videos
+
+For each succeeded task, download the video:
+
+```bash
+curl -s -o "<STEP_04_DIR>/<output_filename>" "<video_url>"
+```
+
+## Step 7: Write Index
+
+Write `index.json` to STEP_04_DIR:
+
+```json
+{
+  "step": "generate_videos",
+  "files": [
+    {"input": "image001.png", "output": "image001.mp4"},
+    {"input": "image002.png", "output": "image002.mp4"}
+  ]
+}
+```
+
+Only include successfully generated videos in the index.
+
+# Output
+
+Write the VIDEO_INDEX artifact path (STEP_04_DIR/index.json) as your output.
+
+# Self-Check
+
+Before completing, verify:
+
+- [ ] All PNG images in STEP_03_DIR were processed (or logged as failures)
+- [ ] `index.json` was written to STEP_04_DIR
+- [ ] Each entry in index.json maps an input PNG to an output MP4
+- [ ] Failed tasks were logged with error details
+- [ ] The VIDEO_INDEX artifact path is reported in the output
+
+# Forbidden
+
+- Do NOT call the Token Plan API using Python requests/urllib — use curl only.
+- Do NOT skip the `index.json` exclusion when reading variant JSONs.
+- Do NOT use `image_url` from a source other than the variant JSON data.

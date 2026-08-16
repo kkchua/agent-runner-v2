@@ -16,19 +16,9 @@ platform = "agent-runner-v2"
 # Implementations (BCS)
 # ============================================================================
 [[workflow.implementation]]
-name = "agnes_full"
-description = "Full pipeline using Agnes APIs for both image and video"
-label = "Agnes Full Pipeline"
-
-[[workflow.implementation]]
-name = "happyhorse_product"
-description = "Product-focused pipeline: Agnes images + HappyHorse video"
-label = "HappyHorse Product Pipeline"
-
-[[workflow.implementation]]
-name = "video_only"
-description = "Video-only mode: skip LLM/image steps, render videos from existing images"
-label = "Video Only"
+name = "standard"
+description = "Unified media pipeline with pluggable LLM-driven providers for all steps."
+label = "Standard Pipeline"
 
 [workflow.governance]
 include_in_prompts = true
@@ -115,13 +105,12 @@ onsuccess = "generate_images"
 result_meta_key = "ARCHIVE_STEP_01"
 
 # ============================================================================
-# Step 3: Generate Images (action-driven, pluggable provider)
-# No on_reject_refine — action failures need human investigation, not auto-retry.
+# Step 3: Generate Images (prompt-driven, pluggable LLM provider)
 # Archiving deferred to archive_step_02 (runs after approval).
 # ============================================================================
 [[step]]
 name = "generate_images"
-action = "generate_images_default"
+prompt = "{{ slot.generate_images }}"
 enable_notifications = true
 requires_human_approval_after = true
 onsuccess = "archive_step_02"
@@ -147,13 +136,11 @@ onsuccess = "generate_videos"
 result_meta_key = "ARCHIVE_STEP_02"
 
 # ============================================================================
-# Step 4: Generate Videos (action-driven, pluggable provider)
-# No on_reject_refine — action failures need human investigation, not auto-retry.
-# Archiving deferred to archive_step_03 (runs after approval).
+# Step 4: Generate Videos (prompt-driven, pluggable LLM provider)
 # ============================================================================
 [[step]]
 name = "generate_videos"
-action = "generate_videos_default"
+prompt = "{{ slot.generate_videos }}"
 enable_notifications = true
 requires_human_approval_after = false
 onsuccess = "archive_step_03"

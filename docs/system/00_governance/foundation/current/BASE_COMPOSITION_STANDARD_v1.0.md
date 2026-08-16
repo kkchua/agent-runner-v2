@@ -600,6 +600,20 @@ mechanically construct `workflow.toml`, `context_extensions.py`, and
       "name": "string — implementation identifier",
       "description": "string — what this variant does",
       "label": "string — optional display label",
+      "step_slots": {
+        "slot_id": {
+          "type": "llm | action — slot type",
+          "label": "string — human-readable display label",
+          "default": "string — default option name",
+          "options": [
+            {
+              "name": "string — option identifier",
+              "file": "string — prompt file path (required for type=llm)",
+              "description": "string — what this option does"
+            }
+          ]
+        }
+      },
       "overrides": {
         "step_name": {
           "prompt": "string — override prompt path",
@@ -624,6 +638,11 @@ mechanically construct `workflow.toml`, `context_extensions.py`, and
 | `domain_steps[].role_policy` | REQUIRED when type="prompt" |
 | `artifact_keys.inputs[].key` | MUST end with `_FILE` or `_DIR` |
 | `implementations[].name` | MUST be unique. MUST NOT be "default". |
+| `implementations[].step_slots` | Optional. Keys MUST correspond to `domain_steps[].name`. |
+| `step_slots[].type` | "llm" or "action". Defaults to "llm" if omitted. |
+| `step_slots[].default` | MUST match an option `name` in the same slot. |
+| `step_slots[].options[].file` | REQUIRED when type="llm". Path relative to bundle root. |
+| `step_slots[].options[].description` | REQUIRED when type="action". |
 
 ### 8.3 What the Assembler Produces
 
@@ -631,13 +650,18 @@ mechanically construct `workflow.toml`, `context_extensions.py`, and
 |-------------|--------|
 | `identity` | `[workflow]` section in workflow.toml; class name in context_extensions.py |
 | `domain_steps` | `[[step]]` sections in workflow.toml (assembler adds `onsuccess` chaining) |
+| `domain_steps[].type=prompt` | `prompt = "{{ slot.<step_name> }}"` in workflow.toml (slot reference) |
+| `domain_steps[].type=action` | `action = "<action_name>"` in workflow.toml (direct assignment) |
 | `artifact_keys` | `INPUT_ARTIFACTS` + `OUTPUT_ARTIFACTS` dicts in context_extensions.py; `[step.artifacts]` in workflow.toml |
 | `implementations` | `[[workflow.implementation]]` in workflow.toml; `impls/{name}/impl.yaml` files |
+| `implementations[].step_slots` | `step_slots:` section in `impls/{name}/impl.yaml` |
+| `implementations[].overrides` | `overrides:` section in `impls/{name}/impl.yaml` |
 
 ### 8.4 What the Assembler Adds Automatically
 
 - `onsuccess` routing — chains steps in declared order
 - Terminal `step_completion` step — always appended
+- `{{ slot.<step_name> }}` references — prompt steps get slot references in workflow.toml (slot_id = step name)
 - `INPUT_ARTIFACTS` + `OUTPUT_ARTIFACTS` dicts — from `artifact_keys` inputs/outputs
 - `build_context_extensions()` body — uses `resolve_input_artifacts()` and `resolve_output_artifacts()`
 - `install_to_global()` / `sync_to_backend()` — always NO_OP

@@ -1,0 +1,812 @@
+# STEP 02 - Generate Image & Video Prompts (Enhanced Reconstruction) v5
+
+---
+
+# Mission
+
+Your mission is to convert every individual image description JSON generated in {STEP_01_DIR} into a high-quality Image Prompt JSON and Video Prompt.
+This step is a **thematic variance task** — create multiple creative interpretations that share the same CONCEPT but vary the SPECIFIC SUBJECTS.
+The objective is to generate diverse visual interpretations within the same thematic category, exploring different subjects, styles, environments, and moods while maintaining conceptual coherence.
+
+---
+
+# Reference Inputs
+
+- Description JSONs directory: {STEP_01_DIR}
+- Output variants directory: {STEP_02_DIR}
+- Archive directory for processed descriptions: {STEP_01_ARCHIVE}
+- Media configuration: {MEDIA_CONFIG}
+- Governance docs: {GOVERNANCE_RUNTIME_ROOT}
+- Platform docs: {PLATFORM_RUNTIME_ROOT}
+
+# Workflow Rules (CRITICAL)
+
+The {STEP_01_DIR} output directory contains:
+
+- index.json
+- one or more image description JSON files
+
+Example:
+
+{STEP_01_DIR}/
+    index.json
+    image_001.json
+    image_002.json
+    image_003.json
+
+## IMPORTANT
+
+index.json is ONLY a manifest.
+
+It is NOT an image description.
+
+Never generate prompts directly from index.json.
+
+Never merge multiple image prompts into index.json.
+
+Its purpose is ONLY to:
+
+- discover all image description files
+- validate processing completeness
+- generate the final output index.json required by this workflow
+
+---
+
+# Processing Rules
+Process ONE image description JSON at a time.
+Relationship:
+
+1 Image Description JSON
+↓
+
+1 Image Prompt JSON
+
+Never combine multiple image descriptions into a single output.
+
+Repeat until every image listed in index.json has been processed.
+
+Variant JSON structure:
+{
+  "subject": "<image_stem from input description>",
+  "image_filename": "download (3).jpg",
+  "image_stem": "download (3)",
+  "source_file": "step_01_imagedesc/download (3).json",
+  "aspect_ratio": "9:16",          // Copy from input description JSON
+  "image_size": "540x1080",        // Copy from input description JSON
+  "variations": [
+    {
+      "t2i_prompt1": "<detailed English text-to-image prompt>",
+      "t2v_prompt1": "<detailed English text-to-video motion prompt>",
+      "negative_prompt_video": "<negative prompt for video generation>",
+      "image_filename": "<image_stem>_01.png",
+      "image_url": ""
+    },
+    {
+      "t2i_prompt1": "<detailed English text-to-image prompt>",
+      "t2v_prompt1": "<detailed English text-to-video motion prompt>",
+      "negative_prompt_video": "<negative prompt for video generation>",
+      "image_filename": "<image_stem>_02.png",
+      "image_url": ""
+    },
+    {
+      "t2i_prompt1": "<detailed English text-to-image prompt>",
+      "t2v_prompt1": "<detailed English text-to-video motion prompt>",
+      "negative_prompt_video": "<negative prompt for video generation>",
+      "image_filename": "<image_stem>_03.png",
+      "image_url": ""
+    },
+    {
+      "t2i_prompt1": "<detailed English text-to-image prompt>",
+      "t2v_prompt1": "<detailed English text-to-video motion prompt>",
+      "negative_prompt_video": "<negative prompt for video generation>",
+      "image_filename": "<image_stem>_04.png",
+      "image_url": ""
+    }
+  ]
+}
+
+After every image has been processed:
+
+- generate the new index.json
+- preserve the existing workflow
+- preserve filenames
+- preserve archive process
+- preserve output schema
+- preserve all existing output requirements
+
+---
+
+# Thematic Variance Objective
+
+Use the description JSON as inspiration for the CONCEPT category.
+Your objective is to generate creative variations that share the same thematic concept but explore different specific subjects, styles, and environments.
+
+Example transformations:
+- Fish in murky pond → koi in crystal pool → salmon in mountain river → jellyfish in deep ocean
+- Tropical hillside → autumn forest → snowy mountain → desert dunes → urban garden
+- Sunrise beach → sunset cliffs → moonlit lake → dawn mist → twilight cityscape
+
+Vary freely across:
+- Specific subject types within the same category
+- Environmental settings and conditions
+- Photographic approach (natural, cinematic, golden hour, moody, high contrast)
+- Lighting, mood, atmosphere
+- Weather and seasons
+
+Keep the core concept category consistent while exploring creative variety.
+
+---
+
+# Thematic Variance Rules
+
+The CONCEPT category MUST remain consistent across every variant.
+
+## Concept Category (KEEP)
+
+- Core subject type (e.g., aquatic life, landscape, wildlife, architecture)
+- Overall thematic family (e.g., nature, urban, people, objects)
+- General mood direction (e.g., serene, dynamic, mysterious)
+
+## Subject Variation (ALLOW)
+
+- Specific subject identity CAN vary within category
+- Number of subjects CAN vary
+- Subject species/type CAN vary (e.g., different fish breeds, different tree types)
+- Subject presence CAN vary (some variants may omit secondary subjects)
+
+## Scene Variation (ALLOW)
+
+- Environment CAN vary (e.g., pond → river → ocean → aquarium)
+- Location CAN vary (e.g., park → forest → garden → urban)
+- Weather CAN vary (e.g., sunny → rainy → foggy → snowy)
+- Time of day CAN vary (e.g., dawn → midday → sunset → night)
+- Season CAN vary (e.g., spring → summer → autumn → winter)
+
+## Composition Variation (ALLOW)
+
+- Framing CAN vary (e.g., close-up → wide shot → aerial)
+- Camera angle CAN vary (e.g., eye-level → low angle → overhead)
+- Depth layers CAN vary based on scene needs
+
+---
+
+# Permitted Photographic Inference
+
+The following MAY be inferred when not explicitly described.
+
+- focal length
+- lens selection
+- aperture
+- depth of field
+- exposure
+- camera height
+- camera distance
+- camera angle
+- lighting direction
+- lighting softness
+- atmospheric haze
+- material appearance
+- shadow behavior
+- photographic color grading
+
+Only infer what naturally supports the existing scene.
+
+Never change the semantic meaning.
+
+---
+
+# Prompt Priorities
+
+Highest priority
+
+1 Subject identity
+2 Scene fidelity
+3 Object relationships
+4 Environment
+
+Then
+
+5 Composition
+6 Camera placement
+7 Lens
+8 Lighting
+9 Color palette
+10 Mood
+11 Photography style
+12 Technical quality
+13 Fine details
+
+---
+
+# Image Prompt Structure
+
+Generate prompts in natural English.
+
+Structure:
+
+Subject
+
+↓
+
+Appearance
+
+↓
+
+Action / Pose
+
+↓
+
+Environment
+
+↓
+
+Composition
+
+↓
+
+Camera Position
+
+↓
+
+Camera Height
+
+↓
+
+Viewing Angle
+
+↓
+
+Lens
+
+↓
+
+Focal Length
+
+↓
+
+Depth of Field
+
+↓
+
+Lighting
+
+↓
+
+Color Palette
+
+↓
+
+Atmosphere
+
+↓
+
+Photography Style
+
+↓
+
+Technical Quality
+
+↓
+
+Fine Details
+
+Avoid keyword dumping.
+
+Write like a professional photography prompt.
+
+---
+
+# Visual Style Rules
+
+CRITICAL: ALL image prompts (t2i_prompt1) MUST produce photorealistic,
+photographic-quality images. The generated images are used as Frame 1 for
+video generation (image-to-video). Non-photographic styles (painting,
+illustration, anime, cartoon) produce poor video results with flickering,
+morphing, and temporal inconsistency.
+
+## Mandatory Style: Photorealistic Photography
+
+Every variant MUST use a photographic style. Visual variety between variants
+comes from DIFFERENT PHOTOGRAPHIC TECHNIQUES, not different art mediums.
+
+IMPORTANT: The restriction is on RENDERING STYLE only, not on SUBJECT MATTER.
+Fantasy, sci-fi, surreal, dreamlike, and imaginary subjects are ALL ALLOWED —
+they must simply be rendered as if photographed by a real camera. Think of it
+as a movie still or a high-end VFX shot, not a painting.
+
+Examples of allowed photorealistic non-real subjects:
+- Sci-fi alien planet with twin suns (rendered like a movie VFX still)
+- Fantasy forest with bioluminescent trees (rendered like a cinematic shot)
+- Surreal dreamlike scene with floating islands (rendered like a photograph)
+- Cyberpunk cityscape at night (rendered like editorial photography)
+- Underwater magical realm (rendered like nature documentary footage)
+
+Examples of forbidden renderings:
+- The same sci-fi planet painted in oil painting style
+- The same fantasy forest as a watercolor illustration
+- The same dreamlike scene as anime or cartoon
+
+## Allowed Photographic Styles
+
+- Natural photography (outdoor, available light)
+- Cinematic photography (dramatic lighting, film-like color grading)
+- Editorial photography (magazine-quality, polished)
+- Landscape photography (wide depth of field, sharp detail)
+- Macro photography (extreme close-up, shallow depth of field)
+- Wildlife photography (telephoto compression, natural behavior)
+- Architectural photography (clean lines, perspective control)
+- Street photography (candid, urban atmosphere)
+- Fine art photography (creative lighting, mood-driven — but still photographic)
+- Long exposure photography (motion blur on water, light trails)
+
+## Strictly Forbidden Styles (Will Break Video Rendering)
+
+- Oil painting / impasto / brushstroke textures
+- Watercolor / ink wash
+- Digital painting / concept art / matte painting
+- Anime / cartoon / cel-shaded
+- Illustration / pen and ink / graphic art
+- Sketch / charcoal / pencil
+- 3D render / CGI look
+- Pixel art / voxel
+- Pointillism / stipple
+- Any non-photographic art medium
+
+## How to Add "painterly" or "artistic" Quality
+
+If the source image description suggests an artistic feel, achieve it through
+PHOTOGRAPHIC means only:
+- Soft bokeh and shallow depth of field (not brushstrokes)
+- Golden hour or blue hour lighting (not painted skies)
+- Film grain and analog color tones (not watercolor washes)
+- Lens flare and optical effects (not digital painting overlays)
+- Selective focus and tilt-shift (not illustration techniques)
+
+## Variant Differentiation Through Photography
+
+Each variant should use a DIFFERENT photographic approach:
+
+Example
+- Variant 1: Natural photography — faithful to the source image lighting and mood
+- Variant 2: Cinematic — dramatic side lighting, deeper shadows, film color grading
+- Variant 3: Golden hour — warm directional light, long shadows, amber tones
+- Variant 4: Moody/atmospheric — fog, mist, overcast, muted desaturated tones
+- Variant 5: High contrast — strong directional light, bold shadows, vivid colors
+
+All variants MUST remain photorealistic. No exceptions.
+
+---
+
+# Variant Generation
+
+Generate N variants where N is determined by the num_variants field in {MEDIA_CONFIG} (default 4).
+
+Each variant MUST explores the SAME concept with DIFFERENT specific subjects.
+
+EXAMPLE
+Thematic Anchor
+Original concept with similar subject matter. Maintains connection to source.
+Example: Fish and turtles in natural pond habitat.
+
+Environment Shift
+Same concept category, different environment and subject type.
+Example: Colorful koi in crystal clear Japanese garden pool.
+
+Wild Alternative
+Same concept, wild/nature interpretation with different subjects.
+Example: Salmon jumping in rushing mountain river rapids.
+
+Unexpected Setting
+Same concept, unusual or contrasting environment.
+Example: Large carp in urban concrete fountain with city reflections.
+
+
+# Variant Diversity Rules
+
+Every variant must preserve the core CONCEPT category.
+
+Each variant should maximize creative diversity across:
+
+- Specific subject types (different species, different objects)
+- Environment and setting (different locations, different contexts)
+- Photographic approach (natural, cinematic, golden hour, moody, high contrast)
+- Camera position, height, distance, framing, perspective
+- Lighting direction, intensity, atmosphere, color grading
+- Weather and season (free to vary)
+- Mood and emotional tone
+
+Do NOT create variants by changing only one parameter.
+
+Each variant should explore a different creative interpretation.
+
+Every variant should feel visually distinct while maintaining thematic coherence.
+
+Do not reuse the same sentence structure between variants.
+
+Rewrite each prompt independently.
+
+---
+
+# Photography Rules
+
+Assume the image is a real photograph.
+
+Use professional photography terminology.
+
+Never describe the image as:
+- painting
+- illustration
+- anime
+- CGI
+- 3D render
+
+
+# Video Prompt Rules
+
+Assume the generated image is Frame 1. The video prompt (t2v_prompt1)
+describes how the EXACT contents of Frame 1 move over the video duration.
+
+## Camera Motion — STABLE ONLY (CRITICAL)
+
+The video API sometimes misinterprets camera motion descriptions as handheld
+walking, which produces an unpleasant footstep-bounce shake effect.
+
+### ABSOLUTE RULE: Use smooth, stable camera motion only
+
+Camera movement must feel like it was shot on a professional dolly, crane,
+or gimbal — NEVER like a person walking holding a camera.
+
+### Safe camera motions (use these):
+
+- **Static camera** — no camera movement, only subject/environment motion
+- **Slow dolly in/out** — smooth forward/backward glide (NOT walking)
+- **Slow pan** — smooth horizontal rotation
+- **Slow tilt** — smooth vertical rotation
+- **Slow push-in** — gradual zoom-like approach (not walking forward)
+- **Slow pull-back** — gradual retreat (not walking backward)
+
+### Forbidden camera descriptions (will cause shake):
+
+- Walking / walking toward / walking through
+- Handheld / shaky / documentary style
+- POV / point-of-view / what you see
+- Following a subject (implies walking behind them)
+- "Camera moves through" (implies walking path)
+- Any description that suggests body movement or footstep rhythm
+- Fast or jerky movements
+- Random camera adjustments
+
+### Camera motion examples
+
+CORRECT:
+- "Static camera, gentle waves lap at the shore"
+- "Slow dolly forward, the subject walks toward the camera"
+- "Slow pan right, revealing the landscape"
+- "Static camera, clouds drift across the sky"
+
+WRONG (will likely cause shake):
+- "Camera walks through the forest"
+- "POV of someone walking down the path"
+- "Handheld shot following the subject"
+- "Camera moves forward as the person walks"
+
+---
+
+## THE GOLDEN RULE
+
+Before writing ANY word in the video prompt, mentally list every object,
+surface, and element visible in Frame 1. The video prompt may ONLY
+reference elements from that list. If an element is not in Frame 1, it
+does not exist in the video — period.
+
+## Video Prompt Template
+
+Structure every t2v_prompt1 using this exact pattern:
+
+"[Camera motion], the [existing element 1] [motion verb], the [existing
+element 2] [motion verb], [atmospheric detail about existing elements]."
+
+Every noun in the prompt MUST be an element visible in Frame 1.
+Every verb MUST come from the Allowed Verbs list below.
+
+## Allowed Verbs (motion of existing elements only)
+
+Camera verbs: dolly, pan, tilt, crane, orbit, push-in, pull-back, track
+Water verbs: flow, ripple, lap, crash, surge, drift, reflect, shimmer
+Vegetation verbs: sway, bend, rustle (existing trees/plants only — NOT growing)
+Cloud/sky verbs: drift, shift, roll (existing clouds only — NOT forming)
+Light verbs: shift, fade, shimmer, dance (existing light only)
+Subject verbs: walk, swim, float, glide, turn, move (existing subjects only)
+Particle verbs: drift, float, scatter (existing particles only)
+
+## Forbidden Verbs (imply creation, appearance, or disappearance)
+
+NEVER use these verbs — they cause objects to appear/disappear in video:
+
+- grow, growing, sprout, emerge, materialize
+- appear, appearing, fade in, come into view
+- disappear, vanish, fade out, dissolve
+- transform, morph, become, turn into
+- generate, create, form, develop
+- rise (when implying new objects rising into frame)
+- fall (when implying new objects falling into frame — falling leaves, rain)
+- enter, arrive, approach (new subjects from off-screen)
+- leave, depart, exit (existing subjects leaving frame)
+
+## Forbidden Elements (regardless of scene context)
+
+These elements MUST NOT appear in the video prompt unless ALREADY VISIBLE
+in Frame 1. The video API will render whatever the prompt describes — if
+you mention it, it appears, even if it wasn't in the source image.
+
+- Birds, bats, insects, butterflies (any flying creatures)
+- Falling leaves, petals, seeds, debris
+- Fish jumping, dolphins breaching
+- Rain, snow (unless visible in Frame 1)
+- Boats, vehicles, people not in Frame 1
+- Trees, rocks, structures not in Frame 1
+- Fog, mist, haze (unless visible in Frame 1)
+
+## Scene-Specific Hallucination Triggers (HIGH RISK)
+
+The video API has strong trained associations that override negative prompts.
+For these scenes, you MUST include positive counter-instructions in t2v_prompt1.
+
+Beach/Ocean/Sea:
+  TRIGGER: API associates water scenes with birds, seagulls, dolphins
+  MUST INCLUDE in t2v_prompt1: "clear empty sky above the water"
+  DO describe: wave motion, foam, surface reflections, sand texture
+  DO NOT describe: palm trees, seagulls, dolphins, boats, shells
+
+Forest/Woodland:
+  TRIGGER: API associates forests with falling leaves, deer, birds
+  MUST INCLUDE in t2v_prompt1: "still air, no falling leaves"
+  DO describe: tree sway (existing trees), light filtering through canopy
+  DO NOT describe: falling leaves, deer, birds, mushrooms
+
+Mountain/Cliff:
+  TRIGGER: API associates mountains with eagles, clouds forming, snow
+  MUST INCLUDE in t2v_prompt1: "empty sky, no birds soaring"
+  DO describe: existing cloud drift, light shifting on peaks
+  DO NOT describe: eagles, clouds forming, snow falling
+
+Waterfall/River:
+  TRIGGER: API associates waterfalls with mist rising, fish, rainbow
+  MUST INCLUDE in t2v_prompt1: "no mist rising above the falls"
+  DO describe: water flow, existing mist movement, spray
+  DO NOT describe: rainbow, fish, rocks appearing
+
+City/Urban:
+  TRIGGER: API associates cities with cars appearing, people walking in
+  MUST INCLUDE in t2v_prompt1: "static scene, no new vehicles or people entering"
+  DO describe: existing traffic flow, existing lights, existing movement
+  DO NOT describe: cars appearing, people walking in, lights turning on
+
+Desert/Arid:
+  TRIGGER: API associates deserts with sand dunes shifting, camels
+  MUST INCLUDE in t2v_prompt1: "still sand surface, no wind-blown sand"
+  DO describe: heat shimmer, existing sand texture, stillness
+  DO NOT describe: cacti appearing, sand dunes shifting dramatically
+
+IMPORTANT: The "MUST INCLUDE" phrases are POSITIVE instructions that tell
+the API what the scene SHOULD look like. These are far more effective than
+negative prompts alone. Always include them for these scene types.
+
+## Correct vs Incorrect Examples
+
+WRONG: "Gentle waves lap at the shore as palm trees sway and seagulls
+soar overhead"
+→ WRONG because: palm trees and seagulls are not in Frame 1
+
+CORRECT: "Slow dolly forward, gentle waves lap at the sandy shore,
+soft foam drifts along the waterline, subtle light shimmer on the
+water surface"
+→ CORRECT because: every element (waves, sand, foam, light) is in Frame 1
+
+WRONG: "The forest comes alive as leaves gently fall and a deer steps
+through the trees"
+→ WRONG because: falling leaves and deer are not in Frame 1
+
+CORRECT: "Static camera, existing tree canopy sways gently in the wind,
+dappled light shifts across the forest floor, subtle atmospheric haze
+drifts between the trees"
+→ CORRECT because: trees, light, and haze are all in Frame 1
+
+## Double Object Prevention
+
+The video API sometimes duplicates prominent objects (moon, sun, planets)
+creating two or more copies in the sky. To prevent this:
+
+If Frame 1 contains a moon, sun, or other celestial object:
+- Mention it EXACTLY ONCE in the video prompt
+- Use "the single moon" or "the one sun" — the word "single" prevents duplication
+- Do NOT describe it moving or changing — just say "the single moon remains
+  stationary in the sky" or "the single sun casts steady light"
+- Do NOT describe multiple light sources
+
+If Frame 1 contains any prominent singular object (lighthouse, tower, statue):
+- Mention it EXACTLY ONCE
+- Use "the single [object]" to prevent duplication
+- Do NOT describe it being replicated or multiplied
+
+---
+
+# Negative Prompt
+
+Include a comprehensive negative prompt.
+
+Identity
+
+- identity drift
+- face distortion
+- age drift
+- hairstyle drift
+
+Geometry
+
+- extra limbs
+- extra fingers
+- malformed hands
+- duplicate people
+- duplicate objects
+- warped anatomy
+
+Composition
+
+- cropped subject
+- floating objects
+- incorrect perspective
+
+Image Quality
+
+- blur
+- motion blur
+- noise
+- compression artifacts
+- chromatic aberration
+- oversaturation
+- underexposure
+- overexposure
+
+Text
+
+- watermark
+- logo
+- signature
+- subtitles
+- captions
+- text
+
+Style
+
+- painting
+- illustration
+- anime
+- CGI
+- 3D render
+
+Temporal Consistency (Video)
+
+- objects appearing mid-video
+- objects disappearing mid-video
+- subjects entering frame
+- subjects exiting frame
+- new animals appearing
+- new people appearing
+- objects vanishing
+- temporal flicker
+- popping objects
+- sudden appearance
+- sudden disappearance
+- teleportation
+
+Forbidden Video Elements
+
+- birds flying
+- falling leaves
+- falling petals
+- flying creatures (birds, bats, insects, butterflies)
+- debris falling from above
+- leaves detaching from trees
+- wind-blown particles shedding from vegetation
+
+---
+
+# Output Rules
+
+Output ONLY the required JSON files to disk.
+
+Do NOT explain your reasoning.
+
+Do NOT summarize the description JSON.
+
+Do NOT mention inferred details.
+
+Preserve the required JSON schema.
+
+Preserve all filenames.
+
+Preserve existing workflow.
+
+Preserve archive generation.
+
+Preserve index.json generation.
+
+## Output Filename Convention
+
+For each input description JSON, create an output file with `_prompts` suffix:
+
+Input:  {STEP_01_DIR}/image_001.json  →  Output: {STEP_02_DIR}/image_001_prompts.json
+Input:  {STEP_01_DIR}/beach_sunset.json  →  Output: {STEP_02_DIR}/beach_sunset_prompts.json
+
+The output JSON filename must be: `<input_stem>_prompts.json`
+
+## Index.json Structure
+
+After processing all images, generate an index.json in {STEP_02_DIR}/ with this structure:
+
+```json
+{
+  "step": "generate_prompts",
+  "files": [
+    {"input": "step_01_imagedesc/image_001.json", "output": "{STEP_02_DIR}/image_001_prompts.json"},
+    {"input": "step_01_imagedesc/image_002.json", "output": "{STEP_02_DIR}/image_002_prompts.json"}
+  ]
+}
+```
+
+After writing all variant JSONs to {STEP_02_DIR}, generate the index.json.
+
+Note: Archiving of processed description files from {STEP_01_DIR} is handled
+automatically by a subsequent archive step — do NOT archive or remove files
+from {STEP_01_DIR} yourself.
+
+---
+
+# CRITICAL: Output Mechanism
+
+You MUST use your file-writing tools to create actual files on disk. Do NOT put artifact data in the meta.json result field -- the result field is for status and summary information ONLY.
+
+Required file outputs:
+1. Individual variant JSONs: {STEP_02_DIR}/<image_stem>_prompts.json for each input description
+2. Index file: {STEP_02_DIR}/index.json listing all input-to-output mappings
+
+Your meta.json result field should contain only:
+- status: "complete" or "error"
+- remark: brief summary (e.g., "Generated 4 variants each for 5 descriptions, wrote 5 JSONs + index")
+- Do NOT include the full JSON data in the result field
+
+In the artifacts field of meta.json, you MUST report:
+- PROMPT_VARIANTS: the absolute path to the index.json file you wrote
+
+---
+
+# Self Validation
+
+Before finalizing each image:
+
+✓ Core concept category preserved across variants
+
+✓ Specific subjects vary within concept (not identical)
+
+✓ Environments vary (different locations/settings)
+
+✓ Photographic styles vary (lighting, focal length, depth of field, perspective, color grading)
+
+✓ All t2i_prompt1 images are PHOTOREALISTIC (no painting, illustration, anime, or CGI styles)
+
+✓ Camera information included
+
+✓ Video prompt starts from Frame 1
+
+✓ GOLDEN RULE: every noun in t2v_prompt1 is an element visible in Frame 1
+
+✓ No forbidden verbs used (grow, emerge, appear, disappear, fall, enter, leave)
+
+✓ No hallucinated elements (birds, falling leaves, fish, boats, trees not in Frame 1)
+
+✓ No double/duplicate objects (moon, sun, or any prominent object mentioned exactly once with "single")
+
+✓ Camera is SMOOTH and STABLE — no walking, no footstep, no handheld shake (use "static camera" if unsure)
+
+✓ TEMPORAL CONSISTENCY: All objects from Frame 1 remain throughout video

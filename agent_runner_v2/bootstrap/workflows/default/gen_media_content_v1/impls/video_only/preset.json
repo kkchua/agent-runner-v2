@@ -1,7 +1,0 @@
-{
-  "actions": {
-    "render_image": "__none__",
-    "render_video": "agnes_v2"
-  },
-  "review_images_before_video": false
-}
