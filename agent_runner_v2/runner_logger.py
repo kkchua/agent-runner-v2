@@ -1,11 +1,14 @@
 """Structured logger for the agent runner.
 
-Provides both console output (colourised) and file logging (JSON-lines).
+Provides both console output (colourised) and file logging (JSON-lines)
+with automatic rotation via standard library RotatingFileHandler.
 All events include: timestamp, step, coder, model, duration, status.
 """
 from __future__ import annotations
 
 import json
+import logging
+import logging.handlers
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -16,7 +19,9 @@ from .runtime_context import RUNNER_HOME
 # ---------------------------------------------------------------------------
 # Module-level state
 # ---------------------------------------------------------------------------
-_LOG_FILE: Path | None = None
+
+_FILE_HANDLER: logging.handlers.RotatingFileHandler | None = None
+_LOGGER: logging.Logger | None = None
 _COLOURS = {
     "reset": "\033[0m",
     "bold": "\033[1m",
@@ -56,15 +61,24 @@ def _log_dir() -> Path:
     return Path(RUNNER_HOME) / "logs"
 
 
-def _ensure_log_file() -> Path | None:
-    global _LOG_FILE
-    if _LOG_FILE is not None:
-        return _LOG_FILE
+def _ensure_logger() -> logging.Logger | None:
+    """Initialise the rotating file logger on first use."""
+    global _FILE_HANDLER, _LOGGER
+    if _LOGGER is not None:
+        return _LOGGER
     try:
         d = _log_dir()
         d.mkdir(parents=True, exist_ok=True)
-        _LOG_FILE = d / "runner.log"
-        return _LOG_FILE
+        log_path = d / "runner.log"
+        _FILE_HANDLER = logging.handlers.RotatingFileHandler(
+            str(log_path), maxBytes=10 * 1024 * 1024, backupCount=5, encoding="utf-8",
+        )
+        _FILE_HANDLER.setFormatter(logging.Formatter("%(message)s"))
+        _LOGGER = logging.getLogger("agent_runner_v2.runner")
+        _LOGGER.setLevel(logging.INFO)
+        _LOGGER.propagate = False
+        _LOGGER.addHandler(_FILE_HANDLER)
+        return _LOGGER
     except OSError:
         return None
 
@@ -246,15 +260,11 @@ def _print_console(record: dict[str, Any]) -> None:
 
 
 # ---------------------------------------------------------------------------
-# File output (JSON-lines)
+# File output (JSON-lines via RotatingFileHandler)
 # ---------------------------------------------------------------------------
 
 def _write_file(record: dict[str, Any]) -> None:
-    log_path = _ensure_log_file()
-    if log_path is None:
+    logger = _ensure_logger()
+    if logger is None:
         return
-    try:
-        with open(log_path, "a", encoding="utf-8") as fh:
-            fh.write(json.dumps(record, ensure_ascii=False) + "\n")
-    except OSError:
-        pass
+    logger.info(json.dumps(record, ensure_ascii=False))

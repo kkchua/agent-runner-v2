@@ -1,0 +1,264 @@
+# Artifact Generator Builder v3
+# SDLC-scoped pipeline — LLM generates domain logic only (actions + prompts).
+# Infrastructure (workflow.toml, context_extensions.py) assembled mechanically.
+#
+# Pipeline:
+#   1. Analyze          — understand requirement, produce Analysis JSON
+#   2-3. Plan ↔ Challenge   — design domain logic, then attack it
+#   4-5. Implement ↔ Critic — write actions + prompts + requirements.txt, then review
+#   6. Assemble         — mechanically build structural files (ACTION)
+#   7-9. Review → Validate → Gatekeep — quality gates
+#   10. Promote          — deploy + generate README (ACTION)
+
+[workflow]
+name = "artifact_generator_builder"
+version = "3.0.0"
+label = "Artifact Generator Builder"
+job_prefix = "AGB"
+description = "Builds workflow packages from requirement documents. LLM generates domain logic (actions + prompts), infrastructure assembled mechanically."
+visibility = "canonical"
+default_max_rejects = 3
+init_step = "analyze_requirement"
+layer = "layer3"
+platform = "agent-runner-v2"
+
+[workflow.governance]
+include_in_prompts = true
+prompt_targets = ["all"]
+
+# =============================================================================
+# Implementations
+# =============================================================================
+
+[[workflow.implementation]]
+name = "generator"
+description = "Produces variable content artifacts (reports, media, documents). Default implementation."
+label = "Content Generator"
+
+[[workflow.implementation]]
+name = "builder"
+description = "Produces executable agent-runner-v2 workflow packages as output."
+label = "Workflow Builder"
+
+# =============================================================================
+# Step 1: Analyze Requirement
+# =============================================================================
+
+[[step]]
+name = "analyze_requirement"
+prompt = "{{ slot.analyze_requirement }}"
+enable_notifications = true
+requires_human_approval_after = false
+onsuccess = "plan_domain_logic"
+
+[step.coder]
+role_policy = "architect_standard"
+
+[step.artifacts]
+required_inputs = ["REQUIREMENT_DOC"]
+optional_inputs = ["EXISTING_WORKFLOW_DIR"]
+produces = ["ANALYSIS_JSON_FILE"]
+result_meta_key = "ANALYSIS_JSON_FILE"
+
+# =============================================================================
+# Step 2: Plan Domain Logic
+# =============================================================================
+
+[[step]]
+name = "plan_domain_logic"
+prompt = "{{ slot.plan_domain_logic }}"
+enable_notifications = true
+requires_human_approval_after = false
+onsuccess = "challenge_plan"
+
+[step.coder]
+role_policy = "architect_standard"
+
+[step.artifacts]
+required_inputs = ["ANALYSIS_JSON_FILE", "REQUIREMENT_DOC"]
+produces = ["DOMAIN_PLAN_FILE"]
+result_meta_key = "DOMAIN_PLAN_FILE"
+
+# =============================================================================
+# Step 3: Challenge Plan
+# =============================================================================
+
+[[step]]
+name = "challenge_plan"
+prompt = "{{ slot.challenge_plan }}"
+enable_notifications = true
+requires_human_approval_after = false
+onsuccess = "implement_domain"
+
+[step.coder]
+role_policy = "reviewer_standard"
+
+[step.artifacts]
+required_inputs = ["DOMAIN_PLAN_FILE", "ANALYSIS_JSON_FILE"]
+produces = ["PLAN_CHALLENGE_FILE"]
+result_meta_key = "PLAN_CHALLENGE_FILE"
+
+[step.on_reject_refine]
+step = "plan_domain_logic"
+artifact = "PLAN_CHALLENGE_FILE"
+max_iterations = 2
+exhausted_failure_code = "PLAN_CHALLENGE_EXHAUSTED"
+exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
+
+# =============================================================================
+# Step 4: Implement Domain Logic
+# =============================================================================
+
+[[step]]
+name = "implement_domain"
+prompt = "{{ slot.implement_domain }}"
+enable_notifications = true
+requires_human_approval_after = false
+onsuccess = "critic_impl"
+
+[step.coder]
+role_policy = "architect_standard"
+
+[step.artifacts]
+required_inputs = ["DOMAIN_PLAN_FILE", "ANALYSIS_JSON_FILE", "REQUIREMENT_DOC"]
+produces = ["WORKFLOW_ACTIONS_FILE", "WORKFLOW_PROMPTS_DIR", "WORKFLOW_REQUIREMENTS_FILE"]
+result_meta_key = "WORKFLOW_ACTIONS_FILE"
+
+# =============================================================================
+# Step 5: Critic Implementation
+# =============================================================================
+
+[[step]]
+name = "critic_impl"
+prompt = "{{ slot.critic_impl }}"
+enable_notifications = true
+requires_human_approval_after = false
+onsuccess = "assemble_package"
+
+[step.coder]
+role_policy = "reviewer_standard"
+
+[step.artifacts]
+required_inputs = ["WORKFLOW_ACTIONS_FILE", "WORKFLOW_PROMPTS_DIR", "DOMAIN_PLAN_FILE"]
+optional_inputs = ["IMPL_CRITIQUE_FILE"]
+produces = ["IMPL_CRITIQUE_FILE"]
+result_meta_key = "IMPL_CRITIQUE_FILE"
+
+[step.on_reject_refine]
+step = "implement_domain"
+artifact = "IMPL_CRITIQUE_FILE"
+max_iterations = 2
+exhausted_failure_code = "IMPL_CRITIC_EXHAUSTED"
+exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
+
+# =============================================================================
+# Step 6: Assemble Package (ACTION)
+# =============================================================================
+
+[[step]]
+name = "assemble_package"
+action = "_assemble_package"
+enable_notifications = true
+requires_human_approval_after = false
+onsuccess = "review_package"
+
+[step.artifacts]
+required_inputs = ["ANALYSIS_JSON_FILE", "WORKFLOW_ACTIONS_FILE", "WORKFLOW_PROMPTS_DIR"]
+produces = ["WORKFLOW_MANIFEST_FILE", "WORKFLOW_EXTENSIONS_FILE", "IMPL_OVERRIDE_FILES"]
+result_meta_key = "WORKFLOW_MANIFEST_FILE"
+
+# =============================================================================
+# Step 7: Review Package
+# =============================================================================
+
+[[step]]
+name = "review_package"
+prompt = "{{ slot.review_package }}"
+enable_notifications = true
+requires_human_approval_after = false
+onsuccess = "validate_structure"
+
+[step.coder]
+role_policy = "reviewer_standard"
+
+[step.artifacts]
+required_inputs = ["WORKFLOW_MANIFEST_FILE", "WORKFLOW_ACTIONS_FILE", "WORKFLOW_EXTENSIONS_FILE", "WORKFLOW_PROMPTS_DIR", "ANALYSIS_JSON_FILE"]
+produces = ["PACKAGE_REVIEW_FILE"]
+result_meta_key = "PACKAGE_REVIEW_FILE"
+
+[step.on_reject_refine]
+step = "implement_domain"
+artifact = "PACKAGE_REVIEW_FILE"
+max_iterations = 2
+exhausted_failure_code = "PACKAGE_REVIEW_EXHAUSTED"
+exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
+
+# =============================================================================
+# Step 8: Validate Structure (ACTION)
+# =============================================================================
+
+[[step]]
+name = "validate_structure"
+action = "_validate_structure"
+enable_notifications = true
+requires_human_approval_after = false
+onsuccess = "gatekeep_package"
+
+[step.artifacts]
+required_inputs = ["WORKFLOW_MANIFEST_FILE", "WORKFLOW_ACTIONS_FILE", "WORKFLOW_EXTENSIONS_FILE"]
+produces = ["VALIDATION_FINDINGS_FILE"]
+result_meta_key = "VALIDATION_FINDINGS_FILE"
+
+# =============================================================================
+# Step 9: Gatekeep Package
+# =============================================================================
+
+[[step]]
+name = "gatekeep_package"
+prompt = "{{ slot.gatekeep_package }}"
+enable_notifications = true
+requires_human_approval_after = false
+onsuccess = "promote_package"
+
+[step.coder]
+role_policy = "gatekeeper_standard"
+
+[step.artifacts]
+required_inputs = ["WORKFLOW_MANIFEST_FILE", "WORKFLOW_ACTIONS_FILE", "VALIDATION_FINDINGS_FILE", "PACKAGE_REVIEW_FILE", "ANALYSIS_JSON_FILE"]
+produces = ["GATEKEEP_PACKAGE_FILE"]
+result_meta_key = "GATEKEEP_PACKAGE_FILE"
+
+[step.on_reject_refine]
+step = "implement_domain"
+artifact = "GATEKEEP_PACKAGE_FILE"
+max_iterations = 2
+exhausted_failure_code = "GATEKEEP_EXHAUSTED"
+exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
+
+# =============================================================================
+# Step 10: Promote Package (ACTION)
+# =============================================================================
+
+[[step]]
+name = "promote_package"
+action = "_promote_workflow_package"
+enable_notifications = true
+requires_human_approval_after = false
+onsuccess = "step_completion"
+
+[step.artifacts]
+required_inputs = ["WORKFLOW_MANIFEST_FILE", "WORKFLOW_ACTIONS_FILE", "WORKFLOW_EXTENSIONS_FILE", "WORKFLOW_PROMPTS_DIR"]
+produces = ["WORKFLOW_PACKAGE_DIR"]
+result_meta_key = "WORKFLOW_PACKAGE_DIR"
+
+[step.config]
+artifact_key = "WORKFLOW_PACKAGE_DIR"
+backup = true
+
+# =============================================================================
+# Terminal
+# =============================================================================
+
+[[step]]
+name = "step_completion"
+action = "step_completion"

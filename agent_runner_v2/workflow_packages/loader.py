@@ -28,14 +28,28 @@ else:
     except ImportError:
         tomllib = None  # type: ignore[assignment]
 
+try:
+    import yaml
+except ImportError:
+    yaml = None  # type: ignore[assignment]
 
-def load_workflow_package(package_dir: Path) -> WorkflowBundle:
+
+def load_workflow_package(
+    package_dir: Path,
+    *,
+    impl_name: str | None = None,
+) -> WorkflowBundle:
     """Parse *package_dir/workflow.toml* and return a validated WorkflowBundle.
 
     Parameters
     ----------
     package_dir :
         Root directory of the workflow package (must contain ``workflow.toml``).
+    impl_name :
+        Optional implementation name.  When provided, the loader reads
+        ``impls/{impl_name}/impl.yaml`` and applies step-level overrides
+        (prompt/action swaps) on top of the workflow.toml defaults.
+        The ``"default"`` impl name is equivalent to ``None``.
 
     Returns
     -------
@@ -64,7 +78,225 @@ def load_workflow_package(package_dir: Path) -> WorkflowBundle:
     raw = manifest_path.read_bytes()
     data = tomllib.loads(raw.decode("utf-8"))
 
-    return _parse_bundle(data, manifest_path, package_dir)
+    bundle = _parse_bundle(data, manifest_path, package_dir)
+
+    # --- Apply implementation overrides ----------------------------------
+    if impl_name and impl_name != "default":
+        bundle = _apply_impl_overrides(bundle, impl_name)
+
+    return bundle
+
+
+# ---------------------------------------------------------------------------
+# Implementation override support
+# ---------------------------------------------------------------------------
+
+_IMPL_ACTIONS_CACHE: dict[str, dict[str, Any]] = {}
+
+
+def _load_impl_overrides(bundle_root: Path, impl_name: str) -> dict[str, Any]:
+    """Load ``impls/{impl_name}/impl.yaml`` and return the parsed dict.
+
+    Raises
+    ------
+    FileNotFoundError
+        If the impl.yaml does not exist.
+    ValueError
+        If PyYAML is not installed or the file is malformed.
+    """
+    if yaml is None:
+        raise ImportError(
+            "PyYAML is required for implementation overrides. "
+            "Install with: pip install pyyaml"
+        )
+
+    impl_dir = bundle_root / "impls" / impl_name
+    impl_file = impl_dir / "impl.yaml"
+
+    if not impl_file.is_file():
+        raise FileNotFoundError(
+            f"Implementation '{impl_name}' not found — "
+            f"no impl.yaml at {impl_file}"
+        )
+
+    with open(impl_file, "r", encoding="utf-8") as f:
+        data = yaml.safe_load(f)
+
+    if not isinstance(data, dict):
+        raise ValueError(
+            f"impl.yaml for '{impl_name}' must be a YAML mapping, "
+            f"got {type(data).__name__}"
+        )
+
+    return data
+
+
+def _apply_impl_overrides(
+    bundle: WorkflowBundle,
+    impl_name: str,
+) -> WorkflowBundle:
+    """Apply impl.yaml overrides to a bundle's step configs.
+
+    Reads ``impls/{impl_name}/impl.yaml``, validates override entries,
+    and returns a new WorkflowBundle with overridden StepConfig instances.
+    Also loads impl-specific actions (if any) and merges them with the
+    bundle's custom actions.
+
+    Raises
+    ------
+    ValueError
+        If an override references a nonexistent step or has no prompt/action.
+    """
+    from dataclasses import replace
+    import re
+
+    overrides_data = _load_impl_overrides(bundle.bundle_root, impl_name)
+    overrides = overrides_data.get("overrides", {})
+    # step_slots generalises prompt_slots; fall back for backward compatibility
+    step_slots = overrides_data.get("step_slots") or overrides_data.get("prompt_slots", {})
+
+    if not isinstance(overrides, dict):
+        raise ValueError(
+            f"impl.yaml 'overrides:' must be a mapping, "
+            f"got {type(overrides).__name__}"
+        )
+
+    new_steps = dict(bundle.steps)
+
+    # Regex to match {{ slot.ID }}
+    slot_pattern = re.compile(r"^\{\{\s*slot\.([\w-]+)\s*\}\}$")
+
+    for step_name, step_override in overrides.items():
+        # Validate step exists
+        if step_name not in bundle.steps:
+            raise ValueError(
+                f"impl.yaml override references unknown step '{step_name}'. "
+                f"Available steps: {', '.join(bundle.step_order)}"
+            )
+
+        if not isinstance(step_override, dict):
+            raise ValueError(
+                f"Override for step '{step_name}' must be a mapping, "
+                f"got {type(step_override).__name__}"
+            )
+
+        new_prompt = step_override.get("prompt")
+        new_action = step_override.get("action")
+
+        if not new_prompt and not new_action:
+            raise ValueError(
+                f"Override for step '{step_name}' must specify "
+                f"at least one of: prompt, action"
+            )
+
+        # Build replacement kwargs
+        changes: dict[str, Any] = {}
+        
+        if new_prompt:
+            prompt_str = str(new_prompt)
+            match = slot_pattern.match(prompt_str)
+            
+            if match:
+                # It's a slot reference {{ slot.ID }}
+                slot_id = match.group(1)
+                
+                # Validate slot exists in step_slots
+                if slot_id not in step_slots:
+                    raise ValueError(
+                        f"impl.yaml references step slot '{slot_id}' "
+                        f"but it is not defined in 'step_slots'."
+                    )
+
+                slot_config = step_slots[slot_id]
+                if not isinstance(slot_config, dict) or "default" not in slot_config or "options" not in slot_config:
+                    raise ValueError(
+                        f"Prompt slot '{slot_id}' is malformed. "
+                        f"Must have 'default' and 'options'."
+                    )
+                
+                # Find the default option's file
+                default_name = slot_config["default"]
+                default_file = None
+                for opt in slot_config.get("options", []):
+                    if opt.get("name") == default_name:
+                        default_file = opt.get("file")
+                        break
+                
+                if not default_file:
+                    raise ValueError(
+                        f"Default option '{default_name}' for slot '{slot_id}' "
+                        f"not found in options."
+                    )
+                
+                changes["prompt_slot_id"] = slot_id
+                changes["prompt_file"] = str(default_file)
+            else:
+                # Legacy direct file path
+                changes["prompt_file"] = prompt_str
+
+        if new_action:
+            changes["action"] = str(new_action)
+
+        new_steps[step_name] = replace(new_steps[step_name], **changes)
+
+    # Load impl-specific actions and merge (impl actions take priority)
+    impl_actions = _load_impl_actions(bundle.bundle_root, impl_name)
+    new_custom_actions = dict(bundle.custom_actions)
+    new_custom_actions.update(impl_actions)
+
+    return replace(bundle, steps=new_steps, custom_actions=new_custom_actions,
+                   impl_prompt_slots=step_slots, impl_step_slots=step_slots)
+
+
+def _load_impl_actions(
+    bundle_root: Path,
+    impl_name: str,
+) -> dict[str, Any]:
+    """Import ``impls/{impl_name}/actions.py`` and return registered actions.
+
+    Returns an empty dict when no actions.py exists for the implementation.
+    Results are cached per (bundle_root, impl_name) pair.
+    """
+    impl_actions_file = bundle_root / "impls" / impl_name / "actions.py"
+    if not impl_actions_file.is_file():
+        return {}
+
+    cache_key = f"{bundle_root.resolve()}::{impl_name}"
+    if cache_key in _IMPL_ACTIONS_CACHE:
+        return dict(_IMPL_ACTIONS_CACHE[cache_key])
+
+    try:
+        import importlib.util  # noqa: PLC0415
+
+        from .actions import REGISTERED_ACTIONS  # noqa: PLC0415
+
+        before = dict(REGISTERED_ACTIONS)
+
+        spec = importlib.util.spec_from_file_location(
+            f"impl_{impl_name}_actions", impl_actions_file
+        )
+        if spec is None or spec.loader is None:
+            return {}
+        mod = importlib.util.module_from_spec(spec)
+        sys.modules[mod.__name__] = mod
+        spec.loader.exec_module(mod)
+
+        new_actions = {
+            name: func
+            for name, func in REGISTERED_ACTIONS.items()
+            if name not in before or before.get(name) is not func
+        }
+
+        _IMPL_ACTIONS_CACHE[cache_key] = dict(new_actions)
+        return new_actions
+
+    except Exception:
+        import logging  # noqa: PLC0415
+
+        logging.getLogger(__name__).exception(
+            "Failed to load impl actions from %s", impl_actions_file
+        )
+        return {}
 
 
 # ---------------------------------------------------------------------------
@@ -107,6 +339,22 @@ def _parse_bundle(
         coder_sec = _get_section(raw, "coder", optional=True) or {}
         routing = _get_section(raw, "routing", optional=True) or {}
 
+        # --- Detect misplaced step-level keys in sub-tables ---------------
+        # TOML assigns keys between sub-table headers to the preceding
+        # sub-table.  A key like ``onsuccess`` written after [step.artifacts]
+        # silently ends up inside the artifacts dict instead of at step
+        # level, breaking routing with no visible error.
+        _STEP_LEVEL_ONLY = {"onsuccess"}
+        for _sub_name, _sub_dict in (("artifacts", artifact), ("coder", coder_sec)):
+            _misplaced = _STEP_LEVEL_ONLY & set(_sub_dict.keys())
+            if _misplaced:
+                raise ValueError(
+                    f"workflow '{name}', step '{step_name}': "
+                    f"key(s) {sorted(_misplaced)} found inside "
+                    f"[step.{_sub_name}] — they must appear BEFORE any "
+                    f"[step.*] sub-table header in workflow.toml"
+                )
+
         sc = StepConfig(
             name=step_name,
             prompt_file=_opt_str(raw, "prompt"),
@@ -131,16 +379,11 @@ def _parse_bundle(
             coder_must_differ=bool(coder_sec.get("must_differ", False)),
             on_approve=_opt_str(routing, "on_approve"),
             on_reject_refine=raw.get("on_reject_refine"),
-            on_exhaust_replan=raw.get("on_exhaust_replan"),
             reject_code_routes=raw.get("reject_code_routes"),
             requires_human_approval_after=bool(
                 raw.get("requires_human_approval_after", False)
                 or artifact.get("requires_human_approval_after", False)
             ),
-            loop_returns_to=_opt_str(raw, "loop_returns_to")
-                or _opt_str(artifact, "loop_returns_to"),
-            replan_returns_to=_opt_str(raw, "replan_returns_to")
-                or _opt_str(artifact, "replan_returns_to"),
             enable_notifications=bool(raw.get("enable_notifications", False)),
             template_ref=raw.get("template_ref"),
             post_action=_opt_str(raw, "post_action"),
@@ -157,6 +400,16 @@ def _parse_bundle(
 
     # --- Package-local actions ------------------------------------------
     custom_actions = _load_package_actions(bundle_root)
+
+    # --- Alternative implementations from [[workflow.implementation]] ----
+    implementations: list[dict[str, str]] = []
+    for impl_entry in wf.get("implementation", []):
+        if isinstance(impl_entry, dict) and "name" in impl_entry:
+            implementations.append({
+                "name": str(impl_entry["name"]),
+                "description": str(impl_entry.get("description", "")),
+                "label": str(impl_entry.get("label", impl_entry["name"])),
+            })
 
     return WorkflowBundle(
         name=name,
@@ -175,6 +428,7 @@ def _parse_bundle(
         custom_actions=custom_actions,
         description=description,
         visibility=visibility,
+        implementations=implementations,
     )
 
 
@@ -188,15 +442,15 @@ _STEP_DIRECT_KEYS = {
     "produces", "result_meta_key", "result_meta_key_from_context",
     "target_artifact", "edit_mode", "immutable_inputs",
     "produced_document_status", "coder", "enable_notifications",
-    "on_reject_refine", "on_exhaust_replan", "reject_code_routes",
-    "requires_human_approval_after", "loop_returns_to", "replan_returns_to",
+    "on_reject_refine", "reject_code_routes",
+    "requires_human_approval_after",
     "template_ref", "post_action",
 }
 _KNOWN_STEP_KEYS = {
     "name", "prompt", "action", "mode",
     "artifacts", "coder", "routing",
-    "on_reject_refine", "on_exhaust_replan", "reject_code_routes",
-    "requires_human_approval_after", "loop_returns_to", "replan_returns_to",
+    "on_reject_refine", "reject_code_routes",
+    "requires_human_approval_after",
     "enable_notifications", "template_ref", "post_action",
 }
 
@@ -263,18 +517,12 @@ def bundle_to_template_group_dict(bundle: WorkflowBundle) -> dict[str, Any]:
         # --- Routing -----------------------------------------------------
         if sc.on_reject_refine:
             cfg["on_reject_refine"] = dict(sc.on_reject_refine)
-        if sc.on_exhaust_replan:
-            cfg["on_exhaust_replan"] = dict(sc.on_exhaust_replan)
         if sc.reject_code_routes:
             cfg["reject_code_routes"] = dict(sc.reject_code_routes)
 
         # --- Review gating -----------------------------------------------
         if sc.requires_human_approval_after:
             cfg["requires_human_approval_after"] = True
-        if sc.loop_returns_to:
-            cfg["loop_returns_to"] = sc.loop_returns_to
-        if sc.replan_returns_to:
-            cfg["replan_returns_to"] = sc.replan_returns_to
 
         # --- Behaviour flags --------------------------------------------
         if sc.enable_notifications:
@@ -287,6 +535,14 @@ def bundle_to_template_group_dict(bundle: WorkflowBundle) -> dict[str, Any]:
         # --- Extra / passthrough -----------------------------------------
         for k, v in sc.extra.items():
             cfg[k] = v
+
+        # Flatten [step.config] sub-table into top-level cfg keys so
+        # actions can read them as step_cfg.get("phase") instead of
+        # step_cfg.get("config", {}).get("phase").
+        config_sub = cfg.pop("config", None)
+        if isinstance(config_sub, dict):
+            for k, v in config_sub.items():
+                cfg[k] = v
 
         step_configs[step_name] = cfg
 
@@ -307,6 +563,9 @@ def bundle_to_template_group_dict(bundle: WorkflowBundle) -> dict[str, Any]:
     }
     if bundle.visibility:
         group["visibility"] = bundle.visibility
+
+    if bundle.implementations:
+        group["implementation"] = list(bundle.implementations)
 
     if bundle.governance and bundle.governance.artifact_registry:
         group["artifact_registry"] = [
@@ -359,6 +618,7 @@ def _load_package_actions(bundle_root: Path) -> dict[str, Any]:
         if spec is None or spec.loader is None:
             return {}
         mod = importlib.util.module_from_spec(spec)
+        sys.modules[mod.__name__] = mod
         # Execute the module — this runs the @action() decorators
         spec.loader.exec_module(mod)
 

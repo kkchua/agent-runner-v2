@@ -44,17 +44,3 @@ from .path_primitives import (
     system_template_rel,
     architecture_site_rel,
 )
-from .path_catalog import (
-
-    # Path mapping functions
-    known_artifact_paths,
-    delivery_scaffold_docs,
-    audience_site_artifacts,
-    architecture_site_pages,
-    stakeholder_site_pages,
-    developer_site_pages,
-    operator_site_pages,
-    tester_site_pages,
-    user_site_pages,
-    legacy_artifact_paths,
-)

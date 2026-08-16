@@ -1,0 +1,33 @@
+{
+  "schema_version": "v2",
+  "coder_result": {
+    "status": "APPROVED",
+    "remark": "Wrote the platform core review artifact. All 6 permanent documents passed review: no Layer 1 redefinition, no Layer 3 drift, complete metadata compliance, all mandatory sections present, platform identity clear, lifecycle states correct.",
+    "artifacts": {
+      "REVIEW_FILE_SUGGESTED": "D:\\MyProjectSpace\\01_Workflows\\agent-runner-v2\\docs\\system\\00_governance\\platform\\runs\\02PC-GEN-20260721-009\\02PC-GEN-20260721-009-platform-core-review.md"
+    },
+    "recorded_at": "2026-07-21T17:21:09+08:00",
+    "usage": {
+      "input_tokens": 95000,
+      "output_tokens": 4500,
+      "total_tokens": 99500
+    }
+  },
+  "runner_data": {
+    "step": "review_platform_core_docs",
+    "coder_used": "opencode",
+    "invoked_at": "2026-07-21T17:21:09",
+    "finished_at": "2026-07-21T17:25:29",
+    "prompt_checksum": "sha256:de9fb137bb4e8bcaff2654e823fdcb860a27d55b1e2bbed65f5c011998d7419e",
+    "allowed_write_paths": [
+      "D:/MyProjectSpace/01_Workflows/agent-runner-v2/docs/system/00_governance/platform/runs/02PC-GEN-20260721-009/02PC-GEN-20260721-009-platform-core-review.md",
+      "D:/MyProjectSpace/01_Workflows/agent-runner-v2/docs/system/00_governance/platform/runs/02PC-GEN-20260721-009/02PC-GEN-20260721-009-platform-core-review.meta.json"
+    ],
+    "changed_paths": [
+      "D:/MyProjectSpace/01_Workflows/agent-runner-v2/docs/system/00_governance/platform/runs/02PC-GEN-20260721-009/02PC-GEN-20260721-009-platform-core-review.md",
+      "D:/MyProjectSpace/01_Workflows/agent-runner-v2/docs/system/00_governance/platform/runs/02PC-GEN-20260721-009/02PC-GEN-20260721-009-platform-core-review.meta.json"
+    ],
+    "enriched_at": "2026-07-21T17:25:29",
+    "runner_version": "v2"
+  }
+}

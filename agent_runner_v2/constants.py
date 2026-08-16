@@ -16,7 +16,7 @@ Usage:
 
 from __future__ import annotations
 
-from pathlib import PurePosixPath
+from pathlib import Path, PurePosixPath
 
 # ============================================================================
 # File Extension Constants
@@ -171,7 +171,7 @@ FOLDER_KEY_SYSTEM_DOC_ROOT = "docs/system/00_governance/bootstrap"
 FOLDER_KEY_SYSTEM_TEMPLATE_ROOT = "docs/system/00_governance/bootstrap/templates"
 FOLDER_KEY_SYSTEM_DELIVERY_TEMPLATE_ROOT = "docs/system/00_governance/bootstrap/templates/delivery"
 FOLDER_KEY_SYSTEM_CODEBASE_TEMPLATE_ROOT = "docs/system/00_governance/bootstrap/templates/codebase"
-FOLDER_KEY_CODEBASE_DOC_ROOT = "docs/repo/codebase"
+FOLDER_KEY_CODEBASE_DOC_ROOT = "docs/repo/codebase/current"
 FOLDER_KEY_DELIVERY_DOC_ROOT = "docs/repo/delivery"
 FOLDER_KEY_AUDIENCE_DOC_ROOT = "docs/repo/audience"
 FOLDER_KEY_DOCS_SITE_ROOT = "docs/repo/site"
@@ -189,12 +189,12 @@ FOLDER_KEY_LEGACY_DOCS_SITE_ROOT = "docs/site"
 
 # Bootstrap folders (where 00_master_docs_bootstrap_v1 writes during development)
 FOLDER_KEY_SYSTEM_BOOTSTRAP = "docs/system/00_governance/bootstrap"
-FOLDER_KEY_CODEBASE_ANALYSIS = "docs/repo/codebase/00_analysis"
-FOLDER_KEY_CODEBASE_STANDARDS = "docs/repo/codebase/00_standards"
-FOLDER_KEY_CODEBASE_INVENTORY = "docs/repo/codebase/01_inventory"
-FOLDER_KEY_CODEBASE_MODULES = "docs/repo/codebase/02_modules"
-FOLDER_KEY_CODEBASE_COMPONENTS = "docs/repo/codebase/03_components"
-FOLDER_KEY_CODEBASE_CHANGES = "docs/repo/codebase/04_changes"
+FOLDER_KEY_CODEBASE_ANALYSIS = "docs/repo/codebase/current/00_analysis"
+FOLDER_KEY_CODEBASE_STANDARDS = "docs/repo/codebase/current/00_standards"
+FOLDER_KEY_CODEBASE_INVENTORY = "docs/repo/codebase/current/01_inventory"
+FOLDER_KEY_CODEBASE_MODULES = "docs/repo/codebase/current/02_modules"
+FOLDER_KEY_CODEBASE_COMPONENTS = "docs/repo/codebase/current/03_components"
+FOLDER_KEY_CODEBASE_CHANGES = "docs/repo/codebase/current/04_changes"
 
 # Repo governance folder (Layer 2 repo master docs)
 FOLDER_KEY_REPO_GOVERNANCE = "docs/repo/governance"
@@ -216,6 +216,8 @@ FOLDER_KEY_CODEBASE_TEMPLATES = "docs/system/00_governance/bootstrap/templates/c
 # Runtime global folders (after ukbe-run-agent init copies bootstrap to ~/.ukbe-runner)
 # These will be resolved at runtime using the global runner home path
 FOLDER_KEY_GLOBAL_BUNDLES = "~/.ukbe-runner/bundles/core/current"
+FOLDER_KEY_GLOBAL_FOUNDATION = "~/.ukbe-runner/bundles/core/current/foundation"
+FOLDER_KEY_GLOBAL_PLATFORM = "~/.ukbe-runner/bundles/core/current/platform"
 
 # ============================================================================
 # Path Generation Function
@@ -341,15 +343,6 @@ ARTIFACT_PATH_CODEBASE_COMPONENT_TEMPLATE = f"{FOLDER_KEY_CODEBASE_TEMPLATES}/{F
 ARTIFACT_PATH_CODEBASE_CHANGE_TEMPLATE = f"{FOLDER_KEY_CODEBASE_TEMPLATES}/{FILENAME_CODEBASE_CHANGE_TEMPLATE}{EXT_MD}"
 
 DELIVERY_SCAFFOLD_DIRS = [
-    FOLDER_KEY_DELIVERY_INITIATIVES,
-    FOLDER_KEY_DELIVERY_PLANS,
-    FOLDER_KEY_DELIVERY_TASKS,
-    FOLDER_KEY_DELIVERY_IMPLEMENTATIONS,
-    FOLDER_KEY_DELIVERY_REVIEWS,
-    FOLDER_KEY_DELIVERY_MEMORY,
-    FOLDER_KEY_DELIVERY_STANDARDS,
-    "docs/codebase/00_templates",
-    "docs/codebase/05_archives",
     FOLDER_KEY_SYSTEM_DELIVERY_TEMPLATE_ROOT,
     FOLDER_KEY_SYSTEM_CODEBASE_TEMPLATE_ROOT,
 ]
@@ -357,20 +350,9 @@ DELIVERY_SCAFFOLD_DIRS = [
 RUN_AGENT_REQUIRED_DOC_DIRS = [
     *DELIVERY_SCAFFOLD_DIRS,
     FOLDER_KEY_CODEBASE_STANDARDS,
-    FOLDER_KEY_CODEBASE_INVENTORY,
-    FOLDER_KEY_CODEBASE_MODULES,
-    FOLDER_KEY_CODEBASE_COMPONENTS,
-    FOLDER_KEY_CODEBASE_CHANGES,
     relpath(FOLDER_KEY_DOCS, "system", "00_governance"),
     FOLDER_KEY_SYSTEM_BOOTSTRAP,
     FOLDER_KEY_SYSTEM_TEMPLATE_ROOT,
-    FOLDER_KEY_SYSTEM_DELIVERY_TEMPLATE_ROOT,
-    FOLDER_KEY_SYSTEM_CODEBASE_TEMPLATE_ROOT,
-    relpath(FOLDER_KEY_DOCS, "system", "01_overview"),
-    relpath(FOLDER_KEY_DOCS, "system", "02_functional"),
-    relpath(FOLDER_KEY_DOCS, "system", "03_architecture"),
-    relpath(FOLDER_KEY_DOCS, "engineering"),
-    relpath(FOLDER_KEY_DOCS, "operations"),
 ]
 
 # ============================================================================
@@ -759,6 +741,48 @@ This requirement is MANDATORY - failure to follow these steps will cause workflo
 """
 
 
+SECTION_HEADING_RULE = r"""
+
+## Section Heading Rule
+
+Section headings (lines starting with #) MUST use plain text only.
+- Do NOT add backticks, bold, italics, or other inline formatting to section headings.
+- Section headings must match required names exactly as specified.
+- Correct: `## Platform doc_type Values`
+- Wrong: `## Platform \`doc_type\` Values` or `## **Platform doc_type Values**`
+"""
+
+
+GOVERNANCE_PATH_REFERENCE_RULE = """
+
+## Governance Path Reference Rule
+
+When referencing governance or platform documents in output, use filenames
+only (e.g., METADATA_STANDARD.md, METADATA_CONTRACT.md). Do NOT include
+resolved filesystem paths or repo-local directory paths.
+"""
+
+
+CODER_SOP_INSTRUCTION_TEMPLATE = """
+
+===========================================================================
+MANDATORY CODER SOP
+===========================================================================
+Before implementing any logic, read and follow:
+{CODER_IMPLEMENTATION_SOP_PATH}
+
+Minimum required behavior:
+- Re-read the current source-of-truth files from disk before making decisions
+- Inspect existing code paths before assuming runtime behavior
+- Refactor duplicated execution logic toward one shared helper or transition path
+- Do not add new parallel logic for workflow completion, failure, notifications, or artifacts
+- Add or update tests proving all affected execution modes follow the same behavior
+
+This SOP is repository-wide and applies to all coder backends for this step.
+===========================================================================
+"""
+
+
 TOOL_INSTRUCTION_TEMPLATE = """
 
 ## Workflow Rules
@@ -771,15 +795,15 @@ Your step ID is: {STEP_NAME}
 
 ### create_todos(step_id, todos)
 Call FIRST. Break the task into concrete steps, one record per todo.
-Usage: "{PYTHON_CMD}" -c "import sys; sys.path.insert(0, {TOOLS_DIR_PY}); import os; os.environ['PROGRESS_FILE']={PROGRESS_FILE_PY}; from agent_tools import create_todos; create_todos({STEP_NAME_PY}, ['Step 1', 'Step 2'])"
+Usage: {PYTHON_CMD} -c "import os; os.environ['PROGRESS_FILE']={PROGRESS_FILE_PY}; from agent_tools import create_todos; create_todos({STEP_NAME_PY}, ['Step 1', 'Step 2'])"
 
 ### mark_process(step_id, index, notes='')
 Call immediately BEFORE starting each todo item. This inserts a `processing` status record.
-Usage: "{PYTHON_CMD}" -c "import sys; sys.path.insert(0, {TOOLS_DIR_PY}); import os; os.environ['PROGRESS_FILE']={PROGRESS_FILE_PY}; from agent_tools import mark_process; mark_process({STEP_NAME_PY}, 1, notes='Started')"
+Usage: {PYTHON_CMD} -c "import os; os.environ['PROGRESS_FILE']={PROGRESS_FILE_PY}; from agent_tools import mark_process; mark_process({STEP_NAME_PY}, 1, notes='Started')"
 
 ### mark_complete(step_id, index, notes='')
 Call immediately AFTER finishing each todo item. This inserts a `completed` status record. 1-based index.
-Usage: "{PYTHON_CMD}" -c "import sys; sys.path.insert(0, {TOOLS_DIR_PY}); import os; os.environ['PROGRESS_FILE']={PROGRESS_FILE_PY}; from agent_tools import mark_complete; mark_complete({STEP_NAME_PY}, 1, notes='Done')"
+Usage: {PYTHON_CMD} -c "import os; os.environ['PROGRESS_FILE']={PROGRESS_FILE_PY}; from agent_tools import mark_complete; mark_complete({STEP_NAME_PY}, 1, notes='Done')"
 
 ## Mandatory Sequence
 1. create_todos(step_id) - list all your steps first
@@ -1061,3 +1085,175 @@ SOP_AND_STATUS_RULES_REQUIREMENTS: dict[str, list[str]] = {
     ARTIFACT_PATH_CODEBASE_DOC_SOP: CODEBASE_SOP_REQUIRED_SECTIONS,
     ARTIFACT_PATH_CODEBASE_DOC_STATUS_RULES: CODEBASE_STATUS_RULES_REQUIRED_SECTIONS,
 }
+
+
+# ============================================================================
+# Shared SDLC Constants
+# ============================================================================
+# Common base paths used across all SDLC workflow packages.
+# Workflows reference these instead of hardcoding path strings.
+
+SDLC_DELIVERY_BASE = "docs/repo/agent_runner/sdlc/delivery"
+
+
+# ============================================================================
+# Global Artifact Path Registry
+# ============================================================================
+# Runtime-populated dict that maps artifact keys to repo-relative paths.
+# Populated by workflow_packages/hooks.py when workflows register their
+# artifact keys via WorkflowExtensions.register_artifact_keys().
+#
+# This is the single lookup table for artifact path resolution at runtime.
+
+ARTIFACT_PATHS: dict[str, str] = {}
+
+
+def register_artifact_paths(paths: dict[str, str]) -> None:
+    """Merge workflow-contributed paths into the global registry.
+
+    Called by the scanner (workflow_packages/hooks.py) when a workflow's
+    ``register_artifact_keys()`` hook returns path mappings.
+
+    Parameters:
+        paths: Dict mapping artifact key strings to repo-relative
+            path templates.
+    """
+    ARTIFACT_PATHS.update(paths)
+
+
+def get_artifact_path(key: str, default: str = "") -> str:
+    """Look up an artifact path from the global registry.
+
+    Parameters:
+        key: Artifact key (e.g. ``"INIT_FILE"``).
+        default: Value to return when the key is not registered.
+
+    Returns:
+        The repo-relative path template, or *default* if not found.
+    """
+    return ARTIFACT_PATHS.get(key, default)
+
+
+# ============================================================================
+# SDLC Sequence Number Resolution
+# ============================================================================
+
+def resolve_next_seq(directory: Path, prefix: str) -> str:
+    """Scan *directory* for ``.md`` files starting with *prefix*.
+
+    Extracts the sequence number from the segment immediately before the
+    ``_slug`` part of each filename and returns the next available number
+    as a zero-padded 3-digit string.
+
+    Examples::
+
+        # BACKLOG-20260723-001_console-sdlc10-support.md  → seq 001
+        # BACKLOG-20260723-002_console-sdlc10-support.md  → seq 002
+        resolve_next_seq(dir, "BACKLOG-20260723-") → "003"
+
+        # IMPL-20260723-001-003_console-sdlc10-support.md → seq 003
+        resolve_next_seq(dir, "IMPL-20260723-") → "004"
+
+    Parameters:
+        directory: Target directory to scan.
+        prefix: Filename prefix including the date (e.g. ``"BACKLOG-20260723-"``).
+
+    Returns:
+        Next 3-digit zero-padded sequence number (``"001"`` when no
+        matching files exist).
+    """
+    import re
+    max_seq = 0
+    if directory.is_dir():
+        for f in directory.iterdir():
+            if f.suffix != ".md":
+                continue
+            if not f.name.startswith(prefix):
+                continue
+            # Find the segment containing '_' and extract digits before it
+            stem = f.stem
+            parts = stem.split("-")
+            for part in reversed(parts):
+                if "_" in part:
+                    num_str = part.split("_")[0]
+                    if num_str.isdigit():
+                        max_seq = max(max_seq, int(num_str))
+                    break
+    return str(max_seq + 1).zfill(3)
+
+
+# ============================================================================
+# SDLC Slug and Date Extraction
+# ============================================================================
+
+def extract_slug_from_path(file_path: str) -> str:
+    """Extract the slug from an SDLC artifact filename.
+
+    Pattern: ``{TYPE}-{date}-{seq}_{slug}.md`` → returns ``{slug}``.
+    Falls back to the filename stem (e.g. ``"my-workflow-spec"``),
+    then to ``"unknown"`` if the path is empty.
+
+    Examples::
+
+        extract_slug_from_path(".../INIT-20260722-001_console-sdlc10-support.md")
+        → "console-sdlc10-support"
+
+        extract_slug_from_path(".../specs/agnes-media-gen-v1.md")
+        → "agnes-media-gen-v1"
+
+        extract_slug_from_path("")
+        → "unknown"
+
+    Parameters:
+        file_path: Path or filename string to extract the slug from.
+
+    Returns:
+        The slug substring after the last ``_``, the filename stem, or ``"unknown"``.
+    """
+    import re
+    if not file_path:
+        return "unknown"
+    filename = Path(file_path).stem
+    if not filename:
+        return "unknown"
+    match = re.search(r"_(.+)$", filename)
+    if match:
+        return match.group(1)
+    return filename
+
+
+def extract_date_from_path(file_path: str) -> str:
+    """Extract the date from an SDLC artifact filename.
+
+    Pattern: ``{TYPE}-{date}-{seq}_{slug}.md`` → returns ``{date}``.
+    Falls back to today's date if extraction fails.
+
+    Examples::
+
+        extract_date_from_path(".../DRAFT-INIT-20260806-001_incremental-codebase-doc-update.md")
+        → "20260806"
+
+        extract_date_from_path(".../INIT-20260722-001_console-sdlc10-support.md")
+        → "20260722"
+
+        extract_date_from_path("")
+        → today's date (YYYYMMDD)
+
+    Parameters:
+        file_path: Path or filename string to extract the date from.
+
+    Returns:
+        The date substring (YYYYMMDD) or today's date as fallback.
+    """
+    import re
+    import datetime as dt
+    if not file_path:
+        return dt.datetime.now().strftime("%Y%m%d")
+    filename = Path(file_path).stem
+    if not filename:
+        return dt.datetime.now().strftime("%Y%m%d")
+    # Pattern: TYPE-YYYYMMDD-SEQ_slug
+    match = re.search(r"-(\d{8})-", filename)
+    if match:
+        return match.group(1)
+    return dt.datetime.now().strftime("%Y%m%d")

@@ -13,12 +13,11 @@ a long-lived process.
 ```
 workflows/<name>/
 ├── workflow.toml              # Manifest: steps, artifacts, routing, coders
-├── bundle_governance.toml     # Canonical artifact registry (single source of truth)
+├── bundle_governance.toml     # Optional artifact registry for backend sync
+├── context_extensions.py      # MANDATORY — WorkflowExtensions interface (see below)
 ├── actions.py                 # Custom @action functions (optional)
-├── context_extensions.py      # Path resolution and prompt context injection
-├── output_paths.py            # Workflow-owned path contracts (optional)
 ├── prompts/                   # Prompt template .txt files
-├── bundle_governance/         # Generated governance adapters
+├── bundle_governance/         # Optional generated governance adapters
 │   ├── core_governance.md     # Bundle-level governance rules
 │   ├── prompt_sop.md          # SOP rules injected into every prompt
 │   ├── prompt_contract.json   # Required prompt markers and rejection terms
@@ -36,14 +35,15 @@ Every workflow package must contain at minimum:
 | File | Purpose |
 |---|---|
 | `workflow.toml` | Step definitions, routing, coder roles, artifact contracts |
-| `bundle_governance.toml` | Canonical artifact registry — the single source of truth for artifact keys |
-| `context_extensions.py` | Injects absolute artifact paths and reference inputs into prompt context |
+| `context_extensions.py` | **MANDATORY** — `WorkflowExtensions` subclass implementing lifecycle hooks (see below) |
 | `prompts/` | At least one `.txt` prompt template per prompt-driven step |
 
-## `bundle_governance.toml` — Artifact Registry
+## `bundle_governance.toml` — Artifact Registry (Optional)
 
-**This file is the single source of truth for artifact keys.** Every
-artifact your workflow can produce or consume must be declared here.
+**Optional.** Provides a centralized artifact registry for backend sync
+validation and governance adapter generation. Artifact keys are
+auto-accepted by the runner if they appear in `workflow.toml` step
+fields even without this file.
 
 ### Structure
 
@@ -82,16 +82,16 @@ required = false
 | `description` | No | Human-readable description |
 | `required` | No | Whether the artifact must exist for validation to pass (default `false`) |
 
-### Why it matters
+### Why use it
 
-- The runner stores `workflow_artifact_keys` in job state at creation time.
-- `build_job_sync_payload()` filters artifacts to only keys declared here.
-- Undeclared artifacts are rejected before reaching the backend, preventing
-  foreign-key violations on the backend's `artifact_types` table.
-- The backend sync uses these keys to auto-register artifact types.
+- Provides a centralized artifact registry for governance adapter generation
+  (AGENTS.md, QWEN.md, CLAUDE.md).
+- The backend sync uses declared keys to auto-register artifact types.
+- Adds an extra validation layer for artifact key declarations.
 
-**If your workflow produces an artifact but doesn't declare it in
-`bundle_governance.toml`, the sync will silently drop it.**
+**Note:** Even without this file, artifact keys are auto-accepted by the
+runner if they appear in `workflow.toml` step fields (`produces`,
+`required_inputs`, etc.). See the "Artifact Key Registration" section below.
 
 ---
 
@@ -156,6 +156,42 @@ produces = ["MY_VALIDATION_REPORT"]
 result_meta_key = "MY_VALIDATION_REPORT"
 ```
 
+#### Promote step
+
+A promote step updates an artifact document's `Status:` field to
+`Approved` in-place. Uses the `promote_artifact` or `promote_all`
+action.
+
+**IMPORTANT:** The `promotes` key MUST be at the top level of `[[step]]`,
+NOT under `[step.artifacts]`. The TOML loader only extracts specific
+known fields from `[step.artifacts]` — `promotes` is not one of them and
+gets silently dropped if placed there. Top-level unknown keys are
+captured by the `extra` passthrough and reach the action's `step_cfg`.
+
+```toml
+[[step]]
+name = "promote_plan"
+action = "promote_artifact"
+promotes = "PLAN_FILE"
+enable_notifications = true
+onsuccess = "stepCompletion"
+
+[step.artifacts]
+required_inputs = ["PLAN_FILE"]
+result_meta_key = "PLAN_FILE"
+```
+
+For `promote_all` (multiple artifacts), use a list:
+
+```toml
+[[step]]
+name = "promote_all"
+action = "promote_all"
+promotes = ["REV_FILE", "MEM_FILE", "CLOSE_FILE"]
+enable_notifications = true
+onsuccess = "stepCompletion"
+```
+
 #### Terminal step
 
 Every workflow must end with a `stepCompletion` step.
@@ -172,7 +208,6 @@ action = "step_completion"
 |---|---|
 | `onsuccess` | Step to run after approval |
 | `on_reject_refine` | Refinement loop when a step is rejected |
-| `on_exhaust_replan` | Replan fallback when refinement is exhausted |
 | `requires_human_approval_after` | Gate step completion on human approval |
 
 ### Refinement loop
@@ -186,39 +221,110 @@ exhausted_failure_code = "MY_REFINEMENT_EXHAUSTED"
 exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
 ```
 
-The loop route: `review → validate (rejected) → refine → (loop_returns_to) → review`.
-Add `loop_returns_to = "review_docs"` on the refine step.
+The loop route: `review → validate (rejected) → refine → (onsuccess) → review`.
+The refine step uses `onsuccess = "review_docs"` to return to the review step.
 
 ---
 
-## `context_extensions.py` — Path Resolution
+## `context_extensions.py` — Workflow Extension Interface
 
-Every workflow must provide a `build_context_extensions()` function that
-injects absolute paths and metadata into the prompt rendering context.
+Every workflow package **must** have a `context_extensions.py` that
+defines a `WorkflowExtensions` subclass. This is the workflow's plugin
+interface — a single file that handles artifact path registration,
+prompt context injection, and initialization hooks.
+
+### Base Class
+
+The base class lives at
+`agent_runner_v2/workflow_packages/extensions_base.py` and provides
+default no-op implementations for all hooks:
+
+| Method | Purpose | When Called |
+|--------|---------|-------------|
+| `register_artifact_keys(job_id, mode)` | Return artifact key → path mappings | At workflow startup (CLI `run`) |
+| `build_context_extensions(state, step, step_cfg, ctx, project_root)` | Return prompt context variables | Before each step's prompt is rendered |
+| `init(workspace_root, runner_home)` | One-time environment setup | At CLI `init` |
+
+### Example
 
 ```python
-def build_context_extensions(*, state, step, step_cfg, ctx, project_root=None):
-    job_id = state.get("job_id", "unknown")
-    root = Path(project_root or Path.cwd()).resolve()
-    output_paths = build_output_paths(job_id=job_id)
+"""Context extensions for my_workflow_v1."""
+from __future__ import annotations
 
-    extensions = {
-        "MY_REFERENCE_INPUT": str(root / "path" / "to" / "reference.md"),
-    }
+import datetime as dt
+from pathlib import Path
 
-    for key, rel_path in output_paths.items():
-        if rel_path.endswith((".md", ".json")):
-            extensions[key] = str(root / rel_path)
+from agent_runner_v2.workflow_packages.extensions_base import WorkflowExtensions
+from agent_runner_v2.runtime_context import get_workspace_root, get_runner_home
 
-    return extensions
+
+class MyWorkflowExtensions(WorkflowExtensions):
+    """Workflow extension hooks for my_workflow_v1."""
+
+    workflow_name = "my_workflow_v1"
+
+    def register_artifact_keys(self, *, job_id: str, mode: str) -> dict[str, str]:
+        """Declare artifact paths for the global registry."""
+        date_str = dt.datetime.now().strftime("%Y%m%d")
+        run_root = f"docs/repo/my_workflow/runs/{job_id}"
+        return {
+            # Input artifact — must be registered so the backend can resolve
+            # bare filenames submitted by the operator console
+            "MY_INPUT": f"docs/repo/my_workflow/inputs/MY-INPUT-{{seq}}_{{slug}}.md",
+            # Output artifacts
+            "MY_OUTPUT": f"{run_root}/MY-OUTPUT-{date_str}_{{slug}}.md",
+            "REVIEW_FILE_SUGGESTED": f"{run_root}/{job_id}-review.md",
+        }
+
+    def build_context_extensions(
+        self, *, state, step, step_cfg, ctx, project_root=None,
+    ) -> dict[str, str]:
+        """Inject absolute paths and metadata into prompt context."""
+        result: dict[str, str] = {}
+
+        # Governance roots (global paths)
+        runner_home = get_runner_home()
+        if runner_home:
+            result["GOVERNANCE_RUNTIME_ROOT"] = str(
+                Path(runner_home) / "bundles" / "core" / "current" / "foundation"
+            )
+
+        # Resolve artifact paths to absolute
+        workspace_root = Path(project_root or get_workspace_root() or Path.cwd())
+        job_id = state.get("job_id", "unknown")
+        for key, rel_path in self.register_artifact_keys(job_id=job_id, mode="").items():
+            resolved = rel_path.replace("{slug}", job_id)
+            result[key] = str(workspace_root / resolved)
+
+        return result
 ```
 
-Use `build_output_paths()` to centralize path templates — keep the same
-function in both `context_extensions.py` and `actions.py` for consistency.
+### Key Rules
 
-**Path convention:** The `loop_iteration` parameter on `build_output_paths()`
-appends `_iter{N}` suffixes to loop-able artifact paths (review, validation,
-audit) so refinement passes don't overwrite previous iteration outputs.
+1. **`register_artifact_keys()` replaces `output_paths.py`** — all
+   path templates are declared here. The returned dict is merged into
+   the global `ARTIFACT_PATHS` registry at startup.
+
+2. **Register BOTH inputs and outputs** — `register_artifact_keys()`
+   must include path templates for **all** artifacts the workflow uses,
+   not just the ones it produces. This includes input artifacts from
+   `required_inputs` in the init step. The backend's `_resolve_input_paths()`
+   uses these registrations (via `sync_workflows.py`'s `_extract_init_input_dirs()`)
+   to resolve bare filenames submitted by the operator console into full
+   absolute paths. If an input artifact is missing from the registry, the
+   backend cannot resolve it and the job fails with
+   "Missing required input artifact(s)".
+
+3. **`build_context_extensions()` must resolve to absolute paths** —
+   prompt placeholders like `{MY_OUTPUT}` are replaced with the values
+   returned here. Always use absolute paths.
+
+4. **Shared constants** — use constants from `constants.py` (e.g.
+   `SDLC_DELIVERY_BASE`) instead of hardcoding base paths.
+
+5. **Loop-able artifacts** — use `loop_iteration` parameter to append
+   `_iter{N}` suffixes for review/validation/audit paths so refinement
+   passes don't overwrite previous outputs.
 
 ---
 
@@ -262,6 +368,12 @@ Prompt files are plain `.txt` files in `prompts/`. Use `{ARTIFACT_KEY}`
 placeholders — the runner resolves them to absolute paths via
 `context_extensions.py`.
 
+**Critical rule:** Use bare `{ARTIFACT_KEY}` placeholders for paths that the
+coder must read or write. Never wrap them in backticks like
+`` `{ARTIFACT_KEY}` `` — backticks make the text literal, so the runner
+will NOT resolve the placeholder and the coder will see the key name
+instead of the actual file path.
+
 ```
 Objective
 
@@ -269,14 +381,15 @@ Generate the staged output document set for `my_workflow_v1`.
 
 Reference Inputs
 
-- Read `{MY_REFERENCE_INPUT}`.
+- Read {MY_REFERENCE_INPUT}.
+- Read Layer 1 governance at {GOVERNANCE_RUNTIME_ROOT}.
 
 Artifacts
 
-Write the required outputs:
+Write the required outputs to these paths:
 
-- `{MY_FOUNDATION_INDEX}`
-- `{MY_LAYER_MODEL}`
+- {MY_FOUNDATION_INDEX}
+- {MY_LAYER_MODEL}
 
 Required Frontmatter
 
@@ -292,7 +405,6 @@ Each output must include YAML frontmatter with:
 Output Instructions
 
 - Write complete markdown files.
-- Use ASCII only.
 ```
 
 ## Backend Sync
@@ -314,32 +426,184 @@ must be registered before any run produces them.
 
 ---
 
+## Artifact Key Registration
+
+**You do NOT need to register artifact keys in `constants.py` or
+`artifact_keys.py`.** The runner automatically accepts any artifact key
+declared in your workflow package.
+
+### How it works
+
+When `create_job()` runs, it builds the valid artifact key set by merging:
+
+1. **Global keys** from `constants.py` (shared keys like `REVIEW_FILE_SUGGESTED`)
+2. **Step-declared keys** — all `produces`, `required_inputs`, `optional_inputs`,
+   `target_artifact`, `promotes`, `result_meta_key`, `source`, and `dest` values
+   from every step in `workflow.toml`
+3. **Governance registry keys** — all `[[artifact]]` keys from
+   `bundle_governance.toml`
+
+This means any key you use in your `workflow.toml` steps is automatically
+valid for seed validation (`--set KEY=PATH`), job state tracking, and
+context resolution — with zero changes to global files.
+
+### What this means for developers
+
+| Action | Required? |
+|---|---|
+| Declare keys in `workflow.toml` step `produces`/`required_inputs` | **Yes** — this is how the runner discovers your keys |
+| Declare keys in `bundle_governance.toml` `[[artifact]]` | **Yes** — this is the canonical registry for backend sync |
+| Declare keys in `register_artifact_keys()` in `context_extensions.py` | **Yes** — maps keys to filesystem paths for context resolution AND backend input path resolution |
+| Add keys to `constants.py` or `artifact_keys.py` | **No** — workflow keys are auto-accepted |
+
+**Important:** `register_artifact_keys()` must include path templates for
+**input artifacts** (from init step `required_inputs`) as well as output
+artifacts. The backend uses these registrations to resolve bare filenames
+submitted by the operator console into full paths. Missing input
+registrations cause "Missing required input artifact(s)" errors at runtime.
+
+### Example
+
+If your workflow has a step that produces `MY_CUSTOM_OUTPUT`:
+
+```toml
+# workflow.toml
+[[step]]
+name = "generate_output"
+prompt = "prompts/01_generate.txt"
+
+[step.artifacts]
+produces = ["MY_CUSTOM_OUTPUT"]
+result_meta_key = "MY_CUSTOM_OUTPUT"
+```
+
+The key `MY_CUSTOM_OUTPUT` is immediately valid. You can seed it via
+`--set MY_CUSTOM_OUTPUT=/path/to/file`, reference it in prompts as
+`{MY_CUSTOM_OUTPUT}`, and track it in job state — all without touching
+any global registration file.
+
+### When to add keys to `artifact_keys.py`
+
+Only add keys to the global `artifact_keys.py` when:
+
+- The key is **shared across multiple workflows** (e.g., `REVIEW_FILE_SUGGESTED`)
+- The key needs a **centralized path mapping** in `known_artifact_paths()`
+- The key is used by **core runner logic** outside any specific workflow
+
+For workflow-specific keys, keep them in your workflow package only.
+
+---
+
 ## Conventions
 
-1. **Artifact keys must be declared once** in `bundle_governance.toml`.
-   They appear in `workflow.toml` step `produces`/`inputs` and
-   `context_extensions.py` `build_output_paths()`, but the
-   `bundle_governance.toml` is the canonical registry.
+1. **`context_extensions.py` is mandatory.** Every workflow package
+   must implement `WorkflowExtensions` from
+   `agent_runner_v2.workflow_packages.extensions_base`. This is the
+   single interface file — no separate `output_paths.py`. See the
+   "Workflow Extension Interface" section above.
 
-2. **Path templates use `<job_id>` placeholder** — the runner resolves it
+2. **Artifact keys are workflow-owned.** Declare them in `workflow.toml`
+   step fields (`produces`, `required_inputs`) and in
+   `bundle_governance.toml` `[[artifact]]` entries. The runner auto-discovers
+   them — do NOT add workflow-specific keys to `constants.py` or
+   `artifact_keys.py`. Only shared cross-workflow keys (like
+   `REVIEW_FILE_SUGGESTED`) belong in the global registry.
+
+3. **Use shared base path constants.** SDLC workflows must use
+   `SDLC_DELIVERY_BASE` from `constants.py` instead of hardcoding
+   `"docs/repo/agent_runner/sdlc/delivery"` in each workflow.
+
+4. **Path templates use `<job_id>` placeholder** — the runner resolves it
    at runtime from the active job ID.
 
-3. **Loop-able artifacts (review, validation, audit) must use iteration
-   suffixes** via `build_output_paths(loop_iteration=...)` to preserve
-   per-pass outputs.
+5. **Loop-able artifacts (review, validation, audit) must use iteration
+   suffixes** via `loop_iteration` parameter in `register_artifact_keys()`
+   to preserve per-pass outputs.
 
-4. **Terminal step (`stepCompletion`)** is required at the end of every
+6. **Terminal step (`stepCompletion`)** is required at the end of every
    workflow. It must use the shared `step_completion` action.
 
-5. **Three copies** of the workflow package exist in the repo:
+7. **Three copies** of the workflow package exist in the repo:
    - `workflows/<name>/` — primary development copy
    - `agent_runner_v2/bootstrap/workflows/default/<name>/` — packaged bundle
    - `docs/system/00_governance/bootstrap/workflows/<name>/` — published source
 
    Keep all three in sync after changes.
 
-6. **All injected path placeholders must use absolute paths** — relative
+8. **All injected path placeholders must use absolute paths** — relative
    paths break when the daemon runs from a different working directory.
 
-7. **Use ASCII only in generated documents** — the deterministic validator
-   rejects non-ASCII characters.
+9. **Prompt placeholders must be bare `{KEY}`** — never `` `{KEY}` ``.
+    Backtick-wrapped placeholders are literal text and will NOT be resolved
+    by the runner. The coder needs actual file paths, not key names.
+
+10. **`promotes` key must be top-level in `[[step]]`** — for promote steps
+    using `promote_artifact` or `promote_all` actions, the `promotes` key
+    MUST be placed at the top level of `[[step]]`, NOT under
+    `[step.artifacts]`. The TOML loader silently drops unknown fields from
+    `[step.artifacts]` — only top-level unknown keys are captured by the
+    `extra` passthrough dict and reach the action's `step_cfg`.
+
+11. **`register_artifact_keys()` must include input artifacts** — register
+    path templates for ALL artifacts the workflow uses, including inputs
+    from `required_inputs` in the init step. The backend's
+    `_resolve_input_paths()` relies on these registrations to resolve bare
+    filenames submitted by the operator console. Missing input registrations
+    cause "Missing required input artifact(s)" errors at runtime.
+
+---
+
+## Extending the Workflow Interface
+
+When a new cross-cutting feature is needed that all (or some) workflows
+must handle, add a new hook method to the interface. **Do NOT create
+new file types or new discovery mechanisms.**
+
+### Steps to Add a New Hook
+
+1. **Add method to `WorkflowExtensions` base class** in
+   `extensions_base.py` with a default no-op implementation:
+
+   ```python
+   def on_job_complete(self, *, state, project_root) -> None:
+       """Called when a workflow job completes."""
+       pass
+   ```
+
+2. **Add scanner function in `hooks.py`**:
+
+   ```python
+   def notify_all_job_completions(*, state, project_root) -> None:
+       """Call on_job_complete() on all workflows."""
+       scan_all("on_job_complete", state=state, project_root=project_root)
+   ```
+
+3. **Wire to CLI command** in `run_agent.py` at the appropriate point.
+
+4. **Implement in workflows that need it** — override the method in
+   their `context_extensions.py` subclass. Workflows that don't care
+   inherit the no-op default.
+
+### Example: Adding a Validation Hook
+
+```python
+# 1. extensions_base.py
+def validate_environment(self, *, workspace_root) -> list[str]:
+    """Return list of validation errors. Empty = pass."""
+    return []
+
+# 2. hooks.py
+def validate_all_environments(*, workspace_root) -> dict[str, list[str]]:
+    """Call validate_environment() on all workflows. Return failures."""
+    return scan_all("validate_environment", workspace_root=workspace_root)
+
+# 3. run_agent.py — wire to init or pre-run check
+
+# 4. Workflow implementation
+class MyWorkflowExtensions(WorkflowExtensions):
+    def validate_environment(self, *, workspace_root):
+        errors = []
+        if not (workspace_root / "required_folder").is_dir():
+            errors.append("required_folder/ missing")
+        return errors
+```

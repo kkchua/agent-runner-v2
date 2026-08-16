@@ -1,0 +1,47 @@
+name: standard
+label: "Standard Validation"
+description: "Default SDLC validation with adversarial challenge and pass/fail gate."
+
+# -----------------------------------------------------------------------
+# Prompt Slots Configuration
+# -----------------------------------------------------------------------
+prompt_slots:
+  generate_validation:
+    label: "Validation Generation"
+    default: "standard"
+    options:
+      - name: "standard"
+        file: "prompts/generate_validation/standard.txt"
+        description: "State-aware validation with pre-check and evidence-based verification."
+
+  challenge_validation:
+    label: "Validation Challenge"
+    default: "standard"
+    options:
+      - name: "standard"
+        file: "prompts/challenge_validation/standard.txt"
+        description: "Adversarial attack on validation evidence quality and coverage."
+
+  address_challenges:
+    label: "Address Challenges"
+    default: "standard"
+    options:
+      - name: "standard"
+        file: "prompts/address_challenges/standard.txt"
+        description: "Evidence-based challenge resolution."
+
+  gatekeep_validation:
+    label: "Validation Gate"
+    default: "standard"
+    options:
+      - name: "standard"
+        file: "prompts/gatekeep_validation/standard.txt"
+        description: "Pass/fail gate verifying validation quality."
+
+  refine_validation:
+    label: "Validation Refinement"
+    default: "standard"
+    options:
+      - name: "standard"
+        file: "prompts/refine_validation/standard.txt"
+        description: "Address gatekeep findings."

@@ -23,7 +23,6 @@ from .workflow_path_contracts import resolve_workflow_output_paths
 MASTER_BOOTSTRAP_WORKFLOWS: set[str] = {
     "00_layer1_governance_bootstrap_v1",
     "01_governance_foundation_v1",
-    "00_repo_master_docs_bootstrap_v1",
 }
 EXECUTION_SCAFFOLD_WORKFLOWS: set[str] = set()
 ARCHITECTURE_SITE_WORKFLOW = ""
@@ -48,19 +47,6 @@ def master_bootstrap_doc_paths(*, job_id: str, mode: str) -> list[str]:
             mode=mode,
         ).values()
     )
-
-
-def legacy_master_bootstrap_doc_paths(*, job_id: str, mode: str) -> list[str]:
-    """Get legacy master bootstrap document paths (subset without dynamic filenames)."""
-    all_paths = _master_bootstrap_doc_paths(
-        template_group="00_layer1_governance_bootstrap_v1",
-        job_id=job_id,
-        mode=mode,
-    )
-    return [
-        path for key, path in all_paths.items()
-        if key not in ["SYSTEM_DOCS_VALIDATION", "REVIEW_FILE_SUGGESTED"]
-    ]
 
 
 def _unique_paths(paths: Iterable[str]) -> list[str]:

@@ -1,0 +1,77 @@
+# Workflow: Text Summarizer
+# Auto-assembled by AGB from Analysis JSON.
+
+[workflow]
+name = "text_summarizer_ayz"
+version = "1.0.0"
+label = "Text Summarizer"
+job_prefix = "TXTSUM"
+init_step = "parse_input"
+description = "Transforms long text documents into concise summaries or ranked key points"
+default_max_rejects = 3
+visibility = "canonical"
+layer = "layer3"
+platform = "agent-runner-v2"
+
+[[workflow.implementation]]
+name = "key_points"
+description = "Produces ordered list of extracted key points with importance scores"
+label = "Key Points"
+
+[[step]]
+name = "parse_input"
+action = "parse_input_document"
+enable_notifications = false
+requires_human_approval_after = false
+onsuccess = "analyze_structure"
+
+[step.artifacts]
+required_inputs = ["SOURCE_DOCUMENT_FILE"]
+produces = ["PARSED_DOCUMENT"]
+result_meta_key = "PARSED_DOCUMENT"
+
+[[step]]
+name = "analyze_structure"
+prompt = "prompts/02_analyze_structure.txt"
+enable_notifications = false
+requires_human_approval_after = false
+onsuccess = "transform_content"
+
+[step.coder]
+role_policy = "architect_standard"
+
+[step.artifacts]
+required_inputs = ["PARSED_DOCUMENT"]
+produces = ["STRUCTURAL_ANALYSIS"]
+result_meta_key = "STRUCTURAL_ANALYSIS"
+
+[[step]]
+name = "transform_content"
+prompt = "prompts/03_transform_content.txt"
+enable_notifications = false
+requires_human_approval_after = false
+onsuccess = "render_output"
+
+[step.coder]
+role_policy = "architect_standard"
+
+[step.artifacts]
+required_inputs = ["PARSED_DOCUMENT", "STRUCTURAL_ANALYSIS"]
+produces = ["TRANSFORMED_CONTENT"]
+result_meta_key = "TRANSFORMED_CONTENT"
+
+[[step]]
+name = "render_output"
+action = "render_prose_output"
+enable_notifications = false
+requires_human_approval_after = false
+onsuccess = "step_completion"
+
+[step.artifacts]
+required_inputs = ["TRANSFORMED_CONTENT"]
+produces = ["OUTPUT_FILE"]
+result_meta_key = "OUTPUT_FILE"
+
+[[step]]
+name = "step_completion"
+action = "step_completion"

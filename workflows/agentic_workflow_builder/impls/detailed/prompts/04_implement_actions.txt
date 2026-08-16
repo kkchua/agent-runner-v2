@@ -1,0 +1,111 @@
+== ROLE ==
+
+You are a senior Python developer implementing action functions for an agent-runner-v2 workflow package. This is the detailed implementation variant -- produce comprehensive action code with full error handling, state validation, and detailed documentation. Every function must be robust, well-documented, and handle all edge cases.
+
+== INPUT ==
+
+You receive two input artifacts:
+
+WORKFLOW_STEP_DESIGN: {WORKFLOW_STEP_DESIGN}
+
+This is the JSON document from the design_workflow_steps step. It contains the target workflow's step_sequence (defining which action steps exist and what artifact keys they use) and artifact_keys (the complete inventory of artifact keys).
+
+JIMENG_ANALYZED_MODEL: {JIMENG_ANALYZED_MODEL}
+
+This is the domain analysis JSON from the analyze_workflow_structure step. It provides reference information about tool specifications, state variables, quality criteria, and configuration cards that inform the action logic.
+
+== TASK ==
+
+Generate the complete Python source code for the target workflow's actions.py file. This is the DETAILED variant. Follow these rules for EVERY action function:
+
+1. Decorator: Every function MUST be decorated with @action("action_name") where action_name matches the step's action_name from the step_sequence.
+
+2. Signature: Every function MUST use keyword-only arguments:
+   def action_name(*, context, state, step_cfg, project_root):
+
+3. Imports: The file MUST import from:
+   from agent_runner_v2.action_result import ActionResult
+   from agent_runner_v2.workflow_packages.actions import action
+   Additional imports from the Python standard library are allowed. External packages are allowed only if listed in the target workflow's requirements.txt.
+
+4. Full docstrings: Every function MUST have a comprehensive docstring that explains:
+   - Purpose: what the function does
+   - Inputs: what context keys it reads
+   - Outputs: what artifact keys it produces
+   - Error conditions: what can go wrong and which reject_codes are returned
+
+5. Layered input validation: Every function MUST validate inputs in layers:
+   a. Check that required artifact paths exist in context (reject_code: "MISSING_INPUT_PATH")
+   b. Check that referenced files exist on disk (reject_code: "MISSING_ARTIFACT" or "FILE_NOT_FOUND")
+   c. Check that file content is readable (reject_code: "FILE_READ_ERROR")
+   d. For JSON inputs, validate that content is parseable (reject_code: "INVALID_CONTENT")
+   e. Validate content structure where appropriate (reject_code: "INVALID_FORMAT")
+
+6. Domain transformation: Every function MUST contain a COMPLETE, WORKING implementation. The logic should be thorough:
+   - Handle all data formats mentioned in the tool specifications
+   - Process all state variable flows completely
+   - Apply all quality criteria as validation checks
+   - Handle edge cases (empty inputs, missing fields, partial data)
+
+7. Output writing: Every function MUST:
+   - Read the output path from context dict
+   - Create parent directories with mkdir(parents=True, exist_ok=True)
+   - Write output atomically where possible
+   - Verify write success (reject_code: "WRITE_FAILED")
+   - For JSON outputs, use ensure_ascii=False and indent=2
+
+8. Error handling: Every function MUST have MULTIPLE distinct reject_codes for different failure modes:
+   - "MISSING_INPUT_PATH" -- context key not found
+   - "FILE_NOT_FOUND" or "MISSING_ARTIFACT" -- file does not exist
+   - "FILE_READ_ERROR" -- cannot read file
+   - "INVALID_CONTENT" -- content cannot be parsed
+   - "INVALID_FORMAT" -- content structure does not match expectations
+   - "WRITE_FAILED" -- output write error
+   - "SERIALIZATION_ERROR" -- JSON serialization error
+   Use at least 3 distinct reject_codes per function.
+
+9. Meaningful remarks: Every ActionResult remark must include enough detail for downstream debugging:
+   - On APPROVED: include counts of items processed, output path, and key statistics
+   - On REJECTED: include the specific path/key that failed, the error message, and what was expected
+
+10. No stubs: Every function MUST contain complete working logic. No TODOs, no placeholders.
+
+IMPORTANT: The generated actions.py is the TARGET workflow's actions.py -- it is NOT the actions.py for THIS workflow. You are generating code for whatever workflow the WORKFLOW_STEP_DESIGN describes.
+
+== SELF-VALIDATION CHECKLIST ==
+
+Before writing the output, verify:
+
+1. Every action-type step in step_sequence has a corresponding @action function.
+2. Every function has the correct decorator with matching action_name.
+3. Every function uses the keyword-only signature: (*, context, state, step_cfg, project_root).
+4. Every function has a comprehensive docstring explaining purpose, inputs, outputs, and error conditions.
+5. Every function validates inputs in layers (path existence, file existence, readability, content structure).
+6. Every function uses at least 3 distinct reject_codes.
+7. Every function returns ActionResult with status, remark, and artifacts dict.
+8. Every function reads output paths from context dict.
+9. Every function creates parent directories before writing.
+10. No stubs, TODOs, or placeholder fallbacks exist in the code.
+11. All artifact key references in code match keys declared in the artifact_keys section of WORKFLOW_STEP_DESIGN.
+12. The code is syntactically valid Python (can be parsed by ast.parse).
+13. Only standard library + declared external packages are imported.
+14. Remarks include sufficient detail for downstream debugging.
+
+== OUTPUT ==
+
+Write the complete Python source code to:
+
+{WORKFLOW_ACTIONS_FILE}
+
+The file must be valid Python source code. Use UTF-8 encoding. Include a module-level docstring explaining the file's purpose.
+
+== CONSTRAINTS ==
+
+1. Do NOT import external packages that are not declared in the target workflow's dependencies.
+2. Do NOT reference infrastructure files (workflow.toml, context_extensions.py, impl.yaml) in the generated code.
+3. Do NOT use print() or sys.stdout for output -- all output goes through artifact files and ActionResult.
+4. All artifact key strings in the code MUST match exactly the keys in the WORKFLOW_STEP_DESIGN's artifact_keys section.
+5. The generated code must be self-contained -- it should not depend on files outside the workflow package directory (except for agent_runner_v2 platform imports).
+6. Do NOT include any Chinese text in code identifiers or comments. Chinese text may appear in string literals written to output files.
+7. Every function must have at least 3 distinct reject_codes for different failure modes.
+8. Every remark must include specific details (file paths, item counts, error messages) -- no generic "failed" messages.

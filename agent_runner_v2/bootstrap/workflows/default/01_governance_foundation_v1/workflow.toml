@@ -1,15 +1,40 @@
+# Governance Foundation v1 (BCS-compliant)
+# Generates, validates, audits, and publishes the Layer 1 governance foundation set.
+#
+# Pipeline:
+#   1. Collect     — gather governance context inventory (ACTION)
+#   2. Generate    — produce 6 Layer 1 governance documents
+#   3. Review      — internal quality review (loop → step 4, max 2)
+#   4. Refine      — address review/validation/audit findings
+#   5. Validate    — deterministic validation (ACTION)
+#   6. Audit       — semantic audit with human approval gate [HUMAN GATE]
+#   7. Publish     — deploy to current/ (ACTION)
+#   8. Complete    — terminal (ACTION)
+
 [workflow]
 name = "01_governance_foundation_v1"
-version = "1"
+version = "2.0.0"
 label = "Governance Foundation v1"
 job_prefix = "01GF"
 description = "Generates, validates, audits, and publishes the Layer 1 governance foundation set."
 visibility = "canonical"
 default_max_rejects = 3
+init_step = "collect_governance_context"
+layer = "layer1"
+platform = "agent-runner-v2"
 
-[workflow.init]
-step = "collect_governance_context"
-inputs = []
+# ============================================================================
+# Implementations (BCS)
+# ============================================================================
+
+[[workflow.implementation]]
+name = "standard"
+description = "Default Layer 1 governance generation with review, validation, and audit."
+label = "Standard"
+
+# ============================================================================
+# Step 1: Collect Governance Context (ACTION)
+# ============================================================================
 
 [[step]]
 name = "collect_governance_context"
@@ -21,9 +46,13 @@ onsuccess = "generate_governance_foundation_docs"
 produces = ["GOVERNANCE_CONTEXT_INVENTORY"]
 result_meta_key = "GOVERNANCE_CONTEXT_INVENTORY"
 
+# ============================================================================
+# Step 2: Generate Governance Foundation Docs
+# ============================================================================
+
 [[step]]
 name = "generate_governance_foundation_docs"
-prompt = "prompts/01_generate_governance_foundation_docs.txt"
+prompt = "{{ slot.generate_governance_foundation_docs }}"
 enable_notifications = true
 onsuccess = "review_governance_foundation_docs"
 
@@ -42,9 +71,13 @@ result_meta_key = "L1_FOUNDATION_INDEX"
 [step.coder]
 role_policy = "architect_standard"
 
+# ============================================================================
+# Step 3: Review Governance Foundation Docs
+# ============================================================================
+
 [[step]]
 name = "review_governance_foundation_docs"
-prompt = "prompts/02_review_governance_foundation_docs.txt"
+prompt = "{{ slot.review_governance_foundation_docs }}"
 enable_notifications = true
 requires_human_approval_after = false
 onsuccess = "validate_governance_foundation_docs"
@@ -73,10 +106,15 @@ max_iterations = 2
 exhausted_failure_code = "GOVERNANCE_FOUNDATION_REFINEMENT_EXHAUSTED"
 exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
 
+# ============================================================================
+# Step 4: Refine Governance Foundation Docs
+# ============================================================================
+
 [[step]]
 name = "refine_governance_foundation_docs"
-prompt = "prompts/03_refine_governance_foundation_docs.txt"
+prompt = "{{ slot.refine_governance_foundation_docs }}"
 enable_notifications = true
+onsuccess = "review_governance_foundation_docs"
 
 [step.artifacts]
 required_inputs = [
@@ -101,10 +139,13 @@ produces = [
 target_artifact = "L1_FOUNDATION_INDEX"
 edit_mode = "in_place"
 result_meta_key = "L1_FOUNDATION_INDEX"
-loop_returns_to = "review_governance_foundation_docs"
 
 [step.coder]
 role_policy = "refine_standard"
+
+# ============================================================================
+# Step 5: Validate Governance Foundation Docs (ACTION)
+# ============================================================================
 
 [[step]]
 name = "validate_governance_foundation_docs"
@@ -131,9 +172,13 @@ max_iterations = 2
 exhausted_failure_code = "GOVERNANCE_FOUNDATION_VALIDATION_EXHAUSTED"
 exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
 
+# ============================================================================
+# Step 6: Audit Governance Foundation Docs (Human Approval Gate)
+# ============================================================================
+
 [[step]]
 name = "audit_governance_foundation_docs"
-prompt = "prompts/04_audit_governance_foundation_docs.txt"
+prompt = "{{ slot.audit_governance_foundation_docs }}"
 enable_notifications = true
 requires_human_approval_after = true
 onsuccess = "publish_governance_foundation_set"
@@ -163,6 +208,10 @@ max_iterations = 2
 exhausted_failure_code = "GOVERNANCE_FOUNDATION_AUDIT_EXHAUSTED"
 exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
 
+# ============================================================================
+# Step 7: Publish Governance Foundation Set (ACTION)
+# ============================================================================
+
 [[step]]
 name = "publish_governance_foundation_set"
 action = "publish_governance_foundation_set"
@@ -182,6 +231,10 @@ required_inputs = [
 ]
 produces = ["GOVERNANCE_PUBLISH_MANIFEST", "GOVERNANCE_PUBLISH_MANIFEST_HISTORY"]
 result_meta_key = "GOVERNANCE_PUBLISH_MANIFEST"
+
+# ============================================================================
+# Step 8: Step Completion (ACTION)
+# ============================================================================
 
 [[step]]
 name = "stepCompletion"

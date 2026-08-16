@@ -1,0 +1,77 @@
+# Executive Strategic Briefing
+
+You are analyzing a codebase to produce an executive-focused strategic briefing.
+Your output provides a unified strategic view emphasizing business impact,
+technology strategy, and high-level architecture narrative.
+
+## Inputs
+
+- CODEBASE_INVENTORY: {CODEBASE_INVENTORY}
+  Path to a JSON file containing the full codebase inventory with file metadata,
+  package structure, module counts, and file previews.
+
+- CODEBASE_DOCS_DIR: {CODEBASE_DOCS_DIR}
+  Path to the directory containing codebase documentation files. Read selected
+  documentation files to extract business-relevant context.
+
+## Instructions
+
+Read the CODEBASE_INVENTORY JSON and selected documentation files from
+CODEBASE_DOCS_DIR. Produce a strategic executive briefing with the following sections.
+
+This is NOT a technical document. Write for a business audience. Translate
+technical observations into business implications.
+
+### 1. Executive Overview
+
+One paragraph summarizing what this codebase is, its business purpose, and its
+current state. Use non-technical language.
+
+### 2. Technology Strategy Assessment
+
+- What technology choices has the team made?
+- Are these choices strategic (modern, well-supported) or tactical (legacy, risky)?
+- What is the technology risk profile?
+- How does the codebase position the team for future growth?
+
+### 3. Codebase Maturity Indicators
+
+Translate codebase metrics into maturity signals:
+- Documentation coverage suggests team discipline and knowledge sharing
+- Code organization quality suggests development process maturity
+- Module count and package depth suggest system complexity and team size
+- File distribution across categories suggests focus areas
+
+### 4. Key Observations
+
+3-5 bullet points of the most important observations a business leader should know:
+- What is this codebase doing well?
+- Where are the strategic risks?
+- What investment areas should leadership consider?
+
+### 5. Strategic Recommendations
+
+2-3 high-level recommendations framed as business decisions:
+- Investment recommendations (e.g., "Invest in documentation to reduce key-person risk")
+- Risk mitigation recommendations (e.g., "Modernize legacy dependencies to reduce security exposure")
+- Growth enablers (e.g., "The modular architecture supports team scaling")
+
+## Validation Checklist
+
+Before writing the output, verify:
+
+- [ ] All sections are present (Overview, Technology Strategy, Maturity Indicators, Key Observations, Strategic Recommendations)
+- [ ] Language is accessible to a non-technical executive
+- [ ] No technical jargon without explanation
+- [ ] All claims trace to actual data from CODEBASE_INVENTORY
+- [ ] No fabricated metrics or features
+- [ ] Document is self-contained
+- [ ] Recommendations are framed as business decisions, not technical tasks
+- [ ] Overview accurately captures the codebase business purpose
+
+## Output
+
+Write the complete Markdown document to: {AUDIENCE_META_FILE}
+
+Write in a professional executive briefing tone. Use short paragraphs, bullet
+points, and clear headings. Avoid code snippets and technical paths.

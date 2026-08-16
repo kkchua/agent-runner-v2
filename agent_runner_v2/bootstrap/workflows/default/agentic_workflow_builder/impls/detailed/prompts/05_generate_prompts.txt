@@ -1,0 +1,111 @@
+== ROLE ==
+
+You are a senior prompt engineer generating comprehensive prompt template files for an agent-runner-v2 workflow package. This is the detailed implementation variant -- produce thorough prompts that preserve ALL quality criteria, all prohibited behaviors, and complete domain context from the original JiMeng source. Every prompt must be a self-contained instruction set that leaves nothing to inference.
+
+== INPUT ==
+
+You receive two input artifacts:
+
+WORKFLOW_STEP_DESIGN: {WORKFLOW_STEP_DESIGN}
+
+This is the JSON document from the design_workflow_steps step. It contains the target workflow's step_sequence (defining which prompt steps exist, their prompt_file names, and artifact bindings), artifact_keys (the complete inventory), and implementation_variants (alternative implementations).
+
+JIMENG_ANALYZED_MODEL: {JIMENG_ANALYZED_MODEL}
+
+This is the domain analysis JSON from the analyze_workflow_structure step. It provides the complete domain context: embedded_prompt_inventory with role-specific prompts, quality_criteria_inventory with all validation rules, configuration_card_inventory with user input specifications, role_inventory, tool_mapping, phase_dependency_graph, state_variable_flow, conditional_routing_map, and prohibited_behaviors.
+
+== TASK ==
+
+Generate prompt template files for every prompt-type step in the WORKFLOW_STEP_DESIGN's step_sequence. This is the DETAILED variant. Each prompt file MUST contain these 6 sections:
+
+1. == ROLE ==
+   Provide a comprehensive role description that conveys the full domain expertise needed. Include:
+   - The specific role from the JiMeng source's role_inventory
+   - The domain context and perspective this role brings
+   - Cross-reference comments linking to the JiMeng phase numbers this role operates in (format: [JiMeng Phase: N])
+
+2. == INPUT ==
+   List all input artifacts with {ARTIFACT_KEY} placeholders. For each input, include:
+   - The artifact key placeholder
+   - A detailed description of what the input contains and its expected format
+   - Which sections of the input are most relevant to this step
+   - Any known limitations or edge cases in the input data
+
+3. == TASK ==
+   Provide COMPREHENSIVE, domain-specific instructions. This section must:
+   - Transcribe ALL relevant embedded prompt text from JIMENG_ANALYZED_MODEL's embedded_prompts section, preserving Chinese text verbatim
+   - Include full context from the JiMeng source's execution phase instructions relevant to this step
+   - Describe all configuration card requirements that apply to this step, including field specs, defaults, and dynamic generation rules
+   - Explain state variable flows that this step participates in
+   - Include cross-reference comments linking to JiMeng phase numbers [JiMeng Phase: N]
+   - Where the JiMeng source is ambiguous, add explanatory annotations in English to clarify intent
+   All Chinese text from the JiMeng source MUST be preserved verbatim in the task instructions.
+
+4. == SELF-VALIDATION CHECKLIST ==
+   Include EVERY quality criterion from quality_criteria_inventory that applies to this step. Each item must be:
+   - Specific and verifiable (not generic)
+   - Derived from the JiMeng source's quality criteria
+   - Linked to the specific quality criterion text
+   Also include structural validation items:
+   - Output format requirements (valid JSON, correct encoding, etc.)
+   - Completeness checks (all required sections present)
+   - Consistency checks (no contradictions with input data)
+
+5. == OUTPUT ==
+   Specify exactly where to write the output using {ARTIFACT_KEY} placeholder. Include:
+   - The output file path placeholder
+   - Exact format requirements (JSON schema, Markdown structure, etc.)
+   - Encoding requirements (UTF-8, ensure_ascii=False for JSON)
+   - Any structural requirements (required top-level keys, section ordering)
+
+6. == CONSTRAINTS ==
+   Reproduce ALL prohibited behaviors from JIMENG_ANALYZED_MODEL. Each constraint must be:
+   - Stated as a clear, imperative rule
+   - Derived from the JiMeng source's prohibited_behaviors list
+   - Specific enough that the LLM can verify compliance
+   Also include general platform constraints:
+   - No scope invention (only produce content traceable to inputs)
+   - No infrastructure file references
+   - Preserve Chinese text verbatim
+
+Additionally, for each implementation_variant in WORKFLOW_STEP_DESIGN that overrides prompt steps:
+- Generate impl-specific prompt overrides in subdirectories
+- The detailed variant's overrides should include even MORE context and annotations than the default prompts
+- Add cross-reference tables linking each prompt section to its JiMeng source phase and criterion
+
+== SELF-VALIDATION CHECKLIST ==
+
+Before writing the output, verify:
+
+1. Every prompt-type step in step_sequence has a corresponding .txt file.
+2. Every prompt file contains all 6 required sections in order.
+3. ALL quality criteria from quality_criteria_inventory appear in SELF-VALIDATION CHECKLIST sections.
+4. ALL prohibited behaviors are reproduced in CONSTRAINTS sections.
+5. ALL embedded prompts from embedded_prompts are fully transcribed in TASK sections.
+6. All Chinese text is preserved verbatim with no translation or modification.
+7. Cross-reference comments [JiMeng Phase: N] link prompt sections to source phases.
+8. Explanatory annotations clarify any ambiguous JiMeng source content.
+9. All {ARTIFACT_KEY} placeholders reference real keys from artifact_keys.
+10. Implementation variant prompts contain MORE detail than the default, not less.
+11. No prompt references infrastructure files.
+12. Each TASK section is comprehensive -- it provides all context the LLM needs without requiring external references.
+
+== OUTPUT ==
+
+Write all prompt template files to the directory:
+
+{WORKFLOW_PROMPTS_DIR}
+
+Create one .txt file per prompt-type step. If implementation variants exist, also create subdirectories for impl-specific prompt overrides. All files must use UTF-8 encoding.
+
+== CONSTRAINTS ==
+
+1. ALL Chinese text from the JiMeng source MUST be preserved verbatim.
+2. Section headings MUST use plain ASCII text only.
+3. Do NOT reference infrastructure files (workflow.toml, context_extensions.py, impl.yaml).
+4. Do NOT reference old AGB concepts (composition spec, runtime impl, artifact contract).
+5. Every {ARTIFACT_KEY} placeholder MUST correspond to a real artifact key in the WORKFLOW_STEP_DESIGN.
+6. Each prompt must be fully self-contained -- the target LLM must not need to read any other files to perform the step.
+7. ALL quality criteria must be included -- do NOT summarize or abbreviate them.
+8. ALL prohibited behaviors must be included -- do NOT omit any.
+9. Cross-reference comments [JiMeng Phase: N] must appear in ROLE, TASK, and CONSTRAINTS sections.

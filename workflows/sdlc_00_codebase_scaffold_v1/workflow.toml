@@ -1,0 +1,290 @@
+[workflow]
+name = "sdlc_00_codebase_scaffold_v1"
+version = "2.0.0"
+label = "SDLC Codebase & Scaffold v1"
+job_prefix = "SDLC00CS"
+description = "Combined codebase sync and SDLC delivery scaffold generation with staging, review, and publish."
+visibility = "canonical"
+default_max_rejects = 2
+init_step = "sync_codebase_docs"
+
+# Layer 2 platform contract references
+layer = "layer3"
+platform = "agent-runner-v2"
+
+[workflow.governance]
+include_in_prompts = true
+prompt_targets = ["all"]
+
+# ============================================================================
+# Implementations (BCS)
+# ============================================================================
+
+[[workflow.implementation]]
+name = "standard"
+description = "Combined codebase sync and SDLC delivery scaffold generation."
+label = "Standard"
+
+# ============================================================================
+# Phase 1: Codebase Sync
+# ============================================================================
+
+# ============================================================================
+# Step 1: Sync Codebase Docs (staging to runs/<job_id>/)
+# ============================================================================
+[[step]]
+name = "sync_codebase_docs"
+action = "sync_codebase_docs"
+mode = "reconcile"
+staging_root = "docs/repo/codebase/runs/{job_id}"
+enable_notifications = true
+onsuccess = "generate_sync_log"
+
+[step.artifacts]
+produces = ["CODEBASE_CHANGE_IMPACT", "CODEBASE_INVENTORY"]
+result_meta_key = "CODEBASE_CHANGE_IMPACT"
+
+# ============================================================================
+# Step 2: Generate Sync Log
+# ============================================================================
+[[step]]
+name = "generate_sync_log"
+action = "generate_sync_log"
+staging_root = "docs/repo/codebase/runs/{job_id}"
+enable_notifications = true
+onsuccess = "review_sync_log"
+
+[step.artifacts]
+produces = ["SYNC_LOG"]
+result_meta_key = "SYNC_LOG"
+
+# ============================================================================
+# Step 3: Review Sync Log (human approval gate)
+# ============================================================================
+[[step]]
+name = "review_sync_log"
+prompt = "{{ slot.review_sync_log }}"
+enable_notifications = true
+requires_human_approval_after = true
+onsuccess = "validate_codebase_docs"
+
+[step.artifacts]
+required_inputs = ["SYNC_LOG", "CODEBASE_INVENTORY", "CODEBASE_CHANGE_IMPACT"]
+produces = ["REVIEW_FILE_SUGGESTED"]
+result_meta_key = "REVIEW_FILE_SUGGESTED"
+
+[step.coder]
+role_policy = "reviewer_standard"
+
+[step.on_reject_refine]
+step = "refine_codebase_docs"
+artifact = "CODEBASE_INVENTORY"
+max_iterations = 2
+exhausted_failure_code = "CODEBASE_SYNC_REFINEMENT_EXHAUSTED"
+exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
+
+# ============================================================================
+# Step 4: Refine Codebase Docs (conditional)
+# ============================================================================
+[[step]]
+name = "refine_codebase_docs"
+prompt = "{{ slot.refine_codebase_docs }}"
+enable_notifications = true
+onsuccess = "review_sync_log"
+
+[step.artifacts]
+required_inputs = ["CODEBASE_INVENTORY", "CODEBASE_CHANGE_IMPACT", "REVIEW_FILE_SUGGESTED"]
+produces = ["CODEBASE_INVENTORY"]
+target_artifact = "CODEBASE_INVENTORY"
+edit_mode = "in_place"
+result_meta_key = "CODEBASE_INVENTORY"
+
+[step.coder]
+role_policy = "architect_standard"
+
+# ============================================================================
+# Step 5: Validate Codebase Docs
+# ============================================================================
+[[step]]
+name = "validate_codebase_docs"
+action = "validate_codebase_docs"
+mode = "reconcile"
+staging_root = "docs/repo/codebase/runs/{job_id}"
+enable_notifications = true
+onsuccess = "create_backup"
+
+[step.artifacts]
+required_inputs = ["CODEBASE_INVENTORY", "CODEBASE_CHANGE_IMPACT"]
+produces = ["VALIDATION_FILE"]
+result_meta_key = "VALIDATION_FILE"
+
+[step.on_reject_refine]
+step = "refine_codebase_docs"
+artifact = "CODEBASE_INVENTORY"
+max_iterations = 2
+exhausted_failure_code = "CODEBASE_VALIDATION_REFINEMENT_EXHAUSTED"
+exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
+
+# ============================================================================
+# Step 6: Create Backup (before publish)
+# ============================================================================
+[[step]]
+name = "create_backup"
+action = "create_backup"
+enable_notifications = true
+onsuccess = "publish_codebase_docs"
+
+[step.artifacts]
+produces = ["CODEBASE_BACKUP"]
+result_meta_key = "CODEBASE_BACKUP"
+
+# ============================================================================
+# Step 7: Publish Codebase Docs (copies runs/ to current/)
+# ============================================================================
+[[step]]
+name = "publish_codebase_docs"
+action = "publish_codebase_docs"
+enable_notifications = true
+onsuccess = "generate_templates"
+
+[step.artifacts]
+required_inputs = ["CODEBASE_INVENTORY", "CODEBASE_CHANGE_IMPACT"]
+produces = ["CODEBASE_PUBLISH_MANIFEST", "CODEBASE_PUBLISH_MANIFEST_HISTORY"]
+result_meta_key = "CODEBASE_PUBLISH_MANIFEST"
+
+# ============================================================================
+# Phase 2: SDLC Delivery Scaffold
+# ============================================================================
+
+# ============================================================================
+# Step 8: Generate Master Templates
+# ============================================================================
+[[step]]
+name = "generate_templates"
+prompt = "{{ slot.generate_templates }}"
+enable_notifications = true
+onsuccess = "generate_agent_contracts"
+
+[step.artifacts]
+produces = ["SDLC_TEMPLATE_REGISTRY", "SDLC_WORKFLOW_SOP", "SDLC_TEMPLATE_DRAFT_INIT", "SDLC_TEMPLATE_INIT", "SDLC_TEMPLATE_REQ", "SDLC_TEMPLATE_PLAN", "SDLC_TEMPLATE_BACKLOG", "SDLC_TEMPLATE_TASK", "SDLC_TEMPLATE_IMPL", "SDLC_TEMPLATE_VALID", "SDLC_TEMPLATE_REV", "SDLC_TEMPLATE_MEM", "SDLC_TEMPLATE_CLOSE"]
+result_meta_key = "SDLC_TEMPLATE_REGISTRY"
+
+[step.coder]
+role_policy = "architect_standard"
+
+[step.on_reject_refine]
+step = "generate_templates"
+artifact = "SDLC_TEMPLATE_REGISTRY"
+max_iterations = 1
+exhausted_failure_code = "TEMPLATE_GENERATION_EXHAUSTED"
+exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
+
+# ============================================================================
+# Step 9: Generate Agent Contracts
+# ============================================================================
+[[step]]
+name = "generate_agent_contracts"
+prompt = "{{ slot.generate_agent_contracts }}"
+enable_notifications = true
+onsuccess = "review_scaffold"
+
+[step.artifacts]
+produces = ["SDLC_AGENTS_INDEX", "SDLC_AGENT_PLANNER", "SDLC_AGENT_TASK_DECOMPOSER", "SDLC_AGENT_IMPL_PLANNER", "SDLC_AGENT_EXECUTOR", "SDLC_AGENT_REVIEWER", "SDLC_AGENT_MEMORY_MANAGER", "SDLC_DELIVERY_STATUS_RULES"]
+result_meta_key = "SDLC_AGENTS_INDEX"
+
+[step.coder]
+role_policy = "architect_standard"
+
+[step.on_reject_refine]
+step = "generate_agent_contracts"
+artifact = "SDLC_AGENTS_INDEX"
+max_iterations = 1
+exhausted_failure_code = "AGENT_CONTRACTS_GENERATION_EXHAUSTED"
+exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
+
+# ============================================================================
+# Step 10: Review Scaffold (human approval gate)
+# ============================================================================
+[[step]]
+name = "review_scaffold"
+prompt = "{{ slot.review_scaffold }}"
+enable_notifications = true
+requires_human_approval_after = true
+onsuccess = "publish_sdlc_scaffold"
+
+[step.artifacts]
+required_inputs = ["SDLC_TEMPLATE_REGISTRY", "SDLC_AGENTS_INDEX"]
+produces = ["REVIEW_FILE_SUGGESTED"]
+result_meta_key = "REVIEW_FILE_SUGGESTED"
+
+[step.coder]
+role_policy = "reviewer_standard"
+
+[step.on_reject_refine]
+step = "refine_scaffold"
+artifact = "REVIEW_FILE_SUGGESTED"
+max_iterations = 2
+exhausted_failure_code = "SCAFFOLD_REFINEMENT_EXHAUSTED"
+exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
+
+# ============================================================================
+# Step 11: Refine Scaffold (conditional)
+# ============================================================================
+[[step]]
+name = "refine_scaffold"
+prompt = "{{ slot.refine_scaffold }}"
+enable_notifications = true
+onsuccess = "review_scaffold"
+
+[step.artifacts]
+required_inputs = ["REVIEW_FILE_SUGGESTED"]
+produces = ["REVIEW_FILE_SUGGESTED"]
+target_artifact = "REVIEW_FILE_SUGGESTED"
+edit_mode = "in_place"
+result_meta_key = "REVIEW_FILE_SUGGESTED"
+
+[step.coder]
+role_policy = "architect_standard"
+
+# ============================================================================
+# Step 12: Publish Scaffold
+# ============================================================================
+[[step]]
+name = "publish_sdlc_scaffold"
+action = "publish_sdlc_scaffold"
+enable_notifications = true
+onsuccess = "commit_changes"
+
+[step.artifacts]
+required_inputs = [
+  "SDLC_TEMPLATE_REGISTRY", "SDLC_WORKFLOW_SOP",
+  "SDLC_TEMPLATE_DRAFT_INIT", "SDLC_TEMPLATE_INIT", "SDLC_TEMPLATE_REQ",
+  "SDLC_TEMPLATE_PLAN", "SDLC_TEMPLATE_BACKLOG", "SDLC_TEMPLATE_TASK",
+  "SDLC_TEMPLATE_IMPL", "SDLC_TEMPLATE_VALID", "SDLC_TEMPLATE_REV",
+  "SDLC_TEMPLATE_MEM", "SDLC_TEMPLATE_CLOSE",
+  "SDLC_AGENTS_INDEX", "SDLC_AGENT_PLANNER", "SDLC_AGENT_TASK_DECOMPOSER",
+  "SDLC_AGENT_IMPL_PLANNER", "SDLC_AGENT_EXECUTOR", "SDLC_AGENT_REVIEWER",
+  "SDLC_AGENT_MEMORY_MANAGER", "SDLC_DELIVERY_STATUS_RULES",
+]
+produces = ["SDLC_SCAFFOLD_PUBLISH_MANIFEST", "SDLC_SCAFFOLD_PUBLISH_MANIFEST_HISTORY"]
+result_meta_key = "SDLC_SCAFFOLD_PUBLISH_MANIFEST"
+
+# ============================================================================
+# Phase 3: Commit
+# ============================================================================
+
+# ============================================================================
+# Step 13: Commit Changes
+# ============================================================================
+[[step]]
+name = "commit_changes"
+action = "commit_changes"
+enable_notifications = false
+onsuccess = "stepCompletion"
+
+# ============================================================================
+# Step 14: Step Completion
+# ============================================================================
+[[step]]
+name = "stepCompletion"
+action = "step_completion"

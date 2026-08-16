@@ -1,0 +1,132 @@
+{
+  "workflow_name": "workflow_builder_v3",
+  "prompt_count": 18,
+  "prompts": [
+    {
+      "step_order": 1,
+      "step_name": "generate_test_criteria",
+      "step_type": "prompt",
+      "file": "prompts/01_generate_test_criteria.txt",
+      "role_policy": "architect_standard"
+    },
+    {
+      "step_order": 2,
+      "step_name": "review_test_criteria",
+      "step_type": "prompt",
+      "file": "prompts/02_review_test_criteria.txt",
+      "role_policy": "reviewer_standard"
+    },
+    {
+      "step_order": 3,
+      "step_name": "refine_test_criteria",
+      "step_type": "prompt",
+      "file": "prompts/03_refine_test_criteria.txt",
+      "role_policy": "architect_standard"
+    },
+    {
+      "step_order": 4,
+      "step_name": "generate_component_schema",
+      "step_type": "prompt",
+      "file": "prompts/04_generate_component_schema.txt",
+      "role_policy": "architect_standard"
+    },
+    {
+      "step_order": 5,
+      "step_name": "gatekeep_component_schema",
+      "step_type": "prompt",
+      "file": "prompts/05_gatekeep_component_schema.txt",
+      "role_policy": "gatekeeper_standard"
+    },
+    {
+      "step_order": 6,
+      "step_name": "generate_composition_format",
+      "step_type": "prompt",
+      "file": "prompts/06_generate_composition_format.txt",
+      "role_policy": "architect_standard"
+    },
+    {
+      "step_order": 7,
+      "step_name": "gatekeep_composition_format",
+      "step_type": "prompt",
+      "file": "prompts/07_gatekeep_composition_format.txt",
+      "role_policy": "gatekeeper_standard"
+    },
+    {
+      "step_order": 8,
+      "step_name": "generate_output_format",
+      "step_type": "prompt",
+      "file": "prompts/08_generate_output_format.txt",
+      "role_policy": "architect_standard"
+    },
+    {
+      "step_order": 9,
+      "step_name": "gatekeep_output_format",
+      "step_type": "prompt",
+      "file": "prompts/09_gatekeep_output_format.txt",
+      "role_policy": "gatekeeper_standard"
+    },
+    {
+      "step_order": 10,
+      "step_name": "generate_operational_workflow",
+      "step_type": "prompt",
+      "file": "prompts/10_generate_operational_workflow.txt",
+      "role_policy": "architect_standard"
+    },
+    {
+      "step_order": 11,
+      "step_name": "gatekeep_operational_workflow",
+      "step_type": "prompt",
+      "file": "prompts/11_gatekeep_operational_workflow.txt",
+      "role_policy": "gatekeeper_standard"
+    },
+    {
+      "step_order": 12,
+      "step_name": "generate_composition_standard",
+      "step_type": "prompt",
+      "file": "prompts/12_generate_composition_standard.txt",
+      "role_policy": "architect_standard"
+    },
+    {
+      "step_order": 13,
+      "step_name": "gatekeep_composition_standard",
+      "step_type": "prompt",
+      "file": "prompts/13_gatekeep_composition_standard.txt",
+      "role_policy": "gatekeeper_standard"
+    },
+    {
+      "step_order": 14,
+      "step_name": "generate_meta_composition_spec",
+      "step_type": "prompt",
+      "file": "prompts/14_generate_meta_composition_spec.txt",
+      "role_policy": "architect_standard"
+    },
+    {
+      "step_order": 15,
+      "step_name": "generate_package",
+      "step_type": "prompt",
+      "file": "prompts/15_generate_package.txt",
+      "role_policy": "architect_standard"
+    },
+    {
+      "step_order": 16,
+      "step_name": "gatekeep_package",
+      "step_type": "prompt",
+      "file": "prompts/16_gatekeep_package.txt",
+      "role_policy": "gatekeeper_standard"
+    },
+    {
+      "step_order": 17,
+      "step_name": "review_package",
+      "step_type": "prompt",
+      "file": "prompts/17_review_package.txt",
+      "role_policy": "reviewer_standard"
+    },
+    {
+      "step_order": 18,
+      "step_name": "refine_package",
+      "step_type": "prompt",
+      "file": "prompts/18_refine_package.txt",
+      "role_policy": "architect_standard"
+    }
+  ]
+}

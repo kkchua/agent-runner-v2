@@ -1,0 +1,123 @@
+Objective
+
+Generate a structured validation report from the approved execution document.
+Verify that the execution results are accurate, complete, and reproducible
+by independently running tests and checking claims against the actual codebase.
+
+Layer Boundary
+
+- This workflow belongs to Layer 3 and operates on top of the Layer 2 platform contract.
+- Generate only validation documentation, not review or closure artifacts.
+- Treat Layer 1 governance and Layer 2 platform constitution as read-only reference inputs.
+
+Reference Inputs
+
+- Read {EXEC_FILE} (approved execution document to validate).
+- Read codebase context from docs/repo/codebase/current/ to understand repository structure.
+- Read Layer 1 governance at {GOVERNANCE_RUNTIME_ROOT} for metadata requirements.
+- Read Layer 2 platform constitution at {PLATFORM_RUNTIME_ROOT} for platform contract.
+
+Pre-Validation State Check (MANDATORY)
+
+Before writing ANY validation content, verify the current state of the codebase:
+
+1. Run the test suite to establish current baseline:
+   .venv\Scripts\python -m pytest tests/unit/ -x -q
+   Record the result (pass count, fail count, errors).
+
+2. Verify the execution claims against actual codebase state:
+   - Check that files mentioned in {EXEC_FILE} exist on disk.
+   - Check that functions/classes mentioned in {EXEC_FILE} are present.
+   - Run the specific tests cited in {EXEC_FILE} and compare output.
+
+3. Identify any discrepancies between {EXEC_FILE} claims and actual state:
+   - Document these discrepancies explicitly in the validation report.
+   - Do not silently accept claims that contradict the codebase.
+
+Validation Document Requirements
+
+The VAL document must include:
+
+1. YAML Frontmatter (REQUIRED):
+   - template_id: "SYS-03-VL"
+   - version: "1.0.0"
+   - doc_type: "workflow_output"
+   - authority: "workflow-generated"
+   - scan_policy: "include"
+   - scan_reason: "validation report for initiative completion"
+   - layer: "layer3"
+   - platform: "agent-runner-v2"
+   - lifecycle_status: "draft"
+   - effective_version: "{job_id}"
+   - managed_by: "workflow-generated"
+
+2. Required Sections (in this exact order):
+
+   a. Pre-Validation State
+      - Baseline test results (from step 1 above)
+      - Execution claim verification findings (from step 2 above)
+      - Discrepancies identified (from step 3 above)
+
+   b. Validation Overview
+      - High-level summary of validation scope
+      - Link back to {EXEC_FILE}
+
+   c. Execution Traceability
+      - Map each EXEC section back to its source requirements
+      - Verify all implementation steps have corresponding validation
+
+   d. Validation Criteria
+      - Criteria used to validate the execution
+      - Each criterion must be independently verifiable
+
+   e. Validation Results
+      - Detailed results of each validation check
+      - Include actual test output, not expected output
+      - Cite specific file paths and line numbers
+
+   f. Acceptance Verification
+      - Confirmation that each acceptance criterion cited in {EXEC_FILE} is met
+      - Explicit pass/fail for each criterion with evidence
+
+   g. Quality Metrics
+      - Test coverage assessment
+      - Code quality observations
+      - Documentation accuracy assessment
+
+   h. Compliance Check
+      - Governance and compliance verification
+      - Metadata compliance check
+
+   i. Issues and Risks
+      - Any remaining issues or risks discovered during validation
+      - Severity classification for each issue
+
+   j. Recommendations
+      - Recommendations for next steps or improvements
+
+   k. Open Questions
+      - Unresolved items that need clarification
+
+3. Content Guidelines:
+   - Base all validation on the approved execution document
+   - Verify all claims against the actual codebase by running tests and reading code
+   - Record ACTUAL test output, not expected output
+   - Verify API and SDK usage against the actual installed library version
+     by reading source code or documentation in the virtual environment
+   - Do not rely on training data for library APIs
+
+Output Instructions
+
+- Write the validation document to {VAL_FILE} path.
+- Use plain text section headings.
+- Keep terminology consistent with Layer 1 and Layer 2 governance docs.
+- Do not create review or closure artifacts.
+
+Forbidden Content
+
+- Layer 1 governance redefinition or contradiction
+- Layer 2 platform contract redefinition
+- Review documents or closure artifacts
+- Implementation details or code changes
+- Fabricated test results -- record only what actually happened
+- Content not supported by the approved execution documents

@@ -1,3 +1,23 @@
+"""Task graph and execution binding utilities for agent_runner_v2.
+
+This module provides utilities for parsing approved task graphs, building
+execution bindings, and enforcing integrity checks before task execution.
+
+Key responsibilities:
+- Extract ordered task nodes from approved task graph documents
+- Build execution bindings that tie a task_node_id to its task_graph
+- Enforce preflight integrity checks (checksum validation, binding completeness)
+- Locate task graphs and plans by their IDs
+
+The execution binding pattern ensures that:
+- The approved task graph hasn't been modified since binding
+- The selected task_node_id exists in the graph
+- All required metadata (plan_id, task_graph_id) is captured
+
+Used by: delivery_planning_v1, task_execution_v1 workflows
+
+Related: IMPL-20260422-04
+"""
 from __future__ import annotations
 
 import datetime as dt

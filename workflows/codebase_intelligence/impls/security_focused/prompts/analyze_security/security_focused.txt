@@ -1,0 +1,165 @@
+# Expanded Security Audit with Compliance Analysis
+
+You are performing an expanded security audit of a codebase with additional
+compliance-focused checks. This variant goes beyond basic vulnerability scanning
+to include OWASP Top 10 mapping, CWE classification, compliance framework
+alignment, and supply chain risk assessment.
+
+## Inputs
+
+- CODEBASE_INVENTORY: {CODEBASE_INVENTORY}
+  Path to a JSON file containing the codebase inventory with file metadata,
+  module list, and package structure. Use this to identify which files to examine.
+
+- SOURCE_CODE_DIR: {SOURCE_CODE_DIR}
+  Path to the directory containing Python source code files. Read ALL source
+  files for comprehensive security analysis.
+
+## Instructions
+
+Read the CODEBASE_INVENTORY and then read ALL source files from SOURCE_CODE_DIR.
+Produce an expanded security audit with compliance impact statements.
+
+CRITICAL RULE: Actual secret values MUST be redacted in all findings.
+
+## Expanded Analysis Dimensions
+
+### 1. OWASP Top 10 Explicit Mapping
+
+For every finding, explicitly map to the OWASP Top 10 (2021 edition):
+- A01: Broken Access Control
+- A02: Cryptographic Failures
+- A03: Injection
+- A04: Insecure Design
+- A05: Security Misconfiguration
+- A06: Vulnerable and Outdated Components
+- A07: Identification and Authentication Failures
+- A08: Software and Data Integrity Failures
+- A09: Security Logging and Monitoring Failures
+- A10: Server-Side Request Forgery
+
+If a finding does not map to any OWASP category, state "No OWASP Top 10 mapping"
+and explain why.
+
+### 2. CWE ID Classification
+
+Every finding must include:
+- Primary CWE ID (e.g., CWE-798 for hardcoded credentials)
+- CWE name (e.g., "Use of Hard-coded Credentials")
+- Secondary CWE ID if applicable
+
+### 3. Compliance Framework Alignment
+
+For each finding, assess alignment with:
+- **SOC 2**: Which Trust Service Criteria are affected?
+  - CC6.1 (Logical access security)
+  - CC6.3 (Access authorization)
+  - CC7.1 (System monitoring)
+  - CC8.1 (Change management)
+- **ISO 27001**: Which Annex A controls are affected?
+  - A.9 (Access control)
+  - A.10 (Cryptography)
+  - A.12 (Operations security)
+  - A.14 (System acquisition/development)
+  - A.18 (Compliance)
+- **GDPR Indicators**: Does this finding affect personal data protection?
+  - Article 5 (Data processing principles)
+  - Article 25 (Data protection by design)
+  - Article 32 (Security of processing)
+
+If a finding does not affect a framework, state "No [framework] impact."
+
+### 4. Supply Chain Risk Assessment
+
+Analyze dependency trust:
+- External packages used (from imports)
+- Trust level of each dependency (well-known vs obscure)
+- Version pinning practices (pinned vs floating)
+- Transitive dependency risks
+- Package source verification (PyPI, private registry)
+
+### 5. Secrets Rotation Status Assessment
+
+For each detected secret:
+- Type of secret (API key, password, token, certificate)
+- Whether it appears to be a production or development value
+- Indicators of rotation practices (environment variable usage, secrets manager references)
+- Rotation risk assessment (how hard would rotation be?)
+
+### 6. Authentication Flow Completeness Check
+
+If auth code exists, map the complete authentication flow:
+- Entry points where auth is checked
+- Token generation and validation points
+- Session management
+- Logout/invalidation handling
+- Password reset flow (if present)
+- Identify gaps in the flow (missing checks, bypass paths)
+
+## Finding Format
+
+Each finding must follow this structure:
+
+```
+### S-NNN: [Title]
+
+- **Phase**: [Security phase]
+- **Severity**: [critical / high / medium / low / info]
+- **CWE**: [CWE-ID: CWE Name]
+- **OWASP**: [A0X:YYYY Category Name]
+- **Compliance Impact**: [SOC 2 / ISO 27001 / GDPR -- specific controls affected]
+- **Evidence**: [File path, line number, code snippet with secrets REDACTED]
+- **Impact**: [Security risk + compliance consequence]
+- **Recommendation**: [Concrete remediation with secure alternative]
+```
+
+## Document Structure
+
+1. **Compliance Dashboard** (at the top)
+   - SOC 2 compliance status
+   - ISO 27001 compliance status
+   - GDPR readiness indicators
+   - OWASP coverage summary
+
+2. **Summary Section**
+   - Total findings by severity
+   - Total findings by phase
+   - CWE distribution
+   - OWASP distribution
+
+3. **Detailed Findings by Phase**
+   - All findings organized by the 5 security phases
+   - Each finding with full compliance mapping
+
+4. **Supply Chain Risk Report**
+   - Dependency inventory with trust assessment
+   - Risk ratings per dependency
+   - Recommendations for dependency management
+
+5. **Auth Flow Analysis** (if applicable)
+   - Complete auth flow map
+   - Gap analysis
+   - Recommendations
+
+## Validation Checklist
+
+Before writing the output, verify:
+
+- [ ] All findings have CWE classification
+- [ ] All findings have OWASP Top 10 mapping (or explicit "no mapping" statement)
+- [ ] Compliance impact assessed for each finding (SOC 2, ISO 27001, GDPR)
+- [ ] No actual secret values appear in the output (all redacted)
+- [ ] Supply chain risk section covers all external imports
+- [ ] Auth flow analysis is complete (if auth code exists)
+- [ ] Finding IDs are sequential
+- [ ] No hallucinated vulnerabilities
+- [ ] All file:line references are accurate
+- [ ] Document is self-contained and audit-ready
+
+## Output
+
+Write the complete Markdown document to: {SECURITY_FINDINGS_FILE}
+
+Write in audit-ready format. Use tables for compliance dashboards. Include
+complete CWE/OWASP/compliance mappings for every finding. This document should
+serve as evidence for a security audit.

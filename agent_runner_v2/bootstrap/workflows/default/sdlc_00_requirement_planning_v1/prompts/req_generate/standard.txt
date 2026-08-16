@@ -1,0 +1,71 @@
+Objective
+
+Generate a structured requirements document from the approved initiative document.
+
+Layer Boundary
+
+- This workflow belongs to Layer 3 and operates on top of the Layer 2 platform contract.
+- Generate only requirements documentation, not planning, backlog, or implementation artifacts.
+- Treat Layer 1 governance and Layer 2 platform constitution as read-only reference inputs.
+
+Reference Inputs
+
+- Read `INIT_FILE` (approved initiative document).
+- Read codebase context from `docs/repo/codebase/current/` to understand repository structure.
+- Read Layer 1 governance at `GOVERNANCE_RUNTIME_ROOT` for metadata requirements.
+- Read Layer 2 platform constitution at `PLATFORM_RUNTIME_ROOT` for platform contract.
+
+Requirements Document Requirements
+
+The REQ document must include:
+
+1. YAML Frontmatter (REQUIRED):
+   - `template_id: "SYS-03-REQ"`
+   - `version: "1.0.0"`
+   - `doc_type: "workflow_output"`
+   - `authority: "workflow-generated"`
+   - `scan_policy: "include"`
+   - `scan_reason: "structured requirements derived from approved initiative"`
+   - `layer: "layer3"`
+   - `platform: "agent-runner-v2"`
+   - `lifecycle_status: "draft"`
+   - `effective_version: "{job_id}"`
+   - `managed_by: "workflow-generated"`
+   - `source_document: "{INIT_FILE filename}"`
+
+2. Required Sections (in this exact order):
+   - `Requirements Overview` - Summary of what the initiative requires
+   - `Functional Requirements` - Specific capabilities the solution must provide
+   - `Non-Functional Requirements` - Performance, security, usability, reliability constraints
+   - `Scope Definition` - Explicit in-scope and out-of-scope items
+   - `Acceptance Criteria` - Measurable criteria for verifying each requirement
+   - `Dependencies and Constraints` - External dependencies, technical constraints
+   - `Risk Assessment` - Requirements risks and mitigation strategies
+
+3. Content Guidelines:
+   - Derive all requirements from the approved initiative document
+   - Each requirement must be specific, measurable, and testable
+   - Use requirement identifiers (for example, FR-001, NFR-001) for traceability
+   - Normalize into canonical structure without inventing scope
+   - Record explicit assumptions where information is missing
+   - Preserve the intent and boundaries of the original initiative
+   - Verify API and SDK usage against the actual installed library version
+     by reading the source code or documentation in the virtual environment.
+     Do not rely on training data for library APIs -- they may have changed.
+
+Output Instructions
+
+- Write the requirements document to `REQ_FILE` path.
+- Use ASCII-only characters (no em-dashes, curly quotes, or Unicode).
+- Use plain text section headings (no backticks or formatting in headings).
+- Keep terminology consistent with the source initiative document.
+- Do not create planning, backlog, or implementation artifacts.
+
+Forbidden Content
+
+- Layer 1 governance redefinition or contradiction
+- Layer 2 platform contract redefinition
+- Solution architecture or design decisions (belongs to planning phase)
+- Implementation details or code
+- Task breakdowns or scheduling
+- Content not traceable to the approved initiative

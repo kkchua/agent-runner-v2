@@ -1,0 +1,8 @@
+name: key_points
+description: "Produces ordered list of extracted key points with importance scores"
+
+overrides:
+  transform_content:
+    prompt: "impls/key_points/prompts/03_transform_key_points.txt"
+  render_output:
+    action: "render_key_points_output"

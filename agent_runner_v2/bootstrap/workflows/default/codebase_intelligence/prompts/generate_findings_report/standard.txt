@@ -1,0 +1,130 @@
+# Consolidated Findings Report Generation
+
+You are consolidating findings from all three analysis streams into a single
+comprehensive findings report. Your report provides the complete picture of
+codebase health, security posture, and audience-relevant insights.
+
+## Inputs
+
+- AUDIENCE_META_FILE: {AUDIENCE_META_FILE}
+  Path to a Markdown document containing audience-specific meta content
+  (developer, architect, executive views of the codebase).
+
+- HEALTH_FINDINGS_FILE: {HEALTH_FINDINGS_FILE}
+  Path to a Markdown document containing structural health analysis findings
+  across 5 dimensions (circular dependencies, coupling, dead code, complexity,
+  import discipline). Each finding has an ID (H-NNN), severity, evidence,
+  impact, and recommendation.
+
+- SECURITY_FINDINGS_FILE: {SECURITY_FINDINGS_FILE}
+  Path to a Markdown document containing security audit findings across 5 phases
+  (secret detection, dependency audit, code patterns, auth review, infrastructure).
+  Each finding has an ID (S-NNN), severity, evidence, impact, and recommendation.
+
+## Instructions
+
+Read all three input documents. Extract, prioritize, and synthesize findings
+into a consolidated report.
+
+## Document Structure
+
+Your output document must have these exact sections:
+
+### 1. Executive Summary
+
+Write 1-2 paragraphs covering:
+- Overall codebase health and security posture
+- Top 3-5 most critical findings across all domains (health + security)
+- Overall risk assessment
+
+This section must be readable by a non-technical executive. Avoid jargon.
+
+### 2. Key Metrics
+
+Provide a metrics summary:
+- Total findings by severity (from health + security combined)
+- Findings by domain: health dimensions vs security phases
+- Comparison summary: which domain has more issues and why it matters
+
+Use a table format for clarity:
+
+| Severity | Health | Security | Total |
+|----------|--------|----------|-------|
+| Critical | N      | N        | N     |
+| High     | N      | N        | N     |
+| ...      | ...    | ...      | ...   |
+
+### 3. Critical and High Priority Findings
+
+Combined list of ALL critical and high severity findings from both health and
+security analyses. For each finding:
+- Include the full detail: ID, domain (Health/Security), severity, evidence,
+  impact, recommendation
+- Sort by severity (critical first), then by domain (security first if tied)
+- Prefix each finding with its domain tag: [HEALTH] or [SECURITY]
+
+### 4. Health Analysis Summary
+
+Brief summary of each of the 5 health dimensions:
+- One paragraph per dimension summarizing its state
+- Reference the top findings with their H-NNN IDs
+- Note where HEALTH_FINDINGS_FILE contains full detail
+
+### 5. Security Analysis Summary
+
+Brief summary of each of the 5 security phases:
+- One paragraph per phase summarizing its state
+- Reference the top findings with their S-NNN IDs
+- Note where SECURITY_FINDINGS_FILE contains full detail
+
+### 6. Cross-Domain Insights
+
+Identify patterns that span multiple domains:
+- Circular dependencies that also create security boundary issues
+- High-coupling modules that are also security-sensitive
+- Dead code that represents abandoned security controls
+- Complex modules that are both hard to maintain and hard to secure
+- Systemic issues affecting both health and security
+
+Each insight must reference specific findings from both domains.
+
+### 7. Recommendations Roadmap
+
+Prioritized action items organized by timeframe:
+- **Immediate** (critical findings): Actions to take now
+- **Short-term** (high findings): Actions within the current sprint
+- **Medium-term** (medium findings): Actions within the quarter
+- **Long-term** (low findings): Actions to plan for
+
+Each recommendation must reference the specific finding ID it addresses.
+
+### 8. Appendix: Methodology
+
+Brief description of:
+- How the analysis was conducted
+- Severity criteria definitions (critical/high/medium/low/info)
+- Analysis dimensions and phases
+- Limitations and scope
+
+## Validation Checklist
+
+Before writing the output, verify:
+
+- [ ] All 8 sections are present (Executive Summary, Key Metrics, Critical/High Findings, Health Summary, Security Summary, Cross-Domain Insights, Recommendations Roadmap, Methodology Appendix)
+- [ ] Executive Summary accurately reflects the most severe findings
+- [ ] All critical and high findings from health and security are included in Section 3
+- [ ] No findings are duplicated (each finding ID appears once)
+- [ ] Cross-domain insights reference actual findings from both domains
+- [ ] Recommendations roadmap covers all critical and high findings
+- [ ] No contradictions between sections
+- [ ] Document is self-contained -- a reader who has not seen the individual reports can understand the full picture
+- [ ] References to individual report files are informational only (document does not depend on them for comprehension)
+- [ ] Metrics table numbers match the actual finding counts
+
+## Output
+
+Write the complete Markdown document to: {FINDINGS_REPORT_FILE}
+
+The document must be valid Markdown with proper heading hierarchy. Use tables
+for metrics. Use bullet lists for findings. Use code formatting for finding IDs
+and file paths. Ensure the document is comprehensive yet readable.

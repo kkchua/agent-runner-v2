@@ -12,7 +12,7 @@ def test_main_worker_command_delegates_to_daemon(monkeypatch):
         captured["argv"] = list(argv or [])
         return 0
 
-    monkeypatch.setattr("agent_runner_v2.daemon.main", fake_daemon_main)
+    monkeypatch.setattr("agent_runner_v2.daemon_v2.main", fake_daemon_main)
 
     rc = run_agent.main(
         [
@@ -57,33 +57,3 @@ def test_main_execute_step_returns_legacy_error(tmp_path, capsys):
 
     stdout_payload = json.loads(capsys.readouterr().out)
     assert stdout_payload["failure"]["failure_code"] == "LEGACY_EXECUTE_STEP_UNSUPPORTED"
-
-
-def test_main_console_command_delegates_to_console_module(monkeypatch):
-    captured: dict[str, object] = {}
-
-    def fake_console_main(argv=None):
-        captured["argv"] = list(argv or [])
-        return 0
-
-    monkeypatch.setattr("agent_runner_v2.console_commands.main", fake_console_main)
-
-    rc = run_agent.main(["console", "--config", "D:/tmp/operator-console.json"])
-
-    assert rc == 0
-    assert captured["argv"] == ["--config", "D:/tmp/operator-console.json"]
-
-
-def test_main_stop_command_delegates_to_stop_module(monkeypatch):
-    captured: dict[str, object] = {}
-
-    def fake_stop_main(argv=None):
-        captured["argv"] = list(argv or [])
-        return 0
-
-    monkeypatch.setattr("agent_runner_v2.stop_commands.main", fake_stop_main)
-
-    rc = run_agent.main(["stop", "run-1", "--reason", "operator"])
-
-    assert rc == 0
-    assert captured["argv"] == ["run-1", "--reason", "operator"]

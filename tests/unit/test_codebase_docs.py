@@ -111,7 +111,7 @@ def test_render_inventory_uses_workflow_name_in_frontmatter(tmp_path, monkeypatc
     )
 
     rendered = codebase_docs.render_inventory(snapshot, title="Repo")
-    assert 'workflow: "00_master_docs_bootstrap_v1"' in rendered.splitlines()[:8]
+    assert 'workflow: "00_master_docs_bootstrap_v1"' in rendered.splitlines()[:12]
 
 
 def test_extract_raises_parses_docstring():
@@ -245,3 +245,96 @@ def example_func(name: str, count: int = 5) -> bool:
         assert "**Returns**: `bool`" in output
         assert "**Raises**:" in output
         assert "ValueError" in output
+
+
+def test_build_snapshot_respects_codebase_scan_ignore(tmp_path, monkeypatch):
+    """Test that .codebase-scan-ignore file excludes matching paths."""
+    (tmp_path / "agent_runner_v2").mkdir()
+    (tmp_path / "agent_runner_v2" / "__init__.py").write_text("", encoding="utf-8")
+    (tmp_path / "README.md").write_text("# Repo\n", encoding="utf-8")
+    (tmp_path / "secrets").mkdir()
+    (tmp_path / "secrets" / "keys.json").write_text("{}", encoding="utf-8")
+    (tmp_path / "generated").mkdir()
+    (tmp_path / "generated" / "output.txt").write_text("data", encoding="utf-8")
+    (tmp_path / "notes.tmp").write_text("temp", encoding="utf-8")
+
+    # Create .codebase-scan-ignore file
+    (tmp_path / ".codebase-scan-ignore").write_text(
+        "# Exclude sensitive and generated files\n"
+        "secrets/\n"
+        "generated/\n"
+        "*.tmp\n",
+        encoding="utf-8",
+    )
+
+    class _Bundle:
+        TEMPLATE_GROUPS = {
+            "00_master_docs_bootstrap_v1": {
+                "visibility": "canonical",
+                "job_prefix": "00DOC",
+                "job_init_step": "00_scan_repo_codebase",
+                "job_init_inputs": [],
+                "steps": [],
+                "step_configs": {},
+            }
+        }
+
+    monkeypatch.setattr(codebase_docs, "get_workflow_module", lambda: _Bundle)
+
+    snapshot = codebase_docs.build_snapshot(
+        tmp_path,
+        mode="bootstrap",
+        job_id="00DOC-GEN-TEST",
+        step="00_scan_repo_codebase",
+    )
+
+    rel_paths = {item.rel_path for item in snapshot["items"]}
+    # Should include README.md
+    assert "README.md" in rel_paths
+    # Should exclude secrets/, generated/, and *.tmp
+    assert all(not path.startswith("secrets/") for path in rel_paths)
+    assert all(not path.startswith("generated/") for path in rel_paths)
+    assert all(not path.endswith(".tmp") for path in rel_paths)
+
+
+def test_load_scan_exclusions_returns_empty_when_no_file(tmp_path):
+    """Test that _load_scan_exclusions returns empty list when file doesn't exist."""
+    patterns = codebase_docs._load_scan_exclusions(tmp_path)
+    assert patterns == []
+
+
+def test_load_scan_exclusions_parses_file(tmp_path):
+    """Test that _load_scan_exclusions correctly parses the ignore file."""
+    (tmp_path / ".codebase-scan-ignore").write_text(
+        "# Comment line\n"
+        "\n"
+        "secrets/\n"
+        "*.log\n"
+        "  # Indented comment\n"
+        "build/\n",
+        encoding="utf-8",
+    )
+    patterns = codebase_docs._load_scan_exclusions(tmp_path)
+    assert patterns == ["secrets/", "*.log", "build/"]
+
+
+def test_matches_exclusion_patterns():
+    """Test the _matches_exclusion function with various patterns."""
+    # Simple filename match
+    assert codebase_docs._matches_exclusion("test.log", ["*.log"])
+    assert not codebase_docs._matches_exclusion("test.txt", ["*.log"])
+
+    # Directory pattern
+    assert codebase_docs._matches_exclusion("secrets/keys.json", ["secrets/"])
+    assert codebase_docs._matches_exclusion("deep/secrets/keys.json", ["secrets/"])
+
+    # Path pattern with slash
+    assert codebase_docs._matches_exclusion("docs/generated/output.md", ["docs/generated/"])
+    assert not codebase_docs._matches_exclusion("other/generated/output.md", ["docs/generated/"])
+
+    # Double-star pattern (matches at any depth)
+    assert codebase_docs._matches_exclusion("a/b/c/file.log", ["**/*.log"])
+    assert codebase_docs._matches_exclusion("a/file.log", ["**/*.log"])
+
+    # Empty patterns
+    assert not codebase_docs._matches_exclusion("any/path", [])

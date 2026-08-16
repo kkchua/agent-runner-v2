@@ -129,7 +129,7 @@ def copy_artifact(
         content = _upsert_metadata_field(content, "Source Pre-Init File", source_rel)
     dest_path.write_text(content, encoding="utf-8")
 
-    print(f"[copy_artifact] copied {source_rel} → {dest_rel}", flush=True)
+    print(f"[copy_artifact] copied {source_rel} -> {dest_rel}", flush=True)
 
     if meta_rel:
         write_meta_sidecar(meta_rel, project_root=project_root, status="APPROVED", remark=f"Copied to {dest_rel}", artifacts={dest_artifact_key: dest_rel})

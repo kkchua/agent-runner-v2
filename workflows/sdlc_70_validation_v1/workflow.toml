@@ -1,0 +1,170 @@
+# SDLC Validation v1 (BCS-compliant)
+# Validates approved execution documents, producing verified VAL documents.
+# Uses prompt slots for swappable strategies and impl presets for configuration.
+#
+# Pipeline:
+#   1. Generate            — Pre-check state, validate EXEC against codebase
+#   2-3. Challenge <-> Address — adversarial attack, then evidence-based resolution
+#   4-4b. Gatekeep <-> Refine — pass/fail gate, refinement on rejection
+#   5. Promote             — deploy VAL artifact (ACTION)
+#   6. Complete            — terminal (ACTION)
+
+[workflow]
+name = "sdlc_70_validation_v1"
+version = "2.0.0"
+label = "SDLC Validation v1"
+job_prefix = "SDLC70VAL"
+description = "Validate approved execution document with adversarial challenge and pass/fail gate."
+visibility = "canonical"
+default_max_rejects = 2
+init_step = "generate_validation"
+layer = "layer3"
+platform = "agent-runner-v2"
+
+# ============================================================================
+# Implementations (BCS)
+# ============================================================================
+
+[[workflow.implementation]]
+name = "standard"
+description = "Default SDLC validation with adversarial challenge and pass/fail gate."
+label = "Standard"
+
+[workflow.governance]
+include_in_prompts = true
+prompt_targets = ["all"]
+
+# ============================================================================
+# Step 1: Generate Validation (state-aware validation)
+# ============================================================================
+
+[[step]]
+name = "generate_validation"
+prompt = "{{ slot.generate_validation }}"
+enable_notifications = true
+onsuccess = "challenge_validation"
+
+[step.artifacts]
+required_inputs = ["EXEC_FILE"]
+produces = ["VAL_FILE"]
+result_meta_key = "VAL_FILE"
+
+[step.coder]
+role_policy = "architect_standard"
+
+# ============================================================================
+# Step 2: Challenge Validation (adversarial)
+# ============================================================================
+
+[[step]]
+name = "challenge_validation"
+prompt = "{{ slot.challenge_validation }}"
+enable_notifications = true
+onsuccess = "address_challenges"
+
+[step.artifacts]
+required_inputs = ["VAL_FILE", "EXEC_FILE"]
+produces = ["CHALLENGE_FILE_SUGGESTED"]
+result_meta_key = "CHALLENGE_FILE_SUGGESTED"
+
+[step.coder]
+role_policy = "reviewer_standard"
+
+[step.on_reject_refine]
+step = "generate_validation"
+artifact = "VAL_FILE"
+max_iterations = 2
+exhausted_failure_code = "VAL_CHALLENGE_EXHAUSTED"
+exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
+
+# ============================================================================
+# Step 2b: Address Challenges (evidence-based)
+# ============================================================================
+
+[[step]]
+name = "address_challenges"
+prompt = "{{ slot.address_challenges }}"
+enable_notifications = true
+onsuccess = "gatekeep_validation"
+
+[step.artifacts]
+required_inputs = ["VAL_FILE", "CHALLENGE_FILE_SUGGESTED", "EXEC_FILE"]
+produces = ["VAL_FILE"]
+target_artifact = "VAL_FILE"
+edit_mode = "in_place"
+result_meta_key = "VAL_FILE"
+
+[step.coder]
+role_policy = "architect_standard"
+
+# ============================================================================
+# Step 3: Gatekeep Validation (pass/fail gate)
+# ============================================================================
+
+[[step]]
+name = "gatekeep_validation"
+prompt = "{{ slot.gatekeep_validation }}"
+enable_notifications = true
+requires_human_approval_after = true
+onsuccess = "promote_validation"
+
+[step.artifacts]
+required_inputs = ["VAL_FILE", "CHALLENGE_FILE_SUGGESTED", "EXEC_FILE"]
+produces = ["GATEKEEP_FILE_SUGGESTED"]
+result_meta_key = "GATEKEEP_FILE_SUGGESTED"
+
+[step.coder]
+role_policy = "gatekeeper_standard"
+
+[step.on_reject_refine]
+step = "refine_validation"
+artifact = "VAL_FILE"
+max_iterations = 2
+exhausted_failure_code = "VAL_GATEKEEP_EXHAUSTED"
+exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
+
+# ============================================================================
+# Step 3b: Refine Validation (conditional)
+# ============================================================================
+
+[[step]]
+name = "refine_validation"
+prompt = "{{ slot.refine_validation }}"
+enable_notifications = true
+onsuccess = "gatekeep_validation"
+
+[step.artifacts]
+required_inputs = ["VAL_FILE", "GATEKEEP_FILE_SUGGESTED", "EXEC_FILE"]
+produces = ["VAL_FILE"]
+target_artifact = "VAL_FILE"
+edit_mode = "in_place"
+result_meta_key = "VAL_FILE"
+
+[step.coder]
+role_policy = "architect_standard"
+
+# ============================================================================
+# Step 4: Promote Validation (ACTION)
+# ============================================================================
+
+[[step]]
+name = "promote_validation"
+action = "promote_artifact"
+promotes = "VAL_FILE"
+enable_notifications = true
+onsuccess = "stepCompletion"
+
+[step.artifacts]
+required_inputs = ["VAL_FILE"]
+source = "VAL_FILE"
+dest = "VAL_FILE"
+dest_dir = "docs/repo/agent_runner/sdlc/delivery/70_validations"
+result_meta_key = "VAL_FILE"
+
+# ============================================================================
+# Step 5: Step Completion (ACTION)
+# ============================================================================
+
+[[step]]
+name = "stepCompletion"
+action = "step_completion"

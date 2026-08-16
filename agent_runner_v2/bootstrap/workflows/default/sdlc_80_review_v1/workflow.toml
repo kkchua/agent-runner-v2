@@ -1,0 +1,162 @@
+# SDLC Review v1 (BCS-compliant)
+# Generates review, memory, and closure documents from approved validation.
+# Uses prompt slots for swappable strategies and impl presets for configuration.
+#
+# Pipeline:
+#   1. Generate            — Generate REV, MEM, CLOSE from VAL
+#   2-2b. Critique <-> Address — internal quality critique, then fix
+#   3-4. Review <-> Refine — human approval gate, refinement on rejection
+#   5. Promote             — deploy all 3 artifacts (ACTION)
+#   6. Complete            — terminal (ACTION)
+
+[workflow]
+name = "sdlc_80_review_v1"
+version = "2.0.0"
+label = "SDLC Review v1"
+job_prefix = "SDLC80REV"
+description = "Generate review, memory, and closure documents from approved validation, producing approved REV, MEM, and CLOSE documents."
+visibility = "canonical"
+default_max_rejects = 2
+init_step = "generate_review"
+layer = "layer3"
+platform = "agent-runner-v2"
+
+# ============================================================================
+# Implementations (BCS)
+# ============================================================================
+
+[[workflow.implementation]]
+name = "standard"
+description = "Default SDLC review with technical critique and human approval gate."
+label = "Standard"
+
+[workflow.governance]
+include_in_prompts = true
+prompt_targets = ["all"]
+
+# ============================================================================
+# Step 1: Generate Review Documents
+# ============================================================================
+[[step]]
+name = "generate_review"
+prompt = "{{ slot.generate_review }}"
+enable_notifications = true
+onsuccess = "technical_critique"
+
+[step.artifacts]
+required_inputs = ["VAL_FILE"]
+produces = ["REV_FILE", "MEM_FILE", "CLOSE_FILE"]
+result_meta_key = "REV_FILE"
+
+[step.coder]
+role_policy = "architect_standard"
+
+# ============================================================================
+# Step 2: Technical Critique
+# ============================================================================
+[[step]]
+name = "technical_critique"
+prompt = "{{ slot.technical_critique }}"
+enable_notifications = true
+onsuccess = "address_critique"
+
+[step.artifacts]
+required_inputs = ["REV_FILE", "MEM_FILE", "CLOSE_FILE"]
+produces = ["CRITIQUE_FILE_SUGGESTED"]
+result_meta_key = "CRITIQUE_FILE_SUGGESTED"
+
+[step.coder]
+role_policy = "reviewer_standard"
+
+[step.on_reject_refine]
+step = "refine_documents"
+artifact = "REV_FILE"
+max_iterations = 2
+exhausted_failure_code = "REVIEW_CRITIQUE_EXHAUSTED"
+exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
+
+# ============================================================================
+# Step 2b: Address Critique
+# ============================================================================
+[[step]]
+name = "address_critique"
+prompt = "{{ slot.address_critique }}"
+enable_notifications = true
+onsuccess = "review_all"
+
+[step.artifacts]
+required_inputs = ["REV_FILE", "MEM_FILE", "CLOSE_FILE", "CRITIQUE_FILE_SUGGESTED"]
+produces = ["REV_FILE", "MEM_FILE", "CLOSE_FILE"]
+target_artifact = "REV_FILE"
+edit_mode = "in_place"
+result_meta_key = "REV_FILE"
+
+[step.coder]
+role_policy = "architect_standard"
+
+# ============================================================================
+# Step 3: Review All Documents
+# ============================================================================
+[[step]]
+name = "review_all"
+prompt = "{{ slot.review_all }}"
+enable_notifications = true
+requires_human_approval_after = true
+onsuccess = "promote_all"
+
+[step.artifacts]
+required_inputs = ["REV_FILE", "MEM_FILE", "CLOSE_FILE", "CRITIQUE_FILE_SUGGESTED"]
+produces = ["REVIEW_FILE_SUGGESTED"]
+result_meta_key = "REVIEW_FILE_SUGGESTED"
+
+[step.coder]
+role_policy = "reviewer_standard"
+
+[step.on_reject_refine]
+step = "refine_documents"
+artifact = "REV_FILE"
+max_iterations = 2
+exhausted_failure_code = "REVIEW_REFINEMENT_EXHAUSTED"
+exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
+
+# ============================================================================
+# Step 4: Refine Documents (conditional)
+# ============================================================================
+[[step]]
+name = "refine_documents"
+prompt = "{{ slot.refine_documents }}"
+enable_notifications = true
+
+onsuccess = "review_all"
+[step.artifacts]
+required_inputs = ["REV_FILE", "MEM_FILE", "CLOSE_FILE", "REVIEW_FILE_SUGGESTED"]
+produces = ["REV_FILE", "MEM_FILE", "CLOSE_FILE"]
+target_artifact = "REV_FILE"
+edit_mode = "in_place"
+result_meta_key = "REV_FILE"
+
+
+[step.coder]
+role_policy = "architect_standard"
+
+# ============================================================================
+# Step 5: Promote All Documents
+# ============================================================================
+[[step]]
+name = "promote_all"
+action = "promote_all"
+promotes = ["REV_FILE", "MEM_FILE", "CLOSE_FILE"]
+enable_notifications = true
+onsuccess = "stepCompletion"
+
+[step.artifacts]
+required_inputs = ["REV_FILE", "MEM_FILE", "CLOSE_FILE"]
+dest_dir = "docs/repo/agent_runner/sdlc/delivery/80_reviews"
+result_meta_key = "REV_FILE"
+
+# ============================================================================
+# Step 6: Step Completion
+# ============================================================================
+[[step]]
+name = "stepCompletion"
+action = "step_completion"

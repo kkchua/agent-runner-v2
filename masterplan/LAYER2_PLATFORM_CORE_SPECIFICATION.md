@@ -9,12 +9,14 @@ scan_reason: "design specification for Layer 2 platform core; exclude from opera
 
 ## Status
 
-This document defines the target specification for a new Layer 2
-platform-core workflow for the `{PLATFORM}` platform.
+**Implemented** — The `02_agent_runner_platform_v1` workflow has been built and shipped.
 
-It is a design document, not an implementation artifact. It exists to
-translate the Layer Architecture Masterplan into a concrete workflow
-design before any new Layer 2 workflow package is created.
+- **Workflow bundle:** `02_agent_runner_platform_v1`
+- **Implementation date:** 2026-07-21
+- **Published platform constitution:** `docs/system/00_governance/platform/agent_runner/current/`
+- **Job reference:** `02PC-20260721-b092c705` (first clean pass, zero refine cycles)
+
+This document defined the target specification for the Layer 2 platform-core workflow. The workflow has been implemented and the platform constitution is now the active Layer 2 standard for agent-runner-v2.
 
 ## Purpose
 
@@ -46,7 +48,7 @@ The new Layer 2 workflow must:
 
 ### Workflow Bundle Name
 
-`02_platform_core_foundation_v1`
+`02_agent_runner_platform_v1`
 
 ### Workflow Class
 
@@ -427,7 +429,7 @@ purpose is:
 ## Output Location
 
 ```
-docs/system/00_governance/platform/
+docs/system/00_governance/platform/agent_runner/
 ├── runs/{job_id}/        ← staged (draft) artifacts + evidence
 ├── history/{job_id}/     ← archived published snapshots
 └── current/              ← active published platform constitution
@@ -661,6 +663,34 @@ Validation should enforce at least:
 - forbidden Layer 3 bundle-specific content is absent
 - evidence artifacts are not classified as permanent platform standards
 - ASCII-only output
+- L1 governance references resolve exclusively to `GOVERNANCE_RUNTIME_ROOT`
+  (the global runtime path). No repo-local L1 path strings (e.g.,
+  `docs/system/00_governance/foundation/current/`) may appear anywhere in
+  the L2 workflow — not in prompts, actions, context inventory artifacts,
+  or validation checks.
+- documented function signatures in SHARED_SERVICES.md
+  (`build_context_extensions`, `build_output_paths`,
+  `resolve_repo_or_runtime_path`, `BackendClient.*` methods) are
+  cross-verified against the installed `{PLATFORM}` package source
+  (resolved via `Path({PLATFORM}.__file__).parent`), not against
+  the repo working tree. This ensures the gate is portable to any
+  CLI-installed PC.
+- the `### Resolution Order` section in SHARED_SERVICES.md describes the
+  actual prefix-dispatch behavior of `resolve_repo_or_runtime_path()`.
+  The phrases "check the repository working tree first" and
+  "fall back to the runtime artifact root" are forbidden because they
+  describe an existence-based fallback that does not exist.
+- the meta sidecar "no disk recovery functions" and
+  "no stdout JSON parsing" phrases are forbidden in RUNTIME_MODEL.md
+  and SHARED_SERVICES.md when the platform source defines a repair
+  function (e.g., `_repair_or_validate_meta_json` in `step_runner.py`).
+  The docs must accurately describe both the primary sidecar channel
+  and the repair fallback.
+- `authority` and `managed_by` in METADATA_CONTRACT.md must be declared
+  as orthogonal axes: `authority` = content ownership;
+  `managed_by` = mechanical producer/maintainer. A document carrying
+  `authority: "platform-owned"` + `managed_by: workflow-generated` is
+  consistent when the contract explicitly states this orthogonality.
 
 ## Audit Gates
 
@@ -675,6 +705,10 @@ Audit should focus on semantic correctness, especially:
   depend on
 - no platform-specific detail leaked into claims of ecosystem-wide
   applicability
+- METADATA_CONTRACT.md's `### Usage Rules` section explicitly states
+  that `authority` and `managed_by` are orthogonal axes. If the
+  contract's definitions imply a contradiction between these two fields,
+  the audit must reject with the specific inconsistency.
 
 ## Rejection and Refinement Policy
 

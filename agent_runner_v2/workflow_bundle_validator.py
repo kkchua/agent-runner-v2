@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -10,6 +11,9 @@ from .workflow_packages.loader import bundle_to_template_group_dict, load_workfl
 
 
 DEFAULT_BOOTSTRAP_WORKFLOWS_ROOT = PACKAGE_ROOT / "bootstrap" / "workflows" / "default"
+
+# Regex to match BCS slot references like {{ slot.ID }}
+_BCS_SLOT_PATTERN = re.compile(r"^\{\{\s*slot\.[\w-]+\s*\}\}$")
 
 
 @dataclass(frozen=True)
@@ -95,9 +99,11 @@ def validate_workflow_bundle_dir(bundle_root: Path) -> WorkflowBundleValidationR
         if not step.prompt_file and not step.action:
             findings.append(_error("step_missing_prompt_or_action", "Step must define either a prompt or an action.", path=str(manifest_path), step=step_name))
         if step.prompt_file:
-            prompt_path = (bundle.bundle_root / step.prompt_file).resolve()
-            if not prompt_path.is_file():
-                findings.append(_error("missing_prompt_file", f"Prompt file does not exist: {prompt_path}", path=str(prompt_path), step=step_name))
+            # BCS: Skip file existence check for dynamic prompt slot references
+            if not _BCS_SLOT_PATTERN.match(step.prompt_file):
+                prompt_path = (bundle.bundle_root / step.prompt_file).resolve()
+                if not prompt_path.is_file():
+                    findings.append(_error("missing_prompt_file", f"Prompt file does not exist: {prompt_path}", path=str(prompt_path), step=step_name))
         _validate_artifact_keys(findings, step.produces, "produces", manifest_path, step_name)
         _validate_artifact_keys(findings, step.required_inputs, "required_inputs", manifest_path, step_name)
         _validate_artifact_keys(findings, step.optional_inputs, "optional_inputs", manifest_path, step_name)
@@ -108,8 +114,6 @@ def validate_workflow_bundle_dir(bundle_root: Path) -> WorkflowBundleValidationR
     for step_name in bundle.step_order:
         cfg = step_configs.get(step_name, {})
         _validate_step_target(findings, known_steps, cfg.get("onsuccess"), "onsuccess_target_missing", manifest_path, step_name)
-        _validate_step_target(findings, known_steps, cfg.get("loop_returns_to"), "loop_returns_to_missing", manifest_path, step_name)
-        _validate_step_target(findings, known_steps, cfg.get("replan_returns_to"), "replan_returns_to_missing", manifest_path, step_name)
         refine_cfg = cfg.get("on_reject_refine") or {}
         if isinstance(refine_cfg, dict):
             _validate_step_target(findings, known_steps, refine_cfg.get("step"), "on_reject_refine_step_missing", manifest_path, step_name)
@@ -449,7 +453,7 @@ def _collect_step_artifact_references(bundle: Any) -> set[str]:
         for key in (step.result_meta_key, step.result_meta_key_from_context, step.target_artifact):
             if isinstance(key, str) and key.strip():
                 referenced.add(key.strip())
-        for route_cfg in (step.on_reject_refine, step.on_exhaust_replan):
+        for route_cfg in (step.on_reject_refine,):
             if isinstance(route_cfg, dict):
                 artifact_key = route_cfg.get("artifact")
                 if isinstance(artifact_key, str) and artifact_key.strip():

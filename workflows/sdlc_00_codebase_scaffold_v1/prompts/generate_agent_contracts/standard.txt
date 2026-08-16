@@ -1,0 +1,154 @@
+Objective
+
+Generate the complete set of agent contract definitions for the SDLC delivery system.
+These contracts define the roles, responsibilities, input/output requirements, and
+behavior rules for each AI agent that participates in the SDLC workflows.
+
+Layer Boundary
+
+- This workflow belongs to Layer 3 and operates on top of the Layer 2 platform contract.
+- Generate only agent contract documentation -- not delivery documents or templates.
+- Treat Layer 1 governance and Layer 2 platform constitution as read-only reference inputs.
+- Agent contracts are universal: shared across all repositories via the global runtime path.
+
+Reference Inputs
+
+- Read Layer 1 governance at GOVERNANCE_RUNTIME_ROOT for metadata requirements.
+- Read Layer 2 platform constitution at PLATFORM_RUNTIME_ROOT for platform contract.
+- Read master agent designs at SDLC_MASTER_AGENT_ROOT for structural guidance.
+- Read the generated templates from Step 1 (SDLC_TEMPLATE_REGISTRY) for cross-referencing.
+- Read codebase context from CODEBASE_DOC_ROOT to understand repository conventions.
+
+Agent Contract Files to Generate
+
+Authoritative Agent-to-Workflow Mapping (MUST match in all cross-references):
+
+| Workflow | Agent(s) | Transformation |
+|---|---|---|
+| sdlc_10_requirement_v1 | (none -- uses workflow's own prompts) | DRAFT-INIT -> INIT-DOC |
+| sdlc_20_planning_v1 | AGENT-planner | INIT-DOC -> REQ-DOC |
+| sdlc_30_backlog_v1 | AGENT-task-decomposer | REQ-DOC -> PLAN-DOC |
+| sdlc_40_task_v1 | AGENT-task-decomposer | PLAN-DOC -> BACKLOG-DOC |
+| sdlc_50_implementation_v1 | AGENT-implementation-planner | BACKLOG-DOC -> TASK-DOC |
+| sdlc_60_execution_v1 | AGENT-executor | TASK-DOC -> IMPL-DOC |
+| sdlc_70_validation_v1 | AGENT-reviewer | IMPL-DOC -> VALID-DOC |
+| sdlc_80_review_v1 | AGENT-reviewer, AGENT-memory-manager | VALID-DOC -> REV-DOC + MEM-DOC + CLOSE-DOC
+
+All cross-references in templates, the template registry, and agent contracts
+MUST be consistent with this table. Do NOT assign agents to workflows they do
+not belong to.
+
+Generate ALL of the following agent contract files in the 02_agents/ output directory:
+
+1. SDLC_AGENTS_INDEX (AGENTS.md)
+   - Master index of all agent contracts
+   - Role summary table with workflow assignments
+   - Cross-reference to template usage
+
+2. SDLC_AGENT_PLANNER (AGENT-planner.md)
+   - Role: Solution Architect
+   - Used by: sdlc_20_planning_v1
+   - Purpose: Transform approved initiative into structured requirements
+   - Input: INIT-DOC (approved initiative), codebase docs
+   - Output: REQ document (requirements)
+
+3. SDLC_AGENT_TASK_DECOMPOSER (AGENT-task-decomposer.md)
+   - Role: Task Decomposer
+   - Used by: sdlc_30_backlog_v1, sdlc_40_task_v1
+   - Purpose: Break down requirements into plans, then plans into backlog items and tasks
+   - sdlc_30 mode: Input REQ (approved) -> Output PLAN document
+   - sdlc_40 mode: Input PLAN (approved) -> Output BACKLOG document
+
+4. SDLC_AGENT_IMPL_PLANNER (AGENT-implementation-planner.md)
+   - Role: Implementation Planner
+   - Used by: sdlc_50_implementation_v1
+   - Purpose: Generate detailed implementation docs from backlog items
+   - Input: BACKLOG (approved), codebase docs
+   - Output: TASK document (task specification)
+
+5. SDLC_AGENT_EXECUTOR (AGENT-executor.md)
+   - Role: Code Executor
+   - Used by: sdlc_60_execution_v1
+   - Purpose: Implement code and tests per approved task specification
+   - Input: TASK (approved), codebase
+   - Output: Code changes, IMPL document (implementation record)
+
+6. SDLC_AGENT_REVIEWER (AGENT-reviewer.md)
+   - Role: Independent Reviewer
+   - Used by: sdlc_70_validation_v1, sdlc_80_review_v1
+   - Purpose: Independently review implementations and validate against requirements
+   - sdlc_70 mode: Input IMPL (approved) -> Output VALID document (validation report)
+   - sdlc_80 mode: Input VALID (approved) -> Output REV document (review decision)
+
+7. SDLC_AGENT_MEMORY_MANAGER (AGENT-memory-manager.md)
+   - Role: Memory Manager
+   - Used by: sdlc_80_review_v1
+   - Purpose: Persist stable, reusable delivery knowledge after completion
+   - Input: Approved artifacts, delivery summaries
+   - Output: MEM document (memory/lessons-learned) + CLOSE document
+
+8. SDLC_DELIVERY_STATUS_RULES (DELIVERY_STATUS_RULES_v1.md)
+   - Lifecycle status rules for all delivery documents
+   - State machine: draft -> changes_requested -> draft -> approved
+   - Promotion patterns: single artifact, two-file, multi-artifact
+   - Audit trail requirements
+
+Agent Contract Structure
+
+Each agent contract must include:
+
+1. YAML Frontmatter (REQUIRED):
+   - template_id: "SYS-AG-XX" identifier
+   - version: "1.0.0"
+   - doc_type: "bundle_definition"
+   - authority: "workflow-generated"
+   - scan_policy: "include"
+   - scan_reason: descriptive reason (e.g., "agent contract definition for <role>")
+   - managed_by: "workflow-generated"
+   - layer: "layer3"
+   - platform: "agent-runner-v2"
+   - agent_id: unique agent identifier
+   - agent_role: role name
+   - lifecycle_status: "template"
+
+2. Required Sections:
+   - Metadata (agent ID, name, role, version, status)
+   - Purpose statement
+   - Inputs (supported, required, optional)
+   - Outputs (document type, folder, naming convention)
+   - Behavior Rules (must/must-not list)
+   - Prompt Contract (system prompt, input contract, output contract)
+   - Execution Flow (numbered steps)
+   - Entry Criteria
+   - Exit Criteria
+   - Constraints
+   - References
+
+3. Content Guidelines:
+   - Each contract must be self-contained
+   - Must define clear input/output boundaries
+   - Must specify behavior rules as explicit must/must-not statements
+   - Must cross-reference related templates and other agent contracts
+   - Must align with the approval gate model from the L3 spec
+   - Verify API and SDK usage against the actual installed library version
+     by reading the source code or documentation in the virtual environment.
+     Do not rely on training data for library APIs -- they may have changed.
+
+Output Instructions
+
+- Write each agent contract to its corresponding SDLC_AGENT_* artifact path.
+- Use ASCII-only characters (no em-dashes, curly quotes, or Unicode).
+- Use plain text section headings.
+- Keep terminology consistent with Layer 1 and Layer 2 governance docs.
+- Each contract must be self-contained with clear role boundaries.
+- Do NOT create .meta.json sidecar files for individual artifact files.
+- Do NOT report .meta.json files in the artifacts dict of your result.
+- Only report the declared artifact keys (SDLC_AGENTS_INDEX, SDLC_AGENT_PLANNER, etc.).
+
+Forbidden Content
+
+- Layer 1 governance redefinition or contradiction
+- Layer 2 platform contract redefinition
+- Repo-specific content (contracts are universal)
+- Template content (generated in a separate step)
+- Implementation details or code examples

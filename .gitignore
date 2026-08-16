@@ -23,3 +23,9 @@ gha-creds-*.json
 .claude/
 
 progress.jsonl
+
+# opencode local tooling
+.opencode/
+
+# Workflow run outputs
+docs/repo/*/runs/

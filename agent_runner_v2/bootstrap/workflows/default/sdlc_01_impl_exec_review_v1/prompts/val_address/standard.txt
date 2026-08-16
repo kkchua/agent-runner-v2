@@ -1,0 +1,90 @@
+Objective
+
+Address the challenge findings by updating the validation document.
+Read the challenge document, analyze each finding, and revise the
+validation report to resolve the issues raised.
+
+Layer Boundary
+
+- This workflow belongs to Layer 3 and operates on top of the Layer 2 platform contract.
+- Address only the validation report, not review or closure artifacts.
+- Treat Layer 1 governance and Layer 2 platform constitution as read-only reference inputs.
+
+Reference Inputs
+
+- Read {VAL_FILE} (the validation report to update).
+- Read {EXEC_FILE} (the execution document for traceability reference).
+- Read {CHALLENGE_FILE_SUGGESTED} (the challenge findings to address).
+- Read the actual codebase to independently verify claims.
+- Read Layer 1 governance at {GOVERNANCE_RUNTIME_ROOT}.
+- Read Layer 2 platform constitution at {PLATFORM_RUNTIME_ROOT}.
+
+Address Challenges Process
+
+For each finding in the challenge document:
+
+1. Read the finding carefully -- understand what issue was raised and why.
+
+2. Evaluate the finding -- determine if it is:
+   a. Valid and should be addressed
+   b. Already addressed in the document (cite where)
+   c. Out of scope for a validation report (belongs to review/closure)
+   d. Incorrect or based on misunderstanding (provide counter-evidence)
+
+3. For evidence-related findings: independently verify by running tests and
+   reading actual source before accepting. Do not blindly trust the challenge
+   or the validation report. Compare actual test output to claimed results.
+
+4. Address valid findings by updating the relevant section of {VAL_FILE}:
+   - If the challenge identifies missing evidence, add it with actual test output.
+   - If the challenge identifies fabricated results, replace with actual output.
+   - If the challenge identifies coverage gaps, add validation for the missing areas.
+   - If the challenge identifies weak methodology, strengthen the validation approach.
+   - If the challenge identifies traceability gaps, add the missing links.
+   - Cross-reference {EXEC_FILE} when the challenge concerns traceability.
+
+5. Document your changes by adding a "Challenge Resolution" section at the
+   end of the validation report with:
+   - Each finding from the challenge
+   - Your resolution (what you changed, or why you did not change)
+   - Evidence of verification (test output, file paths, grep results)
+
+6. Verify consistency after making changes:
+   - Re-run the test suite to confirm no new regressions.
+   - Ensure all sections still flow logically.
+   - Ensure no contradictions were introduced.
+   - Ensure the validation report still aligns with {EXEC_FILE}.
+
+Output Instructions
+
+- Update {VAL_FILE} in place with the revised content.
+- Preserve the YAML frontmatter.
+- Preserve all sections that do not need changes.
+- Add a "Challenge Resolution" section documenting how each finding was addressed.
+- Use plain text section headings.
+
+Challenge Resolution Section Format
+
+Add this section before the Notes section (or at the end if no Notes):
+
+## Challenge Resolution
+
+### Finding 1: [Brief description]
+**Resolution:** [What was changed, or why no change was made]
+**Evidence:** [Test output, file path, or grep result confirming the fix]
+**Affected section:** [Which section was updated]
+
+Self-Validation
+
+Before reporting completion, validate:
+1. Every BLOCKING finding has been resolved with evidence.
+2. Every MAJOR finding has been resolved or explicitly justified.
+3. Test suite passes with no new regressions.
+4. All resolutions cite verifiable evidence, not just assertions.
+
+Forbidden Content
+
+- Layer 1 governance redefinition or contradiction
+- Layer 2 platform contract redefinition
+- Removing the Challenge Resolution section
+- Fabricated test output

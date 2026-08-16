@@ -20,6 +20,16 @@ DEFAULT_WORKFLOW_NAME = "default"
 
 @dataclass(frozen=True)
 class RuntimeContext:
+    """Process-local runtime context for the agent runner.
+
+    Attributes:
+        workspace_root: Project workspace root path.
+        runner_home: Global runner home path (~/.ukbe-runner).
+        workflow_name: Active workflow name.
+        workflow_root: Workflow bundle root path.
+        workflow_module: Optional workflow Python module.
+        delivery_root: Override root for delivery scaffold artifacts.
+    """
     workspace_root: Path
     runner_home: Path
     workflow_name: str
@@ -74,7 +84,21 @@ def set_context(
     workflow_module: ModuleType | None = None,
     delivery_root: Path | None = None,
 ) -> RuntimeContext:
-    """Set process-local runtime context and return it."""
+    """Set process-local runtime context and return it.
+
+    Updates the global _CTX singleton used by all PathProxy instances.
+    Call this at the start of workflow execution.
+
+    Args:
+        workspace_root: Project workspace root path.
+        workflow_name: Workflow name (preserves current if None).
+        workflow_root: Workflow bundle root path.
+        workflow_module: Optional workflow Python module.
+        delivery_root: Override root for delivery scaffold artifacts.
+
+    Returns:
+        The new RuntimeContext instance.
+    """
     global _CTX
     workspace_root = workspace_root.resolve()
     runner_home = GLOBAL_RUNNER_HOME
@@ -97,30 +121,81 @@ def set_context(
 
 
 def get_context() -> RuntimeContext:
+    """Return the current process-local runtime context."""
     return _CTX
 
 
 def get_workspace_root() -> Path:
+    """Return the project workspace root path."""
     return _CTX.workspace_root
 
 
+def get_repo_root() -> Path:
+    """Return the agent-runner-v2 repo root from config, or workspace_root.
+
+    Reads ``repo_root`` from ``~/.ukbe-runner/config.json``.  When
+    ``engine_version`` is ``"SNAPSHOT"`` this tells the system where
+    the repo lives so it can find ``workflows/`` and other repo-local
+    resources when running from an arbitrary working directory.
+
+    Falls back to :func:`get_workspace_root` when no ``repo_root`` is
+    configured or the path does not exist.
+    """
+    from .config_loader import load_runner_config
+    cfg = load_runner_config()
+    repo_root_str = str(cfg.get("repo_root") or "").strip()
+    if repo_root_str:
+        candidate = Path(repo_root_str).resolve()
+        if candidate.is_dir():
+            return candidate
+    return get_workspace_root()
+
+
 def get_runner_home() -> Path:
+    """Return the global runner home path (~/.ukbe-runner)."""
     return _CTX.runner_home
 
 
 def get_jobs_root() -> Path:
+    """Return the jobs root path (~/.ukbe-runner/jobs)."""
     return _CTX.runner_home / "jobs"
 
 
+def get_queue_root() -> Path:
+    """Return the outcome queue root path (~/.ukbe-runner/queue).
+
+    The queue holds step outcome files written by the CLI and consumed
+    by the daemon for backend synchronisation.
+    """
+    return _CTX.runner_home / "queue"
+
+
+def get_governance_runtime_root() -> Path:
+    """Return the Layer 1 governance runtime root (global bundle path)."""
+    return _CTX.runner_home / "bundles" / "core" / "current" / "foundation"
+
+
+def get_platform_runtime_root() -> Path:
+    """Return the Layer 2 platform runtime root (global bundle path)."""
+    return _CTX.runner_home / "bundles" / "core" / "current" / "platform"
+
+
 def get_workflow_root() -> Path:
+    """Return the workflow bundle root path."""
     return _CTX.workflow_root
 
 
 def get_workflow_module() -> ModuleType | None:
+    """Return the workflow Python module, if loaded."""
     return _CTX.workflow_module
 
 
 def set_workflow_module(module: ModuleType) -> None:
+    """Set the workflow module in the current context.
+
+    Args:
+        module: The workflow Python module to set.
+    """
     set_context(
         workspace_root=_CTX.workspace_root,
         workflow_name=_CTX.workflow_name,
@@ -131,10 +206,16 @@ def set_workflow_module(module: ModuleType) -> None:
 
 
 def get_delivery_root() -> Path | None:
+    """Return the delivery scaffold override root, if set."""
     return _CTX.delivery_root
 
 
 def set_delivery_root(root: Path | None) -> None:
+    """Set the delivery root in the current context.
+
+    Args:
+        root: The delivery root path, or None to clear.
+    """
     set_context(
         workspace_root=_CTX.workspace_root,
         workflow_name=_CTX.workflow_name,
@@ -193,7 +274,18 @@ def format_report_path(
     project_root: Path | None = None,
     runtime_root: Path | None = None,
 ) -> str:
-    """Resolve repo/runtime paths for outward-facing result payloads."""
+    """Resolve repo/runtime paths for outward-facing result payloads.
+
+    Converts relative paths to absolute paths for JSON output.
+
+    Args:
+        path_str: Path string to resolve.
+        project_root: Optional project root override.
+        runtime_root: Optional runtime root override.
+
+    Returns:
+        Absolute path string for JSON output.
+    """
     raw = str(path_str or "").strip()
     if not raw:
         return raw
@@ -220,6 +312,18 @@ def format_report_artifacts(
     project_root: Path | None = None,
     runtime_root: Path | None = None,
 ) -> dict[str, Any]:
+    """Format artifact paths for JSON output.
+
+    Converts all string values to absolute paths, preserving None values.
+
+    Args:
+        artifacts: Dict of artifact key to path value.
+        project_root: Optional project root override.
+        runtime_root: Optional runtime root override.
+
+    Returns:
+        Dict with all string values resolved to absolute paths.
+    """
     normalized: dict[str, Any] = {}
     for key, value in dict(artifacts or {}).items():
         if value is None:
@@ -242,22 +346,62 @@ def format_report_artifacts(
 
 
 def repo_doc_root(*parts: str) -> Path:
+    """Return the repo docs root path (docs/).
+
+    Args:
+        *parts: Additional path parts to join.
+
+    Returns:
+        Path under docs/ with parts joined.
+    """
     return get_workspace_root() / Path("docs").joinpath(*parts)
 
 
 def system_doc_root(*parts: str) -> Path:
+    """Return the system governance docs root path.
+
+    Args:
+        *parts: Additional path parts to join.
+
+    Returns:
+        Path under docs/system/00_governance/bootstrap/ with parts joined.
+    """
     return repo_doc_root("system", "00_governance", "bootstrap", *parts)
 
 
 def codebase_doc_root(*parts: str) -> Path:
+    """Return the codebase docs root path.
+
+    Args:
+        *parts: Additional path parts to join.
+
+    Returns:
+        Path under docs/repo/codebase/ with parts joined.
+    """
     return repo_doc_root("repo", "codebase", *parts)
 
 
 def delivery_doc_root(*parts: str) -> Path:
+    """Return the delivery docs root path.
+
+    Args:
+        *parts: Additional path parts to join.
+
+    Returns:
+        Path under docs/repo/delivery/ with parts joined.
+    """
     return repo_doc_root("repo", "delivery", *parts)
 
 
 def architecture_site_root(*parts: str) -> Path:
+    """Return the architecture site root path.
+
+    Args:
+        *parts: Additional path parts to join.
+
+    Returns:
+        Path under docs/repo/site/architecture/ with parts joined.
+    """
     return repo_doc_root("repo", "site", "architecture", *parts)
 
 
@@ -356,5 +500,6 @@ PROJECT_ROOT = PathProxy(get_workspace_root)
 RUNNER_HOME = PathProxy(get_runner_home)
 RUNNER_ROOT = PathProxy(get_workflow_root)
 JOBS_ROOT = PathProxy(get_jobs_root)
+QUEUE_ROOT = PathProxy(get_queue_root)
 DELIVERY_ROOT = PathProxy(lambda: get_delivery_root() or get_workspace_root())
 ARTIFACT_ROOT = PathProxy(resolve_artifact_root)

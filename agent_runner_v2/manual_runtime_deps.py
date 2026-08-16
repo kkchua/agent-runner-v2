@@ -4,6 +4,7 @@ from .cli_runtime import format_job_status_summary, step_progress_label
 from .failure_runtime import clear_last_failure
 from .job_state import (
     approve_step,
+    reject_step,
     apply_task_execution_binding,
     create_job,
     ensure_backward_compatible_state,
@@ -18,6 +19,8 @@ from .job_state import (
     recover_exhausted_planning_job,
     reconcile_job_state,
     reapply_routing,
+    resume_step,
+    retry_step,
     save_job,
     set_job_status,
 )

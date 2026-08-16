@@ -1,0 +1,57 @@
+name: builder
+description: "Produces executable agent-runner-v2 workflow packages as output. Builder-type workflows are meta-workflows that generate other workflows."
+label: "Workflow Builder"
+
+# Builder implementation produces workflow packages (workflow.toml, actions.py, prompts/, etc.)
+# instead of variable content artifacts.
+
+# Implementation-specific guidance files
+guidance:
+  input_artifacts: "impls/builder/INPUT_ARTIFACTS.md"
+  output_artifacts: "impls/builder/OUTPUT_ARTIFACTS.md"
+  specialized_steps: "impls/builder/SPECIALIZED_STEPS.md"
+
+# Prompt slot definitions — maps slot IDs to impl-specific prompt files
+prompt_slots:
+  analyze_requirement:
+    label: "Analyze Requirement"
+    default: standard
+    options:
+      - name: standard
+        file: "prompts/analyze_requirement/builder/standard.txt"
+  plan_domain_logic:
+    label: "Plan Domain Logic"
+    default: standard
+    options:
+      - name: standard
+        file: "prompts/plan_domain_logic/builder/standard.txt"
+  challenge_plan:
+    label: "Challenge Plan"
+    default: standard
+    options:
+      - name: standard
+        file: "prompts/challenge_plan/builder/standard.txt"
+  implement_domain:
+    label: "Implement Domain"
+    default: standard
+    options:
+      - name: standard
+        file: "prompts/implement_domain/builder/standard.txt"
+  critic_impl:
+    label: "Critic Implementation"
+    default: standard
+    options:
+      - name: standard
+        file: "prompts/critic_impl/builder/standard.txt"
+  review_package:
+    label: "Review Package"
+    default: standard
+    options:
+      - name: standard
+        file: "prompts/review_package/builder/standard.txt"
+  gatekeep_package:
+    label: "Gatekeep Package"
+    default: standard
+    options:
+      - name: standard
+        file: "prompts/gatekeep_package/builder/standard.txt"

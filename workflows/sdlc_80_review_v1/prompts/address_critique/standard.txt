@@ -1,0 +1,101 @@
+Objective
+
+Address the technical critique findings by updating the review, memory, and
+closure documents. Read the critique document, analyze each finding, and revise
+all three documents to resolve the issues raised.
+
+Layer Boundary
+
+- This workflow belongs to Layer 3 and operates on top of the Layer 2 platform contract.
+- Address only the review, memory, and closure documents.
+- Treat Layer 1 governance and Layer 2 platform constitution as read-only reference inputs.
+
+Reference Inputs
+
+- Read {REV_FILE} (the review document to update).
+- Read {MEM_FILE} (the memory/lessons-learned document to update).
+- Read {CLOSE_FILE} (the closure document to update).
+- Read {CRITIQUE_FILE_SUGGESTED} (the critique findings to address).
+- Read {VAL_FILE} (the upstream validation report for traceability reference).
+- Read codebase context from docs/repo/codebase/current/ to validate proposed changes.
+- Read Layer 1 governance at {GOVERNANCE_RUNTIME_ROOT} for metadata requirements.
+- Read Layer 2 platform constitution at {PLATFORM_RUNTIME_ROOT} for platform contract.
+
+Address Critique Tasks
+
+For each finding in the critique document:
+
+1. Read the finding carefully -- understand what issue was raised and why.
+
+2. Evaluate the finding -- determine if it is:
+   a. Valid and should be addressed (most common)
+   b. Already addressed in the document (cite where)
+   c. Out of scope for review/memory/closure documents
+   d. Incorrect or based on misunderstanding (provide counter-evidence)
+
+3. Address valid findings by updating the relevant document:
+   - Findings about the review summary go to {REV_FILE}.
+   - Findings about lessons learned or institutional memory go to {MEM_FILE}.
+   - Findings about closure criteria or archival go to {CLOSE_FILE}.
+   - If the critique identifies missing information, add it.
+   - If the critique identifies incorrect information, correct it.
+   - If the critique identifies unclear scope, clarify it.
+   - If the critique identifies technical risks, add mitigation notes.
+   - If the critique suggests better alternatives, evaluate and incorporate if appropriate.
+
+4. Document your changes by adding a "Critique Resolution" section at the
+   end of the review document {REV_FILE} (before Notes if present) with:
+   - Each finding from the critique
+   - Your resolution (what you changed, which document was affected, or why you did not change)
+   - The section of the document that was affected
+
+5. Verify consistency after making changes:
+   - Ensure all three documents still flow logically.
+   - Ensure no contradictions were introduced across {REV_FILE}, {MEM_FILE}, and {CLOSE_FILE}.
+   - Ensure each document still meets its required structure.
+
+Output Instructions
+
+- Update {REV_FILE}, {MEM_FILE}, and {CLOSE_FILE} in place with the revised content.
+- Preserve the YAML frontmatter in each document (do not change template_id, authority, etc.).
+- Preserve all sections that do not need changes.
+- Add a "Critique Resolution" section to {REV_FILE} documenting how each finding was addressed.
+- Use plain text section headings.
+
+Critique Resolution Section Format
+
+Add this section before the Notes section of {REV_FILE} (or at the end if no Notes):
+
+## Critique Resolution
+
+### Finding 1: [Brief description of the finding]
+**Resolution:** [What was changed, or why no change was made]
+**Affected document:** [REV_FILE, MEM_FILE, or CLOSE_FILE]
+**Affected section:** [Which section was updated]
+
+### Finding 2: [Brief description of the finding]
+**Resolution:** [What was changed, or why no change was made]
+**Affected document:** [REV_FILE, MEM_FILE, or CLOSE_FILE]
+**Affected section:** [Which section was updated]
+
+...
+
+Self-Validation
+
+Before reporting APPROVED, validate your output:
+
+1. Completeness: Do the updated documents address ALL findings from the critique?
+2. Consistency: Are there any contradictions introduced by the changes across the three documents?
+3. Structure: Does each document still have all required sections?
+4. Traceability: Can each resolution be traced to a specific critique finding?
+5. Cross-document coherence: Do {REV_FILE}, {MEM_FILE}, and {CLOSE_FILE} tell a consistent story?
+
+If any check fails, revise the output before reporting APPROVED.
+
+Forbidden Content
+
+- Layer 1 governance redefinition or contradiction
+- Layer 2 platform contract redefinition
+- New implementation work or code changes
+- Reopening closed tasks or backlog items
+- Removing the Critique Resolution section

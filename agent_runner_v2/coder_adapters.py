@@ -1,3 +1,22 @@
+"""Coder invocation adapters for agent_runner_v2.
+
+This module provides the abstraction layer between the runner's step execution
+and various LLM coder backends (Qwen, Claude, Codex, OpenCode, etc.).
+
+Key responsibilities:
+- Invoke coder processes with prompt text and sidecar polling
+- Manage process lifecycle (timeout, early-exit detection, cleanup)
+- Extract usage data from stdout or meta.json sidecar
+- Track active coder processes for graceful shutdown
+
+The module uses a sidecar polling pattern: while the coder process runs, the
+adapter polls for a valid meta.json file. When the sidecar appears with valid
+schema, the process can be terminated early without waiting for full timeout.
+
+Primary entry point: invoke_coder()
+
+Related: IMPL-20260422-04
+"""
 from __future__ import annotations
 
 import json
@@ -10,13 +29,21 @@ import time
 import uuid
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 from .runtime_context import PROJECT_ROOT, RUNNER_ROOT
+
+# Type alias for coder invoker functions
+CoderInvoker = Callable[..., dict[str, Any]]
 
 
 @dataclass
 class CoderInvocationError(Exception):
+    """Exception raised when a coder subprocess fails.
+
+    Captures full invocation context for debugging: command, return code,
+    stdout/stderr output, and any raw events from the coder process.
+    """
     message: str
     command: list[str]
     return_code: int
@@ -30,6 +57,11 @@ class CoderInvocationError(Exception):
 
 @dataclass
 class UsageData:
+    """Token usage and cost metrics from a coder invocation.
+
+    Sources: meta.json (LLM self-reported), CLI stdout parsing, or unavailable.
+    Duration is wall-clock time measured by the adapter.
+    """
     step: str
     coder_used: str
     usage_source: str
@@ -44,6 +76,10 @@ class UsageData:
 
 @dataclass
 class InvocationManifest:
+    """Metadata record for a single coder invocation.
+
+    Written to step_manifest.json for audit and replay purposes.
+    """
     step_name: str
     coder_used: str
     command: list[str]
@@ -56,6 +92,11 @@ class InvocationManifest:
 
 @dataclass
 class InvocationResult:
+    """Complete result from invoke_coder() including output, usage, and manifest.
+
+    Primary return type for the coder adapter layer. Contains everything
+    needed to validate the invocation and extract artifacts.
+    """
     return_code: int
     stdout: str
     stderr: str
@@ -140,6 +181,7 @@ def _sidecar_post_complete_grace_seconds() -> float:
 
 
 def _coerce_timeout_output(value: Any) -> str:
+    """Convert timeout output (bytes, str, or None) to string."""
     if value is None:
         return ""
     if isinstance(value, bytes):
@@ -148,6 +190,7 @@ def _coerce_timeout_output(value: Any) -> str:
 
 
 def dataclass_dict(value: UsageData | InvocationManifest) -> dict[str, Any]:
+    """Convert a dataclass instance to a dictionary for JSON serialization."""
     return asdict(value)
 
 
@@ -191,7 +234,7 @@ def _is_valid_sidecar_json(path: Path) -> bool:
 
         # Check 3: Parse and validate JSON schema
         try:
-            text_content = path.read_text(encoding="utf-8")
+            text_content = path.read_text(encoding="utf-8-sig")
             data = json.loads(text_content)
             print(f"[_is_valid_sidecar_json] Check 3a PASS: JSON parsed successfully, size={len(text_content)} bytes", flush=True)
         except Exception as e:
@@ -268,11 +311,13 @@ def _terminate_process_tree(proc: subprocess.Popen[Any]) -> None:
 
 
 def _register_active_coder_proc(proc: subprocess.Popen[Any]) -> None:
+    """Add a coder process to the active tracking set for graceful shutdown."""
     with _ACTIVE_CODER_PROCS_LOCK:
         _ACTIVE_CODER_PROCS.add(proc)
 
 
 def _unregister_active_coder_proc(proc: subprocess.Popen[Any]) -> None:
+    """Remove a coder process from the active tracking set."""
     with _ACTIVE_CODER_PROCS_LOCK:
         _ACTIVE_CODER_PROCS.discard(proc)
 
@@ -350,10 +395,17 @@ def _run_with_sidecar_poll(
             if resolved and resolved.lower().endswith((".cmd", ".bat")):
                 cmd = ["cmd", "/c"] + cmd
 
+        # Inject PYTHONPATH so agent_tools is importable by coder tool commands
+        # without sys.path.insert (avoids PowerShell quoting issues on Windows).
+        proc_env = dict(env) if env else dict(os.environ)
+        _tools_dir = str((Path(__file__).parent / "tools").resolve())
+        _existing_pp = proc_env.get("PYTHONPATH", "")
+        proc_env["PYTHONPATH"] = _tools_dir + (os.pathsep + _existing_pp if _existing_pp else "")
+
         proc = subprocess.Popen(
             cmd,
             cwd=cwd,
-            env=env,
+            env=proc_env,
             stdin=subprocess.PIPE if input_text is not None else subprocess.DEVNULL,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
@@ -479,6 +531,7 @@ from .coder_registry import get_api_key
 
 
 def _mask_api_key(key: str) -> str:
+    """Mask an API key for safe logging (show first/last 4 chars only)."""
     if len(key) <= 8:
         return "****"
     return key[:4] + "****" + key[-4:]
@@ -492,6 +545,7 @@ def _log_command_for_step(step: str, command: list[str], cc: dict[str, Any], *, 
     auth = cc.get("auth_type", "")
     api_key_env = cc.get("openai_api_key_env", "")
     base_url = cc.get("openai_base_url", "")
+    agent = str(cc.get("agent") or "").strip()
 
     api_key_val = ""
     if api_key_env:
@@ -511,6 +565,8 @@ def _log_command_for_step(step: str, command: list[str], cc: dict[str, Any], *, 
         parts.append(api_key_val)
     if base_url:
         parts.append(f"base_url={base_url}")
+    if agent:
+        parts.append(f"agent={agent}")
 
     print(f"  [{step}] {' '.join(parts)}", flush=True)
 
@@ -535,10 +591,64 @@ _env_loaded = False
 
 
 def _ensure_env_loaded() -> None:
+    """Load .env files on first call; subsequent calls are no-ops."""
     global _env_loaded
     if not _env_loaded:
         _load_env_files()
         _env_loaded = True
+
+
+# -----------------------------------------------------------------------------
+# Coder Registry Dispatch Pattern
+# -----------------------------------------------------------------------------
+# Registry mapping coder names to their invoker functions.
+# This replaces the large if/elif chain with a dictionary lookup.
+
+
+def _invoke_codex_wrapper(
+    *,
+    step: str,
+    prompt_text: str,
+    cwd: Path,
+    coder_config: dict[str, Any] | None = None,  # noqa: ARG001
+    sidecar_path: Path | None = None,
+    timeout_seconds_override: int | None = None,
+) -> dict[str, Any]:
+    """Wrapper to normalize _invoke_codex signature (ignores coder_config)."""
+    return _invoke_codex(
+        step=step,
+        prompt_text=prompt_text,
+        cwd=cwd,
+        sidecar_path=sidecar_path,
+        timeout_seconds_override=timeout_seconds_override,
+    )
+
+
+def _invoke_plain_wrapper(
+    *,
+    step: str,
+    prompt_text: str,
+    cwd: Path,
+    coder_config: dict[str, Any] | None = None,  # noqa: ARG001
+    sidecar_path: Path | None = None,
+    timeout_seconds_override: int | None = None,
+) -> dict[str, Any]:
+    """Wrapper to normalize _invoke_plain signature.
+
+    Extracts the actual coder name from the first positional argument pattern.
+    For plain invocation, we pass the coder name from the outer invoke_coder context.
+    """
+    # This wrapper should only be used for the fallback "plain" case
+    # The actual coder name needs to be captured from the outer scope
+    # We use a sentinel value that invoke_coder will replace
+    raise NotImplementedError(
+        "Plain coder invocation requires the coder name from outer scope. "
+        "Use direct _invoke_plain call instead of registry for custom coders."
+    )
+
+
+# CODER_REGISTRY will be populated after all invoker functions are defined
+CODER_REGISTRY: dict[str, CoderInvoker] = {}
 
 
 def invoke_coder(
@@ -553,6 +663,28 @@ def invoke_coder(
     sidecar_path: Path | None = None,
     timeout_seconds_override: int | None = None,
 ) -> InvocationResult:
+    """Invoke a coder process with the given prompt and return the result.
+
+    This is the primary entry point for the coder adapter layer. It dispatches
+    to the appropriate backend-specific invocation function based on the coder name.
+
+    Args:
+        coder: Coder backend name (qwen, claude, codex, opencode, or a custom CLI).
+        step: Step name for logging and manifest.
+        prompt_text: Full prompt text to send to the coder.
+        cwd: Working directory for the coder process.
+        prompt_checksum: SHA-256 checksum of the prompt for audit.
+        now_iso_fn: Function returning current ISO timestamp.
+        coder_config: Resolved coder configuration (model, connection, auth).
+        sidecar_path: Path to meta.json for early-exit polling.
+        timeout_seconds_override: Override timeout for this invocation.
+
+    Returns:
+        InvocationResult with return_code, stdout, stderr, usage, and manifest.
+
+    Raises:
+        CoderInvocationError: If the coder process fails or times out.
+    """
     _ensure_env_loaded()
     cc = coder_config or {}
     model_name = cc.get("model", "")
@@ -571,16 +703,29 @@ def invoke_coder(
 
     started_at = now_iso_fn()
     started_monotonic = time.monotonic()
-    if coder == "codex":
-        result = _invoke_codex(step=step, prompt_text=prompt_text, cwd=cwd, sidecar_path=sidecar_path, timeout_seconds_override=timeout_seconds_override)
-    elif coder == "claude":
-        result = _invoke_claude(step=step, prompt_text=prompt_text, cwd=cwd, sidecar_path=sidecar_path, coder_config=cc, timeout_seconds_override=timeout_seconds_override)
-    elif coder == "qwen":
-        result = _invoke_qwen(step=step, prompt_text=prompt_text, cwd=cwd, coder_config=cc, sidecar_path=sidecar_path, timeout_seconds_override=timeout_seconds_override)
-    elif coder == "opencode":
-        result = _invoke_opencode(step=step, prompt_text=prompt_text, cwd=cwd, coder_config=cc, sidecar_path=sidecar_path, timeout_seconds_override=timeout_seconds_override)
+
+    # Dispatch via registry lookup (replaces large if/elif chain)
+    invoker = CODER_REGISTRY.get(coder)
+    if invoker is not None:
+        result = invoker(
+            step=step,
+            prompt_text=prompt_text,
+            cwd=cwd,
+            coder_config=cc,
+            sidecar_path=sidecar_path,
+            timeout_seconds_override=timeout_seconds_override,
+        )
     else:
-        result = _invoke_plain(coder=coder, step=step, prompt_text=prompt_text, cwd=cwd, sidecar_path=sidecar_path, timeout_seconds_override=timeout_seconds_override)
+        # Fallback for custom/unknown coders
+        result = _invoke_plain(
+            coder=coder,
+            step=step,
+            prompt_text=prompt_text,
+            cwd=cwd,
+            sidecar_path=sidecar_path,
+            timeout_seconds_override=timeout_seconds_override,
+        )
+
     finished_at = now_iso_fn()
     duration_ms = int((time.monotonic() - started_monotonic) * 1000)
 
@@ -623,6 +768,7 @@ def invoke_coder(
 
 
 def _invoke_plain(*, coder: str, step: str, prompt_text: str, cwd: Path, sidecar_path: Path | None = None, timeout_seconds_override: int | None = None) -> dict[str, Any]:
+    """Invoke a plain CLI coder (passing prompt on stdin, expecting JSON on stdout)."""
     command = [coder]
     timeout_seconds = _coder_timeout_seconds(timeout_seconds_override)
     try:
@@ -667,6 +813,7 @@ def _invoke_plain(*, coder: str, step: str, prompt_text: str, cwd: Path, sidecar
 
 
 def _invoke_codex(*, step: str, prompt_text: str, cwd: Path, sidecar_path: Path | None = None, timeout_seconds_override: int | None = None) -> dict[str, Any]:
+    """Invoke OpenAI Codex CLI with sandbox mode and JSON output parsing."""
     with tempfile.NamedTemporaryFile("w+", encoding="utf-8", delete=False) as temp_output:
         output_path = Path(temp_output.name)
     command = [
@@ -742,6 +889,7 @@ def _invoke_codex(*, step: str, prompt_text: str, cwd: Path, sidecar_path: Path 
 
 
 def _extract_codex_error_from_events(lines: list[str]) -> str | None:
+    """Extract the last error message from Codex JSON event lines."""
     last_error: str | None = None
     for line in lines:
         try:
@@ -759,6 +907,7 @@ def _extract_codex_error_from_events(lines: list[str]) -> str | None:
 
 
 def _invoke_claude(*, step: str, prompt_text: str, cwd: Path, sidecar_path: Path | None = None, coder_config: dict[str, Any] | None = None, timeout_seconds_override: int | None = None) -> dict[str, Any]:
+    """Invoke Claude CLI with JSON output format and optional model selection."""
     cc = coder_config or {}
     command = ["claude"]
     # Inject model flag when provided via resolved coder config
@@ -803,6 +952,7 @@ def _invoke_claude(*, step: str, prompt_text: str, cwd: Path, sidecar_path: Path
 
 
 def _invoke_qwen(*, step: str, prompt_text: str, cwd: Path, coder_config: dict[str, Any] | None = None, sidecar_path: Path | None = None, timeout_seconds_override: int | None = None) -> dict[str, Any]:
+    """Invoke Qwen CLI with optional model, auth, and base URL configuration."""
     cc = coder_config or {}
     command = ["qwen", "-y"]
 
@@ -900,6 +1050,7 @@ def _invoke_qwen(*, step: str, prompt_text: str, cwd: Path, coder_config: dict[s
 
 
 def _validate_opencode_model(model_name: str) -> str:
+    """Validate and return an OpenCode model name in '{provider}/{model-id}' format."""
     model_value = str(model_name or "").strip()
     if not model_value:
         raise ValueError("OpenCode requires a model in the form '{provider}/{model-id}'.")
@@ -913,6 +1064,7 @@ def _validate_opencode_model(model_name: str) -> str:
 
 
 def _opencode_model_from_config(coder_config: dict[str, Any]) -> str:
+    """Resolve OpenCode model from coder_config or connection_profile."""
     model_name = str(coder_config.get("model") or "").strip()
     if model_name:
         return _validate_opencode_model(model_name)
@@ -926,9 +1078,13 @@ def _opencode_model_from_config(coder_config: dict[str, Any]) -> str:
 
 
 def _invoke_opencode(*, step: str, prompt_text: str, cwd: Path, coder_config: dict[str, Any] | None = None, sidecar_path: Path | None = None, timeout_seconds_override: int | None = None) -> dict[str, Any]:
+    """Invoke OpenCode CLI with model and optional agent configuration."""
     cc = coder_config or {}
     model_name = _opencode_model_from_config(cc)
     command = ["opencode", "run", "--model", model_name]
+    agent_name = str(cc.get("agent") or "").strip()
+    if agent_name:
+        command.extend(["--agent", agent_name])
 
     _log_command_for_step(step, command, cc, coder_name="opencode")
 
@@ -1002,7 +1158,17 @@ def _invoke_opencode(*, step: str, prompt_text: str, cwd: Path, coder_config: di
     }
 
 
+# Populate CODER_REGISTRY after all invoker functions are defined
+CODER_REGISTRY.update({
+    "codex": _invoke_codex_wrapper,
+    "claude": _invoke_claude,
+    "qwen": _invoke_qwen,
+    "opencode": _invoke_opencode,
+})
+
+
 def _parse_single_json_payload(text: str) -> dict[str, Any] | None:
+    """Parse a single JSON object from text, returning None if invalid."""
     candidate = text.strip()
     if not candidate:
         return None
@@ -1014,6 +1180,7 @@ def _parse_single_json_payload(text: str) -> dict[str, Any] | None:
 
 
 def _extract_result_from_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    """Extract the coder result object from various payload structures."""
     direct = payload.get("result")
     if isinstance(direct, dict):
         return direct
@@ -1036,6 +1203,7 @@ def _extract_result_from_payload(payload: dict[str, Any]) -> dict[str, Any]:
 
 
 def _parse_json_payload(text: str) -> Any | None:
+    """Parse JSON from text, returning None on parse failure."""
     candidate = text.strip()
     if not candidate:
         return None
@@ -1046,6 +1214,7 @@ def _parse_json_payload(text: str) -> Any | None:
 
 
 def _payload_to_raw_events(payload: Any, stdout: str) -> list[str]:
+    """Convert a parsed payload to a list of JSON event strings for raw_events."""
     if isinstance(payload, list):
         return [json.dumps(item) for item in payload if isinstance(item, (dict, list))]
     if isinstance(payload, dict):
@@ -1054,6 +1223,7 @@ def _payload_to_raw_events(payload: Any, stdout: str) -> list[str]:
 
 
 def _extract_result_from_qwen_payload(payload: Any) -> dict[str, Any]:
+    """Extract the coder result from a Qwen payload (object or event list)."""
     if isinstance(payload, dict):
         return _extract_result_from_payload(payload)
     if not isinstance(payload, list):
@@ -1095,6 +1265,7 @@ def _extract_result_from_qwen_payload(payload: Any) -> dict[str, Any]:
 
 
 def _looks_like_qwen_error_text(text: str) -> bool:
+    """Check if text looks like a Qwen/API error message."""
     candidate = text.strip()
     if not candidate:
         return False
@@ -1108,6 +1279,7 @@ def _looks_like_qwen_error_text(text: str) -> bool:
 
 
 def _usage_from_json_events(lines: list[str], *, step: str, coder: str) -> UsageData:
+    """Extract usage metrics from a list of JSON event lines."""
     payloads: list[dict[str, Any]] = []
     for line in lines:
         try:
@@ -1120,6 +1292,7 @@ def _usage_from_json_events(lines: list[str], *, step: str, coder: str) -> Usage
 
 
 def _usage_from_payload(payload: dict[str, Any] | None, *, step: str, coder: str) -> UsageData:
+    """Build UsageData from a parsed payload by collecting nested usage metrics."""
     metrics = _collect_usage_metrics(payload or {})
     usage_source = "cli_reported" if metrics else "not_available"
     input_tokens = _coerce_int(metrics.get("input_tokens"))
@@ -1143,6 +1316,7 @@ def _usage_from_payload(payload: dict[str, Any] | None, *, step: str, coder: str
 
 
 def _collect_usage_metrics(payload: Any) -> dict[str, Any]:
+    """Recursively collect usage metrics from a payload structure."""
     metrics: dict[str, Any] = {}
 
     def visit(node: Any) -> None:
@@ -1161,6 +1335,7 @@ def _collect_usage_metrics(payload: Any) -> dict[str, Any]:
 
 
 def merge_usage(target: dict[str, Any], source: dict[str, Any]) -> None:
+    """Merge usage metrics from source into target using canonical aliases."""
     alias_groups = {
         "input_tokens": ("input_tokens", "inputTokens", "prompt_tokens", "promptTokens"),
         "output_tokens": ("output_tokens", "outputTokens", "completion_tokens", "completionTokens"),
@@ -1195,6 +1370,7 @@ def _coerce_float(value: Any) -> float | None:
 
 
 def _extract_json_object(text: str) -> dict[str, Any]:
+    """Extract a JSON object from text, handling fenced code blocks and embedded objects."""
     candidate = text.strip()
     if not candidate:
         raise ValueError("Coder output is empty")

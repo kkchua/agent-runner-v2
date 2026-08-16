@@ -1,0 +1,33 @@
+{
+  "schema_version": "v2",
+  "coder_result": {
+    "status": "APPROVED",
+    "remark": "Final semantic audit of the staged Layer 2 platform core constitution set for agent-runner-v2 completed. All six permanent documents verified against platform source code. All function signatures match. All BackendClient methods exist. Resolution order, meta sidecar repair, and authority/managed_by orthogonality all confirmed accurate. Zero forbidden-content violations. Zero layer-boundary violations. Zero factual errors. The staged set is ready for human approval and publish.",
+    "artifacts": {
+      "AUDIT_FILE_SUGGESTED": "D:\\MyProjectSpace\\01_Workflows\\agent-runner-v2\\docs\\system\\00_governance\\platform\\runs\\02PC-20260721-b092c705\\02PC-20260721-b092c705-platform-core-audit.md"
+    },
+    "recorded_at": "2026-07-21T17:52:21+08:00",
+    "usage": {
+      "input_tokens": 85000,
+      "output_tokens": 12000,
+      "total_tokens": 97000
+    }
+  },
+  "runner_data": {
+    "step": "audit_platform_core_docs",
+    "coder_used": "opencode",
+    "invoked_at": "2026-07-21T17:52:21",
+    "finished_at": "2026-07-21T18:02:09",
+    "prompt_checksum": "sha256:fa616ecda589a7c99830226495d16d7b0caea95b4e50ab524b907dd8e8acbeed",
+    "allowed_write_paths": [
+      "D:/MyProjectSpace/01_Workflows/agent-runner-v2/docs/system/00_governance/platform/runs/02PC-20260721-b092c705/02PC-20260721-b092c705-platform-core-audit.md",
+      "D:/MyProjectSpace/01_Workflows/agent-runner-v2/docs/system/00_governance/platform/runs/02PC-20260721-b092c705/02PC-20260721-b092c705-platform-core-audit.meta.json"
+    ],
+    "changed_paths": [
+      "D:/MyProjectSpace/01_Workflows/agent-runner-v2/docs/system/00_governance/platform/runs/02PC-20260721-b092c705/02PC-20260721-b092c705-platform-core-audit.md",
+      "D:/MyProjectSpace/01_Workflows/agent-runner-v2/docs/system/00_governance/platform/runs/02PC-20260721-b092c705/02PC-20260721-b092c705-platform-core-audit.meta.json"
+    ],
+    "enriched_at": "2026-07-21T18:02:09",
+    "runner_version": "v2"
+  }
+}

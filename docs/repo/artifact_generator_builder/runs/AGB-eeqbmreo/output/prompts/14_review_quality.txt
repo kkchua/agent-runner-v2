@@ -1,0 +1,72 @@
+# Objective
+
+Review the generated summary for quality beyond structural constraints.
+Assess whether the summary captures the core message, maintains logical
+coherence, and preserves essential information from the source document.
+
+This is an automated LLM quality gate. If the summary does not meet
+quality standards, reject it with specific feedback so the pipeline
+can adjust parameters and regenerate.
+
+# Reference Inputs
+
+- SUMMARY_FILE: {SUMMARY_FILE}
+- OUTPUT_VALIDATION_REPORT: {OUTPUT_VALIDATION_REPORT}
+- OUTPUT_METADATA_FILE: {OUTPUT_METADATA_FILE}
+- DOC_STRUCTURE_FILE: {DOC_STRUCTURE_FILE}
+- RUNTIME_CONFIG_FILE: {RUNTIME_CONFIG_FILE}
+
+# Review Tasks
+
+1. **Core Message Capture**:
+   - Does the summary capture the main thesis or purpose of the
+     source document?
+   - Are the most critical ideas represented?
+   - Is any essential information missing?
+
+2. **Logical Structure**:
+   - Does the summary follow the logical flow: introduction, main
+     points, conclusion?
+   - Are transitions between sections coherent?
+   - Is the ordering of information sensible?
+
+3. **Information Preservation**:
+   - Are key facts, figures, or claims from the source preserved?
+   - Is there any distortion or misrepresentation?
+   - Is the summary faithful to the source (C-003 compliance)?
+
+4. **Compression Quality**:
+   - Is the compression ratio within the 20% threshold (C-001)?
+   - Does the summary read naturally despite the compression?
+   - Are sentences well-formed and coherent?
+
+5. **Language Fidelity**:
+   - Is the summary in the same language as the source (C-002)?
+   - Is the language quality acceptable?
+
+# Self-Critic
+
+- Did I read the actual summary content, not just metadata?
+- Is my assessment specific and actionable?
+- Am I evaluating quality beyond structural constraints?
+- Did I compare the summary against the source document structure?
+
+# Forbidden Content
+
+- Do NOT introduce new information into the summary
+- Do NOT modify the summary file directly
+- Do NOT include non-ASCII characters
+- Do NOT approve if the summary is empty or nonsensical
+
+# Output Instructions
+
+Write to: {QUALITY_REVIEW_REPORT}
+Markdown with YAML frontmatter: doc_type: "quality_review_report", verdict: "PASS" or "REJECT", identity_locked: true.
+
+The report must include:
+- verdict: PASS or REJECT
+- assessment: Brief evaluation of each quality dimension
+- issues: List of specific issues found (empty if PASS)
+- recommendations: Suggested parameter adjustments if REJECT
+
+ASCII-only. No em-dashes or curly quotes.

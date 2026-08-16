@@ -1,0 +1,282 @@
+# Text Summarizer Workflow
+# Transforms an input text file into a condensed summary
+# following the 4-stage pipeline: T1 (Key Point Extraction),
+# T2 (Redundancy Removal), T3 (Structure Assembly), T4 (Output Rendering).
+#
+# Each pipeline stage is followed by an invariant validation step.
+# Two recovery loops handle compression ratio and quality review failures.
+
+[workflow]
+name = "text_summarizer"
+version = "1.0.0"
+label = "Text Summarizer"
+job_prefix = "TSUM"
+description = "Transforms an input text file (.txt or .md) into a condensed summary at most 20 percent of the original word count, preserving the same language and logical structure (intro, main_body, conclusion)."
+visibility = "canonical"
+default_max_rejects = 3
+init_step = "validate_input"
+
+# Layer 2 platform contract references
+layer = "layer3"
+platform = "agent-runner-v2"
+
+[workflow.governance]
+include_in_prompts = true
+prompt_targets = ["all"]
+
+# =============================================================================
+# Phase 1: Input Preparation
+# =============================================================================
+
+# Step 1: Validate input file
+[[step]]
+name = "validate_input"
+action = "validate_input"
+enable_notifications = false
+requires_human_approval_after = false
+onsuccess = "prepare_configuration"
+
+[step.artifacts]
+required_inputs = ["INPUT_TEXT_FILE"]
+produces = ["INPUT_VALIDATION_REPORT"]
+result_meta_key = "INPUT_VALIDATION_REPORT"
+
+# Step 2: Prepare runtime configuration
+[[step]]
+name = "prepare_configuration"
+action = "prepare_configuration"
+enable_notifications = false
+requires_human_approval_after = false
+onsuccess = "parse_input"
+
+[step.artifacts]
+produces = ["RUNTIME_CONFIG_FILE"]
+result_meta_key = "RUNTIME_CONFIG_FILE"
+
+# =============================================================================
+# Phase 2: Pipeline Execution
+# =============================================================================
+
+# Step 3: Parse input into Layer 1 document structure
+[[step]]
+name = "parse_input"
+action = "parse_input"
+enable_notifications = false
+requires_human_approval_after = false
+onsuccess = "extract_keypoints"
+
+[step.artifacts]
+required_inputs = ["INPUT_TEXT_FILE", "RUNTIME_CONFIG_FILE"]
+produces = ["DOC_STRUCTURE_FILE"]
+result_meta_key = "DOC_STRUCTURE_FILE"
+
+# Step 4: Extract key points (Stage T1, TR-001)
+[[step]]
+name = "extract_keypoints"
+action = "extract_keypoints"
+enable_notifications = false
+requires_human_approval_after = false
+onsuccess = "validate_keypoints"
+
+[step.artifacts]
+required_inputs = ["DOC_STRUCTURE_FILE", "RUNTIME_CONFIG_FILE"]
+produces = ["KEYPOINT_LIST_FILE"]
+result_meta_key = "KEYPOINT_LIST_FILE"
+
+# Step 5: Validate key point invariants (T1-INV-001, T1-INV-002)
+[[step]]
+name = "validate_keypoints"
+action = "validate_keypoints"
+enable_notifications = false
+requires_human_approval_after = false
+onsuccess = "remove_redundancy"
+
+[step.artifacts]
+required_inputs = ["KEYPOINT_LIST_FILE", "DOC_STRUCTURE_FILE"]
+produces = ["TRANSFORMATION_INVARIANT_REPORT"]
+result_meta_key = "TRANSFORMATION_INVARIANT_REPORT"
+
+# Step 6: Remove redundancy (Stage T2, TR-002)
+[[step]]
+name = "remove_redundancy"
+action = "remove_redundancy"
+enable_notifications = false
+requires_human_approval_after = false
+onsuccess = "validate_redundancy"
+
+[step.artifacts]
+required_inputs = ["KEYPOINT_LIST_FILE", "RUNTIME_CONFIG_FILE"]
+produces = ["REDUNDANCY_MAP_FILE"]
+result_meta_key = "REDUNDANCY_MAP_FILE"
+
+# Step 7: Validate redundancy invariants (T2-INV-001, T2-INV-002, T2-INV-003)
+[[step]]
+name = "validate_redundancy"
+action = "validate_redundancy"
+enable_notifications = false
+requires_human_approval_after = false
+onsuccess = "assemble_structure"
+
+[step.artifacts]
+required_inputs = ["REDUNDANCY_MAP_FILE", "KEYPOINT_LIST_FILE"]
+produces = ["TRANSFORMATION_INVARIANT_REPORT"]
+result_meta_key = "TRANSFORMATION_INVARIANT_REPORT"
+
+# Step 8: Assemble structure (Stage T3, TR-004)
+[[step]]
+name = "assemble_structure"
+action = "assemble_structure"
+enable_notifications = false
+requires_human_approval_after = false
+onsuccess = "validate_structure"
+
+[step.artifacts]
+required_inputs = ["REDUNDANCY_MAP_FILE", "DOC_STRUCTURE_FILE"]
+produces = ["CONTENT_BLOCK_LIST_FILE", "STRUCTURE_MAP_FILE"]
+result_meta_key = "STRUCTURE_MAP_FILE"
+
+# Step 9: Validate structure invariants (T3-INV-001, T3-INV-002, T3-INV-003)
+[[step]]
+name = "validate_structure"
+action = "validate_structure"
+enable_notifications = false
+requires_human_approval_after = false
+onsuccess = "render_output"
+
+[step.artifacts]
+required_inputs = ["CONTENT_BLOCK_LIST_FILE", "STRUCTURE_MAP_FILE", "KEYPOINT_LIST_FILE"]
+produces = ["TRANSFORMATION_INVARIANT_REPORT"]
+result_meta_key = "TRANSFORMATION_INVARIANT_REPORT"
+
+# Step 10: Render output (Stage T4, TR-003)
+[[step]]
+name = "render_output"
+action = "render_output"
+enable_notifications = false
+requires_human_approval_after = false
+onsuccess = "validate_language"
+
+[step.artifacts]
+required_inputs = ["STRUCTURE_MAP_FILE", "RUNTIME_CONFIG_FILE", "CONTENT_BLOCK_LIST_FILE"]
+produces = ["OUTPUT_DOC_FILE", "OUTPUT_METADATA_FILE", "SUMMARY_FILE", "TRANSFORMATION_INVARIANT_REPORT"]
+result_meta_key = "SUMMARY_FILE"
+
+# Step 11: Validate language invariant (T4-INV-003, C-002)
+[[step]]
+name = "validate_language"
+action = "validate_language"
+enable_notifications = false
+requires_human_approval_after = false
+onsuccess = "validate_compression"
+
+[step.artifacts]
+required_inputs = ["OUTPUT_DOC_FILE", "OUTPUT_METADATA_FILE", "DOC_STRUCTURE_FILE"]
+result_meta_key = "LANGUAGE_VALIDATION"
+
+# Step 12: Validate compression invariant (T4-INV-002, C-001)
+[[step]]
+name = "validate_compression"
+action = "validate_compression"
+enable_notifications = false
+requires_human_approval_after = false
+onsuccess = "validate_output"
+
+[step.artifacts]
+required_inputs = ["OUTPUT_METADATA_FILE", "RUNTIME_CONFIG_FILE"]
+result_meta_key = "COMPRESSION_VALIDATION"
+
+[step.on_reject_refine]
+step = "extract_keypoints"
+artifact = "COMPRESSION_VALIDATION"
+max_iterations = 3
+exhausted_failure_code = "COMPRESSION_RECOVERY_EXHAUSTED"
+exhausted_failure_class = "PIPELINE_FAILURE"
+
+# =============================================================================
+# Phase 3: Output Validation
+# =============================================================================
+
+# Step 13: Validate output (OV-001 through OV-007)
+[[step]]
+name = "validate_output"
+action = "validate_output"
+enable_notifications = false
+requires_human_approval_after = false
+onsuccess = "review_quality"
+
+[step.artifacts]
+required_inputs = ["SUMMARY_FILE", "OUTPUT_DOC_FILE", "OUTPUT_METADATA_FILE"]
+produces = ["OUTPUT_VALIDATION_REPORT"]
+result_meta_key = "OUTPUT_VALIDATION_REPORT"
+
+# Step 14: Review summary quality (LLM-based quality gate)
+[[step]]
+name = "review_quality"
+prompt = "prompts/14_review_quality.txt"
+enable_notifications = true
+requires_human_approval_after = false
+onsuccess = "promote_summary"
+
+[step.artifacts]
+required_inputs = ["SUMMARY_FILE", "OUTPUT_VALIDATION_REPORT", "OUTPUT_METADATA_FILE"]
+produces = ["QUALITY_REVIEW_REPORT"]
+result_meta_key = "QUALITY_REVIEW_REPORT"
+
+[step.coder]
+role_policy = "reviewer_standard"
+
+[step.on_reject_refine]
+step = "adjust_parameters"
+artifact = "QUALITY_REVIEW_REPORT"
+max_iterations = 2
+exhausted_failure_code = "QUALITY_REVIEW_EXHAUSTED"
+exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
+
+# =============================================================================
+# Phase 4: Delivery
+# =============================================================================
+
+# Step 15: Promote summary to final location
+[[step]]
+name = "promote_summary"
+action = "promote_summary"
+enable_notifications = true
+requires_human_approval_after = false
+onsuccess = "complete_pipeline"
+
+[step.artifacts]
+required_inputs = ["SUMMARY_FILE"]
+produces = ["SUMMARY_FILE_PROMOTED"]
+result_meta_key = "SUMMARY_FILE_PROMOTED"
+
+# Step 16: Complete pipeline (terminal)
+[[step]]
+name = "complete_pipeline"
+action = "complete_pipeline"
+enable_notifications = true
+requires_human_approval_after = false
+
+[step.artifacts]
+required_inputs = ["SUMMARY_FILE_PROMOTED"]
+produces = ["COMPLETION_RESULT"]
+result_meta_key = "COMPLETION_RESULT"
+
+# =============================================================================
+# Auxiliary Step: Parameter Adjustment (refinement only)
+# =============================================================================
+
+# Step 17: Adjust pipeline parameters (activated only during quality review loop)
+[[step]]
+name = "adjust_parameters"
+prompt = "prompts/17_adjust_parameters.txt"
+enable_notifications = false
+requires_human_approval_after = false
+onsuccess = "parse_input"
+
+[step.artifacts]
+required_inputs = ["QUALITY_REVIEW_REPORT", "RUNTIME_CONFIG_FILE"]
+produces = ["ADJUSTED_CONFIG"]
+result_meta_key = "ADJUSTED_CONFIG"
+
+[step.coder]
+role_policy = "architect_standard"

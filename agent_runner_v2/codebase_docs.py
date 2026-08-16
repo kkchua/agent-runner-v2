@@ -5,6 +5,7 @@ codebase_docs.py — Deterministic repo scan and codebase-doc generation helpers
 """
 
 import ast
+import fnmatch
 import json
 import re
 import subprocess
@@ -17,7 +18,11 @@ from typing import Any
 from .runtime_context import get_context, get_workflow_module
 from .bundle_loader import load_project_config
 from .doc_paths import codebase_doc_rel
+from .doc_text import sanitize_ascii
 
+
+# Per-repo exclusion file name (at repo root)
+SCAN_IGNORE_FILE = ".codebase-scan-ignore"
 
 EXCLUDED_DIRS = {
     ".git",
@@ -37,9 +42,80 @@ EXCLUDED_DIRS = {
     "venv",
     "env",
     "agent_runner_v2.egg-info",
+    "masterplan",
 }
 
 STD_LIBS = set(getattr(sys, "stdlib_module_names", set()))
+
+
+def _load_scan_exclusions(project_root: Path) -> list[str]:
+    """Load user-defined exclusion patterns from .codebase-scan-ignore file.
+
+    Returns a list of patterns (one per line). Empty lines and comments (#) are ignored.
+    If the file doesn't exist, returns an empty list.
+    """
+    ignore_file = project_root / SCAN_IGNORE_FILE
+    if not ignore_file.exists():
+        return []
+
+    patterns = []
+    for line in ignore_file.read_text(encoding="utf-8").splitlines():
+        stripped = line.strip()
+        # Skip empty lines and comments
+        if stripped and not stripped.startswith("#"):
+            patterns.append(stripped)
+    return patterns
+
+
+def _matches_exclusion(rel_path: str, patterns: list[str]) -> bool:
+    """Check if a relative path matches any exclusion pattern.
+
+    Supports gitignore-style patterns:
+    - Trailing / matches directories (any file under that directory)
+    - * matches anything except /
+    - ** matches anything including /
+    - Patterns without / match against filename only
+    - Patterns with / match against full path
+    """
+    if not patterns:
+        return False
+
+    # Normalize to forward slashes
+    rel_posix = rel_path.replace("\\", "/")
+    filename = PurePosixPath(rel_posix).name
+
+    for pattern in patterns:
+        # Check if pattern is directory-only (trailing /)
+        dir_only = pattern.endswith("/")
+        clean_pattern = pattern.rstrip("/")
+
+        if dir_only:
+            # Directory pattern: match if path starts with this directory
+            # e.g., "secrets/" matches "secrets/keys.json" or "deep/secrets/file.txt"
+            if rel_posix.startswith(clean_pattern + "/") or f"/{clean_pattern}/" in rel_posix:
+                return True
+            # Also match the directory name anywhere in path
+            parts = rel_posix.split("/")
+            if clean_pattern in parts:
+                return True
+        elif "/" not in clean_pattern:
+            # Simple filename pattern (no slash): match against filename only
+            if fnmatch.fnmatch(filename, clean_pattern):
+                return True
+        else:
+            # Path pattern with slash: match against full path
+            if "**" in clean_pattern:
+                # ** matches any number of directories
+                # Use placeholder to avoid double-replacement
+                regex_pattern = clean_pattern.replace("**", "\x00DOUBLESTAR\x00")
+                regex_pattern = regex_pattern.replace("*", "[^/]*")
+                regex_pattern = regex_pattern.replace("\x00DOUBLESTAR\x00", ".*")
+                if re.match(regex_pattern, rel_posix):
+                    return True
+            elif fnmatch.fnmatch(rel_posix, clean_pattern):
+                return True
+
+    return False
 
 
 @dataclass(frozen=True)
@@ -67,43 +143,87 @@ def _slugify(value: str) -> str:
     return value.strip("-")
 
 
-def _module_area(rel_path: str) -> str:
+_NON_PACKAGE_DIRS = {
+    "tests", "test", "scripts", "docs", "tools", "masterplan",
+    "migrations", "alembic", "examples", "example", "fixtures",
+}
+
+
+def _detect_package_root(project_root: Path) -> str | None:
+    """Auto-detect the main Python package directory name."""
+    candidates = []
+    for child in sorted(project_root.iterdir()):
+        if not child.is_dir():
+            continue
+        name = child.name
+        if name.startswith((".", "_")) or name.startswith("__"):
+            continue
+        if name in EXCLUDED_DIRS or name in _NON_PACKAGE_DIRS:
+            continue
+        if name.endswith((".egg-info", ".dist-info")):
+            continue
+        if (child / "__init__.py").exists():
+            candidates.append(name)
+    if len(candidates) == 1:
+        return candidates[0]
+    if len(candidates) > 1:
+        for name in candidates:
+            if (project_root / name / "__main__.py").exists():
+                return name
+        return max(candidates, key=lambda n: sum(
+            1 for _ in (project_root / n).rglob("*.py")
+        ))
+    return None
+
+
+_DIR_AREA_MAP = {
+    "actions": "actions",
+    "tools": "tools",
+    "api": "api",
+    "core": "core",
+    "database": "database",
+    "db": "database",
+    "models": "models",
+    "services": "services",
+    "workers": "workers",
+    "commands": "commands",
+    "schema": "schema",
+    "state": "state",
+    "coder": "coder",
+    "bootstrap": "bootstrap",
+    "backend": "backend",
+}
+
+_FULL_DOC_DIRS = {"actions", "core", "api", "services", "database", "db", "backend", "workers"}
+
+
+def _module_area(rel_path: str, pkg_root: str | None = None) -> str:
     rel = PurePosixPath(rel_path)
-    if rel.parts[:2] == ("agent_runner_v2", "actions"):
-        return "actions"
-    if rel.name == "run_agent.py" or rel.name == "step_runner.py" or rel.name == "workflow_router.py":
-        return "core"
-    if rel.name in {"job_state.py", "runtime_context.py", "execution_request.py", "execution_result.py"}:
-        return "state"
-    if rel.name in {"coder_adapters.py", "coder_registry.py"}:
-        return "coder"
-    if rel.name in {"bundle_loader.py", "template_groups.py"}:
-        return "bootstrap"
-    if rel.name in {"backend_client.py", "daemon.py", "runner_logger.py"}:
-        return "backend"
-    if rel.name in {"approve_commands.py", "submit_commands.py", "engine_commands.py", "submitter.py"}:
-        return "commands"
-    if rel.name in {"action_result.py", "artifact_paths.py", "exceptions.py", "runner_actions.py"}:
-        return "schema"
-    if rel.parts[:2] == ("agent_runner_v2", "tools"):
-        return "tools"
     if rel.name == "__init__.py":
         return "package"
+    if pkg_root and rel.parts[0] == pkg_root and len(rel.parts) == 2:
+        return "core"
+    if len(rel.parts) >= 3 and rel.parts[0] == (pkg_root or rel.parts[0]):
+        dir_name = rel.parts[1]
+        if dir_name in _DIR_AREA_MAP:
+            return _DIR_AREA_MAP[dir_name]
+    if len(rel.parts) >= 2:
+        dir_name = rel.parts[-2]
+        if dir_name in _DIR_AREA_MAP:
+            return _DIR_AREA_MAP[dir_name]
     return "support"
 
 
-def _module_doc_mode(rel_path: str) -> str:
+def _module_doc_mode(rel_path: str, pkg_root: str | None = None) -> str:
     rel = PurePosixPath(rel_path)
     if rel.name == "__init__.py":
         return "stub"
-    if rel.parts[:2] == ("agent_runner_v2", "actions"):
+    if pkg_root and rel.parts[0] == pkg_root and len(rel.parts) >= 3:
+        dir_name = rel.parts[1]
+        if dir_name in _FULL_DOC_DIRS:
+            return "full"
+    if pkg_root and rel.parts[0] == pkg_root and len(rel.parts) == 2:
         return "full"
-    if rel.parts[0] == "agent_runner_v2" and rel.name.endswith(".py"):
-        if rel.name in {"run_agent.py", "step_runner.py", "workflow_router.py", "job_state.py", "runtime_context.py", "coder_adapters.py", "bundle_loader.py", "template_groups.py"}:
-            return "full"
-        if rel.name in {"backend_client.py", "daemon.py", "runner_logger.py"}:
-            return "full"
-        return "summary"
     return "summary"
 
 
@@ -117,12 +237,13 @@ def _module_doc_path(rel_path: str) -> str:
     return codebase_doc_rel(f"02_modules/{stem}.md")
 
 
-def _module_name_from_path(rel_path: str) -> str:
+def _module_name_from_path(rel_path: str, pkg_root: str | None = None) -> str:
     rel = PurePosixPath(rel_path)
-    if rel.parts[0] != "agent_runner_v2":
+    effective_root = pkg_root or "agent_runner_v2"
+    if not pkg_root or rel.parts[0] != effective_root:
         return rel_path
     if rel.name == "__init__.py":
-        return "agent_runner_v2"
+        return effective_root
     return ".".join(rel.with_suffix("").parts)
 
 
@@ -135,6 +256,9 @@ def _iter_repo_files(project_root: Path) -> list[Path]:
     if git_files is not None:
         return git_files
 
+    # Load user-defined exclusion patterns
+    exclusion_patterns = _load_scan_exclusions(project_root)
+
     files: list[Path] = []
     for path in project_root.rglob("*"):
         if path.is_dir():
@@ -143,6 +267,9 @@ def _iter_repo_files(project_root: Path) -> list[Path]:
         if any(part in EXCLUDED_DIRS for part in rel.parts):
             continue
         if rel.suffix in {".pyc", ".pyo", ".tmp"}:
+            continue
+        # Check user-defined exclusions
+        if _matches_exclusion(rel.as_posix(), exclusion_patterns):
             continue
         files.append(path)
     return sorted(files, key=lambda p: p.relative_to(project_root).as_posix().lower())
@@ -162,6 +289,9 @@ def _iter_git_tracked_and_unignored_files(project_root: Path) -> list[Path] | No
     except (FileNotFoundError, subprocess.CalledProcessError):
         return None
 
+    # Load user-defined exclusion patterns
+    exclusion_patterns = _load_scan_exclusions(project_root)
+
     files: list[Path] = []
     for raw_rel in proc.stdout.split(b"\0"):
         if not raw_rel:
@@ -172,21 +302,25 @@ def _iter_git_tracked_and_unignored_files(project_root: Path) -> list[Path] | No
             continue
         if rel.suffix in {".pyc", ".pyo", ".tmp"}:
             continue
+        # Check user-defined exclusions
+        if _matches_exclusion(rel_posix, exclusion_patterns):
+            continue
         path = project_root / Path(rel_posix)
         if path.exists() and path.is_file():
             files.append(path)
     return sorted(files, key=lambda p: p.relative_to(project_root).as_posix().lower())
 
 
-def _classify_file(project_root: Path, path: Path) -> ScanItem:
+def _classify_file(project_root: Path, path: Path, pkg_root: str | None = None) -> ScanItem:
     rel_path = path.relative_to(project_root).as_posix()
     rel = PurePosixPath(rel_path)
-    if rel.parts[0] == "agent_runner_v2" and rel.suffix == ".py":
+    effective_pkg = pkg_root or "agent_runner_v2"
+    if pkg_root and rel.parts[0] == pkg_root and rel.suffix == ".py":
         category = "python modules"
-        subcategory = _module_area(rel_path)
+        subcategory = _module_area(rel_path, pkg_root=pkg_root)
         owner_doc = _module_doc_path(rel_path)
-        doc_mode = _module_doc_mode(rel_path)
-    elif rel.parts[:3] == ("agent_runner_v2", "bootstrap", "workflows"):
+        doc_mode = _module_doc_mode(rel_path, pkg_root=pkg_root)
+    elif rel.parts[:3] == (effective_pkg, "bootstrap", "workflows"):
         category = "bootstrap workflow files"
         subcategory = "workflow assets"
         owner_doc = _component_owner_doc("workflow families")
@@ -412,7 +546,7 @@ def _extract_raises(docstring: str) -> list[dict[str, str]]:
             # Check if this is a new exception line
             # Look for patterns: "ExceptionName - desc", "ExceptionName: desc", "ExceptionName — desc"
             is_exception_line = False
-            for sep in [" - ", " — ", ":"]:
+            for sep in [" - ", " -- ", " — ", ":"]:
                 if sep in stripped:
                     # Check if the part before separator looks like an exception name
                     parts = stripped.split(sep, 1)
@@ -464,7 +598,7 @@ def _extract_decorators(node: ast.FunctionDef | ast.AsyncFunctionDef | ast.Class
     return decorators
 
 
-def _scan_python_module(project_root: Path, path: Path) -> dict[str, Any]:
+def _scan_python_module(project_root: Path, path: Path, pkg_root: str | None = None) -> dict[str, Any]:
     rel_path = path.relative_to(project_root).as_posix()
     try:
         tree = ast.parse(_read_text(path))
@@ -526,9 +660,10 @@ def _scan_python_module(project_root: Path, path: Path) -> dict[str, Any]:
     stdlib_imports = []
     local_imports = []
     external_imports = []
+    effective_pkg = pkg_root or "agent_runner_v2"
     for imp in imports:
         top = imp.split(".", 1)[0]
-        if top == "agent_runner_v2" or imp.startswith("."):
+        if top == effective_pkg or imp.startswith("."):
             local_imports.append(imp)
         elif top in STD_LIBS:
             stdlib_imports.append(imp)
@@ -537,9 +672,9 @@ def _scan_python_module(project_root: Path, path: Path) -> dict[str, Any]:
 
     return {
         "rel_path": rel_path,
-        "module_name": _module_name_from_path(rel_path),
-        "module_area": _module_area(rel_path),
-        "doc_mode": _module_doc_mode(rel_path),
+        "module_name": _module_name_from_path(rel_path, pkg_root=pkg_root),
+        "module_area": _module_area(rel_path, pkg_root=pkg_root),
+        "doc_mode": _module_doc_mode(rel_path, pkg_root=pkg_root),
         "owner_doc_path": _module_doc_path(rel_path),
         "summary": module_doc.splitlines()[0] if module_doc else "Auto-generated baseline module documentation.",
         "module_doc": module_doc,
@@ -628,13 +763,14 @@ def build_snapshot(project_root: Path, *, mode: str, job_id: str, step: str, wor
     now = _today_iso()
     workflow_name = str(workflow_name or get_context().workflow_name or mode)
     project_config = load_project_config(project_root)
+    pkg_root = _detect_package_root(project_root)
     files = _iter_repo_files(project_root)
-    items = [_classify_file(project_root, path) for path in files]
+    items = [_classify_file(project_root, path, pkg_root=pkg_root) for path in files]
     python_modules = []
     for path in files:
         rel = path.relative_to(project_root)
-        if rel.parts[0] == "agent_runner_v2" and rel.suffix == ".py":
-            rec = _scan_python_module(project_root, path)
+        if pkg_root and rel.parts[0] == pkg_root and rel.suffix == ".py":
+            rec = _scan_python_module(project_root, path, pkg_root=pkg_root)
             python_modules.append(rec)
     for rec in python_modules:
         rec["test_references"] = _find_test_references(project_root, rec)
@@ -651,6 +787,7 @@ def build_snapshot(project_root: Path, *, mode: str, job_id: str, step: str, wor
         "generated_at": now,
         "mode": mode,
         "workflow_name": workflow_name,
+        "pkg_root": pkg_root,
         "bundle_profile": str(project_config.get("bundle_profile") or "core+workflow"),
         "bundle_domain": str(project_config.get("bundle_domain") or "general"),
         "bundle_manifest": str(project_config.get("bundle_manifest") or ""),
@@ -690,7 +827,11 @@ def render_inventory(snapshot: dict[str, Any], *, title: str) -> str:
         _frontmatter([
             f'title: "Codebase Inventory - {title}"',
             'template_id: "CODEBASE-INV-v1"',
-            'status: "active"',
+            'version: "1.0.0"',
+            'doc_type: "system"',
+            'authority: "workflow-generated"',
+            'scan_policy: "include"',
+            'lifecycle_status: "approved"',
             f'generated: "{generated_at}"',
             f'workflow: "{workflow_name}"',
             f'step: "{step}"',
@@ -784,7 +925,7 @@ def render_inventory(snapshot: dict[str, Any], *, title: str) -> str:
         ["Date", "Verified By", "Scope", "Result"],
         [[generated_at[:10], workflow_name, "repository scan", "complete"]],
     ))
-    return "".join(sections)
+    return sanitize_ascii("".join(sections))
 
 
 def render_module_doc(snapshot: dict[str, Any], module_record: dict[str, Any]) -> str:
@@ -795,7 +936,11 @@ def render_module_doc(snapshot: dict[str, Any], module_record: dict[str, Any]) -
     frontmatter = _frontmatter([
         f'title: "Module Documentation: {module_name}"',
         'template_id: "CB-02"',
-        'status: "active"',
+        'version: "1.0.0"',
+        'doc_type: "system"',
+        'authority: "workflow-generated"',
+        'scan_policy: "include"',
+        'lifecycle_status: "approved"',
         f'module_path: "{rel_path}"',
         f'module_area: "{module_record["module_area"]}"',
         f'documentation_mode: "{module_record["doc_mode"]}"',
@@ -809,7 +954,7 @@ def render_module_doc(snapshot: dict[str, Any], module_record: dict[str, Any]) -
         f"# Module Documentation: {module_name}\n\n",
         "## 1. Module Overview\n\n",
         "### 1.1 Purpose\n\n",
-        (module_record["module_doc"].splitlines()[0] if module_record["module_doc"] else "Auto-generated baseline documentation from repository scan.") + "\n\n",
+        (sanitize_ascii(module_record["module_doc"].splitlines()[0]) if module_record["module_doc"] else "Auto-generated baseline documentation from repository scan.") + "\n\n",
         "### 1.2 Responsibility\n\n",
         f"This module belongs to the `{module_record['module_area']}` area and is documented as `{module_record['doc_mode']}`.\n\n",
         "### 1.3 Dependencies\n\n",
@@ -833,14 +978,14 @@ def render_module_doc(snapshot: dict[str, Any], module_record: dict[str, Any]) -
                 lines.append(f"**Inherits from**: {', '.join(f'`{b}`' for b in cls['bases'])}\n\n")
             if cls.get('decorators'):
                 lines.append(f"**Decorators**: {', '.join(f'`@{d}`' for d in cls['decorators'])}\n\n")
-            lines.append(f"**Purpose**: {cls.get('summary') or 'Public class'}\n\n")
+            lines.append(f"**Purpose**: {sanitize_ascii(cls.get('summary') or 'Public class')}\n\n")
             if cls.get('methods'):
                 lines.append("**Methods**:\n\n")
                 for method in cls['methods']:
                     sig = method.get('signature', '()')
                     ret = method.get('return_type', '')
-                    ret_str = f" → `{ret}`" if ret else ""
-                    lines.append(f"- `{method['name']}{sig}`{ret_str} — {method.get('summary') or 'method'}\n")
+                    ret_str = f" -> `{ret}`" if ret else ""
+                    lines.append(f"- `{method['name']}{sig}`{ret_str} -- {sanitize_ascii(method.get('summary') or 'method')}\n")
                 lines.append("\n")
     else:
         lines.append("No public classes.\n\n")
@@ -861,7 +1006,7 @@ def render_module_doc(snapshot: dict[str, Any], module_record: dict[str, Any]) -
 
             # Summary/Purpose
             if fn.get('summary'):
-                lines.append(f"**Purpose**: {fn['summary']}\n\n")
+                lines.append(f"**Purpose**: {sanitize_ascii(fn['summary'])}\n\n")
 
             # Full docstring (if different from summary)
             docstring = fn.get('docstring', '')
@@ -874,7 +1019,7 @@ def render_module_doc(snapshot: dict[str, Any], module_record: dict[str, Any]) -
                     desc_lines.append(line)
                 desc = '\n'.join(desc_lines).strip()
                 if desc and desc != fn.get('summary', ''):
-                    lines.append(f"**Description**:\n\n{desc}\n\n")
+                    lines.append(f"**Description**:\n\n{sanitize_ascii(desc)}\n\n")
 
             # Parameters table
             params = fn.get('parameters', [])
@@ -886,8 +1031,8 @@ def render_module_doc(snapshot: dict[str, Any], module_record: dict[str, Any]) -
                     ptype = param.get('type', '')
                     default = param.get('default', '')
                     kind = param.get('kind', '')
-                    type_str = f"`{ptype}`" if ptype else "—"
-                    default_str = f"`{default}`" if default else "—"
+                    type_str = f"`{ptype}`" if ptype else "--"
+                    default_str = f"`{default}`" if default else "--"
                     # Try to get description from docstring
                     param_desc = _extract_param_description(docstring, name)
                     lines.append(f"| `{name}` | {type_str} | {default_str} | {param_desc} |\n")
@@ -905,7 +1050,7 @@ def render_module_doc(snapshot: dict[str, Any], module_record: dict[str, Any]) -
                 for exc in raises:
                     exc_name = exc.get('exception', '')
                     exc_desc = exc.get('description', '')
-                    lines.append(f"- `{exc_name}` — {exc_desc}\n")
+                    lines.append(f"- `{exc_name}` -- {exc_desc}\n")
                 lines.append("\n")
 
             lines.append("---\n\n")
@@ -961,13 +1106,13 @@ def render_module_doc(snapshot: dict[str, Any], module_record: dict[str, Any]) -
     lines.append("\n## 5. Change Log\n\n")
     lines.append("| Date | Change | Verified By |\n|------|--------|-------------|\n")
     lines.append(f"| {_today_date()} | Initial baseline generated from repository scan | {workflow_name} |\n")
-    return "".join(lines)
+    return sanitize_ascii("".join(lines))
 
 
 def _extract_param_description(docstring: str, param_name: str) -> str:
     """Extract parameter description from docstring Args/Parameters section."""
     if not docstring:
-        return "—"
+        return "--"
 
     lines = docstring.splitlines()
     in_args = False
@@ -993,12 +1138,12 @@ def _extract_param_description(docstring: str, param_name: str) -> str:
                     # Extract description
                     if ':' in stripped:
                         desc = stripped.split(':', 1)[1].strip()
-                        return desc if desc else "—"
+                        return desc if desc else "--"
             # Check for continuation lines (indented)
             if line.startswith('    ') and not stripped.startswith(param_name):
                 continue
 
-    return "—"
+    return "--"
 
 
 def render_component_doc(snapshot: dict[str, Any], *, component_name: str, rows: list[dict[str, str]], overview: str) -> str:
@@ -1007,7 +1152,11 @@ def render_component_doc(snapshot: dict[str, Any], *, component_name: str, rows:
     frontmatter = _frontmatter([
         f'title: "Component Documentation: {component_name}"',
         'template_id: "CB-03"',
-        'status: "active"',
+        'version: "1.0.0"',
+        'doc_type: "system"',
+        'authority: "workflow-generated"',
+        'scan_policy: "include"',
+        'lifecycle_status: "approved"',
         f'component_id: "{_slugify(component_name)}"',
         f'created: "{generated_at}"',
         f'owner: "{workflow_name}"',
@@ -1024,7 +1173,7 @@ def render_component_doc(snapshot: dict[str, Any], *, component_name: str, rows:
     out.append("| | | | |\n")
     out.append("\n## 5. Constraints\n\n| Constraint | Rationale | Enforcement |\n|------------|-----------|-------------|\n| Zero mutation of source code | Documentation bootstrap must not alter code | Workflow writes docs only |\n\n## 6. Testing\n\n### 6.1 Integration Tests\n\n| Test | Coverage |\n|------|----------|\n| | |\n\n### 6.2 Known Gaps\n\nAuto-generated baseline; extend with component-specific checks as needed.\n\n## 7. Change Log\n\n| Date | Change | Modules Affected | Verified By |\n|------|--------|-----------------|-------------|\n")
     out.append(f"| {_today_date()} | Initial baseline generated from repository scan | {len(rows)} modules/files | {workflow_name} |\n")
-    return "".join(out)
+    return sanitize_ascii("".join(out))
 
 
 def render_change_impact(snapshot: dict[str, Any], *, title: str, changed_files: list[str], docs_created: list[str], docs_updated: list[str], stale_docs: list[str]) -> str:
@@ -1034,7 +1183,11 @@ def render_change_impact(snapshot: dict[str, Any], *, title: str, changed_files:
         _frontmatter([
             f'title: "Change Impact: {title}"',
             'template_id: "CB-04"',
-            'status: "active"',
+            'version: "1.0.0"',
+            'doc_type: "system"',
+            'authority: "workflow-generated"',
+            'scan_policy: "include"',
+            'lifecycle_status: "approved"',
             f'change_id: "{snapshot["job_id"]}"',
             f'task_id: "{workflow_name}"',
             'initiative_id: "codebase-doc-bootstrap"',
@@ -1081,7 +1234,7 @@ def render_change_impact(snapshot: dict[str, Any], *, title: str, changed_files:
     lines.append("\n## 6. Documentation Debt\n\n| Item | Reason for Deferral | Owner | Due Date |\n|------|-------------------|-------|----------|\n| | | | |\n")
     lines.append("\n## 7. Verification\n\n| Check | Status | Notes |\n|-------|--------|-------|\n")
     lines.append("| All changed files listed | pass | repository scan summary |\n| All updated docs listed | pass | generated docs |\n| Stale docs identified and handled | pass | regenerated baseline |\n| Inventory updated | pass | current scan |\n")
-    return "".join(lines)
+    return sanitize_ascii("".join(lines))
 
 
 def render_validation(snapshot: dict[str, Any], *, title: str, checks: list[tuple[str, bool, str]]) -> str:
@@ -1091,7 +1244,11 @@ def render_validation(snapshot: dict[str, Any], *, title: str, checks: list[tupl
         _frontmatter([
             f'title: "Validation Record: {title}"',
             'template_id: "CB-05"',
-            'status: "active"',
+            'version: "1.0.0"',
+            'doc_type: "system"',
+            'authority: "workflow-generated"',
+            'scan_policy: "include"',
+            'lifecycle_status: "approved"',
             f'validation_id: "{snapshot["job_id"]}"',
             f'created: "{generated_at}"',
             f'author: "{workflow_name}"',
@@ -1106,4 +1263,4 @@ def render_validation(snapshot: dict[str, Any], *, title: str, checks: list[tupl
     lines.append("\n## 3. Results\n\n")
     passes = sum(1 for _, ok, _ in checks if ok)
     lines.append(f"{passes}/{len(checks)} checks passed.\n")
-    return "".join(lines)
+    return sanitize_ascii("".join(lines))

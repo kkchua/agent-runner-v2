@@ -99,3 +99,91 @@ def mark_complete(step_id: str, todo_index: int, notes: str = "") -> dict:
     _write(step_id, todo_index, item, "completed", notes=notes)      # file write MUST succeed
     _post_progress(step_id, todo_index, item, "completed", notes=notes)  # DB post is best-effort
     return {"status": "ok", "step_id": step_id, "todo_index": todo_index}
+
+
+# =============================================================================
+# ASCII Sanitization Tools
+# =============================================================================
+
+def sanitize_ascii(text: str) -> str:
+    """Replace common non-ASCII characters with ASCII equivalents.
+
+    Call this before writing documentation files to ensure ASCII-only content.
+
+    Args:
+        text: Input text that may contain non-ASCII characters.
+
+    Returns:
+        Text with common non-ASCII characters replaced by ASCII equivalents.
+
+    Usage (bash):
+        python -c "from agent_tools import sanitize_ascii; print(sanitize_ascii('text with em-dash'))"
+    """
+    if not text:
+        return text
+    # Em-dash / en-dash to double hyphen
+    text = text.replace("\u2014", "--")  # —
+    text = text.replace("\u2013", "--")  # –
+    # Curly quotes to straight quotes
+    text = text.replace("\u201c", '"')   # "
+    text = text.replace("\u201d", '"')   # "
+    text = text.replace("\u2018", "'")   # '
+    text = text.replace("\u2019", "'")   # '
+    # Arrows
+    text = text.replace("\u2192", "->")  # →
+    text = text.replace("\u2190", "<-")  # ←
+    # Bullets
+    text = text.replace("\u2022", "*")   # •
+    # Ellipsis
+    text = text.replace("\u2026", "...")  # …
+    # Private Use Area angle brackets (sometimes used by LLMs or fonts)
+    text = text.replace("\ue000", "<")
+    text = text.replace("\ue001", ">")
+    text = text.replace("\uf03c", "<")  # PUA angle bracket < (font-specific)
+    text = text.replace("\uf03e", ">")  # PUA angle bracket > (font-specific)
+    # Catch-all: replace any remaining Private Use Area characters (U+E000-U+F8FF)
+    import re as _re
+    text = _re.sub(r"[\ue000-\uf8ff]", "", text)
+    # Final catch-all: strip any remaining non-ASCII characters
+    text = text.encode("ascii", errors="ignore").decode("ascii")
+    return text
+
+
+def sanitize_ascii_file(file_path: str) -> dict:
+    """Read a Markdown file, sanitize non-ASCII characters, and write it back.
+
+    Only processes .md files. Refuses to touch JSON or other file types to
+    prevent corruption of structured data (e.g. meta.json sidecars).
+
+    Args:
+        file_path: Path to the .md file to sanitize.
+
+    Returns:
+        Dict with status and number of replacements made.
+
+    Usage (bash):
+        python -c "from agent_tools import sanitize_ascii_file; sanitize_ascii_file('path/to/file.md')"
+    """
+    path = Path(file_path)
+    if not path.exists():
+        return {"status": "error", "message": f"File not found: {file_path}"}
+
+    if path.suffix.lower() != ".md":
+        return {
+            "status": "error",
+            "message": f"Refusing to sanitize non-Markdown file: {file_path} (only .md files are allowed)",
+        }
+
+    try:
+        content = path.read_text(encoding="utf-8")
+        sanitized = sanitize_ascii(content)
+        replacements = len(content) - len(sanitized)  # Approximate
+        # Count actual character replacements more accurately
+        replacements = sum(
+            content.count(c)
+            for c in "\u2014\u2013\u201c\u201d\u2018\u2019\u2192\u2190\u2022\u2026\ue000\ue001"
+        )
+        path.write_text(sanitized, encoding="utf-8")
+        return {"status": "ok", "file": file_path, "replacements": replacements}
+    except Exception as exc:
+        return {"status": "error", "message": str(exc)}

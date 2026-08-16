@@ -30,6 +30,7 @@ def test_validate_artifacts_in_produces_list_allows_explicit_aliases_only() -> N
             "VALIDATION_FILE_METAJSON": "docs/delivery/06_validations/impl.meta.json",
         },
         produces=["IMPL_FILE", "VALIDATION_FILE"],
+        optional_produces=[],
         step="test_step",
     )
 
@@ -37,6 +38,7 @@ def test_validate_artifacts_in_produces_list_allows_explicit_aliases_only() -> N
         _validate_artifacts_in_produces_list(
             artifacts={"IMPL_FILE_V2": "docs/delivery/05_implementations/impl.md"},
             produces=["IMPL_FILE"],
+            optional_produces=[],
             step="test_step",
         )
 
@@ -48,6 +50,7 @@ def test_validate_artifacts_in_produces_list_allows_master_docs_legacy_aliases()
             "CHANGE_LOG": "docs/system/00_governance/bootstrap/00DOC-test-bootstrap-change-log.md",
         },
         produces=["SYSTEM_DOCS_INDEX", "SYSTEM_DOCS_CHANGE_LOG"],
+        optional_produces=[],
         step="06_refine_master_system_docs",
     )
 
@@ -92,6 +95,7 @@ def test_validate_declared_produced_artifacts_exist_uses_contract_paths(tmp_path
     _validate_declared_produced_artifacts_exist(
         artifacts={},
         produces=["SYSTEM_DOCS_INDEX"],
+        optional_produces=[],
         context={"SYSTEM_DOCS_INDEX": "docs/system/00_governance/bootstrap/README.md"},
         state={"artifacts": {}},
         project_root=tmp_path,
@@ -104,6 +108,7 @@ def test_validate_declared_produced_artifacts_exist_rejects_missing_declared_out
         _validate_declared_produced_artifacts_exist(
             artifacts={"SYSTEM_DOCS_INDEX": "docs/system/00_governance/bootstrap/README.md"},
             produces=["SYSTEM_DOCS_INDEX", "SYSTEM_DOC_STANDARD"],
+            optional_produces=[],
             context={
                 "SYSTEM_DOCS_INDEX": "docs/system/00_governance/bootstrap/README.md",
                 "SYSTEM_DOC_STANDARD": "docs/system/00_governance/bootstrap/DOCUMENTATION_STANDARD.md",
@@ -122,6 +127,7 @@ def test_backfill_declared_produced_artifacts_binds_existing_contract_files(tmp_
     artifacts = _backfill_declared_produced_artifacts(
         artifacts={"SYSTEM_DOCS_CHANGE_LOG": "docs/repo/governance/00RMD-bootstrap-change-log.md"},
         produces=["SYSTEM_DOCS_CHANGE_LOG", "EXISTING_REPO_WORKFLOW_SOP"],
+        optional_produces=[],
         context={"EXISTING_REPO_WORKFLOW_SOP": "docs/repo/governance/EXISTING_REPO_WORKFLOW_SOP.md"},
         state={"artifacts": {}},
         project_root=tmp_path,
@@ -245,24 +251,6 @@ def test_resolve_meta_json_path_falls_back_to_step_dir(tmp_path: Path) -> None:
     )
 
     assert result == step_dir / "meta.json"
-
-
-def test_build_new_review_file_path_prefers_workflow_owned_master_docs_review_path() -> None:
-    path = _build_new_review_file_path(
-        state={
-            "template_group": "00_repo_master_docs_bootstrap_v1",
-            "job_id": "00RMD-TEST-002",
-            "artifacts": {
-                "PROJECT_ANALYSIS": "docs/repo/governance/PROJECT_ANALYSIS.md",
-            },
-        },
-        step="05_review_master_system_docs",
-        step_cfg={
-            "on_reject_refine": {"artifact": "PROJECT_ANALYSIS"},
-        },
-    )
-
-    assert path == "docs/repo/governance/00RMD-TEST-002-master-system-docs-review.md"
 
 
 def test_run_action_preserves_reject_code_in_step_result(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

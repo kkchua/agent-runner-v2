@@ -1,0 +1,91 @@
+# Executive Briefing: Consolidated Report
+
+You are producing an executive briefing that consolidates all analysis streams
+into a strategic decision document. This is a 1-page summary format with risk
+dashboard and prioritized action items.
+
+## Inputs
+
+- AUDIENCE_META_FILE: {AUDIENCE_META_FILE}
+  Path to a Markdown document containing executive strategic briefing content.
+
+- HEALTH_FINDINGS_FILE: {HEALTH_FINDINGS_FILE}
+  Path to a Markdown document containing health scorecard with grades per
+  dimension and top findings.
+
+- SECURITY_FINDINGS_FILE: {SECURITY_FINDINGS_FILE}
+  Path to a Markdown document containing security risk summary with risk
+  categories and business impact.
+
+## Instructions
+
+Read all three input documents. Produce an executive briefing in the format below.
+This is designed to be read in under 5 minutes by a senior leader.
+
+## Document Structure
+
+### 1. One-Page Executive Summary
+
+Write a concise summary (maximum 300 words) covering:
+- What this codebase is and its strategic importance
+- Overall health and security posture (one sentence each)
+- Top 3 things that need attention right now
+- Overall recommendation (proceed with caution / invest in improvements / urgent action needed)
+
+### 2. Risk Dashboard
+
+Visual risk summary using a table:
+
+| Area | Status | Trend | Key Risk |
+|------|--------|-------|----------|
+| Codebase Health | [Grade] | [Improving/Stable/Declining] | [Top risk] |
+| Security Posture | [Risk Level] | [Improving/Stable/Declining] | [Top risk] |
+| Technical Debt | [Level] | [Improving/Stable/Declining] | [Top risk] |
+| Documentation | [Coverage] | [Improving/Stable/Declining] | [Top risk] |
+
+### 3. Top 5 Action Items
+
+Prioritized list of the 5 most important actions, each with:
+1. Action title (plain language)
+2. Why it matters (business impact)
+3. Estimated effort (Small / Medium / Large)
+4. Recommended timeline (Immediate / This quarter / This year)
+5. Resource implication (team hours, budget, external support)
+
+### 4. Strategic Recommendations
+
+2-3 strategic-level recommendations:
+- Framed as business decisions (invest, divest, maintain, transform)
+- Each with cost-benefit rationale
+- Each with risk of inaction
+
+### 5. Appendix: Technical Detail
+
+Move detailed technical findings here for reference:
+- Full health dimension grades and findings
+- Full security risk categories and evidence
+- Complete metrics and statistics
+
+This section is for readers who want more detail but should not be required
+to understand the executive summary.
+
+## Validation Checklist
+
+Before writing the output, verify:
+
+- [ ] Executive summary is under 300 words
+- [ ] Risk dashboard is complete and consistent with input data
+- [ ] Top 5 action items cover the most critical findings
+- [ ] Each action item has effort estimate and resource implication
+- [ ] Strategic recommendations are framed as business decisions
+- [ ] No contradictions between summary and appendix
+- [ ] Document is self-contained -- a leader can make decisions from this alone
+- [ ] Technical appendix accurately reflects input documents
+
+## Output
+
+Write the complete Markdown document to: {FINDINGS_REPORT_FILE}
+
+Write in executive briefing style. The first page should be a standalone
+summary. Use tables for dashboards and metrics. Keep technical details in the
+appendix section only.

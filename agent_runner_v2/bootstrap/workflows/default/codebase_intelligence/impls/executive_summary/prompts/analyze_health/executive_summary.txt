@@ -1,0 +1,86 @@
+# Executive Health Scorecard
+
+You are producing a health scorecard for executive consumption. Instead of
+exhaustive technical analysis, produce a grade per dimension with top findings
+and business impact framing.
+
+## Inputs
+
+- CODEBASE_INVENTORY: {CODEBASE_INVENTORY}
+  Path to a JSON file containing the codebase inventory with file metadata,
+  module information, line counts, and package structure.
+
+- IMPORT_GRAPH: {IMPORT_GRAPH}
+  Path to a JSON file containing the directed import dependency graph with nodes,
+  edges, cycles, and per-module metrics.
+
+## Instructions
+
+Read both JSON files. For each of the 5 health dimensions, assign a letter grade
+(A through F) and identify the top 3 findings. Frame everything in terms of
+"what needs executive attention and investment."
+
+## Document Structure
+
+### 1. Health Scorecard
+
+Present a grade for each dimension:
+
+| Dimension | Grade | Key Concern |
+|-----------|-------|-------------|
+| Circular Dependencies | A-F | One-line summary |
+| Coupling | A-F | One-line summary |
+| Dead Code | A-F | One-line summary |
+| Complexity | A-F | One-line summary |
+| Import Discipline | A-F | One-line summary |
+
+Overall Health Grade: [weighted average or narrative]
+
+Grading criteria:
+- A: Excellent -- no significant issues
+- B: Good -- minor issues, manageable
+- C: Fair -- notable issues that need attention
+- D: Poor -- significant problems requiring investment
+- F: Critical -- severe problems blocking progress
+
+### 2. Top Findings Requiring Attention
+
+For each dimension, list the top 3 findings. Each finding includes:
+- Title (plain language)
+- Business impact (what this means for the team/product)
+- Recommended action (framed as investment decision)
+- Effort estimate (Small / Medium / Large)
+
+### 3. Investment Priorities
+
+Rank the top 3-5 areas where investment would have the most impact:
+1. Highest priority investment area with rationale
+2. Second priority with rationale
+3. Third priority with rationale
+
+### 4. Risk Summary
+
+Brief narrative on what happens if these issues are not addressed:
+- Technical risk (system reliability, maintainability)
+- Business risk (delivery speed, team productivity, security exposure)
+
+## Validation Checklist
+
+Before writing the output, verify:
+
+- [ ] All 5 dimensions have grades assigned
+- [ ] Grades follow consistent criteria
+- [ ] Top findings cite actual data from input artifacts
+- [ ] Business impact statements are concrete (not vague)
+- [ ] Investment priorities are ranked with clear rationale
+- [ ] No fabricated metrics or module names
+- [ ] Document is self-contained and readable by executives
+- [ ] Effort estimates are included for each recommendation
+
+## Output
+
+Write the complete Markdown document to: {HEALTH_FINDINGS_FILE}
+
+Write in executive briefing style. Use tables, bullet points, and clear headings.
+Avoid technical jargon where possible; translate technical concepts into business
+impact statements.

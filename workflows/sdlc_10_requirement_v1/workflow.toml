@@ -1,0 +1,156 @@
+
+[workflow]
+name = "sdlc_10_requirement_v1"
+version = "2.0.0"
+label = "SDLC Requirement Generation v1"
+job_prefix = "SDLC10REQ"
+description = "Generate structured requirements from approved initiative document, producing approved REQ document."
+visibility = "canonical"
+default_max_rejects = 2
+init_step = "generate_requirements"
+
+# Layer 2 platform contract references
+layer = "layer3"
+platform = "agent-runner-v2"
+
+[workflow.governance]
+include_in_prompts = true
+prompt_targets = ["all"]
+
+# ============================================================================
+# Implementations (BCS)
+# ============================================================================
+
+[[workflow.implementation]]
+name = "standard"
+description = "Generate structured requirements from approved initiative document."
+label = "Standard"
+
+# ============================================================================
+# Step 1: Generate Requirements
+# ============================================================================
+[[step]]
+name = "generate_requirements"
+prompt = "{{ slot.generate_requirements }}"
+enable_notifications = true
+onsuccess = "technical_critique"
+
+[step.artifacts]
+required_inputs = ["INIT_FILE"]
+produces = ["REQ_FILE"]
+result_meta_key = "REQ_FILE"
+
+[step.coder]
+role_policy = "architect_standard"
+
+# ============================================================================
+# Step 2: Technical Critique
+# ============================================================================
+[[step]]
+name = "technical_critique"
+prompt = "{{ slot.technical_critique }}"
+enable_notifications = true
+onsuccess = "address_critique"
+
+[step.artifacts]
+required_inputs = ["REQ_FILE"]
+produces = ["CRITIQUE_FILE_SUGGESTED"]
+result_meta_key = "CRITIQUE_FILE_SUGGESTED"
+
+[step.coder]
+role_policy = "reviewer_standard"
+
+[step.on_reject_refine]
+step = "generate_requirements"
+artifact = "REQ_FILE"
+max_iterations = 2
+exhausted_failure_code = "REQ_CRITIQUE_EXHAUSTED"
+exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
+
+# ============================================================================
+# Step 2b: Address Critique
+# ============================================================================
+[[step]]
+name = "address_critique"
+prompt = "{{ slot.address_critique }}"
+enable_notifications = true
+onsuccess = "review_requirements"
+
+[step.artifacts]
+required_inputs = ["REQ_FILE", "CRITIQUE_FILE_SUGGESTED"]
+produces = ["REQ_FILE"]
+target_artifact = "REQ_FILE"
+edit_mode = "in_place"
+result_meta_key = "REQ_FILE"
+
+[step.coder]
+role_policy = "architect_standard"
+
+# ============================================================================
+# Step 3: Review Requirements
+# ============================================================================
+[[step]]
+name = "review_requirements"
+prompt = "{{ slot.review_requirements }}"
+enable_notifications = true
+requires_human_approval_after = true
+onsuccess = "promote_requirements"
+
+[step.artifacts]
+required_inputs = ["REQ_FILE", "CRITIQUE_FILE_SUGGESTED"]
+produces = ["REVIEW_FILE_SUGGESTED"]
+result_meta_key = "REVIEW_FILE_SUGGESTED"
+
+[step.coder]
+role_policy = "reviewer_standard"
+
+[step.on_reject_refine]
+step = "refine_requirements"
+artifact = "REQ_FILE"
+max_iterations = 2
+exhausted_failure_code = "REQ_REFINEMENT_EXHAUSTED"
+exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
+
+# ============================================================================
+# Step 4: Refine Requirements (conditional)
+# ============================================================================
+[[step]]
+name = "refine_requirements"
+prompt = "{{ slot.refine_requirements }}"
+enable_notifications = true
+
+onsuccess = "review_requirements"
+[step.artifacts]
+required_inputs = ["REQ_FILE", "REVIEW_FILE_SUGGESTED"]
+produces = ["REQ_FILE"]
+target_artifact = "REQ_FILE"
+edit_mode = "in_place"
+result_meta_key = "REQ_FILE"
+
+
+[step.coder]
+role_policy = "architect_standard"
+
+# ============================================================================
+# Step 5: Promote Requirements
+# ============================================================================
+[[step]]
+name = "promote_requirements"
+action = "promote_artifact"
+promotes = "REQ_FILE"
+enable_notifications = true
+onsuccess = "stepCompletion"
+
+[step.artifacts]
+required_inputs = ["REQ_FILE"]
+source = "REQ_FILE"
+dest = "REQ_FILE"
+dest_dir = "docs/repo/agent_runner/sdlc/delivery/10_requirements"
+result_meta_key = "REQ_FILE"
+
+# ============================================================================
+# Step 6: Step Completion
+# ============================================================================
+[[step]]
+name = "stepCompletion"
+action = "step_completion"

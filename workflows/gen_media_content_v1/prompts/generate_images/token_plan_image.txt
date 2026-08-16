@@ -1,0 +1,115 @@
+# Objective
+
+Generate images from the prompt variants in step_02 using the Token Plan Image
+API (wan2.7-image). You will read variant JSONs to get t2i prompts, generate
+images, update the JSONs with image URLs, and copy everything to step_03.
+
+# Reference Inputs
+
+- MEDIA_CONFIG: {MEDIA_CONFIG}
+  The workspace config.json. Contains `api.token_plan_image` section with model
+  settings.
+
+- STEP_02_DIR: {STEP_02_DIR}
+  Directory containing variant JSON files from the prompt generation step.
+
+- STEP_03_DIR: {STEP_03_DIR}
+  Output directory for generated images. Create if it does not exist.
+
+# Execution Protocol
+
+## Step 1: Load Configuration
+
+1. Read `config.json` from the workspace root (path in MEDIA_CONFIG).
+2. Extract the `api.token_plan_image` section:
+   - `model` — model name (default: "wan2.7-image")
+   - `size` — image size in format "width*height" (default: "960*1708")
+3. If no `api.token_plan_image` section exists, use hardcoded defaults.
+
+**Note**: Token Plan image API requires total pixels between 1,638,400 and
+2,073,600 (1280x1280 to 1440x1440), with aspect ratio between 1:4 and 4:1.
+
+## Step 2: Load API Key
+
+Read the `.env` file from the workspace root and extract `TOKEN_PLAN_API_KEY`.
+Strip any quotes and spaces from the value.
+
+**Important**: Embed the key directly in curl commands rather than using
+environment variable syntax.
+
+## Step 3: Read Input Data
+
+1. List all `*.json` files in STEP_02_DIR. **Skip `index.json`** — it is not
+   variant data.
+2. For each variant JSON, read it and extract the `variations` array.
+3. Each variation contains: `t2i_prompt1`, `image_filename`, `image_url` (empty).
+
+## Step 4: Generate Images
+
+For each variation in each JSON:
+
+1. Extract `t2i_prompt1` — the text-to-image prompt.
+2. Call the Token Plan Image API:
+
+```bash
+curl -s -X POST "https://token-plan.ap-southeast-1.maas.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation" \
+  -H "Authorization: Bearer <API_KEY>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "<model>",
+    "input": {
+      "messages": [{"role": "user", "content": [{"text": "<t2i_prompt1>"}]}]
+    },
+    "parameters": {"size": "<size>"}
+  }'
+```
+
+3. Extract `output.choices[0].message.content[0].image` from the response —
+   this is the image URL.
+4. Download the image to STEP_03_DIR with filename from `image_filename`:
+
+```bash
+curl -s -o "<STEP_03_DIR>/<image_filename>" "<image_url>"
+```
+
+5. Update the variation's `image_url` field with the URL.
+
+## Step 5: Write Updated JSONs
+
+For each input JSON, write an updated version to STEP_03_DIR with the same
+filename. The updated JSON should have `image_url` filled in for each variation.
+
+## Step 6: Write Index
+
+Write `index.json` to STEP_03_DIR:
+
+```json
+{
+  "step": "generate_images",
+  "files": [
+    {"input": "source_prompts.json", "output": "source_prompts.json"},
+    {"images": ["image001.png", "image002.png", ...]}
+  ]
+}
+```
+
+# Output
+
+Write the IMAGE_INDEX artifact path (STEP_03_DIR/index.json) as your output.
+
+# Self-Check
+
+Before completing, verify:
+
+- [ ] All variations in all JSONs were processed
+- [ ] Each image was downloaded to STEP_03_DIR
+- [ ] Each variation's `image_url` was updated
+- [ ] Updated JSONs were written to STEP_03_DIR
+- [ ] `index.json` was written to STEP_03_DIR
+- [ ] The IMAGE_INDEX artifact path is reported in the output
+
+# Forbidden
+
+- Do NOT call the Token Plan API using Python requests/urllib — use curl only.
+- Do NOT skip the `index.json` exclusion when reading variant JSONs.
+- Do NOT modify the `t2i_prompt1` or `t2v_prompt1` fields.

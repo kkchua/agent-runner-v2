@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import sys
 from functools import lru_cache
 from pathlib import Path
 from types import ModuleType
@@ -12,6 +13,32 @@ def resolve_workflow_output_paths(
     job_id: str = "{job_id}",
     mode: str = "{mode}",
 ) -> dict[str, str]:
+    """Resolve artifact output paths for a workflow.
+
+    Resolution order:
+    1. New interface: ``WorkflowExtensions.register_artifact_keys()``
+       via the hooks scanner (preferred).
+    2. Legacy fallback: ``output_paths.py`` with ``build_output_paths()``
+       (for existing workflows that have not migrated yet).
+
+    Parameters:
+        template_group: Workflow package name.
+        job_id: Job identifier for path construction.
+        mode: Execution mode.
+
+    Returns:
+        Dict mapping artifact key strings to repo-relative paths.
+    """
+    # 1. Try new WorkflowExtensions interface
+    from .workflow_packages.hooks import get_extension
+
+    ext = get_extension(template_group)
+    if ext is not None:
+        paths = ext.register_artifact_keys(job_id=job_id, mode=mode)
+        if isinstance(paths, dict):
+            return {str(k): str(v) for k, v in paths.items()}
+
+    # 2. Legacy fallback: output_paths.py (existing workflows only)
     module = _load_output_paths_module(template_group)
     if module is None or not hasattr(module, "build_output_paths"):
         return {}
@@ -26,6 +53,11 @@ def resolve_workflow_output_paths(
 
 @lru_cache(maxsize=None)
 def _load_output_paths_module(template_group: str) -> ModuleType | None:
+    """Load legacy output_paths.py for existing workflows.
+
+    Only searches repo-local workflows/ directory. Does NOT search
+    the bootstrap source folder — runtime always uses local paths.
+    """
     for candidate in _output_paths_candidates(template_group):
         if not candidate.is_file():
             continue
@@ -36,20 +68,19 @@ def _load_output_paths_module(template_group: str) -> ModuleType | None:
         if spec is None or spec.loader is None:
             continue
         module = importlib.util.module_from_spec(spec)
+        sys.modules[module.__name__] = module
         spec.loader.exec_module(module)
         return module
     return None
 
 
 def _output_paths_candidates(template_group: str) -> list[Path]:
+    """Return candidate paths for legacy output_paths.py.
+
+    Only searches the repo-local workflows/ directory. The bootstrap
+    source folder is NOT searched at runtime.
+    """
     repo_root = Path(__file__).resolve().parents[1]
     return [
         repo_root / "workflows" / template_group / "output_paths.py",
-        repo_root
-        / "agent_runner_v2"
-        / "bootstrap"
-        / "workflows"
-        / "default"
-        / template_group
-        / "output_paths.py",
     ]

@@ -1,0 +1,170 @@
+# SDLC Implementation v1 (BCS-compliant)
+# Generates implementation plans from approved task specifications.
+# Uses prompt slots for swappable strategies and impl presets for configuration.
+#
+# Pipeline:
+#   1. Generate          — TDD-driven implementation plan (tests first)
+#   2-3. Challenge <-> Address — adversarial attack, then evidence-based resolution
+#   4-4b. Gatekeep <-> Refine — pass/fail gate, refinement on rejection
+#   5. Promote           — deploy IMPL artifact (ACTION)
+#   6. Complete          — terminal (ACTION)
+
+[workflow]
+name = "sdlc_50_implementation_v1"
+version = "2.0.0"
+label = "SDLC Implementation v1"
+job_prefix = "SDLC50IMP"
+description = "Generate TDD-driven implementation plan from approved task, with adversarial challenge and pass/fail gate."
+visibility = "canonical"
+default_max_rejects = 2
+init_step = "generate_implementation"
+layer = "layer3"
+platform = "agent-runner-v2"
+
+# ============================================================================
+# Implementations (BCS)
+# ============================================================================
+
+[[workflow.implementation]]
+name = "standard"
+description = "Default SDLC implementation with TDD-driven planning and adversarial challenge."
+label = "Standard"
+
+[workflow.governance]
+include_in_prompts = true
+prompt_targets = ["all"]
+
+# ============================================================================
+# Step 1: Generate Implementation (TDD-driven)
+# ============================================================================
+
+[[step]]
+name = "generate_implementation"
+prompt = "{{ slot.generate_implementation }}"
+enable_notifications = true
+onsuccess = "challenge_implementation"
+
+[step.artifacts]
+required_inputs = ["TASK_FILE"]
+produces = ["IMPL_FILE"]
+result_meta_key = "IMPL_FILE"
+
+[step.coder]
+role_policy = "architect_standard"
+
+# ============================================================================
+# Step 2: Challenge Implementation (adversarial)
+# ============================================================================
+
+[[step]]
+name = "challenge_implementation"
+prompt = "{{ slot.challenge_implementation }}"
+enable_notifications = true
+onsuccess = "address_challenges"
+
+[step.artifacts]
+required_inputs = ["IMPL_FILE", "TASK_FILE"]
+produces = ["CHALLENGE_FILE_SUGGESTED"]
+result_meta_key = "CHALLENGE_FILE_SUGGESTED"
+
+[step.coder]
+role_policy = "reviewer_standard"
+
+[step.on_reject_refine]
+step = "generate_implementation"
+artifact = "IMPL_FILE"
+max_iterations = 2
+exhausted_failure_code = "IMPL_CHALLENGE_EXHAUSTED"
+exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
+
+# ============================================================================
+# Step 2b: Address Challenges (evidence-based)
+# ============================================================================
+
+[[step]]
+name = "address_challenges"
+prompt = "{{ slot.address_challenges }}"
+enable_notifications = true
+onsuccess = "gatekeep_implementation"
+
+[step.artifacts]
+required_inputs = ["IMPL_FILE", "CHALLENGE_FILE_SUGGESTED", "TASK_FILE"]
+produces = ["IMPL_FILE"]
+target_artifact = "IMPL_FILE"
+edit_mode = "in_place"
+result_meta_key = "IMPL_FILE"
+
+[step.coder]
+role_policy = "architect_standard"
+
+# ============================================================================
+# Step 3: Gatekeep Implementation (pass/fail gate)
+# ============================================================================
+
+[[step]]
+name = "gatekeep_implementation"
+prompt = "{{ slot.gatekeep_implementation }}"
+enable_notifications = true
+requires_human_approval_after = true
+onsuccess = "promote_implementation"
+
+[step.artifacts]
+required_inputs = ["IMPL_FILE", "CHALLENGE_FILE_SUGGESTED", "TASK_FILE"]
+produces = ["GATEKEEP_FILE_SUGGESTED"]
+result_meta_key = "GATEKEEP_FILE_SUGGESTED"
+
+[step.coder]
+role_policy = "gatekeeper_standard"
+
+[step.on_reject_refine]
+step = "refine_implementation"
+artifact = "IMPL_FILE"
+max_iterations = 2
+exhausted_failure_code = "IMPL_GATEKEEP_EXHAUSTED"
+exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
+
+# ============================================================================
+# Step 3b: Refine Implementation (conditional)
+# ============================================================================
+
+[[step]]
+name = "refine_implementation"
+prompt = "{{ slot.refine_implementation }}"
+enable_notifications = true
+onsuccess = "gatekeep_implementation"
+
+[step.artifacts]
+required_inputs = ["IMPL_FILE", "GATEKEEP_FILE_SUGGESTED", "TASK_FILE"]
+produces = ["IMPL_FILE"]
+target_artifact = "IMPL_FILE"
+edit_mode = "in_place"
+result_meta_key = "IMPL_FILE"
+
+[step.coder]
+role_policy = "architect_standard"
+
+# ============================================================================
+# Step 4: Promote Implementation (ACTION)
+# ============================================================================
+
+[[step]]
+name = "promote_implementation"
+action = "promote_artifact"
+promotes = "IMPL_FILE"
+enable_notifications = true
+onsuccess = "stepCompletion"
+
+[step.artifacts]
+required_inputs = ["IMPL_FILE"]
+source = "IMPL_FILE"
+dest = "IMPL_FILE"
+dest_dir = "docs/repo/agent_runner/sdlc/delivery/50_implementations"
+result_meta_key = "IMPL_FILE"
+
+# ============================================================================
+# Step 5: Step Completion (ACTION)
+# ============================================================================
+
+[[step]]
+name = "stepCompletion"
+action = "step_completion"

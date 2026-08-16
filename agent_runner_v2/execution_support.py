@@ -70,14 +70,14 @@ def classify_pre_run_failure(exc: Exception) -> dict[str, str]:
         )
     if isinstance(exc, MetaJsonMissingError):
         return build_failure_envelope(
-            failure_class="HUMAN_RETRY_REQUIRED",
+            failure_class="AUTO_RETRYABLE",
             failure_code="META_JSON_MISSING",
             failure_reason=message,
             failure_source="runner",
         )
     if isinstance(exc, MetaJsonInvalidError):
         return build_failure_envelope(
-            failure_class="HUMAN_RETRY_REQUIRED",
+            failure_class="AUTO_RETRYABLE",
             failure_code="META_JSON_INVALID",
             failure_reason=message,
             failure_source="runner",

@@ -1,20 +1,31 @@
 {
   "workspace_root": "D:\\MyProjectSpace\\01_Workflows\\agent-runner-v2",
   "source_root": "D:\\MyProjectSpace\\01_Workflows\\agent-runner-v2\\docs\\system\\00_governance\\bootstrap",
-  "source_docs_included": true,
-  "published_workflow_root": "D:\\MyProjectSpace\\01_Workflows\\agent-runner-v2\\docs\\system\\00_governance\\bootstrap\\workflows",
-  "published_registry_copied": true,
-  "published_workflows_copied": [
-    "00_bootstrap_lifecycle_admin_v1",
-    "00_repo_master_docs_bootstrap_v1",
-    "01_governance_foundation_v1",
-    "02_platform_core_foundation_v1"
-  ],
+  "package_bootstrap_root": "D:\\MyProjectSpace\\01_Workflows\\agent-runner-v2\\agent_runner_v2\\bootstrap\\bundles\\core\\current",
+  "bootstrap_workflows_root": "D:\\MyProjectSpace\\01_Workflows\\agent-runner-v2\\agent_runner_v2\\bootstrap\\workflows\\default",
   "shared_registry_copied": true,
   "plugin_workflows_copied": [
     "00_bootstrap_lifecycle_admin_v1",
-    "00_repo_master_docs_bootstrap_v1",
     "01_governance_foundation_v1",
-    "02_platform_core_foundation_v1"
+    "02_agent_runner_platform_v1",
+    "agentic_workflow_builder",
+    "agnes_gen_video_v1",
+    "agnes_media_gen_v1",
+    "artifact_generator_builder",
+    "codebase_intelligence",
+    "gen_media_content_v1",
+    "sdlc_00_codebase_scaffold_v1",
+    "sdlc_00_init_doc_v1",
+    "sdlc_00_requirement_planning_v1",
+    "sdlc_01_impl_exec_review_v1",
+    "sdlc_10_requirement_v1",
+    "sdlc_20_planning_v1",
+    "sdlc_30_backlog_v1",
+    "sdlc_40_task_v1",
+    "sdlc_50_implementation_v1",
+    "sdlc_60_execution_v1",
+    "sdlc_70_validation_v1",
+    "sdlc_80_review_v1",
+    "text_summarizer_ayz"
   ]
 }

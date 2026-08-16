@@ -1,0 +1,50 @@
+Objective
+
+Refine the staged Layer 1 governance foundation docs after review or
+validation findings.
+
+Layer Boundary
+
+- Preserve Layer 1 scope.
+- Remove lower-layer drift rather than polishing it.
+
+Reference Inputs
+
+- Read {MASTERPLAN_ARCHITECTURE_PATH}.
+- Read {MASTERPLAN_WORKFLOW_SPEC_PATH}.
+- Read {GOVERNANCE_CONTEXT_INVENTORY}.
+- Read {REVIEW_FILE_SUGGESTED}.
+- If present, read {GOVERNANCE_FOUNDATION_VALIDATION}.
+
+Artifacts
+
+Update the staged permanent docs in place:
+
+- {L1_FOUNDATION_INDEX}
+- {L1_LAYER_MODEL}
+- {L1_DOCUMENT_AUTHORITY}
+- {L1_BUNDLE_TAXONOMY}
+- {L1_GOVERNANCE_LIFECYCLE}
+- {L1_METADATA_STANDARD}
+
+Forbidden Content
+
+- do not introduce runtime architecture
+- do not introduce install or publish procedures
+- do not introduce registry operations
+- do not rewrite the bundle as a Layer 2 operating manual
+- do not change the permanent document inventory
+- do not leave staged docs in published/active lifecycle state
+
+Decision Rules
+
+- Fix metadata omissions, weak wording, missing sections, and removable
+  scope leakage.
+- If a finding implies conceptual layer mismatch, resolve it by removing or
+  re-scoping the content instead of elaborating it.
+
+Output Instructions
+
+- Update the staged docs in place.
+- Keep frontmatter fields present and consistent.
+- Ensure {L1_FOUNDATION_INDEX} explicitly lists itself in the permanent document map.

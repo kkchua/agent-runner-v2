@@ -1,0 +1,659 @@
+[workflow]
+name = "sdlc_00_requirement_planning_v1"
+version = "2.0.0"
+label = "SDLC Requirement & Planning v1"
+job_prefix = "SDLC0RP"
+description = "Combined SDLC pipeline: initiative intake through requirement, planning, backlog, and task generation with review gates at each phase."
+visibility = "canonical"
+default_max_rejects = 2
+init_step = "init_generate"
+
+# Layer 2 platform contract references
+layer = "layer3"
+platform = "agent-runner-v2"
+
+[workflow.governance]
+include_in_prompts = true
+prompt_targets = ["all"]
+
+# ============================================================================
+# Implementations (BCS)
+# ============================================================================
+
+[[workflow.implementation]]
+name = "standard"
+description = "Combined SDLC pipeline: initiative intake through requirement, planning, backlog, and task generation."
+label = "Standard"
+
+# ============================================================================
+# Phase 1: Initiative Intake
+# ============================================================================
+
+# ============================================================================
+# Step 1.1: Generate Initiative
+# ============================================================================
+[[step]]
+name = "init_generate"
+prompt = "{{ slot.init_generate }}"
+enable_notifications = true
+onsuccess = "init_technical_critique"
+
+[step.artifacts]
+required_inputs = ["DRAFT_INIT_FILE"]
+produces = ["INIT_FILE"]
+result_meta_key = "INIT_FILE"
+
+[step.coder]
+role_policy = "architect_standard"
+
+# ============================================================================
+# Step 1.2: Technical Critique
+# ============================================================================
+[[step]]
+name = "init_technical_critique"
+prompt = "{{ slot.init_technical_critique }}"
+enable_notifications = true
+onsuccess = "init_address_critique"
+
+[step.artifacts]
+required_inputs = ["INIT_FILE"]
+produces = ["CRITIQUE_FILE_SUGGESTED"]
+result_meta_key = "CRITIQUE_FILE_SUGGESTED"
+
+[step.coder]
+role_policy = "reviewer_standard"
+
+[step.on_reject_refine]
+step = "init_generate"
+artifact = "INIT_FILE"
+max_iterations = 2
+exhausted_failure_code = "INIT_CRITIQUE_EXHAUSTED"
+exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
+
+# ============================================================================
+# Step 1.2b: Address Critique
+# ============================================================================
+[[step]]
+name = "init_address_critique"
+prompt = "{{ slot.init_address_critique }}"
+enable_notifications = true
+onsuccess = "init_review"
+
+[step.artifacts]
+required_inputs = ["INIT_FILE", "CRITIQUE_FILE_SUGGESTED"]
+produces = ["INIT_FILE"]
+target_artifact = "INIT_FILE"
+edit_mode = "in_place"
+result_meta_key = "INIT_FILE"
+
+[step.coder]
+role_policy = "architect_standard"
+
+# ============================================================================
+# Step 1.3: Review Initiative (Human Gate)
+# ============================================================================
+[[step]]
+name = "init_review"
+prompt = "{{ slot.init_review }}"
+enable_notifications = true
+requires_human_approval_after = true
+onsuccess = "promote_init"
+
+[step.artifacts]
+required_inputs = ["INIT_FILE", "CRITIQUE_FILE_SUGGESTED"]
+produces = ["REVIEW_FILE_SUGGESTED"]
+result_meta_key = "REVIEW_FILE_SUGGESTED"
+
+[step.coder]
+role_policy = "reviewer_standard"
+
+[step.on_reject_refine]
+step = "init_refine"
+artifact = "INIT_FILE"
+max_iterations = 2
+exhausted_failure_code = "INIT_REFINEMENT_EXHAUSTED"
+exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
+
+# ============================================================================
+# Step 1.4: Refine Initiative (conditional)
+# ============================================================================
+[[step]]
+name = "init_refine"
+prompt = "{{ slot.init_refine }}"
+enable_notifications = true
+onsuccess = "init_review"
+
+[step.artifacts]
+required_inputs = ["INIT_FILE", "REVIEW_FILE_SUGGESTED"]
+produces = ["INIT_FILE"]
+target_artifact = "INIT_FILE"
+edit_mode = "in_place"
+result_meta_key = "INIT_FILE"
+
+[step.coder]
+role_policy = "architect_standard"
+
+# ============================================================================
+# Step 1.5: Promote Initiative
+# ============================================================================
+[[step]]
+name = "promote_init"
+action = "promote_artifact"
+promotes = "INIT_FILE"
+enable_notifications = true
+onsuccess = "req_generate"
+
+[step.artifacts]
+required_inputs = ["INIT_FILE"]
+source = "INIT_FILE"
+dest = "INIT_FILE"
+dest_dir = "docs/repo/agent_runner/sdlc/delivery/00_initiatives"
+result_meta_key = "INIT_FILE"
+
+# ============================================================================
+# Phase 2: Requirement Generation
+# ============================================================================
+
+# ============================================================================
+# Step 2.1: Generate Requirements
+# ============================================================================
+[[step]]
+name = "req_generate"
+prompt = "{{ slot.req_generate }}"
+enable_notifications = true
+onsuccess = "req_technical_critique"
+
+[step.artifacts]
+required_inputs = ["INIT_FILE"]
+produces = ["REQ_FILE"]
+result_meta_key = "REQ_FILE"
+
+[step.coder]
+role_policy = "architect_standard"
+
+# ============================================================================
+# Step 2.2: Technical Critique
+# ============================================================================
+[[step]]
+name = "req_technical_critique"
+prompt = "{{ slot.req_technical_critique }}"
+enable_notifications = true
+onsuccess = "req_address_critique"
+
+[step.artifacts]
+required_inputs = ["REQ_FILE"]
+produces = ["CRITIQUE_FILE_SUGGESTED"]
+result_meta_key = "CRITIQUE_FILE_SUGGESTED"
+
+[step.coder]
+role_policy = "reviewer_standard"
+
+[step.on_reject_refine]
+step = "req_generate"
+artifact = "REQ_FILE"
+max_iterations = 2
+exhausted_failure_code = "REQ_CRITIQUE_EXHAUSTED"
+exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
+
+# ============================================================================
+# Step 2.2b: Address Critique
+# ============================================================================
+[[step]]
+name = "req_address_critique"
+prompt = "{{ slot.req_address_critique }}"
+enable_notifications = true
+onsuccess = "req_review"
+
+[step.artifacts]
+required_inputs = ["REQ_FILE", "CRITIQUE_FILE_SUGGESTED"]
+produces = ["REQ_FILE"]
+target_artifact = "REQ_FILE"
+edit_mode = "in_place"
+result_meta_key = "REQ_FILE"
+
+[step.coder]
+role_policy = "architect_standard"
+
+# ============================================================================
+# Step 2.3: Review Requirements (Human Gate)
+# ============================================================================
+[[step]]
+name = "req_review"
+prompt = "{{ slot.req_review }}"
+enable_notifications = true
+requires_human_approval_after = true
+onsuccess = "promote_req"
+
+[step.artifacts]
+required_inputs = ["REQ_FILE", "CRITIQUE_FILE_SUGGESTED"]
+produces = ["REVIEW_FILE_SUGGESTED"]
+result_meta_key = "REVIEW_FILE_SUGGESTED"
+
+[step.coder]
+role_policy = "reviewer_standard"
+
+[step.on_reject_refine]
+step = "req_refine"
+artifact = "REQ_FILE"
+max_iterations = 2
+exhausted_failure_code = "REQ_REFINEMENT_EXHAUSTED"
+exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
+
+# ============================================================================
+# Step 2.4: Refine Requirements (conditional)
+# ============================================================================
+[[step]]
+name = "req_refine"
+prompt = "{{ slot.req_refine }}"
+enable_notifications = true
+onsuccess = "req_review"
+
+[step.artifacts]
+required_inputs = ["REQ_FILE", "REVIEW_FILE_SUGGESTED"]
+produces = ["REQ_FILE"]
+target_artifact = "REQ_FILE"
+edit_mode = "in_place"
+result_meta_key = "REQ_FILE"
+
+[step.coder]
+role_policy = "architect_standard"
+
+# ============================================================================
+# Step 2.5: Promote Requirements
+# ============================================================================
+[[step]]
+name = "promote_req"
+action = "promote_artifact"
+promotes = "REQ_FILE"
+enable_notifications = true
+onsuccess = "plan_generate"
+
+[step.artifacts]
+required_inputs = ["REQ_FILE"]
+source = "REQ_FILE"
+dest = "REQ_FILE"
+dest_dir = "docs/repo/agent_runner/sdlc/delivery/10_requirements"
+result_meta_key = "REQ_FILE"
+
+# ============================================================================
+# Phase 3: Planning
+# ============================================================================
+
+# ============================================================================
+# Step 3.1: Generate Plan
+# ============================================================================
+[[step]]
+name = "plan_generate"
+prompt = "{{ slot.plan_generate }}"
+enable_notifications = true
+onsuccess = "plan_technical_critique"
+
+[step.artifacts]
+required_inputs = ["REQ_FILE"]
+produces = ["PLAN_FILE"]
+result_meta_key = "PLAN_FILE"
+
+[step.coder]
+role_policy = "architect_standard"
+
+# ============================================================================
+# Step 3.2: Technical Critique
+# ============================================================================
+[[step]]
+name = "plan_technical_critique"
+prompt = "{{ slot.plan_technical_critique }}"
+enable_notifications = true
+onsuccess = "plan_address_critique"
+
+[step.artifacts]
+required_inputs = ["PLAN_FILE"]
+produces = ["CRITIQUE_FILE_SUGGESTED"]
+result_meta_key = "CRITIQUE_FILE_SUGGESTED"
+
+[step.coder]
+role_policy = "reviewer_standard"
+
+[step.on_reject_refine]
+step = "plan_generate"
+artifact = "PLAN_FILE"
+max_iterations = 2
+exhausted_failure_code = "PLAN_CRITIQUE_EXHAUSTED"
+exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
+
+# ============================================================================
+# Step 3.2b: Address Critique
+# ============================================================================
+[[step]]
+name = "plan_address_critique"
+prompt = "{{ slot.plan_address_critique }}"
+enable_notifications = true
+onsuccess = "plan_review"
+
+[step.artifacts]
+required_inputs = ["PLAN_FILE", "CRITIQUE_FILE_SUGGESTED"]
+produces = ["PLAN_FILE"]
+target_artifact = "PLAN_FILE"
+edit_mode = "in_place"
+result_meta_key = "PLAN_FILE"
+
+[step.coder]
+role_policy = "architect_standard"
+
+# ============================================================================
+# Step 3.3: Review Plan (Human Gate)
+# ============================================================================
+[[step]]
+name = "plan_review"
+prompt = "{{ slot.plan_review }}"
+enable_notifications = true
+requires_human_approval_after = true
+onsuccess = "promote_plan"
+
+[step.artifacts]
+required_inputs = ["PLAN_FILE", "CRITIQUE_FILE_SUGGESTED"]
+produces = ["REVIEW_FILE_SUGGESTED"]
+result_meta_key = "REVIEW_FILE_SUGGESTED"
+
+[step.coder]
+role_policy = "reviewer_standard"
+
+[step.on_reject_refine]
+step = "plan_refine"
+artifact = "PLAN_FILE"
+max_iterations = 2
+exhausted_failure_code = "PLAN_REFINEMENT_EXHAUSTED"
+exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
+
+# ============================================================================
+# Step 3.4: Refine Plan (conditional)
+# ============================================================================
+[[step]]
+name = "plan_refine"
+prompt = "{{ slot.plan_refine }}"
+enable_notifications = true
+onsuccess = "plan_review"
+
+[step.artifacts]
+required_inputs = ["PLAN_FILE", "REVIEW_FILE_SUGGESTED"]
+produces = ["PLAN_FILE"]
+target_artifact = "PLAN_FILE"
+edit_mode = "in_place"
+result_meta_key = "PLAN_FILE"
+
+[step.coder]
+role_policy = "architect_standard"
+
+# ============================================================================
+# Step 3.5: Promote Plan
+# ============================================================================
+[[step]]
+name = "promote_plan"
+action = "promote_artifact"
+promotes = "PLAN_FILE"
+enable_notifications = true
+onsuccess = "backlog_generate"
+
+[step.artifacts]
+required_inputs = ["PLAN_FILE"]
+source = "PLAN_FILE"
+dest = "PLAN_FILE"
+dest_dir = "docs/repo/agent_runner/sdlc/delivery/20_plans"
+result_meta_key = "PLAN_FILE"
+
+# ============================================================================
+# Phase 4: Backlog Generation
+# ============================================================================
+
+# ============================================================================
+# Step 4.1: Generate Backlog
+# ============================================================================
+[[step]]
+name = "backlog_generate"
+prompt = "{{ slot.backlog_generate }}"
+enable_notifications = true
+onsuccess = "backlog_technical_critique"
+
+[step.artifacts]
+required_inputs = ["PLAN_FILE"]
+produces = ["BACKLOG_FILE"]
+result_meta_key = "BACKLOG_FILE"
+
+[step.coder]
+role_policy = "architect_standard"
+
+# ============================================================================
+# Step 4.2: Technical Critique
+# ============================================================================
+[[step]]
+name = "backlog_technical_critique"
+prompt = "{{ slot.backlog_technical_critique }}"
+enable_notifications = true
+onsuccess = "backlog_address_critique"
+
+[step.artifacts]
+required_inputs = ["BACKLOG_FILE"]
+produces = ["CRITIQUE_FILE_SUGGESTED"]
+result_meta_key = "CRITIQUE_FILE_SUGGESTED"
+
+[step.coder]
+role_policy = "reviewer_standard"
+
+[step.on_reject_refine]
+step = "backlog_generate"
+artifact = "BACKLOG_FILE"
+max_iterations = 2
+exhausted_failure_code = "BACKLOG_CRITIQUE_EXHAUSTED"
+exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
+
+# ============================================================================
+# Step 4.2b: Address Critique
+# ============================================================================
+[[step]]
+name = "backlog_address_critique"
+prompt = "{{ slot.backlog_address_critique }}"
+enable_notifications = true
+onsuccess = "backlog_review"
+
+[step.artifacts]
+required_inputs = ["BACKLOG_FILE", "CRITIQUE_FILE_SUGGESTED"]
+produces = ["BACKLOG_FILE"]
+target_artifact = "BACKLOG_FILE"
+edit_mode = "in_place"
+result_meta_key = "BACKLOG_FILE"
+
+[step.coder]
+role_policy = "architect_standard"
+
+# ============================================================================
+# Step 4.3: Review Backlog (Human Gate)
+# ============================================================================
+[[step]]
+name = "backlog_review"
+prompt = "{{ slot.backlog_review }}"
+enable_notifications = true
+requires_human_approval_after = true
+onsuccess = "promote_backlog"
+
+[step.artifacts]
+required_inputs = ["BACKLOG_FILE", "CRITIQUE_FILE_SUGGESTED"]
+produces = ["REVIEW_FILE_SUGGESTED"]
+result_meta_key = "REVIEW_FILE_SUGGESTED"
+
+[step.coder]
+role_policy = "reviewer_standard"
+
+[step.on_reject_refine]
+step = "backlog_refine"
+artifact = "BACKLOG_FILE"
+max_iterations = 2
+exhausted_failure_code = "BACKLOG_REFINEMENT_EXHAUSTED"
+exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
+
+# ============================================================================
+# Step 4.4: Refine Backlog (conditional)
+# ============================================================================
+[[step]]
+name = "backlog_refine"
+prompt = "{{ slot.backlog_refine }}"
+enable_notifications = true
+onsuccess = "backlog_review"
+
+[step.artifacts]
+required_inputs = ["BACKLOG_FILE", "REVIEW_FILE_SUGGESTED"]
+produces = ["BACKLOG_FILE"]
+target_artifact = "BACKLOG_FILE"
+edit_mode = "in_place"
+result_meta_key = "BACKLOG_FILE"
+
+[step.coder]
+role_policy = "architect_standard"
+
+# ============================================================================
+# Step 4.5: Promote Backlog
+# ============================================================================
+[[step]]
+name = "promote_backlog"
+action = "promote_artifact"
+promotes = "BACKLOG_FILE"
+enable_notifications = true
+onsuccess = "task_generate"
+
+[step.artifacts]
+required_inputs = ["BACKLOG_FILE"]
+source = "BACKLOG_FILE"
+dest = "BACKLOG_FILE"
+dest_dir = "docs/repo/agent_runner/sdlc/delivery/30_backlogs"
+result_meta_key = "BACKLOG_FILE"
+
+# ============================================================================
+# Phase 5: Task Generation
+# ============================================================================
+
+# ============================================================================
+# Step 5.1: Generate Task
+# ============================================================================
+[[step]]
+name = "task_generate"
+prompt = "{{ slot.task_generate }}"
+enable_notifications = true
+onsuccess = "task_technical_critique"
+
+[step.artifacts]
+required_inputs = ["BACKLOG_FILE"]
+optional_inputs = ["WORK_ITEM"]
+produces = ["TASK_FILE"]
+result_meta_key = "TASK_FILE"
+
+[step.coder]
+role_policy = "architect_standard"
+
+# ============================================================================
+# Step 5.2: Technical Critique
+# ============================================================================
+[[step]]
+name = "task_technical_critique"
+prompt = "{{ slot.task_technical_critique }}"
+enable_notifications = true
+onsuccess = "task_address_critique"
+
+[step.artifacts]
+required_inputs = ["TASK_FILE"]
+produces = ["CRITIQUE_FILE_SUGGESTED"]
+result_meta_key = "CRITIQUE_FILE_SUGGESTED"
+
+[step.coder]
+role_policy = "reviewer_standard"
+
+[step.on_reject_refine]
+step = "task_generate"
+artifact = "TASK_FILE"
+max_iterations = 2
+exhausted_failure_code = "TASK_CRITIQUE_EXHAUSTED"
+exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
+
+# ============================================================================
+# Step 5.2b: Address Critique
+# ============================================================================
+[[step]]
+name = "task_address_critique"
+prompt = "{{ slot.task_address_critique }}"
+enable_notifications = true
+onsuccess = "task_review"
+
+[step.artifacts]
+required_inputs = ["TASK_FILE", "CRITIQUE_FILE_SUGGESTED"]
+produces = ["TASK_FILE"]
+target_artifact = "TASK_FILE"
+edit_mode = "in_place"
+result_meta_key = "TASK_FILE"
+
+[step.coder]
+role_policy = "architect_standard"
+
+# ============================================================================
+# Step 5.3: Review Task (Human Gate)
+# ============================================================================
+[[step]]
+name = "task_review"
+prompt = "{{ slot.task_review }}"
+enable_notifications = true
+requires_human_approval_after = true
+onsuccess = "promote_task"
+
+[step.artifacts]
+required_inputs = ["TASK_FILE", "CRITIQUE_FILE_SUGGESTED"]
+produces = ["REVIEW_FILE_SUGGESTED"]
+result_meta_key = "REVIEW_FILE_SUGGESTED"
+
+[step.coder]
+role_policy = "reviewer_standard"
+
+[step.on_reject_refine]
+step = "task_refine"
+artifact = "TASK_FILE"
+max_iterations = 2
+exhausted_failure_code = "TASK_REFINEMENT_EXHAUSTED"
+exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
+
+# ============================================================================
+# Step 5.4: Refine Task (conditional)
+# ============================================================================
+[[step]]
+name = "task_refine"
+prompt = "{{ slot.task_refine }}"
+enable_notifications = true
+onsuccess = "task_review"
+
+[step.artifacts]
+required_inputs = ["TASK_FILE", "REVIEW_FILE_SUGGESTED"]
+produces = ["TASK_FILE"]
+target_artifact = "TASK_FILE"
+edit_mode = "in_place"
+result_meta_key = "TASK_FILE"
+
+[step.coder]
+role_policy = "architect_standard"
+
+# ============================================================================
+# Step 5.5: Promote Task
+# ============================================================================
+[[step]]
+name = "promote_task"
+action = "promote_artifact"
+promotes = "TASK_FILE"
+enable_notifications = true
+onsuccess = "stepCompletion"
+
+[step.artifacts]
+required_inputs = ["TASK_FILE"]
+source = "TASK_FILE"
+dest = "TASK_FILE"
+dest_dir = "docs/repo/agent_runner/sdlc/delivery/40_tasks"
+result_meta_key = "TASK_FILE"
+
+# ============================================================================
+# Step Completion
+# ============================================================================
+[[step]]
+name = "stepCompletion"
+action = "step_completion"

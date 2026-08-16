@@ -1,0 +1,39 @@
+name: technical_deep_dive
+label: "Technical Deep Dive"
+description: "Produces exhaustive technical analysis with code-level evidence, dependency graphs, and remediation code samples"
+
+# -----------------------------------------------------------------------
+# Prompt Slots Configuration
+# -----------------------------------------------------------------------
+prompt_slots:
+  generate_audience_meta:
+    label: "Generate Audience Meta (Technical Deep Dive)"
+    default: "technical_deep_dive"
+    options:
+      - name: "technical_deep_dive"
+        file: "impls/technical_deep_dive/prompts/generate_audience_meta/technical_deep_dive.txt"
+        description: "Generate audience meta content with exhaustive technical detail, code-level evidence, and dependency analysis."
+
+  analyze_health:
+    label: "Analyze Health (Technical Deep Dive)"
+    default: "technical_deep_dive"
+    options:
+      - name: "technical_deep_dive"
+        file: "impls/technical_deep_dive/prompts/analyze_health/technical_deep_dive.txt"
+        description: "Analyze codebase health with detailed structural analysis, dependency graphs, and code-level remediation samples."
+
+  analyze_security:
+    label: "Analyze Security (Technical Deep Dive)"
+    default: "technical_deep_dive"
+    options:
+      - name: "technical_deep_dive"
+        file: "impls/technical_deep_dive/prompts/analyze_security/technical_deep_dive.txt"
+        description: "Analyze security findings with technical vulnerability details, exploit scenarios, and code-level remediation."
+
+  generate_findings_report:
+    label: "Generate Findings Report (Technical Deep Dive)"
+    default: "technical_deep_dive"
+    options:
+      - name: "technical_deep_dive"
+        file: "impls/technical_deep_dive/prompts/generate_findings_report/technical_deep_dive.txt"
+        description: "Generate consolidated findings report with exhaustive technical detail, code examples, and implementation guidance."

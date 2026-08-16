@@ -8,6 +8,7 @@ from datetime import datetime
 from pathlib import PurePosixPath
 
 from .doc_paths import codebase_doc_rel, delivery_doc_rel, system_doc_rel
+from .doc_text import sanitize_ascii
 
 
 SYSTEM_BOOTSTRAP_ROOT = system_doc_rel()
@@ -101,7 +102,7 @@ def _architecture_profile_table(snapshot: dict) -> str:
 
 def render_system_index(snapshot: dict, *, repo_name: str) -> str:
     workflow = _workflow_label(snapshot)
-    return (
+    return sanitize_ascii(
         _frontmatter(title="System Documentation Index", workflow=workflow, step=snapshot["step"], audience="all", template_id="SYS-00-IDX")
         + _banner(workflow=workflow, step=snapshot["step"])
         + "# System Documentation Index\n\n"
@@ -143,7 +144,7 @@ def render_system_index(snapshot: dict, *, repo_name: str) -> str:
 
 def render_documentation_standard(snapshot: dict) -> str:
     workflow = _workflow_label(snapshot)
-    return (
+    return sanitize_ascii(
         _frontmatter(title="Documentation Standard", workflow=workflow, step=snapshot["step"], audience="all", template_id="SYS-00-DS")
         + _banner(workflow=workflow, step=snapshot["step"])
         + "# Documentation Standard\n\n"

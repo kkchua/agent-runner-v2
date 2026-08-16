@@ -5,9 +5,7 @@ import os
 from dataclasses import dataclass
 from typing import Any
 
-from .backend_client import BackendClient
 from .config_loader import load_runner_config
-from .daemon_runtime import build_job_sync_payload
 from .state_defaults import default_loop_context, default_replan_context
 
 
@@ -25,29 +23,26 @@ def _sync_backend_after_human_approval(*, state: dict[str, Any]) -> str | None:
     if not step_run_id:
         return None
 
-    cfg = load_runner_config()
-    backend_url = (
-        str(state.get("backend_url") or "").strip()
-        or os.environ.get("AGENT_RUNNER_BACKEND_URL")
-        or str(cfg.get("backend_url") or "").strip()
-    )
-    if not backend_url:
-        return "backend sync skipped: backend_url not configured"
-
-    last_model_output = state.get("last_model_output") or {}
-    step_result = {
-        "status": str(last_model_output.get("status") or "APPROVED"),
-        "outcome": "approved",
-        "coder_used": last_model_output.get("coder_used"),
-        "remark": last_model_output.get("remark"),
-        "artifacts": dict(last_model_output.get("artifacts") or {}),
-    }
-    payload = build_job_sync_payload(
-        job=state,
-        step_result=step_result,
-        step_run_id=step_run_id,
-    )
-    BackendClient(backend_url).sync_job_state(step_run_id=step_run_id, payload=payload)
+    # Check for V2 backend first
+    from .v2.sync import resolve_v2_backend_url, sync_outcome_v2
+    v2_url = resolve_v2_backend_url()
+    if v2_url:
+        last_model_output = state.get("last_model_output") or {}
+        step_result = {
+            "status": str(last_model_output.get("status") or "APPROVED"),
+            "outcome": "approved",
+            "coder_used": last_model_output.get("coder_used"),
+            "remark": last_model_output.get("remark"),
+        }
+        try:
+            sync_outcome_v2(
+                backend_url=v2_url,
+                step_run_id=step_run_id,
+                step_result=step_result,
+                state=state,
+            )
+        except Exception as exc:
+            return f"V2 backend sync failed: {exc}"
     return None
 
 
@@ -56,16 +51,16 @@ def _sync_backend_after_override_step(*, state: dict[str, Any], step_name: str) 
     if not run_id:
         return None
 
-    cfg = load_runner_config()
-    backend_url = (
-        str(state.get("backend_url") or "").strip()
-        or os.environ.get("AGENT_RUNNER_BACKEND_URL")
-        or str(cfg.get("backend_url") or "").strip()
-    )
-    if not backend_url:
-        return "backend sync skipped: backend_url not configured"
+    from .v2.sync import resolve_v2_backend_url
+    from .v2.backend_client import V2BackendClient
+    v2_url = resolve_v2_backend_url()
+    if not v2_url:
+        return "backend sync skipped: v2_backend_url not configured"
 
-    BackendClient(backend_url).reset_run_step(run_id=run_id, step_name=step_name)
+    from .v2.sync import resolve_v2_api_key
+
+    api_key = resolve_v2_api_key()
+    V2BackendClient(v2_url, api_key=api_key).reset_step(run_id=run_id, step_name=step_name)
     return None
 
 
@@ -127,6 +122,29 @@ def handle_admin_command(*, args: Any, group_cfg: dict[str, Any], hooks: Any) ->
         state = hooks.migrate_job_state(state)
         state = hooks.reconcile_job_state(state, group_cfg)
         requested_step = args.approve_step.strip()
+        current_status = hooks.get_job_status(state)
+        # Auto-detect intervention/maxretried and delegate to resume_step
+        if current_status in ("WAITING_FOR_HUMAN_INTERVENTION", "WAITING_FOR_HUMAN_MAXRETRIED"):
+            state = hooks.resume_step(
+                group_name=args.template_group,
+                group_cfg=group_cfg,
+                state=state,
+                step=requested_step,
+            )
+            sync_warning = _sync_backend_after_human_approval(state=state)
+            remark = (
+                f"Step {requested_step!r} resumed (was {current_status})."
+                if not sync_warning
+                else f"Step {requested_step!r} resumed (was {current_status}); {sync_warning}."
+            )
+            print(json.dumps({
+                "status": "APPROVED",
+                "remark": remark,
+                "job_status": hooks.get_job_status(state),
+                "job_id": state["job_id"],
+                "current_step": state["current_step"],
+            }, indent=2))
+            return AdminCommandResolution(handled=True, exit_code=0)
         try:
             state = hooks.approve_step(
                 group_name=args.template_group,
@@ -158,6 +176,88 @@ def handle_admin_command(*, args: Any, group_cfg: dict[str, Any], hooks: Any) ->
         }, indent=2))
         return AdminCommandResolution(handled=True, exit_code=0)
 
+    if args.reject_step:
+        if not args.job_id:
+            raise ValueError("--reject-step requires --job-id")
+        state = hooks.ensure_backward_compatible_state(hooks.load_job(args.template_group, args.job_id))
+        state = hooks.migrate_job_state(state)
+        state = hooks.reconcile_job_state(state, group_cfg)
+        requested_step = args.reject_step.strip()
+        state = hooks.reject_step(
+            group_name=args.template_group,
+            group_cfg=group_cfg,
+            state=state,
+            step=requested_step,
+        )
+        sync_warning = _sync_backend_after_human_approval(state=state)
+        remark = (
+            f"Step {requested_step!r} rejected — routed to refine step."
+            if not sync_warning
+            else f"Step {requested_step!r} rejected — routed to refine step; {sync_warning}."
+        )
+        print(json.dumps({
+            "status": "REJECTED",
+            "remark": remark,
+            "job_status": hooks.get_job_status(state),
+            "job_id": state["job_id"],
+            "current_step": state["current_step"],
+        }, indent=2))
+        return AdminCommandResolution(handled=True, exit_code=0)
+
+    if args.resume_step:
+        if not args.job_id:
+            raise ValueError("--resume-step requires --job-id")
+        state = hooks.ensure_backward_compatible_state(hooks.load_job(args.template_group, args.job_id))
+        state = hooks.migrate_job_state(state)
+        state = hooks.reconcile_job_state(state, group_cfg)
+        requested_step = args.resume_step.strip()
+        state = hooks.resume_step(
+            group_name=args.template_group,
+            group_cfg=group_cfg,
+            state=state,
+            step=requested_step,
+        )
+        sync_warning = _sync_backend_after_human_approval(state=state)
+        print(json.dumps({
+            "status": "APPROVED",
+            "remark": (
+                f"Step {requested_step!r} resumed — advancing to next step."
+                if not sync_warning
+                else f"Step {requested_step!r} resumed — advancing to next step; {sync_warning}."
+            ),
+            "job_status": hooks.get_job_status(state),
+            "job_id": state["job_id"],
+            "current_step": state["current_step"],
+        }, indent=2))
+        return AdminCommandResolution(handled=True, exit_code=0)
+
+    if args.retry_step:
+        if not args.job_id:
+            raise ValueError("--retry-step requires --job-id")
+        state = hooks.ensure_backward_compatible_state(hooks.load_job(args.template_group, args.job_id))
+        state = hooks.migrate_job_state(state)
+        state = hooks.reconcile_job_state(state, group_cfg)
+        requested_step = args.retry_step.strip()
+        state = hooks.retry_step(
+            group_name=args.template_group,
+            group_cfg=group_cfg,
+            state=state,
+            step=requested_step,
+        )
+        sync_warning = _sync_backend_after_human_approval(state=state)
+        print(json.dumps({
+            "status": "APPROVED",
+            "remark": (
+                f"Step {requested_step!r} reset for retry — reject count cleared."
+                if not sync_warning
+                else f"Step {requested_step!r} reset for retry — reject count cleared; {sync_warning}."
+            ),
+            "job_status": hooks.get_job_status(state),
+            "job_id": state["job_id"],
+            "current_step": state["current_step"],
+        }, indent=2))
+        return AdminCommandResolution(handled=True, exit_code=0)
+
     if args.force_approve_step:
         if not args.job_id:
             raise ValueError("--force-approve-step requires --job-id")
@@ -181,6 +281,56 @@ def handle_admin_command(*, args: Any, group_cfg: dict[str, Any], hooks: Any) ->
             "job_status": hooks.get_job_status(state),
             "job_id": state["job_id"],
             "current_step": state["current_step"],
+        }, indent=2))
+        return AdminCommandResolution(handled=True, exit_code=0)
+
+    if args.cancel_run:
+        # DAEMON COMMAND: Actually terminate the running job now.
+        # Called by daemon when it detects a stop request (from operator console).
+        # This updates local job status to STOPPED and syncs to backend.
+        # Requires local job folder to exist (job must be running locally).
+        if not args.job_id:
+            raise ValueError("--cancel-run requires --job-id")
+        state = hooks.ensure_backward_compatible_state(hooks.load_job(args.template_group, args.job_id))
+        state = hooks.migrate_job_state(state)
+        hooks.set_job_status(state, "STOPPED")
+        hooks.save_job(args.template_group, state["job_id"], state)
+        # Sync to backend — set run status to stopped
+        step_run_id = str(state.get("workflow_step_run_id") or "").strip()
+        backend_url = (
+            str(state.get("backend_url") or "").strip()
+            or os.environ.get("AGENT_RUNNER_BACKEND_URL")
+            or str(load_runner_config().get("backend_url") or "").strip()
+        )
+        if backend_url:
+            client = BackendClient(backend_url)
+            run_id = str(state.get("workflow_run_id") or "").strip()
+            if step_run_id:
+                from datetime import datetime, timezone
+                client.sync_job_state(
+                    step_run_id=step_run_id,
+                    payload={
+                        "run_status": "stopped",
+                        "step_status": "cancelled",
+                        "step_outcome": "cancelled",
+                        "step_coder": None,
+                        "step_duration_seconds": 0,
+                        "next_step_name": None,
+                        "output_payload": {},
+                        "error_message": "Cancelled by operator",
+                        "review": None,
+                        "artifacts": [],
+                        "context_payload": {"__run_control": {"stop_requested": True}},
+                        "events": [{"event_type": "RUN_STOPPED", "message": f"Run {state['job_id']} cancelled by operator"}],
+                    },
+                )
+            if run_id:
+                client.stop_run(run_id=run_id, reason="Cancelled by operator")
+        print(json.dumps({
+            "status": "STOPPED",
+            "remark": "Run cancelled by operator.",
+            "job_status": "STOPPED",
+            "job_id": state["job_id"],
         }, indent=2))
         return AdminCommandResolution(handled=True, exit_code=0)
 

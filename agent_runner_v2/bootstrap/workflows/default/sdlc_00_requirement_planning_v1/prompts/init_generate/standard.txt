@@ -1,0 +1,86 @@
+Objective
+
+Generate a structured initiative document (INIT_FILE) from the draft initiative input.
+
+Layer Boundary
+
+- This workflow belongs to Layer 3 and operates on top of the Layer 2 platform contract.
+- Generate only initiative documentation, not planning, backlog, or implementation artifacts.
+- Treat Layer 1 governance and Layer 2 platform constitution as read-only reference inputs.
+
+Reference Inputs
+
+- Read {DRAFT_INIT_FILE} (user-provided draft initiative).
+- Read codebase context from {CODEBASE_DOC_ROOT} to understand repository structure.
+- Read Layer 1 governance at {GOVERNANCE_RUNTIME_ROOT} for metadata requirements.
+- Read Layer 2 platform constitution at {PLATFORM_RUNTIME_ROOT} for platform contract.
+
+CRITICAL: Exact Artifact Key Names
+
+When referencing artifact keys in the document, use EXACTLY these names:
+  - Input artifact: DRAFT_INIT_FILE
+  - Output artifact: INIT_FILE
+
+All artifact keys use the _FILE suffix.
+
+Required Document Structure
+
+The INIT_FILE document MUST contain EXACTLY these sections in this order. No more, no less.
+
+YAML Frontmatter (REQUIRED):
+  template_id: "SYS-03-IN"
+  version: "1.0.0"
+  doc_type: "workflow_output"
+  authority: "workflow-generated"
+  scan_policy: "include"
+  scan_reason: "Approved initiative document in SDLC delivery chain"
+  managed_by: "workflow-generated"
+  layer: "layer3"
+  platform: "agent-runner-v2"
+  lifecycle_status: "draft"
+  effective_version: "{job_id}"
+  source_document: "<filename of {DRAFT_INIT_FILE}>"
+
+Body Sections (REQUIRED, in this exact order):
+  1. Title - Clear, concise title (level-1 heading)
+  2. Objective - Refined statement of what this initiative aims to achieve
+  3. Problem Statement - Current state pain points, why needed, impact of not doing it
+  4. Expected Outcomes - Prioritized bullet list of concrete, measurable outcomes
+  5. Scope - Must contain three sub-sections: In Scope, Out of Scope, Boundary Conditions
+  6. Constraints - Technical, time, resource, regulatory, architectural constraints
+  7. Dependencies - Prerequisite initiatives, third-party systems, data/infrastructure needs
+  8. Success Criteria - Specific, testable criteria that determine initiative success
+  9. Stakeholders - Sponsor, primary users, review authorities, affected teams
+  10. Notes (OPTIONAL) - Additional context, assumptions, background
+
+Content Guidelines
+
+- Preserve the original intent of the draft initiative
+- Normalize into canonical structure without inventing scope
+- Record explicit assumptions where information is missing (in Notes section)
+- Language should be more precise and structured than the draft
+- Scope boundaries should be clearer and more explicit
+- Outcomes should be more measurable
+- Constraints and dependencies should be more complete
+- Identify codebase areas likely affected
+- If a sub-item does not apply, state "None" explicitly
+- Verify API and SDK usage against the actual installed library version
+  by reading the source code or documentation in the virtual environment.
+  Do not rely on training data for library APIs -- they may have changed.
+
+Output Instructions
+
+- Write the initiative document to {INIT_FILE}.
+- Use ASCII-only characters (no em-dashes, curly quotes, or Unicode).
+- Use plain text section headings (no backticks or formatting in headings).
+- Keep terminology consistent with Layer 1 and Layer 2 governance docs.
+- Do not create plans, task graphs, or implementation artifacts.
+
+Forbidden Content
+
+- Layer 1 governance redefinition or contradiction
+- Layer 2 platform contract redefinition
+- Implementation details or technical solutions
+- Task breakdowns or scheduling
+- Architecture decisions (belongs to planning phase)
+- Sections NOT listed in "Required Document Structure" above

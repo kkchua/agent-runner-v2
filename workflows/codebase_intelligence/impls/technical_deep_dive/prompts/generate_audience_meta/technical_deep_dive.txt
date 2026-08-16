@@ -1,0 +1,109 @@
+# Exhaustive Technical Documentation
+
+You are producing exhaustive technical documentation for a codebase. This is the
+maximum-detail variant intended for developers and architects who need complete
+understanding of the codebase internals.
+
+## Inputs
+
+- CODEBASE_INVENTORY: {CODEBASE_INVENTORY}
+  Path to a JSON file containing the full codebase inventory with file metadata,
+  package structure, module counts, line counts, and file previews.
+
+- CODEBASE_DOCS_DIR: {CODEBASE_DOCS_DIR}
+  Path to the directory containing codebase documentation files. Read ALL
+  relevant documentation files to extract maximum detail.
+
+## Instructions
+
+Read the CODEBASE_INVENTORY JSON completely. Then read documentation files from
+CODEBASE_DOCS_DIR exhaustively. Produce a comprehensive technical reference.
+
+## Document Structure
+
+### 1. Complete Module Dependency Tree
+
+List every module and its dependencies:
+```
+package.module
+  depends on:
+    - package.other_module (absolute)
+    - .sibling_module (relative)
+  imported by:
+    - package.consumer_module
+```
+
+### 2. API Signature Listings
+
+For each significant module, list:
+- All public function signatures with parameters and return types
+- All class definitions with their methods
+- All module-level constants and configuration values
+- All exports (what __all__ defines, or what __init__.py re-exports)
+
+### 3. Class Hierarchy
+
+Document the class inheritance structure:
+- Base classes and their subclasses
+- Mixin patterns
+- Abstract base classes and their implementations
+- Data classes and named tuples
+
+### 4. Data Flow Diagrams (Text-Based)
+
+Produce text-based data flow diagrams showing:
+- How data enters the system (entry points, API surfaces)
+- How data flows through modules
+- Where data is transformed
+- Where data exits the system (outputs, external calls)
+
+Use ASCII art or indented text format for diagrams.
+
+### 5. Configuration Maps
+
+Document all configuration:
+- Configuration file locations and formats
+- Environment variables used
+- Default values and overrides
+- Feature flags and toggles
+
+### 6. Developer Navigation Guide
+
+Complete guide for developers:
+- Directory layout with purpose of each directory
+- Key files and what they do
+- How to build, test, and run
+- Common development workflows
+- Debugging strategies
+
+### 7. Architect Design Pattern Analysis
+
+For architects:
+- Design patterns used (Factory, Observer, Strategy, etc.)
+- Layer boundaries and their enforcement
+- Dependency injection patterns
+- Error handling strategies
+- Concurrency patterns (if applicable)
+
+## Validation Checklist
+
+Before writing the output, verify:
+
+- [ ] Every module from CODEBASE_INVENTORY is documented
+- [ ] API signatures are accurate (match actual code)
+- [ ] Class hierarchy is complete
+- [ ] Data flow diagrams reference actual module paths
+- [ ] Configuration maps reference actual files
+- [ ] No fabricated APIs, classes, or patterns
+- [ ] Document is self-contained
+- [ ] All file path references use actual paths from inventory
+- [ ] Developer guide is actionable (commands work as written)
+- [ ] Design pattern analysis cites specific code locations
+
+## Output
+
+Write the complete Markdown document to: {AUDIENCE_META_FILE}
+
+Write with maximum technical detail. Use code blocks extensively. Include
+complete module listings, full API signatures, and detailed diagrams. This
+document should serve as a complete technical reference.

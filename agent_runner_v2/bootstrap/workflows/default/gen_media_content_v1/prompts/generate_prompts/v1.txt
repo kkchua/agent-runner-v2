@@ -1,0 +1,532 @@
+# STEP 02 - Generate Image & Video Prompts (Enhanced Reconstruction)
+
+---
+
+# Mission
+
+Your mission is to convert every individual image description JSON generated in STEP 01 into a high-quality Image Prompt JSON and Video Prompt.
+This step is a reconstruction task, NOT a summarization task.
+The objective is to regenerate an image that is visually indistinguishable from the original source image while producing multiple high-quality photographic interpretations.
+
+---
+
+# Workflow Rules (CRITICAL)
+
+The STEP 01 output directory contains:
+
+- index.json
+- one or more image description JSON files
+
+Example:
+
+step_01_imagedesc/
+    index.json
+    image_001.json
+    image_002.json
+    image_003.json
+
+## IMPORTANT
+
+index.json is ONLY a manifest.
+
+It is NOT an image description.
+
+Never generate prompts directly from index.json.
+
+Never merge multiple image prompts into index.json.
+
+Its purpose is ONLY to:
+
+- discover all image description files
+- validate processing completeness
+- generate the final output index.json required by this workflow
+
+---
+
+# Processing Rules
+Process ONE image description JSON at a time.
+Relationship:
+
+1 Image Description JSON
+↓
+
+1 Image Prompt JSON
+
+Never combine multiple image descriptions into a single output.
+
+Repeat until every image listed in index.json has been processed.
+
+Variant JSON structure:
+{
+  "subject": "<image_stem from input description>",
+  "image_filename": "download (3).jpg",
+  "image_stem": "download (3)",
+  "source_file": "step_01_imagedesc/download (3).json",
+  "aspect_ratio": "9:16",
+  "image_size": "540x1080",
+  "variations": [
+    {
+      "t2i_prompt1": "<detailed English text-to-image prompt>",
+      "t2v_prompt1": "<detailed English text-to-video motion prompt>",
+      "negative_prompt_video": "<negative prompt for video generation>",
+      "image_filename": "<image_stem>_01.png",
+      "image_url": ""
+    },
+    {
+      "t2i_prompt1": "<detailed English text-to-image prompt>",
+      "t2v_prompt1": "<detailed English text-to-video motion prompt>",
+      "negative_prompt_video": "<negative prompt for video generation>",
+      "image_filename": "<image_stem>_02.png",
+      "image_url": ""
+    },
+    {
+      "t2i_prompt1": "<detailed English text-to-image prompt>",
+      "t2v_prompt1": "<detailed English text-to-video motion prompt>",
+      "negative_prompt_video": "<negative prompt for video generation>",
+      "image_filename": "<image_stem>_03.png",
+      "image_url": ""
+    },
+    {
+      "t2i_prompt1": "<detailed English text-to-image prompt>",
+      "t2v_prompt1": "<detailed English text-to-video motion prompt>",
+      "negative_prompt_video": "<negative prompt for video generation>",
+      "image_filename": "<image_stem>_04.png",
+      "image_url": ""
+    }
+  ]
+}
+
+After every image has been processed:
+
+- generate the new index.json
+- preserve the existing workflow
+- preserve filenames
+- preserve archive process
+- preserve output schema
+- preserve all existing output requirements
+
+---
+
+# Reconstruction Objective
+
+Do NOT summarize the description JSON.
+Treat the JSON as semantic evidence describing an existing photograph.
+Your objective is to reconstruct the original image as faithfully as possible.
+The generated prompt should maximize reconstruction fidelity instead of creativity.
+When information is missing, infer only realistic photographic properties.
+Never invent new semantic content.
+
+---
+
+# Semantic Fidelity Rules
+
+The following MUST remain identical across every variant.
+
+## Subject
+
+- identity
+- number of people
+- gender if identifiable
+- age group if identifiable
+- clothing
+- hairstyle
+- facial characteristics
+- accessories
+
+## Scene
+
+- environment
+- location
+- important objects
+- object relationships
+- architecture
+- landscape
+- landmarks
+
+## Composition
+
+- primary subject
+- major scene arrangement
+- important foreground objects
+- important background objects
+
+Never introduce:
+
+- new people
+- new animals
+- new buildings
+- new vehicles
+- new objects
+- new weather events
+- new scenery
+
+---
+
+# Permitted Photographic Inference
+
+The following MAY be inferred when not explicitly described.
+
+- focal length
+- lens selection
+- aperture
+- depth of field
+- exposure
+- camera height
+- camera distance
+- camera angle
+- lighting direction
+- lighting softness
+- atmospheric haze
+- material appearance
+- shadow behavior
+- photographic color grading
+
+Only infer what naturally supports the existing scene.
+
+Never change the semantic meaning.
+
+---
+
+# Prompt Priorities
+
+Highest priority
+
+1 Subject identity
+2 Scene fidelity
+3 Object relationships
+4 Environment
+
+Then
+
+5 Composition
+6 Camera placement
+7 Lens
+8 Lighting
+9 Color palette
+10 Mood
+11 Photography style
+12 Technical quality
+13 Fine details
+
+---
+
+# Image Prompt Structure
+
+Generate prompts in natural English.
+
+Structure:
+
+Subject
+
+↓
+
+Appearance
+
+↓
+
+Action / Pose
+
+↓
+
+Environment
+
+↓
+
+Composition
+
+↓
+
+Camera Position
+
+↓
+
+Camera Height
+
+↓
+
+Viewing Angle
+
+↓
+
+Lens
+
+↓
+
+Focal Length
+
+↓
+
+Depth of Field
+
+↓
+
+Lighting
+
+↓
+
+Color Palette
+
+↓
+
+Atmosphere
+
+↓
+
+Photography Style
+
+↓
+
+Technical Quality
+
+↓
+
+Fine Details
+
+Avoid keyword dumping.
+
+Write like a professional photography prompt.
+
+---
+
+# Variant Generation
+
+Generate exactly 5 variants.
+
+Variant 1
+
+Faithful reconstruction
+
+Closest possible recreation of the original photograph.
+
+Variant 2
+
+Cinematic interpretation
+
+More dramatic framing, cinematic lighting, stronger visual storytelling.
+
+Variant 3
+
+Fine Art interpretation
+
+Elegant composition, artistic atmosphere, premium gallery photography style.
+
+Variant 4
+
+Epic Landscape / Environmental interpretation
+
+Large sense of scale, environmental storytelling, immersive composition.
+
+Variant 5
+
+Professional Editorial interpretation
+
+Magazine-quality composition, premium color grading, polished commercial photography.
+
+---
+
+# Variant Diversity Rules
+
+Every variant must preserve semantic fidelity.
+
+However each variant should maximize photographic diversity.
+
+Across all five variants intentionally vary combinations of:
+
+- camera position
+- camera height
+- camera distance
+- framing
+- perspective
+- focal length
+- aperture
+- depth of field
+- lighting direction
+- lighting intensity
+- atmosphere
+- weather intensity (only if consistent with original)
+- color grading
+- photographic style
+
+Do NOT create variants by changing only one parameter.
+
+Each variant should look like it was photographed by a different professional photographer.
+
+Every variant should feel visually distinct while still clearly depicting the same original scene.
+
+Do not reuse the same sentence structure between variants.
+
+Rewrite each prompt independently.
+
+---
+
+# Photography Rules
+
+Assume the image is a real photograph.
+
+Use professional photography terminology.
+
+Never describe the image as:
+
+- painting
+- illustration
+- anime
+- CGI
+- 3D render
+
+unless explicitly described in the source JSON.
+
+---
+
+# Video Prompt Rules
+
+Assume the generated image is Frame 1.
+
+Describe only plausible motion.
+
+Allowed:
+
+Camera motion
+
+- dolly
+- pan
+- tilt
+- crane
+- orbit
+- push-in
+- pull-back
+
+Subject motion
+
+Environmental motion
+
+Lighting evolution
+
+Cloud movement
+
+Water movement
+
+Wind
+
+Particles
+
+Never introduce:
+
+- new people
+- new objects
+- scene transitions
+- explosions
+- morphing
+- teleportation
+- impossible movement
+
+The video should feel like a natural continuation of the still image.
+
+---
+
+# Negative Prompt
+
+Include a comprehensive negative prompt.
+
+Identity
+
+- identity drift
+- face distortion
+- age drift
+- hairstyle drift
+
+Geometry
+
+- extra limbs
+- extra fingers
+- malformed hands
+- duplicate people
+- duplicate objects
+- warped anatomy
+
+Composition
+
+- cropped subject
+- floating objects
+- incorrect perspective
+
+Image Quality
+
+- blur
+- motion blur
+- noise
+- compression artifacts
+- chromatic aberration
+- oversaturation
+- underexposure
+- overexposure
+
+Text
+
+- watermark
+- logo
+- signature
+- subtitles
+- captions
+- text
+
+Style
+
+- painting
+- illustration
+- anime
+- CGI
+- 3D render
+
+---
+
+# Output Rules
+
+Output ONLY the required JSON.
+
+Do NOT explain your reasoning.
+
+Do NOT summarize the description JSON.
+
+Do NOT mention inferred details.
+
+Preserve the required JSON schema.
+
+Preserve all filenames.
+
+Preserve existing workflow.
+
+Preserve archive generation.
+
+Preserve index.json generation.
+
+---
+
+# Self Validation
+
+Before finalizing each image:
+
+✓ Semantic fidelity preserved
+
+✓ Subject identity preserved
+
+✓ Environment preserved
+
+✓ Composition preserved
+
+✓ Photorealistic
+
+✓ Camera information included
+
+✓ Video prompt starts from Frame 1
+
+✓ Five variants are genuinely different
+
+✓ Variants are not simple edits of each other
+
+✓ One input JSON produced one output JSON
+
+✓ index.json was NOT treated as an image description
+
+✓ Output schema unchanged
+
+✓ Output JSON filename shall be same as input source_file - <source_file>_prompts.json

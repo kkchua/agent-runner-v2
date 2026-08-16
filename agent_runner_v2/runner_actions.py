@@ -25,10 +25,12 @@ from .actions.copy_artifact import copy_artifact
 from .actions.promote_artifact import promote_artifact
 from .actions.promote_init import promote_init
 from .actions.scan_repo_codebase import scan_repo_codebase
+from .actions.sdlc_shared_actions import create_backup, generate_sync_log, commit_changes, promote_all
 from .actions.sync_codebase_docs import sync_codebase_docs
 from .actions.sync_system_docs import sync_system_docs
 from .actions.validate_codebase_docs import validate_codebase_docs
 from .actions.step_completion import step_completion
+from .actions.archive_inputs import archive_inputs
 
 logger = logging.getLogger(__name__)
 
@@ -40,13 +42,18 @@ logger = logging.getLogger(__name__)
 ACTION_REGISTRY: dict[str, Callable] = {
     "copy_artifact": copy_artifact,
     "promote_artifact": promote_artifact,
+    "promote_all": promote_all,
     "promote_init": promote_init,
     "scan_repo_codebase": scan_repo_codebase,
+    "create_backup": create_backup,
+    "generate_sync_log": generate_sync_log,
+    "commit_changes": commit_changes,
     "sync_codebase_docs": sync_codebase_docs,
     "sync_system_docs": sync_system_docs,
     "validate_codebase_docs": validate_codebase_docs,
     "finalize_bootstrap": finalize_bootstrap,
     "step_completion": step_completion,
+    "archive_inputs": archive_inputs,
 }
 
 

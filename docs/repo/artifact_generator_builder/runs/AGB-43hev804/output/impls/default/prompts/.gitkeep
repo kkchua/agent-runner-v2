@@ -1,0 +1,11 @@
+# This directory is reserved for implementation-specific prompt templates.
+#
+# The default implementation reuses the shared prompt templates from
+# the workflow root prompts/ directory:
+# - prompts/extract_keypoints.txt
+# - prompts/remove_redundancy.txt
+# - prompts/preserve_meaning.txt
+#
+# To add implementation-specific prompts, place them here and update
+# the component mapping in default.impl.md to reference them with the
+# "default:" prefix instead of "shared:".

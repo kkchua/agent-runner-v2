@@ -10,8 +10,6 @@ from .section_requirements import (
     CODEBASE_TEMPLATE_SECTION_REQUIREMENTS,
     CODEBASE_SOP_REQUIRED_SECTIONS,
     CODEBASE_STATUS_RULES_REQUIRED_SECTIONS,
-    get_required_sections,
-    list_all_documented_files,
 )
 
 __all__ = [
@@ -24,6 +22,4 @@ __all__ = [
     "CODEBASE_TEMPLATE_SECTION_REQUIREMENTS",
     "CODEBASE_SOP_REQUIRED_SECTIONS",
     "CODEBASE_STATUS_RULES_REQUIRED_SECTIONS",
-    "get_required_sections",
-    "list_all_documented_files",
 ]

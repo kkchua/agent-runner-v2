@@ -1,12 +1,14 @@
 from __future__ import annotations
 
+import re
 import shutil
+import yaml  # Required for loading impl.yaml
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from .artifact_keys import ARTIFACT_KEY_REVIEW
-from .path_catalog import known_artifact_paths
+from .constants import known_artifact_paths
 from .documentation_guardrails import (
     EXECUTION_SCAFFOLD_WORKFLOWS,
     MASTER_BOOTSTRAP_WORKFLOWS,
@@ -17,6 +19,9 @@ from .coder_registry import resolve_effective_coder, resolve_role_policy
 from .runner_logger import log_resolver
 from .step_runner import StepResult
 from .workflow_path_contracts import resolve_workflow_output_paths
+
+if TYPE_CHECKING:
+    from .hooks_protocols import StepExecutionHooks
 
 
 @dataclass
@@ -34,6 +39,133 @@ class PreparedStepExecution:
     checksum: str = ""
 
 
+def resolve_prompt_slot(
+    step_cfg: dict[str, Any],
+    state: dict[str, Any],
+    group_cfg: dict[str, Any],
+    bundle: Any | None,
+) -> str | None:
+    """Resolve a BCS prompt slot reference to a concrete file path."""
+    print("[BCS] resolve_prompt_slot START", flush=True)
+    prompt_file_val = step_cfg.get("prompt_file")
+    print(f"[BCS] Prompt File: {prompt_file_val}", flush=True)
+    
+    # Check if prompt_file contains a slot reference like {{ slot.ID }} anywhere
+    slot_pattern = re.search(r"\{\{\s*slot\.([\w-]+)\s*\}\}", str(prompt_file_val))
+    if slot_pattern:
+        slot_id = slot_pattern.group(1)
+        print(f"[BCS] Slot detected: {slot_id}", flush=True)
+        
+        # Look for implementation_name in group_cfg (runtime context)
+        impl_name = group_cfg.get("implementation_name") or "standard"
+        print(f"[BCS] Impl Name: {impl_name}", flush=True)
+        
+        if bundle and impl_name:
+            impl_yaml_path = bundle.bundle_root / "impls" / impl_name / "impl.yaml"
+            print(f"[BCS] Check: {impl_yaml_path} -> {impl_yaml_path.exists()}", flush=True)
+            if impl_yaml_path.exists():
+                try:
+                    with open(impl_yaml_path, "r", encoding="utf-8") as f:
+                        impl_data = yaml.safe_load(f)
+                    prompt_slots = impl_data.get("step_slots") or impl_data.get("prompt_slots", {})
+                    slot_config = prompt_slots.get(slot_id)
+                    
+                    if slot_config:
+                        prompt_sels = state.get("prompt_selections", {})
+                        selected_name = prompt_sels.get(slot_id)
+                        default_name = slot_config.get("default")
+                        options = slot_config.get("options", [])
+                        valid_names = {opt.get("name") for opt in options}
+
+                        if selected_name not in valid_names:
+                            selected_name = default_name
+
+                        for opt in options:
+                            if opt.get("name") == selected_name:
+                                file_path = opt.get("file")
+                                if file_path:
+                                    # Two-tier resolution: impl-specific first, then shared
+                                    impl_specific = bundle.bundle_root / "impls" / impl_name / file_path
+                                    if impl_specific.exists():
+                                        res = impl_specific
+                                        print(f"[BCS] RESOLVED (impl-specific): {res}", flush=True)
+                                    else:
+                                        res = bundle.bundle_root / file_path
+                                        print(f"[BCS] RESOLVED (shared fallback): {res}", flush=True)
+                                    return str(res)
+                except Exception as e:
+                    print(f"[BCS] Error: {e}", flush=True)
+
+        # Convention-based fallback: prompts/{slot_id}/standard.txt
+        if bundle:
+            convention_path = bundle.bundle_root / "prompts" / slot_id / "standard.txt"
+            if convention_path.exists():
+                print(f"[BCS] RESOLVED (convention fallback): {convention_path}", flush=True)
+                return str(convention_path)
+            print(f"[BCS] Convention fallback not found: {convention_path}", flush=True)
+
+    return None
+
+
+def _resolve_action_step_slots(
+    context: dict[str, str],
+    state: dict[str, Any],
+    step: str,
+    group_cfg: dict[str, Any],
+    bundle: Any | None,
+) -> None:
+    """Resolve action-type step_slots and inject selected provider into context.
+
+    For each step_slot with ``type: "action"``, reads the user's selection
+    from ``state["prompt_selections"]`` (or falls back to the slot default),
+    then injects it into *context* as ``STEP_SLOT_{STEP_NAME}`` (uppercased).
+
+    This allows action-driven steps to read the selected provider directly
+    from context without needing to parse config.json or preset.json.
+    """
+    if bundle is None:
+        return
+
+    impl_name = group_cfg.get("implementation_name") or ""
+    if not impl_name:
+        return
+
+    # Read step_slots from impl.yaml (fallback to prompt_slots for compat)
+    impl_yaml_path = bundle.bundle_root / "impls" / impl_name / "impl.yaml"
+    if not impl_yaml_path.exists():
+        return
+
+    try:
+        with open(impl_yaml_path, "r", encoding="utf-8") as f:
+            impl_data = yaml.safe_load(f)
+    except Exception:
+        return
+
+    step_slots = impl_data.get("step_slots") or impl_data.get("prompt_slots", {})
+    slot_config = step_slots.get(step)
+    if not slot_config or not isinstance(slot_config, dict):
+        return
+
+    slot_type = slot_config.get("type", "llm")
+    if slot_type != "action":
+        return
+
+    # Determine selected provider
+    selections = state.get("prompt_selections", {})
+    selected = selections.get(step, "")
+    default = slot_config.get("default", "")
+    options = slot_config.get("options", [])
+    valid_names = {opt.get("name") for opt in options}
+
+    if selected not in valid_names:
+        selected = default
+
+    # Inject into context
+    context_key = f"STEP_SLOT_{step.upper()}"
+    context[context_key] = selected
+    print(f"[step_slots] {step} -> {selected} (injected as {context_key})", flush=True)
+
+
 def prepare_step_execution(
     *,
     template_group: str,
@@ -44,13 +176,11 @@ def prepare_step_execution(
     project_root: Path,
     workflow_key_override: str = "",
     cli_coder: str | None = None,
-    hooks: Any,
+    hooks: "StepExecutionHooks",
 ) -> PreparedStepExecution:
-    missing_required = hooks._missing_artifacts(step_cfg.get("required_inputs", []), state)
-    if missing_required:
-        raise FileNotFoundError(
-            f"Cannot run step {step!r}. Missing required input artifact(s): {', '.join(missing_required)}"
-        )
+    # Note: missing_artifacts check moved to AFTER build_context so that
+    # context_extensions.py can resolve input paths first (e.g., INPUT_FILE
+    # from bare filename to full path in input/ subdirectory).
 
     hooks.check_preflight_artifact_status(step_cfg=step_cfg, state=state)
     hooks.ensure_planning_task_queue_integrity(state, step=step)
@@ -62,6 +192,27 @@ def prepare_step_execution(
     context = hooks.build_context(state, step=step, step_cfg=step_cfg, project_root=project_root)
     context["WORKFLOW_KEY_OVERRIDE"] = workflow_key_override or ""
 
+    # Inject implementation name and bundle root so actions can load
+    # implementation-specific presets (e.g. provider selection).
+    impl_name = group_cfg.get("implementation_name") or ""
+    if impl_name:
+        context["IMPLEMENTATION_NAME"] = impl_name
+    bundle = group_cfg.get("_workflow_bundle")
+    if bundle is not None:
+        context["WORKFLOW_BUNDLE_ROOT"] = str(bundle.bundle_root)
+
+    # Resolve action-type step_slots: inject selected provider into context.
+    # For each step_slot with type="action", the selected provider name is
+    # injected as STEP_SLOT_{STEP_NAME} (uppercased) so the action can read it.
+    _resolve_action_step_slots(context, state, step, group_cfg, bundle)
+
+    # Now check for missing required inputs AFTER context_extensions has resolved paths
+    missing_required = hooks._missing_artifacts(step_cfg.get("required_inputs", []), state)
+    if missing_required:
+        raise FileNotFoundError(
+            f"Cannot run step {step!r}. Missing required input artifact(s): {', '.join(missing_required)}"
+        )
+
     meta_from_ctx = step_cfg.get("result_meta_key_from_context")
     if not meta_from_ctx:
         result_key = step_cfg.get("result_meta_key", "")
@@ -70,7 +221,11 @@ def prepare_step_execution(
             context[meta_ctx_key] = str(step_dir / "meta.json")
 
     loop_ctx = state.get("loop_context", {})
-    if step_cfg.get("loop_returns_to") and loop_ctx.get("active") and loop_ctx.get("loop_source_review"):
+    is_refine = any(
+        (sc.get("on_reject_refine") or {}).get("step") == step
+        for sc in group_cfg.get("step_configs", {}).values()
+    )
+    if is_refine and loop_ctx.get("active") and loop_ctx.get("loop_source_review"):
         context[ARTIFACT_KEY_REVIEW] = loop_ctx["loop_source_review"]
 
     action_name = str(step_cfg.get("action") or "")
@@ -92,6 +247,15 @@ def prepare_step_execution(
     coder_used, coder_alias, coder_role, coder_config = _normalize_resolved_coder(resolved)
 
     model_id = (coder_config or {}).get("model_id") or (coder_config or {}).get("model") or None
+    
+    # --- BCS: Dynamic Prompt Slot Resolution ---
+    bundle = group_cfg.get("_workflow_bundle")
+    resolved_path = resolve_prompt_slot(step_cfg, state, group_cfg, bundle)
+    if resolved_path:
+        step_cfg = dict(step_cfg) # Copy to avoid mutating original
+        step_cfg["prompt_file"] = resolved_path
+        print(f"[BCS] Resolved prompt slot: {step_cfg.get('prompt_file')}", flush=True)
+
     prompt_path = hooks.resolve_prompt_path(step_cfg=step_cfg, coder=coder_used, model_id=model_id)
     if not prompt_path.exists():
         raise FileNotFoundError(f"Prompt file not found: {prompt_path}")
@@ -283,7 +447,7 @@ def execute_prepared_step(
     step: str,
     step_cfg: dict[str, Any],
     effective_root: Path,
-    hooks: Any,
+    hooks: "StepExecutionHooks",
 ) -> StepResult:
     if prepared.action_name:
         return hooks.run_action(
@@ -359,6 +523,9 @@ def resolve_step_coder(
     original = chosen
     resolved_role: str | None = original
     resolved_config = resolve_effective_coder(role_name=original, bundle_root=bundle_root)
+    agent_value = str(policy.get("agent") or "").strip() if policy else ""
+    if agent_value:
+        resolved_config["agent"] = agent_value
     chosen = str(resolved_config.get("coder") or "").strip() or original
 
     if resolved_config is not None:

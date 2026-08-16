@@ -1,0 +1,121 @@
+# Exhaustive Health Analysis
+
+You are performing an exhaustive technical health analysis of a codebase. Produce
+per-module analysis with exact metrics, code-level evidence, and before/after
+code samples for remediation.
+
+## Inputs
+
+- CODEBASE_INVENTORY: {CODEBASE_INVENTORY}
+  Path to a JSON file containing the codebase inventory with file metadata,
+  module information, line counts, and package structure.
+
+- IMPORT_GRAPH: {IMPORT_GRAPH}
+  Path to a JSON file containing the directed import dependency graph with nodes,
+  edges, cycles, and per-module metrics (fan_in, fan_out).
+
+## Instructions
+
+Read both JSON files completely. Produce exhaustive per-module analysis across
+5 health dimensions. Every finding must include exact line numbers, code snippets,
+and before/after remediation samples.
+
+## Document Structure
+
+### 1. Per-Module Analysis
+
+For each module in the codebase, provide:
+- Module name and file path
+- Line count and complexity indicators
+- fan_in and fan_out values
+- Cyclomatic complexity estimate (based on code structure)
+- Dependency list with import types
+- Importer list (what depends on this module)
+- Health assessment (1-2 sentences)
+
+### 2. Circular Dependencies -- Exhaustive Analysis
+
+For each cycle:
+- Full cycle path with module names
+- Exact import lines (file:line) that create the cycle
+- Code snippets showing the circular import
+- Why this cycle exists (apparent design reason)
+- Before code: current import structure
+- After code: proposed refactored import structure
+- Dependency injection or interface extraction examples
+
+### 3. Coupling Analysis -- Exhaustive Metrics
+
+For each module, provide:
+- Exact fan_in and fan_out values
+- Comparison to codebase median and mean
+- List of all importers (fan_in sources)
+- List of all dependencies (fan_out targets)
+- Coupling hotspots visualization (text-based)
+- Specific coupling reduction recommendations with code samples
+
+### 4. Dead Code Detection -- Exhaustive Scan
+
+For each module with fan_in=0:
+- Confirm it is not an entry point or __init__
+- Show all exports (what it provides)
+- Check if it is referenced in documentation
+- Check if it is imported dynamically (string-based imports)
+- Dead code confidence level (definitely dead / possibly dead / unclear)
+- Recommendation: remove, document as entry point, or investigate further
+
+### 5. Complexity Assessment -- Per-Function Analysis
+
+For the largest modules:
+- Per-function line counts
+- Estimated cyclomatic complexity per function
+- Functions exceeding complexity thresholds
+- Code snippets of complex functions
+- Refactoring suggestions with before/after samples
+
+### 6. Import Discipline -- Pattern Analysis
+
+- Complete import pattern inventory:
+  - Total absolute imports: N
+  - Total relative imports: N
+  - Cross-package imports: N
+  - External imports: N
+- Import pattern violations (if any)
+- Industry benchmark comparison
+- Recommended import conventions with examples
+
+## Finding Format
+
+Each finding must include:
+- Finding ID: H-NNN
+- Dimension
+- Severity: critical / high / medium / low / info
+- Title
+- Exact evidence (file:line, module names, metrics)
+- Code snippet showing the issue
+- Before/after code samples for remediation
+- Impact assessment
+- Step-by-step remediation plan
+
+## Validation Checklist
+
+Before writing the output, verify:
+
+- [ ] Every module from CODEBASE_INVENTORY has an analysis entry
+- [ ] All findings cite exact file:line evidence
+- [ ] Before/after code samples are syntactically valid
+- [ ] Metrics (fan_in, fan_out, line counts) match input data
+- [ ] Finding IDs are sequential
+- [ ] Severity ratings are consistent
+- [ ] No fabricated modules, metrics, or code
+- [ ] Complexity estimates are based on actual data
+- [ ] Recommendations are implementable with provided code samples
+- [ ] All 5 dimensions are exhaustively covered
+
+## Output
+
+Write the complete Markdown document to: {HEALTH_FINDINGS_FILE}
+
+Write with maximum technical detail. Include code blocks for all evidence and
+remediation samples. Use tables for metrics. This document should serve as a
+complete technical health reference.

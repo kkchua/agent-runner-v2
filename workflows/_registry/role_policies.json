@@ -1,70 +1,165 @@
 {
   "role_policies": {
-    "architect_standard": {
+	"agnes_standard": {
+      "default_role": "agnes-2.0-flash",
+	  "agent": "arv_architect",
+      "allowed_roles": [
+        "agnes-2.0-flash"
+      ]
+    },
+	"architect_vision": {
       "default_role": "bailian_qwen3.7-plus",
+	  "agent": "arv_architect",
       "allowed_roles": [
         "bailian_qwen3.7-plus",
+		"bailian_kimi-k2.5",
+		"zen_go_mimo-v2.5",
+        "agnes-2.0-flash"
+      ]
+    },
+	"gatekeeper_standard": {
+      "default_role": "bailian_qwen3.7-plus",
+	  "agent": "arv_architect",
+      "allowed_roles": [
+        "bailian_qwen3.7-plus",
+		"bailian_kimi-k2.5",
+		"zen_go_mimo-v2.5",
+        "agnes-2.0-flash"
+      ]
+    },
+	"image_video": {
+      "default_role": "bailian_qwen3.7-plus",
+	  "agent": "arv_architect",
+      "allowed_roles": [
+	    "zen_go_deepseek-v4-pro",
+		"zen_go_deepseek-v4-flash",
+		"zen_go_mimo-v2.5",
         "bailian_glm-5",
-        "deepseek_deepseek-v4-pro",
-		"agnes-2.0-flash",
+		"bailian_qwen3.7-plus",
+		"bailian_kimi-k2.5",
+		"agnes-2.0-flash"
+      ]
+	},
+    "architect_kimi-k2.5": {
+      "default_role": "bailian_kimi-k2.5",
+	  "agent": "arv_architect",
+      "allowed_roles": [
+        "bailian_qwen3.7-plus",
+		"bailian_kimi-k2.5",
+        "bailian_glm-5",
+        "agnes-2.0-flash",
 		"zen_go_deepseek-v4-pro",
-		"architect_test_bailian",
-		"zen_go_glm_52"
+		"zen_go_deepseek-v4-flash",
+		"zen_deepseek-v4-flash-free",
+		"zen_mimo-v2.5-free"
+      ]
+    },
+    "architect_standard": {
+      "default_role": "bailian_qwen3.7-plus",
+	  "agent": "arv_architect",
+      "allowed_roles": [
+        "bailian_qwen3.7-plus",
+		"bailian_kimi-k2.5",
+        "bailian_glm-5",
+        "agnes-2.0-flash",
+		"zen_go_deepseek-v4-pro",
+		"zen_go_deepseek-v4-flash",
+		"zen_deepseek-v4-flash-free",
+		"zen_mimo-v2.5-free"
       ]
     },
     "reviewer_standard": {
-      "default_role": "deepseek_deepseek-v4-pro",
-      "allowed_roles": [
-        "bailian_qwen3.7-plus",
-		"deepseek_deepseek-v4-pro",
-        "bailian_glm-5",
-		"zen_go_glm_52",
-        "bailian_MiniMax-M2.5"
+      "default_role": "zen_go_deepseek-v4-flash",
+      "agent": "arv_reviewer",
+	  "allowed_roles": [
+	    "bailian_qwen3.7-plus",
+		"bailian_kimi-k2.5",
+        "zen_go_mimo-v2.5-pro",
+		"zen_go_deepseek-v4-pro",
+		"zen_go_deepseek-v4-flash",
+		"zen_deepseek-v4-flash-free",
+		"zen_mimo-v2.5-free",
+		"bailian_glm-5"
       ]
     },
     "refine_standard": {
-      "default_role": "zen_go_glm_52",
-      "allowed_roles": [
-       	"zen_go_glm_52",
+      "default_role": "bailian_kimi-k2.5",
+      "agent": "arv_reviewer",
+	  "allowed_roles": [
+	    "bailian_kimi-k2.5",
+       	"bailian_glm-5",
         "bailian_qwen3.7-plus",
-        "zen_go_deepseek-v4-pro"
+        "zen_go_deepseek-v4-pro",
+		"zen_go_deepseek-v4-flash",
+		"zen_deepseek-v4-flash-free"
       ]
     },
     "plan_standard": {
-      "default_role": "bailian_qwen3.7-plus",
+      "default_role": "zen_go_deepseek-v4-flash",
+	  "agent": "arv_architect",
       "allowed_roles": [
         "bailian_qwen3.7-plus",
-        "zen_go_glm_52",
-        "zen_go_deepseek-v4-pro"
+        "zen_go_deepseek-v4-pro",
+		"zen_go_deepseek-v4-flash",
+		"zen_deepseek-v4-flash-free",
+		"bailian_glm-5"
+      ]
+    },
+	"backlog_standard": {
+      "default_role": "bailian_kimi-k2.5",
+	  "agent": "arv_architect",
+      "allowed_roles": [
+	    "bailian_qwen3.7-plus",
+        "bailian_kimi-k2.5",
+        "zen_go_deepseek-v4-pro",
+		"zen_go_deepseek-v4-flash",
+		"zen_deepseek-v4-flash-free"
+      ]
+    },
+	"task_standard": {
+      "default_role": "bailian_MiniMax-M2.5",
+	  "agent": "arv_architect",
+      "allowed_roles": [
+        "bailian_MiniMax-M2.5",
+        "zen_go_deepseek-v4-pro",
+		"zen_go_deepseek-v4-flash",
+		"zen_deepseek-v4-flash-free"
       ]
     },
     "implement_standard": {
-      "default_role": "zen_go_deepseek-v4-pro",
+      "default_role": "bailian_qwen3-coder-next",
+	  "agent": "arv_architect",
       "allowed_roles": [
         "zen_go_deepseek-v4-pro",
+		"zen_go_deepseek-v4-flash",
+		"zen_deepseek-v4-flash-free",
         "bailian_qwen3.7-plus",
         "bailian_qwen3-coder-next",
 		"bailian_qwen3-coder-plus"
       ]
     },
     "execution_standard": {
-      "default_role": "zen_go_deepseek-v4-flash",
+      "default_role": "bailian_qwen3-coder-next",
+	  "agent": "arv_coder",
       "allowed_roles": [
+        "bailian_qwen3-coder-next",
         "bailian_qwen3-coder-plus",
-        "zen_go_deepseek-v4-pro",
-		"zen_go_deepseek-v4-flash"
+		"zen_go_mimo-v2.5-pro"
       ]
     },
     "validation_standard": {
       "default_role": "bailian_qwen3.7-plus",
+	  "agent": "arv_reviewer",
       "allowed_roles": [
         "bailian_qwen3.7-plus",
         "zen_go_deepseek-v4-pro",
-        "zen_go_glm_52"
+		"zen_go_deepseek-v4-flash",
+		"zen_deepseek-v4-flash-free"
       ]
     },
     "code_fix_standard": {
-      "default_role": "bailian_MiniMax-M2.5",
+      "default_role": "bailian_qwen3-coder-plus",
+	  "agent": "arv_coder",
       "allowed_roles": [
         "bailian_MiniMax-M2.5",
         "bailian_qwen3-coder-plus",
@@ -73,6 +168,7 @@
     },
     "documentation_standard": {
       "default_role": "bailian_kimi-k2.5",
+	  "agent": "arv_architect",
       "allowed_roles": [
         "bailian_kimi-k2.5",
         "bailian_qwen3.7-plus",

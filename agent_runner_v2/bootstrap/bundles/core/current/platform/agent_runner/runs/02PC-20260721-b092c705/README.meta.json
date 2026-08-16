@@ -1,0 +1,11 @@
+{
+  "schema_version": "v2",
+  "coder_result": {
+    "status": "APPROVED",
+    "remark": "Generated the Layer 2 platform core index (README.md) for agent-runner-v2. Part of the full platform constitution set.",
+    "artifacts": {
+      "L2_PLATFORM_INDEX": "D:/MyProjectSpace/01_Workflows/agent-runner-v2/docs/system/00_governance/platform/runs/02PC-20260721-b092c705/README.md"
+    },
+    "recorded_at": "2026-07-21T17:42:04+08:00"
+  }
+}

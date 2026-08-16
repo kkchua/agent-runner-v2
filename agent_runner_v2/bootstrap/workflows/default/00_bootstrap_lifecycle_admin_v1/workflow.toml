@@ -1,39 +1,64 @@
+# Bootstrap Lifecycle Admin v1 (BCS-compliant)
+# Validates, publishes, and initializes the bootstrap runtime package.
+#
+# Pipeline:
+#   1. Validate    — check workflow bundle integrity and bootstrap docs
+#   2. Publish     — rebuild packaged bootstrap from repo source of truth
+#   3. Init        — initialize global runner home from packaged bootstrap
+#   4. Sync        — sync workflow definitions to backend
+#   5. Summary     — write lifecycle summary report
+#   6. Complete    — terminal (ACTION)
+
 [workflow]
 name = "00_bootstrap_lifecycle_admin_v1"
-version = "1"
+version = "2.0.0"
 label = "Bootstrap Lifecycle Admin v1"
 job_prefix = "00BOOT"
 description = "Validates, publishes, and initializes the bootstrap runtime package from the repo source of truth"
 visibility = "canonical"
 default_max_rejects = 0
+init_step = "validate_bootstrap_lifecycle_sources"
+layer = "layer2"
+platform = "agent-runner-v2"
 
-[workflow.init]
-step = "validate_bootstrap_lifecycle_sources"
-inputs = []
+# ============================================================================
+# Implementations (BCS)
+# ============================================================================
+
+[[workflow.implementation]]
+name = "standard"
+description = "Validates, publishes, and initializes the bootstrap runtime package."
+label = "Standard"
+
+# ============================================================================
+# Step 1: Validate Bootstrap Lifecycle Sources (ACTION)
+# ============================================================================
 
 [[step]]
 name = "validate_bootstrap_lifecycle_sources"
 action = "validate_bootstrap_lifecycle_sources"
-enable_notifications = true
+enable_notifications = false
 onsuccess = "publish_bootstrap_lifecycle_bundle"
+
+# ============================================================================
+# Step 2: Publish Bootstrap Lifecycle Bundle (ACTION)
+# ============================================================================
 
 [[step]]
 name = "publish_bootstrap_lifecycle_bundle"
 action = "publish_bootstrap_lifecycle_bundle"
-enable_notifications = true
+enable_notifications = false
 onsuccess = "init_bootstrap_lifecycle_workspace"
+
+# ============================================================================
+# Step 3: Init Bootstrap Lifecycle Workspace (ACTION)
+# ============================================================================
 
 [[step]]
 name = "init_bootstrap_lifecycle_workspace"
 action = "init_bootstrap_lifecycle_workspace"
-enable_notifications = true
+enable_notifications = false
 onsuccess = "sync_workflow_definitions"
-
-[[step]]
-name = "sync_workflow_definitions"
-action = "sync_workflow_definitions"
-enable_notifications = true
-onsuccess = "write_bootstrap_lifecycle_summary"
 
 [step.on_reject_refine]
 step = "init_bootstrap_lifecycle_workspace"
@@ -42,15 +67,33 @@ max_iterations = 0
 exhausted_failure_code = "SYNC_FAILED"
 exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
 
+# ============================================================================
+# Step 4: Sync Workflow Definitions (ACTION)
+# ============================================================================
+
+[[step]]
+name = "sync_workflow_definitions"
+action = "sync_workflow_definitions"
+enable_notifications = false
+onsuccess = "write_bootstrap_lifecycle_summary"
+
+# ============================================================================
+# Step 5: Write Bootstrap Lifecycle Summary (ACTION)
+# ============================================================================
+
 [[step]]
 name = "write_bootstrap_lifecycle_summary"
 action = "write_bootstrap_lifecycle_summary"
-enable_notifications = true
+enable_notifications = false
 onsuccess = "stepCompletion"
 
 [step.artifacts]
 produces = ["BOOTSTRAP_SUMMARY"]
 result_meta_key = "BOOTSTRAP_SUMMARY"
+
+# ============================================================================
+# Step 6: Step Completion (ACTION)
+# ============================================================================
 
 [[step]]
 name = "stepCompletion"

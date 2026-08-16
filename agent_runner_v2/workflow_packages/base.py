@@ -72,13 +72,10 @@ class StepConfig:
     # Routing
     on_approve: str | None = None
     on_reject_refine: dict[str, Any] | None = None
-    on_exhaust_replan: dict[str, Any] | None = None
     reject_code_routes: dict[str, Any] | None = None
 
     # Review gating
     requires_human_approval_after: bool = False
-    loop_returns_to: str | None = None
-    replan_returns_to: str | None = None
 
     # Behaviour flags
     enable_notifications: bool = False
@@ -88,6 +85,9 @@ class StepConfig:
 
     # Post-action hook (e.g. "generate_site_pdf" after LLM step)
     post_action: str | None = None
+
+    # Prompt Slot ID (for dynamic prompt resolution via impl.yaml)
+    prompt_slot_id: str | None = None
 
     # Pass-through for any unrecognised fields (preserves forward compat)
     extra: dict[str, Any] = field(default_factory=dict)
@@ -124,6 +124,18 @@ class WorkflowBundle:
     # Metadata
     description: str = ""
     visibility: str = ""
+
+    # Alternative implementation declarations from [[workflow.implementation]]
+    implementations: list[dict[str, str]] = field(default_factory=list)
+
+    # Prompt slot definitions from the active implementation (impl.yaml)
+    # Maps slot_id -> {label, default, options: [{name, file, description}]}
+    impl_prompt_slots: dict[str, Any] = field(default_factory=dict)
+
+    # Step slot definitions — generalises prompt_slots with type support.
+    # Each slot has a "type" field: "llm" (prompt selection) or "action" (provider selection).
+    # Falls back to impl_prompt_slots when not explicitly set (backward compatible).
+    impl_step_slots: dict[str, Any] = field(default_factory=dict)
 
     def get_step(self, name: str) -> StepConfig:
         """Look up a step by name. Raises KeyError if missing."""
