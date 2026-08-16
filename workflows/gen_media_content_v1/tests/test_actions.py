@@ -340,48 +340,59 @@ class TestImportProvider:
 
 
 # ============================================================================
-# Tests for action stubs
+# Tests for action orchestrators (updated from stub tests)
 # ============================================================================
 
 class TestGenerateImagesDefault:
-    """Tests for generate_images_default action stub."""
+    """Tests for generate_images_default orchestrator - missing provider case."""
 
-    def test_returns_rejected_missing_provider(self):
-        """ACT-08: Returns ActionResult with REJECTED status and MISSING_PROVIDER."""
-        mock_context = MagicMock()
-        mock_state = MagicMock()
-        mock_step_cfg = MagicMock()
+    def test_returns_approved_skip_for_none_provider(self, tmp_path):
+        """ACT-08: Returns APPROVED with skip message when render_image is __none__."""
+        config_path = tmp_path / "config.json"
+        config_data = {
+            "actions": {"render_image": "__none__", "render_video": "__none__"},
+            "api": {},
+        }
+        config_path.write_text(json.dumps(config_data), encoding="utf-8")
+        step_02 = tmp_path / "step_02"
+        step_02.mkdir()
 
         result = generate_images_default(
-            context=mock_context,
-            state=mock_state,
-            step_cfg=mock_step_cfg,
-            project_root=Path("."),
+            context={"MEDIA_CONFIG": str(config_path),
+                     "STEP_02_DIR": str(step_02),
+                     "STEP_03_DIR": str(tmp_path / "step_03")},
+            state=MagicMock(),
+            step_cfg=MagicMock(),
+            project_root=tmp_path,
         )
 
-        assert result.status == "REJECTED"
-        assert result.reject_code == "MISSING_PROVIDER"
-        assert isinstance(result.remark, str)
-        assert len(result.remark) > 0
+        assert result.status == "APPROVED"
+        assert "skipped" in result.remark.lower()
 
 
 class TestGenerateVideosDefault:
-    """Tests for generate_videos_default action stub."""
+    """Tests for generate_videos_default orchestrator - skip provider case."""
 
-    def test_returns_rejected_missing_provider(self):
-        """ACT-09: Returns ActionResult with REJECTED status and MISSING_PROVIDER."""
-        mock_context = MagicMock()
-        mock_state = MagicMock()
-        mock_step_cfg = MagicMock()
+    def test_returns_approved_skip_for_none_provider(self, tmp_path):
+        """ACT-09: Returns APPROVED with skip message when render_video is __none__."""
+        config_path = tmp_path / "config.json"
+        config_data = {
+            "actions": {"render_image": "agnes_v1", "render_video": "__none__"},
+            "api": {},
+        }
+        config_path.write_text(json.dumps(config_data), encoding="utf-8")
 
         result = generate_videos_default(
-            context=mock_context,
-            state=mock_state,
-            step_cfg=mock_step_cfg,
-            project_root=Path("."),
+            context={"MEDIA_CONFIG": str(config_path),
+                     "STEP_02_DIR": str(tmp_path / "step_02"),
+                     "STEP_03_DIR": str(tmp_path / "step_03"),
+                     "STEP_04_DIR": str(tmp_path / "step_04")},
+            state=MagicMock(),
+            step_cfg=MagicMock(),
+            project_root=tmp_path,
         )
 
-        assert result.status == "REJECTED"
-        assert result.reject_code == "MISSING_PROVIDER"
+        assert result.status == "APPROVED"
+        assert "skip" in result.remark.lower()
         assert isinstance(result.remark, str)
         assert len(result.remark) > 0

@@ -1,0 +1,8 @@
+name: detailed
+description: "Comprehensive action implementations with full error handling and state management, detailed prompts preserving all quality criteria and self-check rules from the JiMeng source."
+
+overrides:
+  implement_actions:
+    prompt: "impls/detailed/prompts/04_implement_actions.txt"
+  generate_prompts:
+    prompt: "impls/detailed/prompts/05_generate_prompts.txt"

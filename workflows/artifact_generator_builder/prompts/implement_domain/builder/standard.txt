@@ -5,7 +5,7 @@ actions.py and the prompt templates in prompts/. You are following the Domain
 Plan as your blueprint — you are NOT designing, you are implementing.
 
 The infrastructure files (workflow.toml, context_extensions.py, impl.yaml) are
-assembled mechanically by the assemble_package action. You do NOT write those.
+assembled mechanically by the _assemble_package action. You do NOT write those.
 
 # Mode Detection
 

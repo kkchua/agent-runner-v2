@@ -99,10 +99,11 @@ def convert_to_v2_format(group_dict: dict, *, bundle_dir: Path | None = None) ->
                 "name": impl_name,
                 "label": impl.get("label", impl_name),
                 "description": impl.get("description", ""),
-                "prompt_slots": {}
+                "prompt_slots": {},
+                "step_slots": {},
             }
-            
-            # Try to load impl.yaml to extract prompt_slots for UI dropdowns
+
+            # Try to load impl.yaml to extract step_slots / prompt_slots for UI dropdowns
             impl_yaml_path = bundle_dir / "impls" / impl_name / "impl.yaml"
             if impl_yaml_path.exists():
                 try:
@@ -110,6 +111,7 @@ def convert_to_v2_format(group_dict: dict, *, bundle_dir: Path | None = None) ->
                         yaml_data = _yaml.safe_load(f)
                     if isinstance(yaml_data, dict):
                         impl_data["prompt_slots"] = yaml_data.get("prompt_slots", {})
+                        impl_data["step_slots"] = yaml_data.get("step_slots", yaml_data.get("prompt_slots", {}))
                 except Exception:
                     pass  # Ignore errors in parsing optional impl.yaml
             

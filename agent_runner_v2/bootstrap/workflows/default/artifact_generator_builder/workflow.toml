@@ -157,7 +157,7 @@ exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
 
 [[step]]
 name = "assemble_package"
-action = "assemble_package"
+action = "_assemble_package"
 enable_notifications = true
 requires_human_approval_after = false
 onsuccess = "review_package"
@@ -199,7 +199,7 @@ exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
 
 [[step]]
 name = "validate_structure"
-action = "validate_structure"
+action = "_validate_structure"
 enable_notifications = true
 requires_human_approval_after = false
 onsuccess = "gatekeep_package"
@@ -241,7 +241,7 @@ exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
 
 [[step]]
 name = "promote_package"
-action = "promote_workflow_package"
+action = "_promote_workflow_package"
 enable_notifications = true
 requires_human_approval_after = false
 onsuccess = "step_completion"

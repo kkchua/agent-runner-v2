@@ -1,0 +1,112 @@
+# Workflow: Agentic Workflow Builder
+# Auto-assembled by AGB from Analysis JSON.
+
+[workflow]
+name = "agentic_workflow_builder"
+version = "1.0.0"
+label = "Agentic Workflow Builder"
+job_prefix = "AGBUILDER"
+init_step = "parse_jimeng_markdown"
+description = "Builds executable agent-runner-v2 workflows from JiMeng/Dreamai-style agentic workflow markdown definitions."
+default_max_rejects = 3
+visibility = "canonical"
+layer = "layer3"
+platform = "agent-runner-v2"
+
+[[workflow.implementation]]
+name = "minimal"
+description = "Condensed action implementations and streamlined prompts with minimal validation, suitable for simple JiMeng workflows with few phases and no complex conditional routing."
+label = "Minimal"
+
+[[workflow.implementation]]
+name = "detailed"
+description = "Comprehensive action implementations with full error handling and state management, detailed prompts preserving all quality criteria and self-check rules from the JiMeng source."
+label = "Detailed"
+
+[[step]]
+name = "parse_jimeng_markdown"
+action = "parse_jimeng_markdown"
+enable_notifications = false
+requires_human_approval_after = false
+onsuccess = "analyze_workflow_structure"
+
+[step.artifacts]
+required_inputs = ["JIMENG_WORKFLOW_FILE"]
+produces = ["JIMENG_PARSED_MODEL"]
+result_meta_key = "JIMENG_PARSED_MODEL"
+
+[[step]]
+name = "analyze_workflow_structure"
+prompt = "prompts/02_analyze_workflow_structure.txt"
+enable_notifications = false
+requires_human_approval_after = false
+onsuccess = "design_workflow_steps"
+
+[step.coder]
+role_policy = "architect_standard"
+
+[step.artifacts]
+required_inputs = ["JIMENG_PARSED_MODEL"]
+produces = ["JIMENG_ANALYZED_MODEL"]
+result_meta_key = "JIMENG_ANALYZED_MODEL"
+
+[[step]]
+name = "design_workflow_steps"
+prompt = "prompts/03_design_workflow_steps.txt"
+enable_notifications = false
+requires_human_approval_after = false
+onsuccess = "implement_actions"
+
+[step.coder]
+role_policy = "architect_standard"
+
+[step.artifacts]
+required_inputs = ["JIMENG_ANALYZED_MODEL"]
+produces = ["WORKFLOW_STEP_DESIGN"]
+result_meta_key = "WORKFLOW_STEP_DESIGN"
+
+[[step]]
+name = "implement_actions"
+prompt = "prompts/04_implement_actions.txt"
+enable_notifications = false
+requires_human_approval_after = false
+onsuccess = "generate_prompts"
+
+[step.coder]
+role_policy = "coder_standard"
+
+[step.artifacts]
+required_inputs = ["WORKFLOW_STEP_DESIGN", "JIMENG_ANALYZED_MODEL"]
+produces = ["WORKFLOW_ACTIONS_FILE"]
+result_meta_key = "WORKFLOW_ACTIONS_FILE"
+
+[[step]]
+name = "generate_prompts"
+prompt = "prompts/05_generate_prompts.txt"
+enable_notifications = false
+requires_human_approval_after = false
+onsuccess = "assemble_requirements"
+
+[step.coder]
+role_policy = "coder_standard"
+
+[step.artifacts]
+required_inputs = ["WORKFLOW_STEP_DESIGN", "JIMENG_ANALYZED_MODEL"]
+produces = ["WORKFLOW_PROMPTS_DIR"]
+result_meta_key = "WORKFLOW_PROMPTS_DIR"
+
+[[step]]
+name = "assemble_requirements"
+action = "assemble_requirements"
+enable_notifications = false
+requires_human_approval_after = false
+onsuccess = "step_completion"
+
+[step.artifacts]
+required_inputs = ["WORKFLOW_STEP_DESIGN"]
+produces = ["WORKFLOW_REQUIREMENTS_FILE"]
+result_meta_key = "WORKFLOW_REQUIREMENTS_FILE"
+
+[[step]]
+name = "step_completion"
+action = "step_completion"

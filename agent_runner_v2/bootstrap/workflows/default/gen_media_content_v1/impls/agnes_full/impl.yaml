@@ -1,0 +1,57 @@
+name: agnes_full
+label: "Agnes Full Pipeline"
+
+# ============================================================================
+# Step Slots Configuration
+# ============================================================================
+step_slots:
+  # --- Action-type slots (provider selection) ---
+  generate_images:
+    type: "action"
+    label: "Image Provider"
+    default: "agnes_v1"
+    options:
+      - name: "__none__"
+        description: "Skip image generation"
+      - name: "agnes_v1"
+        description: "Agnes Image 2.1 Flash"
+
+  generate_videos:
+    type: "action"
+    label: "Video Provider"
+    default: "agnes_v2"
+    options:
+      - name: "__none__"
+        description: "Skip video generation"
+      - name: "agnes_v2"
+        description: "Agnes Video 2.0"
+      - name: "happyhorse_v1_1"
+        description: "HappyHorse 1.1 I2V"
+
+  # --- LLM-type slots (prompt selection) ---
+  extract_descriptions:
+    type: "llm"
+    label: "Description Extraction"
+    default: "standard"
+    options:
+      - name: "standard"
+        file: "prompts/extract_desc/standard.txt"
+        description: "Standard description extraction prompt."
+
+  generate_prompts:
+    type: "llm"
+    label: "Prompt Generation"
+    default: "standard"
+    options:
+      - name: "standard"
+        file: "prompts/generate_prompts/standard.txt"
+        description: "Standard prompt generation."
+
+# ============================================================================
+# Action Overrides
+# ============================================================================
+overrides:
+  generate_images:
+    action: "generate_images_default"
+  generate_videos:
+    action: "generate_videos_default"

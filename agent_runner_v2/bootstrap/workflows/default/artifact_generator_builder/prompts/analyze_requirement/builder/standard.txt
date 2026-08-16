@@ -174,9 +174,15 @@ Structure:
 }
 ```
 
-**For implementation="builder"**: The output artifacts should be workflow package files:
-- WORKFLOW_TOML, ACTIONS_PY, CONTEXT_EXTENSIONS_PY, PROMPTS_DIR, IMPLS_DIR, README_MD, REQUIREMENTS_TXT
-- Reference implementation guidance at: workflows/artifact_generator_builder/impls/builder/OUTPUT_ARTIFACTS.md
+**For implementation="builder"**: The domain_steps produce domain logic only:
+- `WORKFLOW_ACTIONS_FILE` → actions.py (@action functions, LLM-generated)
+- `WORKFLOW_PROMPTS_DIR` → prompts/*.txt (prompt templates, LLM-generated)
+- `WORKFLOW_REQUIREMENTS_FILE` → requirements.txt (dependencies, LLM-generated)
+
+Infrastructure files (workflow.toml, context_extensions.py, impl.yaml, README.md)
+are assembled mechanically by AGB's _assemble_package action from this Analysis JSON.
+Do NOT include infrastructure artifacts in domain_steps or artifact_keys.outputs.
+Reference: workflows/artifact_generator_builder/impls/builder/SPECIALIZED_STEPS.md
 
 **For implementation="generator"** (or not specified): The output artifacts are variable (defined by the requirement doc).
 
@@ -189,7 +195,7 @@ Before writing the output, verify:
 - [ ] identity.job_prefix is 2-10 uppercase characters
 - [ ] identity.implementation is "builder" or "generator" (default to "generator" if not specified)
 - [ ] identity.subtype is included if present in frontmatter
-- [ ] If implementation="builder", output artifacts include workflow package files (WORKFLOW_TOML, ACTIONS_PY, etc.)
+- [ ] If implementation="builder", domain_steps produce ONLY domain logic (WORKFLOW_ACTIONS_FILE, WORKFLOW_PROMPTS_DIR). Do NOT include infrastructure artifacts (WORKFLOW_TOML_FILE, WORKFLOW_EXTENSIONS_FILE) in outputs.
 - [ ] Every domain_step has either action_name (type=action) or prompt_file + role_policy (type=prompt)
 - [ ] All domain_step names are unique
 - [ ] Data flow is valid: each step's required_inputs are produced by prior steps or are workflow inputs
