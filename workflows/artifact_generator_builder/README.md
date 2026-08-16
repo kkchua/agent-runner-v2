@@ -88,7 +88,7 @@ Generated workflows support alternative implementations via the override pattern
 |------|---------|
 | `workflow.toml` | 10-step SDLC-scoped pipeline |
 | `context_extensions.py` | Two-dict artifact resolution (INPUT_ARTIFACTS + OUTPUT_ARTIFACTS) |
-| `actions.py` | assemble_package, validate_structure, promote actions |
+| `actions.py` | _assemble_package, _validate_structure, _promote_workflow_package actions |
 | `prompts/` | 7 prompt templates |
 | `input/` | Requirement documents |
 

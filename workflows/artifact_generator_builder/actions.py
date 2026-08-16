@@ -15,7 +15,7 @@ from agent_runner_v2.action_result import ActionResult
 from agent_runner_v2.workflow_packages.actions import action
 
 
-@action("promote_workflow_package")
+@action("_promote_workflow_package")
 def promote_workflow_package(*, context, state, step_cfg, project_root):
     """Promote all deliverables to workflows/{codename}/.
 
@@ -205,7 +205,7 @@ def promote_workflow_package(*, context, state, step_cfg, project_root):
     )
 
 
-@action("assemble_package")
+@action("_assemble_package")
 def assemble_package(*, context, state, step_cfg, project_root):
     """Deterministically build workflow.toml, context_extensions.py, and impl.yaml
     from the Analysis JSON produced by analyze_requirement.
@@ -270,6 +270,37 @@ def assemble_package(*, context, state, step_cfg, project_root):
                 artifacts={},
                 reject_code="MISSING_ROLE_POLICY",
             )
+
+    # Filter out infrastructure steps — AGB pipeline actions are prefixed with "_".
+    # Domain actions must NOT use the "_" prefix.
+    filtered_steps = []
+    for step in domain_steps:
+        action_name = step.get("action_name", "")
+        if step["type"] == "action" and action_name.startswith("_"):
+            print(
+                f"[assemble_package] WARNING: Filtering infrastructure step "
+                f"'{step['name']}' (action={action_name}) from domain_steps. "
+                f"AGB infrastructure actions are prefixed with '_'.",
+                flush=True,
+            )
+        else:
+            filtered_steps.append(step)
+    if len(filtered_steps) != len(domain_steps):
+        print(
+            f"[assemble_package] Filtered {len(domain_steps) - len(filtered_steps)} "
+            f"infrastructure step(s) from domain_steps. "
+            f"Remaining: {len(filtered_steps)} domain step(s).",
+            flush=True,
+        )
+    domain_steps = filtered_steps
+
+    if not domain_steps:
+        return ActionResult(
+            status="REJECTED",
+            remark="All domain_steps were infrastructure steps. No domain logic to assemble.",
+            artifacts={},
+            reject_code="NO_DOMAIN_STEPS",
+        )
 
     # Determine output directory (same dir as actions.py)
     actions_path = artifacts.get("WORKFLOW_ACTIONS_FILE", "")
@@ -745,7 +776,7 @@ ukbe-run-agent run --template-group {name}
 """
 
 
-@action("validate_structure")
+@action("_validate_structure")
 def validate_structure(*, context, state, step_cfg, project_root):
     """Run deterministic structural validation on the generated package.
 

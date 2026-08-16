@@ -363,6 +363,7 @@ def _check_prompt_input_consistency(
 
         non_artifact = {
             "ARTIFACT_KEY", "SOME_KEY", "job_id", "seq", "UNRESOLVED",
+            "PLACEHOLDER", "OUTPUT_FILE",
         }
         placeholders -= non_artifact
 

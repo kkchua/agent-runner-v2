@@ -69,7 +69,7 @@
       ]
     },
     "reviewer_standard": {
-      "default_role": "bailian_kimi-k2.5",
+      "default_role": "zen_go_deepseek-v4-flash",
       "agent": "arv_reviewer",
 	  "allowed_roles": [
 	    "bailian_qwen3.7-plus",
@@ -83,7 +83,7 @@
       ]
     },
     "refine_standard": {
-      "default_role": "bailian_qwen3.7-plus",
+      "default_role": "bailian_kimi-k2.5",
       "agent": "arv_reviewer",
 	  "allowed_roles": [
 	    "bailian_kimi-k2.5",
@@ -95,7 +95,7 @@
       ]
     },
     "plan_standard": {
-      "default_role": "bailian_qwen3.7-plus",
+      "default_role": "zen_go_deepseek-v4-flash",
 	  "agent": "arv_architect",
       "allowed_roles": [
         "bailian_qwen3.7-plus",

@@ -178,6 +178,15 @@ def _initialize_state_from_backend(
         impl = str(context.get("impl_name") or context.get("IMPL_NAME") or "").strip()
         if impl:
             state["impl_name"] = impl
+        # Extract prompt_selections for step_slot resolution
+        prompt_sels = context.get("prompt_selections") or {}
+        if prompt_sels:
+            state["prompt_selections"] = prompt_sels
+
+    # Also merge prompt_selections from top-level backend state (BCS canonical location)
+    top_prompt_sels = run.get("prompt_selections") or {}
+    if top_prompt_sels and "prompt_selections" not in state:
+        state["prompt_selections"] = top_prompt_sels
 
     return state
 

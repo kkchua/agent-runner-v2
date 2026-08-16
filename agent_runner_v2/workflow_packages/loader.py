@@ -152,7 +152,8 @@ def _apply_impl_overrides(
 
     overrides_data = _load_impl_overrides(bundle.bundle_root, impl_name)
     overrides = overrides_data.get("overrides", {})
-    prompt_slots = overrides_data.get("prompt_slots", {})
+    # step_slots generalises prompt_slots; fall back for backward compatibility
+    step_slots = overrides_data.get("step_slots") or overrides_data.get("prompt_slots", {})
 
     if not isinstance(overrides, dict):
         raise ValueError(
@@ -199,14 +200,14 @@ def _apply_impl_overrides(
                 # It's a slot reference {{ slot.ID }}
                 slot_id = match.group(1)
                 
-                # Validate slot exists in prompt_slots
-                if slot_id not in prompt_slots:
+                # Validate slot exists in step_slots
+                if slot_id not in step_slots:
                     raise ValueError(
-                        f"impl.yaml references prompt slot '{slot_id}' "
-                        f"but it is not defined in 'prompt_slots'."
+                        f"impl.yaml references step slot '{slot_id}' "
+                        f"but it is not defined in 'step_slots'."
                     )
-                
-                slot_config = prompt_slots[slot_id]
+
+                slot_config = step_slots[slot_id]
                 if not isinstance(slot_config, dict) or "default" not in slot_config or "options" not in slot_config:
                     raise ValueError(
                         f"Prompt slot '{slot_id}' is malformed. "
@@ -243,7 +244,8 @@ def _apply_impl_overrides(
     new_custom_actions = dict(bundle.custom_actions)
     new_custom_actions.update(impl_actions)
 
-    return replace(bundle, steps=new_steps, custom_actions=new_custom_actions, impl_prompt_slots=prompt_slots)
+    return replace(bundle, steps=new_steps, custom_actions=new_custom_actions,
+                   impl_prompt_slots=step_slots, impl_step_slots=step_slots)
 
 
 def _load_impl_actions(

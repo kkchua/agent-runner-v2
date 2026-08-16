@@ -202,6 +202,17 @@ def test_prompt_placeholder_not_in_artifacts_detected(tmp_path: Path) -> None:
     assert any(f.code == "PROMPT_INPUT_MISMATCH" and "MISSING_KEY" in f.message for f in result.errors)
 
 
+def test_prompt_generic_placeholder_names_excluded(tmp_path: Path) -> None:
+    _write(tmp_path / "workflow.toml", MINIMAL_TOML)
+    _write(
+        tmp_path / "prompts/step_one.txt",
+        "Do NOT use generic placeholders like {PLACEHOLDER} or {OUTPUT_FILE}.\n",
+    )
+    manifest = tmp_path / "workflow.toml"
+    result = validate_package(manifest_path=manifest)
+    assert not any(f.code == "PROMPT_INPUT_MISMATCH" for f in result.errors)
+
+
 # --- Extension key coverage ---
 
 def test_unregistered_artifact_keys_warning(tmp_path: Path) -> None:

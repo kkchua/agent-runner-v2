@@ -1,0 +1,153 @@
+Objective
+
+Scan the directory referenced by {STEP_00_DIR} for image files with
+extensions PNG, JPG, and WEBP. For each image found, use your vision
+capabilities to read the image and produce a structured description
+JSON file. Save each description JSON to {STEP_01_DIR} with the
+filename matching the input image stem (e.g., image001.png produces
+image001.json). Finally, produce an index.json file in {STEP_01_DIR}
+listing all input-to-output file mappings.
+
+Reference Inputs
+
+- Input images directory: {STEP_00_DIR}
+- Output descriptions directory: {STEP_01_DIR}
+- Media configuration: {MEDIA_CONFIG}
+- Governance docs: {GOVERNANCE_RUNTIME_ROOT}
+- Platform docs: {PLATFORM_RUNTIME_ROOT}
+
+Output Instructions
+
+For each image file found in {STEP_00_DIR}, produce a JSON file with
+the following structure. The JSON must contain exactly one entry in
+the descriptions array per image. Each description object must include
+all 9 attribute groups listed below.
+
+Top-level JSON structure:
+{
+  "image_filename": "<original input image filename>",
+  "image_stem": "<filename without extension>",
+  "descriptions": [
+    {
+      "subject_attributes": {
+        "main_subject": "",
+        "subject_type": "",
+        "subject_description": "",
+        "distinctive_features": [],
+        "recognizable_objects": [],
+        "subject_state_or_pose": ""
+      },
+      "scene_attributes": {
+        "setting": "",
+        "environment": "",
+        "foreground": "",
+        "midground": "",
+        "background": "",
+        "time_of_day": "",
+        "season_or_weather": "",
+        "spatial_depth": "",
+        "parallax_potential": ""
+      },
+      "composition_attributes": {
+        "orientation": "",
+        "framing": "",
+        "camera_angle": "",
+        "subject_position": "",
+        "negative_space": "",
+        "visual_flow": "",
+        "depth_layers": []
+      },
+      "lighting_attributes": {
+        "lighting_type": "",
+        "light_direction": "",
+        "light_quality": "",
+        "color_temperature": "",
+        "shadow_highlight_behavior": "",
+        "atmospheric_lighting": ""
+      },
+      "style_attributes": {
+        "visual_style": "",
+        "medium": "",
+        "realism_level": "",
+        "texture_quality": "",
+        "rendering_treatment": ""
+      },
+      "color_attributes": {
+        "dominant_colors": [],
+        "accent_colors": [],
+        "color_contrast": "",
+        "palette_mood": ""
+      },
+      "mood_attributes": {
+        "emotional_tone": "",
+        "atmosphere": "",
+        "viewer_feeling": ""
+      },
+      "motion_potential": {
+        "primary_motion_candidate": "",
+        "subject_motion_candidates": [],
+        "environmental_motion_candidates": [],
+        "camera_motion_candidates": [],
+        "motion_intensity_suggestion": "",
+        "motion_pacing_suggestion": "",
+        "motion_constraints": []
+      },
+      "extraction_confidence": {
+        "overall_confidence": 0.0,
+        "uncertain_attributes": []
+      }
+    }
+  ]
+}
+
+Fill every field with descriptive values derived from visual analysis
+of the image. Array fields (distinctive_features, recognizable_objects,
+depth_layers, dominant_colors, accent_colors, subject_motion_candidates,
+environmental_motion_candidates, camera_motion_candidates,
+motion_constraints, uncertain_attributes) must contain at least one
+element when applicable. The overall_confidence field must be a float
+between 0.0 and 1.0 representing the confidence level of the extraction.
+
+After writing all description JSONs to {STEP_01_DIR}:
+
+Write an index.json file to {STEP_01_DIR} with this structure:
+   {
+     "step": "extract_descriptions",
+     "files": [
+       {"input": "step_00_inputimage/image001.png", "output": "step_01_imagedesc/image001.json"}
+     ]
+   }
+
+Note: Archiving of processed input images from {STEP_00_DIR} is handled
+automatically by a subsequent archive step -- do NOT archive or remove files
+from {STEP_00_DIR} yourself.
+
+Supported image formats: PNG, JPG (JPEG), WEBP.
+All output must be ASCII-only JSON with UTF-8 encoding.
+
+CRITICAL: Output Mechanism
+
+You MUST use your file-writing tools to create actual files on disk. Do NOT
+put artifact data in the meta.json result field -- the result field is for
+status and summary information ONLY.
+
+Required file outputs:
+1. Individual description JSONs: {STEP_01_DIR}/<image_stem>.json for each
+   input image (e.g., step_00_inputimage/image001.png -> step_01_imagedesc/image001.json)
+2. Index file: {STEP_01_DIR}/index.json listing all input-to-output mappings
+   (this is the {IMAGE_DESCRIPTIONS} artifact)
+
+Your meta.json result field should contain only:
+- status: "complete" or "error"
+- remark: brief summary (e.g., "Processed 5 images, wrote 5 JSONs + index")
+- Do NOT include the full JSON data in the result field
+
+In the artifacts field of meta.json, you MUST report:
+- IMAGE_DESCRIPTIONS: the absolute path to the index.json file you wrote
+  (use the actual resolved path of {STEP_01_DIR}/index.json)
+
+Artifacts
+
+The {IMAGE_DESCRIPTIONS} artifact is the index.json file you write to
+{STEP_01_DIR}/index.json. This file must exist on disk after step completion.
+You must report this absolute path in the artifacts field of meta.json.

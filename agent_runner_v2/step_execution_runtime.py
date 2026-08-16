@@ -67,7 +67,7 @@ def resolve_prompt_slot(
                 try:
                     with open(impl_yaml_path, "r", encoding="utf-8") as f:
                         impl_data = yaml.safe_load(f)
-                    prompt_slots = impl_data.get("prompt_slots", {})
+                    prompt_slots = impl_data.get("step_slots") or impl_data.get("prompt_slots", {})
                     slot_config = prompt_slots.get(slot_id)
                     
                     if slot_config:
@@ -107,6 +107,65 @@ def resolve_prompt_slot(
     return None
 
 
+def _resolve_action_step_slots(
+    context: dict[str, str],
+    state: dict[str, Any],
+    step: str,
+    group_cfg: dict[str, Any],
+    bundle: Any | None,
+) -> None:
+    """Resolve action-type step_slots and inject selected provider into context.
+
+    For each step_slot with ``type: "action"``, reads the user's selection
+    from ``state["prompt_selections"]`` (or falls back to the slot default),
+    then injects it into *context* as ``STEP_SLOT_{STEP_NAME}`` (uppercased).
+
+    This allows action-driven steps to read the selected provider directly
+    from context without needing to parse config.json or preset.json.
+    """
+    if bundle is None:
+        return
+
+    impl_name = group_cfg.get("implementation_name") or ""
+    if not impl_name:
+        return
+
+    # Read step_slots from impl.yaml (fallback to prompt_slots for compat)
+    impl_yaml_path = bundle.bundle_root / "impls" / impl_name / "impl.yaml"
+    if not impl_yaml_path.exists():
+        return
+
+    try:
+        with open(impl_yaml_path, "r", encoding="utf-8") as f:
+            impl_data = yaml.safe_load(f)
+    except Exception:
+        return
+
+    step_slots = impl_data.get("step_slots") or impl_data.get("prompt_slots", {})
+    slot_config = step_slots.get(step)
+    if not slot_config or not isinstance(slot_config, dict):
+        return
+
+    slot_type = slot_config.get("type", "llm")
+    if slot_type != "action":
+        return
+
+    # Determine selected provider
+    selections = state.get("prompt_selections", {})
+    selected = selections.get(step, "")
+    default = slot_config.get("default", "")
+    options = slot_config.get("options", [])
+    valid_names = {opt.get("name") for opt in options}
+
+    if selected not in valid_names:
+        selected = default
+
+    # Inject into context
+    context_key = f"STEP_SLOT_{step.upper()}"
+    context[context_key] = selected
+    print(f"[step_slots] {step} -> {selected} (injected as {context_key})", flush=True)
+
+
 def prepare_step_execution(
     *,
     template_group: str,
@@ -132,6 +191,20 @@ def prepare_step_execution(
 
     context = hooks.build_context(state, step=step, step_cfg=step_cfg, project_root=project_root)
     context["WORKFLOW_KEY_OVERRIDE"] = workflow_key_override or ""
+
+    # Inject implementation name and bundle root so actions can load
+    # implementation-specific presets (e.g. provider selection).
+    impl_name = group_cfg.get("implementation_name") or ""
+    if impl_name:
+        context["IMPLEMENTATION_NAME"] = impl_name
+    bundle = group_cfg.get("_workflow_bundle")
+    if bundle is not None:
+        context["WORKFLOW_BUNDLE_ROOT"] = str(bundle.bundle_root)
+
+    # Resolve action-type step_slots: inject selected provider into context.
+    # For each step_slot with type="action", the selected provider name is
+    # injected as STEP_SLOT_{STEP_NAME} (uppercased) so the action can read it.
+    _resolve_action_step_slots(context, state, step, group_cfg, bundle)
 
     # Now check for missing required inputs AFTER context_extensions has resolved paths
     missing_required = hooks._missing_artifacts(step_cfg.get("required_inputs", []), state)

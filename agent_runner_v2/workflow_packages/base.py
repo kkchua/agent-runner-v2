@@ -132,6 +132,11 @@ class WorkflowBundle:
     # Maps slot_id -> {label, default, options: [{name, file, description}]}
     impl_prompt_slots: dict[str, Any] = field(default_factory=dict)
 
+    # Step slot definitions — generalises prompt_slots with type support.
+    # Each slot has a "type" field: "llm" (prompt selection) or "action" (provider selection).
+    # Falls back to impl_prompt_slots when not explicitly set (backward compatible).
+    impl_step_slots: dict[str, Any] = field(default_factory=dict)
+
     def get_step(self, name: str) -> StepConfig:
         """Look up a step by name. Raises KeyError if missing."""
         return self.steps[name]
