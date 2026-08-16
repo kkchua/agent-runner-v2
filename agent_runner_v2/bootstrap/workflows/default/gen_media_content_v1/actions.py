@@ -694,9 +694,23 @@ def generate_videos_default(*, context, state, step_cfg, project_root) -> Action
 
         video_prompt = variation.get("t2v_prompt1", "") or variation.get("t2i_prompt1", "")
         image_url = variation.get("image_url", "")
-        if not video_prompt or not image_url:
-            failures.append(f"{img_name}: missing prompt or image_url in variant data")
+        if not video_prompt:
+            failures.append(f"{img_name}: missing prompt in variant data")
             continue
+
+        # If image_url is empty/null, use base64 embedded format from the actual image file
+        image_ref = image_url
+        if not image_ref:
+            image_path = step_03_dir / img_name
+            if not image_path.exists():
+                failures.append(f"{img_name}: no image_url and image file not found")
+                continue
+            import base64
+            with open(image_path, "rb") as img_f:
+                img_data = base64.b64encode(img_f.read()).decode("utf-8")
+            # Use data URI format for base64 embedded image
+            image_ref = f"data:image/png;base64,{img_data}"
+            logger.info("Using base64 embedded image for %s (%d bytes)", img_name, len(img_data))
 
         video_base = Path(img_name).stem
         api_key = key_pool.next_key()
@@ -704,7 +718,7 @@ def generate_videos_default(*, context, state, step_cfg, project_root) -> Action
         try:
             result = provider.call_api(
                 prompt=video_prompt,
-                image=image_url,
+                image=image_ref,
                 config=api_config,
                 api_key=api_key,
                 base_url=base_url,

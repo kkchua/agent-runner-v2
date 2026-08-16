@@ -600,6 +600,20 @@ mechanically construct `workflow.toml`, `context_extensions.py`, and
       "name": "string — implementation identifier",
       "description": "string — what this variant does",
       "label": "string — optional display label",
+      "step_slots": {
+        "slot_id": {
+          "type": "llm | action — slot type",
+          "label": "string — human-readable display label",
+          "default": "string — default option name",
+          "options": [
+            {
+              "name": "string — option identifier",
+              "file": "string — prompt file path (required for type=llm)",
+              "description": "string — what this option does"
+            }
+          ]
+        }
+      },
       "overrides": {
         "step_name": {
           "prompt": "string — override prompt path",
@@ -624,6 +638,11 @@ mechanically construct `workflow.toml`, `context_extensions.py`, and
 | `domain_steps[].role_policy` | REQUIRED when type="prompt" |
 | `artifact_keys.inputs[].key` | MUST end with `_FILE` or `_DIR` |
 | `implementations[].name` | MUST be unique. MUST NOT be "default". |
+| `implementations[].step_slots` | Optional. Keys MUST correspond to `domain_steps[].name`. |
+| `step_slots[].type` | "llm" or "action". Defaults to "llm" if omitted. |
+| `step_slots[].default` | MUST match an option `name` in the same slot. |
+| `step_slots[].options[].file` | REQUIRED when type="llm". Path relative to bundle root. |
+| `step_slots[].options[].description` | REQUIRED when type="action". |
 
 ### 8.3 What the Assembler Produces
 
@@ -631,13 +650,18 @@ mechanically construct `workflow.toml`, `context_extensions.py`, and
 |-------------|--------|
 | `identity` | `[workflow]` section in workflow.toml; class name in context_extensions.py |
 | `domain_steps` | `[[step]]` sections in workflow.toml (assembler adds `onsuccess` chaining) |
+| `domain_steps[].type=prompt` | `prompt = "{{ slot.<step_name> }}"` in workflow.toml (slot reference) |
+| `domain_steps[].type=action` | `action = "<action_name>"` in workflow.toml (direct assignment) |
 | `artifact_keys` | `INPUT_ARTIFACTS` + `OUTPUT_ARTIFACTS` dicts in context_extensions.py; `[step.artifacts]` in workflow.toml |
 | `implementations` | `[[workflow.implementation]]` in workflow.toml; `impls/{name}/impl.yaml` files |
+| `implementations[].step_slots` | `step_slots:` section in `impls/{name}/impl.yaml` |
+| `implementations[].overrides` | `overrides:` section in `impls/{name}/impl.yaml` |
 
 ### 8.4 What the Assembler Adds Automatically
 
 - `onsuccess` routing — chains steps in declared order
 - Terminal `step_completion` step — always appended
+- `{{ slot.<step_name> }}` references — prompt steps get slot references in workflow.toml (slot_id = step name)
 - `INPUT_ARTIFACTS` + `OUTPUT_ARTIFACTS` dicts — from `artifact_keys` inputs/outputs
 - `build_context_extensions()` body — uses `resolve_input_artifacts()` and `resolve_output_artifacts()`
 - `install_to_global()` / `sync_to_backend()` — always NO_OP
@@ -793,96 +817,7 @@ The CLI (`run_agent.py`) receives `--impl-name` and passes it to `_load_group()`
 - **Contract:** The Runtime MUST resolve the implementation and populate `group_cfg["implementation_name"]` with the exact string provided.
 - **Rule:** The BCS slot resolver (`resolve_prompt_slot`) reads from `group_cfg["implementation_name"]`.
 
-### 11.6 Step Slots (Unified Slot Mechanism)
-
-Step slots provide a unified mechanism for configuring workflow steps at runtime.
-Each slot can be either **action-type** (provider selection) or **llm-type** (prompt selection).
-
-#### 11.6.1 Slot Definition (impl.yaml)
-
-Implementations define step slots in `impls/{impl_name}/impl.yaml`:
-
-```yaml
-step_slots:
-  generate_images:           # Must match workflow.toml step name exactly
-    type: "action"           # "action" for provider selection, "llm" for prompt selection
-    label: "Image Provider"  # Human-readable label for UI
-    default: "agnes_v1"      # Default value if no selection made
-    options:
-      - name: "__none__"     # Special value meaning "skip this step"
-        description: "Skip image generation"
-      - name: "agnes_v1"
-        description: "Agnes Image 2.1 Flash"
-      - name: "qwen_image"
-        description: "Qwen Image Generation"
-
-  extract_descriptions:      # LLM-type slot for prompt selection
-    type: "llm"
-    label: "Description Extraction"
-    default: "standard"
-    options:
-      - name: "standard"
-        file: "prompts/extract_desc/standard.txt"
-        description: "Standard description extraction prompt."
-```
-
-**Key Rules:**
-- Slot keys MUST exactly match step names in `workflow.toml` (used for runtime resolution and UI sorting)
-- Action-type slots inject selected provider into context as `STEP_SLOT_{STEP_NAME}` (uppercased)
-- LLM-type slots select which prompt template file to use
-- `__none__` is a reserved option name meaning "skip this step"
-
-#### 11.6.2 Runtime Resolution Flow
-
-```
-User Selection (Operator Console)
-    ↓
-prompt_selections: {"generate_videos": "happyhorse_v1_1"}
-    ↓
-Backend stores in context_payload
-    ↓
-Daemon writes to backend_state.json
-    ↓
-CLI loads into state["prompt_selections"]
-    ↓
-_resolve_action_step_slots() reads impl.yaml
-    ↓
-Validates selection against options
-    ↓
-Injects: context["STEP_SLOT_GENERATE_VIDEOS"] = "happyhorse_v1_1"
-    ↓
-Action reads: context.get("STEP_SLOT_GENERATE_VIDEOS")
-```
-
-#### 11.6.3 State Loading Contract
-
-The Runtime MUST load `prompt_selections` from backend state into the local state dict:
-
-```python
-# From context_payload
-prompt_sels = context.get("prompt_selections") or {}
-if prompt_sels:
-    state["prompt_selections"] = prompt_sels
-
-# From top-level backend state (BCS canonical location)
-top_prompt_sels = run.get("prompt_selections") or {}
-if top_prompt_sels and "prompt_selections" not in state:
-    state["prompt_selections"] = top_prompt_sels
-```
-
-#### 11.6.4 Implementation as Preset
-
-Implementations act as **presets** that pre-select defaults for step slots:
-- User can override individual slot selections via operator console dropdowns
-- `prompt_selections` contains user's actual choices (overrides impl defaults)
-- If a selection is invalid (not in options), falls back to slot default
-
-#### 11.6.5 Backward Compatibility
-
-- `step_slots` falls back to `prompt_slots` if not present (existing workflows unaffected)
-- Workflows without implementations continue to use workflow.toml defaults
-
-### 11.7 Logging Standards (The Paper Trail)
+### 11.6 Logging Standards (The Paper Trail)
 Every boundary in the data flow MUST log the exact data being passed.
 This is mandatory for debugging data drops.
 
@@ -892,12 +827,11 @@ This is mandatory for debugging data drops.
     -   Log constructed `cli_args` before spawning child.
 3.  **CLI:** Log received arguments (`template_group`, `impl_name`).
 
-### 11.8 Summary of Canonical Keys
+### 11.7 Summary of Canonical Keys
 | Concept | Key Name | Used By |
 |---------|----------|---------|
 | Implementation Name | `implementation_name` | **ALL** (Backend, Daemon, CLI, Runtime) |
 | Prompt Selections | `prompt_selections` | **ALL** |
-| Step Slot Context | `STEP_SLOT_{STEP_NAME}` | Runtime (injected by `_resolve_action_step_slots`) |
 | Workflow Name | `workflow_name` | **ALL** |
 | Job ID / Code | `run_code` | **ALL** |
 

@@ -1,0 +1,58 @@
+name: standard
+label: "Standard Pipeline"
+
+# ============================================================================
+# Step Slots Configuration
+# ============================================================================
+step_slots:
+  # --- LLM-type slots (prompt selection) ---
+  extract_descriptions:
+    type: "llm"
+    label: "Description Extraction"
+    default: "standard"
+    options:
+      - name: "standard"
+        file: "prompts/extract_desc/standard.txt"
+        description: "Standard vision-based description extraction."
+
+  generate_prompts:
+    type: "llm"
+    label: "Prompt Generation"
+    default: "reconstruction"
+    options:
+      - name: "thematic_variance"
+        file: "prompts/generate_prompts/v2.txt"
+        description: "Creative thematic variance — diverse subjects within same concept."
+      - name: "reconstruction"
+        file: "prompts/generate_prompts/v9.txt"
+        description: "Faithful reconstruction — visually indistinguishable from original."
+
+  generate_images:
+    type: "llm"
+    label: "Image Generation"
+    default: "agnes_v1"
+    options:
+      - name: "agnes_v1"
+        file: "prompts/generate_images/agnes_v1.txt"
+        description: "Agnes Image 2.1 Flash via LLM-driven curl."
+      - name: "token_plan_image"
+        file: "prompts/generate_images/token_plan_image.txt"
+        description: "Token Plan wan2.7-image via LLM-driven curl."
+
+  generate_videos:
+    type: "llm"
+    label: "Video Generation"
+    default: "happyhorse_v1_1"
+    options:
+      - name: "agnes_v2"
+        file: "prompts/generate_videos/agnes_v2.txt"
+        description: "Agnes Video V2.0 i2v via LLM-driven curl."
+      - name: "happyhorse_v1_1"
+        file: "prompts/generate_videos/happyhorse-1.1-i2v.txt"
+        description: "HappyHorse 1.1 image-to-video via LLM-driven curl."
+      - name: "happyhorse-1.1-t2v"
+        file: "prompts/generate_videos/happyhorse-1.1-t2v.txt"
+        description: "HappyHorse 1.1 text-to-video via LLM-driven curl."
+      - name: "alibaba_token_plan"
+        file: "prompts/generate_videos/alibaba_token_plan.txt"
+        description: "Alibaba Token Plan generic video via LLM-driven curl."

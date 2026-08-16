@@ -1,0 +1,142 @@
+# Objective
+
+Generate videos from text prompts using the HappyHorse 1.1 text-to-video API.
+You will read variant JSONs from step_03 to get t2v prompts, submit all video
+generation tasks, poll for completion, download videos to step_04, and write
+an index.json.
+
+**Note**: Unlike i2v mode, t2v does NOT use the generated images. It uses only
+the text prompts (t2v_prompt1) to generate videos from scratch.
+
+# Reference Inputs
+
+- MEDIA_CONFIG: {MEDIA_CONFIG}
+  The workspace config.json. Contains `api.token_plan.happyhorse-1.1-t2v` section
+  with model settings.
+
+- STEP_03_DIR: {STEP_03_DIR}
+  Directory containing generated PNG images and variant JSON files from the
+  image generation step. We read the JSONs for prompts but do NOT use the PNGs.
+
+- STEP_04_DIR: {STEP_04_DIR}
+  Output directory for generated videos. Create if it does not exist.
+
+# Execution Protocol
+
+## Step 1: Load Configuration
+
+1. Read `config.json` from the workspace root (path in MEDIA_CONFIG).
+2. Extract the `api.token_plan.happyhorse-1.1-t2v` section:
+   - `resolution` — video resolution (default: "480P")
+   - `ratio` — aspect ratio (default: "9:16")
+   - `duration` — duration in seconds (default: 5)
+   - `watermark` — add watermark (default: false)
+3. If no settings found, use hardcoded defaults.
+
+**Note**: `watermark` must be a JSON boolean (`true`/`false`), NOT a string.
+
+## Step 2: Load API Key
+
+Read the `.env` file from the workspace root and extract `TOKEN_PLAN_API_KEY`.
+Strip any quotes and spaces from the value.
+
+**Important**: Embed the key directly in curl commands rather than using
+environment variable syntax.
+
+## Step 3: Read Input Data
+
+1. List all `*.json` files in STEP_03_DIR. **Skip `index.json`** — it is not
+   variant data.
+2. For each variant JSON, read it and extract the `variations` array.
+3. Each variation contains: `t2v_prompt1`, `image_filename`.
+4. Build a list of: `{image_filename, t2v_prompt1}` for all variations.
+
+**Note**: We use `image_filename` as the basis for the output video filename
+(e.g., `image001.png` → `image001.mp4`), but we do NOT use the actual image.
+
+## Step 4: Phase 1 — Submit All Tasks
+
+For each variation, submit a t2v task via curl.
+Do NOT poll yet — submit ALL tasks first for maximum parallelism.
+
+```bash
+curl -s -X POST "https://token-plan.ap-southeast-1.maas.aliyuncs.com/api/v1/services/aigc/video-generation/video-synthesis" \
+  -H "X-DashScope-Async: enable" \
+  -H "Authorization: Bearer <API_KEY>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "happyhorse-1.1-t2v",
+    "input": {"prompt": "<t2v_prompt1>"},
+    "parameters": {"resolution": "<resolution>", "ratio": "<ratio>", "duration": <duration>, "watermark": <watermark>}
+  }'
+```
+
+Replace `<API_KEY>` with the actual key value extracted from .env.
+
+For each submit, extract `output.task_id` from the response.
+Record the mapping: `task_id` → `{image_filename, output_filename}`.
+
+Output filename: `<image_stem>.mp4` (e.g., `image001.png` → `image001.mp4`).
+
+If a submit fails, log the error and continue with the next variation.
+
+## Step 5: Phase 2 — Poll All Tasks
+
+For each `task_id`, poll until complete:
+
+```bash
+curl -s "https://token-plan.ap-southeast-1.maas.aliyuncs.com/api/v1/tasks/<task_id>" \
+  -H "Authorization: Bearer <API_KEY>"
+```
+
+Check `output.task_status`:
+- `SUCCEEDED` → extract `output.video_url`
+- `FAILED` → log error, continue with next task
+- Other → wait 15 seconds, poll again
+
+## Step 6: Phase 3 — Download Videos
+
+For each succeeded task, download the video:
+
+```bash
+curl -s -o "<STEP_04_DIR>/<output_filename>" "<video_url>"
+```
+
+## Step 7: Write Index
+
+Write `index.json` to STEP_04_DIR:
+
+```json
+{
+  "step": "generate_videos",
+  "model": "happyhorse-1.1-t2v",
+  "mode": "text-to-video",
+  "files": [
+    {"input": "image001.png", "output": "image001.mp4", "prompt_used": "..."},
+    {"input": "image002.png", "output": "image002.mp4", "prompt_used": "..."}
+  ]
+}
+```
+
+Only include successfully generated videos in the index.
+
+# Output
+
+Write the VIDEO_INDEX artifact path (STEP_04_DIR/index.json) as your output.
+
+# Self-Check
+
+Before completing, verify:
+
+- [ ] All variations in all JSONs were processed (or logged as failures)
+- [ ] `index.json` was written to STEP_04_DIR
+- [ ] Each entry in index.json maps an input filename to an output MP4
+- [ ] Failed tasks were logged with error details
+- [ ] The VIDEO_INDEX artifact path is reported in the output
+
+# Forbidden
+
+- Do NOT call the Token Plan API using Python requests/urllib — use curl only.
+- Do NOT skip the `index.json` exclusion when reading variant JSONs.
+- Do NOT use image URLs — this is text-to-video mode, no images needed.
+- Do NOT copy PNG files to step_04 — only videos go there.
