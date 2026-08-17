@@ -7,10 +7,10 @@ authority: "workflow-generated"
 scan_policy: "include"
 lifecycle_status: "approved"
 component_id: "workflow-families"
-created: "2026-08-06T07:04:04+08:00"
-owner: "sdlc_00_codebase_v1"
-last_verified_by_change: "sdlc_00_codebase_v1 / SDLC00CB-bgmxg5vi / 2026-08-06T07:04:04+08:00"
-modules: ["00_bootstrap_lifecycle_admin_v1", "01_governance_foundation_v1", "02_agent_runner_platform_v1", "agnes_gen_video_v1", "agnes_media_gen_v1", "sdlc_00_codebase_v1", "sdlc_00_delivery_scaffold_v1", "sdlc_00_init_doc_v1", "sdlc_10_requirement_v1", "sdlc_20_planning_v1", "sdlc_30_backlog_v1", "sdlc_40_task_v1", "sdlc_50_implementation_v1", "sdlc_60_execution_v1", "sdlc_70_validation_v1", "sdlc_80_review_v1", "workflow_builder_v1"]
+created: "2026-08-17T21:19:17+08:00"
+owner: "sdlc_00_codebase_scaffold_v1"
+last_verified_by_change: "sdlc_00_codebase_scaffold_v1 / SDLC00CS-1zcrrbbs / 2026-08-17T21:19:17+08:00"
+modules: ["00_bootstrap_lifecycle_admin_v1", "01_governance_foundation_v1", "02_agent_runner_platform_v1", "agentic_workflow_builder", "agnes_gen_video_v1", "agnes_media_gen_v1", "artifact_generator_builder", "codebase_intelligence", "gen_media_content_v1", "sdlc_00_codebase_scaffold_v1", "sdlc_00_init_doc_v1", "sdlc_00_requirement_planning_v1", "sdlc_01_impl_exec_review_v1", "sdlc_10_requirement_v1", "sdlc_20_planning_v1", "sdlc_30_backlog_v1", "sdlc_40_task_v1", "sdlc_50_implementation_v1", "sdlc_60_execution_v1", "sdlc_70_validation_v1", "sdlc_80_review_v1", "text_summarizer_ayz"]
 ---
 
 # Component Documentation: workflow families
@@ -28,11 +28,16 @@ Repository workflow families, their step sequences, and their current bootstrap/
 | `00_bootstrap_lifecycle_admin_v1` | 00BOOT / 6 steps |
 | `01_governance_foundation_v1` | 01GF / 8 steps |
 | `02_agent_runner_platform_v1` | 02AR / 8 steps |
+| `agentic_workflow_builder` | AGBUILDER / 7 steps |
 | `agnes_gen_video_v1` | AGVID / 3 steps |
 | `agnes_media_gen_v1` | AMGEN / 9 steps |
-| `sdlc_00_codebase_v1` | SDLC00CB / 9 steps |
-| `sdlc_00_delivery_scaffold_v1` | SDLC00SCF / 6 steps |
+| `artifact_generator_builder` | AGB / 12 steps |
+| `codebase_intelligence` | CODEINT / 8 steps |
+| `gen_media_content_v1` | MEDIA / 9 steps |
+| `sdlc_00_codebase_scaffold_v1` | SDLC00CS / 14 steps |
 | `sdlc_00_init_doc_v1` | SDLC00INIT / 7 steps |
+| `sdlc_00_requirement_planning_v1` | SDLC0RP / 31 steps |
+| `sdlc_01_impl_exec_review_v1` | SDLC01IER / 25 steps |
 | `sdlc_10_requirement_v1` | SDLC10REQ / 7 steps |
 | `sdlc_20_planning_v1` | SDLC20PLN / 7 steps |
 | `sdlc_30_backlog_v1` | SDLC30BLG / 7 steps |
@@ -41,7 +46,7 @@ Repository workflow families, their step sequences, and their current bootstrap/
 | `sdlc_60_execution_v1` | SDLC60EXE / 7 steps |
 | `sdlc_70_validation_v1` | SDLC70VAL / 7 steps |
 | `sdlc_80_review_v1` | SDLC80REV / 7 steps |
-| `workflow_builder_v1` | WFBUILD / 17 steps |
+| `text_summarizer_ayz` | TXTSUM / 5 steps |
 
 ## 2. Architecture
 
@@ -60,11 +65,16 @@ Repository files are scanned, normalized into inventory rows, and rendered into 
 | `00_bootstrap_lifecycle_admin_v1` | outbound | markdown | 00BOOT / 6 steps |
 | `01_governance_foundation_v1` | outbound | markdown | 01GF / 8 steps |
 | `02_agent_runner_platform_v1` | outbound | markdown | 02AR / 8 steps |
+| `agentic_workflow_builder` | outbound | markdown | AGBUILDER / 7 steps |
 | `agnes_gen_video_v1` | outbound | markdown | AGVID / 3 steps |
 | `agnes_media_gen_v1` | outbound | markdown | AMGEN / 9 steps |
-| `sdlc_00_codebase_v1` | outbound | markdown | SDLC00CB / 9 steps |
-| `sdlc_00_delivery_scaffold_v1` | outbound | markdown | SDLC00SCF / 6 steps |
+| `artifact_generator_builder` | outbound | markdown | AGB / 12 steps |
+| `codebase_intelligence` | outbound | markdown | CODEINT / 8 steps |
+| `gen_media_content_v1` | outbound | markdown | MEDIA / 9 steps |
+| `sdlc_00_codebase_scaffold_v1` | outbound | markdown | SDLC00CS / 14 steps |
 | `sdlc_00_init_doc_v1` | outbound | markdown | SDLC00INIT / 7 steps |
+| `sdlc_00_requirement_planning_v1` | outbound | markdown | SDLC0RP / 31 steps |
+| `sdlc_01_impl_exec_review_v1` | outbound | markdown | SDLC01IER / 25 steps |
 | `sdlc_10_requirement_v1` | outbound | markdown | SDLC10REQ / 7 steps |
 | `sdlc_20_planning_v1` | outbound | markdown | SDLC20PLN / 7 steps |
 | `sdlc_30_backlog_v1` | outbound | markdown | SDLC30BLG / 7 steps |
@@ -73,7 +83,7 @@ Repository files are scanned, normalized into inventory rows, and rendered into 
 | `sdlc_60_execution_v1` | outbound | markdown | SDLC60EXE / 7 steps |
 | `sdlc_70_validation_v1` | outbound | markdown | SDLC70VAL / 7 steps |
 | `sdlc_80_review_v1` | outbound | markdown | SDLC80REV / 7 steps |
-| `workflow_builder_v1` | outbound | markdown | WFBUILD / 17 steps |
+| `text_summarizer_ayz` | outbound | markdown | TXTSUM / 5 steps |
 
 ## 3. Behavior
 
@@ -117,4 +127,4 @@ Auto-generated baseline; extend with component-specific checks as needed.
 
 | Date | Change | Modules Affected | Verified By |
 |------|--------|-----------------|-------------|
-| 2026-08-06 | Initial baseline generated from repository scan | 17 modules/files | sdlc_00_codebase_v1 |
+| 2026-08-17 | Initial baseline generated from repository scan | 22 modules/files | sdlc_00_codebase_scaffold_v1 |

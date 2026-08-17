@@ -10,9 +10,9 @@ module_path: "agent_runner_v2/run_agent.py"
 module_area: "core"
 documentation_mode: "full"
 owner_doc_path: "docs/repo/codebase/current/02_modules/agent-runner-v2-run-agent.md"
-last_verified_by_change: "sdlc_00_codebase_v1 / SDLC00CB-bgmxg5vi / 2026-08-06T07:04:04+08:00"
-created: "2026-08-06T07:04:04+08:00"
-owner: "sdlc_00_codebase_v1"
+last_verified_by_change: "sdlc_00_codebase_scaffold_v1 / SDLC00CS-1zcrrbbs / 2026-08-17T21:19:17+08:00"
+created: "2026-08-17T21:19:17+08:00"
+owner: "sdlc_00_codebase_scaffold_v1"
 ---
 
 # Module Documentation: agent_runner_v2.run_agent
@@ -43,7 +43,6 @@ This module belongs to the `core` area and is documented as `full`.
 | `shutil` | stdlib module | imported dependency |
 | `sys` | stdlib module | imported dependency |
 | `typing` | stdlib module | imported dependency |
-| `backend_client` | external module | repository dependency |
 | `bundle_loader` | external module | repository dependency |
 | `coder_registry` | external module | repository dependency |
 | `constants` | external module | repository dependency |
@@ -55,14 +54,16 @@ This module belongs to the `core` area and is documented as `full`.
 | `execution_result` | external module | repository dependency |
 | `failure_runtime` | external module | repository dependency |
 | `job_state` | external module | repository dependency |
-| `routing_runtime` | external module | repository dependency |
 | `runner_logger` | external module | repository dependency |
 | `runtime_context` | external module | repository dependency |
 | `runtime_hooks` | external module | repository dependency |
 | `step_runner` | external module | repository dependency |
 | `task_runtime` | external module | repository dependency |
+| `v2` | external module | repository dependency |
+| `v2.backend_client_v1` | external module | repository dependency |
+| `v2.routing_runtime` | external module | repository dependency |
+| `v2.workflow_router` | external module | repository dependency |
 | `workflow_packages.loader` | external module | repository dependency |
-| `workflow_router` | external module | repository dependency |
 | `workflow_specs` | external module | repository dependency |
 
 ## 2. Public API
@@ -128,4 +129,4 @@ No documented exceptions.
 
 | Date | Change | Verified By |
 |------|--------|-------------|
-| 2026-08-06 | Initial baseline generated from repository scan | sdlc_00_codebase_v1 |
+| 2026-08-17 | Initial baseline generated from repository scan | sdlc_00_codebase_scaffold_v1 |

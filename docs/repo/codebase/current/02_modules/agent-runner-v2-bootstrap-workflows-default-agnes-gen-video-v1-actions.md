@@ -10,9 +10,9 @@ module_path: "agent_runner_v2/bootstrap/workflows/default/agnes_gen_video_v1/act
 module_area: "bootstrap"
 documentation_mode: "summary"
 owner_doc_path: "docs/repo/codebase/current/02_modules/agent-runner-v2-bootstrap-workflows-default-agnes-gen-video-v1-actions.md"
-last_verified_by_change: "sdlc_00_codebase_v1 / SDLC00CB-bgmxg5vi / 2026-08-06T07:04:04+08:00"
-created: "2026-08-06T07:04:04+08:00"
-owner: "sdlc_00_codebase_v1"
+last_verified_by_change: "sdlc_00_codebase_scaffold_v1 / SDLC00CS-1zcrrbbs / 2026-08-17T21:19:17+08:00"
+created: "2026-08-17T21:19:17+08:00"
+owner: "sdlc_00_codebase_scaffold_v1"
 ---
 
 # Module Documentation: agent_runner_v2.bootstrap.workflows.default.agnes_gen_video_v1.actions
@@ -21,7 +21,7 @@ owner: "sdlc_00_codebase_v1"
 
 ### 1.1 Purpose
 
-Custom actions for agnes_gen_video_v1 workflow.
+Domain actions for agnes_gen_video_v1.
 
 ### 1.2 Responsibility
 
@@ -32,19 +32,13 @@ This module belongs to the `bootstrap` area and is documented as `summary`.
 | Dependency | Type | Purpose |
 |------------|------|---------|
 | `__future__` | stdlib module | imported dependency |
-| `base64` | stdlib module | imported dependency |
-| `dataclasses` | stdlib module | imported dependency |
 | `json` | stdlib module | imported dependency |
 | `logging` | stdlib module | imported dependency |
-| `os` | stdlib module | imported dependency |
 | `pathlib` | stdlib module | imported dependency |
 | `struct` | stdlib module | imported dependency |
-| `time` | stdlib module | imported dependency |
+| `typing` | stdlib module | imported dependency |
 | `agent_runner_v2.action_result` | internal module | repository dependency |
-| `agent_runner_v2.api_key_pool` | internal module | repository dependency |
-| `agent_runner_v2.concurrent_api` | internal module | repository dependency |
 | `agent_runner_v2.workflow_packages.actions` | internal module | repository dependency |
-| `requests` | external module | repository dependency |
 
 ## 2. Public API
 
@@ -55,22 +49,22 @@ No public classes.
 
 ### 2.2 Functions
 
-#### generate_videos_from_images()
+#### generate_videos_default()
 
 **Decorators**: `@action`
 
-**Signature**: `generate_videos_from_images(*, context, state, step_cfg, project_root)`
+**Signature**: `generate_videos_default(*, context, state, step_cfg, project_root)`
 
-**Purpose**: Generate videos from images using Agnes Video V2.0 API.
+**Purpose**: Default action for generate_videos.
 
 **Parameters**:
 
 | Name | Type | Default | Description |
 |------|------|---------|-------------|
-| `context` | -- | -- | Prompt context dictionary with resolved paths. |
-| `state` | -- | -- | Workflow state dictionary with artifacts and job metadata. |
-| `step_cfg` | -- | -- | Step configuration dictionary from workflow.toml. |
-| `project_root` | -- | -- | Root path of the target repository. |
+| `context` | -- | -- | -- |
+| `state` | -- | -- | -- |
+| `step_cfg` | -- | -- | -- |
+| `project_root` | -- | -- | -- |
 
 **Returns**: `ActionResult`
 
@@ -100,4 +94,4 @@ No documented exceptions.
 
 | Date | Change | Verified By |
 |------|--------|-------------|
-| 2026-08-06 | Initial baseline generated from repository scan | sdlc_00_codebase_v1 |
+| 2026-08-17 | Initial baseline generated from repository scan | sdlc_00_codebase_scaffold_v1 |

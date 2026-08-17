@@ -7,10 +7,10 @@ authority: "workflow-generated"
 scan_policy: "include"
 lifecycle_status: "approved"
 component_id: "actions-package"
-created: "2026-08-06T07:04:04+08:00"
-owner: "sdlc_00_codebase_v1"
-last_verified_by_change: "sdlc_00_codebase_v1 / SDLC00CB-bgmxg5vi / 2026-08-06T07:04:04+08:00"
-modules: ["agent_runner_v2/actions/__init__.py", "agent_runner_v2/actions/archive_inputs.py", "agent_runner_v2/actions/copy_artifact.py", "agent_runner_v2/actions/documentation_validation_core.py", "agent_runner_v2/actions/finalize_bootstrap.py", "agent_runner_v2/actions/promote_artifact.py", "agent_runner_v2/actions/promote_init.py", "agent_runner_v2/actions/scan_repo_codebase.py", "agent_runner_v2/actions/sdlc_shared_actions.py", "agent_runner_v2/actions/step_completion.py", "agent_runner_v2/actions/sync_codebase_docs.py", "agent_runner_v2/actions/sync_system_docs.py", "agent_runner_v2/actions/validate_codebase_docs.py", "agent_runner_v2/actions/validate_system_docs.py"]
+created: "2026-08-17T21:19:17+08:00"
+owner: "sdlc_00_codebase_scaffold_v1"
+last_verified_by_change: "sdlc_00_codebase_scaffold_v1 / SDLC00CS-1zcrrbbs / 2026-08-17T21:19:17+08:00"
+modules: ["agent_runner_v2/actions/__init__.py", "agent_runner_v2/actions/archive_inputs.py", "agent_runner_v2/actions/copy_artifact.py", "agent_runner_v2/actions/documentation_validation_core.py", "agent_runner_v2/actions/finalize_bootstrap.py", "agent_runner_v2/actions/preset_config.py", "agent_runner_v2/actions/promote_artifact.py", "agent_runner_v2/actions/promote_init.py", "agent_runner_v2/actions/scan_repo_codebase.py", "agent_runner_v2/actions/sdlc_shared_actions.py", "agent_runner_v2/actions/step_completion.py", "agent_runner_v2/actions/sync_codebase_docs.py", "agent_runner_v2/actions/sync_system_docs.py", "agent_runner_v2/actions/validate_codebase_docs.py", "agent_runner_v2/actions/validate_system_docs.py"]
 ---
 
 # Component Documentation: actions package
@@ -30,6 +30,7 @@ Deterministic action modules that implement non-coder steps and their I/O contra
 | `agent_runner_v2/actions/copy_artifact.py` | deterministic runner action |
 | `agent_runner_v2/actions/documentation_validation_core.py` | deterministic runner action |
 | `agent_runner_v2/actions/finalize_bootstrap.py` | deterministic runner action |
+| `agent_runner_v2/actions/preset_config.py` | deterministic runner action |
 | `agent_runner_v2/actions/promote_artifact.py` | deterministic runner action |
 | `agent_runner_v2/actions/promote_init.py` | deterministic runner action |
 | `agent_runner_v2/actions/scan_repo_codebase.py` | deterministic runner action |
@@ -59,6 +60,7 @@ Repository files are scanned, normalized into inventory rows, and rendered into 
 | `agent_runner_v2/actions/copy_artifact.py` | outbound | markdown | deterministic runner action |
 | `agent_runner_v2/actions/documentation_validation_core.py` | outbound | markdown | deterministic runner action |
 | `agent_runner_v2/actions/finalize_bootstrap.py` | outbound | markdown | deterministic runner action |
+| `agent_runner_v2/actions/preset_config.py` | outbound | markdown | deterministic runner action |
 | `agent_runner_v2/actions/promote_artifact.py` | outbound | markdown | deterministic runner action |
 | `agent_runner_v2/actions/promote_init.py` | outbound | markdown | deterministic runner action |
 | `agent_runner_v2/actions/scan_repo_codebase.py` | outbound | markdown | deterministic runner action |
@@ -111,4 +113,4 @@ Auto-generated baseline; extend with component-specific checks as needed.
 
 | Date | Change | Modules Affected | Verified By |
 |------|--------|-----------------|-------------|
-| 2026-08-06 | Initial baseline generated from repository scan | 14 modules/files | sdlc_00_codebase_v1 |
+| 2026-08-17 | Initial baseline generated from repository scan | 15 modules/files | sdlc_00_codebase_scaffold_v1 |

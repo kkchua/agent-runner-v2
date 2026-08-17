@@ -10,9 +10,9 @@ module_path: "agent_runner_v2/job_state.py"
 module_area: "core"
 documentation_mode: "full"
 owner_doc_path: "docs/repo/codebase/current/02_modules/agent-runner-v2-job-state.md"
-last_verified_by_change: "sdlc_00_codebase_v1 / SDLC00CB-bgmxg5vi / 2026-08-06T07:04:04+08:00"
-created: "2026-08-06T07:04:04+08:00"
-owner: "sdlc_00_codebase_v1"
+last_verified_by_change: "sdlc_00_codebase_scaffold_v1 / SDLC00CS-1zcrrbbs / 2026-08-17T21:19:17+08:00"
+created: "2026-08-17T21:19:17+08:00"
+owner: "sdlc_00_codebase_scaffold_v1"
 ---
 
 # Module Documentation: agent_runner_v2.job_state
@@ -49,10 +49,10 @@ This module belongs to the `core` area and is documented as `full`.
 | `failure_runtime` | external module | repository dependency |
 | `notification_manager` | external module | repository dependency |
 | `notifications` | external module | repository dependency |
-| `routing_runtime` | external module | repository dependency |
 | `runtime_context` | external module | repository dependency |
 | `state_defaults` | external module | repository dependency |
-| `transition_runtime` | external module | repository dependency |
+| `v2.routing_runtime` | external module | repository dependency |
+| `v2.transition_runtime` | external module | repository dependency |
 
 ## 2. Public API
 
@@ -574,7 +574,7 @@ No public classes.
 
 **Signature**: `reapply_routing(state: dict[str, Any], group_cfg: dict[str, Any])`
 
-**Purpose**: Re-evaluate routing for the current step and activate replan or refine loops as needed.
+**Purpose**: Re-evaluate routing for the current step and activate refine loops as needed.
 
 **Parameters**:
 
@@ -591,7 +591,7 @@ No public classes.
 
 **Signature**: `recover_exhausted_planning_job(state: dict[str, Any], group_cfg: dict[str, Any])`
 
-**Purpose**: Attempt to recover a FAILED job by activating replan routing if budget allows.
+**Purpose**: No-op -- replan routing removed; backend handles exhaustion as standard SOP.
 
 **Parameters**:
 
@@ -1113,4 +1113,4 @@ No public classes.
 
 | Date | Change | Verified By |
 |------|--------|-------------|
-| 2026-08-06 | Initial baseline generated from repository scan | sdlc_00_codebase_v1 |
+| 2026-08-17 | Initial baseline generated from repository scan | sdlc_00_codebase_scaffold_v1 |

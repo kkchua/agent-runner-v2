@@ -10,9 +10,9 @@ module_path: "agent_runner_v2/step_execution_runtime.py"
 module_area: "core"
 documentation_mode: "full"
 owner_doc_path: "docs/repo/codebase/current/02_modules/agent-runner-v2-step-execution-runtime.md"
-last_verified_by_change: "sdlc_00_codebase_v1 / SDLC00CB-bgmxg5vi / 2026-08-06T07:04:04+08:00"
-created: "2026-08-06T07:04:04+08:00"
-owner: "sdlc_00_codebase_v1"
+last_verified_by_change: "sdlc_00_codebase_scaffold_v1 / SDLC00CS-1zcrrbbs / 2026-08-17T21:19:17+08:00"
+created: "2026-08-17T21:19:17+08:00"
+owner: "sdlc_00_codebase_scaffold_v1"
 ---
 
 # Module Documentation: agent_runner_v2.step_execution_runtime
@@ -34,6 +34,7 @@ This module belongs to the `core` area and is documented as `full`.
 | `__future__` | stdlib module | imported dependency |
 | `dataclasses` | stdlib module | imported dependency |
 | `pathlib` | stdlib module | imported dependency |
+| `re` | stdlib module | imported dependency |
 | `shutil` | stdlib module | imported dependency |
 | `typing` | stdlib module | imported dependency |
 | `artifact_keys` | external module | repository dependency |
@@ -43,6 +44,7 @@ This module belongs to the `core` area and is documented as `full`.
 | `runner_logger` | external module | repository dependency |
 | `step_runner` | external module | repository dependency |
 | `workflow_path_contracts` | external module | repository dependency |
+| `yaml` | external module | repository dependency |
 
 ## 2. Public API
 
@@ -56,6 +58,25 @@ This module belongs to the `core` area and is documented as `full`.
 
 
 ### 2.2 Functions
+
+#### resolve_prompt_slot()
+
+**Signature**: `resolve_prompt_slot(step_cfg: dict[str, Any], state: dict[str, Any], group_cfg: dict[str, Any], bundle: Any | None)`
+
+**Purpose**: Resolve a BCS prompt slot reference to a concrete file path.
+
+**Parameters**:
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `step_cfg` | `dict[str, Any]` | -- | -- |
+| `state` | `dict[str, Any]` | -- | -- |
+| `group_cfg` | `dict[str, Any]` | -- | -- |
+| `bundle` | `Any | None` | -- | -- |
+
+**Returns**: `str | None`
+
+---
 
 #### prepare_step_execution()
 
@@ -193,4 +214,4 @@ No documented exceptions.
 
 | Date | Change | Verified By |
 |------|--------|-------------|
-| 2026-08-06 | Initial baseline generated from repository scan | sdlc_00_codebase_v1 |
+| 2026-08-17 | Initial baseline generated from repository scan | sdlc_00_codebase_scaffold_v1 |

@@ -7,10 +7,10 @@ authority: "workflow-generated"
 scan_policy: "include"
 lifecycle_status: "approved"
 component_id: "tests-suite"
-created: "2026-08-06T07:04:04+08:00"
-owner: "sdlc_00_codebase_v1"
-last_verified_by_change: "sdlc_00_codebase_v1 / SDLC00CB-bgmxg5vi / 2026-08-06T07:04:04+08:00"
-modules: ["tests/conftest.py", "tests/integration/__init__.py", "tests/integration/test_architecture_site.py", "tests/integration/test_backend_worker_mode.py", "tests/integration/test_cli_backend_e2e.py", "tests/integration/test_notification_e2e.py", "tests/integration/test_notification_integration.py", "tests/integration/test_notifications.py", "tests/integration/test_pushover.py", "tests/integration/test_ukbe_runner_wrapper.py", "tests/run_workflow_unit_tests.py", "tests/unit/__init__.py", "tests/unit/test_agent_tools.py", "tests/unit/test_api_key_pool.py", "tests/unit/test_backend_client.py", "tests/unit/test_backend_execution.py", "tests/unit/test_bundle_loader.py", "tests/unit/test_codebase_docs.py", "tests/unit/test_codebase_init_commands.py", "tests/unit/test_coder_adapters_opencode.py", "tests/unit/test_coder_adapters_sidecar_grace.py", "tests/unit/test_coder_registry.py", "tests/unit/test_concurrent_api.py", "tests/unit/test_config_loader.py", "tests/unit/test_constants_registry.py", "tests/unit/test_context_extensions.py", "tests/unit/test_daemon_v2_backend_state.py", "tests/unit/test_daemon_v2_startup_validation.py", "tests/unit/test_documentation_governance.py", "tests/unit/test_documentation_guardrails_cleanup.py", "tests/unit/test_dynamic_import_dataclass.py", "tests/unit/test_execution_core.py", "tests/unit/test_failure_runtime.py", "tests/unit/test_generated_doc_frontmatter_injection.py", "tests/unit/test_job_state_date_prefix.py", "tests/unit/test_job_state_review_completion.py", "tests/unit/test_job_state_step_dirs.py", "tests/unit/test_job_state_usage_summary.py", "tests/unit/test_list_runs_commands.py", "tests/unit/test_machine_contracts.py", "tests/unit/test_manual_runtime.py", "tests/unit/test_model_config_roles.py", "tests/unit/test_notification_manager.py", "tests/unit/test_plugin_workflow_support.py", "tests/unit/test_promote_artifact.py", "tests/unit/test_recovery_runtime.py", "tests/unit/test_reset_step_commands.py", "tests/unit/test_routing_runtime.py", "tests/unit/test_run_agent_hook_surface.py", "tests/unit/test_run_agent_legacy_cli.py", "tests/unit/test_run_agent_status.py", "tests/unit/test_runtime_context_paths.py", "tests/unit/test_runtime_hooks.py", "tests/unit/test_runtime_utils.py", "tests/unit/test_sdlc_shared_actions.py", "tests/unit/test_show_run_commands.py", "tests/unit/test_state_defaults.py", "tests/unit/test_step_completion.py", "tests/unit/test_step_runner_write_contract.py", "tests/unit/test_submit_commands.py", "tests/unit/test_sync_workflows.py", "tests/unit/test_task_runtime.py", "tests/unit/test_three_state_waiting.py", "tests/unit/test_tool_instruction_block.py", "tests/unit/test_transient_error_classification.py", "tests/unit/test_transition_recovery_runtime.py", "tests/unit/test_transition_runtime.py", "tests/unit/test_v2_backend_client.py", "tests/unit/test_v2_queue.py", "tests/unit/test_v2_sync.py", "tests/unit/test_workflow_bundle_validator.py", "tests/unit/test_workflow_packages.py", "tests/unit/test_workflow_registry.py", "tests/unit/test_workflow_router_notifications.py", "tests/unit/test_workflow_specs.py", "tests/unit/workflows/00_bootstrap_lifecycle_admin_v1/test_actions.py", "tests/unit/workflows/02_agent_runner_platform_v1/__init__.py", "tests/unit/workflows/02_agent_runner_platform_v1/test_platform_core_actions.py", "tests/unit/workflows/__init__.py"]
+created: "2026-08-17T21:19:17+08:00"
+owner: "sdlc_00_codebase_scaffold_v1"
+last_verified_by_change: "sdlc_00_codebase_scaffold_v1 / SDLC00CS-1zcrrbbs / 2026-08-17T21:19:17+08:00"
+modules: ["tests/conftest.py", "tests/integration/__init__.py", "tests/integration/check_backend_runs.py", "tests/integration/check_workflow_impls.py", "tests/integration/submit_sdlc_50_job.py", "tests/integration/test_architecture_site.py", "tests/integration/test_backend_claim_response.py", "tests/integration/test_backend_worker_mode.py", "tests/integration/test_claim_existing_job.py", "tests/integration/test_cli_backend_e2e.py", "tests/integration/test_daemon_claim.py", "tests/integration/test_notification_e2e.py", "tests/integration/test_notification_integration.py", "tests/integration/test_notifications.py", "tests/integration/test_pushover.py", "tests/integration/test_ukbe_runner_wrapper.py", "tests/run_workflow_unit_tests.py", "tests/unit/__init__.py", "tests/unit/test_agb_assemble_package.py", "tests/unit/test_agent_tools.py", "tests/unit/test_api_key_pool.py", "tests/unit/test_backend_client.py", "tests/unit/test_bundle_loader.py", "tests/unit/test_codebase_docs.py", "tests/unit/test_codebase_init_commands.py", "tests/unit/test_coder_adapters_opencode.py", "tests/unit/test_coder_adapters_sidecar_grace.py", "tests/unit/test_coder_registry.py", "tests/unit/test_concurrent_api.py", "tests/unit/test_config_loader.py", "tests/unit/test_constants_registry.py", "tests/unit/test_context_extensions.py", "tests/unit/test_daemon_cli_construction.py", "tests/unit/test_daemon_v2_backend_state.py", "tests/unit/test_daemon_v2_child_outcome_action.py", "tests/unit/test_daemon_v2_startup_validation.py", "tests/unit/test_documentation_governance.py", "tests/unit/test_documentation_guardrails_cleanup.py", "tests/unit/test_dynamic_import_dataclass.py", "tests/unit/test_execution_core.py", "tests/unit/test_failure_runtime.py", "tests/unit/test_generated_doc_frontmatter_injection.py", "tests/unit/test_impl_name_propagation.py", "tests/unit/test_impl_overrides.py", "tests/unit/test_job_state_date_prefix.py", "tests/unit/test_job_state_review_completion.py", "tests/unit/test_job_state_step_dirs.py", "tests/unit/test_job_state_usage_summary.py", "tests/unit/test_list_runs_commands.py", "tests/unit/test_machine_contracts.py", "tests/unit/test_manual_runtime.py", "tests/unit/test_model_config_roles.py", "tests/unit/test_notification_manager.py", "tests/unit/test_plugin_workflow_support.py", "tests/unit/test_promote_artifact.py", "tests/unit/test_prompt_selection_real.py", "tests/unit/test_prompt_slot_resolution.py", "tests/unit/test_recovery_runtime.py", "tests/unit/test_reset_step_commands.py", "tests/unit/test_routing_runtime.py", "tests/unit/test_run_agent_hook_surface.py", "tests/unit/test_run_agent_legacy_cli.py", "tests/unit/test_run_agent_status.py", "tests/unit/test_runtime_context_paths.py", "tests/unit/test_runtime_hooks.py", "tests/unit/test_runtime_utils.py", "tests/unit/test_sdlc_shared_actions.py", "tests/unit/test_show_run_commands.py", "tests/unit/test_state_defaults.py", "tests/unit/test_step_completion.py", "tests/unit/test_step_runner_write_contract.py", "tests/unit/test_submit_commands.py", "tests/unit/test_sync_workflows.py", "tests/unit/test_task_runtime.py", "tests/unit/test_telegram_notifications.py", "tests/unit/test_three_state_waiting.py", "tests/unit/test_tool_instruction_block.py", "tests/unit/test_transient_error_classification.py", "tests/unit/test_transition_recovery_runtime.py", "tests/unit/test_transition_runtime.py", "tests/unit/test_v2_backend_client.py", "tests/unit/test_v2_queue.py", "tests/unit/test_v2_sync.py", "tests/unit/test_workflow_bundle_validator.py", "tests/unit/test_workflow_package_validator.py", "tests/unit/test_workflow_packages.py", "tests/unit/test_workflow_registry.py", "tests/unit/test_workflow_router_notifications.py", "tests/unit/test_workflow_specs.py", "tests/unit/workflows/00_bootstrap_lifecycle_admin_v1/test_actions.py", "tests/unit/workflows/02_agent_runner_platform_v1/__init__.py", "tests/unit/workflows/02_agent_runner_platform_v1/test_platform_core_actions.py", "tests/unit/workflows/__init__.py", "tests/unit/workflows/text_summarizer_ayz/test_context_extensions.py"]
 ---
 
 # Component Documentation: tests suite
@@ -27,9 +27,15 @@ Repository test suite coverage grouped as a single logical component.
 |--------|-------------------|
 | `tests/conftest.py` | test coverage |
 | `tests/integration/__init__.py` | test coverage |
+| `tests/integration/check_backend_runs.py` | test coverage |
+| `tests/integration/check_workflow_impls.py` | test coverage |
+| `tests/integration/submit_sdlc_50_job.py` | test coverage |
 | `tests/integration/test_architecture_site.py` | test coverage |
+| `tests/integration/test_backend_claim_response.py` | test coverage |
 | `tests/integration/test_backend_worker_mode.py` | test coverage |
+| `tests/integration/test_claim_existing_job.py` | test coverage |
 | `tests/integration/test_cli_backend_e2e.py` | test coverage |
+| `tests/integration/test_daemon_claim.py` | test coverage |
 | `tests/integration/test_notification_e2e.py` | test coverage |
 | `tests/integration/test_notification_integration.py` | test coverage |
 | `tests/integration/test_notifications.py` | test coverage |
@@ -37,10 +43,10 @@ Repository test suite coverage grouped as a single logical component.
 | `tests/integration/test_ukbe_runner_wrapper.py` | test coverage |
 | `tests/run_workflow_unit_tests.py` | test coverage |
 | `tests/unit/__init__.py` | test coverage |
+| `tests/unit/test_agb_assemble_package.py` | test coverage |
 | `tests/unit/test_agent_tools.py` | test coverage |
 | `tests/unit/test_api_key_pool.py` | test coverage |
 | `tests/unit/test_backend_client.py` | test coverage |
-| `tests/unit/test_backend_execution.py` | test coverage |
 | `tests/unit/test_bundle_loader.py` | test coverage |
 | `tests/unit/test_codebase_docs.py` | test coverage |
 | `tests/unit/test_codebase_init_commands.py` | test coverage |
@@ -51,7 +57,9 @@ Repository test suite coverage grouped as a single logical component.
 | `tests/unit/test_config_loader.py` | test coverage |
 | `tests/unit/test_constants_registry.py` | test coverage |
 | `tests/unit/test_context_extensions.py` | test coverage |
+| `tests/unit/test_daemon_cli_construction.py` | test coverage |
 | `tests/unit/test_daemon_v2_backend_state.py` | test coverage |
+| `tests/unit/test_daemon_v2_child_outcome_action.py` | test coverage |
 | `tests/unit/test_daemon_v2_startup_validation.py` | test coverage |
 | `tests/unit/test_documentation_governance.py` | test coverage |
 | `tests/unit/test_documentation_guardrails_cleanup.py` | test coverage |
@@ -59,6 +67,8 @@ Repository test suite coverage grouped as a single logical component.
 | `tests/unit/test_execution_core.py` | test coverage |
 | `tests/unit/test_failure_runtime.py` | test coverage |
 | `tests/unit/test_generated_doc_frontmatter_injection.py` | test coverage |
+| `tests/unit/test_impl_name_propagation.py` | test coverage |
+| `tests/unit/test_impl_overrides.py` | test coverage |
 | `tests/unit/test_job_state_date_prefix.py` | test coverage |
 | `tests/unit/test_job_state_review_completion.py` | test coverage |
 | `tests/unit/test_job_state_step_dirs.py` | test coverage |
@@ -70,6 +80,8 @@ Repository test suite coverage grouped as a single logical component.
 | `tests/unit/test_notification_manager.py` | test coverage |
 | `tests/unit/test_plugin_workflow_support.py` | test coverage |
 | `tests/unit/test_promote_artifact.py` | test coverage |
+| `tests/unit/test_prompt_selection_real.py` | test coverage |
+| `tests/unit/test_prompt_slot_resolution.py` | test coverage |
 | `tests/unit/test_recovery_runtime.py` | test coverage |
 | `tests/unit/test_reset_step_commands.py` | test coverage |
 | `tests/unit/test_routing_runtime.py` | test coverage |
@@ -87,6 +99,7 @@ Repository test suite coverage grouped as a single logical component.
 | `tests/unit/test_submit_commands.py` | test coverage |
 | `tests/unit/test_sync_workflows.py` | test coverage |
 | `tests/unit/test_task_runtime.py` | test coverage |
+| `tests/unit/test_telegram_notifications.py` | test coverage |
 | `tests/unit/test_three_state_waiting.py` | test coverage |
 | `tests/unit/test_tool_instruction_block.py` | test coverage |
 | `tests/unit/test_transient_error_classification.py` | test coverage |
@@ -96,6 +109,7 @@ Repository test suite coverage grouped as a single logical component.
 | `tests/unit/test_v2_queue.py` | test coverage |
 | `tests/unit/test_v2_sync.py` | test coverage |
 | `tests/unit/test_workflow_bundle_validator.py` | test coverage |
+| `tests/unit/test_workflow_package_validator.py` | test coverage |
 | `tests/unit/test_workflow_packages.py` | test coverage |
 | `tests/unit/test_workflow_registry.py` | test coverage |
 | `tests/unit/test_workflow_router_notifications.py` | test coverage |
@@ -104,6 +118,7 @@ Repository test suite coverage grouped as a single logical component.
 | `tests/unit/workflows/02_agent_runner_platform_v1/__init__.py` | test coverage |
 | `tests/unit/workflows/02_agent_runner_platform_v1/test_platform_core_actions.py` | test coverage |
 | `tests/unit/workflows/__init__.py` | test coverage |
+| `tests/unit/workflows/text_summarizer_ayz/test_context_extensions.py` | test coverage |
 
 ## 2. Architecture
 
@@ -121,9 +136,15 @@ Repository files are scanned, normalized into inventory rows, and rendered into 
 |-----------|-----------|----------|-------------|
 | `tests/conftest.py` | outbound | markdown | test coverage |
 | `tests/integration/__init__.py` | outbound | markdown | test coverage |
+| `tests/integration/check_backend_runs.py` | outbound | markdown | test coverage |
+| `tests/integration/check_workflow_impls.py` | outbound | markdown | test coverage |
+| `tests/integration/submit_sdlc_50_job.py` | outbound | markdown | test coverage |
 | `tests/integration/test_architecture_site.py` | outbound | markdown | test coverage |
+| `tests/integration/test_backend_claim_response.py` | outbound | markdown | test coverage |
 | `tests/integration/test_backend_worker_mode.py` | outbound | markdown | test coverage |
+| `tests/integration/test_claim_existing_job.py` | outbound | markdown | test coverage |
 | `tests/integration/test_cli_backend_e2e.py` | outbound | markdown | test coverage |
+| `tests/integration/test_daemon_claim.py` | outbound | markdown | test coverage |
 | `tests/integration/test_notification_e2e.py` | outbound | markdown | test coverage |
 | `tests/integration/test_notification_integration.py` | outbound | markdown | test coverage |
 | `tests/integration/test_notifications.py` | outbound | markdown | test coverage |
@@ -131,10 +152,10 @@ Repository files are scanned, normalized into inventory rows, and rendered into 
 | `tests/integration/test_ukbe_runner_wrapper.py` | outbound | markdown | test coverage |
 | `tests/run_workflow_unit_tests.py` | outbound | markdown | test coverage |
 | `tests/unit/__init__.py` | outbound | markdown | test coverage |
+| `tests/unit/test_agb_assemble_package.py` | outbound | markdown | test coverage |
 | `tests/unit/test_agent_tools.py` | outbound | markdown | test coverage |
 | `tests/unit/test_api_key_pool.py` | outbound | markdown | test coverage |
 | `tests/unit/test_backend_client.py` | outbound | markdown | test coverage |
-| `tests/unit/test_backend_execution.py` | outbound | markdown | test coverage |
 | `tests/unit/test_bundle_loader.py` | outbound | markdown | test coverage |
 | `tests/unit/test_codebase_docs.py` | outbound | markdown | test coverage |
 | `tests/unit/test_codebase_init_commands.py` | outbound | markdown | test coverage |
@@ -145,7 +166,9 @@ Repository files are scanned, normalized into inventory rows, and rendered into 
 | `tests/unit/test_config_loader.py` | outbound | markdown | test coverage |
 | `tests/unit/test_constants_registry.py` | outbound | markdown | test coverage |
 | `tests/unit/test_context_extensions.py` | outbound | markdown | test coverage |
+| `tests/unit/test_daemon_cli_construction.py` | outbound | markdown | test coverage |
 | `tests/unit/test_daemon_v2_backend_state.py` | outbound | markdown | test coverage |
+| `tests/unit/test_daemon_v2_child_outcome_action.py` | outbound | markdown | test coverage |
 | `tests/unit/test_daemon_v2_startup_validation.py` | outbound | markdown | test coverage |
 | `tests/unit/test_documentation_governance.py` | outbound | markdown | test coverage |
 | `tests/unit/test_documentation_guardrails_cleanup.py` | outbound | markdown | test coverage |
@@ -153,6 +176,8 @@ Repository files are scanned, normalized into inventory rows, and rendered into 
 | `tests/unit/test_execution_core.py` | outbound | markdown | test coverage |
 | `tests/unit/test_failure_runtime.py` | outbound | markdown | test coverage |
 | `tests/unit/test_generated_doc_frontmatter_injection.py` | outbound | markdown | test coverage |
+| `tests/unit/test_impl_name_propagation.py` | outbound | markdown | test coverage |
+| `tests/unit/test_impl_overrides.py` | outbound | markdown | test coverage |
 | `tests/unit/test_job_state_date_prefix.py` | outbound | markdown | test coverage |
 | `tests/unit/test_job_state_review_completion.py` | outbound | markdown | test coverage |
 | `tests/unit/test_job_state_step_dirs.py` | outbound | markdown | test coverage |
@@ -164,6 +189,8 @@ Repository files are scanned, normalized into inventory rows, and rendered into 
 | `tests/unit/test_notification_manager.py` | outbound | markdown | test coverage |
 | `tests/unit/test_plugin_workflow_support.py` | outbound | markdown | test coverage |
 | `tests/unit/test_promote_artifact.py` | outbound | markdown | test coverage |
+| `tests/unit/test_prompt_selection_real.py` | outbound | markdown | test coverage |
+| `tests/unit/test_prompt_slot_resolution.py` | outbound | markdown | test coverage |
 | `tests/unit/test_recovery_runtime.py` | outbound | markdown | test coverage |
 | `tests/unit/test_reset_step_commands.py` | outbound | markdown | test coverage |
 | `tests/unit/test_routing_runtime.py` | outbound | markdown | test coverage |
@@ -181,6 +208,7 @@ Repository files are scanned, normalized into inventory rows, and rendered into 
 | `tests/unit/test_submit_commands.py` | outbound | markdown | test coverage |
 | `tests/unit/test_sync_workflows.py` | outbound | markdown | test coverage |
 | `tests/unit/test_task_runtime.py` | outbound | markdown | test coverage |
+| `tests/unit/test_telegram_notifications.py` | outbound | markdown | test coverage |
 | `tests/unit/test_three_state_waiting.py` | outbound | markdown | test coverage |
 | `tests/unit/test_tool_instruction_block.py` | outbound | markdown | test coverage |
 | `tests/unit/test_transient_error_classification.py` | outbound | markdown | test coverage |
@@ -190,6 +218,7 @@ Repository files are scanned, normalized into inventory rows, and rendered into 
 | `tests/unit/test_v2_queue.py` | outbound | markdown | test coverage |
 | `tests/unit/test_v2_sync.py` | outbound | markdown | test coverage |
 | `tests/unit/test_workflow_bundle_validator.py` | outbound | markdown | test coverage |
+| `tests/unit/test_workflow_package_validator.py` | outbound | markdown | test coverage |
 | `tests/unit/test_workflow_packages.py` | outbound | markdown | test coverage |
 | `tests/unit/test_workflow_registry.py` | outbound | markdown | test coverage |
 | `tests/unit/test_workflow_router_notifications.py` | outbound | markdown | test coverage |
@@ -198,6 +227,7 @@ Repository files are scanned, normalized into inventory rows, and rendered into 
 | `tests/unit/workflows/02_agent_runner_platform_v1/__init__.py` | outbound | markdown | test coverage |
 | `tests/unit/workflows/02_agent_runner_platform_v1/test_platform_core_actions.py` | outbound | markdown | test coverage |
 | `tests/unit/workflows/__init__.py` | outbound | markdown | test coverage |
+| `tests/unit/workflows/text_summarizer_ayz/test_context_extensions.py` | outbound | markdown | test coverage |
 
 ## 3. Behavior
 
@@ -241,4 +271,4 @@ Auto-generated baseline; extend with component-specific checks as needed.
 
 | Date | Change | Modules Affected | Verified By |
 |------|--------|-----------------|-------------|
-| 2026-08-06 | Initial baseline generated from repository scan | 79 modules/files | sdlc_00_codebase_v1 |
+| 2026-08-17 | Initial baseline generated from repository scan | 94 modules/files | sdlc_00_codebase_scaffold_v1 |

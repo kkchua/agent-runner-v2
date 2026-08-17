@@ -10,9 +10,9 @@ module_path: "agent_runner_v2/runtime_hooks.py"
 module_area: "core"
 documentation_mode: "full"
 owner_doc_path: "docs/repo/codebase/current/02_modules/agent-runner-v2-runtime-hooks.md"
-last_verified_by_change: "sdlc_00_codebase_v1 / SDLC00CB-bgmxg5vi / 2026-08-06T07:04:04+08:00"
-created: "2026-08-06T07:04:04+08:00"
-owner: "sdlc_00_codebase_v1"
+last_verified_by_change: "sdlc_00_codebase_scaffold_v1 / SDLC00CS-1zcrrbbs / 2026-08-17T21:19:17+08:00"
+created: "2026-08-17T21:19:17+08:00"
+owner: "sdlc_00_codebase_scaffold_v1"
 ---
 
 # Module Documentation: agent_runner_v2.runtime_hooks
@@ -61,7 +61,7 @@ This module belongs to the `core` area and is documented as `full`.
 - `load_workflow_module(workspace_root: Path, bundle_name: str, *, config: dict[str, Any] | None = None)` -> `Any` -- Load workflow module.
 - `resolve_workflow_root(workspace_root: Path, bundle_name: str, *, config: dict[str, Any] | None = None)` -> `Path` -- Resolve workflow root path.
 - `ensure_delivery_folders(target_root: Path)` -> `None` -- Ensure delivery folders exist.
-- `load_group(group_name: str, workspace_root: Path | None = None, workflow_root: Path | None = None)` -> `dict[str, Any]` -- Load workflow group configuration.
+- `load_group(group_name: str, workspace_root: Path | None = None, workflow_root: Path | None = None, impl_name: str | None = None)` -> `dict[str, Any]` -- Load workflow group configuration.
 - `validate_static_reference_files(workspace_root: Path, group_cfg: dict[str, Any] | None = None, template_group: str = '')` -> `None` -- Validate static reference files.
 
 #### ManualHooks
@@ -121,4 +121,4 @@ No documented exceptions.
 
 | Date | Change | Verified By |
 |------|--------|-------------|
-| 2026-08-06 | Initial baseline generated from repository scan | sdlc_00_codebase_v1 |
+| 2026-08-17 | Initial baseline generated from repository scan | sdlc_00_codebase_scaffold_v1 |

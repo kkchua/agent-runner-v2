@@ -10,9 +10,9 @@ module_path: "agent_runner_v2/workflow_bundle_validator.py"
 module_area: "core"
 documentation_mode: "full"
 owner_doc_path: "docs/repo/codebase/current/02_modules/agent-runner-v2-workflow-bundle-validator.md"
-last_verified_by_change: "sdlc_00_codebase_v1 / SDLC00CB-bgmxg5vi / 2026-08-06T07:04:04+08:00"
-created: "2026-08-06T07:04:04+08:00"
-owner: "sdlc_00_codebase_v1"
+last_verified_by_change: "sdlc_00_codebase_scaffold_v1 / SDLC00CS-1zcrrbbs / 2026-08-17T21:19:17+08:00"
+created: "2026-08-17T21:19:17+08:00"
+owner: "sdlc_00_codebase_scaffold_v1"
 ---
 
 # Module Documentation: agent_runner_v2.workflow_bundle_validator
@@ -35,6 +35,7 @@ This module belongs to the `core` area and is documented as `full`.
 | `dataclasses` | stdlib module | imported dependency |
 | `json` | stdlib module | imported dependency |
 | `pathlib` | stdlib module | imported dependency |
+| `re` | stdlib module | imported dependency |
 | `typing` | stdlib module | imported dependency |
 | `runtime_context` | external module | repository dependency |
 | `workflow_packages.loader` | external module | repository dependency |
@@ -97,6 +98,7 @@ This module belongs to the `core` area and is documented as `full`.
 | Name | Purpose |
 |------|--------|
 | `DEFAULT_BOOTSTRAP_WORKFLOWS_ROOT` | module configuration |
+| `_BCS_SLOT_PATTERN` | module configuration |
 
 
 ## 3. Error Handling
@@ -117,4 +119,4 @@ No documented exceptions.
 
 | Date | Change | Verified By |
 |------|--------|-------------|
-| 2026-08-06 | Initial baseline generated from repository scan | sdlc_00_codebase_v1 |
+| 2026-08-17 | Initial baseline generated from repository scan | sdlc_00_codebase_scaffold_v1 |

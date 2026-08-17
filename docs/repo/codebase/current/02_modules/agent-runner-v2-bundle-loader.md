@@ -10,9 +10,9 @@ module_path: "agent_runner_v2/bundle_loader.py"
 module_area: "core"
 documentation_mode: "full"
 owner_doc_path: "docs/repo/codebase/current/02_modules/agent-runner-v2-bundle-loader.md"
-last_verified_by_change: "sdlc_00_codebase_v1 / SDLC00CB-bgmxg5vi / 2026-08-06T07:04:04+08:00"
-created: "2026-08-06T07:04:04+08:00"
-owner: "sdlc_00_codebase_v1"
+last_verified_by_change: "sdlc_00_codebase_scaffold_v1 / SDLC00CS-1zcrrbbs / 2026-08-17T21:19:17+08:00"
+created: "2026-08-17T21:19:17+08:00"
+owner: "sdlc_00_codebase_scaffold_v1"
 ---
 
 # Module Documentation: agent_runner_v2.bundle_loader
@@ -220,27 +220,11 @@ This module belongs to the `core` area and is documented as `full`.
 
 ---
 
-#### published_workflows_root()
-
-**Signature**: `published_workflows_root(workspace_root: Path)`
-
-**Purpose**: Return the published workflows root under bootstrap/workflows/.
-
-**Parameters**:
-
-| Name | Type | Default | Description |
-|------|------|---------|-------------|
-| `workspace_root` | `Path` | -- | -- |
-
-**Returns**: `Path`
-
----
-
 #### publish_bootstrap_bundle()
 
 **Signature**: `publish_bootstrap_bundle(workspace_root: Path, *, source_root: Path | None = None, package_root: Path | None = None, plugin_workflows_root: Path | None = None)`
 
-**Purpose**: Publish the repo's bootstrap bundle to docs/system/00_governance/bootstrap/.
+**Purpose**: Publish the repo's bootstrap bundle for pip packaging and init.
 
 **Parameters**:
 
@@ -440,7 +424,6 @@ This module belongs to the `core` area and is documented as `full`.
 | `FOUNDATION_CURRENT_ROOT_REL` | module configuration |
 | `PLATFORM_CURRENT_ROOT_REL` | module configuration |
 | `PACKAGE_BOOTSTRAP_ROOT` | module configuration |
-| `PACKAGED_BOOTSTRAP_EXCLUDE_PATTERNS` | module configuration |
 | `PACKAGED_BOOTSTRAP_EXCLUDED_WORKFLOWS` | module configuration |
 
 
@@ -462,4 +445,4 @@ No documented exceptions.
 
 | Date | Change | Verified By |
 |------|--------|-------------|
-| 2026-08-06 | Initial baseline generated from repository scan | sdlc_00_codebase_v1 |
+| 2026-08-17 | Initial baseline generated from repository scan | sdlc_00_codebase_scaffold_v1 |

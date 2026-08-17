@@ -10,9 +10,9 @@ module_path: "agent_runner_v2/bootstrap/workflows/default/sdlc_00_init_doc_v1/co
 module_area: "bootstrap"
 documentation_mode: "summary"
 owner_doc_path: "docs/repo/codebase/current/02_modules/agent-runner-v2-bootstrap-workflows-default-sdlc-00-init-doc-v1-context-extensions.md"
-last_verified_by_change: "sdlc_00_codebase_v1 / SDLC00CB-bgmxg5vi / 2026-08-06T07:04:04+08:00"
-created: "2026-08-06T07:04:04+08:00"
-owner: "sdlc_00_codebase_v1"
+last_verified_by_change: "sdlc_00_codebase_scaffold_v1 / SDLC00CS-1zcrrbbs / 2026-08-17T21:19:17+08:00"
+created: "2026-08-17T21:19:17+08:00"
+owner: "sdlc_00_codebase_scaffold_v1"
 ---
 
 # Module Documentation: agent_runner_v2.bootstrap.workflows.default.sdlc_00_init_doc_v1.context_extensions
@@ -51,7 +51,7 @@ This module belongs to the `bootstrap` area and is documented as `summary`.
 
 **Methods**:
 
-- `register_artifact_keys(*, job_id: str = '{job_id}', mode: str = '{mode}')` -> `dict[str, str]` -- Return artifact key to relative-path mappings.
+- `register_artifact_keys(*, job_id: str = '{job_id}', mode: str = '{mode}', date_str: str | None = None)` -> `dict[str, str]` -- Return artifact key to relative-path mappings for OUTPUT artifacts.
 - `build_context_extensions(*, state: dict[str, Any], step: str, step_cfg: dict[str, Any], ctx: dict[str, str], project_root: Path | None = None)` -> `dict[str, str]` -- Build context extensions for sdlc_00_init_doc_v1 workflow.
 - `install_to_global(*, workspace_root, runner_home)` -- This workflow has no global installation artifacts.
 - `sync_to_backend(*, workspace_root)` -- Sync via `ukbe-run-agent sync-workflows` CLI instead.
@@ -85,4 +85,4 @@ No documented exceptions.
 
 | Date | Change | Verified By |
 |------|--------|-------------|
-| 2026-08-06 | Initial baseline generated from repository scan | sdlc_00_codebase_v1 |
+| 2026-08-17 | Initial baseline generated from repository scan | sdlc_00_codebase_scaffold_v1 |
