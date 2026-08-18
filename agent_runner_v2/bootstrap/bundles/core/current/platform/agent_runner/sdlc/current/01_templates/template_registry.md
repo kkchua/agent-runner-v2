@@ -9,10 +9,10 @@ managed_by: "workflow-generated"
 layer: "layer3"
 platform: "agent-runner-v2"
 lifecycle_status: "published"
-effective_version: "SDLC00SCF-20260722-3a011a52"
+effective_version: "SDLC00CS-1zcrrbbs"
 ---
 
-> Managed by workflow: `sdlc_00_delivery_scaffold_v1` / step: `publish_sdlc_scaffold`
+> Managed by workflow: `sdlc_00_codebase_scaffold_v1` / step: `publish_sdlc_scaffold`
 > This file is workflow-generated and protected from manual edits.
 
 # SDLC Template Registry
@@ -36,7 +36,7 @@ Layer 2 platform constitution templates, or agent contract definitions
 
 | # | Template File | Template ID | Artifact Prefix | Producing Workflow | Input Source | Storage Folder |
 |---|---|---|---|---|---|---|
-| 01 | 01_DRAFT_INIT_template.md | SYS-03-DI | DRAFT-INIT | (user-authored) | Human input | draft_initiatives/ |
+| 01 | 01_DRAFT_INIT_template.md | SYS-03-DI | DRAFT-INIT | (user-authored) | Human input | draftinitiates/ |
 | 02 | 02_INIT_template.md | SYS-03-IN | INIT | sdlc_10_requirement_v1 | DRAFT-INIT-DOC | initiatives/ |
 | 03 | 03_REQ_template.md | SYS-03-RQ | REQ | sdlc_20_planning_v1 | INIT-DOC | requirements/ |
 | 04 | 04_PLAN_template.md | SYS-03-PL | PLAN | sdlc_30_backlog_v1 | REQ-DOC | plans/ |
@@ -98,11 +98,28 @@ VALIDATE-DOC (08_VALID_template.md)
 REV-DOC + MEM-DOC + CLOSE-DOC (09_REV, 10_MEM, 11_CLOSE templates)
 ```
 
+## Standard Step Pattern
+
+All initiative workflows (sdlc_10 through sdlc_80) follow this standard
+step pattern for document generation and approval:
+
+1. generate_<artifact> (prompt) -- Generate the document from input.
+2. technical_critique (prompt) -- Internal quality gate that evaluates
+   feasibility and technical soundness.
+3. address_critique (prompt) -- Address findings from technical critique,
+   update document in-place, add Critique Resolution section.
+4. review_<artifact> (prompt) -- Human approval gate that verifies
+   critique was resolved and document meets standards.
+5. refine_<artifact> (prompt, conditional) -- Refine based on review
+   feedback.
+6. promote_<artifact> (action) -- Promote document to approved status.
+7. step_completion (action) -- Finalize and notify.
+
 ## Template Version History
 
 | Version | Date | Change Summary |
 |---|---|---|
-| 1.0.0 | 2026-07-22 | Initial release. All 11 document templates plus registry and SOP. |
+| 1.0.0 | 2026-08-17 | Initial release. All 11 document templates plus registry and SOP. |
 
 ## Cross-References to Agent Contracts
 

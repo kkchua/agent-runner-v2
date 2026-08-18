@@ -4,17 +4,17 @@ version: "1.0.0"
 doc_type: "bundle_definition"
 authority: "sdlc-owned"
 scan_policy: "include"
-scan_reason: "Agent contract definition for Implementation Planner (AGENT-implementation-planner)"
+scan_reason: "agent contract definition for Implementation Planner (AGENT-implementation-planner)"
 managed_by: "workflow-generated"
 layer: "layer3"
 platform: "agent-runner-v2"
 agent_id: "AGENT-implementation-planner"
 agent_role: "Implementation Planner"
 lifecycle_status: "published"
-effective_version: "SDLC00SCF-20260722-3a011a52"
+effective_version: "SDLC00CS-1zcrrbbs"
 ---
 
-> Managed by workflow: `sdlc_00_delivery_scaffold_v1` / step: `publish_sdlc_scaffold`
+> Managed by workflow: `sdlc_00_codebase_scaffold_v1` / step: `publish_sdlc_scaffold`
 > This file is workflow-generated and protected from manual edits.
 
 # SDLC Agent Contract: AGENT-implementation-planner
@@ -90,7 +90,7 @@ backlog scope, without writing code.
 The output TASK-DOC MUST include:
 - Linked Initiative ID (preserved from upstream)
 - File plan: exact files to create or modify
-- Module responsibilities: what each module/component must do
+- Module responsibilities: what each module or component must do
 - Reuse strategy: existing code to leverage
 - Data flow: how data moves through the implementation
 - Test plan: what tests are required
@@ -224,5 +224,5 @@ The output MUST:
 - Template Registry: 01_templates/template_registry.md
 - Upstream Agent: AGENT-task-decomposer (AGENT-task-decomposer.md)
 - Downstream Agent: AGENT-executor (AGENT-executor.md)
-- Layer 1 Metadata Standard: GOVERNANCE_RUNTIME_ROOT/METADATA_STANDARD.md
-- Layer 2 Metadata Contract: PLATFORM_RUNTIME_ROOT/METADATA_CONTRACT.md
+- Layer 1 Metadata Standard: METADATA_STANDARD.md
+- Layer 2 Metadata Contract: METADATA_CONTRACT.md

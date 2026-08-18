@@ -4,31 +4,30 @@ version: "1.0.0"
 doc_type: "bundle_definition"
 authority: "sdlc-owned"
 scan_policy: "include"
-scan_reason: "SDLC delivery document template for approved Memory and Lessons Learned documents"
+scan_reason: "SDLC delivery document template for approved Memory (Lessons Learned) documents"
 managed_by: "workflow-generated"
 layer: "layer3"
 platform: "agent-runner-v2"
 lifecycle_status: "published"
-effective_version: "SDLC00SCF-20260722-3a011a52"
+effective_version: "SDLC00CS-1zcrrbbs"
 ---
 
-> Managed by workflow: `sdlc_00_delivery_scaffold_v1` / step: `publish_sdlc_scaffold`
+> Managed by workflow: `sdlc_00_codebase_scaffold_v1` / step: `publish_sdlc_scaffold`
 > This file is workflow-generated and protected from manual edits.
 
-# SDLC Template: Memory / Lessons Learned (MEM)
+# SDLC Template: Memory (MEM)
 
 ## Purpose
 
-This template defines the structure for approved memory and lessons
-learned documents (MEM-DOC). A memory document is produced by the
+This template defines the structure for approved memory (lessons learned)
+documents (MEM-DOC). A memory document is produced by the
 sdlc_80_review_v1 workflow from an approved validation document
 (VALIDATE-DOC). The MEM-DOC captures lessons learned, reusable patterns,
-and institutional knowledge from the initiative. It is one of three
-outputs from sdlc_80, alongside REV-DOC and CLOSE-DOC.
+and knowledge artifacts from the initiative. It is one of three
+documents produced by sdlc_80 (along with REV-DOC and CLOSE-DOC).
 
-Memory documents are stored in the reviews/ directory (co-located with
-the review and closure documents for the same initiative). Once
-approved, they are immutable and form part of the SDLC audit trail.
+Memory documents are stored in the reviews/ directory. Once approved,
+they are immutable and form part of the SDLC audit trail.
 
 ## Required Frontmatter (for instances of this template)
 
@@ -42,7 +41,7 @@ version: "<semver>"
 doc_type: "workflow_output"
 authority: "workflow-generated"
 scan_policy: "include"
-scan_reason: "Approved memory and lessons learned document produced by sdlc_80"
+scan_reason: "Approved memory (lessons learned) document produced by sdlc_80"
 managed_by: "workflow-generated"
 layer: "layer3"
 platform: "agent-runner-v2"
@@ -78,62 +77,64 @@ A clear title for the memory document. Format as a level-1 heading.
 
 Structured metadata about the memory document:
 
-- Document ID (e.g., MEM-20260722-001)
+- Document ID (e.g., MEM-20260817-001)
 - Source validation reference (VALID file path)
-- Date of creation
+- Date of generation
 - Producing workflow (sdlc_80_review_v1)
 - Producing agent (AGENT-memory-manager)
 
-### 3. Executive Summary
+### 3. Lessons Learned Summary
 
-A brief summary of the key lessons learned and knowledge captured.
+A high-level summary of the key lessons learned from this initiative.
 
-### 4. Lessons Learned
+### 4. What Went Well
 
-Categorized lessons from the initiative:
+List of positive outcomes and successful practices:
 
-- **What Went Well**: Practices and decisions that produced positive
-  outcomes.
-- **What Could Be Improved**: Areas where the process or approach fell
-  short.
-- **Unexpected Challenges**: Surprises encountered and how they were
-  handled.
+- Technical decisions that worked well.
+- Process aspects that were effective.
+- Collaboration patterns that succeeded.
 
-### 5. Reusable Patterns
+### 5. What Could Be Improved
+
+List of areas for improvement:
+
+- Technical approaches that had issues.
+- Process bottlenecks encountered.
+- Communication gaps identified.
+
+### 6. Reusable Patterns
 
 Patterns, techniques, or solutions discovered during the initiative
-that may be reusable in future work:
+that could be reused in future work:
 
-- Pattern description.
-- Context of applicability.
-- Implementation notes.
+- Code patterns.
+- Architecture patterns.
+- Testing strategies.
+- Workflow optimizations.
 
-### 6. Knowledge Artifacts
+### 7. Technical Debt Items
 
-Knowledge captured for future reference:
+Technical debt accumulated during the initiative:
 
-- Technical insights.
-- Process improvements.
-- Tool or framework discoveries.
-- Integration patterns.
+- Known shortcuts taken.
+- Deferred improvements.
+- Suggested future refactoring.
 
-### 7. Recommendations for Future Initiatives
+### 8. Knowledge Artifacts
 
-Actionable recommendations based on lessons learned:
+Links or references to any reusable knowledge artifacts created:
 
-- Process recommendations.
-- Technical recommendations.
-- Organizational recommendations.
+- Documentation produced.
+- Scripts or tools developed.
+- Configuration templates.
 
-### 8. Knowledge Retention Actions
+### 9. Critique Resolution
 
-Specific actions to retain the captured knowledge:
+Results from the technical_critique and address_critique steps. Lists
+each finding, its severity, and the resolution applied.
 
-- Documentation updates needed.
-- Training or onboarding material to create.
-- Knowledge base entries to add.
-
-### 9. Source Reference
+### 10. Source Reference
 
 Cross-reference to the source validation document.
 
@@ -142,19 +143,20 @@ Cross-reference to the source validation document.
 ### Tone and Style
 
 - Use reflective, constructive language.
-- Focus on learning, not blame.
-- Be specific enough for future practitioners to apply the lessons.
+- Lessons must be specific and actionable.
+- Avoid blame; focus on systemic improvements.
 
 ### Length
 
-- Aim for 2-5 pages for the memory document.
-- Each lesson should be concise but include context.
+- Aim for 2-5 pages for the complete memory document.
+- Each lesson should be concise but include enough context to be
+  useful.
 
 ### Completeness
 
 - All required sections MUST be present.
-- At least 3 lessons learned should be captured.
-- At least 1 reusable pattern should be documented.
+- Every lesson must include context and recommendation.
+- Every reusable pattern must include usage guidance.
 
 ### ASCII-Only Requirement
 
@@ -187,7 +189,7 @@ MEM-{YYYYMMDD}-{NN}_{slug}.md
 ### Example
 
 ```
-MEM-20260722-001_add-user-authentication.md
+MEM-20260817-001_add-user-authentication.md
 ```
 
 ### Storage Location
@@ -199,17 +201,17 @@ Memory documents are stored in:
 
 ### Related Templates
 
-- **08_VALID_template.md** (SYS-03-VL): The source validation that
-  informed the lessons learned.
-- **09_REV_template.md** (SYS-03-RV): Review document produced
-  alongside this memory document by sdlc_80.
-- **11_CLOSE_template.md** (SYS-03-CL): Closure document produced
-  alongside this memory document by sdlc_80.
+- **08_VALID_template.md** (SYS-03-VL): The source validation document
+  from which this memory was derived.
+- **09_REV_template.md** (SYS-03-RV): The companion review document
+  produced by sdlc_80.
+- **11_CLOSE_template.md** (SYS-03-CL): The companion closure document
+  produced by sdlc_80.
 
 ### Related Agent Contracts
 
-- AGENT-memory-manager: Used by sdlc_80 to produce this memory document.
-- AGENT-reviewer: Produces the companion REV-DOC in sdlc_80.
+- AGENT-memory-manager: Used by sdlc_80 to produce this memory document
+  from the validation document.
 
 ### Related Workflows
 

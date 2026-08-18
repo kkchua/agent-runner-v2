@@ -9,10 +9,10 @@ managed_by: "workflow-generated"
 layer: "layer3"
 platform: "agent-runner-v2"
 lifecycle_status: "published"
-effective_version: "SDLC00SCF-20260722-3a011a52"
+effective_version: "SDLC00CS-1zcrrbbs"
 ---
 
-> Managed by workflow: `sdlc_00_delivery_scaffold_v1` / step: `publish_sdlc_scaffold`
+> Managed by workflow: `sdlc_00_codebase_scaffold_v1` / step: `publish_sdlc_scaffold`
 > This file is workflow-generated and protected from manual edits.
 
 # SDLC Template: Validation (VALID)
@@ -22,9 +22,10 @@ effective_version: "SDLC00SCF-20260722-3a011a52"
 This template defines the structure for approved validation documents
 (VALID-DOC). A validation document is produced by the
 sdlc_70_validation_v1 workflow from an approved implementation document
-(IMPL-DOC). The VALID-DOC contains the validation results, quality
-assessment, and verification against the original requirements. It
-serves as input to sdlc_80_review_v1.
+(IMPL-DOC). The VALID-DOC records the validation results, including
+whether the implementation meets all requirements, passes all tests,
+and satisfies the acceptance criteria. It serves as input to
+sdlc_80_review_v1.
 
 Validation documents are stored in the validations/ directory. Once
 approved, they are immutable and form part of the SDLC audit trail.
@@ -77,74 +78,75 @@ A clear title for the validation document. Format as a level-1 heading.
 
 Structured metadata about the validation document:
 
-- Document ID (e.g., VALID-20260722-001)
+- Document ID (e.g., VALID-20260817-001)
 - Source implementation reference (IMPL file path)
-- Date of validation
+- Date of generation
 - Producing workflow (sdlc_70_validation_v1)
 - Producing agent (AGENT-reviewer)
 
 ### 3. Validation Summary
 
-High-level summary of the validation outcome:
+A high-level summary of the validation outcome: pass or fail, with
+key findings.
 
-- Overall validation result (pass/fail/partial).
-- Number of criteria checked.
-- Number of criteria passed.
-- Number of criteria failed.
-- Key findings summary.
+### 4. Requirements Verification
 
-### 4. Requirements Traceability Verification
+For each functional requirement (FR) from the requirements document,
+document whether the implementation satisfies it:
 
-Verification that all requirements from the REQ-DOC are addressed by
-the implementation:
-
-- Requirements coverage matrix.
-- Missing requirements (if any).
-- Over-implementation notes (if any).
-
-### 5. Acceptance Criteria Validation
-
-Detailed validation of each acceptance criterion from the TASK-DOC:
-
-- Criterion description.
-- Validation method used.
-- Validation result (pass/fail).
+- Requirement ID.
+- Verification method (test, inspection, analysis).
+- Result (pass, fail, partial).
 - Evidence reference.
 
-### 6. Code Quality Assessment
+### 5. Non-Functional Requirements Verification
 
-Assessment of implementation quality:
+For each non-functional requirement (NFR), document whether the
+implementation meets the measurable threshold:
 
-- Code style and conventions compliance.
-- Test coverage adequacy.
-- Security considerations.
-- Performance considerations.
+- Requirement ID.
+- Measured value.
+- Required threshold.
+- Result (pass, fail).
 
-### 7. Test Verification
+### 6. Test Execution Summary
 
-Independent verification of test results:
+Summary of all test executions:
 
-- Tests reported in IMPL-DOC verified.
-- Additional tests executed (if any).
-- Test results summary.
+- Total tests run.
+- Passed, failed, skipped counts.
+- Coverage metrics.
+- Test log references.
 
-### 8. Findings
+### 7. Acceptance Criteria Validation
 
-Detailed list of findings from the validation:
+For each acceptance criterion from the original initiative, document
+whether it is satisfied by the implementation.
 
-- Defects found (with severity).
-- Improvements recommended.
-- Risks identified.
+### 8. Validation Defects
 
-### 9. Validation Decision
+Any defects found during validation:
 
-The overall validation decision:
+- Defect ID.
+- Description.
+- Severity (critical, major, minor).
+- Impact assessment.
 
-- Recommended action (approve, request changes, reject).
-- Justification for the decision.
-- Conditions for approval (if any).
+### 9. Critique Resolution
 
-### 10. Source Reference
+Results from the technical_critique and address_critique steps. Lists
+each finding, its severity, and the resolution applied.
+
+### 10. Validation Verdict
+
+The overall validation verdict:
+
+- PASS: All requirements met, all tests pass, no critical defects.
+- CONDITIONAL PASS: Minor issues remain, acceptable with documented
+  rationale.
+- FAIL: Critical requirements not met or critical defects found.
+
+### 11. Source Reference
 
 Cross-reference to the source implementation document.
 
@@ -153,18 +155,19 @@ Cross-reference to the source implementation document.
 ### Tone and Style
 
 - Use objective, evidence-based language.
-- All findings must be supported by evidence.
-- Clearly distinguish between facts and recommendations.
+- Every validation claim must reference specific evidence.
+- Defect descriptions must be reproducible.
 
 ### Length
 
 - Aim for 3-8 pages depending on initiative complexity.
-- The Acceptance Criteria Validation section should be thorough.
+- Verification tables may be long for complex requirements sets.
 
 ### Completeness
 
 - All required sections MUST be present.
-- Every acceptance criterion must be explicitly validated.
+- Every requirement must have a verification result.
+- Every defect must have a severity and impact assessment.
 
 ### ASCII-Only Requirement
 
@@ -197,7 +200,7 @@ VALID-{YYYYMMDD}-{NN}_{slug}.md
 ### Example
 
 ```
-VALID-20260722-001_add-user-authentication.md
+VALID-20260817-001_add-user-authentication.md
 ```
 
 ### Storage Location
@@ -211,18 +214,17 @@ Validation documents are stored in:
 
 - **07_IMPL_template.md** (SYS-03-IM): The source implementation that
   was validated.
-- **09_REV_template.md** (SYS-03-RV): Review output produced by sdlc_80
+- **09_REV_template.md** (SYS-03-RV): The output produced by sdlc_80
   from this validation document.
-- **10_MEM_template.md** (SYS-03-MM): Memory output produced by sdlc_80
-  from this validation document.
-- **11_CLOSE_template.md** (SYS-03-CL): Closure output produced by
+- **10_MEM_template.md** (SYS-03-MM): The memory document produced by
   sdlc_80 from this validation document.
+- **11_CLOSE_template.md** (SYS-03-CL): The closure document produced
+  by sdlc_80 from this validation document.
 
 ### Related Agent Contracts
 
-- AGENT-reviewer: Used by sdlc_70 to validate the IMPL-DOC.
-- AGENT-executor (upstream): Produced the IMPL-DOC in sdlc_60 that
-  sdlc_70 validates.
+- AGENT-reviewer: Used by sdlc_70 to produce this validation document
+  from the implementation.
 
 ### Related Workflows
 

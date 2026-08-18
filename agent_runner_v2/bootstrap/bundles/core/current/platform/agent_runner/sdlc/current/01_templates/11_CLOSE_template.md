@@ -9,10 +9,10 @@ managed_by: "workflow-generated"
 layer: "layer3"
 platform: "agent-runner-v2"
 lifecycle_status: "published"
-effective_version: "SDLC00SCF-20260722-3a011a52"
+effective_version: "SDLC00CS-1zcrrbbs"
 ---
 
-> Managed by workflow: `sdlc_00_delivery_scaffold_v1` / step: `publish_sdlc_scaffold`
+> Managed by workflow: `sdlc_00_codebase_scaffold_v1` / step: `publish_sdlc_scaffold`
 > This file is workflow-generated and protected from manual edits.
 
 # SDLC Template: Initiative Closure (CLOSE)
@@ -22,12 +22,12 @@ effective_version: "SDLC00SCF-20260722-3a011a52"
 This template defines the structure for approved initiative closure
 documents (CLOSE-DOC). A closure document is produced by the
 sdlc_80_review_v1 workflow from an approved validation document
-(VALIDATE-DOC). The CLOSE-DOC formally records the completion of the
-initiative, summarizing deliverables, outcomes, and final status. It is
-one of three outputs from sdlc_80, alongside REV-DOC and MEM-DOC.
+(VALIDATE-DOC). The CLOSE-DOC formally closes the initiative,
+summarizing outcomes, confirming deliverables, and recording the final
+status. It is one of three documents produced by sdlc_80 (along with
+REV-DOC and MEM-DOC).
 
-Closure documents are stored in the reviews/ directory (co-located with
-the review and memory documents for the same initiative). Once approved,
+Closure documents are stored in the reviews/ directory. Once approved,
 they are immutable and form part of the SDLC audit trail.
 
 ## Required Frontmatter (for instances of this template)
@@ -78,95 +78,94 @@ A clear title for the closure document. Format as a level-1 heading.
 
 Structured metadata about the closure document:
 
-- Document ID (e.g., CLOSE-20260722-001)
+- Document ID (e.g., CLOSE-20260817-001)
 - Source validation reference (VALID file path)
-- Date of closure
+- Date of generation
 - Producing workflow (sdlc_80_review_v1)
 - Producing agent (AGENT-memory-manager)
 
-### 3. Initiative Summary
+### 3. Initiative Closure Summary
 
-A high-level summary of the initiative:
+A summary of the initiative and its closure status.
 
-- Initiative ID and title.
-- Duration (start date to closure date).
-- Original objectives (from INIT-DOC).
-- Final disposition (completed, partially completed, terminated).
+### 4. Outcome Verification
 
-### 4. Deliverables Summary
+For each expected outcome from the initiative document, document
+whether it was achieved:
 
-List of all deliverables produced during the initiative:
+- Outcome description.
+- Achievement status (achieved, partially achieved, not achieved).
+- Evidence of achievement.
 
-- Document deliverables (with file references).
-- Code deliverables (with repository references).
-- Configuration changes.
-- Other artifacts.
+### 5. Deliverables Inventory
 
-### 5. Outcome Assessment
+Complete list of all deliverables produced during the initiative:
 
-Assessment of outcomes against original objectives:
+- Document deliverables (with file paths).
+- Code deliverables (with commit references).
+- Test deliverables (with test suite references).
 
-- Objectives achieved.
-- Objectives partially achieved.
-- Objectives not achieved (with explanation).
-- Unplanned outcomes (if any).
+### 6. Success Criteria Evaluation
 
-### 6. Resource Summary
+For each success criterion from the initiative document, document
+whether it was met:
+
+- Success criterion.
+- Evaluation result.
+- Measurement evidence.
+
+### 7. Initiative Timeline
+
+Summary of the initiative timeline:
+
+- Start date.
+- Key milestones and dates.
+- Closure date.
+- Duration versus planned duration.
+
+### 8. Resource Utilization
 
 Summary of resources consumed:
 
-- Workflow runs executed.
-- Estimated total effort.
-- Tools and services used.
+- Workflow steps executed.
+- Coder invocations and token usage.
+- Review iterations.
 
-### 7. Audit Trail Summary
+### 9. Critique Resolution
 
-Summary of the complete audit trail for this initiative:
+Results from the technical_critique and address_critique steps. Lists
+each finding, its severity, and the resolution applied.
 
-- List of all documents produced across the SDLC chain.
-- Document status for each (all should be "approved").
-- Cross-references to all related documents.
-
-### 8. Closure Declaration
+### 10. Closure Declaration
 
 Formal declaration of initiative closure:
 
-- Closure decision (closed successfully, closed with exceptions, etc.).
-- Date of closure.
-- Responsible authority.
-- Conditions of closure (if any).
+- Closure status: CLOSED, CLOSED WITH CONDITIONS, or NOT CLOSED.
+- Conditions or follow-up items, if any.
+- Authorization reference.
 
-### 9. Post-Closure Actions
+### 11. Source Reference
 
-Any follow-up actions required after closure:
-
-- Maintenance items.
-- Monitoring requirements.
-- Future enhancement opportunities.
-
-### 10. Source Reference
-
-Cross-reference to the source validation document and the complete
-audit trail.
+Cross-reference to the source validation document.
 
 ## Content Guidelines
 
 ### Tone and Style
 
 - Use formal, conclusive language.
-- Be factual and objective.
-- Summarize comprehensively but concisely.
+- Every claim about outcomes must reference evidence.
+- Closure declaration must be unambiguous.
 
 ### Length
 
-- Aim for 2-5 pages for the closure document.
-- The deliverables and audit trail sections should be thorough.
+- Aim for 2-5 pages for the complete closure document.
+- Each section should be thorough but concise.
 
 ### Completeness
 
 - All required sections MUST be present.
-- All documents in the audit trail must be listed.
-- All objectives must have an outcome assessment.
+- Every outcome must have an achievement status.
+- Every deliverable must be listed.
 
 ### ASCII-Only Requirement
 
@@ -199,7 +198,7 @@ CLOSE-{YYYYMMDD}-{NN}_{slug}.md
 ### Example
 
 ```
-CLOSE-20260722-001_add-user-authentication.md
+CLOSE-20260817-001_add-user-authentication.md
 ```
 
 ### Storage Location
@@ -211,18 +210,17 @@ Closure documents are stored in:
 
 ### Related Templates
 
-- **08_VALID_template.md** (SYS-03-VL): The source validation that
-  informed the closure decision.
-- **09_REV_template.md** (SYS-03-RV): Review document produced
-  alongside this closure document by sdlc_80.
-- **10_MEM_template.md** (SYS-03-MM): Memory document produced
-  alongside this closure document by sdlc_80.
+- **08_VALID_template.md** (SYS-03-VL): The source validation document
+  from which this closure was derived.
+- **09_REV_template.md** (SYS-03-RV): The companion review document
+  produced by sdlc_80.
+- **10_MEM_template.md** (SYS-03-MM): The companion memory document
+  produced by sdlc_80.
 
 ### Related Agent Contracts
 
 - AGENT-memory-manager: Used by sdlc_80 to produce this closure
-  document.
-- AGENT-reviewer: Produces the companion REV-DOC in sdlc_80.
+  document from the validation document.
 
 ### Related Workflows
 

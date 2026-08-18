@@ -9,10 +9,10 @@ managed_by: "workflow-generated"
 layer: "layer3"
 platform: "agent-runner-v2"
 lifecycle_status: "published"
-effective_version: "SDLC00SCF-20260722-3a011a52"
+effective_version: "SDLC00CS-1zcrrbbs"
 ---
 
-> Managed by workflow: `sdlc_00_delivery_scaffold_v1` / step: `publish_sdlc_scaffold`
+> Managed by workflow: `sdlc_00_codebase_scaffold_v1` / step: `publish_sdlc_scaffold`
 > This file is workflow-generated and protected from manual edits.
 
 # SDLC Delivery Status Rules v1
@@ -334,12 +334,13 @@ higher-precedence layers.
 - Agent Contract Registry: 02_agents/AGENTS.md
 - SDLC Workflow SOP: 01_templates/WORKFLOW_SOP_v1.md
 - SDLC Template Registry: 01_templates/template_registry.md
-- Layer 1 Governance Lifecycle: GOVERNANCE_RUNTIME_ROOT/GOVERNANCE_LIFECYCLE.md
-- Layer 2 Validation Contract: PLATFORM_RUNTIME_ROOT/VALIDATION_CONTRACT.md
-- L3 SDLC Specification: masterplan/LAYER3_AI_DRIVEN_SDLC_SPECIFICATION.md
+- Layer 1 Governance Lifecycle: GOVERNANCE_LIFECYCLE.md
+- Layer 2 Validation Contract: VALIDATION_CONTRACT.md
+- Layer 1 Metadata Standard: METADATA_STANDARD.md
+- Layer 2 Metadata Contract: METADATA_CONTRACT.md
 
 ## Version History
 
 | Version | Date | Change Summary |
 |---|---|---|
-| 1.0.0 | 2026-07-22 | Initial release. Defines lifecycle states, state machine, promotion patterns, refine loop rules, and audit trail requirements for all SDLC delivery documents. |
+| 1.0.0 | 2026-08-17 | Initial release. Defines lifecycle states, state machine, promotion patterns, refine loop rules, and audit trail requirements for all SDLC delivery documents. |

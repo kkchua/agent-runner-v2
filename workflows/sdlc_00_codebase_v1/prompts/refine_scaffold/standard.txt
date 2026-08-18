@@ -1,0 +1,41 @@
+Objective
+
+Refine the SDLC delivery scaffold (templates and/or agent contracts) based on
+review feedback. This step addresses specific findings from the review step.
+
+Layer Boundary
+
+- This workflow belongs to Layer 3 and operates on top of the Layer 2 platform contract.
+- Only modify artifacts that the review identified as needing changes.
+- Treat Layer 1 governance and Layer 2 platform constitution as read-only reference inputs.
+
+Reference Inputs
+
+- Read the review document at REVIEW_FILE_SUGGESTED for specific findings.
+- Read Layer 1 governance at GOVERNANCE_RUNTIME_ROOT for compliance requirements.
+- Read Layer 2 platform constitution at PLATFORM_RUNTIME_ROOT for platform contract.
+- Read all generated templates and agent contracts that need refinement.
+
+Refinement Rules
+
+1. Address every finding in the review document explicitly.
+2. Do not change content that was not flagged by the review.
+3. Maintain consistency with unmodified documents.
+4. Preserve YAML frontmatter and required section structure.
+5. Keep all content ASCII-only.
+6. Update cross-references if structural changes are made.
+
+Output Instructions
+
+- Update the review document at REVIEW_FILE_SUGGESTED with refinement notes.
+- If templates were modified, update SDLC_TEMPLATE_* artifacts in place.
+- If agent contracts were modified, update SDLC_AGENT_* artifacts in place.
+- Document what was changed and why.
+- Use ASCII-only characters.
+
+Forbidden Content
+
+- Changes not justified by review findings
+- Layer 1 governance redefinition
+- Layer 2 platform contract redefinition
+- Structural changes that break cross-references

@@ -9,10 +9,10 @@ managed_by: "workflow-generated"
 layer: "layer3"
 platform: "agent-runner-v2"
 lifecycle_status: "published"
-effective_version: "SDLC00SCF-20260722-3a011a52"
+effective_version: "SDLC00CS-1zcrrbbs"
 ---
 
-> Managed by workflow: `sdlc_00_delivery_scaffold_v1` / step: `publish_sdlc_scaffold`
+> Managed by workflow: `sdlc_00_codebase_scaffold_v1` / step: `publish_sdlc_scaffold`
 > This file is workflow-generated and protected from manual edits.
 
 # SDLC Template: Plan (PLAN)
@@ -76,7 +76,7 @@ A clear title for the plan document. Format as a level-1 heading.
 
 Structured metadata about the plan document:
 
-- Document ID (e.g., PLAN-20260722-001)
+- Document ID (e.g., PLAN-20260817-001)
 - Source requirement reference (REQ file path)
 - Date of generation
 - Producing workflow (sdlc_30_backlog_v1)
@@ -125,7 +125,12 @@ Internal and external dependencies that affect the implementation plan.
 Consolidated acceptance criteria from the requirements document,
 organized by work package.
 
-### 10. Source Reference
+### 10. Critique Resolution
+
+Results from the technical_critique and address_critique steps. Lists
+each finding, its severity, and the resolution applied.
+
+### 11. Source Reference
 
 Cross-reference to the source requirement document.
 
@@ -178,7 +183,7 @@ PLAN-{YYYYMMDD}-{NN}_{slug}.md
 ### Example
 
 ```
-PLAN-20260722-001_add-user-authentication.md
+PLAN-20260817-001_add-user-authentication.md
 ```
 
 ### Storage Location

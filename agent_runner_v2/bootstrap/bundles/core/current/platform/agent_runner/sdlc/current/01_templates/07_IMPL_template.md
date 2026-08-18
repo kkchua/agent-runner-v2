@@ -9,10 +9,10 @@ managed_by: "workflow-generated"
 layer: "layer3"
 platform: "agent-runner-v2"
 lifecycle_status: "published"
-effective_version: "SDLC00SCF-20260722-3a011a52"
+effective_version: "SDLC00CS-1zcrrbbs"
 ---
 
-> Managed by workflow: `sdlc_00_delivery_scaffold_v1` / step: `publish_sdlc_scaffold`
+> Managed by workflow: `sdlc_00_codebase_scaffold_v1` / step: `publish_sdlc_scaffold`
 > This file is workflow-generated and protected from manual edits.
 
 # SDLC Template: Implementation (IMPL)
@@ -22,9 +22,9 @@ effective_version: "SDLC00SCF-20260722-3a011a52"
 This template defines the structure for approved implementation documents
 (IMPL-DOC). An implementation document is produced by the
 sdlc_60_execution_v1 workflow from an approved task specification
-(TASK-DOC). The IMPL-DOC records the actual implementation work
-performed, including code changes, test results, and execution notes. It
-serves as input to sdlc_70_validation_v1.
+(TASK-DOC). The IMPL-DOC records what was actually implemented, the
+files changed, tests added, and execution results. It serves as input
+to sdlc_70_validation_v1.
 
 Implementation documents are stored in the implementations/ directory.
 Once approved, they are immutable and form part of the SDLC audit trail.
@@ -78,64 +78,56 @@ heading.
 
 Structured metadata about the implementation document:
 
-- Document ID (e.g., IMPL-20260722-001-01)
-- Source task specification reference (TASK file path)
-- Date of execution
+- Document ID (e.g., IMPL-20260817-001-01)
+- Source task reference (TASK file path)
+- Date of generation
 - Producing workflow (sdlc_60_execution_v1)
 - Producing agent (AGENT-executor)
 
-### 3. Execution Summary
+### 3. Implementation Summary
 
-A high-level summary of the implementation work:
+A high-level summary of what was implemented and how it maps to the
+task specification.
 
-- Tasks completed.
-- Files created or modified.
-- Overall approach taken.
-- Deviations from the task specification (if any).
+### 4. Changes Made
 
-### 4. Implementation Details
+Detailed list of all changes made:
 
-Detailed record of the implementation:
-
-- Code changes with file paths and descriptions.
+- Files created.
+- Files modified.
+- Files deleted.
 - Configuration changes.
-- New files created.
-- Dependencies added or updated.
 
-### 5. Test Execution Report
+### 5. Test Results
 
-Results of tests executed during implementation:
+Results of all tests executed:
 
-- Unit tests run and results.
-- Integration tests run and results.
-- Test coverage metrics (if available).
-- Any tests that were skipped and why.
+- Unit test results.
+- Integration test results.
+- Test coverage information.
+- Any skipped or failed tests with explanations.
 
-### 6. Deviations and Decisions
+### 6. Acceptance Criteria Verification
 
-Record of any deviations from the task specification:
+For each acceptance criterion from the task specification, document
+whether it was met and provide evidence.
 
-- What was changed and why.
-- Alternative approaches considered.
-- Decisions made during execution.
-- Impact on acceptance criteria.
+### 7. Deviations from Task Specification
 
-### 7. Known Issues
+Any deviations from the original task specification, with justification
+for each deviation.
 
-Any known issues discovered during implementation:
+### 8. Known Issues
 
-- Issue description.
-- Severity assessment.
-- Recommended follow-up.
+Any known issues, limitations, or TODO items remaining after
+implementation.
 
-### 8. Acceptance Criteria Verification
+### 9. Critique Resolution
 
-Self-assessment against the task specification acceptance criteria:
+Results from the technical_critique and address_critique steps. Lists
+each finding, its severity, and the resolution applied.
 
-- Each criterion marked as met or not met.
-- Evidence for each assessment.
-
-### 9. Source Reference
+### 10. Source Reference
 
 Cross-reference to the source task specification document.
 
@@ -143,20 +135,21 @@ Cross-reference to the source task specification document.
 
 ### Tone and Style
 
-- Use factual, objective language.
-- Report what was done, not what was intended.
-- Include specific file paths, function names, and line references.
+- Use factual, evidence-based language.
+- All claims about implementation must be backed by test results or
+  file references.
+- Deviations must include clear justification.
 
 ### Length
 
-- Aim for 3-10 pages depending on task complexity.
-- Implementation details section should be thorough.
+- Aim for 3-8 pages depending on implementation complexity.
+- Test results may be summarized with references to full logs.
 
 ### Completeness
 
 - All required sections MUST be present.
-- All files created or modified must be listed.
-- All tests executed must be reported.
+- Every file change must be listed.
+- Every acceptance criterion must have a verification result.
 
 ### ASCII-Only Requirement
 
@@ -190,7 +183,7 @@ IMPL-{YYYYMMDD}-{NN}-{TT}_{slug}.md
 ### Example
 
 ```
-IMPL-20260722-001-01_add-user-authentication.md
+IMPL-20260817-001-01_add-user-authentication.md
 ```
 
 ### Storage Location
@@ -209,8 +202,8 @@ Implementation documents are stored in:
 
 ### Related Agent Contracts
 
-- AGENT-executor: Used by sdlc_60 to execute the task and produce this
-  implementation document.
+- AGENT-executor: Used by sdlc_60 to produce this implementation
+  document from the task specification.
 
 ### Related Workflows
 

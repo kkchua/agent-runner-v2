@@ -12,20 +12,29 @@ requirement.md  →  [AGB]  →  workflow_package/
 
 The platform infrastructure (step runner, routing, artifact system) is predefined and stable. The LLM only generates the domain-specific content that plugs into it.
 
-## Pipeline (10 steps)
+## Pipeline (12 steps)
+
+### Domain Phase (LLM's world)
 
 | # | Step | Type | Purpose |
 |---|------|------|---------|
 | 1 | analyze_requirement | prompt | Read requirement doc, produce Analysis JSON |
-| 2 | plan_domain_logic | prompt | Design what actions + prompts are needed |
-| 3 | challenge_plan | prompt | Attack the plan (SDLC plan ↔ challenge) |
-| 4 | implement_domain | prompt | Write actions.py + prompt files |
-| 5 | critic_impl | prompt | Review code logic + prompt quality (SDLC implement ↔ critic) |
-| 6 | assemble_package | action | Build workflow.toml + context_extensions.py + impl.yaml |
-| 7 | review_package | prompt | Holistic review of assembled package |
-| 8 | validate_structure | action | Deterministic structural validation |
-| 9 | gatekeep_package | prompt | Final pass/fail gate |
-| 10 | promote_package | action | Deploy to workflows/{codename}/ + generate README |
+| 2 | generate_domain_map | action | Generate artifact key mapping from Analysis JSON |
+| 3 | plan_domain_logic | prompt | Design what actions + prompts are needed |
+| 4 | challenge_plan | prompt | Attack the plan (SDLC plan ↔ challenge) |
+| 5 | implement_domain | prompt | Write actions.py + prompt files |
+| 6 | critic_impl | prompt | Review code logic + prompt quality (SDLC implement ↔ critic) |
+
+### Infrastructure Phase (platform's world)
+
+| # | Step | Type | Purpose |
+|---|------|------|---------|
+| 7 | copy_infrastructure | action | Copy AGB infrastructure files to target_workflow/ |
+| 8 | assemble_package | action | Build workflow.toml + context_extensions.py |
+| 9 | validate_structure | action | Deterministic structural validation |
+| 10 | review_package | prompt | Holistic review of assembled package |
+| 11 | gatekeep_package | prompt | Final pass/fail gate |
+| 12 | promote_package | action | Deploy to workflows/{codename}/ + generate README |
 
 ## What the LLM Generates
 
@@ -58,12 +67,16 @@ AGB produces a complete executable workflow package:
 
 ```
 workflows/{codename}/
-    workflow.toml
-    context_extensions.py
-    actions.py
-    prompts/
-    impls/{name}/        (alternative implementations)
-    README.md
+    workflow.toml              # Infrastructure (assembled)
+    context_extensions.py      # Infrastructure (generated)
+    actions.py                 # Infrastructure (copied from AGB)
+    prompts/                   # Infrastructure (copied from AGB)
+    impls/standard/
+        actions.py             # Domain (LLM-generated)
+        requirements.txt       # Domain (LLM-generated)
+        prompts/               # Domain (LLM-generated)
+        impl.yaml              # Domain (LLM-generated)
+    README.md                  # Generated during promote step
 ```
 
 ### Running
@@ -78,18 +91,20 @@ The Analysis JSON is the contract between step 1 (analyze) and step 6 (assemble)
 
 ## Multi-Implementation Support
 
-Generated workflows support alternative implementations via the override pattern:
+AGB itself uses implementation name `"standard"` (see workflow.toml).
+
+Generated target workflows also use implementation name `"standard"`:
 - `workflow.toml` = default implementation (all steps assigned)
-- `impls/{name}/impl.yaml` = partial overrides (only steps that differ)
+- `impls/standard/impl.yaml` = domain-specific overrides (actions, prompts, requirements.txt)
 
 ## Files
 
 | File | Purpose |
 |------|---------|
-| `workflow.toml` | 10-step SDLC-scoped pipeline |
+| `workflow.toml` | 12-step pipeline (6 domain + 6 infrastructure) |
 | `context_extensions.py` | Two-dict artifact resolution (INPUT_ARTIFACTS + OUTPUT_ARTIFACTS) |
-| `actions.py` | _assemble_package, _validate_structure, _promote_workflow_package actions |
-| `prompts/` | 7 prompt templates |
+| `actions.py` | Domain + infrastructure action implementations |
+| `prompts/` | 7 prompt templates (all at root, no subdirs) |
 | `input/` | Requirement documents |
 
 ## Governance
@@ -101,6 +116,6 @@ docs/system/00_governance/foundation/current/BASE_COMPOSITION_STANDARD_v1.0.md
 
 ## Version
 
-- **Version**: 3.0.0
+- **Version**: 3.1.0
 - **Job Prefix**: AGB
 - **Platform**: agent-runner-v2

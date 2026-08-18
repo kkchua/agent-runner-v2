@@ -9,10 +9,10 @@ managed_by: "workflow-generated"
 layer: "layer3"
 platform: "agent-runner-v2"
 lifecycle_status: "published"
-effective_version: "SDLC00SCF-20260722-3a011a52"
+effective_version: "SDLC00CS-1zcrrbbs"
 ---
 
-> Managed by workflow: `sdlc_00_delivery_scaffold_v1` / step: `publish_sdlc_scaffold`
+> Managed by workflow: `sdlc_00_codebase_scaffold_v1` / step: `publish_sdlc_scaffold`
 > This file is workflow-generated and protected from manual edits.
 
 # SDLC Template: Task Specification (TASK)
@@ -20,14 +20,15 @@ effective_version: "SDLC00SCF-20260722-3a011a52"
 ## Purpose
 
 This template defines the structure for approved task specification
-documents (TASK-DOC). A task specification is produced by the
+documents (TASK-DOC). A task specification document is produced by the
 sdlc_50_implementation_v1 workflow from an approved backlog document
-(BACKLOG-DOC). The TASK-DOC provides detailed instructions for a single
-task or a small group of related tasks, ready for execution by
+(BACKLOG-DOC). The TASK-DOC provides detailed implementation
+instructions for a single task, including file-level changes, test
+requirements, and verification steps. It serves as input to
 sdlc_60_execution_v1.
 
-Task specification documents are stored in the tasks/ directory. Once
-approved, they are immutable and form part of the SDLC audit trail.
+Task documents are stored in the tasks/ directory. Once approved, they
+are immutable and form part of the SDLC audit trail.
 
 ## Required Frontmatter (for instances of this template)
 
@@ -77,89 +78,79 @@ A clear title for the task specification. Format as a level-1 heading.
 
 Structured metadata about the task specification:
 
-- Document ID (e.g., TASK-20260722-001-01)
+- Document ID (e.g., TASK-20260817-001-01)
 - Source backlog reference (BACKLOG file path)
-- Task IDs covered from backlog
+- Task ID from backlog (e.g., TASK-001)
 - Date of generation
 - Producing workflow (sdlc_50_implementation_v1)
 - Producing agent (AGENT-implementation-planner)
 
 ### 3. Task Overview
 
-High-level description of what this task specification covers:
+A summary of what this task accomplishes, linking back to the backlog
+entry and the overall initiative objective.
 
-- Which backlog tasks are included.
-- Scope of work for this specification.
-- Expected outcome.
+### 4. Implementation Specification
 
-### 4. Detailed Implementation Steps
+Detailed implementation instructions:
 
-Step-by-step instructions for implementing the task. Each step MUST
-include:
-
-- Step number.
-- Action description.
 - Files to create or modify.
-- Expected result after the step.
+- Functions or classes to implement.
+- Interfaces or APIs to define.
+- Data structures to use.
 
-### 5. Technical Specifications
+### 5. Test Requirements
 
-Detailed technical requirements:
+Specific test cases that must be implemented:
 
-- API contracts or interfaces to implement.
-- Data structures or schemas.
-- Configuration changes.
-- Dependencies to install or configure.
+- Unit tests required.
+- Integration tests required.
+- Edge cases to cover.
+- Expected test outcomes.
 
-### 6. Test Requirements
+### 6. Acceptance Criteria
 
-Test criteria for this task:
+Testable acceptance criteria for this task. Each criterion must be
+specific enough to verify programmatically.
 
-- Unit tests to write.
-- Integration tests to update.
-- Test coverage expectations.
-- Edge cases to verify.
+### 7. Dependencies and Prerequisites
 
-### 7. Acceptance Criteria
+- Tasks that must be completed before this task.
+- External dependencies required.
+- Environment setup needed.
 
-Specific acceptance criteria inherited from the backlog and requirements,
-adapted for this task:
+### 8. Risk Considerations
 
-- Functional acceptance criteria.
-- Technical acceptance criteria.
-- Quality gates.
+Task-specific risks and mitigation approaches.
 
-### 8. Definition of Done
+### 9. Critique Resolution
 
-Clear definition of what "done" means for this task:
+Results from the technical_critique and address_critique steps. Lists
+each finding, its severity, and the resolution applied.
 
-- Code complete.
-- Tests passing.
-- Documentation updated.
-- Review criteria met.
+### 10. Source Reference
 
-### 9. Source Reference
-
-Cross-reference to the source backlog document and original requirements.
+Cross-reference to the source backlog document and the specific task
+entry.
 
 ## Content Guidelines
 
 ### Tone and Style
 
-- Use imperative, instruction-style language.
-- Steps must be precise enough for an executor to follow without
-  ambiguity.
-- Include file paths and specific identifiers.
+- Use precise, implementation-level language.
+- File paths and function names must be exact.
+- Test requirements must be verifiable.
 
 ### Length
 
-- Aim for 2-6 pages per task specification.
-- Implementation steps should be granular but not excessively verbose.
+- Aim for 2-5 pages per task specification.
+- Implementation details should be thorough but focused.
 
 ### Completeness
 
 - All required sections MUST be present.
-- Each implementation step must be actionable.
+- Every file-level change must be specified.
+- Every test requirement must include expected outcome.
 
 ### ASCII-Only Requirement
 
@@ -193,12 +184,12 @@ TASK-{YYYYMMDD}-{NN}-{TT}_{slug}.md
 ### Example
 
 ```
-TASK-20260722-001-01_add-user-authentication.md
+TASK-20260817-001-01_add-user-authentication.md
 ```
 
 ### Storage Location
 
-Task specification documents are stored in:
+Task documents are stored in:
 `docs/repo/agent_runner/sdlc/delivery/tasks/`
 
 ## Cross-References
@@ -212,8 +203,8 @@ Task specification documents are stored in:
 
 ### Related Agent Contracts
 
-- AGENT-implementation-planner: Used by sdlc_50 to generate task specs
-  from backlog items.
+- AGENT-implementation-planner: Used by sdlc_50 to generate this task
+  specification from the backlog.
 
 ### Related Workflows
 

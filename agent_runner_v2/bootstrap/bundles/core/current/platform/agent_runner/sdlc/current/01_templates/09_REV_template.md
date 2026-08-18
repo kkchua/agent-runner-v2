@@ -9,10 +9,10 @@ managed_by: "workflow-generated"
 layer: "layer3"
 platform: "agent-runner-v2"
 lifecycle_status: "published"
-effective_version: "SDLC00SCF-20260722-3a011a52"
+effective_version: "SDLC00CS-1zcrrbbs"
 ---
 
-> Managed by workflow: `sdlc_00_delivery_scaffold_v1` / step: `publish_sdlc_scaffold`
+> Managed by workflow: `sdlc_00_codebase_scaffold_v1` / step: `publish_sdlc_scaffold`
 > This file is workflow-generated and protected from manual edits.
 
 # SDLC Template: Review (REV)
@@ -21,10 +21,10 @@ effective_version: "SDLC00SCF-20260722-3a011a52"
 
 This template defines the structure for approved review documents
 (REV-DOC). A review document is produced by the sdlc_80_review_v1
-workflow from an approved validation document (VALIDATE-DOC). The REV-DOC
-contains the final review findings, overall quality assessment, and
-recommendations for the initiative. It is one of three outputs from
-sdlc_80, alongside MEM-DOC and CLOSE-DOC.
+workflow from an approved validation document (VALIDATE-DOC). The
+REV-DOC contains the final review assessment, quality evaluation, and
+recommendations for the initiative. It is one of three documents
+produced by sdlc_80 (along with MEM-DOC and CLOSE-DOC).
 
 Review documents are stored in the reviews/ directory. Once approved,
 they are immutable and form part of the SDLC audit trail.
@@ -77,65 +77,61 @@ A clear title for the review document. Format as a level-1 heading.
 
 Structured metadata about the review document:
 
-- Document ID (e.g., REV-20260722-001)
+- Document ID (e.g., REV-20260817-001)
 - Source validation reference (VALID file path)
-- Date of review
+- Date of generation
 - Producing workflow (sdlc_80_review_v1)
 - Producing agent (AGENT-reviewer)
 
 ### 3. Review Summary
 
-High-level summary of the review outcome:
-
-- Overall initiative assessment.
-- Key strengths identified.
-- Key weaknesses or concerns.
-- Final recommendation.
+A high-level summary of the review findings and overall assessment.
 
 ### 4. Quality Assessment
 
-Comprehensive quality assessment of the initiative:
+Evaluation of the implementation quality across dimensions:
 
-- Requirements quality.
-- Implementation quality.
-- Testing quality.
-- Documentation quality.
-- Process adherence.
+- Code quality.
+- Test coverage adequacy.
+- Documentation completeness.
+- Architecture compliance.
 
-### 5. Findings Summary
+### 5. Requirements Compliance
 
-Consolidated findings from the review:
+Assessment of whether all requirements were satisfied, referencing the
+validation results.
 
-- Critical findings.
-- Major findings.
-- Minor findings.
-- Observations.
+### 6. Process Compliance
 
-### 6. Recommendations
+Assessment of whether the SDLC process was followed correctly:
 
-Actionable recommendations:
+- All workflow steps completed in order.
+- All approval gates passed.
+- All critique findings addressed.
 
-- Immediate actions required.
-- Short-term improvements.
-- Long-term considerations.
+### 7. Recommendations
 
-### 7. Initiative Outcome Assessment
+Recommendations for:
 
-Assessment of whether the initiative achieved its objectives:
+- Follow-up work or enhancements.
+- Process improvements.
+- Technical debt items to address.
 
-- Original objectives from INIT-DOC.
-- Actual outcomes achieved.
-- Gap analysis (if any).
+### 8. Critique Resolution
 
-### 8. Final Disposition
+Results from the technical_critique and address_critique steps. Lists
+each finding, its severity, and the resolution applied.
 
-The final review disposition:
+### 9. Overall Verdict
 
-- Approved, approved with conditions, or rejected.
-- Conditions for approval (if applicable).
-- Rationale for the disposition.
+The overall review verdict:
 
-### 9. Source Reference
+- APPROVED: Initiative completed successfully.
+- APPROVED WITH CONDITIONS: Minor issues remain; acceptable with
+  documented plan.
+- NOT APPROVED: Critical issues prevent closure.
+
+### 10. Source Reference
 
 Cross-reference to the source validation document.
 
@@ -143,19 +139,20 @@ Cross-reference to the source validation document.
 
 ### Tone and Style
 
-- Use balanced, professional language.
-- Acknowledge both strengths and weaknesses.
-- Recommendations must be specific and actionable.
+- Use objective, balanced language.
+- Assessment claims must reference specific evidence.
+- Recommendations must be actionable.
 
 ### Length
 
-- Aim for 3-6 pages for the review document.
-- Each finding should be concise but complete.
+- Aim for 2-5 pages for the complete review document.
+- Each section should be thorough but concise.
 
 ### Completeness
 
 - All required sections MUST be present.
-- Every finding must have a severity classification.
+- Every quality dimension must be assessed.
+- Every recommendation must be specific and actionable.
 
 ### ASCII-Only Requirement
 
@@ -188,7 +185,7 @@ REV-{YYYYMMDD}-{NN}_{slug}.md
 ### Example
 
 ```
-REV-20260722-001_add-user-authentication.md
+REV-20260817-001_add-user-authentication.md
 ```
 
 ### Storage Location
@@ -200,17 +197,17 @@ Review documents are stored in:
 
 ### Related Templates
 
-- **08_VALID_template.md** (SYS-03-VL): The source validation that was
-  reviewed.
-- **10_MEM_template.md** (SYS-03-MM): Memory document produced
-  alongside this review by sdlc_80.
-- **11_CLOSE_template.md** (SYS-03-CL): Closure document produced
-  alongside this review by sdlc_80.
+- **08_VALID_template.md** (SYS-03-VL): The source validation document
+  from which this review was derived.
+- **10_MEM_template.md** (SYS-03-MM): The companion memory document
+  produced by sdlc_80.
+- **11_CLOSE_template.md** (SYS-03-CL): The companion closure document
+  produced by sdlc_80.
 
 ### Related Agent Contracts
 
-- AGENT-reviewer: Used by sdlc_80 to produce this review document.
-- AGENT-memory-manager: Produces the companion MEM-DOC in sdlc_80.
+- AGENT-reviewer: Used by sdlc_80 to produce this review document from
+  the validation document.
 
 ### Related Workflows
 

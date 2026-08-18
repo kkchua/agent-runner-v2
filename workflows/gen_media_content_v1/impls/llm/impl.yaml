@@ -1,0 +1,70 @@
+name: llm
+label: "LLM Providers (curl-based)"
+
+# ============================================================================
+# Step Overrides — switch from action-driven to prompt-driven
+# ============================================================================
+overrides:
+  generate_images:
+    prompt: "{{ slot.generate_images }}"
+    coder:
+      role_policy: "image_video"
+  generate_videos:
+    prompt: "{{ slot.generate_videos }}"
+    coder:
+      role_policy: "image_video"
+
+# ============================================================================
+# Step Slots Configuration
+# ============================================================================
+step_slots:
+  extract_descriptions:
+    type: "llm"
+    label: "Description Extraction"
+    default: "standard"
+    options:
+      - name: "standard"
+        file: "prompts/extract_desc/standard.txt"
+        description: "Standard vision-based description extraction."
+      - name: "standard_chinese"
+        file: "prompts/extract_desc/standard_chinese.txt"
+        description: "Vision-based description extraction — descriptions in Chinese."
+
+  generate_prompts:
+    type: "llm"
+    label: "Prompt Generation"
+    default: "reconstruction"
+    options:
+      - name: "thematic_variance"
+        file: "prompts/generate_prompts/v2.txt"
+        description: "Creative thematic variance — diverse subjects within same concept."
+      - name: "reconstruction"
+        file: "prompts/generate_prompts/v9.txt"
+        description: "Faithful reconstruction — visually indistinguishable from original."
+      - name: "thematic_variance_chinese"
+        file: "prompts/generate_prompts/v2_chinese.txt"
+        description: "Creative thematic variance — prompts in Chinese."
+      - name: "reconstruction_chinese"
+        file: "prompts/generate_prompts/v9_chinese.txt"
+        description: "Faithful reconstruction — prompts in Chinese."
+
+  generate_images:
+    type: "llm"
+    label: "Image Generation"
+    default: "token_plan_wan27"
+    options:
+      - name: "token_plan_wan27"
+        file: "prompts/generate_images/token_plan_wan27.txt"
+        description: "Token Plan wan2.7-image via LLM-driven curl."
+
+  generate_videos:
+    type: "llm"
+    label: "Video Generation"
+    default: "happyhorse_v1_1"
+    options:
+      - name: "happyhorse_v1_1"
+        file: "prompts/generate_videos/happyhorse-1.1-i2v.txt"
+        description: "HappyHorse 1.1 image-to-video via LLM-driven curl."
+      - name: "happyhorse-1.1-t2v"
+        file: "prompts/generate_videos/happyhorse-1.1-t2v.txt"
+        description: "HappyHorse 1.1 text-to-video via LLM-driven curl."

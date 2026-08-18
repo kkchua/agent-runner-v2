@@ -63,13 +63,15 @@ def validate_package(
     manifest_path: Path,
     extensions_path: Path | None = None,
     actions_path: Path | None = None,
+    infra_actions_path: Path | None = None,
 ) -> ValidationResult:
     """Run all static checks on a workflow package.
 
     Args:
         manifest_path: Path to workflow.toml (required).
         extensions_path: Path to context_extensions.py (optional).
-        actions_path: Path to actions.py (optional).
+        actions_path: Path to domain actions.py (optional).
+        infra_actions_path: Path to infrastructure actions.py (optional).
 
     Returns:
         ValidationResult with findings.
@@ -90,7 +92,7 @@ def validate_package(
         return result
 
     # 2. Python syntax
-    for label, path in [("context_extensions.py", extensions_path), ("actions.py", actions_path)]:
+    for label, path in [("context_extensions.py", extensions_path), ("actions.py", actions_path), ("infra_actions.py", infra_actions_path)]:
         if path and path.is_file():
             _check_python_syntax(path, label, result)
 
@@ -102,8 +104,9 @@ def validate_package(
     _check_artifact_bindings(manifest_data, result)
 
     # 5. Action step completeness
-    if actions_path and actions_path.is_file():
-        _check_action_implementations(manifest_data, actions_path, result)
+    # Domain actions (non-_) are checked in impls/standard/actions.py
+    # Infrastructure actions (_) are checked in root actions.py (copied from AGB)
+    _check_action_implementations(manifest_data, actions_path, infra_actions_path, result)
 
     # 6. Prompt file existence
     _check_prompt_files(manifest_data, bundle_root, result)
@@ -280,9 +283,13 @@ def _check_artifact_bindings(manifest_data: dict, result: ValidationResult) -> N
 
 
 def _check_action_implementations(
-    manifest_data: dict, actions_path: Path, result: ValidationResult,
+    manifest_data: dict, actions_path: Path | None, infra_actions_path: Path | None, result: ValidationResult,
 ) -> None:
-    """Check that all action-driven steps have @action implementations."""
+    """Check that all action-driven steps have @action implementations.
+
+    Infrastructure actions (starting with _) are checked in infra_actions_path.
+    Domain actions (non-underscore) are checked in actions_path.
+    """
     steps = manifest_data.get("step", [])
     if not isinstance(steps, list):
         return
@@ -293,23 +300,48 @@ def _check_action_implementations(
         "validate_package_deterministic", "promote_workflow_package",
     }
 
-    try:
-        actions_source = actions_path.read_text(encoding="utf-8")
-    except Exception:
-        return
+    # Load domain actions source
+    domain_actions_source = ""
+    if actions_path and actions_path.is_file():
+        try:
+            domain_actions_source = actions_path.read_text(encoding="utf-8")
+        except Exception:
+            pass
+
+    # Load infrastructure actions source
+    infra_actions_source = ""
+    if infra_actions_path and infra_actions_path.is_file():
+        try:
+            infra_actions_source = infra_actions_path.read_text(encoding="utf-8")
+        except Exception:
+            pass
 
     for step in steps:
         action_name = step.get("action", "")
         if not action_name or action_name in builtin_actions:
             continue
 
-        decorator = f'@action("{action_name}")'
-        if decorator not in actions_source:
-            result.findings.append(ValidationFinding(
-                "error", "MISSING_ACTION_IMPLEMENT",
-                f"Step '{step.get('name', '')}' references action '{action_name}' "
-                f"but {decorator} not found in actions.py",
-            ))
+        # Infrastructure actions start with _
+        if action_name.startswith("_"):
+            # Check in infrastructure actions file
+            if infra_actions_source:
+                decorator = f'@action("{action_name}")'
+                if decorator not in infra_actions_source:
+                    result.findings.append(ValidationFinding(
+                        "error", "MISSING_ACTION_IMPLEMENT",
+                        f"Step '{step.get('name', '')}' references infrastructure action '{action_name}' "
+                        f"but {decorator} not found in infrastructure actions.py",
+                    ))
+        else:
+            # Check in domain actions file
+            if domain_actions_source:
+                decorator = f'@action("{action_name}")'
+                if decorator not in domain_actions_source:
+                    result.findings.append(ValidationFinding(
+                        "error", "MISSING_ACTION_IMPLEMENT",
+                        f"Step '{step.get('name', '')}' references action '{action_name}' "
+                        f"but {decorator} not found in actions.py",
+                    ))
 
 
 def _check_prompt_files(
@@ -364,6 +396,9 @@ def _check_prompt_input_consistency(
         non_artifact = {
             "ARTIFACT_KEY", "SOME_KEY", "job_id", "seq", "UNRESOLVED",
             "PLACEHOLDER", "OUTPUT_FILE",
+            # Documentation example patterns
+            "INPUT_ARTIFACT_KEY", "OUTPUT_ARTIFACT_KEY",
+            "INPUT_KEY", "OUTPUT_KEY", "ARTIFACT_KEY_NAME", "EXAMPLE_KEY",
         }
         placeholders -= non_artifact
 

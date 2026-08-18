@@ -62,31 +62,32 @@ class ArtifactGeneratorBuilderExtensions(WorkflowExtensions):
     # -- Input artifacts: resolved to {workspace_root}/input/ --
     INPUT_ARTIFACTS: dict[str, str] = {
         "REQUIREMENT_DOC": "",
-        "EXISTING_WORKFLOW_DIR": "",
     }
 
     # -- Output artifacts: resolved to {workspace_root}/output/{job_id}/ --
     OUTPUT_ARTIFACTS: dict[str, str] = {
         # Step 1: Analyze
-        "ANALYSIS_JSON_FILE": "ANALYSIS_JSON-{seq}.json",
-        # Steps 2-3: Plan <-> Challenge
-        "DOMAIN_PLAN_FILE": "DOMAIN_PLAN-{seq}.md",
-        "PLAN_CHALLENGE_FILE": "PLAN_CHALLENGE-{seq}.md",
-        # Steps 4-5: Implement <-> Critic
-        "WORKFLOW_ACTIONS_FILE": "actions.py",
-        "WORKFLOW_REQUIREMENTS_FILE": "requirements.txt",
-        "WORKFLOW_PROMPTS_DIR": "prompts/",
-        "IMPL_CRITIQUE_FILE": "IMPL_CRITIQUE-{seq}.md",
-        # Step 6: Assemble
-        "WORKFLOW_MANIFEST_FILE": "workflow.toml",
-        "WORKFLOW_EXTENSIONS_FILE": "context_extensions.py",
-        "IMPL_OVERRIDE_FILES": "impls/",
-        # Steps 7-9: Review -> Validate -> Gatekeep
-        "PACKAGE_REVIEW_FILE": "PACKAGE_REVIEW-{seq}.md",
-        "VALIDATION_FINDINGS_FILE": "VALIDATION_FINDINGS-{seq}.md",
-        "GATEKEEP_PACKAGE_FILE": "GATEKEEP_PACKAGE-{seq}.md",
-        # Step 10: Promote
-        "WORKFLOW_PACKAGE_DIR": "",
+        "AGB_ANALYSIS_JSON": "ANALYSIS_JSON-{seq}.json",
+        # Step 2: Domain Map (action)
+        "AGB_DOMAIN_MAP": "AGB_DOMAIN_MAP.md",
+        # Steps 3-4: Plan <-> Challenge
+        "AGB_DOMAIN_PLAN": "DOMAIN_PLAN-{seq}.md",
+        "AGB_PLAN_CHALLENGE": "PLAN_CHALLENGE-{seq}.md",
+        # Steps 5-6: Implement <-> Critic (domain logic → target_workflow/impls/standard/)
+        "DOMAIN_ACTIONS_FILE": "target_workflow/impls/standard/actions.py",
+        "DOMAIN_PROMPTS_DIR": "target_workflow/impls/standard/prompts/",
+        "DOMAIN_IMPL_FILE": "target_workflow/impls/standard/impl.yaml",
+        "AGB_IMPL_CRITIQUE": "IMPL_CRITIQUE-{seq}.md",
+        # Step 7: Copy Infrastructure (action) → target_workflow/
+        "TARGET_EXTENSIONS_FILE": "target_workflow/context_extensions.py",
+        # Step 8: Assemble (action) → target_workflow/
+        "TARGET_MANIFEST_FILE": "target_workflow/workflow.toml",
+        # Steps 9-11: Review -> Validate -> Gatekeep
+        "AGB_PACKAGE_REVIEW": "PACKAGE_REVIEW-{seq}.md",
+        "AGB_VALIDATION_FINDINGS": "VALIDATION_FINDINGS-{seq}.md",
+        "AGB_GATEKEEP_REPORT": "GATEKEEP_PACKAGE-{seq}.md",
+        # Step 12: Promote (action)
+        "TARGET_PACKAGE_DIR": "",
     }
 
     def register_artifact_keys(
@@ -131,7 +132,7 @@ class ArtifactGeneratorBuilderExtensions(WorkflowExtensions):
             get_platform_runtime_root()
         )
         result["BASE_COMPOSITION_STANDARD"] = str(
-            get_governance_runtime_root() / "BASE_COMPOSITION_STANDARD_v1.0.md"
+            get_governance_runtime_root() / "BCS_v2.0.md"
         )
 
         # Resolve input artifacts → {workspace_root}/input/

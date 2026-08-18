@@ -9,10 +9,10 @@ managed_by: "workflow-generated"
 layer: "layer3"
 platform: "agent-runner-v2"
 lifecycle_status: "published"
-effective_version: "SDLC00SCF-20260722-3a011a52"
+effective_version: "SDLC00CS-1zcrrbbs"
 ---
 
-> Managed by workflow: `sdlc_00_delivery_scaffold_v1` / step: `publish_sdlc_scaffold`
+> Managed by workflow: `sdlc_00_codebase_scaffold_v1` / step: `publish_sdlc_scaffold`
 > This file is workflow-generated and protected from manual edits.
 
 # SDLC Workflow Standard Operating Procedure
@@ -29,8 +29,8 @@ every SDLC workflow must follow.
 
 This SOP applies to all initiative workflows in the SDLC family:
 sdlc_10_requirement_v1 through sdlc_80_review_v1. It does not apply to
-sdlc_00_delivery_scaffold_v1 or sdlc_00_codebase_v1, which are bootstrap
-and maintenance workflows with their own operating rules.
+sdlc_00_codebase_scaffold_v1 or other bootstrap and maintenance
+workflows with their own operating rules.
 
 ## Workflow Sequence
 
@@ -55,30 +55,57 @@ has `lifecycle_status: "approved"` in its YAML frontmatter. If the
 required status is not met, the workflow MUST fail and report the
 dependency violation.
 
-### Workflow Steps Pattern
+### Standard Step Pattern
 
-Every SDLC workflow follows this general step pattern:
+Every initiative workflow (sdlc_10 through sdlc_80) follows this
+standard step pattern for document generation and approval:
 
-1. **generate_<artifact>** (prompt) -- Generate the document from input
-2. **review_<artifact>** (prompt) -- Internal review of the document
-3. **refine_<artifact>** (prompt, conditional) -- Refine based on review
-4. **promote_<artifact>** (action) -- Promote document to approved status
-5. **step_completion** (action) -- Finalize and notify
+1. **generate_<artifact>** (prompt) -- Generate the document from input.
+2. **technical_critique** (prompt) -- Internal quality gate. Evaluates
+   feasibility and technical soundness. Produces critique findings.
+3. **address_critique** (prompt) -- Address findings from technical
+   critique. Update the document in-place. Add a Critique Resolution
+   section documenting each finding and its resolution.
+4. **review_<artifact>** (prompt) -- Human approval gate. Verifies that
+   critique was resolved and the document meets standards.
+5. **refine_<artifact>** (prompt, conditional) -- Refine based on review
+   feedback. Only executed if the human reviewer requests changes.
+6. **promote_<artifact>** (action) -- Promote document to approved
+   status. Changes lifecycle_status from "draft" to "approved".
+7. **step_completion** (action) -- Finalize and notify. Records
+   completion metadata and sends notifications if configured.
+
+### Step Pattern Rules
+
+- Steps 1 through 3 form the internal generation and quality loop.
+  The document is created, critiqued, and refined before any human
+  sees it.
+- Step 4 is the first human touchpoint. The reviewer verifies that
+  the critique was addressed and the document meets standards.
+- Step 5 is conditional. If the human reviewer approves, this step
+  is skipped. If changes are requested, this step runs and the
+  document returns to step 4 for re-review.
+- Steps 6 and 7 are action steps. They do not invoke a coder. They
+  are executed automatically by the runner.
+- The refine loop (steps 4-5) has a maximum iteration budget,
+  typically 3 iterations. If the budget is exhausted without
+  approval, the workflow fails.
 
 ## Approval Gate Model
 
 ### Standard Approval Gate
 
 Each initiative workflow (sdlc_10 through sdlc_80) has a human approval
-gate that controls whether the output document transitions from `draft`
-to `approved` lifecycle status.
+gate at step 4 (review_<artifact>) that controls whether the output
+document transitions from "draft" to "approved" lifecycle status.
 
 ### Lifecycle States
 
 Delivery documents follow these lifecycle states during a workflow run:
 
 ```
-draft -> changes_requested -> draft (refine loop) -> approved
+draft -> (technical_critique -> address_critique) -> review ->
+changes_requested -> draft (refine loop) -> approved
 ```
 
 ### Lifecycle Status Values
@@ -91,19 +118,32 @@ draft -> changes_requested -> draft (refine loop) -> approved
 
 ### Promotion Rules
 
-1. A document MUST be in `draft` status to enter review.
-2. A document MUST pass human approval to reach `approved`.
-3. An `approved` document is immutable and MUST NOT be modified by any
+1. A document MUST be in "draft" status to enter review.
+2. A document MUST pass human approval to reach "approved".
+3. An "approved" document is immutable and MUST NOT be modified by any
    subsequent workflow.
 4. Any changes to an approved document require a new initiative or a
    formal amendment process.
 
+### Critique Resolution Rules
+
+1. The technical_critique step MUST produce a structured list of
+   findings, each with a severity (critical, major, minor) and a
+   description.
+2. The address_critique step MUST address every finding, even if the
+   resolution is "accepted as-is with rationale".
+3. A Critique Resolution section MUST be added to the document, listing
+   each finding and its resolution.
+4. Critical findings MUST be resolved before the document proceeds to
+   human review.
+
 ### Refine Loop Rules
 
-1. If review identifies fixable defects, status returns to `draft` for
+1. If review identifies fixable defects, status returns to "draft" for
    refinement.
 2. The refine loop has a maximum iteration budget (typically 3).
-3. After exhausting the budget, the workflow fails and must be restarted.
+3. After exhausting the budget, the workflow fails and must be
+   restarted.
 4. Defects that are not fixable through refinement (e.g., wrong scope,
    invalid input) MUST cause immediate workflow failure.
 
@@ -129,17 +169,17 @@ All delivery documents MUST follow this naming convention:
 
 | Document Type | Prefix | Example |
 |---|---|---|
-| Draft Initiative | DRAFT-INIT | DRAFT-INIT-20260722-001_add-auth-feature.md |
-| Initiative | INIT | INIT-20260722-001_add-auth-feature.md |
-| Requirement | REQ | REQ-20260722-001_add-auth-feature.md |
-| Plan | PLAN | PLAN-20260722-001_add-auth-feature.md |
-| Backlog | BACKLOG | BACKLOG-20260722-001_add-auth-feature.md |
-| Task | TASK | TASK-20260722-001-01_add-auth-feature.md |
-| Implementation | IMPL | IMPL-20260722-001-01_add-auth-feature.md |
-| Validation | VALID | VALID-20260722-001_add-auth-feature.md |
-| Review | REV | REV-20260722-001_add-auth-feature.md |
-| Memory | MEM | MEM-20260722-001_add-auth-feature.md |
-| Closure | CLOSE | CLOSE-20260722-001_add-auth-feature.md |
+| Draft Initiative | DRAFT-INIT | DRAFT-INIT-20260817-001_add-auth-feature.md |
+| Initiative | INIT | INIT-20260817-001_add-auth-feature.md |
+| Requirement | REQ | REQ-20260817-001_add-auth-feature.md |
+| Plan | PLAN | PLAN-20260817-001_add-auth-feature.md |
+| Backlog | BACKLOG | BACKLOG-20260817-001_add-auth-feature.md |
+| Task | TASK | TASK-20260817-001-01_add-auth-feature.md |
+| Implementation | IMPL | IMPL-20260817-001-01_add-auth-feature.md |
+| Validation | VALID | VALID-20260817-001_add-auth-feature.md |
+| Review | REV | REV-20260817-001_add-auth-feature.md |
+| Memory | MEM | MEM-20260817-001_add-auth-feature.md |
+| Closure | CLOSE | CLOSE-20260817-001_add-auth-feature.md |
 
 ### Slug Rules
 
@@ -158,7 +198,7 @@ Delivery documents are stored under:
 
 | Document Type | Subdirectory |
 |---|---|
-| Draft initiatives | draft_initiatives/ |
+| Draft initiatives | draftinitiates/ |
 | Initiatives | initiatives/ |
 | Requirements | requirements/ |
 | Plans | plans/ |
@@ -182,25 +222,27 @@ frontmatter, it is immutable:
 
 SDLC workflows use three promotion patterns:
 
-1. **Single Artifact Promotion** (most workflows): Change `lifecycle_status`
-   from `draft` to `approved` on the same file.
+1. **Single Artifact Promotion** (most workflows): Change
+   lifecycle_status from "draft" to "approved" on the same file.
 
-2. **Two-File Promotion** (sdlc_10 only): Create a new file (INIT-DOC) from
-   the draft file (DRAFT-INIT-DOC). Both files are preserved for audit
-   trail.
+2. **Two-File Promotion** (sdlc_10 only): Create a new file (INIT-DOC)
+   from the draft file (DRAFT-INIT-DOC). Both files are preserved for
+   audit trail.
 
 3. **Multi-Artifact Promotion** (sdlc_80 only): Promote all three output
-   documents (REV, MEM, CLOSE) to `approved` simultaneously.
+   documents (REV, MEM, CLOSE) to "approved" simultaneously.
 
 ### Artifact Validation
 
 Every output document MUST pass these validation checks before promotion:
 
 1. YAML frontmatter has all required fields with valid values.
-2. Document content has all required sections as defined by the template.
+2. Document content has all required sections as defined by the
+   template.
 3. Document uses ASCII-only characters.
 4. Naming convention matches the required pattern.
 5. Storage location matches the required subdirectory.
+6. Critique Resolution section is present (for initiative workflows).
 
 ## Audit Trail Rules
 
@@ -215,7 +257,8 @@ cross-references.
 
 Every document MUST include:
 
-- Reference to the input document that produced it (via cross_references).
+- Reference to the input document that produced it (via
+  cross_references).
 - Reference to the output document it produced (via cross_references).
 - The workflow and step that generated it (via managed_by or generation
   metadata).
@@ -290,8 +333,7 @@ If a human reviewer rejects the document:
 If a coder (AI backend) fails to generate a valid response:
 
 1. Retry with the same coder once.
-2. If the second attempt fails, try an alternative coder backend.
-3. If all coders fail, fail the workflow and escalate.
+2. If the second attempt fails, fail the workflow and escalate.
 
 ## Related Documents
 

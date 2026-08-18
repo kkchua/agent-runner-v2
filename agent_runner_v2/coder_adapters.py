@@ -307,6 +307,17 @@ def _terminate_process_tree(proc: subprocess.Popen[Any]) -> None:
             )
             return
         except Exception:
+            pass  # Fall through to universal fallback
+
+    # Universal fallback: ensure process is terminated regardless of platform
+    try:
+        proc.terminate()
+        proc.wait(timeout=5)
+    except Exception:
+        try:
+            proc.kill()
+            proc.wait(timeout=2)
+        except Exception:
             pass
 
 
@@ -339,14 +350,6 @@ def abort_active_coder_processes(*, reason: str = "interrupt") -> int:
         _terminate_process_tree(proc)
         _unregister_active_coder_proc(proc)
     return len(procs)
-    try:
-        proc.terminate()
-        proc.wait(timeout=5)
-    except Exception:
-        try:
-            proc.kill()
-        except Exception:
-            pass
 
 
 def _run_with_sidecar_poll(

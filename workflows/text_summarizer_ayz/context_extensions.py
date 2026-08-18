@@ -47,7 +47,7 @@ class TextSummarizerAyzExtensions(WorkflowExtensions):
         result["GOVERNANCE_RUNTIME_ROOT"] = str(get_governance_runtime_root())
         result["PLATFORM_RUNTIME_ROOT"] = str(get_platform_runtime_root())
         result["BASE_COMPOSITION_STANDARD"] = str(
-            get_governance_runtime_root() / "BASE_COMPOSITION_STANDARD_v1.0.md"
+            get_governance_runtime_root() / "BCS_v2.0.md"
         )
         resolve_input_artifacts(result, state, workspace_root, self.INPUT_ARTIFACTS)
         resolve_output_artifacts(result, state, workspace_root, self.OUTPUT_ARTIFACTS)

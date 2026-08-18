@@ -1,0 +1,138 @@
+# Objective
+
+Analyze the requirement document and produce the **Analysis JSON** — the single
+contract artifact that drives the entire downstream pipeline.
+
+You are extracting domain structure from the requirement and encoding it in a
+machine-readable schema. The Analysis JSON contains ONLY domain concerns —
+what the target workflow DOES, not how it's built or deployed.
+
+# Reference Inputs
+
+- REQUIREMENT_DOC: {REQUIREMENT_DOC}
+  Read the entire requirement document. Extract domain identity, step
+  decomposition, and artifact key definitions.
+
+- BASE_COMPOSITION_STANDARD: {BASE_COMPOSITION_STANDARD}
+  Authoritative reference for workflow package structure.
+
+# Analysis Protocol
+
+## Step 1: Extract Identity and Type
+
+Read the requirement document's YAML frontmatter and body. Extract:
+
+- **codename**: MUST be read from the requirement doc's YAML frontmatter
+  `codename:` field. This is the single source of truth.
+- **name**: MUST equal codename.
+- **job_prefix**: 2-10 uppercase characters for job ID generation.
+- **version**: Semantic version from the requirement doc, default "1.0.0".
+- **label**: Human-readable display name.
+- **description**: One-line description of what this workflow does.
+- **type**: Read from the `type:` field in frontmatter. Valid values:
+  - `"builder"` — This workflow produces workflow packages (self-replicating).
+  - `"generator"` — This workflow produces variable artifacts (reports, media, documents).
+  - If not specified, default to `"generator"`.
+- **subtype**: Optional. Read from `subtype:` field if present. Indicates domain-specific specialization (e.g., "jimeng", "comfyui").
+
+Include `type` and `subtype` in the identity section of the Analysis JSON.
+
+## Step 2: Decompose into Domain Steps
+
+Analyze the requirement and decompose the work into an ordered sequence of
+domain steps. For each step, determine:
+
+- **name**: Unique snake_case identifier.
+- **type**: `"action"` for deterministic code-driven steps (input parsing,
+  output rendering, data transforms, format conversions) or `"prompt"` for
+  LLM-driven steps (analysis, transformation, generation, review).
+- **action_name**: Required when type="action". The function name that will
+  be decorated with @action in actions.py.
+- **prompt_file**: Required when type="prompt". Filename only (no directory
+  prefix). The prompt template that will be written to prompts/.
+- **role_policy**: Required when type="prompt". Coder role policy name
+  (e.g., "architect_standard", "reviewer_standard").
+- **required_inputs**: List of artifact keys this step needs.
+- **produces**: List of artifact keys this step produces.
+
+### Action vs Prompt Decision Rules
+
+Use **action** when the step:
+- Parses input files (text, JSON, CSV, structured data)
+- Renders/formats output files
+- Performs deterministic data transforms
+- Validates data against rules
+- Copies, moves, or organizes files
+
+Use **prompt** when the step:
+- Requires LLM reasoning to analyze content
+- Generates creative or transformed text
+- Makes judgment calls about quality or completeness
+- Produces domain-specific intelligence from raw data
+
+### Data Flow Validation
+
+Steps MUST form a valid chain:
+- The first step's required_inputs MUST be satisfied by workflow-level inputs.
+- Each subsequent step's required_inputs MUST be produced by prior steps.
+- The final step MUST produce at least one output artifact key.
+
+## Step 3: Define Artifact Keys
+
+Categorize ALL artifact keys into three groups:
+
+- **inputs**: Artifacts provided as workflow input (from operator console).
+  Keys MUST end with `_FILE` or `_DIR`.
+- **intermediate**: Artifacts produced by one step and consumed by another.
+  These are internal pipeline data.
+- **outputs**: Final deliverable artifacts produced by the workflow.
+
+For each key, provide a **pattern** — a relative path template describing
+where the file will be stored (e.g., `output/{codename}_parsed.json`).
+
+# Output Instructions
+
+Write the Analysis JSON to: {AGB_ANALYSIS_JSON}
+
+The output MUST be valid JSON with this structure:
+
+```json
+{
+  "identity": {
+    "name": "...",
+    "codename": "...",
+    "job_prefix": "...",
+    "version": "...",
+    "label": "...",
+    "description": "...",
+    "type": "builder|generator",
+    "subtype": "optional-subtype-name"
+  },
+  "domain_steps": [ ... ],
+  "artifact_keys": {
+    "inputs": [ ... ],
+    "intermediate": [ ... ],
+    "outputs": [ ... ]
+  }
+}
+```
+
+# Self-Validation
+
+Before writing the output, verify:
+
+- [ ] identity.codename matches the requirement doc's YAML frontmatter
+- [ ] identity.name equals identity.codename
+- [ ] identity.job_prefix is 2-10 uppercase characters
+- [ ] identity.type is "builder" or "generator" (default to "generator" if not specified)
+- [ ] identity.subtype is included if present in frontmatter
+- [ ] Every domain_step has either action_name (type=action) or prompt_file + role_policy (type=prompt)
+- [ ] All domain_step names are unique
+- [ ] Data flow is valid: each step's required_inputs are produced by prior steps or are workflow inputs
+- [ ] Input artifact key names end with _FILE or _DIR
+- [ ] No requirement was silently dropped — all requirements from the doc are accounted for
+
+# Forbidden Content
+
+- Do NOT invent requirements not present in the requirement document.
+- Do NOT include non-ASCII characters.

@@ -117,6 +117,10 @@ def convert_to_v2_format(group_dict: dict, *, bundle_dir: Path | None = None) ->
             
             definition["implementations"].append(impl_data)
 
+    # Include workflow contract for discovery and chaining
+    if group_dict.get("contract"):
+        definition["contract"] = dict(group_dict["contract"])
+
     return definition
 
 

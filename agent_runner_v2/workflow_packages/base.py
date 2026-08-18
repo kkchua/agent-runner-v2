@@ -42,6 +42,22 @@ class BundleGovernance:
 
 
 @dataclass(frozen=True)
+class WorkflowContract:
+    """Input/output contract for workflow discovery and chaining.
+
+    Declared at root level in workflow.toml, not per-implementation.
+    Defines what artifacts this workflow requires and produces.
+    """
+
+    inputs: list[str] = field(default_factory=list)
+    optional_inputs: list[str] = field(default_factory=list)
+    outputs: list[str] = field(default_factory=list)
+    input_output_description: str = ""
+    category: str = ""
+    tags: list[str] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
 class StepConfig:
     """Canonical, validated step configuration from a workflow.toml manifest."""
 
@@ -136,6 +152,9 @@ class WorkflowBundle:
     # Each slot has a "type" field: "llm" (prompt selection) or "action" (provider selection).
     # Falls back to impl_prompt_slots when not explicitly set (backward compatible).
     impl_step_slots: dict[str, Any] = field(default_factory=dict)
+
+    # Input/output contract for discovery and chaining
+    contract: WorkflowContract | None = None
 
     def get_step(self, name: str) -> StepConfig:
         """Look up a step by name. Raises KeyError if missing."""

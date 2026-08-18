@@ -1,0 +1,68 @@
+{
+  "prompts": {
+    "extract_desc": "standard",
+    "generate_prompts": "standard"
+  },
+  "actions": {
+    "render_image": "agnes_v1",
+    "render_video": "happyhorse_v1_1"
+  },
+  "review_images_before_video": true,
+  "api": {
+    "agnes_v1": {
+      "model": "agnes-image-2.1-flash",
+      "size": "1K",
+      "ratio": "9:16"
+    },
+    "agnes_v2": {
+      "model": "agnes-video-v2.0",
+	  "width": 540,
+	  "height": 960,
+	  "num_frames": 241,
+	  "frame_rate": 24,
+	  "video_prompt": "t2i_prompt1",
+	  "video_prompt_prefix": "",
+	  "video_prompt_postfix": "",
+	  "negative_prompt_video_postfix": ""
+    },
+    "happyhorse_v1_1": {
+      "model": "happyhorse-1.1-i2v",
+      "resolution": "480P",
+      "ratio": "9:16",
+      "duration": 5,
+	  "watermark": false
+    },
+	"token_plan": {
+      "default_model": "happyhorse-1.1-i2v",
+      "happyhorse-1.1-t2v": {
+        "resolution": "480P",
+        "ratio": "9:16",
+        "duration": 5,
+		"watermark": false
+      },
+      "happyhorse-1.1-i2v": {
+        "resolution": "480P",
+        "ratio": "9:16",
+        "duration": 5,
+		"watermark": false
+      },
+      "happyhorse-1.1-r2v": {
+        "resolution": "480P",
+        "ratio": "9:16",
+        "duration": 5,
+		"watermark": false
+      }
+    },
+    "token_plan_image": {
+      "model": "wan2.7-image",
+      "size": "960*1708"
+    }
+  },
+  "num_variants": 4,
+  "max_concurrent": 5,
+  "process_delay": 5,
+  "coder_timeout": 900,
+  "api_timeout": 500,
+  "api_max_retries": 5,
+  "retry_base_wait": 5
+}

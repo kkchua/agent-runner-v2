@@ -1,0 +1,52 @@
+name: agnes
+label: "Agnes Pipeline (Python Actions)"
+
+# ============================================================================
+# Step Slots Configuration
+# ============================================================================
+step_slots:
+  extract_descriptions:
+    type: "llm"
+    label: "Description Extraction"
+    default: "standard"
+    options:
+      - name: "standard"
+        file: "prompts/extract_desc/standard.txt"
+        description: "Standard vision-based description extraction."
+      - name: "standard_chinese"
+        file: "prompts/extract_desc/standard_chinese.txt"
+        description: "Vision-based description extraction — descriptions in Chinese."
+
+  generate_prompts:
+    type: "llm"
+    label: "Prompt Generation"
+    default: "reconstruction"
+    options:
+      - name: "thematic_variance"
+        file: "prompts/generate_prompts/v2.txt"
+        description: "Creative thematic variance — diverse subjects within same concept."
+      - name: "reconstruction"
+        file: "prompts/generate_prompts/v9.txt"
+        description: "Faithful reconstruction — visually indistinguishable from original."
+      - name: "thematic_variance_chinese"
+        file: "prompts/generate_prompts/v2_chinese.txt"
+        description: "Creative thematic variance — prompts in Chinese."
+      - name: "reconstruction_chinese"
+        file: "prompts/generate_prompts/v9_chinese.txt"
+        description: "Faithful reconstruction — prompts in Chinese."
+
+  generate_images:
+    type: "action"
+    label: "Image Generation"
+    default: "agnes_v1"
+    options:
+      - name: "agnes_v1"
+        description: "Agnes Image 2.1 Flash via Python action provider."
+
+  generate_videos:
+    type: "action"
+    label: "Video Generation"
+    default: "agnes_v2"
+    options:
+      - name: "agnes_v2"
+        description: "Agnes Video V2.0 i2v via Python action provider."

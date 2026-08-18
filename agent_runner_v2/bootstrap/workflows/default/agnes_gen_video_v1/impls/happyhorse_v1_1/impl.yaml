@@ -1,6 +1,0 @@
-name: happyhorse_v1_1
-description: "Generates videos using HappyHorse-1.1-i2v API (single image-to-video)"
-
-overrides:
-  generate_videos:
-    action: "generate_videos_happyhorse"

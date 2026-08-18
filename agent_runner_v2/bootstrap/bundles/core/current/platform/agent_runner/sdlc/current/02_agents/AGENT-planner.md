@@ -4,17 +4,17 @@ version: "1.0.0"
 doc_type: "bundle_definition"
 authority: "sdlc-owned"
 scan_policy: "include"
-scan_reason: "Agent contract definition for Solution Architect (AGENT-planner)"
+scan_reason: "agent contract definition for Solution Architect (AGENT-planner)"
 managed_by: "workflow-generated"
 layer: "layer3"
 platform: "agent-runner-v2"
 agent_id: "AGENT-planner"
 agent_role: "Solution Architect"
 lifecycle_status: "published"
-effective_version: "SDLC00SCF-20260722-3a011a52"
+effective_version: "SDLC00CS-1zcrrbbs"
 ---
 
-> Managed by workflow: `sdlc_00_delivery_scaffold_v1` / step: `publish_sdlc_scaffold`
+> Managed by workflow: `sdlc_00_codebase_scaffold_v1` / step: `publish_sdlc_scaffold`
 > This file is workflow-generated and protected from manual edits.
 
 # SDLC Agent Contract: AGENT-planner
@@ -70,7 +70,7 @@ workflow.
 
 ### Optional Inputs
 
-- Existing architecture notes
+- Existing architecture note
 - Supporting design documents
 - Delivery memory references from prior initiatives
 - Reviewer feedback from previous attempts
@@ -214,5 +214,5 @@ The output MUST:
 - REQ Template: 01_templates/03_REQ_template.md
 - Template Registry: 01_templates/template_registry.md
 - Downstream Agent: AGENT-task-decomposer (AGENT-task-decomposer.md)
-- Layer 1 Metadata Standard: GOVERNANCE_RUNTIME_ROOT/METADATA_STANDARD.md
-- Layer 2 Metadata Contract: PLATFORM_RUNTIME_ROOT/METADATA_CONTRACT.md
+- Layer 1 Metadata Standard: METADATA_STANDARD.md
+- Layer 2 Metadata Contract: METADATA_CONTRACT.md

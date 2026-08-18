@@ -1,0 +1,163 @@
+# Objective
+
+Review the generated domain logic — actions.py and prompt files — for quality,
+correctness, and completeness. You are a code reviewer attacking the
+implementation, not the infrastructure.
+
+Your findings will be fed back to implement_domain (step 5) for refinement.
+Produce concrete, actionable findings that the implementer can address.
+
+# Reference Inputs
+
+- DOMAIN_ACTIONS_FILE: {DOMAIN_ACTIONS_FILE}
+  The generated actions.py containing all domain action functions.
+
+- DOMAIN_PROMPTS_DIR: {DOMAIN_PROMPTS_DIR}
+  Directory containing all generated prompt template files.
+
+- AGB_DOMAIN_PLAN: {AGB_DOMAIN_PLAN}
+  The blueprint that implement_domain followed. Use this to verify the
+  implementation matches the plan.
+
+- AGB_DOMAIN_MAP: {AGB_DOMAIN_MAP}
+  The domain artifact key mapping. Use this to verify all artifact references
+  in actions and prompts are valid domain keys.
+
+- BASE_COMPOSITION_STANDARD: {BASE_COMPOSITION_STANDARD}
+  Action interface contract (Section 5) and artifact key constraints (Section 6).
+
+# Review Protocol
+
+## Step 1: Review Action Functions
+
+For each @action function in actions.py:
+
+### Code Logic
+- Does the function do what the Domain Plan specifies?
+- Are all planned formats/inputs actually handled with real logic?
+- Are there dead-code branches or unreachable paths?
+- Does the algorithm produce correct results for the happy path?
+
+### Error Handling
+- Are inputs validated at the function boundary?
+- Does each failure mode return REJECTED with a distinct reject_code?
+- Are there unhandled exceptions that should be caught?
+- Are there silent failures (e.g., try/except that swallows errors)?
+
+### Artifact Consistency
+- Does the function read from the correct artifact keys?
+- Does it write output to the correct artifact paths?
+- Are the artifact keys in the returned `artifacts` dict consistent with
+  the Analysis JSON?
+
+### Action Contract Compliance
+- Is the @action decorator present with the correct name?
+- Is the signature `(*, context, state, step_cfg, project_root)`?
+- Does every code path return an ActionResult?
+- Are imports correct (ActionResult, action decorator)?
+
+## Step 2: Review Prompt Files
+
+For each prompt template in the prompts/ directory:
+
+### Clarity and Completeness
+- Does the prompt contain all domain instructions from the Domain Plan?
+- Are the input/output sections clearly defined?
+- Is the expected output format specified?
+- Would an LLM with no other context be able to execute this prompt correctly?
+
+### Placeholder References
+- Does every `{PLACEHOLDER}` correspond to an artifact key in the Domain
+  Artifact Map?
+- Are there missing placeholders — data the prompt needs but doesn't receive?
+- Are placeholder names spelled correctly?
+
+### Validation Checklist
+- Does the prompt include a self-validation section?
+- Are the checklist items specific to this domain (not generic)?
+- Do the checklist items actually verify the critical requirements?
+
+### Constraint Enforcement
+- Does the prompt enforce output constraints (length, format, structure)?
+- Are forbidden patterns listed?
+- Are edge cases addressed in the instructions?
+
+## Step 3: Cross-Cutting Checks
+
+- **Data flow integrity**: Trace data from first step to last. Does each
+  step produce what the next step consumes?
+- **Artifact key coverage**: Are all artifact keys from the Domain Artifact Map
+  either produced or consumed by at least one action/prompt?
+- **No orphan code**: Are there functions in actions.py that no step
+  references?
+- **No missing functions**: Are there action names in the Analysis JSON
+  that have no corresponding function in actions.py?
+
+# Output Instructions
+
+Write to: {AGB_IMPL_CRITIQUE}
+
+Markdown with YAML frontmatter:
+
+```yaml
+---
+doc_type: "impl_critique"
+identity_locked: true
+---
+```
+
+Structure your critique as:
+
+```
+# Implementation Critique
+
+## Summary
+- Total findings: N
+- BLOCKING: N
+- MAJOR: N
+- MINOR: N
+
+## Findings
+
+### Finding 1: <title>
+**Type:** Action / Prompt / Cross-cutting
+**Target:** <file and function/section>
+**Issue:** <specific description of the problem>
+**Evidence:** <quote the problematic code or prompt text>
+**Severity:** BLOCKING / MAJOR / MINOR
+
+### Finding 2: <title>
+...
+```
+
+# Severity Definitions
+
+- **BLOCKING**: The code will crash, produce wrong results, or the prompt
+  will produce unusable output. Must be fixed before the package can work.
+- **MAJOR**: The code works for happy paths but fails on realistic inputs.
+  Degraded functionality or incorrect edge case handling.
+- **MINOR**: Style issue, missing optimization, or unlikely edge case.
+  The code works but could be more robust.
+
+# Self-Validation
+
+Before writing the output, verify:
+
+- [ ] Every action function in actions.py has been reviewed
+- [ ] Every prompt file in prompts/ has been reviewed
+- [ ] All findings include specific evidence (quoted code or text)
+- [ ] Severity ratings are accurate and justified
+- [ ] Findings are actionable — the implementer can fix each one
+- [ ] No infrastructure issues are reported (those are assembled mechanically)
+
+# Rules
+
+- Produce AT LEAST 3 findings. If the implementation is perfect, explicitly
+  state that and explain why.
+- Every finding MUST include evidence — quote the specific code or prompt text.
+- Do NOT attack infrastructure (workflow.toml structure, context_extensions.py).
+- Do NOT suggest redesigning the domain logic — suggest fixes within the
+  current plan.
+- Do NOT include non-ASCII characters.
+- Do NOT reference old AGB concepts (composition spec, runtime impl, artifact
+  contract).

@@ -9,10 +9,10 @@ managed_by: "workflow-generated"
 layer: "layer3"
 platform: "agent-runner-v2"
 lifecycle_status: "published"
-effective_version: "SDLC00SCF-20260722-3a011a52"
+effective_version: "SDLC00CS-1zcrrbbs"
 ---
 
-> Managed by workflow: `sdlc_00_delivery_scaffold_v1` / step: `publish_sdlc_scaffold`
+> Managed by workflow: `sdlc_00_codebase_scaffold_v1` / step: `publish_sdlc_scaffold`
 > This file is workflow-generated and protected from manual edits.
 
 # SDLC Template: Draft Initiative (DRAFT-INIT)
@@ -25,7 +25,7 @@ workflow, which transforms it into a structured, approved initiative
 document (INIT-DOC).
 
 Draft initiatives are authored by humans and stored in the
-draft_initiatives/ directory. They represent the initial problem
+draftinitiates/ directory. They represent the initial problem
 statement, objective, and scope definition that triggers an SDLC
 initiative.
 
@@ -184,13 +184,13 @@ DRAFT-INIT-{YYYYMMDD}-{NN}_{slug}.md
 ### Example
 
 ```
-DRAFT-INIT-20260722-001_add-user-authentication.md
+DRAFT-INIT-20260817-001_add-user-authentication.md
 ```
 
 ### Storage Location
 
 Draft initiatives are stored in:
-`docs/repo/agent_runner/sdlc/delivery/draft_initiatives/`
+`docs/repo/agent_runner/sdlc/delivery/draftinitiates/`
 
 ## Cross-References
 

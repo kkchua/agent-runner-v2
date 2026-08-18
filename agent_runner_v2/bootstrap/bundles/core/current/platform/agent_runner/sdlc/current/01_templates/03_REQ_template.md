@@ -9,10 +9,10 @@ managed_by: "workflow-generated"
 layer: "layer3"
 platform: "agent-runner-v2"
 lifecycle_status: "published"
-effective_version: "SDLC00SCF-20260722-3a011a52"
+effective_version: "SDLC00CS-1zcrrbbs"
 ---
 
-> Managed by workflow: `sdlc_00_delivery_scaffold_v1` / step: `publish_sdlc_scaffold`
+> Managed by workflow: `sdlc_00_codebase_scaffold_v1` / step: `publish_sdlc_scaffold`
 > This file is workflow-generated and protected from manual edits.
 
 # SDLC Template: Requirement (REQ)
@@ -78,7 +78,7 @@ heading.
 
 Structured metadata about the requirements document:
 
-- Document ID (e.g., REQ-20260722-001)
+- Document ID (e.g., REQ-20260817-001)
 - Source initiative reference (INIT file path)
 - Date of generation
 - Producing workflow (sdlc_20_planning_v1)
@@ -122,12 +122,17 @@ ensuring full traceability.
 
 Dependencies between requirements and any external dependencies.
 
-### 9. Open Questions
+### 9. Critique Resolution
+
+Results from the technical_critique and address_critique steps. Lists
+each finding, its severity, and the resolution applied.
+
+### 10. Open Questions
 
 Any unresolved questions or ambiguities that need clarification before
 planning can proceed.
 
-### 10. Source Reference
+### 11. Source Reference
 
 Cross-reference to the source initiative document.
 
@@ -137,8 +142,7 @@ Cross-reference to the source initiative document.
 
 - Use precise, unambiguous language.
 - Each requirement must be testable and verifiable.
-- Avoid subjective qualifiers ("fast", "easy", "user-friendly") without
-  measurable thresholds.
+- Avoid subjective qualifiers without measurable thresholds.
 
 ### Length
 
@@ -182,7 +186,7 @@ REQ-{YYYYMMDD}-{NN}_{slug}.md
 ### Example
 
 ```
-REQ-20260722-001_add-user-authentication.md
+REQ-20260817-001_add-user-authentication.md
 ```
 
 ### Storage Location

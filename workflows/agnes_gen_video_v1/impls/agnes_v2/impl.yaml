@@ -1,6 +1,0 @@
-name: agnes_v2
-description: "Generates videos using Agnes Video V2.0 API with keyframe support"
-
-overrides:
-  generate_videos:
-    action: "generate_videos_agnes_v2"

@@ -1,8 +1,8 @@
 {
-  "workflow_id": "sdlc_00_delivery_scaffold_v1",
+  "workflow_id": "sdlc_00_codebase_scaffold_v1",
   "workflow_layer": "layer3",
   "platform": "agent-runner-v2",
-  "change_or_run_id": "SDLC00SCF-20260722-3a011a52",
+  "change_or_run_id": "SDLC00CS-1zcrrbbs",
   "change_class": "scaffold_publish",
   "artifact_inventory": {
     "SDLC_TEMPLATE_REGISTRY": "docs/system/00_governance/platform/agent_runner/sdlc/current/01_templates/template_registry.md",
@@ -31,9 +31,9 @@
   "authority": "sdlc-owned",
   "lifecycle_status": "published",
   "source_step": "publish_sdlc_scaffold",
-  "published_timestamp": "2026-07-22T17:12:49+08:00",
-  "effective_version": "SDLC00SCF-20260722-3a011a52",
+  "published_timestamp": "2026-08-17T23:58:16+08:00",
+  "effective_version": "SDLC00CS-1zcrrbbs",
   "active_set": true,
-  "supersedes": null,
+  "supersedes": "SDLC00SCF-20260722-3a011a52",
   "superseded_by": null
 }

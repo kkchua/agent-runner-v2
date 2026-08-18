@@ -9,10 +9,10 @@ managed_by: "workflow-generated"
 layer: "layer3"
 platform: "agent-runner-v2"
 lifecycle_status: "published"
-effective_version: "SDLC00SCF-20260722-3a011a52"
+effective_version: "SDLC00CS-1zcrrbbs"
 ---
 
-> Managed by workflow: `sdlc_00_delivery_scaffold_v1` / step: `publish_sdlc_scaffold`
+> Managed by workflow: `sdlc_00_codebase_scaffold_v1` / step: `publish_sdlc_scaffold`
 > This file is workflow-generated and protected from manual edits.
 
 # SDLC Template: Backlog (BACKLOG)
@@ -22,8 +22,9 @@ effective_version: "SDLC00SCF-20260722-3a011a52"
 This template defines the structure for approved backlog documents
 (BACKLOG-DOC). A backlog document is produced by the sdlc_40_task_v1
 workflow from an approved plan document (PLAN-DOC). The BACKLOG-DOC
-contains the decomposed task list with priorities, estimates, and
-assignment guidance. It serves as input to sdlc_50_implementation_v1.
+contains the ordered list of tasks derived from the plan, with
+prioritization and dependency information. It serves as input to
+sdlc_50_implementation_v1.
 
 Backlog documents are stored in the backlogs/ directory. Once approved,
 they are immutable and form part of the SDLC audit trail.
@@ -76,7 +77,7 @@ A clear title for the backlog document. Format as a level-1 heading.
 
 Structured metadata about the backlog document:
 
-- Document ID (e.g., BACKLOG-20260722-001)
+- Document ID (e.g., BACKLOG-20260817-001)
 - Source plan reference (PLAN file path)
 - Date of generation
 - Producing workflow (sdlc_40_task_v1)
@@ -84,50 +85,51 @@ Structured metadata about the backlog document:
 
 ### 3. Backlog Overview
 
-Summary of the backlog contents:
+A summary of the backlog contents, including total task count, priority
+distribution, and estimated effort.
 
-- Total number of tasks.
-- Summary of effort estimates.
-- High-level ordering rationale.
+### 4. Task Inventory
 
-### 4. Task List
+A numbered list of all tasks in the backlog. Each task MUST include:
 
-Numbered list of backlog tasks. Each task MUST include:
-
-- Task ID (e.g., BL-001).
+- Task ID (e.g., TASK-001).
 - Task title.
-- Description of the work to be done.
-- Parent work package (from the plan document).
-- Priority (critical, high, medium, low).
-- Estimated effort (story points or hours).
+- Description.
+- Priority (P1, P2, P3, P4).
+- Estimated effort.
 - Dependencies on other tasks.
-- Required skills or expertise.
 
-### 5. Task Ordering
+### 5. Priority Ordering
 
-The recommended execution order with justification:
+The ordered sequence of tasks based on priority and dependencies.
+Include rationale for the ordering.
 
-- Sequential dependencies.
-- Parallel opportunities.
-- Critical path identification.
+### 6. Task Dependencies
 
-### 6. Effort Summary
+A dependency graph or table showing which tasks depend on which other
+tasks. Include critical path identification.
 
-Aggregated effort estimates:
+### 7. Effort Estimation
 
-- Total estimated effort.
-- Effort breakdown by work package.
-- Confidence level for estimates.
+Summary of effort estimates for each task and the total backlog.
+Include estimation method used.
 
-### 7. Risk Items
+### 8. Sprint or Phase Grouping
 
-Backlog-specific risks:
+If applicable, group tasks into sprints or phases. Each group should
+have a goal and a set of tasks.
 
-- Tasks with high uncertainty.
-- Tasks requiring external dependencies.
-- Mitigation strategies.
+### 9. Risks and Blockers
 
-### 8. Source Reference
+Identified risks and potential blockers that could affect backlog
+execution.
+
+### 10. Critique Resolution
+
+Results from the technical_critique and address_critique steps. Lists
+each finding, its severity, and the resolution applied.
+
+### 11. Source Reference
 
 Cross-reference to the source plan document.
 
@@ -135,19 +137,19 @@ Cross-reference to the source plan document.
 
 ### Tone and Style
 
-- Use action-oriented language for task descriptions.
-- Each task should be independently understandable.
-- Estimates should include basis for estimation.
+- Use precise, actionable language.
+- Each task must be independently verifiable.
+- Priority assignments must include justification.
 
 ### Length
 
 - Aim for 3-10 pages depending on initiative complexity.
-- The Task List section will typically be the longest.
+- Task descriptions should be concise but complete.
 
 ### Completeness
 
 - All required sections MUST be present.
-- Every task must have an ID, title, description, and estimate.
+- Every task must have an ID, title, description, priority, and effort.
 
 ### ASCII-Only Requirement
 
@@ -180,7 +182,7 @@ BACKLOG-{YYYYMMDD}-{NN}_{slug}.md
 ### Example
 
 ```
-BACKLOG-20260722-001_add-user-authentication.md
+BACKLOG-20260817-001_add-user-authentication.md
 ```
 
 ### Storage Location
@@ -199,14 +201,14 @@ Backlog documents are stored in:
 
 ### Related Agent Contracts
 
-- AGENT-task-decomposer: Used by sdlc_40 to decompose the plan into
-  backlog tasks.
+- AGENT-task-decomposer: Used by sdlc_40 to generate the backlog from
+  the plan.
 
 ### Related Workflows
 
 - **sdlc_40_task_v1**: Produces this document from a PLAN-DOC.
 - **sdlc_50_implementation_v1**: Consumes this document to produce
-  TASK-DOC files.
+  TASK-DOCs.
 
 ### Layer 1 Governance References
 

@@ -45,7 +45,7 @@ class CodebaseIntelligenceExtensions(WorkflowExtensions):
         result["GOVERNANCE_RUNTIME_ROOT"] = str(get_governance_runtime_root())
         result["PLATFORM_RUNTIME_ROOT"] = str(get_platform_runtime_root())
         result["BASE_COMPOSITION_STANDARD"] = str(
-            get_governance_runtime_root() / "BASE_COMPOSITION_STANDARD_v1.0.md"
+            get_governance_runtime_root() / "BCS_v2.0.md"
         )
         # Input directories — use predefined defaults (workspace-relative)
         result["CODEBASE_DOCS_DIR"] = str(workspace_root / "docs" / "repo" / "codebase" / "current")

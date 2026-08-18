@@ -9,10 +9,10 @@ managed_by: "workflow-generated"
 layer: "layer3"
 platform: "agent-runner-v2"
 lifecycle_status: "published"
-effective_version: "SDLC00SCF-20260722-3a011a52"
+effective_version: "SDLC00CS-1zcrrbbs"
 ---
 
-> Managed by workflow: `sdlc_00_delivery_scaffold_v1` / step: `publish_sdlc_scaffold`
+> Managed by workflow: `sdlc_00_codebase_scaffold_v1` / step: `publish_sdlc_scaffold`
 > This file is workflow-generated and protected from manual edits.
 
 # SDLC Template: Initiative (INIT)
@@ -76,7 +76,7 @@ A clear, concise title for the initiative. Format as a level-1 heading.
 
 Structured metadata about the initiative:
 
-- Initiative ID (e.g., INIT-20260722-001)
+- Initiative ID (e.g., INIT-20260817-001)
 - Source draft reference (DRAFT-INIT file path)
 - Date of approval
 - Producing workflow (sdlc_10_requirement_v1)
@@ -138,7 +138,12 @@ Identified risks and mitigation strategies:
 - Resource risks.
 - Mitigation approach for each risk.
 
-### 11. Source Reference
+### 11. Critique Resolution
+
+Results from the technical_critique and address_critique steps. Lists
+each finding, its severity, and the resolution applied.
+
+### 12. Source Reference
 
 Cross-reference to the source draft initiative document.
 
@@ -191,7 +196,7 @@ INIT-{YYYYMMDD}-{NN}_{slug}.md
 ### Example
 
 ```
-INIT-20260722-001_add-user-authentication.md
+INIT-20260817-001_add-user-authentication.md
 ```
 
 ### Storage Location

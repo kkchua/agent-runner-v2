@@ -131,6 +131,7 @@ class ChildExecution:
     job_step_result_path: Path | None = None
     queue_dir: Path | None = None
     job_path: Path | None = None
+    log_handle: Any | None = None  # File handle for child.log, must be closed
 
 
 @dataclass
@@ -476,6 +477,7 @@ def _spawn_child(
         started_at_iso=datetime.now(timezone.utc).isoformat(),
         queue_dir=queue_path,
         job_path=job_path,
+        log_handle=log_handle,
     )
 
 
@@ -678,7 +680,8 @@ def run_supervisor(*, config: SupervisorConfig, v2_url: str) -> int:
                 })
                 try:
                     child.process.terminate()
-                except OSError:
+                    child.process.wait(timeout=5)  # Brief wait for graceful termination
+                except Exception:
                     pass
 
     signal.signal(signal.SIGINT, _handle_signal)
@@ -707,7 +710,8 @@ def run_supervisor(*, config: SupervisorConfig, v2_url: str) -> int:
                             })
                             try:
                                 child.process.terminate()
-                            except OSError:
+                                child.process.wait(timeout=3)  # Brief wait for termination
+                            except Exception:
                                 pass
             except RuntimeError as hb_err:
                 logger.log("warning", "daemon_v2_heartbeat_failed", message=str(hb_err))
@@ -838,7 +842,8 @@ def run_supervisor(*, config: SupervisorConfig, v2_url: str) -> int:
                         })
                         try:
                             child.process.kill()
-                        except OSError:
+                            child.process.wait(timeout=5)  # Reap zombie process
+                        except Exception:
                             pass
 
                 if child.state in ("completed", "failed", "killed", "timed_out"):
@@ -866,6 +871,12 @@ def run_supervisor(*, config: SupervisorConfig, v2_url: str) -> int:
                             error_message=f"Child exited with code {exit_code}, no result in queue",
                             logger=logger,
                         )
+                    # Close log file handle to prevent file descriptor leak
+                    if child.log_handle is not None:
+                        try:
+                            child.log_handle.close()
+                        except Exception:
+                            pass
                     del children[step_run_id]
 
             # Process pending outcome queue files
@@ -877,6 +888,13 @@ def run_supervisor(*, config: SupervisorConfig, v2_url: str) -> int:
 
         time.sleep(config.poll_seconds)
 
+    # Final cleanup: close any remaining log handles
+    for step_run_id, child in list(children.items()):
+        if child.log_handle is not None:
+            try:
+                child.log_handle.close()
+            except Exception:
+                pass
     logger.log("info", "daemon_v2_stopped", message="V2 daemon stopped")
     return 0
 

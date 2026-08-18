@@ -1,0 +1,264 @@
+# 步骤 01 - 图像描述提取 - 中文版
+
+---
+
+# 任务目标
+
+扫描 {STEP_00_DIR} 引用的目录，查找扩展名为 PNG、JPG 和 WEBP 的图像文件。
+对于找到的每张图像，使用你的视觉能力读取图像并生成结构化的描述 JSON 文件。
+将每个描述 JSON 保存到 {STEP_01_DIR}，文件名与输入图像的主文件名匹配（例如，image001.png 生成 image001.json）。
+最后，在 {STEP_01_DIR} 中生成一个 index.json 文件，列出所有输入到输出的文件映射。
+
+---
+
+# 参考输入
+
+- 输入图像目录：{STEP_00_DIR}
+- 输出描述目录：{STEP_01_DIR}
+- 媒体配置：{MEDIA_CONFIG}
+- 治理文档：{GOVERNANCE_RUNTIME_ROOT}
+- 平台文档：{PLATFORM_RUNTIME_ROOT}
+
+---
+
+# 输出说明
+
+对于 {STEP_00_DIR} 中找到的每个图像文件，生成一个具有以下结构的 JSON 文件。
+JSON 必须在 descriptions 数组中包含每个图像恰好一个条目。
+每个描述对象必须包含下面列出的所有 9 个属性组。
+
+**重要：所有描述性文字内容必须使用中文撰写。**
+JSON 字段名（键）保持英文，文件名保持原样，仅描述性内容值使用中文。
+
+顶层 JSON 结构：
+{
+  "image_filename": "<原始输入图像文件名>",
+  "image_stem": "<不含扩展名的文件名>",
+  "descriptions": [
+    {
+      "subject_attributes": {
+        "main_subject": "",
+        "subject_type": "",
+        "subject_description": "",
+        "distinctive_features": [],
+        "recognizable_objects": [],
+        "subject_state_or_pose": ""
+      },
+      "scene_attributes": {
+        "setting": "",
+        "environment": "",
+        "foreground": "",
+        "midground": "",
+        "background": "",
+        "time_of_day": "",
+        "season_or_weather": "",
+        "spatial_depth": "",
+        "parallax_potential": ""
+      },
+      "composition_attributes": {
+        "orientation": "",
+        "framing": "",
+        "camera_angle": "",
+        "subject_position": "",
+        "negative_space": "",
+        "visual_flow": "",
+        "depth_layers": []
+      },
+      "lighting_attributes": {
+        "lighting_type": "",
+        "light_direction": "",
+        "light_quality": "",
+        "color_temperature": "",
+        "shadow_highlight_behavior": "",
+        "atmospheric_lighting": ""
+      },
+      "style_attributes": {
+        "visual_style": "",
+        "medium": "",
+        "realism_level": "",
+        "texture_quality": "",
+        "rendering_treatment": ""
+      },
+      "color_attributes": {
+        "dominant_colors": [],
+        "accent_colors": [],
+        "color_contrast": "",
+        "palette_mood": ""
+      },
+      "mood_attributes": {
+        "emotional_tone": "",
+        "atmosphere": "",
+        "viewer_feeling": ""
+      },
+      "motion_potential": {
+        "primary_motion_candidate": "",
+        "subject_motion_candidates": [],
+        "environmental_motion_candidates": [],
+        "camera_motion_candidates": [],
+        "motion_intensity_suggestion": "",
+        "motion_pacing_suggestion": "",
+        "motion_constraints": []
+      },
+      "extraction_confidence": {
+        "overall_confidence": 0.0,
+        "uncertain_attributes": []
+      }
+    }
+  ]
+}
+
+---
+
+# 字段说明（中文填写指南）
+
+## 主体属性 (subject_attributes)
+- `main_subject`: 用中文描述图像中的主要主体（如"一只金色的 retriever 犬"）
+- `subject_type`: 用中文描述主体类型（如"动物"、"人物"、"建筑"、"风景"）
+- `subject_description`: 用中文详细描述主体的外观特征
+- `distinctive_features`: 用中文数组列出主体的显著特征
+- `recognizable_objects`: 用中文数组列出可识别的物体
+- `subject_state_or_pose`: 用中文描述主体的状态或姿势
+
+## 场景属性 (scene_attributes)
+- `setting`: 用中文描述场景设置（如"城市公园"、"山间小溪"）
+- `environment`: 用中文描述环境类型（如"户外自然环境"）
+- `foreground`: 用中文描述前景内容
+- `midground`: 用中文描述中景内容
+- `background`: 用中文描述背景内容
+- `time_of_day`: 用中文描述一天中的时间（如"黄昏时分"、"正午"）
+- `season_or_weather`: 用中文描述季节或天气（如"秋季，晴朗"）
+- `spatial_depth`: 用中文描述空间深度感
+- `parallax_potential`: 用中文描述视差潜力
+
+## 构图属性 (composition_attributes)
+- `orientation`: 用中文描述方向（如"横向"、"纵向"）
+- `framing`: 用中文描述取景方式（如"中景"、"特写"、"全景"）
+- `camera_angle`: 用中文描述摄像机角度（如"平视"、"俯视"、"仰视"）
+- `subject_position`: 用中文描述主体位置（如"画面中央"、"左侧三分之一处"）
+- `negative_space`: 用中文描述留白区域
+- `visual_flow`: 用中文描述视觉流动方向
+- `depth_layers`: 用中文数组描述景深层次
+
+## 光照属性 (lighting_attributes)
+- `lighting_type`: 用中文描述光照类型（如"自然光"、"人工光"、"逆光"）
+- `light_direction`: 用中文描述光照方向（如"从左侧"、"从上方"）
+- `light_quality`: 用中文描述光照质量（如"柔和散射"、"强烈直射"）
+- `color_temperature`: 用中文描述色温（如"暖色调"、"冷色调"）
+- `shadow_highlight_behavior`: 用中文描述阴影和高光行为
+- `atmospheric_lighting`: 用中文描述大气光照效果
+
+## 风格属性 (style_attributes)
+- `visual_style`: 用中文描述视觉风格（如"写实摄影"、"电影质感"）
+- `medium`: 用中文描述媒介（如"数码摄影"、"胶片摄影"）
+- `realism_level`: 用中文描述写实程度（如"高度写实"、"半写实"）
+- `texture_quality`: 用中文描述纹理质量
+- `rendering_treatment`: 用中文描述渲染处理方式
+
+## 色彩属性 (color_attributes)
+- `dominant_colors`: 用中文数组描述主色调（如["深蓝色", "墨绿色"]）
+- `accent_colors`: 用中文数组描述强调色（如["金色", "橙色"]）
+- `color_contrast`: 用中文描述色彩对比度（如"高对比"、"低对比柔和"）
+- `palette_mood`: 用中文描述色彩情绪（如"温暖舒适"、"冷峻神秘"）
+
+## 情绪属性 (mood_attributes)
+- `emotional_tone`: 用中文描述情绪基调（如"宁静祥和"、"充满活力"）
+- `atmosphere`: 用中文描述氛围（如"梦幻朦胧"、"清晰锐利"）
+- `viewer_feeling`: 用中文描述观众感受（如"令人放松"、"激发冒险感"）
+
+## 运动潜力 (motion_potential)
+- `primary_motion_candidate`: 用中文描述主要运动候选（如"水波荡漾"）
+- `subject_motion_candidates`: 用中文数组描述主体可能的运动
+- `environmental_motion_candidates`: 用中文数组描述环境可能的运动（如"树叶摇曳"、"云朵飘动"）
+- `camera_motion_candidates`: 用中文数组描述摄像机可能的运动（如"缓慢推进"、"平移"）
+- `motion_intensity_suggestion`: 用中文描述运动强度建议（如"轻柔缓慢"、"中等活力"）
+- `motion_pacing_suggestion`: 用中文描述运动节奏建议
+- `motion_constraints`: 用中文数组描述运动约束
+
+## 提取置信度 (extraction_confidence)
+- `overall_confidence`: 0.0 到 1.0 之间的浮点数，表示提取的置信度
+- `uncertain_attributes`: 用中文数组描述不确定的属性及原因
+
+---
+
+# 填写要求
+
+用从图像视觉分析中得出的描述性值填充每个字段。
+
+数组字段（distinctive_features、recognizable_objects、depth_layers、dominant_colors、accent_colors、subject_motion_candidates、environmental_motion_candidates、camera_motion_candidates、motion_constraints、uncertain_attributes）在适用时必须包含至少一个元素。
+
+overall_confidence 字段必须是 0.0 到 1.0 之间的浮点数，表示提取的置信度。
+
+---
+
+# 索引文件生成
+
+将所有描述 JSON 写入 {STEP_01_DIR} 后：
+
+在 {STEP_01_DIR} 中写入一个 index.json 文件，结构如下：
+{
+  "step": "extract_descriptions",
+  "files": [
+    {"input": "step_00_inputimage/image001.png", "output": "step_01_imagedesc/image001.json"}
+  ]
+}
+
+注意：从 {STEP_00_DIR} 归档已处理的输入图像由后续的归档步骤自动处理 — 不要自己从 {STEP_00_DIR} 归档或删除文件。
+
+支持的图像格式：PNG、JPG (JPEG)、WEBP。
+
+---
+
+# 关键：输出机制
+
+你必须使用文件写入工具在磁盘上创建实际文件。不要将工件数据放在 meta.json 的 result 字段中 — result 字段仅用于状态和摘要信息。
+
+所需的文件输出：
+1. 单个描述 JSON：{STEP_01_DIR}/<image_stem>.json（对应每个输入图像）
+   （例如：step_00_inputimage/image001.png -> step_01_imagedesc/image001.json）
+2. 索引文件：{STEP_01_DIR}/index.json 列出所有输入到输出的映射
+   （这是 {IMAGE_DESCRIPTIONS} 工件）
+
+你的 meta.json result 字段应仅包含：
+- status: "complete" 或 "error"
+- remark: 简短摘要（如"处理 5 张图像，写入 5 个 JSON + 索引"）
+- 不要在 result 字段中包含完整的 JSON 数据
+
+在 meta.json 的 artifacts 字段中，你必须报告：
+- IMAGE_DESCRIPTIONS: 你写入的 index.json 文件的绝对路径
+  （使用 {STEP_01_DIR}/index.json 的实际解析路径）
+
+---
+
+# 工件
+
+{IMAGE_DESCRIPTIONS} 工件是你写入 {STEP_01_DIR}/index.json 的 index.json 文件。
+此文件必须在步骤完成后存在于磁盘上。
+你必须在 artifacts 字段中报告这个绝对路径。
+
+---
+
+# 自我验证
+
+在完成所有描述后：
+
+✓ 每个输入图像都生成了对应的描述 JSON
+
+✓ 所有描述性文字内容使用中文撰写
+
+✓ JSON 字段名（键）保持英文
+
+✓ 文件名保持与输入图像一致
+
+✓ 每个描述对象包含所有 9 个属性组
+
+✓ 数组字段至少包含一个元素（适用时）
+
+✓ overall_confidence 是 0.0 到 1.0 之间的浮点数
+
+✓ index.json 正确列出所有输入到输出的映射
+
+✓ 未从 {STEP_00_DIR} 归档或删除任何文件
+
+✓ meta.json 的 result 字段仅包含状态和摘要
+
+✓ IMAGE_DESCRIPTIONS 工件报告了 index.json 的绝对路径

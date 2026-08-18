@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import Any
 
 from ..bundle_governance import load_bundle_governance
-from .base import StepConfig, WorkflowBundle
+from .base import StepConfig, WorkflowBundle, WorkflowContract
 
 # ---------------------------------------------------------------------------
 # TOML support — prefer stdlib tomllib (3.11+), fall back to tomli
@@ -411,6 +411,19 @@ def _parse_bundle(
                 "label": str(impl_entry.get("label", impl_entry["name"])),
             })
 
+    # --- Parse workflow contract for discovery and chaining -------------
+    contract_data = wf.get("contract", {})
+    contract: WorkflowContract | None = None
+    if contract_data:
+        contract = WorkflowContract(
+            inputs=list(contract_data.get("inputs", [])),
+            optional_inputs=list(contract_data.get("optional_inputs", [])),
+            outputs=list(contract_data.get("outputs", [])),
+            input_output_description=str(contract_data.get("input_output_description", "")),
+            category=str(contract_data.get("category", "")),
+            tags=list(contract_data.get("tags", [])),
+        )
+
     return WorkflowBundle(
         name=name,
         version=version,
@@ -429,6 +442,7 @@ def _parse_bundle(
         description=description,
         visibility=visibility,
         implementations=implementations,
+        contract=contract,
     )
 
 
@@ -572,6 +586,16 @@ def bundle_to_template_group_dict(bundle: WorkflowBundle) -> dict[str, Any]:
             {"key": a.key, "path": a.path, "required": a.required}
             for a in bundle.governance.artifact_registry
         ]
+
+    if bundle.contract:
+        group["contract"] = {
+            "inputs": list(bundle.contract.inputs),
+            "optional_inputs": list(bundle.contract.optional_inputs),
+            "outputs": list(bundle.contract.outputs),
+            "input_output_description": bundle.contract.input_output_description,
+            "category": bundle.contract.category,
+            "tags": list(bundle.contract.tags),
+        }
 
     return group
 

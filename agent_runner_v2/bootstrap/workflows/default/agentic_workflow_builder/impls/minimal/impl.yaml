@@ -1,8 +1,0 @@
-name: minimal
-description: "Condensed action implementations and streamlined prompts with minimal validation, suitable for simple JiMeng workflows with few phases and no complex conditional routing."
-
-overrides:
-  implement_actions:
-    prompt: "impls/minimal/prompts/04_implement_actions.txt"
-  generate_prompts:
-    prompt: "impls/minimal/prompts/05_generate_prompts.txt"

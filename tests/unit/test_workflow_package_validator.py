@@ -213,6 +213,29 @@ def test_prompt_generic_placeholder_names_excluded(tmp_path: Path) -> None:
     assert not any(f.code == "PROMPT_INPUT_MISMATCH" for f in result.errors)
 
 
+def test_prompt_documentation_example_patterns_excluded(tmp_path: Path) -> None:
+    """Documentation examples using generic placeholder names should not trigger errors."""
+    _write(tmp_path / "workflow.toml", MINIMAL_TOML)
+    _write(
+        tmp_path / "prompts/step_one.txt",
+        """Example structure:
+## Context
+Input artifacts:
+- <INPUT_ARTIFACT_KEY>
+- <OUTPUT_ARTIFACT_KEY>
+
+Or with curly braces in documentation:
+- {INPUT_KEY}
+- {OUTPUT_KEY}
+- {ARTIFACT_KEY_NAME}
+- {EXAMPLE_KEY}
+""",
+    )
+    manifest = tmp_path / "workflow.toml"
+    result = validate_package(manifest_path=manifest)
+    assert not any(f.code == "PROMPT_INPUT_MISMATCH" for f in result.errors)
+
+
 # --- Extension key coverage ---
 
 def test_unregistered_artifact_keys_warning(tmp_path: Path) -> None:
