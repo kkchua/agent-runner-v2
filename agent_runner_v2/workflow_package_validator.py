@@ -21,6 +21,9 @@ import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
+# Regex to match BCS slot references like {{ slot.ID }}
+_BCS_SLOT_PATTERN = re.compile(r"^\{\{\s*slot\.[\w-]+\s*\}\}$")
+
 
 @dataclass
 class ValidationFinding:
@@ -355,6 +358,9 @@ def _check_prompt_files(
     for step in steps:
         prompt_file = step.get("prompt", "")
         if not prompt_file:
+            continue
+        # BCS: Skip file existence check for dynamic prompt slot references
+        if _BCS_SLOT_PATTERN.match(prompt_file):
             continue
         prompt_path = bundle_root / prompt_file
         if not prompt_path.is_file():
