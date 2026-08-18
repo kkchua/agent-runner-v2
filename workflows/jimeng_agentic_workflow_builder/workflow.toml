@@ -1,0 +1,205 @@
+# Workflow: JiMeng Agentic Workflow Builder
+# Auto-assembled by AGB from Analysis JSON.
+
+[workflow]
+name = "jimeng_agentic_workflow_builder"
+version = "1.0.0"
+label = "JiMeng Agentic Workflow Builder"
+job_prefix = "AGB"
+init_step = "parse_jimeng_structure"
+description = "Builds executable agent-runner-v2 workflow packages from JiMeng/Dreamai-style agentic workflow markdown definitions."
+default_max_rejects = 3
+visibility = "canonical"
+layer = "layer3"
+platform = "agent-runner-v2"
+
+[[workflow.implementation]]
+name = "standard"
+description = "Default implementation for JiMeng Agentic Workflow Builder"
+label = "Standard"
+
+[[step]]
+name = "parse_jimeng_structure"
+prompt = "impls/standard/prompts/parse_jimeng_structure.md"
+enable_notifications = false
+requires_human_approval_after = false
+onsuccess = "design_workflow_steps"
+
+[step.coder]
+role_policy = "architect_standard"
+
+[step.artifacts]
+required_inputs = ["JIMENG_WORKFLOW_FILE"]
+produces = ["PARSED_STRUCTURE_FILE"]
+result_meta_key = "PARSED_STRUCTURE_FILE"
+
+[[step]]
+name = "design_workflow_steps"
+prompt = "impls/standard/prompts/design_workflow_steps.md"
+enable_notifications = false
+requires_human_approval_after = false
+onsuccess = "map_interactions"
+
+[step.coder]
+role_policy = "architect_standard"
+
+[step.artifacts]
+required_inputs = ["PARSED_STRUCTURE_FILE"]
+produces = ["STEP_BLUEPRINT_FILE"]
+result_meta_key = "STEP_BLUEPRINT_FILE"
+
+[[step]]
+name = "map_interactions"
+prompt = "impls/standard/prompts/map_interactions.md"
+enable_notifications = false
+requires_human_approval_after = false
+onsuccess = "extract_role_prompts"
+
+[step.coder]
+role_policy = "architect_standard"
+
+[step.artifacts]
+required_inputs = ["PARSED_STRUCTURE_FILE", "STEP_BLUEPRINT_FILE"]
+produces = ["INTERACTION_MAP_FILE"]
+result_meta_key = "INTERACTION_MAP_FILE"
+
+[[step]]
+name = "extract_role_prompts"
+prompt = "impls/standard/prompts/extract_role_prompts.md"
+enable_notifications = false
+requires_human_approval_after = false
+onsuccess = "define_artifact_flow"
+
+[step.coder]
+role_policy = "architect_standard"
+
+[step.artifacts]
+required_inputs = ["PARSED_STRUCTURE_FILE", "INTERACTION_MAP_FILE"]
+produces = ["PROMPT_INDEX_FILE"]
+result_meta_key = "PROMPT_INDEX_FILE"
+
+[[step]]
+name = "define_artifact_flow"
+action = "define_artifact_flow"
+enable_notifications = false
+requires_human_approval_after = false
+onsuccess = "assemble_workflow_package"
+
+[step.artifacts]
+required_inputs = ["STEP_BLUEPRINT_FILE", "INTERACTION_MAP_FILE"]
+produces = ["ARTIFACT_FLOW_FILE"]
+result_meta_key = "ARTIFACT_FLOW_FILE"
+
+[[step]]
+name = "assemble_workflow_package"
+action = "assemble_workflow_package"
+enable_notifications = false
+requires_human_approval_after = false
+onsuccess = "copy_infrastructure"
+
+[step.artifacts]
+required_inputs = ["STEP_BLUEPRINT_FILE", "INTERACTION_MAP_FILE", "PROMPT_INDEX_FILE", "ARTIFACT_FLOW_FILE"]
+produces = ["WORKFLOW_PACKAGE_DIR", "WORKFLOW_README_FILE"]
+result_meta_key = "WORKFLOW_PACKAGE_DIR"
+
+# Infrastructure Phase
+
+[[step]]
+name = "copy_infrastructure"
+action = "_copy_infrastructure"
+enable_notifications = false
+requires_human_approval_after = false
+onsuccess = "assemble_package"
+
+[step.artifacts]
+required_inputs = ["AGB_ANALYSIS_JSON"]
+produces = ["TARGET_EXTENSIONS_FILE"]
+result_meta_key = "TARGET_EXTENSIONS_FILE"
+
+[[step]]
+name = "assemble_package"
+action = "_assemble_package"
+enable_notifications = true
+requires_human_approval_after = false
+onsuccess = "validate_structure"
+
+[step.artifacts]
+required_inputs = ["AGB_ANALYSIS_JSON", "DOMAIN_ACTIONS_FILE", "DOMAIN_PROMPTS_DIR"]
+produces = ["TARGET_MANIFEST_FILE"]
+result_meta_key = "TARGET_MANIFEST_FILE"
+
+[[step]]
+name = "validate_structure"
+action = "_validate_structure"
+enable_notifications = true
+requires_human_approval_after = false
+onsuccess = "review_package"
+
+[step.artifacts]
+required_inputs = ["TARGET_MANIFEST_FILE", "DOMAIN_ACTIONS_FILE", "TARGET_EXTENSIONS_FILE"]
+produces = ["AGB_VALIDATION_FINDINGS"]
+result_meta_key = "AGB_VALIDATION_FINDINGS"
+
+[[step]]
+name = "review_package"
+prompt = "{{ slot.review_package }}"
+enable_notifications = true
+requires_human_approval_after = false
+onsuccess = "gatekeep_package"
+
+[step.coder]
+role_policy = "reviewer_standard"
+
+[step.artifacts]
+required_inputs = ["TARGET_MANIFEST_FILE", "DOMAIN_ACTIONS_FILE", "TARGET_EXTENSIONS_FILE", "DOMAIN_PROMPTS_DIR", "AGB_ANALYSIS_JSON"]
+produces = ["AGB_PACKAGE_REVIEW"]
+result_meta_key = "AGB_PACKAGE_REVIEW"
+
+[step.on_reject_refine]
+step = "assemble_package"
+artifact = "AGB_PACKAGE_REVIEW"
+max_iterations = 2
+exhausted_failure_code = "PACKAGE_REVIEW_EXHAUSTED"
+exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
+
+[[step]]
+name = "gatekeep_package"
+prompt = "{{ slot.gatekeep_package }}"
+enable_notifications = true
+requires_human_approval_after = false
+onsuccess = "promote_package"
+
+[step.coder]
+role_policy = "gatekeeper_standard"
+
+[step.artifacts]
+required_inputs = ["TARGET_MANIFEST_FILE", "DOMAIN_ACTIONS_FILE", "AGB_VALIDATION_FINDINGS", "AGB_PACKAGE_REVIEW", "AGB_ANALYSIS_JSON"]
+produces = ["AGB_GATEKEEP_REPORT"]
+result_meta_key = "AGB_GATEKEEP_REPORT"
+
+[step.on_reject_refine]
+step = "assemble_package"
+artifact = "AGB_GATEKEEP_REPORT"
+max_iterations = 2
+exhausted_failure_code = "GATEKEEP_EXHAUSTED"
+exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
+
+[[step]]
+name = "promote_package"
+action = "_promote_workflow_package"
+enable_notifications = true
+requires_human_approval_after = false
+onsuccess = "step_completion"
+
+[step.artifacts]
+required_inputs = ["TARGET_MANIFEST_FILE", "DOMAIN_ACTIONS_FILE", "TARGET_EXTENSIONS_FILE", "DOMAIN_PROMPTS_DIR"]
+produces = ["TARGET_PACKAGE_DIR"]
+result_meta_key = "TARGET_PACKAGE_DIR"
+
+[step.config]
+artifact_key = "TARGET_PACKAGE_DIR"
+backup = true
+
+[[step]]
+name = "step_completion"
+action = "step_completion"

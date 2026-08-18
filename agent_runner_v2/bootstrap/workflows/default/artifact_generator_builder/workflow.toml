@@ -241,7 +241,7 @@ produces = ["AGB_PACKAGE_REVIEW"]
 result_meta_key = "AGB_PACKAGE_REVIEW"
 
 [step.on_reject_refine]
-step = "implement_domain"
+step = "assemble_package"
 artifact = "AGB_PACKAGE_REVIEW"
 max_iterations = 2
 exhausted_failure_code = "PACKAGE_REVIEW_EXHAUSTED"
@@ -267,7 +267,7 @@ produces = ["AGB_GATEKEEP_REPORT"]
 result_meta_key = "AGB_GATEKEEP_REPORT"
 
 [step.on_reject_refine]
-step = "implement_domain"
+step = "assemble_package"
 artifact = "AGB_GATEKEEP_REPORT"
 max_iterations = 2
 exhausted_failure_code = "GATEKEEP_EXHAUSTED"
