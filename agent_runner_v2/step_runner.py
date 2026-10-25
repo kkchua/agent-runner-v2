@@ -14,6 +14,15 @@ Key v2 differences from v1:
 """
 from __future__ import annotations
 
+# Fix Windows console encoding to handle Unicode characters (e.g., Chinese paths)
+import sys
+if sys.platform == "win32":
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+        sys.stderr.reconfigure(encoding="utf-8")
+    except Exception:
+        pass  # Fallback for older Python versions
+
 import datetime as dt
 import hashlib
 import importlib.util
@@ -21,7 +30,6 @@ import json
 import logging
 import re
 import shutil
-import sys
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path, PurePath
@@ -166,6 +174,15 @@ def run_step(
         project_root=project_root,
     )
 
+    # Opt-in unauthorized write detection: snapshot entire project for prompt-driven steps
+    enable_unauthorized_detection = (
+        group_cfg.get("enable_unauthorized_write_detection", False)
+        and step_cfg.get("prompt_file")
+        and not step_cfg.get("action")
+    )
+    full_snapshot_before = _snapshot_all_files(project_root) if enable_unauthorized_detection else None
+
+    invocation = None
     try:
         timeout_seconds = step_cfg.get("coder_timeout_seconds")
         if not isinstance(timeout_seconds, int) or timeout_seconds <= 0:
@@ -201,6 +218,17 @@ def run_step(
             raw_events=exc.raw_events,
             error_message=str(exc),
         )
+        # Run unauthorized write detection even on failure
+        if full_snapshot_before is not None:
+            full_snapshot_after = _snapshot_all_files(project_root)
+            allowed_paths_for_detection = _build_allowed_paths(state=state, project_root=project_root)
+            allowed_paths_for_detection.update(allowed_write_paths)
+            _verify_no_unauthorized_writes(
+                before=full_snapshot_before,
+                after=full_snapshot_after,
+                allowed_paths=allowed_paths_for_detection,
+                project_root=project_root,
+            )
         raise
 
     finished_at = _now_iso()
@@ -210,6 +238,19 @@ def run_step(
         project_root=project_root,
         step=step,
     )
+
+    # Opt-in unauthorized write detection: verify no writes outside allowed paths
+    if full_snapshot_before is not None:
+        full_snapshot_after = _snapshot_all_files(project_root)
+        allowed_paths_for_detection = _build_allowed_paths(state=state, project_root=project_root)
+        # Also include the explicitly allowed write paths
+        allowed_paths_for_detection.update(allowed_write_paths)
+        _verify_no_unauthorized_writes(
+            before=full_snapshot_before,
+            after=full_snapshot_after,
+            allowed_paths=allowed_paths_for_detection,
+            project_root=project_root,
+        )
 
     # Save invocation artefacts
     _save_text(step_dir / "raw_output.txt", invocation.stdout)
@@ -1103,6 +1144,137 @@ def _verify_only_allowed_paths_changed(
 def _hash_file(path: Path) -> str:
     """Compute SHA-256 hash of file contents."""
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+# ---------------------------------------------------------------------------
+# Unauthorized write detection (opt-in, prompt-driven steps only)
+# ---------------------------------------------------------------------------
+
+def _snapshot_all_files(project_root: Path) -> dict[Path, str]:
+    """Snapshot hashes of all files under project_root.
+
+    Used for unauthorized write detection — compares before/after to find
+    any changes outside allowed paths.
+    """
+    snapshot: dict[Path, str] = {}
+    for path in project_root.rglob("*"):
+        if not path.is_file():
+            continue
+        # Skip common non-source directories
+        rel = path.relative_to(project_root)
+        if any(part in (".git", "__pycache__", ".venv", "node_modules", ".pytest-cache") for part in rel.parts):
+            continue
+        try:
+            snapshot[path.resolve()] = _hash_file(path)
+        except OSError:
+            continue
+    return snapshot
+
+
+def _build_allowed_paths(state: dict, project_root: Path) -> set[Path]:
+    """Build the set of paths the coder is allowed to write to.
+
+    Restricts writes to:
+    - The job's Planning folder (from PLANNING_FOLDER artifact) and its subdirectories
+    - Explicit runtime sidecar paths (step_dir, meta.json location)
+    
+    Does NOT allow parent directories of file artifacts to prevent writes outside
+    the job's scope.
+    """
+    allowed: set[Path] = set()
+
+    # Add the job's Planning folder (directory artifact)
+    artifacts = state.get("artifacts", {})
+    planning_folder_str = artifacts.get("PLANNING_FOLDER")
+    if planning_folder_str:
+        try:
+            planning_folder = (project_root / planning_folder_str).resolve()
+            allowed.add(planning_folder)
+        except (OSError, ValueError):
+            pass
+
+    # Add step_dir (where meta.json and debug artifacts go)
+    step_dir_str = state.get("current_step_dir")
+    if step_dir_str:
+        try:
+            step_dir = (project_root / step_dir_str).resolve()
+            allowed.add(step_dir)
+        except (OSError, ValueError):
+            pass
+
+    return allowed
+
+
+def _verify_no_unauthorized_writes(
+    before: dict[Path, str],
+    after: dict[Path, str],
+    allowed_paths: set[Path],
+    project_root: Path,
+) -> None:
+    """Compare snapshots, raise UnauthorizedWriteError if unauthorized changes detected.
+
+    Checks for:
+    - New or modified files outside allowed paths
+    - Deleted files outside allowed paths
+
+    Args:
+        before: Snapshot before coder invocation.
+        after: Snapshot after coder invocation.
+        allowed_paths: Set of paths the coder was allowed to write.
+        project_root: Project root for relative path reporting.
+
+    Raises:
+        UnauthorizedWriteError: If any file changed outside allowed_paths.
+    """
+    from .exceptions import UnauthorizedWriteError
+
+    unauthorized: list[str] = []
+
+    def _is_allowed(path: Path) -> bool:
+        """Check if path is in allowed paths."""
+        return any(
+            path == allowed or path.parent == allowed or _is_subpath(path, allowed)
+            for allowed in allowed_paths
+        )
+
+    # Check for new or modified files
+    for path, after_hash in after.items():
+        before_hash = before.get(path)
+        if before_hash == after_hash:
+            continue  # No change
+        # File changed — check if it's in allowed paths
+        if not _is_allowed(path):
+            try:
+                rel = path.relative_to(project_root)
+                unauthorized.append(str(rel))
+            except ValueError:
+                unauthorized.append(str(path))
+
+    # Check for deleted files (in before but not in after)
+    for path in before:
+        if path not in after:
+            # File was deleted — check if it's in allowed paths
+            if not _is_allowed(path):
+                try:
+                    rel = path.relative_to(project_root)
+                    unauthorized.append(f"{rel} (deleted)")
+                except ValueError:
+                    unauthorized.append(f"{path} (deleted)")
+
+    if unauthorized:
+        raise UnauthorizedWriteError(
+            f"Coder made {len(unauthorized)} unauthorized change(s): {', '.join(sorted(unauthorized)[:5])}",
+            unauthorized_paths=sorted(unauthorized),
+        )
+
+
+def _is_subpath(path: Path, parent: Path) -> bool:
+    """Check if path is a subpath of parent."""
+    try:
+        path.relative_to(parent)
+        return True
+    except ValueError:
+        return False
 
 
 def _canonicalize_master_bootstrap_artifacts(

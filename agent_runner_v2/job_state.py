@@ -1613,6 +1613,9 @@ def _handle_refine_success(
         review_state["review_decided_at"] = None
         review_state["final_decision"] = None
         review_state["final_decision_source"] = None
+        # Increment persistent revision counter for versioned artifacts (plan_first_review_v1 only)
+        if state.get("template_group") == "plan_first_review_v1":
+            state["plan_revision"] = state.get("plan_revision", 1) + 1
     return state, exit_code
 
 
@@ -1805,6 +1808,24 @@ def approve_step(
     return state
 
 
+def _get_effective_limit(state: dict[str, Any], on_reject_refine: dict[str, Any]) -> int:
+    """Get the effective cumulative refinement limit.
+    
+    Combines base max_refinements with any extensions from refinement_extensions.
+    
+    Args:
+        state: Job state dict.
+        on_reject_refine: The on_reject_refine configuration dict.
+    
+    Returns:
+        The effective limit (base + extensions).
+    """
+    base_limit = int(on_reject_refine.get("max_refinements", 0))
+    extensions = state.get("refinement_extensions", [])
+    extensions_sum = sum(ext.get("additional_allowance", 0) for ext in extensions)
+    return base_limit + extensions_sum
+
+
 def reject_step(
     *, group_name: str, group_cfg: dict[str, Any], state: dict[str, Any], step: str,
 ) -> dict[str, Any]:
@@ -1845,41 +1866,105 @@ def reject_step(
     state["pending_human_approval_for"] = None
     state.setdefault("human_approvals", {}).pop(step, None)
 
-    # Increment reject count
+    # Increment BOTH reject_counts (existing) and human_reject_counts (new)
     state.setdefault("reject_counts", {})[step] = state.get("reject_counts", {}).get(step, 0) + 1
+    human_reject_counts = state.setdefault("human_reject_counts", {})
+    human_reject_counts[step] = human_reject_counts.get(step, 0) + 1
+    current_human_count = human_reject_counts[step]
 
     if on_reject_refine.get("step") and on_reject_refine.get("artifact"):
-        # Route to refine step via loop context
-        max_iter = int(on_reject_refine.get("max_iterations", 2))
-        current_count = state["reject_counts"][step]
-        if current_count > max_iter:
-            # Exhausted refine budget — mark as failed
-            exhausted_code = on_reject_refine.get("exhausted_failure_code") or "REFINEMENT_EXHAUSTED"
+        # ── Human rejection limit (opt-in, checked FIRST) ──
+        max_human_rejects = int(on_reject_refine.get("max_human_rejections", 0))
+        if max_human_rejects > 0 and current_human_count > max_human_rejects:
+            human_exhausted_code = on_reject_refine.get("human_exhausted_failure_code") or "HUMAN_REJECTION_EXHAUSTED"
             set_last_failure(
                 state=state,
                 failure_class=on_reject_refine.get("exhausted_failure_class") or "HUMAN_RETRY_REQUIRED",
-                failure_code=exhausted_code,
-                failure_reason=f"Reject count ({current_count}) exceeded max iterations ({max_iter}) for step {step!r}.",
+                failure_code=human_exhausted_code,
+                failure_reason=f"Human rejected {current_human_count} times (max {max_human_rejects}) for step {step!r}.",
                 failure_source="human_reject",
                 step=step,
             )
             set_job_status(state, "WAITING_FOR_HUMAN_INTERVENTION")
             state["pending_intervention_for"] = step
             state["current_step"] = step
+        # ── Cumulative refinement limit (checked SECOND, only for plan_first_review_v1) ──
+        elif group_name == "plan_first_review_v1":
+            effective_limit = _get_effective_limit(state, on_reject_refine)
+            current_revision = state.get("plan_revision", 1)
+            if effective_limit > 0 and current_revision > effective_limit:
+                cumulative_exhausted_code = on_reject_refine.get("exhausted_failure_code") or "PLAN_REFINEMENT_EXHAUSTED"
+                set_last_failure(
+                    state=state,
+                    failure_class=on_reject_refine.get("exhausted_failure_class") or "HUMAN_RETRY_REQUIRED",
+                    failure_code=cumulative_exhausted_code,
+                    failure_reason=f"Cumulative refinements ({current_revision}) exceeded effective limit ({effective_limit}) for step {step!r}.",
+                    failure_source="human_reject",
+                    step=step,
+                )
+                set_job_status(state, "WAITING_FOR_HUMAN_INTERVENTION")
+                state["pending_intervention_for"] = step
+                state["current_step"] = step
+            else:
+                # ── Existing model rejection limit (PRESERVED) ──
+                max_iter = int(on_reject_refine.get("max_iterations", 2))
+                current_count = state["reject_counts"][step]
+                if current_count > max_iter:
+                    exhausted_code = on_reject_refine.get("exhausted_failure_code") or "REFINEMENT_EXHAUSTED"
+                    set_last_failure(
+                        state=state,
+                        failure_class=on_reject_refine.get("exhausted_failure_class") or "HUMAN_RETRY_REQUIRED",
+                        failure_code=exhausted_code,
+                        failure_reason=f"Reject count ({current_count}) exceeded max iterations ({max_iter}) for step {step!r}.",
+                        failure_source="human_reject",
+                        step=step,
+                    )
+                    set_job_status(state, "WAITING_FOR_HUMAN_INTERVENTION")
+                    state["pending_intervention_for"] = step
+                    state["current_step"] = step
+                else:
+                    # Activate refine loop
+                    review_file = state.get("artifacts", {}).get(on_reject_refine["artifact"])
+                    state["loop_context"] = default_loop_context(
+                        active=True,
+                        loop_step=step,
+                        refine_step=on_reject_refine["step"],
+                        target_artifact=on_reject_refine["artifact"],
+                        review_file=review_file,
+                        iteration=current_count,
+                    )
+                    state["current_step"] = on_reject_refine["step"]
+                    set_job_status(state, "IN_PROGRESS")
         else:
-            # Activate refine loop
-            review_file = state.get("artifacts", {}).get(on_reject_refine["artifact"])
-            state["loop_context"] = default_loop_context(
-                active=True,
-                loop_step=step,
-                refine_step=on_reject_refine["step"],
-                target_artifact=on_reject_refine["artifact"],
-                review_file=review_file,
-                iteration=current_count,
-            )
-            state["current_step"] = on_reject_refine["step"]
-            set_job_status(state, "IN_PROGRESS")
-            clear_last_failure(state)
+            # ── Existing model rejection limit (PRESERVED, for non-plan_first_review_v1 workflows) ──
+            max_iter = int(on_reject_refine.get("max_iterations", 2))
+            current_count = state["reject_counts"][step]
+            if current_count > max_iter:
+                exhausted_code = on_reject_refine.get("exhausted_failure_code") or "REFINEMENT_EXHAUSTED"
+                set_last_failure(
+                    state=state,
+                    failure_class=on_reject_refine.get("exhausted_failure_class") or "HUMAN_RETRY_REQUIRED",
+                    failure_code=exhausted_code,
+                    failure_reason=f"Reject count ({current_count}) exceeded max iterations ({max_iter}) for step {step!r}.",
+                    failure_source="human_reject",
+                    step=step,
+                )
+                set_job_status(state, "WAITING_FOR_HUMAN_INTERVENTION")
+                state["pending_intervention_for"] = step
+                state["current_step"] = step
+            else:
+                # Activate refine loop
+                review_file = state.get("artifacts", {}).get(on_reject_refine["artifact"])
+                state["loop_context"] = default_loop_context(
+                    active=True,
+                    loop_step=step,
+                    refine_step=on_reject_refine["step"],
+                    target_artifact=on_reject_refine["artifact"],
+                    review_file=review_file,
+                    iteration=current_count,
+                )
+                state["current_step"] = on_reject_refine["step"]
+                set_job_status(state, "IN_PROGRESS")
     else:
         # No refine route — mark as failed
         set_job_status(state, "WAITING_FOR_HUMAN_INTERVENTION")
@@ -1918,8 +2003,12 @@ def force_approve_step(
         The updated job state dict.
 
     Raises:
-        ValueError: If the step is not defined in the workflow.
+        ValueError: If the step is not defined in the workflow, or if the job is STOPPED_ARCHIVED.
     """
+    # Guard: STOPPED_ARCHIVED is terminal — cannot be reactivated by force approval
+    if get_job_status(state) == "STOPPED_ARCHIVED":
+        raise ValueError(f"Cannot force-approve step: job {state['job_id']!r} is STOPPED_ARCHIVED (terminal).")
+
     step_cfg = group_cfg["step_configs"].get(step)
     if not step_cfg:
         raise ValueError(f"Step {step!r} is not defined for template group {group_name!r}")
@@ -2089,6 +2178,7 @@ def retry_step(
     state.setdefault("reject_counts", {})[step] = 0
     state.setdefault("auto_retry_count_by_step", {})[step] = 0
     state.setdefault("human_retry_count_by_step", {})[step] = 0
+    state.setdefault("human_reject_counts", {}).pop(step, None)
     state["pending_intervention_for"] = None
     state["pending_human_approval_for"] = None
     state["loop_context"] = default_loop_context()
@@ -2097,6 +2187,284 @@ def retry_step(
 
     set_job_status(state, "IN_PROGRESS")
     state["current_step"] = step
+    save_job(group_name, state["job_id"], state)
+    return state
+
+
+def extend_refinement_limit(
+    *, group_name: str, group_cfg: dict[str, Any], state: dict[str, Any],
+    additional_allowance: int, reason: str = "",
+) -> dict[str, Any]:
+    """Extend the cumulative refinement limit and reset per-step counters.
+
+    Used when the workflow hits the cumulative refinement limit (max_refinements)
+    but the user wants to continue. Adds additional_allowance to the effective
+    limit, resets reject_counts for the review step, and reconstructs loop context
+    to resume the refine loop.
+
+    Only valid for plan_first_review_v1 workflow.
+
+    Args:
+        group_name: Workflow template group name.
+        group_cfg: Full workflow configuration dict.
+        state: Mutable job state dict.
+        additional_allowance: Number of additional refinements to allow.
+        reason: Optional reason for the extension (for audit trail).
+
+    Returns:
+        The updated job state dict.
+
+    Raises:
+        ValueError: If workflow is not plan_first_review_v1, or if job status
+            is not WAITING_FOR_HUMAN_INTERVENTION.
+    """
+    if group_name != "plan_first_review_v1":
+        raise ValueError(
+            f"extend_refinement_limit is only valid for plan_first_review_v1, not {group_name!r}"
+        )
+
+    current_status = get_job_status(state)
+    if current_status != "WAITING_FOR_HUMAN_INTERVENTION":
+        raise ValueError(
+            f"Cannot extend refinement limit: job status is {current_status!r}, "
+            f"expected WAITING_FOR_HUMAN_INTERVENTION."
+        )
+
+    # Find the review step (codex_review) from the workflow config
+    step_configs = group_cfg.get("step_configs", {})
+    review_step = None
+    on_reject_refine_cfg = None
+    for step_name, cfg in step_configs.items():
+        if "on_reject_refine" in cfg:
+            review_step = step_name
+            on_reject_refine_cfg = cfg["on_reject_refine"]
+            break
+
+    if review_step is None:
+        raise ValueError(
+            f"Workflow {group_name!r} has no step with on_reject_refine configuration"
+        )
+
+    # ── Validate positive allowance ──
+    if additional_allowance <= 0:
+        raise ValueError(
+            f"additional_allowance must be positive, got {additional_allowance}"
+        )
+
+    # ── Validate pause was caused by cumulative exhaustion ──
+    expected_code = on_reject_refine_cfg.get("exhausted_failure_code") or "PLAN_REFINEMENT_EXHAUSTED"
+    actual_code = state.get("last_failure_code")
+    if actual_code != expected_code:
+        raise ValueError(
+            f"Cannot extend refinement limit: last_failure_code is {actual_code!r}, "
+            f"expected {expected_code!r} (cumulative exhaustion)."
+        )
+
+    # ── Validate resulting limit does not exceed max_ceiling ──
+    max_ceiling = int(on_reject_refine_cfg.get("max_ceiling", 20))
+    prospective_limit = _get_effective_limit(state, on_reject_refine_cfg) + additional_allowance
+    if prospective_limit > max_ceiling:
+        raise ValueError(
+            f"Cannot extend refinement limit: prospective effective limit ({prospective_limit}) "
+            f"would exceed max_ceiling ({max_ceiling})."
+        )
+
+    # Record the extension in refinement_extensions list
+    extensions = state.setdefault("refinement_extensions", [])
+    extensions.append({
+        "additional_allowance": additional_allowance,
+        "reason": reason,
+        "granted_at": now_iso(),
+    })
+
+    # Reset per-step reject counter to allow continuation
+    state.setdefault("reject_counts", {})[review_step] = 0
+
+    # Reconstruct loop context to resume the refine loop
+    refine_step = on_reject_refine_cfg.get("step", "")
+    target_artifact = on_reject_refine_cfg.get("artifact", "")
+    state["loop_context"] = default_loop_context(
+        active=True,
+        loop_step=review_step,
+        refine_step=refine_step,
+        target_artifact=target_artifact,
+    )
+
+    # Clear intervention state and transition to refine step
+    state["pending_intervention_for"] = None
+    state["pending_human_approval_for"] = None
+    clear_last_failure(state)
+    set_job_status(state, "IN_PROGRESS")
+    state["current_step"] = refine_step
+
+    save_job(group_name, state["job_id"], state)
+    return state
+
+
+def stop_and_archive(
+    *,
+    group_name: str,
+    state: dict[str, Any],
+    reason: str,
+) -> dict[str, Any]:
+    """Stop and archive a job (terminal status).
+
+    Marks the job as STOPPED_ARCHIVED, preserving all artifacts.
+
+    Args:
+        group_name: Workflow template group name.
+        state: Mutable job state dict.
+        reason: Reason for stopping (for audit trail).
+
+    Returns:
+        The updated job state dict.
+    """
+    set_job_status(state, "STOPPED_ARCHIVED")
+    state["stop_reason"] = reason
+    state["stopped_at"] = now_iso()
+
+    # Clear any pending interventions or approvals
+    state["pending_intervention_for"] = None
+    state["pending_human_approval_for"] = None
+
+    # Deactivate loop context
+    if "loop_context" in state:
+        state["loop_context"]["active"] = False
+
+    save_job(group_name, state["job_id"], state)
+    return state
+
+
+def change_requirements(
+    *,
+    group_name: str,
+    state: dict[str, Any],
+    new_requirements_file: str,
+    reason: str,
+) -> dict[str, Any]:
+    """Change requirements and create a new baseline.
+
+    Copies the new input to the baseline's request.md (RAW_REQUEST_FILE),
+    updates artifact pointers, preserves prepare_request in completed_steps,
+    clears model_approved_steps, human_approvals, review_state, and failure state.
+    Transitions to formalize_requirements which will produce the new requirements.md.
+
+    Baseline 1 stays at root (backward compatible). Baseline 2+ use subdirectories.
+
+    Args:
+        group_name: Workflow template group name.
+        state: Mutable job state dict.
+        new_requirements_file: Path to new requirements file.
+        reason: Reason for the change (for audit trail).
+
+    Returns:
+        The updated job state dict.
+    """
+    from .constants import (
+        ARTIFACT_PATH_BASELINE_DIR,
+        ARTIFACT_PATH_BASELINE_REQUEST,
+        ARTIFACT_PATH_REQUIREMENTS,
+        ARTIFACT_PATH_QWEN_PLAN,
+        ARTIFACT_PATH_CODEX_REVIEW,
+    )
+
+    # Guard: STOPPED_ARCHIVED is terminal — cannot reactivate
+    if get_job_status(state) == "STOPPED_ARCHIVED":
+        raise ValueError(
+            f"Cannot change requirements: job {state['job_id']!r} is STOPPED_ARCHIVED (terminal)."
+        )
+
+    # Increment baseline counter
+    current_baseline = int(state.get("requirements_baseline", 1))
+    new_baseline = current_baseline + 1
+
+    # Get planning folder from artifacts
+    planning_folder = state.get("artifacts", {}).get("PLANNING_FOLDER", "")
+    if not planning_folder:
+        raise ValueError("Cannot change requirements: PLANNING_FOLDER artifact is missing")
+
+    # Create new baseline directory
+    baseline_dir = ARTIFACT_PATH_BASELINE_DIR(planning_folder, new_baseline)
+    baseline_path = PROJECT_ROOT / baseline_dir
+    baseline_path.mkdir(parents=True, exist_ok=True)
+
+    # Copy new requirements file to baseline's request.md (RAW_REQUEST_FILE)
+    # formalize_requirements will read this and produce the new requirements.md
+    new_req_src = Path(new_requirements_file)
+    if not new_req_src.exists():
+        raise ValueError(f"New requirements file does not exist: {new_requirements_file}")
+
+    dest_request = ARTIFACT_PATH_BASELINE_REQUEST(planning_folder, new_baseline)
+    dest_path = PROJECT_ROOT / dest_request
+    dest_path.write_text(new_req_src.read_text(encoding="utf-8"), encoding="utf-8")
+
+    # Update artifacts to point to new baseline
+    state.setdefault("artifacts", {})
+    state["artifacts"]["RAW_REQUEST_FILE"] = str(dest_path)
+    state["artifacts"]["REQUIREMENTS_FILE"] = str(
+        PROJECT_ROOT / ARTIFACT_PATH_REQUIREMENTS(planning_folder, new_baseline)
+    )
+    state["artifacts"]["QWEN_PLAN_FILE"] = str(
+        PROJECT_ROOT / ARTIFACT_PATH_QWEN_PLAN(planning_folder, revision=1, baseline=new_baseline)
+    )
+    state["artifacts"]["CODEX_REVIEW_FILE"] = str(
+        PROJECT_ROOT / ARTIFACT_PATH_CODEX_REVIEW(planning_folder, revision=1, baseline=new_baseline)
+    )
+
+    # Update baseline counter
+    state["requirements_baseline"] = new_baseline
+
+    # Preserve prepare_request in completed_steps, clear all other steps
+    completed = state.get("completed_steps", [])
+    state["completed_steps"] = ["prepare_request"] if "prepare_request" in completed else []
+
+    # Clear model approvals (stale approvals removed)
+    state["model_approved_steps"] = []
+
+    # Clear pending approvals
+    state["pending_human_approval_for"] = None
+
+    # Clear stale human approvals
+    state["human_approvals"] = {}
+
+    # Reset review state to default
+    state["review_state"] = default_review_state()
+
+    # Clear failure state
+    state["last_failure_class"] = None
+    state["last_failure_code"] = None
+    state["last_failure_reason"] = None
+    state["last_failure_source"] = None
+    state["last_failure_step"] = None
+
+    # Reset counters for new baseline
+    state["reject_counts"] = {}
+    state["human_reject_counts"] = {}
+    state["auto_retry_count_by_step"] = {}
+    state["human_retry_count_by_step"] = {}
+    state["refinement_extensions"] = []
+
+    # Reset plan_revision for new baseline
+    state["plan_revision"] = 1
+
+    # Deactivate loop and replan contexts
+    state["loop_context"] = default_loop_context()
+    state["replan_context"] = default_replan_context()
+
+    # Clear intervention state
+    state["pending_intervention_for"] = None
+
+    # Transition to formalize_requirements
+    state["current_step"] = "formalize_requirements"
+    set_job_status(state, "IN_PROGRESS")
+
+    # Record the change in metadata
+    state.setdefault("change_history", []).append({
+        "baseline": new_baseline,
+        "reason": reason,
+        "changed_at": now_iso(),
+    })
+
     save_job(group_name, state["job_id"], state)
     return state
 

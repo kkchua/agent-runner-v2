@@ -537,6 +537,73 @@ def system_template_rel(*parts: str) -> str:
 
 
 # ============================================================================
+# Plan-First Review Workflow — Layered Path Constants
+# ============================================================================
+
+# Layer 2: Path primitives
+PLANNING_BASE = "Planning"
+
+
+def _planning_folder_path(date_str: str, seq: str, slug: str) -> str:
+    """Return Planning folder path: Planning/{date_str}-{seq}_{slug}/"""
+    return f"{PLANNING_BASE}/{date_str}-{seq}_{slug}"
+
+
+def _planning_artifact_path(folder: str, filename: str) -> str:
+    """Return artifact path within Planning folder."""
+    return f"{folder}/{filename}"
+
+
+# Layer 3: Path catalog — functions that generate versioned paths.
+# Called by context_extensions.py with runtime parameters (folder, revision).
+# NOT used by known_artifact_paths() — these are job-specific paths.
+
+def ARTIFACT_PATH_RAW_REQUEST(folder: str) -> str:
+    """Return request.md path within Planning folder."""
+    return _planning_artifact_path(folder, "request.md")
+
+
+def ARTIFACT_PATH_BASELINE_DIR(folder: str, baseline: int) -> str:
+    """Return baseline subdirectory path. Baseline 1 at root, 2+ in subdirectory."""
+    if baseline == 1:
+        return _planning_artifact_path(folder, "")
+    else:
+        return _planning_artifact_path(folder, f"baseline_{baseline:02d}")
+
+
+def ARTIFACT_PATH_BASELINE_REQUEST(folder: str, baseline: int) -> str:
+    """Return baseline request path. Baseline 1 at root, 2+ in subdirectory."""
+    if baseline == 1:
+        return _planning_artifact_path(folder, "request.md")
+    else:
+        return _planning_artifact_path(folder, f"baseline_{baseline:02d}/request.md")
+
+
+def ARTIFACT_PATH_REQUIREMENTS(folder: str, baseline: int = 1) -> str:
+    """Return requirements.md path. Baseline 1 at root, 2+ in subdirectory."""
+    if baseline == 1:
+        return _planning_artifact_path(folder, "requirements.md")
+    else:
+        return _planning_artifact_path(folder, f"baseline_{baseline:02d}/requirements.md")
+
+
+def ARTIFACT_PATH_QWEN_PLAN(folder: str, revision: int, baseline: int = 1) -> str:
+    """Return versioned plan path. Baseline 1 at root, 2+ in subdirectory."""
+    if baseline == 1:
+        return _planning_artifact_path(folder, f"Qwen_Plan_v{revision:02d}.md")
+    else:
+        return _planning_artifact_path(folder, f"baseline_{baseline:02d}/Qwen_Plan_v{revision:02d}.md")
+
+
+def ARTIFACT_PATH_CODEX_REVIEW(folder: str, revision: int, baseline: int = 1) -> str:
+    """Return versioned review path. Baseline 1 at root, 2+ in subdirectory."""
+    if baseline == 1:
+        return _planning_artifact_path(folder, f"Codex_Review_v{revision:02d}.md")
+    else:
+        return _planning_artifact_path(folder, f"baseline_{baseline:02d}/Codex_Review_v{revision:02d}.md")
+
+
+# ============================================================================
 # Path Mapping Functions (from doc_paths.py)
 # ============================================================================
 # These functions return dictionaries mapping artifact keys to their paths.

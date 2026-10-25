@@ -236,6 +236,8 @@ def _apply_impl_overrides(
 
         if new_action:
             changes["action"] = str(new_action)
+            # Clear prompt_file when overriding to action-driven step
+            changes["prompt_file"] = None
 
         new_steps[step_name] = replace(new_steps[step_name], **changes)
 
@@ -424,6 +426,9 @@ def _parse_bundle(
             tags=list(contract_data.get("tags", [])),
         )
 
+    # --- Opt-in unauthorized write detection flag -----------------------
+    enable_unauthorized_write_detection = bool(wf.get("enable_unauthorized_write_detection", False))
+
     return WorkflowBundle(
         name=name,
         version=version,
@@ -443,6 +448,7 @@ def _parse_bundle(
         visibility=visibility,
         implementations=implementations,
         contract=contract,
+        enable_unauthorized_write_detection=enable_unauthorized_write_detection,
     )
 
 
@@ -596,6 +602,9 @@ def bundle_to_template_group_dict(bundle: WorkflowBundle) -> dict[str, Any]:
             "category": bundle.contract.category,
             "tags": list(bundle.contract.tags),
         }
+
+    if bundle.enable_unauthorized_write_detection:
+        group["enable_unauthorized_write_detection"] = True
 
     return group
 

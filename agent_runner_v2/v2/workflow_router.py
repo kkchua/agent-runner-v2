@@ -9,7 +9,7 @@ from typing import Any
 
 from ..coder_adapters import CoderInvocationError
 from ..constants import ARTIFACT_KEY_REVIEW
-from ..exceptions import ArtifactMissingError, MetaJsonInvalidError, MetaJsonMissingError
+from ..exceptions import ArtifactMissingError, MetaJsonInvalidError, MetaJsonMissingError, UnauthorizedWriteError
 from ..failure_runtime import append_failure_history, clear_last_failure, set_last_failure
 from ..recovery_runtime import (
     activate_refine_loop,
@@ -21,6 +21,7 @@ from ..job_state import (
     HUMAN_DECISIONS,
     FINAL_DECISION_SOURCES,
     REVIEW_ARTIFACT_TYPES,
+    _get_effective_limit,
     advance_step,
     default_review_state,
     record_step_usage,
@@ -398,6 +399,29 @@ def _route_loop_or_replan(
     iteration = current_count
     max_iter = int(on_reject_refine.get("max_iterations", 2))
 
+    # ── Cumulative refinement limit (plan_first_review_v1 only) ──
+    if group_name == "plan_first_review_v1":
+        effective_limit = _get_effective_limit(state, on_reject_refine)
+        current_revision = state.get("plan_revision", 1)
+        if effective_limit > 0 and current_revision > effective_limit:
+            cumulative_code = str(
+                on_reject_refine.get("exhausted_failure_code") or "PLAN_REFINEMENT_EXHAUSTED"
+            )
+            set_last_failure(
+                state=state,
+                failure_class=str(on_reject_refine.get("exhausted_failure_class") or "HUMAN_RETRY_REQUIRED"),
+                failure_code=cumulative_code,
+                failure_reason=f"Cumulative refinements ({current_revision}) exceeded effective limit ({effective_limit}) for step {step!r}.",
+                failure_source="runner",
+                step=step,
+            )
+            set_job_status(state, "WAITING_FOR_HUMAN_INTERVENTION")
+            state["current_step"] = step
+            state["pending_intervention_for"] = step
+            save_job(group_name, state["job_id"], state)
+            send_workflow_notification("WAITING_FOR_HUMAN_INTERVENTION", dict(state))
+            return state, 1
+
     if iteration <= max_iter:
         return _trigger_loop(
             group_name=group_name,
@@ -540,6 +564,8 @@ def _classify_exception_v2(exc: Exception) -> tuple[str, str, str]:
         if _looks_like_step_contract_mismatch(message):
             return "HUMAN_RETRY_REQUIRED", "STEP_CONTRACT_MISMATCH", "validator"
         return "HUMAN_RETRY_REQUIRED", "ARTIFACT_FILES_MISSING", "validator"
+    if isinstance(exc, UnauthorizedWriteError):
+        return "HUMAN_RETRY_REQUIRED", "UNAUTHORIZED_WRITE_DETECTED", "validator"
     # Unknown exception — treat as fatal
     return "FATAL", "UNEXPECTED_RUNNER_ERROR", "runner"
 

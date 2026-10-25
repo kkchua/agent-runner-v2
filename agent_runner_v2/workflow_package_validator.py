@@ -124,6 +124,9 @@ def validate_package(
     # 9. Implementation override validity
     _check_implementation_overrides(manifest_data, bundle_root, result)
 
+    # 10. LLM step coder definition
+    _check_llm_step_coder_defined(manifest_data, bundle_root, result)
+
     return result
 
 
@@ -516,6 +519,9 @@ def _check_implementation_overrides(
             if isinstance(override, dict):
                 prompt_override = override.get("prompt", "")
                 if prompt_override:
+                    # Skip BCS slot references (e.g., {{ slot.generate_images }})
+                    if _BCS_SLOT_PATTERN.match(prompt_override):
+                        continue
                     prompt_path = bundle_root / prompt_override
                     if not prompt_path.is_file():
                         result.findings.append(ValidationFinding(
@@ -523,3 +529,62 @@ def _check_implementation_overrides(
                             f"impls/{impl_name}/impl.yaml overrides prompt to "
                             f"'{prompt_override}' but file does not exist",
                         ))
+
+
+def _check_llm_step_coder_defined(
+    manifest_data: dict, bundle_root: Path, result: ValidationResult,
+) -> None:
+    """Check that all LLM steps have a coder with role_policy defined.
+
+    Also validates that the role_policy exists in the registry.
+    """
+    steps = manifest_data.get("step", [])
+    if not isinstance(steps, list):
+        return
+
+    # Load available role policies from registry
+    available_policies: set[str] = set()
+    registry_path = bundle_root.parent / "_registry" / "role_policies.json"
+    if registry_path.is_file():
+        try:
+            import json
+            with open(registry_path, "r", encoding="utf-8") as f:
+                registry_data = json.load(f)
+            available_policies = set(registry_data.get("role_policies", {}).keys())
+        except Exception:
+            pass  # Registry not available, skip existence check
+
+    for step in steps:
+        name = step.get("name", "")
+        prompt = step.get("prompt", "")
+
+        # Only check LLM steps (those with a prompt field)
+        if not prompt:
+            continue
+
+        # Skip action-driven steps that happen to have a prompt override
+        action = step.get("action", "")
+        if action:
+            continue
+
+        coder_cfg = step.get("coder", {})
+        if not isinstance(coder_cfg, dict):
+            coder_cfg = {}
+
+        role_policy = coder_cfg.get("role_policy", "")
+        if not role_policy:
+            result.findings.append(ValidationFinding(
+                "error", "MISSING_CODER_ROLE_POLICY",
+                f"LLM step '{name}' has a prompt but no [step.coder] role_policy defined. "
+                f"All prompt-driven steps must specify a role_policy.",
+            ))
+            continue
+
+        # Validate role_policy exists in registry (if registry is available)
+        if available_policies and role_policy not in available_policies:
+            result.findings.append(ValidationFinding(
+                "error", "UNKNOWN_ROLE_POLICY",
+                f"Step '{name}' references role_policy '{role_policy}' "
+                f"but it is not defined in _registry/role_policies.json. "
+                f"Available policies: {', '.join(sorted(available_policies))}",
+            ))

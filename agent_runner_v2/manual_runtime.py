@@ -437,6 +437,15 @@ def resolve_manual_run(*, args: Any, group_cfg: dict[str, Any], hooks: Any, mode
 
     state = hooks.ensure_backward_compatible_state(hooks.load_job(args.template_group, args.job_id))
     state = hooks.migrate_job_state(state)
+
+    # Guard: STOPPED_ARCHIVED is terminal — archived jobs cannot resume
+    from .job_state import get_job_status
+    if get_job_status(state) == "STOPPED_ARCHIVED":
+        raise ValueError(
+            f"Job {state['job_id']!r} is STOPPED_ARCHIVED (terminal). "
+            f"Archived jobs cannot resume. Reason: {state.get('stop_reason', 'unknown')}"
+        )
+
     state = hooks.recover_exhausted_planning_job(state, group_cfg)
     state = hooks.reconcile_job_state(state, group_cfg)
     if _apply_daemon_backend_linkage(mode=mode, state=state):

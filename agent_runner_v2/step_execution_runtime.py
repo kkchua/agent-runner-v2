@@ -39,6 +39,47 @@ class PreparedStepExecution:
     checksum: str = ""
 
 
+def _load_merged_step_slots(bundle: Any, impl_name: str) -> dict[str, Any]:
+    """Load step_slots with inheritance from standard implementation.
+
+    Loads standard/impl.yaml step_slots as base, then merges the current
+    impl's step_slots on top (impl overrides standard per-key).
+
+    This allows non-standard implementations (e.g. Generator) to inherit
+    step_slots from standard without duplicating them in their own impl.yaml.
+    """
+    if bundle is None:
+        return {}
+
+    merged_slots: dict[str, Any] = {}
+
+    # Load standard impl as base (if current impl is not standard)
+    if impl_name != "standard":
+        standard_yaml_path = bundle.bundle_root / "impls" / "standard" / "impl.yaml"
+        if standard_yaml_path.exists():
+            try:
+                with open(standard_yaml_path, "r", encoding="utf-8") as f:
+                    standard_data = yaml.safe_load(f)
+                if isinstance(standard_data, dict):
+                    merged_slots = standard_data.get("step_slots") or standard_data.get("prompt_slots", {})
+            except Exception:
+                pass
+
+    # Load current impl's step_slots and merge (overrides standard)
+    impl_yaml_path = bundle.bundle_root / "impls" / impl_name / "impl.yaml"
+    if impl_yaml_path.exists():
+        try:
+            with open(impl_yaml_path, "r", encoding="utf-8") as f:
+                impl_data = yaml.safe_load(f)
+            if isinstance(impl_data, dict):
+                impl_slots = impl_data.get("step_slots") or impl_data.get("prompt_slots", {})
+                merged_slots.update(impl_slots)
+        except Exception:
+            pass
+
+    return merged_slots
+
+
 def resolve_prompt_slot(
     step_cfg: dict[str, Any],
     state: dict[str, Any],
@@ -61,40 +102,34 @@ def resolve_prompt_slot(
         print(f"[BCS] Impl Name: {impl_name}", flush=True)
         
         if bundle and impl_name:
-            impl_yaml_path = bundle.bundle_root / "impls" / impl_name / "impl.yaml"
-            print(f"[BCS] Check: {impl_yaml_path} -> {impl_yaml_path.exists()}", flush=True)
-            if impl_yaml_path.exists():
-                try:
-                    with open(impl_yaml_path, "r", encoding="utf-8") as f:
-                        impl_data = yaml.safe_load(f)
-                    prompt_slots = impl_data.get("step_slots") or impl_data.get("prompt_slots", {})
-                    slot_config = prompt_slots.get(slot_id)
-                    
-                    if slot_config:
-                        prompt_sels = state.get("prompt_selections", {})
-                        selected_name = prompt_sels.get(slot_id)
-                        default_name = slot_config.get("default")
-                        options = slot_config.get("options", [])
-                        valid_names = {opt.get("name") for opt in options}
+            # Load merged step_slots (inherits from standard impl)
+            prompt_slots = _load_merged_step_slots(bundle, impl_name)
+            print(f"[BCS] Loaded {len(prompt_slots)} merged step_slots for impl '{impl_name}'", flush=True)
+            slot_config = prompt_slots.get(slot_id)
 
-                        if selected_name not in valid_names:
-                            selected_name = default_name
+            if slot_config:
+                prompt_sels = state.get("prompt_selections", {})
+                selected_name = prompt_sels.get(slot_id)
+                default_name = slot_config.get("default")
+                options = slot_config.get("options", [])
+                valid_names = {opt.get("name") for opt in options}
 
-                        for opt in options:
-                            if opt.get("name") == selected_name:
-                                file_path = opt.get("file")
-                                if file_path:
-                                    # Two-tier resolution: impl-specific first, then shared
-                                    impl_specific = bundle.bundle_root / "impls" / impl_name / file_path
-                                    if impl_specific.exists():
-                                        res = impl_specific
-                                        print(f"[BCS] RESOLVED (impl-specific): {res}", flush=True)
-                                    else:
-                                        res = bundle.bundle_root / file_path
-                                        print(f"[BCS] RESOLVED (shared fallback): {res}", flush=True)
-                                    return str(res)
-                except Exception as e:
-                    print(f"[BCS] Error: {e}", flush=True)
+                if selected_name not in valid_names:
+                    selected_name = default_name
+
+                for opt in options:
+                    if opt.get("name") == selected_name:
+                        file_path = opt.get("file")
+                        if file_path:
+                            # Two-tier resolution: impl-specific first, then shared
+                            impl_specific = bundle.bundle_root / "impls" / impl_name / file_path
+                            if impl_specific.exists():
+                                res = impl_specific
+                                print(f"[BCS] RESOLVED (impl-specific): {res}", flush=True)
+                            else:
+                                res = bundle.bundle_root / file_path
+                                print(f"[BCS] RESOLVED (shared fallback): {res}", flush=True)
+                            return str(res)
 
         # Convention-based fallback: prompts/{slot_id}/standard.txt
         if bundle:
@@ -126,22 +161,10 @@ def _resolve_action_step_slots(
     if bundle is None:
         return
 
-    impl_name = group_cfg.get("implementation_name") or ""
-    if not impl_name:
-        return
+    impl_name = group_cfg.get("implementation_name") or "standard"
 
-    # Read step_slots from impl.yaml (fallback to prompt_slots for compat)
-    impl_yaml_path = bundle.bundle_root / "impls" / impl_name / "impl.yaml"
-    if not impl_yaml_path.exists():
-        return
-
-    try:
-        with open(impl_yaml_path, "r", encoding="utf-8") as f:
-            impl_data = yaml.safe_load(f)
-    except Exception:
-        return
-
-    step_slots = impl_data.get("step_slots") or impl_data.get("prompt_slots", {})
+    # Load merged step_slots (inherits from standard impl)
+    step_slots = _load_merged_step_slots(bundle, impl_name)
     slot_config = step_slots.get(step)
     if not slot_config or not isinstance(slot_config, dict):
         return
@@ -206,12 +229,18 @@ def prepare_step_execution(
     # injected as STEP_SLOT_{STEP_NAME} (uppercased) so the action can read it.
     _resolve_action_step_slots(context, state, step, group_cfg, bundle)
 
+    # Skip artifact validation for noop actions (they don't use inputs)
+    action_name = str(step_cfg.get("action") or "")
+    is_noop = action_name == "noop"
+
     # Now check for missing required inputs AFTER context_extensions has resolved paths
-    missing_required = hooks._missing_artifacts(step_cfg.get("required_inputs", []), state)
-    if missing_required:
-        raise FileNotFoundError(
-            f"Cannot run step {step!r}. Missing required input artifact(s): {', '.join(missing_required)}"
-        )
+    # (skip for noop actions since they don't actually use the inputs)
+    if not is_noop:
+        missing_required = hooks._missing_artifacts(step_cfg.get("required_inputs", []), state)
+        if missing_required:
+            raise FileNotFoundError(
+                f"Cannot run step {step!r}. Missing required input artifact(s): {', '.join(missing_required)}"
+            )
 
     meta_from_ctx = step_cfg.get("result_meta_key_from_context")
     if not meta_from_ctx:
@@ -228,7 +257,6 @@ def prepare_step_execution(
     if is_refine and loop_ctx.get("active") and loop_ctx.get("loop_source_review"):
         context[ARTIFACT_KEY_REVIEW] = loop_ctx["loop_source_review"]
 
-    action_name = str(step_cfg.get("action") or "")
     if action_name:
         return PreparedStepExecution(
             step_dir=step_dir,

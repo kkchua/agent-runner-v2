@@ -91,7 +91,19 @@ def convert_to_v2_format(group_dict: dict, *, bundle_dir: Path | None = None) ->
     # Pass through implementation declarations and their prompt slots
     if group_dict.get("implementation"):
         import yaml as _yaml  # Import here to avoid top-level dependency if not needed
-        
+
+        # Load standard impl's step_slots as base for inheritance
+        standard_step_slots: dict = {}
+        standard_yaml_path = bundle_dir / "impls" / "standard" / "impl.yaml"
+        if standard_yaml_path.exists():
+            try:
+                with open(standard_yaml_path, "r", encoding="utf-8") as f:
+                    standard_data = _yaml.safe_load(f)
+                if isinstance(standard_data, dict):
+                    standard_step_slots = standard_data.get("step_slots") or standard_data.get("prompt_slots", {})
+            except Exception:
+                pass
+
         definition["implementations"] = []
         for impl in group_dict["implementation"]:
             impl_name = impl["name"]
@@ -103,6 +115,9 @@ def convert_to_v2_format(group_dict: dict, *, bundle_dir: Path | None = None) ->
                 "step_slots": {},
             }
 
+            # Start with standard step_slots as base (inheritance)
+            merged_step_slots = dict(standard_step_slots)
+
             # Try to load impl.yaml to extract step_slots / prompt_slots for UI dropdowns
             impl_yaml_path = bundle_dir / "impls" / impl_name / "impl.yaml"
             if impl_yaml_path.exists():
@@ -110,11 +125,18 @@ def convert_to_v2_format(group_dict: dict, *, bundle_dir: Path | None = None) ->
                     with open(impl_yaml_path, "r", encoding="utf-8") as f:
                         yaml_data = _yaml.safe_load(f)
                     if isinstance(yaml_data, dict):
-                        impl_data["prompt_slots"] = yaml_data.get("prompt_slots", {})
-                        impl_data["step_slots"] = yaml_data.get("step_slots", yaml_data.get("prompt_slots", {}))
+                        impl_prompt_slots = yaml_data.get("prompt_slots", {})
+                        impl_step_slots = yaml_data.get("step_slots", yaml_data.get("prompt_slots", {}))
+                        # Merge impl's slots on top of standard (impl overrides standard)
+                        merged_step_slots.update(impl_step_slots)
+                        impl_data["prompt_slots"] = impl_prompt_slots
+                        impl_data["step_slots"] = merged_step_slots
                 except Exception:
                     pass  # Ignore errors in parsing optional impl.yaml
-            
+            else:
+                # No impl.yaml — use inherited standard slots
+                impl_data["step_slots"] = merged_step_slots
+
             definition["implementations"].append(impl_data)
 
     # Include workflow contract for discovery and chaining

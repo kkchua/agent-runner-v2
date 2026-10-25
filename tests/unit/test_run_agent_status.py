@@ -1,9 +1,20 @@
 from __future__ import annotations
 
+import inspect
 import json
 
 from agent_runner_v2 import manual_runtime_deps, shared_runtime_deps
 from agent_runner_v2 import run_agent as run_agent_module
+
+
+def test_main_does_not_shadow_module_level_json():
+    """Regression: local `import json` inside main() made json a local variable,
+    causing UnboundLocalError on the existing run path before reaching those lines."""
+    source = inspect.getsource(run_agent_module.main)
+    assert "import json" not in source, (
+        "main() must not contain local `import json` — "
+        "it shadows the module-level import and breaks earlier code paths"
+    )
 
 
 def test_step_progress_label_formats_index_and_total():

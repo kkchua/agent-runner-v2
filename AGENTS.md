@@ -68,6 +68,7 @@ copy .env.example .env
 
 ## Change Log
 
+- 2026-08-19: AGBv2 v3.0.0 (stable) — Artifact Generator Builder for creating executable workflow packages from requirement documents
 - 2026-08-04: Initial agent instructions added.
 
 ---
@@ -129,3 +130,66 @@ workflows/<name>/
 | `v2/backend_client.py` | HTTP client for state-machine backend |
 | `v2/sync.py` | Outcome sync to backend |
 | `actions/` | 30+ action modules (copy, validate, scan, publish, …) |
+
+### Creating New Workflows (AGBv2)
+
+**AGBv2** (Artifact Generator Builder v3.0.0) is a meta-workflow that transforms requirement documents into complete, executable workflow packages.
+
+**Location:** `workflows/artifact_generator_builder/`  
+**Documentation:** `docs/system/00_governance/platform/AGBv2/`
+
+**Pipeline:**
+```
+input/requirement.md → analyze → plan → implement → assemble → validate → promote → workflows/{codename}/
+```
+
+**Usage:**
+```bash
+# Run AGBv2
+ukbe-run-agent run --template-group artifact_generator_builder
+
+# Or via Operator Console
+# Select workflow: artifact_generator_builder
+# Select implementation: standard
+```
+
+**Key Artifacts:**
+
+| Artifact | Description |
+|----------|-------------|
+| `REQUIREMENT_DOC` | Input: markdown with YAML frontmatter (codename, title, version) |
+| `ANALYSIS_JSON_FILE` | Structured analysis of requirements |
+| `DOMAIN_PLAN_FILE` | Design plan for actions + prompts |
+| `WORKFLOW_PACKAGE_DIR` | Output: complete workflow in `workflows/{codename}/` |
+
+**See:** [AGBv2 Documentation](docs/system/00_governance/platform/AGBv2/README.md) for full guide.
+
+### Plan-First Review Workflow
+
+**plan_first_review_v1** is a structured plan-first review cycle with Codex reviewer and Qwen planner roles.
+
+**Location:** `workflows/plan_first_review_v1/`
+
+**Pipeline:**
+```
+raw_request.md → prepare_request → formalize_requirements → generate_plan → codex_review → refine_plan (loop) → promote
+```
+
+**Usage:**
+```bash
+ukbe-run-agent run --template-group plan_first_review_v1
+```
+
+**Operator Commands:**
+
+| Command | Purpose | Availability |
+|---------|---------|--------------|
+| `continue-refinement --job-id ID --additional-allowance N` | Extend refinement limit | plan_first_review_v1 only |
+| `stop-and-archive --job-id ID --reason R` | Terminal stop (irreversible) | Any workflow |
+| `change-requirements --job-id ID --new-requirements-file PATH --reason R` | New requirements baseline | plan_first_review_v1 only; blocked if STOPPED_ARCHIVED |
+
+**Key Features:**
+- Atomic Planning folder allocation (`mkdir(exist_ok=False)` + retry)
+- Layered path constants (`PLANNING_BASE`, `ARTIFACT_PATH_*`)
+- Unauthorized write detection (post-hoc reporting, not prevention)
+- Multi-baseline support via `change-requirements`

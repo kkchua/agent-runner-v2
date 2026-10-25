@@ -1,0 +1,3707 @@
+#!/usr/bin/env python3
+"""
+step_runner.py — Core step execution contract for agent_runner_v2.
+
+Single responsibility: invoke coder → read meta.json → validate artifacts → enrich sidecar.
+
+Related: IMPL-20260422-04, PLAN-20260608-01
+
+Key v2 differences from v1:
+- meta.json sidecar is the ONLY communication channel (no fallbacks, no stdout JSON parsing)
+- No pre-invocation sidecar writes
+- No recovery functions
+- Raises exceptions on failure; caller routes them
+"""
+from __future__ import annotations
+
+# Fix Windows console encoding to handle Unicode characters (e.g., Chinese paths)
+import sys
+if sys.platform == "win32":
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+        sys.stderr.reconfigure(encoding="utf-8")
+    except Exception:
+        pass  # Fallback for older Python versions
+
+import datetime as dt
+import hashlib
+import importlib.util
+import json
+import logging
+import re
+import shutil
+import tempfile
+from dataclasses import dataclass
+from pathlib import Path, PurePath
+from typing import Any
+
+from .artifact_paths import compute_paths
+from .coder_adapters import CoderInvocationError, dataclass_dict, invoke_coder
+from .exceptions import ArtifactMissingError, MetaJsonInvalidError, MetaJsonMissingError
+from .doc_paths import (
+    docs_root_rel,
+    architecture_site_rel,
+    codebase_doc_rel,
+    delivery_doc_rel,
+    system_doc_rel,
+)
+from .constants import (
+    ARTIFACT_KEY_REVIEW,
+    FOLDER_KEY_DELIVERY_IMPLEMENTATIONS,
+    FOLDER_KEY_DELIVERY_TASKS,
+    FOLDER_KEY_DELIVERY_PLANS,
+    FOLDER_KEY_DELIVERY_INITIATIVES,
+    FOLDER_KEY_DELIVERY_REVIEWS,
+    FOLDER_KEY_CODEBASE_CHANGES,
+    FOLDER_KEY_SYSTEM_TEMPLATE_ROOT,
+    FOLDER_KEY_SYSTEM_DELIVERY_TEMPLATE_ROOT,
+    FOLDER_KEY_SYSTEM_CODEBASE_TEMPLATE_ROOT,
+    EXT_MD,
+    EXT_JSON,
+    known_artifact_paths,
+    prompt_literal_substitutions,
+    repo_governance_rel,
+    SIDECAR_INSTRUCTION_TEMPLATE as CONSTANTS_SIDECAR_INSTRUCTION_TEMPLATE,
+    TOOL_INSTRUCTION_TEMPLATE as CONSTANTS_TOOL_INSTRUCTION_TEMPLATE,
+    SECTION_HEADING_RULE,
+    GOVERNANCE_PATH_REFERENCE_RULE,
+    CODER_SOP_INSTRUCTION_TEMPLATE,
+)
+from .bundle_governance import render_prompt_governance_block
+from .runtime_context import (
+    ARTIFACT_ROOT,
+    JOBS_ROOT,
+    PACKAGE_ROOT,
+    RUNNER_ROOT,
+    artifact_rel_to_meta_rel,
+    format_report_artifacts,
+    get_workflow_module,
+    resolve_repo_or_runtime_path,
+)
+from .documentation_guardrails import (
+    MASTER_BOOTSTRAP_WORKFLOWS,
+    master_bootstrap_artifact_candidates,
+)
+
+
+def _workflow_module():
+    """Get workflow module, returning None for plugin workflows."""
+    return get_workflow_module()
+
+
+def _get_step_names_from_state(state: dict) -> list[str]:
+    """Get workflow step names from state (backend provides this).
+    
+    For plugin workflows, steps come from backend_step_order in state.
+    Falls back to empty list if not available.
+    """
+    # Try to get from backend context first
+    template_group = state.get("template_group", "")
+    
+    # Backend should provide step order via step_execution_spec
+    # For now, return empty - the calling code should handle this gracefully
+    return []
+
+
+logger = logging.getLogger(__name__)
+
+
+def _path_for_report(path: Path, base: Path) -> str:
+    """Format a path for reporting (forward slashes, absolute)."""
+    return str(path.resolve()).replace("\\", "/")
+
+
+# ---------------------------------------------------------------------------
+# StepResult — the single return type from run_step()
+# ---------------------------------------------------------------------------
+
+@dataclass
+class StepResult:
+    """Result of a step execution (run_step or run_action).
+
+    Contains the final status, artifacts, and metadata for routing decisions.
+    """
+    status: str           # "APPROVED" | "REJECTED"
+    remark: str
+    artifacts: dict[str, str]
+    reject_code: str | None
+    meta_json_path: str   # repo-relative path of the meta.json that was read
+    usage_data: dict      # from InvocationResult.usage
+
+
+# ---------------------------------------------------------------------------
+# Main entry point
+# ---------------------------------------------------------------------------
+
+def run_step(
+    *,
+    group_name: str,
+    group_cfg: dict,
+    state: dict,
+    step: str,
+    step_cfg: dict,
+    coder: str,
+    coder_config: dict | None,
+    prompt_text: str,
+    checksum: str,
+    step_dir: Path,
+    project_root: Path,
+    context: dict[str, str],
+) -> StepResult:
+    """Invoke coder, read meta.json contract, validate artifacts, enrich sidecar.
+
+    Raises:
+        CoderInvocationError  — coder process failed (caller routes to failure)
+        MetaJsonMissingError  — coder did not write meta.json (hard failure)
+        MetaJsonInvalidError  — meta.json present but schema invalid (hard failure)
+        ArtifactMissingError  — meta.json references paths that don't exist on disk
+    """
+    invoked_at = _now_iso()
+
+    # Resolve meta.json path before invocation so it can be used as an early-exit signal.
+    # Safe to compute here — context is pre-built and immutable; we do NOT call build_context() again.
+    meta_path = _resolve_meta_json_path(step_cfg=step_cfg, context=context, project_root=project_root, step_dir=step_dir)
+    _validate_step_write_contract_config(step_cfg=step_cfg, step=step)
+    allowed_write_paths = _resolve_allowed_write_paths(
+        step_cfg=step_cfg,
+        context=context,
+        state=state,
+        project_root=project_root,
+        meta_path=meta_path,
+    )
+    audit_before = _snapshot_allowed_write_roots(
+        allowed_paths=allowed_write_paths,
+        project_root=project_root,
+    )
+
+    # Opt-in unauthorized write detection: snapshot entire project for prompt-driven steps
+    enable_unauthorized_detection = (
+        group_cfg.get("enable_unauthorized_write_detection", False)
+        and step_cfg.get("prompt_file")
+        and not step_cfg.get("action")
+    )
+    full_snapshot_before = _snapshot_all_files(project_root) if enable_unauthorized_detection else None
+
+    invocation = None
+    try:
+        timeout_seconds = step_cfg.get("coder_timeout_seconds")
+        if not isinstance(timeout_seconds, int) or timeout_seconds <= 0:
+            timeout_seconds = None
+        invocation = invoke_coder(
+            coder=coder,
+            step=step,
+            prompt_text=prompt_text,
+            cwd=project_root,
+            prompt_checksum=checksum,
+            now_iso_fn=_now_iso,
+            coder_config=coder_config,
+            sidecar_path=meta_path,
+            timeout_seconds_override=timeout_seconds,
+        )
+        print(
+            f"[{_now_iso()}] coder={coder} step={step} status=COMPLETE "
+            f"return_code={invocation.return_code}",
+            flush=True,
+        )
+    except CoderInvocationError as exc:
+        print(
+            f"[{_now_iso()}] coder={coder} step={step} status=ERROR "
+            f"return_code={exc.return_code}",
+            flush=True,
+        )
+        _save_debug_failure(
+            step_dir=step_dir,
+            command=exc.command,
+            return_code=exc.return_code,
+            stdout=exc.stdout,
+            stderr=exc.stderr,
+            raw_events=exc.raw_events,
+            error_message=str(exc),
+        )
+        # Run unauthorized write detection even on failure
+        if full_snapshot_before is not None:
+            full_snapshot_after = _snapshot_all_files(project_root)
+            allowed_paths_for_detection = _build_allowed_paths(state=state, project_root=project_root)
+            allowed_paths_for_detection.update(allowed_write_paths)
+            _verify_no_unauthorized_writes(
+                before=full_snapshot_before,
+                after=full_snapshot_after,
+                allowed_paths=allowed_paths_for_detection,
+                project_root=project_root,
+            )
+        raise
+
+    finished_at = _now_iso()
+    changed_paths = _verify_only_allowed_paths_changed(
+        before=audit_before,
+        allowed_paths=allowed_write_paths,
+        project_root=project_root,
+        step=step,
+    )
+
+    # Opt-in unauthorized write detection: verify no writes outside allowed paths
+    if full_snapshot_before is not None:
+        full_snapshot_after = _snapshot_all_files(project_root)
+        allowed_paths_for_detection = _build_allowed_paths(state=state, project_root=project_root)
+        # Also include the explicitly allowed write paths
+        allowed_paths_for_detection.update(allowed_write_paths)
+        _verify_no_unauthorized_writes(
+            before=full_snapshot_before,
+            after=full_snapshot_after,
+            allowed_paths=allowed_paths_for_detection,
+            project_root=project_root,
+        )
+
+    # Save invocation artefacts
+    _save_text(step_dir / "raw_output.txt", invocation.stdout)
+    if invocation.stderr:
+        _save_text(step_dir / "stderr.txt", invocation.stderr)
+    _save_json_atomic(step_dir / "usage.json", dataclass_dict(invocation.usage))
+    _save_json_atomic(step_dir / "step_manifest.json", dataclass_dict(invocation.manifest))
+    _write_raw_events_jsonl(step_dir / "raw_events.jsonl", invocation.raw_events)
+
+    # Read and validate meta.json. If the coder produced a direct result object
+    # instead of a wrapped v2 sidecar, repair it into the expected schema.
+    meta = _repair_or_validate_meta_json(
+        meta_path=meta_path,
+        parsed_result=invocation.parsed_result,
+    )
+    coder_result = meta["coder_result"]
+
+    artifacts = dict(coder_result.get("artifacts") or {})
+    produces = step_cfg.get("produces", [])
+    optional_produces = step_cfg.get("optional_produces", [])
+    artifacts = _backfill_declared_produced_artifacts(
+        artifacts=artifacts,
+        produces=produces,
+        optional_produces=optional_produces,
+        context=context,
+        state=state,
+        project_root=project_root,
+    )
+
+    # Validate artifact files exist on disk
+    _validate_artifact_files_exist(artifacts=artifacts, project_root=project_root)
+
+    # Strip UTF-8 BOM from coder-written artifact files
+    _strip_bom_from_artifacts(artifacts=artifacts, project_root=project_root)
+
+    # Validate template conformance if template_ref is configured
+    template_ref = step_cfg.get("template_ref")
+    if template_ref:
+        _validate_template_conformance(
+            template_ref=template_ref,
+            artifacts=artifacts,
+            project_root=project_root,
+            step=step,
+        )
+
+    # Validate artifacts are in the produces list (declarative protection model)
+    _validate_artifacts_in_produces_list(
+        artifacts=artifacts,
+        produces=produces,
+        optional_produces=optional_produces,
+        step=step,
+    )
+
+    artifacts = _canonicalize_master_bootstrap_artifacts(
+        artifacts=artifacts,
+        project_root=project_root,
+        state=state,
+    )
+    _validate_declared_produced_artifacts_exist(
+        artifacts=artifacts,
+        produces=produces,
+        optional_produces=optional_produces,
+        context=context,
+        state=state,
+        project_root=project_root,
+        step=step,
+    )
+
+    meta["coder_result"]["artifacts"] = format_report_artifacts(
+        artifacts,
+        project_root=project_root,
+        runtime_root=JOBS_ROOT,
+    )
+    _save_json_atomic(meta_path, meta)
+
+    # Print Doc ID and sidecar file path to console for visibility
+    result_key = step_cfg.get("result_meta_key") or step_cfg.get("result_meta_key_from_context", "")
+    artifact_path = artifacts.get(result_key, "") if result_key else ""
+    try:
+        meta_rel = str(meta_path.relative_to(project_root))
+    except ValueError:
+        meta_rel = str(meta_path)
+    print(f"[step_runner] step={step} result_key={result_key}", flush=True)
+    if artifact_path:
+        print(f"[step_runner] Doc ID PATH: {artifact_path}", flush=True)
+    print(f"[step_runner] Sidecar PATH: {meta_rel}", flush=True)
+
+    # Enrich sidecar with runner_data (atomic — never touches coder_result)
+    enrich_sidecar(
+        meta_path=meta_path,
+        step=step,
+        coder_used=coder,
+        invoked_at=invoked_at,
+        finished_at=finished_at,
+        prompt_checksum=checksum,
+        project_root=project_root,
+        allowed_write_paths=sorted(_path_for_report(path, project_root) for path in allowed_write_paths),
+        changed_paths=changed_paths,
+    )
+
+    # Build usage_data from meta.json coder_result.usage (LLM self-reported).
+    # This is the authoritative source — CLI stdout parsing is unreliable due to
+    # sidecar early-exit terminating the process before final usage output.
+    meta_usage = coder_result.get("usage") if isinstance(coder_result.get("usage"), dict) else {}
+    usage_data = _build_usage_data(
+        meta_usage=meta_usage,
+        step=step,
+        coder=coder,
+        invocation=invocation,
+    )
+    # Re-write usage.json with enriched data from meta.json.
+    _save_json_atomic(step_dir / "usage.json", usage_data)
+
+    return StepResult(
+        status=coder_result["status"],
+        remark=str(coder_result.get("remark") or ""),
+        artifacts=artifacts,
+        reject_code=coder_result.get("reject_code") or None,
+        meta_json_path=_path_for_report(meta_path, project_root),
+        usage_data=usage_data,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Action step execution (non-coder steps)
+# ---------------------------------------------------------------------------
+
+def run_action(
+    *,
+    action_name: str,
+    state: dict,
+    step: str,
+    step_cfg: dict,
+    step_dir: Path,
+    project_root: Path,
+    context: dict[str, str],
+) -> StepResult:
+    """Execute a runner action (non-coder step).
+
+    The action function writes its own meta.json and returns an ActionResult.
+    We then validate, enrich, and return a StepResult — same contract as run_step().
+
+    Raises:
+        Exception — action-specific failures (caller routes to failure).
+    """
+    from .runner_actions import execute as execute_action
+
+    invoked_at = _now_iso()
+
+    # Resolve meta.json path so the action can use it from context.
+    meta_path = _resolve_meta_json_path(
+        step_cfg=step_cfg,
+        context=context,
+        project_root=project_root,
+        step_dir=step_dir,
+    )
+
+    # Execute the action
+    result = execute_action(
+        action_name=action_name,
+        context=context,
+        state=state,
+        step_cfg=step_cfg,
+        step=step,
+        project_root=project_root,
+    )
+
+    finished_at = _now_iso()
+
+    # Write meta.json from ActionResult automatically so actions don't
+    # need to manage sidecar files themselves.
+    _save_json_atomic(meta_path, {
+        "schema_version": "v2",
+        "coder_result": {
+            "status": result.status,
+            "remark": result.remark,
+            "artifacts": format_report_artifacts(dict(result.artifacts or {}), project_root=project_root),
+            **({"reject_code": result.reject_code} if result.reject_code else {}),
+            "recorded_at": finished_at,
+        },
+    })
+
+    # Validate the action wrote a meta.json
+    meta = _read_and_validate_meta_json(meta_path)
+    coder_result = meta["coder_result"]
+
+    # Validate artifact files exist on disk
+    artifacts = dict(coder_result.get("artifacts") or {})
+    _validate_artifact_files_exist(artifacts=artifacts, project_root=project_root)
+
+    # Strip UTF-8 BOM from artifact files (no-op for clean files)
+    _strip_bom_from_artifacts(artifacts=artifacts, project_root=project_root)
+
+    # Validate artifacts are in the produces list (declarative protection model)
+    produces = step_cfg.get("produces", [])
+    optional_produces = step_cfg.get("optional_produces", [])
+    _validate_artifacts_in_produces_list(
+        artifacts=artifacts,
+        produces=produces,
+        optional_produces=optional_produces,
+        step=step,
+    )
+
+    # Enrich sidecar with runner_data
+    enrich_sidecar(
+        meta_path=meta_path,
+        step=step,
+        coder_used="action",
+        invoked_at=invoked_at,
+        finished_at=finished_at,
+        prompt_checksum="n/a",
+        project_root=project_root,
+        allowed_write_paths=[],
+        changed_paths=[],
+    )
+
+    # Write action_manifest.json for diagnostic visibility into action steps.
+    # Unlike prompt steps (which have prompt.txt, raw_output.txt, usage.json, etc.),
+    # action steps had no human-readable record of what happened.
+    _save_json_atomic(step_dir / "action_manifest.json", {
+        "action_name": action_name,
+        "step_name": step,
+        "invoked_at": invoked_at,
+        "finished_at": finished_at,
+        "status": result.status,
+        "remark": result.remark,
+        "artifacts": format_report_artifacts(dict(result.artifacts or {}), project_root=project_root),
+        **({"reject_code": result.reject_code} if result.reject_code else {}),
+        "step_config": {k: v for k, v in step_cfg.items() if k not in ("_workflow_bundle", "coder", "on_reject_refine")},
+    })
+
+    return StepResult(
+        status=coder_result["status"],
+        remark=str(coder_result.get("remark") or ""),
+        artifacts=artifacts,
+        reject_code=coder_result.get("reject_code") or None,
+        meta_json_path=_path_for_report(meta_path, project_root),
+        usage_data={},
+    )
+
+
+# ---------------------------------------------------------------------------
+# Meta.json contract
+# ---------------------------------------------------------------------------
+
+def _resolve_meta_json_path(
+    *,
+    step_cfg: dict,
+    context: dict[str, str],
+    project_root: Path,
+    step_dir: Path | None = None,
+) -> Path:
+    """Resolve absolute path of the meta.json to read after coder invocation.
+
+    Priority:
+    1. result_meta_key_from_context — context variable holds the artifact path;
+       derive meta.json by replacing extension.
+    2. result_meta_key — use the precomputed {KEY}_METAJSON context variable.
+    3. step_dir fallback — for producing steps where artifact doesn't exist yet.
+    """
+    from_ctx_key = step_cfg.get("result_meta_key_from_context")
+    if from_ctx_key:
+        value = context.get(from_ctx_key, "")
+        if value:
+            if from_ctx_key.endswith("_METAJSON"):
+                # Key already points to a pre-resolved .meta.json path — use directly
+                meta_rel = value
+            else:
+                # Key points to an artifact path — derive the .meta.json sidecar path
+                meta_rel = artifact_rel_to_meta_rel(value)
+            return resolve_repo_or_runtime_path(meta_rel, project_root=project_root, runtime_root=JOBS_ROOT)
+
+    result_key = step_cfg.get("result_meta_key")
+    if result_key:
+        meta_rel = context.get(f"{result_key}_METAJSON", "")
+        if meta_rel:
+            return resolve_repo_or_runtime_path(meta_rel, project_root=project_root, runtime_root=JOBS_ROOT)
+
+    # Fallback: use step directory for producing steps (artifact not yet created)
+    if step_dir is not None:
+        fallback = step_dir / "meta.json"
+        print(
+            f"[step_runner] meta.json fallback to step dir: {_path_for_report(fallback, project_root)}",
+            flush=True,
+        )
+        return fallback
+
+    raise MetaJsonMissingError(
+        f"Step config has neither 'result_meta_key' nor 'result_meta_key_from_context' "
+        f"and no step_dir fallback available — cannot locate meta.json"
+    )
+
+
+def _read_and_validate_meta_json(path: Path) -> dict:
+    """Read and validate coder-written meta.json.
+
+    Accepts both:
+    - v2 format: schema_version = "v2"
+    - legacy format: sidecar_version = "artifact_meta_v1"
+
+    Raises MetaJsonMissingError if file absent.
+    Raises MetaJsonInvalidError with descriptive message on any schema failure.
+    """
+    if not path.exists() or not path.is_file():
+        raise MetaJsonMissingError(
+            f"Coder did not write meta.json to expected path: {path}"
+        )
+
+    try:
+        meta = json.loads(path.read_text(encoding="utf-8-sig"))
+    except (json.JSONDecodeError, OSError) as exc:
+        raise MetaJsonInvalidError(
+            f"meta.json at {path} is not valid JSON: {exc}"
+        ) from exc
+
+    if not isinstance(meta, dict):
+        raise MetaJsonInvalidError(f"meta.json at {path} is not a JSON object")
+
+    # Accept both schema versions during transition
+    schema_v = str(meta.get("schema_version") or "").strip()
+    sidecar_v = str(meta.get("sidecar_version") or "").strip()
+    if schema_v not in ("v2",) and sidecar_v not in ("artifact_meta_v1",):
+        raise MetaJsonInvalidError(
+            f"meta.json at {path} has unrecognised version: "
+            f"schema_version={schema_v!r}, sidecar_version={sidecar_v!r}. "
+            "Expected schema_version='v2' or sidecar_version='artifact_meta_v1'."
+        )
+
+    coder_result = meta.get("coder_result")
+    if not isinstance(coder_result, dict):
+        raise MetaJsonInvalidError(
+            f"meta.json at {path} is missing coder_result object"
+        )
+
+    status = str(coder_result.get("status") or "").strip().upper()
+    if status not in ("APPROVED", "REJECTED"):
+        raise MetaJsonInvalidError(
+            f"meta.json at {path} has invalid coder_result.status: {status!r}. "
+            "Must be 'APPROVED' or 'REJECTED'."
+        )
+    coder_result["status"] = status  # normalise case in-place
+
+    if not isinstance(coder_result.get("artifacts"), dict):
+        raise MetaJsonInvalidError(
+            f"meta.json at {path} is missing coder_result.artifacts object"
+        )
+
+    recorded_at = str(coder_result.get("recorded_at") or "").strip()
+    if not recorded_at:
+        raise MetaJsonInvalidError(
+            f"meta.json at {path} is missing coder_result.recorded_at"
+        )
+
+    return meta
+
+
+def _coerce_int(value: Any) -> int | None:
+    """Convert value to int, returning None on failure.
+
+    Args:
+        value: Any value to convert (typically str, int, or None).
+
+    Returns:
+        Integer value if conversion succeeds, None otherwise.
+    """
+    if value is None:
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _coerce_float(value: Any) -> float | None:
+    """Convert value to float, returning None on failure.
+
+    Args:
+        value: Any value to convert (typically str, float, int, or None).
+
+    Returns:
+        Float value if conversion succeeds, None otherwise.
+    """
+    if value is None:
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _build_usage_data(
+    *,
+    meta_usage: dict[str, Any],
+    step: str,
+    coder: str,
+    invocation: Any,
+) -> dict[str, Any]:
+    """Build usage_data dict from meta.json coder_result.usage (LLM self-reported).
+
+    Falls back to stdout-extracted usage (cli_reported) when the sidecar
+    has no usage data, then to not_available if neither source has values.
+    Duration is always taken from the invocation (wall-clock measurement).
+    """
+    cli_usage = dataclass_dict(invocation.usage)
+    cli_tokens = {
+        "input_tokens": cli_usage.get("input_tokens"),
+        "output_tokens": cli_usage.get("output_tokens"),
+        "total_tokens": cli_usage.get("total_tokens"),
+        "cost": cli_usage.get("cost"),
+    }
+
+    input_tokens = _coerce_int(meta_usage.get("input_tokens")) or cli_tokens["input_tokens"]
+    output_tokens = _coerce_int(meta_usage.get("output_tokens")) or cli_tokens["output_tokens"]
+    total_tokens = _coerce_int(meta_usage.get("total_tokens")) or cli_tokens["total_tokens"]
+    cost = _coerce_float(meta_usage.get("cost")) or cli_tokens["cost"]
+
+    if meta_usage:
+        usage_source = "meta_json_reported"
+    elif any(v is not None for v in [input_tokens, output_tokens, total_tokens]):
+        usage_source = "cli_reported"
+    else:
+        usage_source = "not_available"
+
+    return {
+        "step": step,
+        "coder_used": coder,
+        "usage_source": usage_source,
+        "input_tokens": input_tokens,
+        "output_tokens": output_tokens,
+        "total_tokens": total_tokens,
+        "cost": cost,
+        "duration_ms": cli_usage.get("duration_ms"),
+        "started_at": cli_usage.get("started_at", ""),
+        "finished_at": cli_usage.get("finished_at", ""),
+    }
+
+
+def _coerce_direct_result_to_meta(
+    *,
+    payload: dict[str, Any],
+    expected_meta_path: Path,
+) -> dict[str, Any] | None:
+    """Convert a direct coder result object into a v2 meta.json payload.
+
+    Accepts payloads shaped like:
+    {
+      "status": "APPROVED|REJECTED",
+      "remark": "...",
+      "artifacts": {...},
+      "reject_code": "..."
+    }
+    """
+    if not isinstance(payload, dict):
+        return None
+
+    status = str(payload.get("status") or "").strip().upper()
+    artifacts = payload.get("artifacts")
+    if status not in ("APPROVED", "REJECTED") or not isinstance(artifacts, dict):
+        return None
+
+    coder_result: dict[str, Any] = {
+        "status": status,
+        "remark": str(payload.get("remark") or ""),
+        "artifacts": artifacts,
+        "recorded_at": dt.datetime.now().astimezone().isoformat(timespec="seconds"),
+    }
+    reject_code = str(payload.get("reject_code") or "").strip()
+    if reject_code:
+        coder_result["reject_code"] = reject_code
+
+    return {
+        "schema_version": "v2",
+        "coder_result": coder_result,
+    }
+
+
+def _repair_or_validate_meta_json(
+    *,
+    meta_path: Path,
+    parsed_result: dict[str, Any] | None,
+) -> dict[str, Any]:
+    """Validate meta.json, repairing common direct-result sidecar mistakes when possible."""
+    try:
+        return _read_and_validate_meta_json(meta_path)
+    except MetaJsonMissingError:
+        repaired = _coerce_direct_result_to_meta(
+            payload=parsed_result or {},
+            expected_meta_path=meta_path,
+        )
+        if repaired is None:
+            raise
+        _save_json_atomic(meta_path, repaired)
+        return _read_and_validate_meta_json(meta_path)
+    except MetaJsonInvalidError as exc:
+        repaired: dict[str, Any] | None = None
+
+        if meta_path.exists() and meta_path.is_file():
+            try:
+                existing = json.loads(meta_path.read_text(encoding="utf-8-sig"))
+            except (json.JSONDecodeError, OSError):
+                existing = None
+            repaired = _coerce_direct_result_to_meta(
+                payload=existing if isinstance(existing, dict) else {},
+                expected_meta_path=meta_path,
+            )
+
+        if repaired is None:
+            repaired = _coerce_direct_result_to_meta(
+                payload=parsed_result or {},
+                expected_meta_path=meta_path,
+            )
+
+        if repaired is None:
+            raise exc
+
+        _save_json_atomic(meta_path, repaired)
+        return _read_and_validate_meta_json(meta_path)
+
+
+def _validate_artifact_files_exist(
+    *,
+    artifacts: dict[str, str],
+    project_root: Path,
+) -> None:
+    """Raise ArtifactMissingError if any artifact path in the dict doesn't exist.
+
+    Note: Skips .meta.json files as they are sidecars, not actual artifacts.
+    """
+    missing = [
+        path_str
+        for path_str in artifacts.values()
+        if path_str and not path_str.endswith('.meta.json') and not (project_root / path_str).exists()
+    ]
+    if missing:
+        raise ArtifactMissingError(
+            f"Artifact files claimed in meta.json do not exist on disk: {missing}",
+            missing=missing,
+        )
+
+
+def _strip_bom_from_artifacts(
+    *,
+    artifacts: dict[str, str],
+    project_root: Path,
+) -> None:
+    """Strip UTF-8 BOM from artifact files if present.
+
+    Some coders write files with a BOM (U+FEFF) which breaks YAML frontmatter
+    parsing and ASCII-only compliance.  This is a no-op for clean files.
+    """
+    for path_str in artifacts.values():
+        if not path_str or path_str.endswith(".meta.json"):
+            continue
+        abs_path = project_root / path_str
+        if not abs_path.exists() or not abs_path.is_file():
+            continue
+        content = abs_path.read_text(encoding="utf-8")
+        if content.startswith("\ufeff"):
+            abs_path.write_text(content[1:], encoding="utf-8")
+
+
+def _validate_declared_produced_artifacts_exist(
+    *,
+    artifacts: dict[str, str],
+    produces: list[str],
+    optional_produces: list[str],
+    context: dict[str, str],
+    state: dict[str, Any],
+    project_root: Path,
+    step: str,
+) -> None:
+    """Require every declared produced artifact to exist on disk for APPROVED LLM steps.
+
+    Unlike `_validate_artifact_files_exist`, this enforces the full `produces`
+    contract, not just the subset of artifact paths explicitly returned by the model.
+
+    Optional produces (optional_produces) are skipped if not present in artifacts
+    and not resolvable from context — they are allowed but not required.
+    """
+    if not produces and not optional_produces:
+        return
+
+    optional_set = set(optional_produces)
+    missing: list[str] = []
+    for artifact_key in produces:
+        path_str = str(artifacts.get(artifact_key) or "").strip()
+        if not path_str:
+            path_str = _resolve_contract_path_from_context(
+                artifact_key=artifact_key,
+                context=context,
+                state=state,
+            )
+        if not path_str:
+            missing.append(f"{artifact_key} (no resolved output path)")
+            continue
+        resolved = resolve_repo_or_runtime_path(
+            path_str,
+            project_root=project_root,
+            runtime_root=JOBS_ROOT,
+        )
+        if not resolved.exists():
+            missing.append(f"{artifact_key} -> {path_str}")
+
+    # Optional produces: only flag if explicitly declared in artifacts but missing
+    for artifact_key in optional_produces:
+        path_str = str(artifacts.get(artifact_key) or "").strip()
+        if not path_str:
+            # Not declared in meta.json — skip (it's optional)
+            continue
+        resolved = resolve_repo_or_runtime_path(
+            path_str,
+            project_root=project_root,
+            runtime_root=JOBS_ROOT,
+        )
+        if not resolved.exists():
+            missing.append(f"{artifact_key} -> {path_str}")
+
+    if missing:
+        raise ArtifactMissingError(
+            f"Step '{step}' was approved but declared produced artifacts are missing on disk: {missing}",
+            missing=missing,
+        )
+
+
+def _backfill_declared_produced_artifacts(
+    *,
+    artifacts: dict[str, str],
+    produces: list[str],
+    optional_produces: list[str],
+    context: dict[str, str],
+    state: dict[str, Any],
+    project_root: Path,
+) -> dict[str, str]:
+    """Fill missing declared produced artifacts from their contract paths.
+
+    Some coder steps write all declared files to disk but omit part of the
+    artifact set from the sidecar. When the omitted file exists at the declared
+    contract path, bind it into the returned artifact map so downstream steps
+    can consume the full produced set.
+
+    Also attempts backfill for optional_produces keys.
+    """
+    all_declared = produces + optional_produces
+    if not all_declared:
+        return dict(artifacts)
+
+    normalized = dict(artifacts)
+    for artifact_key in all_declared:
+        current = str(normalized.get(artifact_key) or "").strip()
+        if current:
+            continue
+        path_str = _resolve_contract_path_from_context(
+            artifact_key=artifact_key,
+            context=context,
+            state=state,
+        )
+        if not path_str:
+            continue
+        resolved = resolve_repo_or_runtime_path(
+            path_str,
+            project_root=project_root,
+            runtime_root=JOBS_ROOT,
+        )
+        if resolved.exists():
+            normalized[artifact_key] = _path_for_report(resolved, project_root)
+    return normalized
+
+
+def _validate_artifacts_in_produces_list(
+    *,
+    artifacts: dict[str, str],
+    produces: list[str],
+    optional_produces: list[str],
+    step: str,
+) -> None:
+    """Raise ArtifactMissingError if any artifact is not in the step's produces list.
+
+    This enforces the declarative write-contract model:
+    - Each step declares what it produces in template_groups.py
+    - LLM can only report artifacts in that list
+    - Prevents workflows from reporting undeclared outputs
+
+    Both produces and optional_produces are allowed.
+
+    Note: Only explicit alias normalization is allowed:
+    - REVIEW_FILE_SUGGESTED_METAJSON → REVIEW_FILE_SUGGESTED
+    - REVIEW_FILE_SUGGESTED_PATH → REVIEW_FILE_SUGGESTED
+    """
+    allowed = set(produces) | set(optional_produces)
+    if not allowed:
+        # Action steps or steps without declared outputs - skip validation
+        return
+
+    # Normalize artifacts using explicit alias suffixes only.
+    normalized_artifacts = {}
+    for artifact_key, artifact_path in artifacts.items():
+        normalized_key = _normalize_artifact_contract_key(artifact_key)
+        if normalized_key == "README" and "SYSTEM_DOCS_INDEX" in allowed:
+            normalized_key = "SYSTEM_DOCS_INDEX"
+        elif normalized_key == "CHANGE_LOG" and "SYSTEM_DOCS_CHANGE_LOG" in allowed:
+            normalized_key = "SYSTEM_DOCS_CHANGE_LOG"
+        normalized_artifacts[normalized_key] = artifact_path
+    
+    # Check each normalized artifact against produces list
+    unauthorized = []
+    for artifact_key in normalized_artifacts.keys():
+        if artifact_key not in allowed:
+            unauthorized.append(artifact_key)
+    
+    if unauthorized:
+        raise ArtifactMissingError(
+            f"Step '{step}' reported artifacts not declared in 'produces' list: {unauthorized}. "
+            f"Allowed artifacts: {sorted(allowed)}",
+            missing=unauthorized,
+        )
+
+
+def _normalize_artifact_contract_key(artifact_key: str) -> str:
+    """Remove _METAJSON or _PATH suffix from artifact key.
+
+    Used to normalize sidecar keys like REVIEW_FILE_SUGGESTED_METAJSON
+    back to their canonical artifact key REVIEW_FILE_SUGGESTED.
+
+    Args:
+        artifact_key: Artifact key that may have a suffix.
+
+    Returns:
+        Artifact key with suffix removed, or original key if no suffix.
+    """
+    key = str(artifact_key or "").strip()
+    for suffix in ("_METAJSON", "_PATH"):
+        if key.endswith(suffix):
+            return key[:-len(suffix)]
+    return key
+
+
+def _declared_write_keys(step_cfg: dict[str, Any]) -> list[str]:
+    """Extract all declared write artifact keys from step config.
+
+    Combines 'produces', 'updates', and 'target_artifact' into a single
+    list of artifact keys that this step may write.
+
+    Args:
+        step_cfg: Step configuration dict with produces/updates/target_artifact.
+
+    Returns:
+        List of unique artifact keys that this step writes.
+    """
+    keys: list[str] = []
+    for raw_key in step_cfg.get("produces", []) or []:
+        key = str(raw_key or "").strip()
+        if key and key not in keys:
+            keys.append(key)
+    for raw_key in step_cfg.get("updates", []) or []:
+        key = str(raw_key or "").strip()
+        if key and key not in keys:
+            keys.append(key)
+    target_artifact = str(step_cfg.get("target_artifact") or "").strip()
+    if target_artifact and target_artifact not in keys:
+        keys.append(target_artifact)
+    return keys
+
+
+def _step_requires_write_contract(step_cfg: dict[str, Any]) -> bool:
+    """Check if a step requires a write contract declaration.
+
+    Steps require write contracts if they:
+    - Have result_meta_key or result_meta_key_from_context (produces artifacts)
+    - Have declared produces/updates keys
+
+    Action steps never require write contracts (they manage their own I/O).
+
+    Args:
+        step_cfg: Step configuration dict.
+
+    Returns:
+        True if step requires write contract, False otherwise.
+    """
+    if step_cfg.get("action"):
+        return False
+    if step_cfg.get("result_meta_key") or step_cfg.get("result_meta_key_from_context"):
+        return True
+    if _declared_write_keys(step_cfg):
+        return True
+    return False
+
+
+def _validate_step_write_contract_config(*, step_cfg: dict[str, Any], step: str) -> None:
+    """Validate that write-capable steps declare their write contract."""
+    if not _step_requires_write_contract(step_cfg):
+        return
+    declared = _declared_write_keys(step_cfg)
+    if declared:
+        return
+    raise RuntimeError(
+        f"Step '{step}' is write-capable but declares no write contract. "
+        "Add 'produces' for created artifacts or 'updates' for in-place edits."
+    )
+
+
+def _resolve_contract_path_from_context(
+    *,
+    artifact_key: str,
+    context: dict[str, str],
+    state: dict[str, Any],
+) -> str:
+    """Resolve artifact path from context or state.
+
+    Tries multiple sources in order:
+    1. Direct context key (e.g., REVIEW_FILE_SUGGESTED)
+    2. _PATH suffix context key (e.g., REVIEW_FILE_SUGGESTED_PATH)
+    3. State artifacts dict
+
+    Args:
+        artifact_key: The artifact key to resolve.
+        context: Prompt rendering context dict.
+        state: Workflow state dict containing artifacts.
+
+    Returns:
+        Resolved path string, or empty string if not found.
+    """
+    for candidate in (
+        context.get(artifact_key, ""),
+        context.get(f"{artifact_key}_PATH", ""),
+        (state.get("artifacts") or {}).get(artifact_key, ""),
+    ):
+        value = str(candidate or "").strip()
+        if value:
+            return value
+    return ""
+
+
+def _resolve_allowed_write_paths(
+    *,
+    step_cfg: dict[str, Any],
+    context: dict[str, str],
+    state: dict[str, Any],
+    project_root: Path,
+    meta_path: Path,
+) -> set[Path]:
+    """Resolve all allowed write paths from declared produces/updates keys."""
+    allowed_paths: set[Path] = {meta_path.resolve()}
+    for artifact_key in _declared_write_keys(step_cfg):
+        path_str = _resolve_contract_path_from_context(
+            artifact_key=artifact_key,
+            context=context,
+            state=state,
+        )
+        if not path_str:
+            continue
+        resolved = resolve_repo_or_runtime_path(
+            path_str,
+            project_root=project_root,
+            runtime_root=JOBS_ROOT,
+        )
+        allowed_paths.add(resolved.resolve())
+    return allowed_paths
+
+
+def _snapshot_allowed_write_roots(*, allowed_paths: set[Path], project_root: Path) -> dict[Path, str]:
+    """Snapshot file hashes before invocation for write verification."""
+    snapshot: dict[Path, str] = {}
+    for path in allowed_paths:
+        resolved = path.resolve()
+        if not resolved.exists() or not resolved.is_file():
+            snapshot[resolved] = ""
+            continue
+        try:
+            snapshot[resolved] = _hash_file(resolved)
+        except OSError:
+            snapshot[resolved] = ""
+    return snapshot
+
+
+def _verify_only_allowed_paths_changed(
+    *,
+    before: dict[Path, str],
+    allowed_paths: set[Path],
+    project_root: Path,
+    step: str,
+) -> list[str]:
+    """Compare before/after snapshots and return list of changed paths."""
+    after = _snapshot_allowed_write_roots(allowed_paths=allowed_paths, project_root=project_root)
+    changed_abs: list[Path] = []
+    for path in sorted(allowed_paths):
+        if before.get(path) != after.get(path):
+            changed_abs.append(path)
+    return [_path_for_report(path, project_root) for path in changed_abs]
+
+
+def _hash_file(path: Path) -> str:
+    """Compute SHA-256 hash of file contents."""
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+# ---------------------------------------------------------------------------
+# Unauthorized write detection (opt-in, prompt-driven steps only)
+# ---------------------------------------------------------------------------
+
+def _snapshot_all_files(project_root: Path) -> dict[Path, str]:
+    """Snapshot hashes of all files under project_root.
+
+    Used for unauthorized write detection — compares before/after to find
+    any changes outside allowed paths.
+    """
+    snapshot: dict[Path, str] = {}
+    for path in project_root.rglob("*"):
+        if not path.is_file():
+            continue
+        # Skip common non-source directories
+        rel = path.relative_to(project_root)
+        if any(part in (".git", "__pycache__", ".venv", "node_modules", ".pytest-cache") for part in rel.parts):
+            continue
+        try:
+            snapshot[path.resolve()] = _hash_file(path)
+        except OSError:
+            continue
+    return snapshot
+
+
+def _build_allowed_paths(state: dict, project_root: Path) -> set[Path]:
+    """Build the set of paths the coder is allowed to write to.
+
+    Restricts writes to:
+    - The job's Planning folder (from PLANNING_FOLDER artifact) and its subdirectories
+    - Explicit runtime sidecar paths (step_dir, meta.json location)
+    
+    Does NOT allow parent directories of file artifacts to prevent writes outside
+    the job's scope.
+    """
+    allowed: set[Path] = set()
+
+    # Add the job's Planning folder (directory artifact)
+    artifacts = state.get("artifacts", {})
+    planning_folder_str = artifacts.get("PLANNING_FOLDER")
+    if planning_folder_str:
+        try:
+            planning_folder = (project_root / planning_folder_str).resolve()
+            allowed.add(planning_folder)
+        except (OSError, ValueError):
+            pass
+
+    # Add step_dir (where meta.json and debug artifacts go)
+    step_dir_str = state.get("current_step_dir")
+    if step_dir_str:
+        try:
+            step_dir = (project_root / step_dir_str).resolve()
+            allowed.add(step_dir)
+        except (OSError, ValueError):
+            pass
+
+    return allowed
+
+
+def _verify_no_unauthorized_writes(
+    before: dict[Path, str],
+    after: dict[Path, str],
+    allowed_paths: set[Path],
+    project_root: Path,
+) -> None:
+    """Compare snapshots, raise UnauthorizedWriteError if unauthorized changes detected.
+
+    Checks for:
+    - New or modified files outside allowed paths
+    - Deleted files outside allowed paths
+
+    Args:
+        before: Snapshot before coder invocation.
+        after: Snapshot after coder invocation.
+        allowed_paths: Set of paths the coder was allowed to write.
+        project_root: Project root for relative path reporting.
+
+    Raises:
+        UnauthorizedWriteError: If any file changed outside allowed_paths.
+    """
+    from .exceptions import UnauthorizedWriteError
+
+    unauthorized: list[str] = []
+
+    def _is_allowed(path: Path) -> bool:
+        """Check if path is in allowed paths."""
+        return any(
+            path == allowed or path.parent == allowed or _is_subpath(path, allowed)
+            for allowed in allowed_paths
+        )
+
+    # Check for new or modified files
+    for path, after_hash in after.items():
+        before_hash = before.get(path)
+        if before_hash == after_hash:
+            continue  # No change
+        # File changed — check if it's in allowed paths
+        if not _is_allowed(path):
+            try:
+                rel = path.relative_to(project_root)
+                unauthorized.append(str(rel))
+            except ValueError:
+                unauthorized.append(str(path))
+
+    # Check for deleted files (in before but not in after)
+    for path in before:
+        if path not in after:
+            # File was deleted — check if it's in allowed paths
+            if not _is_allowed(path):
+                try:
+                    rel = path.relative_to(project_root)
+                    unauthorized.append(f"{rel} (deleted)")
+                except ValueError:
+                    unauthorized.append(f"{path} (deleted)")
+
+    if unauthorized:
+        raise UnauthorizedWriteError(
+            f"Coder made {len(unauthorized)} unauthorized change(s): {', '.join(sorted(unauthorized)[:5])}",
+            unauthorized_paths=sorted(unauthorized),
+        )
+
+
+def _is_subpath(path: Path, parent: Path) -> bool:
+    """Check if path is a subpath of parent."""
+    try:
+        path.relative_to(parent)
+        return True
+    except ValueError:
+        return False
+
+
+def _canonicalize_master_bootstrap_artifacts(
+    *,
+    artifacts: dict[str, str],
+    project_root: Path,
+    state: dict,
+) -> dict[str, str]:
+    """Canonicalize artifacts for master bootstrap workflows (special handling)."""
+    if state.get("template_group") not in MASTER_BOOTSTRAP_WORKFLOWS:
+        return dict(artifacts)
+
+    job_id = str(state.get("job_id") or "").strip()
+    mode = str((state.get("current_step_cfg") or {}).get("mode") or state.get("current_mode") or "bootstrap")
+    candidates = master_bootstrap_artifact_candidates(
+        template_group=str(state.get("template_group") or ""),
+        job_id=job_id,
+        mode=mode,
+    )
+    normalized = dict(artifacts)
+
+    for artifact_key, path_candidates in candidates.items():
+        if not path_candidates:
+            continue
+        canonical_rel = path_candidates[0]
+        canonical_abs = project_root / canonical_rel
+        current_rel = str(normalized.get(artifact_key) or "").strip()
+
+        chosen_rel = ""
+        if current_rel:
+            current_abs = project_root / current_rel
+            if current_abs.exists() and current_abs.is_file():
+                chosen_rel = current_rel
+
+        if not chosen_rel:
+            for candidate_rel in path_candidates:
+                candidate_abs = project_root / candidate_rel
+                if candidate_abs.exists() and candidate_abs.is_file():
+                    chosen_rel = candidate_rel
+                    break
+
+        if not chosen_rel:
+            continue
+
+        chosen_abs = project_root / chosen_rel
+        if chosen_rel != canonical_rel:
+            canonical_abs.parent.mkdir(parents=True, exist_ok=True)
+            canonical_abs.write_text(chosen_abs.read_text(encoding="utf-8"), encoding="utf-8")
+        normalized[artifact_key] = canonical_rel
+
+    return normalized
+
+
+def _backend_artifact_rules(state: dict[str, Any]) -> dict[str, Any]:
+    """Extract backend artifact rules from workflow state.
+
+    Backend artifact rules define path templates for artifacts when running
+    in backend mode (vs local mode). Used to resolve working and final paths.
+
+    Args:
+        state: Workflow state dict with backend_artifact_rules key.
+
+    Returns:
+        Dict mapping artifact keys to rule dicts with path templates.
+    """
+    rules = state.get("backend_artifact_rules") or {}
+    return rules if isinstance(rules, dict) else {}
+
+
+def _normalize_backend_job_path(path_str: str) -> str:
+    """Normalize a backend job-relative path to an absolute path.
+
+    Handles special prefixes:
+    - ".ukbe-runner/jobs/..." → resolved under JOBS_ROOT
+    - "docs/", "archive/", "scripts/", "temp/" → kept relative (repo paths)
+    - Other relative paths → resolved under JOBS_ROOT
+
+    Args:
+        path_str: Path string to normalize.
+
+    Returns:
+        Normalized absolute path string.
+    """
+    if not path_str:
+        return path_str
+    p = Path(path_str)
+    if p.is_absolute():
+        return str(p)
+    posix = path_str.replace("\\", "/")
+    marker = ".ukbe-runner/jobs/"
+    if posix.startswith(marker):
+        suffix = posix[len(marker):]
+        return str(JOBS_ROOT / Path(suffix))
+    repo_prefixes = ("docs/", "archive/", "scripts/", "temp/")
+    if posix.startswith(repo_prefixes):
+        return path_str
+    return str(JOBS_ROOT / Path(path_str))
+
+
+def _resolve_backend_artifact_rule_path(*, state: dict, artifact_key: str, step: str, prefer_final: bool = False) -> str:
+    """Resolve artifact path from backend artifact rule template.
+
+    Uses path templates from backend_artifact_rules to compute the working
+    or final path for an artifact. Templates support placeholders like
+    {job_id}, {step_name}, {step_order}, {workflow_name}.
+
+    Args:
+        state: Workflow state dict with backend_artifact_rules.
+        artifact_key: Artifact key to resolve path for.
+        step: Current step name.
+        prefer_final: If True, prefer final_path_template over working_path_template.
+
+    Returns:
+        Resolved absolute path string, or empty string if no rule found.
+    """
+    rules = _backend_artifact_rules(state)
+    rule = rules.get(artifact_key) if isinstance(rules, dict) else None
+    if not isinstance(rule, dict):
+        return ""
+    template = rule.get("final_path_template") if prefer_final else rule.get("working_path_template")
+    if not template:
+        template = rule.get("working_path_template") or rule.get("final_path_template")
+    if not template:
+        return ""
+    run_id = str(state.get("job_id") or state.get("workflow_run_id") or "backend-run")
+    steps = _workflow_module().TEMPLATE_GROUPS.get(state.get("template_group", ""), {}).get("steps", [])
+    try:
+        step_index = steps.index(step) + 1
+    except ValueError:
+        step_index = 1
+    step_dir_rel = str(state.get("backend_step_dir_rel") or "").strip()
+    step_sequence = int(state.get("backend_step_sequence") or step_index)
+    step_dir_name = PurePath(step_dir_rel).name if step_dir_rel else f"{step_sequence:02d}_{step}"
+    resolved = str(template).format(
+        workflow_name=str(state.get("template_group") or ""),
+        template_group=str(state.get("template_group") or ""),
+        job_id=run_id,
+        run_code=run_id,
+        step_name=step,
+        step_order=step_sequence,
+        step_dir=step_dir_name,
+        step_dir_rel=step_dir_rel,
+    )
+    return _normalize_backend_job_path(resolved)
+
+
+def _set_backend_artifact_rule_aliases(*, ctx: dict[str, str], state: dict, step: str, artifacts: dict[str, Any], produces: list[str]) -> bool:
+    """Set context aliases from backend artifact rules.
+
+    For each artifact with a backend rule, sets {KEY}_PATH and {KEY}_METAJSON
+    context variables based on the rule's path template.
+
+    Args:
+        ctx: Context dict to update with aliases.
+        state: Workflow state dict with backend_artifact_rules.
+        step: Current step name.
+        artifacts: Current artifact values.
+        produces: List of artifact keys this step produces.
+
+    Returns:
+        True if backend rules were applied, False otherwise.
+    """
+    rules = _backend_artifact_rules(state)
+    if not rules:
+        return False
+    step_dir_rel = str(state.get("backend_step_dir_rel") or "").strip()
+    for artifact_key, rule in rules.items():
+        if not isinstance(rule, dict):
+            continue
+        is_produced = artifact_key in produces
+        artifact_value = artifacts.get(artifact_key) or ""
+        if not artifact_value:
+            artifact_value = _resolve_backend_artifact_rule_path(
+                state=state,
+                artifact_key=artifact_key,
+                step=step,
+                prefer_final=not is_produced,
+            )
+        artifact_value = _normalize_backend_job_path(str(artifact_value)) if artifact_value else ""
+        if artifact_value:
+            ctx[f"{artifact_key}_PATH"] = str(artifact_value)
+        meta_strategy = str(rule.get("meta_path_strategy") or "artifact_sidecar")
+        if meta_strategy == "step_shared_meta" and step_dir_rel:
+            meta_path = f"{step_dir_rel}/meta.json"
+        else:
+            p = PurePath(str(artifact_value))
+            meta_path = str(p.parent / f"{p.stem}.meta.json") if artifact_value else ""
+        meta_path = _normalize_backend_job_path(meta_path) if meta_path else ""
+        if meta_path:
+            ctx[f"{artifact_key}_METAJSON"] = meta_path
+        if is_produced and not artifacts.get(artifact_key) and artifact_value:
+            ctx[artifact_key] = str(artifact_value)
+            ctx[f"{artifact_key}_PATH"] = str(artifact_value)
+            if meta_path:
+                ctx[f"{artifact_key}_METAJSON"] = meta_path
+    return True
+
+
+
+from .constants import get_master_docs_output_paths, delivery_scaffold_docs
+
+MASTER_DOCS_OUTPUT_PATHS: dict[str, str] = get_master_docs_output_paths()
+DELIVERY_SCAFFOLD_OUTPUT_PATHS: dict[str, str] = delivery_scaffold_docs()
+
+BUG_FIX_OUTPUT_PATHS: dict[str, str] = {
+    "BUG_REPORT_FILE": f"{FOLDER_KEY_DELIVERY_IMPLEMENTATIONS}/{{step_dir_rel}}/BUG_REPORT.md",
+    "REPRO_FILE": f"{FOLDER_KEY_DELIVERY_IMPLEMENTATIONS}/{{step_dir_rel}}/BUG_REPRODUCTION.md",
+    "ROOT_CAUSE_FILE": f"{FOLDER_KEY_DELIVERY_IMPLEMENTATIONS}/{{step_dir_rel}}/ROOT_CAUSE.md",
+    "PATCH_FILE": f"{FOLDER_KEY_DELIVERY_IMPLEMENTATIONS}/{{step_dir_rel}}/PATCH.md",
+}
+
+
+def _delivery_scaffold_output_path(*, state: dict, artifact_key: str, step: str) -> str:
+    """Resolve delivery scaffold artifact path from template.
+
+    Uses DELIVERY_SCAFFOLD_OUTPUT_PATHS templates to compute paths for
+    delivery scaffold workflow artifacts.
+
+    Args:
+        state: Workflow state dict with job_id and template_group.
+        artifact_key: Artifact key to resolve path for.
+        step: Current step name.
+
+    Returns:
+        Resolved path string, or empty string if no template found.
+    """
+    template = DELIVERY_SCAFFOLD_OUTPUT_PATHS.get(artifact_key)
+    if not template:
+        return ""
+    run_id = str(state.get("job_id") or state.get("workflow_run_id") or "delivery-scaffold-run")
+    steps = _workflow_module().TEMPLATE_GROUPS.get(state.get("template_group", ""), {}).get("steps", [])
+    try:
+        step_index = steps.index(step) + 1
+    except ValueError:
+        step_index = 1
+    step_dir_rel = str(state.get("backend_step_dir_rel") or "").strip()
+    if not step_dir_rel:
+        try:
+            idx = steps.index(step) + 1
+        except ValueError:
+            idx = 1
+        template_group = state.get("template_group", "")
+        job_id = state.get("job_id", "")
+        step_dir_rel = f"{template_group}/{job_id}/{idx:02d}_{step}"
+    return template.format(run_id=run_id, step=step, step_index=step_index, step_dir_rel=step_dir_rel)
+
+
+def _set_delivery_scaffold_aliases(*, ctx: dict[str, str], state: dict, step: str, artifacts: dict[str, Any], produces: list[str]) -> None:
+    """Set context aliases for delivery scaffold workflow.
+
+    Delegates to backend artifact rules if available, otherwise uses
+    DELIVERY_SCAFFOLD_OUTPUT_PATHS templates for local CLI mode.
+
+    Args:
+        ctx: Context dict to update with aliases.
+        state: Workflow state dict.
+        step: Current step name.
+        artifacts: Current artifact values.
+        produces: List of artifact keys this step produces.
+    """
+    if _set_backend_artifact_rule_aliases(ctx=ctx, state=state, step=step, artifacts=artifacts, produces=produces):
+        return
+    if not str(state.get("template_group") or "").startswith("delivery_scaffold"):
+        return
+
+    step_names = list(_workflow_module().TEMPLATE_GROUPS.get(state.get("template_group", ""), {}).get("steps", []))
+    step_dir_rel = str(state.get("backend_step_dir_rel") or "").strip()
+    if not step_dir_rel:
+        # Local CLI mode: compute step_dir_rel from job state (same fallback
+        # as build_context's producing-step logic).
+        try:
+            idx = step_names.index(step) + 1
+        except ValueError:
+            idx = 1
+        template_group = state.get("template_group", "")
+        job_id = state.get("job_id", "")
+        step_dir_rel = f"{template_group}/{job_id}/{idx:02d}_{step}"
+
+    # Resolve step-relative paths to absolute paths in the global job directory
+    step_dir_abs = _normalize_backend_job_path(step_dir_rel) if step_dir_rel else ""
+    step_dir_meta = f"{step_dir_abs}/meta.json" if step_dir_rel else ""
+    run_id = str(state.get("job_id") or state.get("workflow_run_id") or "delivery-scaffold-run")
+    step_index = (step_names.index(step) + 1) if step in step_names else 1
+
+    for artifact_key, rel_path in DELIVERY_SCAFFOLD_OUTPUT_PATHS.items():
+        artifact_value = artifacts.get(artifact_key) or rel_path.format(
+            run_id=run_id,
+            step=step,
+            step_index=step_index,
+            step_dir_rel=step_dir_rel,
+        )
+        ctx[f"{artifact_key}_PATH"] = str(artifact_value)
+        p = PurePath(str(artifact_value))
+        default_meta = step_dir_meta if artifact_key in produces and step_dir_meta else str(p.parent / f"{p.stem}.meta.json")
+        ctx[f"{artifact_key}_METAJSON"] = default_meta
+
+    for artifact_key in produces:
+        if artifact_key in DELIVERY_SCAFFOLD_OUTPUT_PATHS and not artifacts.get(artifact_key):
+            output_path = _delivery_scaffold_output_path(state=state, artifact_key=artifact_key, step=step)
+            if output_path:
+                # Resolve step_dir_rel-relative paths to absolute job directory paths
+                if step_dir_rel and output_path.startswith(step_dir_rel):
+                    output_path = output_path.replace(step_dir_rel, step_dir_abs, 1)
+                ctx[artifact_key] = output_path
+                ctx[f"{artifact_key}_PATH"] = output_path
+                ctx[f"{artifact_key}_METAJSON"] = step_dir_meta or str(PurePath(output_path).parent / f"{PurePath(output_path).stem}.meta.json")
+
+
+def _set_bug_fix_aliases(*, ctx: dict[str, str], state: dict, step: str, artifacts: dict[str, Any], produces: list[str]) -> None:
+    """Set context aliases for bug fix workflow.
+
+    Sets {KEY}_PATH and {KEY}_METAJSON aliases for BUG_REPORT_FILE,
+    REPRO_FILE, ROOT_CAUSE_FILE, and PATCH_FILE artifacts.
+
+    Args:
+        ctx: Context dict to update with aliases.
+        state: Workflow state dict.
+        step: Current step name.
+        artifacts: Current artifact values.
+        produces: List of artifact keys this step produces.
+    """
+    # Determine if this step produces bug fix artifacts
+    bug_fix_artifact_keys = {"BUG_REPORT_FILE", "REPRO_FILE", "ROOT_CAUSE_FILE", "PATCH_FILE"}
+    if not any(key in produces for key in bug_fix_artifact_keys):
+        return
+
+    step_names = list(_workflow_module().TEMPLATE_GROUPS.get(state.get("template_group", ""), {}).get("steps", []))
+    step_dir_rel = str(state.get("backend_step_dir_rel") or "").strip()
+    if not step_dir_rel:
+        try:
+            idx = step_names.index(step) + 1
+        except ValueError:
+            idx = 1
+        template_group = state.get("template_group", "")
+        job_id = state.get("job_id", "")
+        step_dir_rel = f"{template_group}/{job_id}/{idx:02d}_{step}"
+
+    step_dir_abs = _normalize_backend_job_path(step_dir_rel) if step_dir_rel else ""
+    step_dir_meta = f"{step_dir_abs}/meta.json" if step_dir_rel else ""
+    run_id = str(state.get("job_id") or state.get("workflow_run_id") or "bug-fix-run")
+    step_index = (step_names.index(step) + 1) if step in step_names else 1
+
+    for artifact_key, rel_path in CONSTANTS_BUG_FIX_OUTPUT_PATHS.items():
+        artifact_value = artifacts.get(artifact_key) or rel_path.format(
+            run_id=run_id,
+            step=step,
+            step_index=step_index,
+            step_dir_rel=step_dir_rel,
+        )
+        ctx[f"{artifact_key}_PATH"] = str(artifact_value)
+        p = PurePath(str(artifact_value))
+        default_meta = step_dir_meta if artifact_key in produces and step_dir_meta else str(p.parent / f"{p.stem}.meta.json")
+        ctx[f"{artifact_key}_METAJSON"] = default_meta
+
+    for artifact_key in produces:
+        if artifact_key in CONSTANTS_BUG_FIX_OUTPUT_PATHS and not artifacts.get(artifact_key):
+            output_path = CONSTANTS_BUG_FIX_OUTPUT_PATHS[artifact_key].format(
+                run_id=run_id,
+                step=step,
+                step_index=step_index,
+                step_dir_rel=step_dir_rel,
+            )
+            if step_dir_rel and output_path.startswith(step_dir_rel):
+                output_path = output_path.replace(step_dir_rel, step_dir_abs, 1)
+            ctx[artifact_key] = output_path
+            ctx[f"{artifact_key}_PATH"] = output_path
+            ctx[f"{artifact_key}_METAJSON"] = step_dir_meta or str(PurePath(output_path).parent / f"{PurePath(output_path).stem}.meta.json")
+
+
+def _set_master_docs_aliases(
+    *,
+    ctx: dict[str, str],
+    state: dict,
+    step: str,
+    artifacts: dict[str, Any],
+    produces: list[str],
+    project_root: Path,
+    step_cfg: dict | None = None,
+) -> None:
+    """Set context aliases for master docs bootstrap workflows.
+
+    Sets aliases for system documentation artifacts like README.md,
+    DOCUMENTATION_STANDARD.md, and validation outputs.
+
+    Args:
+        ctx: Context dict to update with aliases.
+        state: Workflow state dict.
+        step: Current step name.
+        artifacts: Current artifact values.
+        produces: List of artifact keys this step produces.
+        project_root: Project root path for resolving absolute paths.
+        step_cfg: Optional step configuration with workflow bundle.
+    """
+    bundle = (step_cfg or {}).get("_workflow_bundle") if step_cfg else None
+    if getattr(bundle, "context_extensions_path", None):
+        return
+
+    template_group = str(state.get("template_group") or "")
+    if template_group not in {
+        "00_core_governance_bootstrap_v1",
+        "00_layer1_governance_bootstrap_v1",
+    }:
+        return
+
+    step_names = list(_workflow_module().TEMPLATE_GROUPS.get(state.get("template_group", ""), {}).get("steps", []))
+    step_dir_rel = str(state.get("backend_step_dir_rel") or "").strip()
+    if not step_dir_rel:
+        try:
+            idx = step_names.index(step) + 1
+        except ValueError:
+            idx = 1
+        job_id = state.get("job_id", "")
+        step_dir_rel = f"{template_group}/{job_id}/{idx:02d}_{step}"
+
+    step_dir_abs = _normalize_backend_job_path(step_dir_rel) if step_dir_rel else ""
+    step_dir_meta = f"{step_dir_abs}/meta.json" if step_dir_rel else ""
+
+    mode = str(
+        state.get("current_step_cfg", {}).get("mode")
+        or state.get("current_mode")
+        or "bootstrap"
+    )
+    job_id = str(state.get("job_id") or "00DOC")
+
+    if template_group in {"00_core_governance_bootstrap_v1", "00_layer1_governance_bootstrap_v1"}:
+        output_paths: dict[str, str] = {
+            "SYSTEM_DOCS_INDEX": system_doc_rel("README.md"),
+            "SYSTEM_DOC_STANDARD": system_doc_rel("DOCUMENTATION_STANDARD.md"),
+            "BUNDLE_TAXONOMY": system_doc_rel("BUNDLE_TAXONOMY.md"),
+            "RUNTIME_GOVERNANCE": system_doc_rel("RUNTIME_GOVERNANCE.md"),
+            "SYSTEM_DOCS_VALIDATION": system_doc_rel(f"{job_id}-layer1-governance-validation.md"),
+            "REVIEW_FILE_SUGGESTED": system_doc_rel(f"{job_id}-layer1-governance-review.md"),
+            "AUDIT_FILE_SUGGESTED": system_doc_rel(f"{job_id}-layer1-governance-audit.md"),
+            "BOOTSTRAP_SUMMARY": system_doc_rel(f"{job_id}-bootstrap-summary.md"),
+        }
+    else:
+        output_paths = MASTER_DOCS_OUTPUT_PATHS
+
+    for artifact_key, rel_path in output_paths.items():
+        artifact_value = artifacts.get(artifact_key) or rel_path.format(job_id=job_id, mode=mode)
+        resolved = resolve_repo_or_runtime_path(
+            str(artifact_value),
+            project_root=project_root,
+            runtime_root=JOBS_ROOT,
+        )
+        resolved_str = str(resolved)
+        ctx[artifact_key] = resolved_str
+        ctx[f"{artifact_key}_PATH"] = resolved_str
+        if artifact_value:
+            p = PurePath(resolved_str)
+            ctx[f"{artifact_key}_METAJSON"] = step_dir_meta or str(p.parent / f"{p.stem}.meta.json")
+
+
+def _validate_template_conformance(
+    *,
+    template_ref: dict[str, Any],
+    artifacts: dict[str, str],
+    project_root: Path,
+    step: str,
+) -> None:
+    """Validate generated artifact conforms to the expected template structure.
+
+    If the template artifact (from DELIVERY_*_TEMPLATE) is available on disk,
+    read it to extract required sections and metadata fields. If not available,
+    fall back to the inline required_sections/required_metadata_fields config.
+
+    Raises ArtifactMissingError if the artifact doesn't conform to the template.
+    """
+    doc_type = template_ref.get("type", "")
+    template_artifact_key = template_ref.get("template_artifact_key", "")
+    inline_sections = template_ref.get("required_sections", [])
+    inline_metadata = template_ref.get("required_metadata_fields", [])
+
+    # Determine which artifact path to validate (use result_meta_key artifact if available)
+    artifact_path = None
+    if template_artifact_key and template_artifact_key in artifacts:
+        artifact_path = artifacts[template_artifact_key]
+    elif artifacts:
+        # Use the first non-None artifact path
+        for v in artifacts.values():
+            if v:
+                artifact_path = v
+                break
+
+    if not artifact_path:
+        # No artifact to validate — skip (coder may have rejected)
+        return
+
+    full_path = project_root / artifact_path
+    if not full_path.exists():
+        return  # Artifact existence already validated by _validate_artifact_files_exist
+
+    # Read the generated artifact
+    content = full_path.read_text(encoding="utf-8")
+
+    # Try to load template artifact for richer validation
+    template_path = None
+    if template_artifact_key:
+        template_rel = artifacts.get(template_artifact_key)
+        if template_rel:
+            template_path = project_root / template_rel
+
+    # Gather required sections and metadata from template file or inline config
+    required_sections = list(inline_sections) if inline_sections else []
+    required_metadata = list(inline_metadata) if inline_metadata else []
+
+    if template_path and template_path.exists():
+        template_content = template_path.read_text(encoding="utf-8")
+        # Extract sections from template as a secondary check
+        # The template's section headings serve as the canonical required sections
+        import re as _re
+        template_headings = _re.findall(r'^#+\s+(.+)$', template_content, _re.MULTILINE)
+        if template_headings and not required_sections:
+            # Use template headings as required sections
+            required_sections = [h.strip().strip('#').strip() for h in template_headings if h.strip()]
+
+    if not required_sections and not required_metadata:
+        return  # Nothing to validate
+
+    # Check required sections
+    missing_sections = []
+    for section in required_sections:
+        if not _has_section(content, section):
+            missing_sections.append(section)
+
+    # Check required metadata fields
+    missing_metadata = []
+    for field in required_metadata:
+        if not _has_metadata_field(content, field):
+            missing_metadata.append(field)
+
+    if missing_sections or missing_metadata:
+        issues = []
+        if missing_sections:
+            issues.append(f"missing sections: {', '.join(missing_sections)}")
+        if missing_metadata:
+            issues.append(f"missing metadata fields: {', '.join(missing_metadata)}")
+        raise ArtifactMissingError(
+            f"Template conformance failed for step {step!r} ({doc_type}): {'; '.join(issues)}",
+            missing=missing_sections + missing_metadata,
+        )
+
+    print(f"[step_runner] template conformance OK for step={step} type={doc_type}", flush=True)
+
+
+def _has_section(content: str, section: str) -> bool:
+    """Check if markdown content contains a section heading.
+
+    Performs case-insensitive match for section heading (e.g., "## Overview"
+    matches section "Overview").
+
+    Args:
+        content: Markdown content to search.
+        section: Section name to find.
+
+    Returns:
+        True if section heading exists, False otherwise.
+    """
+    import re as _re
+    pattern = _re.compile(rf'^#+\s+.*{_re.escape(section)}', _re.MULTILINE | _re.IGNORECASE)
+    return bool(pattern.search(content))
+
+
+def _has_metadata_field(content: str, field: str) -> bool:
+    """Check if metadata block contains a field (frontmatter or markdown table)."""
+    import re as _re
+    escaped = _re.escape(field)
+    # matches "Field: value" or "- Field: value" (frontmatter / YAML-style)
+    kv_pattern = _re.compile(rf'^\s*-?\s*{escaped}\s*[:：]', _re.MULTILINE)
+    # matches "| Field | value |" (markdown table row)
+    table_pattern = _re.compile(rf'^\|\s*{escaped}\s*\|', _re.MULTILINE | _re.IGNORECASE)
+    return bool(kv_pattern.search(content) or table_pattern.search(content))
+
+
+# ---------------------------------------------------------------------------
+# Sidecar enrichment
+# ---------------------------------------------------------------------------
+
+def enrich_sidecar(
+    *,
+    meta_path: Path,
+    step: str,
+    coder_used: str,
+    invoked_at: str,
+    finished_at: str,
+    prompt_checksum: str,
+    project_root: Path,
+    allowed_write_paths: list[str],
+    changed_paths: list[str],
+) -> None:
+    """Atomically append runner_data section to existing meta.json.
+
+    Never modifies coder_result. Idempotent — overwrites runner_data if present.
+    """
+    try:
+        meta = json.loads(meta_path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return  # Best-effort; should not happen after _read_and_validate_meta_json
+
+    meta["runner_data"] = {
+        "step": step,
+        "coder_used": coder_used,
+        "invoked_at": invoked_at,
+        "finished_at": finished_at,
+        "prompt_checksum": f"sha256:{prompt_checksum}",
+        "allowed_write_paths": allowed_write_paths,
+        "changed_paths": changed_paths,
+        "enriched_at": _now_iso(),
+        "runner_version": "v2",
+    }
+
+    tmp_fd, tmp_path = tempfile.mkstemp(
+        dir=meta_path.parent, prefix=".tmp_", suffix=".json"
+    )
+    try:
+        with open(tmp_fd, "w", encoding="utf-8") as fh:
+            json.dump(meta, fh, indent=2, ensure_ascii=False)
+        Path(tmp_path).replace(meta_path)
+    except Exception:
+        Path(tmp_path).unlink(missing_ok=True)
+        raise
+
+
+# ---------------------------------------------------------------------------
+# Context building (prompt template variable resolution)
+# ---------------------------------------------------------------------------
+
+def _load_site_config(*, state: dict) -> dict:
+    """Load sites.config from docs/sites.config in the target repo.
+
+    Returns a dict with:
+    - output_format: "html", "pdf", or "html+pdf" (default: "html")
+    - additional_sections: list of custom section definitions
+    - theme: theme configuration dict (name, layout_file, css_file)
+
+    Returns empty dict if config doesn't exist or workflow not configured.
+    """
+    template_group = state.get("template_group", "")
+    if not template_group:
+        return {}
+
+    # Look for sites.config in the artifact root (target repo's docs/)
+    config_path = ARTIFACT_ROOT / "docs" / "sites.config"
+    if not config_path.exists():
+        return {}
+
+    try:
+        with open(config_path, "r", encoding="utf-8") as f:
+            config = json.load(f)
+    except Exception as exc:
+        print(f"[step_runner] Failed to load sites.config: {exc}", flush=True)
+        return {}
+
+    workflow_config = config.get(template_group, {})
+    if not isinstance(workflow_config, dict):
+        return {}
+
+    return {
+        "output_format": workflow_config.get("output_format", "html"),
+        "additional_sections": workflow_config.get("additional_sections", []),
+        "theme": workflow_config.get("theme", {}),
+    }
+
+
+def _format_additional_sections(sections: list) -> str:
+    """Format additional sections for prompt injection."""
+    if not sections:
+        return ""
+
+    lines = [
+        "## Additional Custom Sections",
+        "",
+        "In addition to the default sections, include the following custom sections:",
+        "",
+    ]
+    for i, section in enumerate(sections, 1):
+        title = section.get("title", f"Custom Section {i}")
+        desc = section.get("description", "")
+        guidelines = section.get("content_guidelines", "")
+        source = section.get("source_artifacts", [])
+
+        lines.append(f"### {i}. {title}")
+        if desc:
+            lines.append(f"**Purpose**: {desc}")
+        if guidelines:
+            lines.append(f"**Content Guidelines**: {guidelines}")
+        if source:
+            lines.append(f"**Source Documents**: {', '.join(source)}")
+        lines.append("")
+
+    return "\n".join(lines)
+
+
+def _load_site_theme(*, site_config: dict) -> dict:
+    """Load custom theme files (layout template and CSS) from the target repo.
+
+    Args:
+        site_config: The site config dict from _load_site_config()
+
+    Returns a dict with:
+    - theme_name: Name of the theme (default: "default")
+    - layout_template: Full HTML template content (or empty string)
+    - theme_css: Full CSS content (or empty string)
+    - layout_instructions: Instructions for LLM on how to use the template
+    """
+    # Theme config can be a string (theme name) or dict (legacy format)
+    theme_config = site_config.get("theme", "default")
+    if isinstance(theme_config, str):
+        theme_name = theme_config
+    elif isinstance(theme_config, dict):
+        theme_name = theme_config.get("name", "default")
+    else:
+        theme_name = "default"
+
+    result = {
+        "theme_name": theme_name,
+        "layout_template": "",
+        "theme_css": "",
+        "layout_instructions": "",
+    }
+
+    # Load theme files from global runner home's themes directory
+    # Theme location: ~/.ukbe-runner/themes/<theme_name>/
+    # Falls back to package bundle location if not found in global path
+    from pathlib import Path as _Path
+    from .runtime_context import RUNNER_HOME
+
+    # First try global runner home
+    global_themes_root = RUNNER_HOME / "themes"
+    theme_dir = global_themes_root / theme_name
+
+    # Fall back to package bundle location if not found
+    if not theme_dir.exists():
+        bundle_themes_root = PACKAGE_ROOT / "bootstrap" / "themes"
+        theme_dir = bundle_themes_root / theme_name
+
+    layout_path = theme_dir / "layout.html"
+    css_path = theme_dir / "theme.css"
+
+    # Load layout template
+    if layout_path.exists():
+        try:
+            result["layout_template"] = layout_path.read_text(encoding="utf-8")
+            result["layout_instructions"] = _build_layout_instructions(str(layout_path))
+        except Exception as exc:
+            print(f"[step_runner] Failed to load layout template {layout_path}: {exc}", flush=True)
+    else:
+        print(f"[step_runner] Theme layout not found: {layout_path}, using default", flush=True)
+
+    # Load CSS
+    if css_path.exists():
+        try:
+            result["theme_css"] = css_path.read_text(encoding="utf-8")
+        except Exception as exc:
+            print(f"[step_runner] Failed to load CSS {css_path}: {exc}", flush=True)
+    else:
+        print(f"[step_runner] Theme CSS not found: {css_path}, using default", flush=True)
+
+    return result
+
+
+def _build_layout_instructions(layout_file: str) -> str:
+    """Build instructions for LLM on how to use a custom layout template."""
+    return f"""Custom Layout Template:
+- A custom layout template is provided at: {layout_file}
+- Use this template as the base HTML structure
+- Replace these placeholders in the template:
+  - {{{{TITLE}}}} → Page title (e.g., "Stakeholder Documentation")
+  - {{{{SUBTITLE}}}} → Page subtitle/description
+  - {{{{WORKFLOW}}}} → Workflow name (e.g., "51_stakeholder_docs_v1")
+  - {{{{STEP}}}} → Step name (e.g., "generate_site")
+  - {{{{NAV_LINKS}}}} → Navigation links as HTML anchor tags
+  - {{{{BODY}}}} → Main content HTML (generated from markdown)
+  - {{{{CSS}}}} → CSS styles (provided separately or use default)
+  - {{{{THEME_NAME}}}} → Theme name identifier
+  - {{{{DOWNLOAD_LINK}}}} → PDF download link (if applicable)
+
+- The template content will be injected as {{{{SITE_LAYOUT_TEMPLATE}}}}
+- The CSS content will be injected as {{{{SITE_THEME_CSS}}}}
+- If {{{{SITE_LAYOUT_TEMPLATE}}}} is empty, use the standard page_shell structure
+"""
+
+
+def _load_additional_sections(*, state: dict, step: str) -> str:
+    """Load additional sections from sites.config in the target repo.
+
+    Kept for backward compatibility. Use _load_site_config() for full config.
+    """
+    config = _load_site_config(state=state)
+    return _format_additional_sections(config.get("additional_sections", []))
+
+
+# ---------------------------------------------------------------------------
+# Workflow package context hooks
+# ---------------------------------------------------------------------------
+
+_CONTEXT_HOOK_CACHE: dict[str, object | None] = {}
+
+
+def _apply_workflow_package_context_hooks(
+    *,
+    ctx: dict[str, str],
+    state: dict,
+    step: str,
+    step_cfg: dict | None,
+    project_root: Path | None = None,
+) -> None:
+    """Load and run context_extensions.py from the active workflow package.
+
+    Resolution order:
+    1. New interface: ``WorkflowExtensions.build_context_extensions()``
+       via the hooks scanner (preferred).
+    2. Legacy fallback: free-function ``build_context_extensions()``
+       (for existing workflows that have not migrated yet).
+
+    When ``step_cfg`` carries a ``_workflow_bundle`` reference (stamped by
+    ``_load_group`` in ``run_agent.py``), this function discovers and invokes
+    the context hooks exported by the workflow package.
+    """
+    if not step_cfg:
+        logger.debug("[ctx_hooks] step_cfg is empty/None, skipping")
+        return
+    bundle = step_cfg.get("_workflow_bundle")
+    if bundle is None:
+        logger.debug("[ctx_hooks] _workflow_bundle not in step_cfg, skipping")
+        return
+
+    logger.info("[ctx_hooks] bundle=%s", bundle.name)
+
+    # 1. Try new WorkflowExtensions interface
+    from .workflow_packages.hooks import get_extension
+
+    ext = get_extension(bundle.name)
+    if ext is not None:
+        try:
+            extensions = ext.build_context_extensions(
+                state=state,
+                step=step,
+                step_cfg=step_cfg,
+                ctx=ctx,
+                project_root=project_root,
+            )
+            if isinstance(extensions, dict):
+                artifacts = state.get("artifacts") or {}
+                for k, v in extensions.items():
+                    # Context extensions provide authoritative path resolution.
+                    # Always inject them — they override backend-resolved paths.
+                    ctx[k] = v
+                    # Write resolved path back to state so _missing_artifacts
+                    # sees the resolved path, not the bare filename.
+                    if k in artifacts and artifacts[k]:
+                        artifacts[k] = v
+                logger.info(
+                    "[ctx_hooks] injected %d keys: %s",
+                    len(extensions),
+                    sorted(extensions.keys()),
+                )
+            return
+        except Exception:
+            logger.exception(
+                "[ctx_hooks] build_context_extensions failed for %s",
+                bundle.name,
+            )
+            return
+
+    logger.warning("[ctx_hooks] get_extension(%r) returned None — context extensions will NOT be applied", bundle.name)
+
+    # 2. Legacy fallback: free-function build_context_extensions()
+    ext_path = getattr(bundle, "context_extensions_path", None)
+    if ext_path is None:
+        return
+
+    cache_key = str(ext_path)
+
+    if cache_key in _CONTEXT_HOOK_CACHE:
+        hooks_fn = _CONTEXT_HOOK_CACHE[cache_key]
+    else:
+        hooks_fn = _load_context_extensions_module(ext_path, cache_key)
+        _CONTEXT_HOOK_CACHE[cache_key] = hooks_fn
+
+    if hooks_fn is not None:
+        try:
+            extensions = hooks_fn(
+                state=state,
+                step=step,
+                step_cfg=step_cfg,
+                ctx=ctx,
+                project_root=project_root,
+            )
+            if isinstance(extensions, dict):
+                ctx.update(extensions)
+        except Exception:
+            import logging  # noqa: PLC0415
+
+            logging.getLogger(__name__).exception(
+                "Context extension hook failed for %s", ext_path
+            )
+
+
+def _load_context_extensions_module(
+    ext_path: Path, cache_key: str
+) -> object | None:
+    """Import ``context_extensions.py`` and return the hook callable.
+
+    Returns ``None`` when the file doesn't exist or loading fails, and
+    caches that result so we don't retry on every step.
+    """
+    if not ext_path.is_file():
+        return None
+
+    try:
+        spec = importlib.util.spec_from_file_location(
+            "workflow_context_extensions", ext_path
+        )
+        if spec is None or spec.loader is None:
+            return None
+        mod = importlib.util.module_from_spec(spec)
+        sys.modules[mod.__name__] = mod
+        spec.loader.exec_module(mod)
+
+        return getattr(mod, "build_context_extensions", None)
+    except Exception:
+        import logging  # noqa: PLC0415
+
+        logging.getLogger(__name__).exception(
+            "Failed to load context extensions from %s", ext_path
+        )
+        return None
+
+
+def build_context(
+    state: dict,
+    *,
+    step: str = "",
+    step_cfg: dict | None = None,
+    project_root: Path | None = None,
+) -> dict[str, str]:
+    """Build the full context dict for prompt rendering."""
+    # Use centralized constants instead of workflow module
+    from .constants import REFERENCE_FILES
+
+    ctx: dict[str, str] = dict(REFERENCE_FILES)
+    
+    # Helper to convert relative paths to absolute paths
+    def _abs_path(rel_path: str) -> str:
+        if project_root and not Path(rel_path).is_absolute():
+            return str((project_root / rel_path).resolve()).replace("\\", "/")
+        return rel_path
+    
+    ctx["SYSTEM_DOC_ROOT"] = _abs_path(system_doc_rel())
+    ctx["REPO_GOVERNANCE_ROOT"] = _abs_path(repo_governance_rel())
+    ctx["DOCS_ROOT"] = _abs_path(docs_root_rel())
+    ctx["SYSTEM_TEMPLATE_ROOT"] = FOLDER_KEY_SYSTEM_TEMPLATE_ROOT
+    ctx["SYSTEM_DELIVERY_TEMPLATE_ROOT"] = FOLDER_KEY_SYSTEM_DELIVERY_TEMPLATE_ROOT
+    ctx["SYSTEM_CODEBASE_TEMPLATE_ROOT"] = FOLDER_KEY_SYSTEM_CODEBASE_TEMPLATE_ROOT
+    ctx["CODEBASE_DOC_ROOT"] = _abs_path(codebase_doc_rel())
+    ctx["DELIVERY_DOC_ROOT"] = _abs_path(delivery_doc_rel())
+    ctx["ARCHITECTURE_SITE_ROOT"] = _abs_path(architecture_site_rel())
+    ctx["CODER_IMPLEMENTATION_SOP_PATH"] = "CODER_IMPLEMENTATION_SOP.md"
+
+    # Get artifacts from state for fingerprinting
+    artifacts = state.get("artifacts") or {}
+
+    # Inject artifact values as context variables so prompt templates
+    # can reference {ARTIFACT_KEY} directly (e.g., {IMAGE_FOLDER}).
+    for _ak, _av in artifacts.items():
+        if _av is not None:
+            ctx[_ak] = str(_av)
+
+    # For producing steps where the artifact doesn't exist yet, compute the step
+    # directory meta.json path so the prompt can tell the coder where to write it.
+    if step and step_cfg:
+        result_key = str(
+            step_cfg.get("result_meta_key")
+            or step_cfg.get("result_meta_key_from_context")
+            or ""
+        ).strip()
+        # If result_key already ends with _METAJSON, use it directly;
+        # otherwise append _METAJSON to form the context key.
+        if result_key.endswith("_METAJSON"):
+            meta_ctx_key = result_key
+        else:
+            meta_ctx_key = f"{result_key}_METAJSON"
+        prefer_step_meta = bool(step_cfg.get("action"))
+        if result_key and (prefer_step_meta or not ctx.get(meta_ctx_key)):
+            step_dir_rel = str(state.get("backend_step_dir_rel") or "").strip()
+            if not step_dir_rel:
+                # Try to get step order from group_cfg or state
+                template_group = state.get("template_group", "")
+                steps = []
+                
+                # Try to get from backend context first
+                backend_step_order = state.get("backend_step_order")
+                if backend_step_order is not None:
+                    idx = int(backend_step_order)
+                else:
+                    # Fallback: try to find step in workflow package
+                    try:
+                        from .runtime_context import GLOBAL_RUNNER_HOME
+                        from .workflow_packages.loader import load_workflow_package
+                        
+                        wf_root = GLOBAL_RUNNER_HOME / "workflows" / "default" / template_group
+                        if wf_root.exists():
+                            bundle = load_workflow_package(wf_root)
+                            steps = list(bundle.steps.keys()) if hasattr(bundle, 'steps') else []
+                        else:
+                            steps = []
+                    except Exception:
+                        steps = []
+                    
+                    try:
+                        idx = steps.index(step) + 1
+                    except ValueError:
+                        idx = 1
+                template_group = state.get("template_group", "")
+                job_id = state.get("job_id", "")
+                step_dir_rel = f"{template_group}/{job_id}/{idx:02d}_{step}"
+            ctx[meta_ctx_key] = _normalize_backend_job_path(f"{step_dir_rel}/meta.json")
+            print(f"[step_runner] Producing step {step}: {meta_ctx_key} -> {ctx[meta_ctx_key]}", flush=True)
+
+    ctx["ARTIFACT_FINGERPRINTS"] = _format_artifact_fingerprint_block(artifacts)
+
+    # Context-pack explicit path alias: CONTEXT_PACK_FILE_PATH mirrors CONTEXT_PACK_FILE
+    # (the generic loop above produces CONTEXT_PACK_FILE_ABS_PATH but prompts expect _PATH)
+    ctx_pack = artifacts.get("CONTEXT_PACK_FILE")
+    if ctx_pack:
+        ctx["CONTEXT_PACK_FILE_PATH"] = ctx_pack
+    else:
+        ctx["CONTEXT_PACK_FILE_PATH"] = ""
+
+    # Task ID starting sequence: scan existing task docs to avoid collision
+    task_dir = ARTIFACT_ROOT / FOLDER_KEY_DELIVERY_TASKS
+    date_code = dt.datetime.now().strftime("%Y%m%d")
+    highest_task_seq = 0
+    if task_dir.exists():
+        for existing in task_dir.glob(f"TASK-{date_code}-*.md"):
+            m = re.match(rf"TASK-{date_code}-(\d+)_", existing.stem)
+            if m:
+                highest_task_seq = max(highest_task_seq, int(m.group(1)))
+    ctx["TASK_ID_START_SEQ"] = str(highest_task_seq + 1)  # next available sequence number
+
+    loop_ctx = state.get("loop_context") or {}
+    ctx["LOOP_ACTIVE"] = "true" if loop_ctx.get("active") else "false"
+    ctx["LOOP_STEP"] = str(loop_ctx.get("loop_step") or "")
+    ctx["LOOP_ITERATION"] = str(loop_ctx.get("loop_iteration") or 0)
+
+    review_suggested = _suggested_review_file_path(state=state, step=step, step_cfg=step_cfg)
+    ctx[ARTIFACT_KEY_REVIEW] = review_suggested
+    ctx["REVIEW_FILE_PATH"] = review_suggested
+    # Provide meta.json path for the suggested review file
+    if review_suggested:
+        ctx[f"{ARTIFACT_KEY_REVIEW}_METAJSON"] = artifact_rel_to_meta_rel(review_suggested)
+        ctx["REVIEW_FILE_METAJSON"] = ctx[f"{ARTIFACT_KEY_REVIEW}_METAJSON"]
+        print(f"[step_runner] REVIEW PATH: {review_suggested}", flush=True)
+        print(f"[step_runner] REVIEW Sidecar PATH: {ctx[f'{ARTIFACT_KEY_REVIEW}_METAJSON']}", flush=True)
+    else:
+        ctx[f"{ARTIFACT_KEY_REVIEW}_METAJSON"] = ""
+        ctx["REVIEW_FILE_METAJSON"] = ""
+
+    produces = (step_cfg or {}).get("produces", [])
+    if "VALIDATION_FILE" in produces:
+        validation_path = _build_validation_file_path(state=state, step=step, step_cfg=step_cfg)
+        ctx["VALIDATION_FILE_PATH"] = validation_path
+        if validation_path:
+            ctx["VALIDATION_FILE_METAJSON"] = artifact_rel_to_meta_rel(validation_path)
+        else:
+            ctx["VALIDATION_FILE_METAJSON"] = ""
+    else:
+        ctx.setdefault("VALIDATION_FILE_PATH", "")
+        ctx.setdefault("VALIDATION_FILE_METAJSON", "")
+
+    if "CODEBASE_CHANGE_IMPACT" in produces and not artifacts.get("CODEBASE_CHANGE_IMPACT"):
+        change_path = _build_codebase_change_impact_path(state=state)
+        ctx["CODEBASE_CHANGE_IMPACT_PATH"] = change_path
+        if change_path:
+            ctx["CODEBASE_CHANGE_IMPACT_METAJSON"] = artifact_rel_to_meta_rel(change_path)
+        else:
+            ctx["CODEBASE_CHANGE_IMPACT_METAJSON"] = ""
+    else:
+        ctx.setdefault("CODEBASE_CHANGE_IMPACT_PATH", artifacts.get("CODEBASE_CHANGE_IMPACT", ""))
+        ctx.setdefault("CODEBASE_CHANGE_IMPACT_METAJSON", "")
+
+    replan_ctx = state.get("replan_context") or {}
+    ctx["REPLAN_ACTIVE"] = "true" if replan_ctx.get("active") else "false"
+    ctx["REPLAN_TRIGGER_REASON"] = str(replan_ctx.get("trigger_reason") or "")
+    ctx["REPLAN_BLOCKING_ISSUES"] = "\n".join(
+        f"- {issue}" for issue in replan_ctx.get("blocking_issues", [])
+    )
+
+    # Task queue / execution binding
+    backend_ctx = state.get("backend_context_payload") or {}
+    backend_item = backend_ctx.get("current_item") if isinstance(backend_ctx.get("current_item"), dict) else {}
+
+    current_queue_item_id = str(
+        backend_item.get("queue_item_id")
+        or backend_ctx.get("CURRENT_QUEUE_ITEM_ID")
+        or ""
+    )
+    current_task_id = str(
+        backend_item.get("task_id")
+        or backend_item.get("task_node_id")
+        or backend_ctx.get("CURRENT_TASK_ID")
+        or backend_ctx.get("CURRENT_TASK_NODE_ID")
+        or ""
+    )
+    current_task_node_id = str(
+        backend_item.get("task_node_id")
+        or backend_ctx.get("CURRENT_TASK_NODE_ID")
+        or current_task_id
+    )
+    current_task_title = str(
+        backend_item.get("title")
+        or backend_ctx.get("CURRENT_TASK_TITLE")
+        or ""
+    )
+
+    if not (current_queue_item_id or current_task_id or current_task_node_id or current_task_title):
+        from .task_runtime import task_queue_current_item, task_execution_binding_current_item
+        current_item = task_queue_current_item(state) or task_execution_binding_current_item(state)
+        current_queue_item_id = str((current_item or {}).get("queue_item_id") or "")
+        current_task_id = str(
+            (current_item or {}).get("task_id")
+            or (current_item or {}).get("task_node_id")
+            or ""
+        )
+        current_task_node_id = str(
+            (current_item or {}).get("task_node_id") or current_task_id
+        )
+        current_task_title = str((current_item or {}).get("title") or "")
+
+    ctx["CURRENT_QUEUE_ITEM_ID"] = current_queue_item_id
+    ctx["CURRENT_TASK_ID"] = current_task_id
+    ctx["CURRENT_TASK_NODE_ID"] = current_task_node_id
+    ctx["CURRENT_TASK_TITLE"] = current_task_title
+
+    backend_task_file_path = str(backend_ctx.get("TASK_FILE_PATH") or "")
+    backend_task_file_meta = str(backend_ctx.get("TASK_FILE_METAJSON") or "")
+    if backend_task_file_path:
+        ctx["TASK_FILE_PATH"] = backend_task_file_path
+        ctx["TASK_FILE_METAJSON"] = backend_task_file_meta or str(PurePath(backend_task_file_path).parent / f"{PurePath(backend_task_file_path).stem}.meta.json")
+    elif current_task_node_id:
+        task_path, meta_path = compute_paths(
+            node_id=current_task_node_id,
+            title=current_task_title,
+            output_dir=FOLDER_KEY_DELIVERY_TASKS,
+        )
+        ctx["TASK_FILE_PATH"] = task_path
+        ctx["TASK_FILE_METAJSON"] = meta_path
+
+    # Pre-compute output paths for steps that create NEW files.
+    # When the artifact is already in artifacts (refine/replan/executor), the loop above
+    # already populated METAJSON from the existing path — no override needed.
+    produces = (step_cfg or {}).get("produces", [])
+
+    _set_delivery_scaffold_aliases(
+        ctx=ctx,
+        state=state,
+        step=step,
+        artifacts=artifacts,
+        produces=produces,
+    )
+    _set_master_docs_aliases(
+        ctx=ctx,
+        state=state,
+        step=step,
+        artifacts=artifacts,
+        produces=produces,
+        project_root=(project_root or Path.cwd()),
+        step_cfg=step_cfg,
+    )
+    _set_bug_fix_aliases(
+        ctx=ctx,
+        state=state,
+        step=step,
+        artifacts=artifacts,
+        produces=produces,
+    )
+
+    # Print expected output paths BEFORE the agent starts (for visibility)
+    if produces:
+        print(f"[step_runner] step={step} produces={produces}", flush=True)
+
+    if "PRE_INIT_FILE" in produces and not artifacts.get("PRE_INIT_FILE"):
+        pre_init_path = str(backend_ctx.get("PRE_INIT_FILE_PATH") or "")
+        if not pre_init_path:
+            pre_init_path = _build_pre_init_file_path(state=state)
+        if pre_init_path:
+            ctx["PRE_INIT_FILE_PATH"] = pre_init_path
+            pre_init_meta = str(backend_ctx.get("PRE_INIT_FILE_METAJSON") or "")
+            ctx["PRE_INIT_FILE_METAJSON"] = pre_init_meta or artifact_rel_to_meta_rel(pre_init_path)
+            print(f"[step_runner] PRE_INIT PATH: {pre_init_path}", flush=True)
+            print(f"[step_runner] PRE_INIT Sidecar PATH: {ctx['PRE_INIT_FILE_METAJSON']}", flush=True)
+
+    if "PLAN_FILE" in produces and not artifacts.get("PLAN_FILE"):
+        plan_path = str(backend_ctx.get("PLAN_FILE_PATH") or "")
+        if not plan_path:
+            plan_path = _build_plan_file_path(state=state)
+        if plan_path:
+            ctx["PLAN_FILE_PATH"] = plan_path
+            plan_meta = str(backend_ctx.get("PLAN_FILE_METAJSON") or "")
+            p = PurePath(plan_path)
+            ctx["PLAN_FILE_METAJSON"] = plan_meta or artifact_rel_to_meta_rel(plan_path)
+            stem_match = re.match(r"(PLAN-\d{8}-\d+)", p.stem)
+            ctx["PLAN_ID"] = str(backend_ctx.get("PLAN_ID") or (stem_match.group(1) if stem_match else ""))
+            print(f"[step_runner] PLAN ID: {ctx['PLAN_ID']}", flush=True)
+            print(f"[step_runner] PLAN PATH: {plan_path}", flush=True)
+            print(f"[step_runner] PLAN Sidecar PATH: {ctx['PLAN_FILE_METAJSON']}", flush=True)
+
+    if "TASK_GRAPH_FILE" in produces and not artifacts.get("TASK_GRAPH_FILE"):
+        tg_path = str(backend_ctx.get("TASK_GRAPH_FILE_PATH") or "")
+        if not tg_path:
+            tg_path = _build_task_graph_file_path(state=state)
+        if tg_path:
+            ctx["TASK_GRAPH_FILE_PATH"] = tg_path
+            tg_meta = str(backend_ctx.get("TASK_GRAPH_FILE_METAJSON") or "")
+            ctx["TASK_GRAPH_FILE_METAJSON"] = tg_meta or artifact_rel_to_meta_rel(tg_path)
+            print(f"[step_runner] TASK_GRAPH PATH: {tg_path}", flush=True)
+            print(f"[step_runner] TASK_GRAPH Sidecar PATH: {ctx['TASK_GRAPH_FILE_METAJSON']}", flush=True)
+
+    if "TASK_FILE" in produces and not artifacts.get("TASK_FILE"):
+        task_path = ctx.get("TASK_FILE_PATH", "")
+        task_meta = ctx.get("TASK_FILE_METAJSON", "")
+        if task_path:
+            task_node = ctx.get("CURRENT_TASK_NODE_ID", "")
+            print(f"[step_runner] TASK ID: {task_node}", flush=True)
+            print(f"[step_runner] TASK PATH: {task_path}", flush=True)
+            print(f"[step_runner] TASK Sidecar PATH: {task_meta}", flush=True)
+
+    if "IMPL_FILE" in produces and not artifacts.get("IMPL_FILE"):
+        impl_path = str(backend_ctx.get("IMPL_FILE_PATH") or "")
+        if not impl_path:
+            impl_path = _build_impl_file_path(state=state)
+        if impl_path:
+            ctx["IMPL_FILE_PATH"] = impl_path
+            impl_meta = str(backend_ctx.get("IMPL_FILE_METAJSON") or "")
+            ctx["IMPL_FILE_METAJSON"] = impl_meta or artifact_rel_to_meta_rel(impl_path)
+            print(f"[step_runner] IMPL PATH: {impl_path}", flush=True)
+            print(f"[step_runner] IMPL Sidecar PATH: {ctx['IMPL_FILE_METAJSON']}", flush=True)
+
+    if "IMAGE_DESC_FOLDER" in produces and not artifacts.get("IMAGE_DESC_FOLDER"):
+        image_folder = artifacts.get("IMAGE_FOLDER")
+        if image_folder:
+            ctx["IMAGE_DESC_FOLDER"] = image_folder
+            ctx["IMAGE_DESC_FOLDER_METAJSON"] = str(Path(image_folder) / "meta.json")
+            print(f"[step_runner] IMAGE_DESC FOLDER: {image_folder}", flush=True)
+            print(f"[step_runner] IMAGE_DESC METAJSON PATH: {ctx['IMAGE_DESC_FOLDER_METAJSON']}", flush=True)
+
+    # IMAGE_CSV path resolution — always compute context variables so prompt templates
+    # can reference {IMAGE_CSV_RUN_DIR} and {IMAGE_CSV_JSON_METAJSON} on both new and
+    # refine steps.  Reuse existing artifact path when available to keep the same
+    # date-stamped run directory across refine-loop iterations.
+    if "IMAGE_CSV_JSON" in produces:
+        existing_csv_json = artifacts.get("IMAGE_CSV_JSON")
+        if existing_csv_json:
+            # Reuse the run directory from a prior step (gen_prompts already ran).
+            p = PurePath(existing_csv_json)
+            # existing_csv_json may be a directory ("source_csv/YYYYMMDD-NNN/")
+            # or a file inside that directory ("source_csv/YYYYMMDD-NNN/file.json").
+            if p.suffix == ".json":
+                run_dir = str(p.parent)
+            else:
+                run_dir = str(p)
+            if run_dir:
+                ctx["IMAGE_CSV_RUN_DIR"] = run_dir
+                ctx["IMAGE_CSV_JSON"] = run_dir
+                ctx["IMAGE_CSV_JSON_METAJSON"] = str(Path(run_dir) / "meta.json")
+        else:
+            # First run — compute next sequential run number for today.
+            image_folder = artifacts.get("IMAGE_FOLDER")
+            if image_folder:
+                date_code = dt.datetime.now().strftime("%Y%m%d")
+                csv_root = ARTIFACT_ROOT / "source_csv"
+                highest_run = 0
+                if csv_root.exists():
+                    for existing in csv_root.glob(f"{date_code}-*"):
+                        if existing.is_dir():
+                            m = re.match(rf"{date_code}-(\d+)$", existing.name)
+                            if m:
+                                highest_run = max(highest_run, int(m.group(1)))
+                run_num = f"{highest_run + 1:03d}"
+                run_dir = f"{date_code}-{run_num}"
+                ctx["IMAGE_CSV_RUN_DIR"] = str(Path("source_csv") / run_dir)
+                ctx["IMAGE_CSV_JSON"] = str(Path("source_csv") / run_dir)
+                ctx["IMAGE_CSV_JSON_METAJSON"] = str(Path("source_csv") / run_dir / "meta.json")
+        if ctx.get("IMAGE_CSV_RUN_DIR"):
+            print(f"[step_runner] IMAGE_CSV RUN_DIR: {ctx['IMAGE_CSV_RUN_DIR']}", flush=True)
+            print(f"[step_runner] IMAGE_CSV JSON PATH: {ctx.get('IMAGE_CSV_JSON', '')}", flush=True)
+            print(f"[step_runner] IMAGE_CSV METAJSON PATH: {ctx['IMAGE_CSV_JSON_METAJSON']}", flush=True)
+
+    # Task source traceability
+    task_meta = _task_source_traceability_metadata(state)
+    ctx["SOURCE_TASK_GRAPH_ID"] = str(task_meta.get("Source Task Graph ID") or "")
+    ctx["SOURCE_TASK_NODE_ID"] = str(task_meta.get("Source Task Node ID") or "")
+
+    # Review step metadata
+    if step_cfg:
+        review_target = (step_cfg.get("on_reject_refine") or {}).get("artifact", "")
+        ctx["REVIEW_TARGET_ARTIFACT"] = str(review_target or "")
+        ctx.update(_review_prompt_metadata_context(state=state, step=step, step_cfg=step_cfg))
+
+    # ComfyUI submission context
+    produces = (step_cfg or {}).get("produces", [])
+    if "IMAGE_CSV_SUBMIT_RESULT" in produces:
+        run_dir = ctx.get("IMAGE_CSV_RUN_DIR", "")
+        if not run_dir:
+            # Fallback: derive from existing IMAGE_CSV_JSON artifact (produced by gen_prompts)
+            existing = artifacts.get("IMAGE_CSV_JSON", "")
+            if existing:
+                p = PurePath(existing)
+                # IMAGE_CSV_JSON may be a directory ("source_csv/YYYYMMDD-NNN") or
+                # a file inside that directory ("source_csv/YYYYMMDD-NNN/file.json").
+                # Use the directory component as the run directory.
+                if p.suffix == ".json":
+                    run_dir = str(p.parent)
+                else:
+                    run_dir = str(p)
+        if run_dir:
+            ctx["IMAGE_CSV_RUN_DIR"] = run_dir
+            ctx["IMAGE_CSV_SUBMIT_RESULT_PATH"] = str(Path(run_dir) / "submission_results.json")
+            ctx["IMAGE_CSV_SUBMIT_RESULT_METAJSON"] = str(Path(run_dir) / "submission_results.meta.json")
+            print(f"[step_runner] SUBMIT RESULT PATH: {ctx['IMAGE_CSV_SUBMIT_RESULT_PATH']}", flush=True)
+            print(f"[step_runner] SUBMIT METAJSON PATH: {ctx['IMAGE_CSV_SUBMIT_RESULT_METAJSON']}", flush=True)
+        else:
+            ctx["IMAGE_CSV_SUBMIT_RESULT_PATH"] = ""
+            ctx["IMAGE_CSV_SUBMIT_RESULT_METAJSON"] = ""
+
+    ctx["STEP_NAME"] = step
+
+    # Step-scoped progress.jsonl path — lives inside the step job directory.
+    ctx["PROGRESS_FILE"] = _resolve_progress_file_path(state=state, step=step)
+
+    try:
+        import os as _os
+        _tools_dir = _os.path.normpath(str((PACKAGE_ROOT / "tools").resolve()))
+        ctx["TOOLS_DIR"] = _tools_dir
+    except Exception:
+        ctx["TOOLS_DIR"] = ""
+    ctx["PYTHON_CMD"] = "python"
+    ctx["TOOLS_DIR_PY"] = _python_string_literal(ctx.get("TOOLS_DIR", ""))
+    ctx["PROGRESS_FILE_PY"] = _python_string_literal(ctx.get("PROGRESS_FILE", ""))
+    ctx["STEP_NAME_PY"] = _python_string_literal(step)
+
+    # Load site configuration from docs/sites.config (per-repo configuration)
+    site_config = _load_site_config(state=state)
+    ctx["OUTPUT_FORMAT"] = site_config.get("output_format", "html")
+    ctx["ADDITIONAL_SECTIONS"] = _format_additional_sections(site_config.get("additional_sections", []))
+
+    # Load theme configuration (layout template and CSS)
+    theme = _load_site_theme(site_config=site_config)
+    ctx["SITE_THEME_NAME"] = theme.get("theme_name", "default")
+    ctx["SITE_LAYOUT_TEMPLATE"] = theme.get("layout_template", "")
+    ctx["SITE_THEME_CSS"] = theme.get("theme_css", "")
+    ctx["SITE_LAYOUT_INSTRUCTIONS"] = theme.get("layout_instructions", "")
+
+    # Run workflow package context hooks (from context_extensions.py).
+    # Must run before _prompt_allowed_write_paths so artifact paths are available.
+    _apply_workflow_package_context_hooks(
+        ctx=ctx,
+        state=state,
+        step=step,
+        step_cfg=step_cfg,
+        project_root=project_root,
+    )
+
+    ctx["ALLOWED_WRITE_PATHS"] = _prompt_allowed_write_paths(
+        step_cfg=step_cfg or {},
+        state=state,
+        context=ctx,
+    )
+
+    return ctx
+
+
+def render_prompt(template_text: str, context: dict[str, str], step_cfg: dict | None = None) -> str:
+    """Render a prompt template by substituting context variables.
+
+    Replaces {KEY} placeholders with values from context dict. Also:
+    - Rewrites prompt literal substitutions (e.g., %DATE%, %UUID%)
+    - Injects sidecar instructions for artifact-producing steps
+    - Appends allowed write paths if configured
+
+    Args:
+        template_text: The prompt template with {KEY} placeholders.
+        context: Dict mapping placeholder keys to values.
+        step_cfg: Optional step configuration for sidecar injection.
+
+    Returns:
+        Rendered prompt text with all placeholders replaced.
+    """
+    import os as _os
+    from datetime import datetime as _datetime
+    _src = _os.path.abspath(__file__)
+    render_context = _normalize_prompt_context_paths(context)
+    render_context.setdefault("PYTHON_CMD", "python")
+    render_context.setdefault("TOOLS_DIR_PY", _python_string_literal(render_context.get("TOOLS_DIR", "")))
+    render_context.setdefault("PROGRESS_FILE_PY", _python_string_literal(render_context.get("PROGRESS_FILE", "")))
+    render_context.setdefault("STEP_NAME_PY", _python_string_literal(render_context.get("STEP_NAME", "")))
+    _tools_dir = render_context.get("TOOLS_DIR", "")
+    print(f"[render_prompt] step_runner={_src}", flush=True)
+    print(f"[render_prompt] TOOLS_DIR={_tools_dir!r}", flush=True)
+    rendered = _rewrite_prompt_literals(template_text)
+    for key, value in render_context.items():
+        rendered = rendered.replace(f"{{{key}}}", _stringify_prompt_value(value))
+    
+    # NEW: Inject standardized sidecar instructions (if this step produces artifacts)
+    if step_cfg:
+        result_key = step_cfg.get("result_meta_key") or step_cfg.get("result_meta_key_from_context", "")
+        if result_key:
+            # If result_meta_key_from_context already ends with _METAJSON, use it directly
+            if result_key.endswith("_METAJSON"):
+                meta_json_path = render_context.get(result_key, "")
+                artifact_key = result_key.replace("_METAJSON", "")
+            else:
+                meta_json_path = render_context.get(f"{result_key}_METAJSON", "")
+                artifact_key = result_key
+            
+            artifact_path = render_context.get(artifact_key, "")
+            
+            if meta_json_path:  # Only inject if we have the path
+                # Build artifact entries for JSON template
+                if artifact_path:
+                    artifact_entries = f'        "{artifact_key}": "{artifact_path}"'
+                else:
+                    artifact_entries = f'        "{artifact_key}": null'
+                
+                # Generate timestamp
+                current_timestamp = _datetime.now().astimezone().isoformat(timespec="seconds")
+                
+                # Format and append sidecar instructions
+                sidecar_text = CONSTANTS_SIDECAR_INSTRUCTION_TEMPLATE.format(
+                    META_JSON_PATH=meta_json_path,
+                    ARTIFACT_ENTRIES=artifact_entries,
+                    CURRENT_TIMESTAMP=current_timestamp
+                )
+                rendered += sidecar_text
+                print(f"[render_prompt] SIDECAR_INSTRUCTION appended for {result_key}", flush=True)
+            else:
+                print(f"[render_prompt] SIDECAR_INSTRUCTION skipped: {result_key}_METAJSON not in context", flush=True)
+        allowed_write_paths = str(render_context.get("ALLOWED_WRITE_PATHS") or "").strip()
+        if allowed_write_paths:
+            rendered += (
+                "\n\n## Allowed Write Paths\n\n"
+                "You may create or update ONLY the exact files listed below for this step.\n"
+                "Do not modify any other repository or runtime files.\n\n"
+                f"{allowed_write_paths}\n"
+            )
+    
+    if _tools_dir:
+        block = CONSTANTS_TOOL_INSTRUCTION_TEMPLATE
+        for key, value in render_context.items():
+            block = block.replace(f"{{{key}}}", _stringify_prompt_value(value))
+        rendered = rendered + block
+        print("[render_prompt] TOOL_INSTRUCTION appended", flush=True)
+
+    rendered += SECTION_HEADING_RULE
+    rendered += GOVERNANCE_PATH_REFERENCE_RULE
+    workflow_bundle = (step_cfg or {}).get("_workflow_bundle")
+    governance = getattr(workflow_bundle, "governance", None)
+    if workflow_bundle is not None and governance is not None and governance.include_in_prompts:
+        prompt_targets = set(governance.prompt_targets or ["all"])
+        current_step = str(render_context.get("STEP_NAME", ""))
+        if "all" in prompt_targets or current_step in prompt_targets:
+            rendered += render_prompt_governance_block(
+                governance,
+                bundle_name=workflow_bundle.name,
+                bundle_label=workflow_bundle.label,
+                step_name=current_step,
+            )
+            print("[render_prompt] BUNDLE_GOVERNANCE appended", flush=True)
+    if render_context.get("CODER_IMPLEMENTATION_SOP_PATH"):
+        sop_block = CODER_SOP_INSTRUCTION_TEMPLATE
+        for key, value in render_context.items():
+            sop_block = sop_block.replace(f"{{{key}}}", _stringify_prompt_value(value))
+        rendered = rendered + sop_block
+        print("[render_prompt] MANDATORY CODER SOP appended", flush=True)
+    else:
+        print("[render_prompt] CODER_IMPLEMENTATION_SOP_PATH not in context — MANDATORY CODER SOP skipped", flush=True)
+    return rendered
+
+
+def _rewrite_prompt_literals(template_text: str) -> str:
+    """Replace artifact paths in template text with prompt placeholders.
+
+    Uses prompt_literal_substitutions() from constants module to replace
+    known path literals with {PLACEHOLDER} tokens.
+
+    Args:
+        template_text: Template text containing path literals.
+
+    Returns:
+        Template with path literals replaced by placeholders.
+    """
+    rendered = template_text
+    for literal, token in sorted(prompt_literal_substitutions().items(), key=lambda item: len(item[0]), reverse=True):
+        rendered = rendered.replace(literal, token)
+    return rendered
+
+
+def _stringify_prompt_value(value: Any) -> str:
+    """Normalize prompt-context values to strings.
+
+    Args:
+        value: Any value to convert (None returns empty string).
+
+    Returns:
+        String representation of value, or empty string for None.
+    """
+    if value is None:
+        return ""
+    if isinstance(value, str):
+        return value
+    return str(value)
+
+
+def _normalize_prompt_context_paths(context: dict[str, Any]) -> dict[str, Any]:
+    """Convert coder-facing path values to forward-slash form.
+
+    Ensures Windows backslashes are converted to forward slashes for
+    LLM readability. Internal runtime state remains unchanged.
+
+    Args:
+        context: Context dict with potential path values.
+
+    Returns:
+        Context dict with path values normalized to forward slashes.
+    """
+    normalized: dict[str, Any] = {}
+    for key, value in context.items():
+        if not isinstance(value, str):
+            normalized[key] = value
+            continue
+        normalized[key] = _prompt_safe_path_value(key, value)
+    return normalized
+
+
+def _prompt_safe_path_value(key: str, value: str) -> str:
+    """Convert path value to forward slashes if it looks like a path.
+
+    Args:
+        key: Context key name (used to detect path-like keys).
+        value: Value to potentially normalize.
+
+    Returns:
+        Value with backslashes replaced by forward slashes if path-like.
+    """
+    raw = str(value or "")
+    if not raw or "\n" in raw or "\r" in raw:
+        return raw
+    if not _looks_like_prompt_path(key, raw):
+        return raw
+    return raw.replace("\\", "/")
+
+
+def _looks_like_prompt_path(key: str, value: str) -> bool:
+    """Detect if a key-value pair represents a file path.
+
+    Uses heuristics:
+    - Key ends with _PATH or _METAJSON
+    - Key is a known path artifact key
+    - Value starts with path-like prefixes (docs/, archive/, /, etc.)
+    - Value looks like a Windows or Unix path with file extension
+
+    Args:
+        key: Context key name.
+        value: Context value.
+
+    Returns:
+        True if the value appears to be a file path.
+    """
+    upper_key = str(key or "").upper()
+    if upper_key.endswith(("_PATH", "_METAJSON")):
+        return True
+    if upper_key in {
+        ARTIFACT_KEY_REVIEW,
+        "VALIDATION_FILE",
+        "PROGRESS_FILE",
+        "TOOLS_DIR",
+        "PYTHON_CMD",
+    }:
+        return True
+    raw = str(value or "").strip()
+    if not raw:
+        return False
+    if raw.startswith(("docs/", "archive/", "scripts/", "temp/", ".ukbe-runner/", "/", "./", "../")):
+        return True
+    if re.match(r"^[A-Za-z]:[\\/]", raw):
+        return True
+    if "\\" in raw and re.search(r"\.(md|json|jsonl|txt|html|pdf|csv|toml|yaml|yml|py|bat)$", raw, re.IGNORECASE):
+        return True
+    return False
+
+
+def _python_string_literal(value: Any) -> str:
+    """Render a value as a Python string literal for inline `python -c` snippets.
+
+    Args:
+        value: Any value to render.
+
+    Returns:
+        Python string literal representation (quoted and escaped).
+    """
+    return repr(_stringify_prompt_value(value))
+
+
+def prompt_checksum(prompt_text: str) -> str:
+    """Compute SHA-256 checksum of prompt text for integrity verification.
+
+    Args:
+        prompt_text: The prompt text to hash.
+
+    Returns:
+        Hexadecimal SHA-256 checksum string.
+    """
+    return hashlib.sha256(prompt_text.encode("utf-8")).hexdigest()
+
+
+def resolve_prompt_path(*, step_cfg: dict, coder: str, model_id: str | None = None) -> Path:
+    """Resolve prompt file path with three-level fallback.
+
+    Resolution order:
+      1. {stem}_{model_id}{suffix}  e.g. 06_task_deepseek-chat.txt  (if model_id given)
+      2. {stem}_{coder}{suffix}     e.g. 06_task_qwen.txt
+      3. {stem}{suffix}             e.g. 06_task.txt  (default)
+    """
+    import os
+    
+    def safe_relative(path: Path, base: Path) -> str:
+        """Safely compute relative path, falling back to os.path.relpath on Windows."""
+        try:
+            return str(path.relative_to(base))
+        except ValueError:
+            # Cross-drive paths on Windows cannot be relativized.
+            try:
+                return os.path.relpath(path, base)
+            except ValueError:
+                return str(path)
+    
+    default_path = RUNNER_ROOT / step_cfg["prompt_file"]
+    path_obj = Path(step_cfg["prompt_file"])
+
+    if model_id:
+        model_specific = RUNNER_ROOT / str(
+            path_obj.parent / f"{path_obj.stem}_{model_id}{path_obj.suffix}"
+        )
+        if model_specific.exists():
+            rel_path = safe_relative(model_specific, RUNNER_ROOT)
+            print(f"[step_runner] Using model-id-specific prompt: {rel_path}", flush=True)
+            return model_specific
+
+    coder_specific = RUNNER_ROOT / str(
+        path_obj.parent / f"{path_obj.stem}_{coder}{path_obj.suffix}"
+    )
+    if coder_specific.exists():
+        rel_path = safe_relative(coder_specific, RUNNER_ROOT)
+        print(f"[step_runner] Using coder-specific prompt: {rel_path}", flush=True)
+        return coder_specific
+
+    rel_path = safe_relative(default_path, RUNNER_ROOT)
+    print(f"[step_runner] Using default prompt: {rel_path}", flush=True)
+    return default_path
+
+
+# ---------------------------------------------------------------------------
+# Review / validation path helpers
+# ---------------------------------------------------------------------------
+
+def _review_target_artifact_key(step_cfg: dict) -> str | None:
+    """Determine which artifact key is being reviewed.
+
+    Checks on_reject_refine.artifact first, then falls back to first
+    produces item if requires_human_approval_after is set.
+
+    Args:
+        step_cfg: Step configuration dict.
+
+    Returns:
+        Artifact key being reviewed, or None if not determinable.
+    """
+    on_reject_refine = step_cfg.get("on_reject_refine") or {}
+    if on_reject_refine.get("artifact"):
+        return str(on_reject_refine["artifact"])
+    produces = step_cfg.get("produces", [])
+    if step_cfg.get("requires_human_approval_after") and produces:
+        return str(produces[0])
+    return None
+
+
+def _review_filename_date_code() -> str:
+    """Generate date code for review filename (YYMMDD format).
+
+    Returns:
+        Current date as 6-digit string (e.g., "260727").
+    """
+    return dt.datetime.now().strftime("%y%m%d")
+
+
+def _review_step_code(step: str) -> str:
+    """Generate short code for review step name.
+
+    Maps step names like "review_master_system_docs" to short codes like
+    "rmaster" for use in review filenames.
+
+    Args:
+        step: Step name (may have numeric prefix).
+
+    Returns:
+        Short code string, or empty string if no mapping found.
+    """
+    # Strip numeric prefix (e.g., "05_" from "05_review_master_system_docs")
+    step_base = re.sub(r"^\d+_", "", step)
+    return {
+        "audit_core_governance_accuracy": "acore",
+        "review_core_governance_docs": "rcore",
+        "review_master_system_docs": "rmaster",
+        "review_impl": "rimpl",
+        "review_pre_init": "rpre",
+        "review_planner": "rplan",
+        "review_task": "rtask",
+        "review_task_graph": "rtg",
+        "review_prompts": "rcsv",
+        "review_sop": "rsop",
+        "review_templates": "rtmpl",
+        "review_agents": "ragent",
+        "review_markdown": "rmd",
+    }.get(step_base, "")
+
+
+def _normalize_review_slug(value: str, *, max_length: int = 40) -> str:
+    """Normalize a string into a URL-safe slug for review filenames.
+
+    Converts to lowercase, replaces non-alphanumeric chars with hyphens,
+    and truncates to max_length.
+
+    Args:
+        value: String to normalize.
+        max_length: Maximum slug length.
+
+    Returns:
+        Normalized slug string.
+    """
+    slug = re.sub(r"[^a-z0-9-]+", "-", value.strip().lower().replace("_", "-").replace(" ", "-"))
+    slug = re.sub(r"-{2,}", "-", slug).strip("-")
+    return (slug[:max_length].rstrip("-") if len(slug) > max_length else slug) or "review"
+
+
+def _derive_review_slug_from_artifact_path(path_value: str) -> str:
+    """Extract a meaningful slug from an artifact filename.
+
+    Strips common prefixes like PRE-INIT-, INIT-, PLAN-, TASK-, IMPL-
+    from the artifact filename and normalizes the remainder.
+
+    Args:
+        path_value: Artifact file path.
+
+    Returns:
+        Normalized slug derived from the filename stem.
+    """
+    stem = Path(path_value).stem
+    for pattern in [
+        r"^PRE-INIT-\d{8}-\d+[_-]?",
+        r"^INIT-\d{8}-\d+[_-]?",
+        r"^PLAN-\d{8}-\d+[_-]?",
+        r"^TASK-GRAPH-\d{8}-PLAN-\d{8}-\d+[_-]?",
+        r"^TASK-\d{8}-\d+[_-]?",
+        r"^IMPL-\d{8}-TASK-\d{8}-\d+[_-]?",
+        r"^IMPL-\d{8}-\d+[_-]?",
+    ]:
+        stem = re.sub(pattern, "", stem, count=1)
+    return _normalize_review_slug(stem)
+
+
+def _build_review_target_identifier(*, artifact_key: str, artifact_path: str) -> str:
+    """Build a short identifier for the review target.
+
+    Format: {prefix}-{MMDD}-{seq} where prefix is based on artifact type
+    (I=init, P=plan, G=task graph, T=task, M=impl, C=csv, R=other).
+
+    Args:
+        artifact_key: Type of artifact being reviewed.
+        artifact_path: Path to the artifact file.
+
+    Returns:
+        Short identifier string like "I-0727-01".
+    """
+    name = Path(artifact_path).name
+    matches = re.findall(r"(\d{8})-(\d+)", name)
+    if matches:
+        yyyymmdd, seq = matches[-1]
+        mmdd, seq = yyyymmdd[4:8], seq.zfill(2)
+    else:
+        mmdd, seq = "0000", "00"
+    prefix = {"PRE_INIT_FILE": "I", "INIT_FILE": "I", "PLAN_FILE": "P",
+               "TASK_GRAPH_FILE": "G", "TASK_FILE": "T", "IMPL_FILE": "M",
+               "IMAGE_CSV_JSON": "C"}.get(artifact_key, "R")
+    return f"{prefix}-{mmdd}-{seq}"
+
+
+def _build_new_review_file_path(*, state: dict, step: str, step_cfg: dict) -> str:
+    """Build path for a new review file.
+
+    Uses workflow-owned path if available, otherwise constructs from
+    template_group, job_id, step, and target artifact.
+
+    Filename format: REV-{date}-{seq}_{step_code}_{tid}_{slug}.md
+
+    Args:
+        state: Workflow state dict.
+        step: Current step name.
+        step_cfg: Step configuration dict.
+
+    Returns:
+        Repo-relative path for the new review file.
+    """
+    template_group = str(state.get("template_group") or "").strip()
+    job_id = str(state.get("job_id") or "").strip()
+    mode = str((step_cfg or {}).get("mode") or state.get("current_mode") or "bootstrap").strip()
+
+    if template_group and job_id:
+        try:
+            from .workflow_path_contracts import resolve_workflow_output_paths
+
+            output_paths = resolve_workflow_output_paths(
+                template_group=template_group,
+                job_id=job_id,
+                mode=mode,
+            )
+        except Exception:
+            output_paths = {}
+        workflow_owned_review = str(output_paths.get("REVIEW_FILE_SUGGESTED") or "").strip()
+        if workflow_owned_review:
+            return workflow_owned_review
+
+    artifact_key = _review_target_artifact_key(step_cfg)
+    if not artifact_key:
+        return ""
+    artifact_path = (state.get("artifacts") or {}).get(artifact_key)
+    if not artifact_path:
+        return ""
+    step_code = _review_step_code(step)
+    if not step_code:
+        return ""
+    tid = _build_review_target_identifier(artifact_key=artifact_key, artifact_path=artifact_path)
+    slug = _derive_review_slug_from_artifact_path(artifact_path)
+    review_dir = ARTIFACT_ROOT / FOLDER_KEY_DELIVERY_REVIEWS
+    date_code = _review_filename_date_code()
+
+    # Find highest sequence number already used for this date (any slug/step/tid)
+    highest_seq = 0
+    for existing in review_dir.glob(f"REV-{date_code}-*.md"):
+        m = re.match(rf"REV-{date_code}-(\d+)_", existing.stem)
+        if m:
+            highest_seq = max(highest_seq, int(m.group(1)))
+
+    seq = highest_seq + 1
+    while True:
+        candidate = review_dir / f"REV-{date_code}-{seq:02d}_{step_code}_{tid}_{slug}.md"
+        if not candidate.exists():
+            p = PurePath(str(candidate.relative_to(Path(ARTIFACT_ROOT))))
+            return str(p)
+        seq += 1
+
+
+def _suggested_review_file_path(
+    *, state: dict, step: str, step_cfg: dict | None = None
+) -> str:
+    """Determine the suggested review file path for review steps.
+
+    For refine loop iterations, appends _iter{N} to the source review path.
+    Otherwise, builds a new review file path.
+
+    Args:
+        state: Workflow state dict with loop_context.
+        step: Current step name.
+        step_cfg: Optional step configuration dict.
+
+    Returns:
+        Repo-relative path for the suggested review file.
+    """
+    ctx = state.get("loop_context") or {}
+    if not ctx.get("active") or step != ctx.get("loop_step") or not ctx.get("loop_source_review"):
+        if step_cfg:
+            return _build_new_review_file_path(state=state, step=step, step_cfg=step_cfg)
+        return ""
+    next_iteration = int(ctx.get("loop_iteration", 0)) + 1
+    review_path = Path(ctx["loop_source_review"])
+    stem = review_path.stem
+    stem = (
+        re.sub(r"_iter\d+$", f"_iter{next_iteration}", stem)
+        if re.search(r"_iter\d+$", stem)
+        else f"{stem}_iter{next_iteration}"
+    )
+    return str(review_path.with_name(f"{stem}{review_path.suffix}"))
+
+
+def _build_validation_file_path(*, state: dict, step: str, step_cfg: dict) -> str:
+    """Build path for a validation artifact.
+
+    Handles codebase workflows, delivery/task execution workflows,
+    and bug fix workflows with appropriate path patterns.
+
+    Args:
+        state: Workflow state dict.
+        step: Current step name.
+        step_cfg: Step configuration dict.
+
+    Returns:
+        Repo-relative path for the validation file.
+    """
+    template_group = str(state.get("template_group") or "")
+    
+    # Handle codebase workflows
+    if template_group.startswith("codebase_"):
+        mode = str(step_cfg.get("mode") or ("bootstrap" if "bootstrap" in template_group else "reconcile"))
+        validation_dir = ARTIFACT_ROOT / FOLDER_KEY_CODEBASE_CHANGES
+        candidate = validation_dir / f"{str(state.get('job_id') or 'codebase-scan')}-{mode}-validation.md"
+        seq = 2
+        while candidate.exists():
+            candidate = validation_dir / f"{str(state.get('job_id') or 'codebase-scan')}-{mode}-validation_{seq:02d}.md"
+            seq += 1
+        return str(PurePath(str(candidate.relative_to(Path(ARTIFACT_ROOT)))))
+
+    # Handle delivery/task execution workflows (with IMPL_FILE)
+    impl_path = (state.get("artifacts") or {}).get("IMPL_FILE")
+    if impl_path:
+        tid = _build_review_target_identifier(artifact_key="IMPL_FILE", artifact_path=impl_path)
+        slug = _derive_review_slug_from_artifact_path(impl_path)
+        review_dir = ARTIFACT_ROOT / FOLDER_KEY_DELIVERY_REVIEWS
+        seq = 1
+        while True:
+            candidate = review_dir / f"VALIDATION-{_review_filename_date_code()}-{tid}_{slug}.md"
+            if seq > 1:
+                candidate = review_dir / f"VALIDATION-{_review_filename_date_code()}-{seq}-{tid}_{slug}.md"
+            if not candidate.exists():
+                return str(PurePath(str(candidate.relative_to(Path(ARTIFACT_ROOT)))))
+            seq += 1
+    
+    # Handle bug fix workflows (don't require IMPL_FILE)
+    workflow_cfg = _workflow_module().TEMPLATE_GROUPS.get(template_group, {})
+    step_configs = workflow_cfg.get("step_configs", {})
+    bug_fix_artifact_keys = {"BUG_REPORT_FILE", "REPRO_FILE", "ROOT_CAUSE_FILE", "PATCH_FILE"}
+    
+    is_bug_fix_workflow = False
+    for s_name, s_cfg in step_configs.items():
+        s_produces = s_cfg.get("produces", [])
+        if any(key in s_produces for key in bug_fix_artifact_keys):
+            is_bug_fix_workflow = True
+            break
+    
+    if is_bug_fix_workflow:
+        # Use step_dir pattern like other bug fix artifacts
+        step_names = workflow_cfg.get("steps", [])
+        try:
+            idx = step_names.index(step) + 1
+        except ValueError:
+            idx = 1
+        job_id = state.get("job_id", "")
+        step_dir_rel = f"{template_group}/{job_id}/{idx:02d}_{step}"
+        return delivery_doc_rel(f"04_implementation_plans/{step_dir_rel}/VALIDATION.md")
+    
+    # No match - return empty
+    return ""
+
+
+def _build_pre_init_file_path(*, state: dict) -> str:
+    """Compute collision-free path for a new pre-init artifact.
+
+    Sequence number is global per date (not per-slug) to avoid ID collisions.
+    """
+    draft_path = (state.get("artifacts") or {}).get("DRAFT_INIT_FILE", "")
+    slug = _derive_review_slug_from_artifact_path(draft_path) if draft_path else "pre-init"
+    pre_init_dir = ARTIFACT_ROOT / FOLDER_KEY_DELIVERY_INITIATIVES / "pre_init"
+    date_code = dt.datetime.now().strftime("%Y%m%d")
+
+    # Find highest sequence number already used for this date (any slug)
+    highest_seq = 0
+    for existing in pre_init_dir.glob(f"PRE-INIT-{date_code}-*.md"):
+        m = re.match(rf"PRE-INIT-{date_code}-(\d+)_", existing.stem)
+        if m:
+            highest_seq = max(highest_seq, int(m.group(1)))
+
+    seq = highest_seq + 1
+    while True:
+        candidate = pre_init_dir / f"PRE-INIT-{date_code}-{seq:02d}_{slug}.md"
+        if not candidate.exists():
+            return str(PurePath(str(candidate.relative_to(Path(ARTIFACT_ROOT)))))
+        seq += 1
+
+
+def _build_plan_file_path(*, state: dict) -> str:
+    """Compute collision-free path for a new plan artifact.
+
+    Sequence number is global per date (not per-slug) so that the Plan ID
+    embedded in the document metadata never collides across different plans
+    created on the same day.
+    """
+    init_path = (state.get("artifacts") or {}).get("INIT_FILE", "")
+    slug = _derive_review_slug_from_artifact_path(init_path) if init_path else "plan"
+    plan_dir = ARTIFACT_ROOT / FOLDER_KEY_DELIVERY_PLANS
+    date_code = dt.datetime.now().strftime("%Y%m%d")
+
+    # Find highest sequence number already used for this date (any slug)
+    highest_seq = 0
+    for existing in plan_dir.glob(f"PLAN-{date_code}-*.md"):
+        m = re.match(rf"PLAN-{date_code}-(\d+)_", existing.stem)
+        if m:
+            highest_seq = max(highest_seq, int(m.group(1)))
+
+    seq = highest_seq + 1
+    while True:
+        candidate = plan_dir / f"PLAN-{date_code}-{seq:02d}_{slug}.md"
+        if not candidate.exists():
+            return str(PurePath(str(candidate.relative_to(Path(ARTIFACT_ROOT)))))
+        seq += 1
+
+
+def _build_task_graph_file_path(*, state: dict) -> str:
+    """Compute path for a task graph artifact.
+
+    Naming: TASK-GRAPH-{YYYYMMDD}-{PLAN-YYYYMMDD-NN}.md
+    The task graph is unique per plan — no -seq fallback needed.
+    If the file already exists from a prior aborted run, the agent overwrites it.
+    """
+    plan_path = (state.get("artifacts") or {}).get("PLAN_FILE", "")
+    if not plan_path:
+        return ""
+    plan_stem = Path(plan_path).stem  # e.g. "PLAN-20260413-01_slug"
+    m = re.match(r"(PLAN-\d{8}-\d+)", plan_stem)
+    plan_id = m.group(1) if m else "PLAN-00000000-00"
+    tg_dir = ARTIFACT_ROOT / FOLDER_KEY_DELIVERY_PLANS / "artifacts"
+    date_code = dt.datetime.now().strftime("%Y%m%d")
+    candidate = tg_dir / f"TASK-GRAPH-{date_code}-{plan_id}.md"
+    return str(PurePath(str(candidate.relative_to(Path(ARTIFACT_ROOT)))))
+
+
+def _build_impl_file_path(*, state: dict) -> str:
+    """Compute a collision-free path for a new implementation plan file.
+
+    Naming: `delivery_doc_rel("04_implementation_plans")` / IMPL-YYYYMMDD-NN_title-slug.md
+    Sequence number is global per date (not per-slug) to avoid ID collisions.
+    """
+    from .task_runtime import task_execution_binding_current_item, task_queue_current_item
+
+    current_item = task_queue_current_item(state) or task_execution_binding_current_item(state)
+    title = str((current_item or {}).get("title") or "")
+    slug = _normalize_review_slug(title, max_length=60) if title else "impl"
+    impl_dir = ARTIFACT_ROOT / FOLDER_KEY_DELIVERY_IMPLEMENTATIONS
+    date_code = dt.datetime.now().strftime("%Y%m%d")  # YYYYMMDD — matches existing naming convention
+
+    # Find highest sequence number already used for this date (any slug)
+    highest_seq = 0
+    for existing in impl_dir.glob(f"IMPL-{date_code}-*.md"):
+        m = re.match(rf"IMPL-{date_code}-(\d+)_", existing.stem)
+        if m:
+            highest_seq = max(highest_seq, int(m.group(1)))
+
+    seq = highest_seq + 1
+    while True:
+        candidate = impl_dir / f"IMPL-{date_code}-{seq:02d}_{slug}.md"
+        if not candidate.exists():
+            return str(PurePath(str(candidate.relative_to(Path(ARTIFACT_ROOT)))))
+        seq += 1
+
+
+def _build_codebase_change_impact_path(*, state: dict) -> str:
+    """Compute a collision-free path for a codebase documentation change record."""
+    template_group = str(state.get("template_group") or "")
+    if template_group.startswith("codebase_"):
+        mode = "bootstrap" if "bootstrap" in template_group else "reconcile"
+        change_dir = ARTIFACT_ROOT / FOLDER_KEY_CODEBASE_CHANGES
+        candidate = change_dir / f"{str(state.get('job_id') or 'codebase-scan')}-{mode}.md"
+        seq = 2
+        while candidate.exists():
+            candidate = change_dir / f"{str(state.get('job_id') or 'codebase-scan')}-{mode}_{seq:02d}.md"
+            seq += 1
+        return str(PurePath(str(candidate.relative_to(Path(ARTIFACT_ROOT)))))
+
+    from .task_runtime import task_execution_binding_current_item, task_queue_current_item
+
+    current_item = task_queue_current_item(state) or task_execution_binding_current_item(state)
+    task_id = str((current_item or {}).get("task_id") or (current_item or {}).get("task_node_id") or "").strip()
+    title = str((current_item or {}).get("title") or "").strip()
+    slug = _normalize_review_slug(title, max_length=60) if title else "codebase-doc-update"
+    base = task_id or f"DOCSYNC-{dt.datetime.now().strftime('%Y%m%d')}"
+    change_dir = ARTIFACT_ROOT / FOLDER_KEY_CODEBASE_CHANGES
+    candidate = change_dir / f"{base}_{slug}.md"
+    seq = 2
+    while candidate.exists():
+        candidate = change_dir / f"{base}_{slug}_{seq:02d}.md"
+        seq += 1
+    return str(PurePath(str(candidate.relative_to(Path(ARTIFACT_ROOT)))))
+
+
+def _review_prompt_metadata_context(*, state: dict, step: str, step_cfg: dict) -> dict[str, str]:
+    """Extract metadata context from review target for prompt rendering.
+
+    Reads the target artifact and extracts status, review decision,
+    reviewer, and reviewed_at fields for use in review prompts.
+
+    Args:
+        state: Workflow state dict.
+        step: Current step name.
+        step_cfg: Step configuration dict.
+
+    Returns:
+        Dict with REVIEW_* context variables for prompt rendering.
+    """
+    artifact_key = _review_target_artifact_key(step_cfg)
+    if not artifact_key:
+        return {}
+    artifact_path = (state.get("artifacts") or {}).get(artifact_key)
+    if not artifact_path:
+        return {}
+    path = ARTIFACT_ROOT / artifact_path
+    if not path.exists() or not path.is_file():
+        return {}
+
+    content = path.read_text(encoding="utf-8")
+    raw_status = _extract_document_status(content) or ""
+    normalized_status = re.sub(r"\s+", "_", raw_status.strip().lower().replace("-", "_"))
+
+    review_decision = (_extract_metadata_value(content, "Review Decision") or "").strip()
+    model_reviewer = (_extract_metadata_value(content, "Model Reviewer") or "").strip()
+    reviewed_at = (_extract_metadata_value(content, "Reviewed At") or "").strip()
+
+    active_review_placeholders_valid = (
+        normalized_status == "in_review"
+        and review_decision.upper() == "PENDING"
+        and reviewed_at.upper() == "TBD"
+    )
+
+    return {
+        "REVIEW_TARGET_STATUS_RAW": raw_status or "MISSING",
+        "REVIEW_TARGET_STATUS_NORMALIZED": normalized_status or "missing",
+        "REVIEW_TARGET_STATUS_IS_ALLOWED": "true" if normalized_status in {
+            "draft", "in_review", "changes_requested", "pending_human_approval"
+        } else "false",
+        "REVIEW_METADATA_REVIEW_DECISION": review_decision or "MISSING",
+        "REVIEW_METADATA_MODEL_REVIEWER": model_reviewer or "MISSING",
+        "REVIEW_METADATA_REVIEWED_AT": reviewed_at or "MISSING",
+        "REVIEW_METADATA_IS_ACTIVE_REVIEW_CONTEXT": "true" if normalized_status == "in_review" else "false",
+        "REVIEW_METADATA_PLACEHOLDERS_VALID": "true" if active_review_placeholders_valid else "false",
+        "REVIEW_METADATA_BOOKKEEPING_ONLY": (
+            "Review metadata fields are runner-managed workflow bookkeeping. "
+            "Do not reject based on them alone when REVIEW_METADATA_PLACEHOLDERS_VALID=true."
+        ),
+        "REVIEW_STATUS_NORMALIZATION_NOTE": (
+            "Treat case and underscore/space variants as equivalent lifecycle values. "
+            "Canonical machine form is snake_case, e.g. IN_REVIEW == in_review."
+        ),
+    }
+
+
+# ---------------------------------------------------------------------------
+# Fingerprint helpers
+# ---------------------------------------------------------------------------
+
+def _build_file_fingerprint(path_value: str | None) -> dict:
+    """Build a fingerprint dict for a file.
+
+    Contains checksum (SHA-256), byte size, and modification time.
+
+    Args:
+        path_value: Repo-relative path to the file.
+
+    Returns:
+        Dict with checksum, bytes, and mtime fields.
+    """
+    fp: dict = {"checksum": "", "bytes": None, "mtime": None}
+    if not path_value:
+        return fp
+    path = ARTIFACT_ROOT / path_value
+    if not path.exists() or not path.is_file():
+        return fp
+    stat = path.stat()
+    fp["checksum"] = hashlib.sha256(path.read_bytes()).hexdigest()
+    fp["bytes"] = stat.st_size
+    fp["mtime"] = stat.st_mtime_ns
+    return fp
+
+
+def _format_artifact_fingerprint_block(artifacts: dict) -> str:
+    """Format artifact fingerprints for prompt context.
+    
+    Uses artifact keys from state instead of workflow module.
+    """
+    lines = []
+    # Use artifact keys from state (which come from step_execution_spec produces/required_inputs)
+    for key, value in artifacts.items():
+        if not value:
+            continue
+        fp = _build_file_fingerprint(value)
+        if fp["checksum"]:
+            lines.append(
+                f"- {key}: checksum={fp['checksum']}, bytes={fp['bytes']}, mtime={fp['mtime']}"
+            )
+    return "\n".join(lines)
+
+
+def _prompt_allowed_write_paths(
+    *,
+    step_cfg: dict[str, Any],
+    state: dict[str, Any],
+    context: dict[str, str],
+) -> str:
+    """Format allowed write paths for prompt injection.
+
+    Lists all declared artifact paths and meta.json paths that the
+    coder is allowed to write for this step.
+
+    Args:
+        step_cfg: Step configuration dict.
+        state: Workflow state dict.
+        context: Prompt context dict.
+
+    Returns:
+        Newline-separated list of allowed paths.
+    """
+    lines: list[str] = []
+    for artifact_key in _declared_write_keys(step_cfg):
+        path_value = _resolve_contract_path_from_context(
+            artifact_key=artifact_key,
+            context=context,
+            state=state,
+        )
+        if path_value:
+            lines.append(f"- {path_value}")
+
+    result_key = str(step_cfg.get("result_meta_key") or step_cfg.get("result_meta_key_from_context") or "").strip()
+    meta_value = ""
+    if result_key.endswith("_METAJSON"):
+        meta_value = str(context.get(result_key) or "").strip()
+    elif result_key:
+        meta_value = str(context.get(f"{result_key}_METAJSON") or "").strip()
+    if meta_value:
+        lines.append(f"- {meta_value}")
+
+    unique_lines: list[str] = []
+    seen: set[str] = set()
+    for line in lines:
+        if line not in seen:
+            seen.add(line)
+            unique_lines.append(line)
+    return "\n".join(unique_lines)
+
+
+def _resolve_progress_file_path(*, state: dict[str, Any], step: str) -> str:
+    """Resolve path to progress.jsonl for a step.
+
+    Uses backend_step_dir_rel if available (backend mode), otherwise
+    constructs path from template_group, job_id, and step sequence.
+
+    Args:
+        state: Workflow state dict.
+        step: Current step name.
+
+    Returns:
+        Absolute path to progress.jsonl file.
+    """
+    step_dir_rel = str((state or {}).get("backend_step_dir_rel") or "").strip()
+    if step_dir_rel:
+        return _normalize_backend_job_path(str(PurePath(step_dir_rel) / "progress.jsonl"))
+
+    template_group = str((state or {}).get("template_group") or "").strip()
+    job_id = str((state or {}).get("job_id") or "").strip()
+    seq = int((state or {}).get("backend_step_sequence") or (state or {}).get("backend_step_order") or 0)
+    if not seq and template_group and step:
+        try:
+            workflow_module = _workflow_module()
+            steps = []
+            if workflow_module is not None:
+                steps = workflow_module.TEMPLATE_GROUPS.get(template_group, {}).get("steps", [])
+            try:
+                seq = steps.index(step) + 1
+            except ValueError:
+                seq = 0
+        except RuntimeError:
+            seq = 0
+
+    safe_group = template_group or "_unknown_group"
+    safe_job = job_id or "_unknown_job"
+    safe_seq = seq if seq > 0 else 0
+    return str(Path(JOBS_ROOT) / safe_group / safe_job / f"{safe_seq:02d}_{step}" / "progress.jsonl")
+
+
+# ---------------------------------------------------------------------------
+# Task traceability
+# ---------------------------------------------------------------------------
+
+def _task_source_traceability_metadata(state: dict) -> dict[str, str | None]:
+    """Extract task traceability metadata from state for embedding in generated artifacts.
+
+    Returns Source Task Graph ID and Source Task Node ID from the current
+    task execution context.
+
+    Args:
+        state: Workflow state dict with task_execution_binding.
+
+    Returns:
+        Dict with traceability metadata keys.
+    """
+    task_graph_file = str((state.get("artifacts") or {}).get("TASK_GRAPH_FILE") or "").strip()
+    source_task_graph_id: str | None = None
+    if task_graph_file:
+        tgp = ARTIFACT_ROOT / task_graph_file
+        if tgp.exists() and tgp.is_file():
+            content = tgp.read_text(encoding="utf-8")
+            source_task_graph_id = (_extract_metadata_value(content, "Task Graph ID") or "").strip() or None
+
+    from .task_runtime import task_queue_current_item, task_execution_binding_current_item
+    current_item = task_queue_current_item(state) or task_execution_binding_current_item(state)
+    source_task_node_id = str(
+        (current_item or {}).get("task_node_id") or (current_item or {}).get("task_id") or ""
+    ).strip() or None
+
+    return {"Source Task Graph ID": source_task_graph_id, "Source Task Node ID": source_task_node_id}
+
+
+# ---------------------------------------------------------------------------
+# Document metadata helpers
+# ---------------------------------------------------------------------------
+
+def _extract_document_status(content: str) -> str | None:
+    """Extract Status field from document content.
+
+    Tries metadata block first, then falls back to "Status:" prefix line.
+
+    Args:
+        content: Document content to search.
+
+    Returns:
+        Status value string, or None if not found.
+    """
+    val = _extract_metadata_value(content, "Status")
+    if val is not None:
+        return val
+    for line in content.splitlines():
+        stripped = line.strip()
+        if stripped.lower().startswith("status:"):
+            return stripped.split(":", 1)[1].strip()
+    return None
+
+
+def _extract_metadata_value(content: str, key: str) -> str | None:
+    """Extract a metadata field value from document content.
+
+    Matches bullet-point format: "- Key: value" or "- **Key**: value"
+
+    Args:
+        content: Document content to search.
+        key: Metadata field name to find.
+
+    Returns:
+        Field value string, or None if not found.
+    """
+    pattern = re.compile(
+        rf"^\s*[-*]\s*(?:\*\*)?{re.escape(key)}(?::(?:\*\*)?|\*\*:\s*|:)\s*(.+?)\s*$",
+        re.IGNORECASE,
+    )
+    for line in content.splitlines():
+        m = pattern.match(line.strip())
+        if m:
+            return m.group(1).strip()
+    return None
+
+
+# ---------------------------------------------------------------------------
+# I/O helpers
+# ---------------------------------------------------------------------------
+
+def _now_iso() -> str:
+    """Return current ISO timestamp (local timezone, seconds precision)."""
+    return dt.datetime.now().isoformat(timespec="seconds")
+
+
+def _ensure_dir(path: Path) -> None:
+    """Create directory and parents if they don't exist."""
+    path.mkdir(parents=True, exist_ok=True)
+
+
+def _save_text(path: Path, content: str) -> None:
+    """Write text content to a file, creating parent directories."""
+    _ensure_dir(path.parent)
+    path.write_text(content, encoding="utf-8")
+
+
+def _save_json_atomic(path: Path, data: Any) -> None:
+    """Write JSON atomically using temp file and replace."""
+    _ensure_dir(path.parent)
+    tmp_fd, tmp_path = tempfile.mkstemp(dir=path.parent, prefix=".tmp_", suffix=".json")
+    try:
+        with open(tmp_fd, "w", encoding="utf-8") as fh:
+            json.dump(data, fh, indent=2, ensure_ascii=False)
+        Path(tmp_path).replace(path)
+    except Exception:
+        Path(tmp_path).unlink(missing_ok=True)
+        raise
+
+
+def _save_debug_failure(
+    *,
+    step_dir: Path,
+    command: list | None = None,
+    return_code: int | None = None,
+    stdout: str = "",
+    stderr: str = "",
+    raw_events: list | None = None,
+    error_message: str = "",
+) -> None:
+    """Save coder invocation failure details for debugging."""
+    _ensure_dir(step_dir)
+    if stdout:
+        _save_text(step_dir / "raw_output.txt", stdout)
+    if stderr:
+        _save_text(step_dir / "stderr.txt", stderr)
+    if raw_events:
+        _write_raw_events_jsonl(step_dir / "raw_events.jsonl", raw_events)
+    payload = {
+        "error_message": error_message,
+        "command": command,
+        "return_code": return_code,
+    }
+    _save_json_atomic(step_dir / "invoke_error.json", payload)
+
+
+def _write_raw_events_jsonl(path: Path, lines: list | None) -> None:
+    """Write raw event lines to a JSONL file."""
+    if not lines:
+        return
+    _ensure_dir(path.parent)
+    path.write_text("\n".join(lines), encoding="utf-8")

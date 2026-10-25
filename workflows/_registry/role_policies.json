@@ -1,10 +1,10 @@
 {
   "role_policies": {
 	"agnes_standard": {
-      "default_role": "agnes-2.0-flash",
+      "default_role": "agnes-2.5-flash",
 	  "agent": "arv_architect",
       "allowed_roles": [
-        "agnes-2.0-flash"
+        "agnes-2.5-flash"
       ]
     },
 	"architect_vision": {
@@ -14,7 +14,7 @@
         "bailian_qwen3.7-plus",
 		"bailian_kimi-k2.5",
 		"zen_go_mimo-v2.5",
-        "agnes-2.0-flash"
+        "agnes-2.5-flash"
       ]
     },
 	"gatekeeper_standard": {
@@ -24,7 +24,7 @@
         "bailian_qwen3.7-plus",
 		"bailian_kimi-k2.5",
 		"zen_go_mimo-v2.5",
-        "agnes-2.0-flash"
+        "agnes-2.5-flash"
       ]
     },
 	"image_video": {

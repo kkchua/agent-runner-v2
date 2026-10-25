@@ -51,3 +51,14 @@ class NotFoundError(Exception):
     Distinct from ArtifactMissingError which is specific to coder-produced artifacts.
     Used for configuration files, registry entries, and other infrastructure resources.
     """
+
+
+class UnauthorizedWriteError(Exception):
+    """Raised when post-step snapshot detects writes outside allowed paths.
+
+    Contains a list of unauthorized changed paths for diagnostic output.
+    """
+
+    def __init__(self, message: str, unauthorized_paths: list[str]) -> None:
+        super().__init__(message)
+        self.unauthorized_paths = unauthorized_paths

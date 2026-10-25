@@ -13,6 +13,8 @@ This is the master index for agent-runner-v2 documentation. Use this page to fin
 2. Read [AGENTS.md](AGENTS.md) for comprehensive project overview
 3. Check [AGENT_RUNNER_V2_SPECIALIST.md](AGENT_RUNNER_V2_SPECIALIST.md) for navigation guidance
 
+**Want to create a new workflow?** Use [AGBv2](#creating-workflows-with-agbv2) — write a requirement document and generate a complete workflow package automatically.
+
 **Need to write code?** Go to [Coders](#for-coders) section below.
 
 **Need to understand architecture?** Go to [Architecture & Design](#architecture--design) section.
@@ -27,6 +29,7 @@ This is the master index for agent-runner-v2 documentation. Use this page to fin
 
 | Document | Purpose | When to Read |
 |----------|---------|--------------|
+| [SOP.md](SOP.md) | **Architecture, implementation, and validation SOP** — Codex/Qwen/User roles, plan-first approval gate, deployment handoff package | When participating in a plan-first review cycle |
 | [docs/developer/CODER_IMPLEMENTATION_SOP.md](docs/developer/CODER_IMPLEMENTATION_SOP.md) | **Execution discipline for coding tasks** — 8 mandatory rules | **Before writing/editing code** — mandatory reading |
 | [AGENTS.md](AGENTS.md) | **Comprehensive project reference** — architecture, modules, conventions, commands | When you need to understand the codebase structure |
 | [docs/developer/AGENT_RUNNER_V2_SPECIALIST.md](docs/developer/AGENT_RUNNER_V2_SPECIALIST.md) | **Agent navigation instructions** — how to find things without repo-wide scans | When you're lost or need to locate specific components |
@@ -121,6 +124,7 @@ V1 files are marked `[V1 DEPRECATED]` — do not use for new development.
 | Document | Purpose | When to Read |
 |----------|---------|--------------|
 | [AGENTS.md](AGENTS.md) | **Workflow package system** — workflow.toml structure, StepConfig, WorkflowBundle, BundleGovernance | When creating or modifying workflows |
+| [docs/system/00_governance/platform/AGBv2/README.md](docs/system/00_governance/platform/AGBv2/README.md) | **AGBv2** — Artifact Generator Builder v3.0.0. Transform requirement documents into executable workflow packages | When creating new workflows from requirements |
 | [docs/system/00_governance/foundation/current/BASE_COMPOSITION_STANDARD_v1.0.md](docs/system/00_governance/foundation/current/BASE_COMPOSITION_STANDARD_v1.0.md) | **Base Composition Standard (BCS)** — impls, prompt slots, two-tier prompt resolution, action contracts | When designing workflows with multiple implementations or pluggable prompts |
 | [masterplan/WORKFLOW_EXTENSION_INTERFACE_PLAN.md](masterplan/WORKFLOW_EXTENSION_INTERFACE_PLAN.md) | **WorkflowExtensions pattern** — how workflows hook into the runner | When implementing custom workflow logic |
 
@@ -189,6 +193,94 @@ masterplan/
   ├─> LAYER2_PLATFORM_CORE_SPECIFICATION.md (L2 platform)
   └─> LAYER3_AI_DRIVEN_SDLC_SPECIFICATION.md (L3 workflows)
 ```
+
+---
+
+## Creating Workflows with AGBv2
+
+**AGBv2** (Artifact Generator Builder v3.0.0) is a meta-workflow that transforms a requirement document into a complete, executable workflow package.
+
+```
+input/requirement.md  →  [AGBv2]  →  workflows/{codename}/
+```
+
+### Quick Start
+
+1. **Prepare your workspace** with `input/` and `output/` subfolders
+2. **Write a requirement document** following [AGBv2 Requirement Doc Guide](docs/system/00_governance/platform/AGBv2/03_REQUIREMENT_DOC_GUIDE.md):
+   ```yaml
+   ---
+   codename: "my_generator"
+   title: "My Generator"
+   version: "1.0"
+   ---
+
+   ## Overview
+   What problem does this generator solve?
+
+   ## Input Artifacts
+   What content does it accept?
+
+   ## Output Artifacts
+   What does it produce?
+
+   ## Transformation Requirements
+   How does input become output?
+   ```
+   See [templates/REQUIREMENT_DOC_TEMPLATE.md](docs/system/00_governance/platform/AGBv2/templates/REQUIREMENT_DOC_TEMPLATE.md) for a blank template.
+
+3. **Run AGBv2**:
+   ```bash
+   ukbe-run-agent run --template-group artifact_generator_builder
+   ```
+
+4. **Collect output** from `workflows/{codename}/`
+
+### Documentation
+
+| Document | Purpose |
+|----------|---------|
+| [AGBv2/README.md](docs/system/00_governance/platform/AGBv2/README.md) | AGBv2 overview, pipeline, quick start |
+| [AGBv2/03_REQUIREMENT_DOC_GUIDE.md](docs/system/00_governance/platform/AGBv2/03_REQUIREMENT_DOC_GUIDE.md) | How to write requirement documents |
+| [AGBv2/02_ANALYSIS_JSON_SCHEMA.md](docs/system/00_governance/platform/AGBv2/02_ANALYSIS_JSON_SCHEMA.md) | Analysis JSON schema reference |
+| [AGBv2/BCS_v2.0.md](docs/system/00_governance/platform/AGBv2/BCS_v2.0.md) | Base Composition Standard v2.0 |
+
+---
+
+## Plan-First Workflow
+
+**plan_first_review_v1** is a structured plan-first review cycle with Codex reviewer and Qwen planner roles.
+
+```
+raw_request.md  →  [plan_first_review_v1]  →  Planning/<date>-<seq>_<slug>/
+```
+
+### Quick Start
+
+1. **Write a raw request** (any markdown describing what you need)
+2. **Run the workflow:**
+   ```bash
+   ukbe-run-agent run --template-group plan_first_review_v1 --set RAW_REQUEST_FILE=path/to/request.md
+   ```
+3. **Review the plan** — After `codex_review` step, human approval is required.
+4. **Intervene if needed:**
+   ```bash
+   # Extend refinement limit
+   ukbe-run-agent continue-refinement --job-id <ID> --additional-allowance 5
+
+   # Stop and archive (terminal, irreversible)
+   ukbe-run-agent stop-and-archive --job-id <ID> --reason "No longer needed"
+
+   # Change requirements mid-cycle (creates new baseline)
+   ukbe-run-agent change-requirements --job-id <ID> --new-requirements-file path/to/new.md --reason "Scope changed"
+   ```
+
+### Documentation
+
+| Document | Purpose |
+|----------|---------|
+| [workflows/plan_first_review_v1/README.md](workflows/plan_first_review_v1/README.md) | Workflow overview, steps, roles, artifacts, operator commands |
+| [SOP.md](SOP.md) | Architecture, implementation, and validation SOP |
 
 ---
 

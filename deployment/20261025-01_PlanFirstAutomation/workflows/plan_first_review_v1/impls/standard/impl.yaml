@@ -1,0 +1,29 @@
+step_slots:
+  formalize_requirements:
+    type: "llm"
+    label: "Formalize Requirements"
+    default: "standard"
+    options:
+      - name: "standard"
+        file: "prompts/formalize_requirements/standard.txt"
+  generate_plan:
+    type: "llm"
+    label: "Generate Plan"
+    default: "standard"
+    options:
+      - name: "standard"
+        file: "prompts/generate_plan/standard.txt"
+  codex_review:
+    type: "llm"
+    label: "Codex Review"
+    default: "standard"
+    options:
+      - name: "standard"
+        file: "prompts/codex_review/standard.txt"
+  refine_plan:
+    type: "llm"
+    label: "Refine Plan"
+    default: "standard"
+    options:
+      - name: "standard"
+        file: "prompts/refine_plan/standard.txt"

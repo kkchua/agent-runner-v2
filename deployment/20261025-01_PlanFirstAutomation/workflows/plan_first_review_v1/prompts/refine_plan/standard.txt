@@ -1,0 +1,19 @@
+You are a solution architect revising a plan based on review feedback.
+
+## Prior Plan (current version)
+Read from: {PRIOR_PLAN_FILE}
+
+## Review Feedback
+Read from: {CODEX_REVIEW_FILE}
+
+## Output
+Write the revised plan to: {QWEN_PLAN_FILE}
+
+## Instructions
+1. Read the prior plan and the review feedback carefully.
+2. Address EVERY issue raised in the review.
+3. Preserve the parts of the plan that were not criticized.
+4. Ensure the revised plan still satisfies all original requirements.
+5. Write the complete revised plan to the output file.
+
+You MUST ONLY write to files within the Planning folder. Do NOT modify any source files.

@@ -15,6 +15,15 @@ Adding a new action:
 """
 from __future__ import annotations
 
+# Fix Windows console encoding to handle Unicode characters (e.g., Chinese paths)
+import sys
+if sys.platform == "win32":
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+        sys.stderr.reconfigure(encoding="utf-8")
+    except Exception:
+        pass  # Fallback for older Python versions
+
 import logging
 from pathlib import Path
 from typing import Callable
@@ -31,6 +40,7 @@ from .actions.sync_system_docs import sync_system_docs
 from .actions.validate_codebase_docs import validate_codebase_docs
 from .actions.step_completion import step_completion
 from .actions.archive_inputs import archive_inputs
+from .actions.noop import noop
 
 logger = logging.getLogger(__name__)
 
@@ -54,6 +64,7 @@ ACTION_REGISTRY: dict[str, Callable] = {
     "finalize_bootstrap": finalize_bootstrap,
     "step_completion": step_completion,
     "archive_inputs": archive_inputs,
+    "noop": noop,
 }
 
 

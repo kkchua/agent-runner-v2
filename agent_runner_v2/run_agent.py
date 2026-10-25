@@ -23,6 +23,15 @@ import os
 import re
 import shutil
 import sys
+
+# Fix Windows console encoding to handle Unicode characters (e.g., Chinese paths)
+if sys.platform == "win32":
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+        sys.stderr.reconfigure(encoding="utf-8")
+    except Exception:
+        pass  # Fallback for older Python versions
+
 from pathlib import Path
 from typing import Any
 
@@ -501,6 +510,32 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         ns.codebase_init_argv = raw[1:]
         return ns
 
+    if command == "continue-refinement":
+        p = argparse.ArgumentParser(description="Extend the cumulative refinement limit for plan_first_review_v1.")
+        p.add_argument("--job-id", required=True, help="Job ID to extend.")
+        p.add_argument("--additional-allowance", type=int, required=True, help="Number of additional refinements to allow.")
+        p.add_argument("--reason", default="", help="Optional reason for the extension.")
+        ns = p.parse_args(raw[1:])
+        ns.command = "continue-refinement"
+        return ns
+
+    if command == "stop-and-archive":
+        p = argparse.ArgumentParser(description="Stop and archive a job (terminal status).")
+        p.add_argument("--job-id", required=True, help="Job ID to stop and archive.")
+        p.add_argument("--reason", required=True, help="Reason for stopping.")
+        ns = p.parse_args(raw[1:])
+        ns.command = "stop-and-archive"
+        return ns
+
+    if command == "change-requirements":
+        p = argparse.ArgumentParser(description="Change requirements and create a new baseline.")
+        p.add_argument("--job-id", required=True, help="Job ID to update.")
+        p.add_argument("--new-requirements-file", required=True, help="Path to new requirements file.")
+        p.add_argument("--reason", required=True, help="Reason for the change.")
+        ns = p.parse_args(raw[1:])
+        ns.command = "change-requirements"
+        return ns
+
     if command == "cleanup":
         p = argparse.ArgumentParser(description="Cleanup old job history and runtime files.")
         p.add_argument("--confirm", action="store_true", help="Actually delete files (default: dry-run only shows what would be deleted)")
@@ -693,6 +728,177 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "codebase-init":
         from .codebase_init_commands import main as _codebase_init_main
         return _codebase_init_main(args.codebase_init_argv)
+
+    if args.command == "continue-refinement":
+        from . import job_state
+        from .workflow_specs import get_template_group_cfg
+        from .runtime_context import get_jobs_root, get_workspace_root
+
+        job_id = args.job_id
+        additional_allowance = args.additional_allowance
+        reason = args.reason
+
+        # Find the job directory — use substring glob for discovery, then verify exact ID
+        jobs_root = Path(get_jobs_root())
+        job_dir = None
+        for candidate in jobs_root.rglob(f"*{job_id}*"):
+            if candidate.is_dir() and (candidate / "job.json").exists():
+                with open(candidate / "job.json", "r", encoding="utf-8") as f:
+                    candidate_state = json.load(f)
+                if candidate_state.get("job_id") == job_id:
+                    job_dir = candidate
+                    break
+
+        if job_dir is None:
+            print(json.dumps({"error": f"Job {job_id!r} not found"}))
+            return 1
+
+        # Load job state
+        job_json_path = job_dir / "job.json"
+        with open(job_json_path, "r", encoding="utf-8") as f:
+            state = json.load(f)
+
+        group_name = state.get("template_group", "")
+        if group_name != "plan_first_review_v1":
+            print(json.dumps({"error": f"extend_refinement_limit only valid for plan_first_review_v1, not {group_name!r}"}))
+            return 1
+
+        # Load workflow config
+        group_cfg = get_template_group_cfg(template_group=group_name, workspace_root=get_workspace_root())
+
+        # Extend the limit
+        try:
+            result = job_state.extend_refinement_limit(
+                group_name=group_name,
+                group_cfg=group_cfg,
+                state=state,
+                additional_allowance=additional_allowance,
+                reason=reason,
+            )
+            # Save updated state
+            with open(job_json_path, "w", encoding="utf-8") as f:
+                json.dump(result, f, indent=2, ensure_ascii=False)
+            print(json.dumps({
+                "status": "ok",
+                "job_id": job_id,
+                "additional_allowance": additional_allowance,
+                "new_effective_limit": job_state._get_effective_limit(result, group_cfg["step_configs"]["codex_review"]["on_reject_refine"]),
+                "current_step": result.get("current_step"),
+            }, indent=2))
+            return 0
+        except ValueError as e:
+            print(json.dumps({"error": str(e)}))
+            return 1
+
+    if args.command == "stop-and-archive":
+        from . import job_state
+        from .runtime_context import get_jobs_root
+
+        job_id = args.job_id
+        reason = args.reason
+
+        # Find the job directory — use substring glob for discovery, then verify exact ID
+        jobs_root = Path(get_jobs_root())
+        job_dir = None
+        for candidate in jobs_root.rglob(f"*{job_id}*"):
+            if candidate.is_dir() and (candidate / "job.json").exists():
+                with open(candidate / "job.json", "r", encoding="utf-8") as f:
+                    candidate_state = json.load(f)
+                if candidate_state.get("job_id") == job_id:
+                    job_dir = candidate
+                    break
+
+        if job_dir is None:
+            print(json.dumps({"error": f"Job {job_id!r} not found"}))
+            return 1
+
+        # Load job state
+        job_json_path = job_dir / "job.json"
+        with open(job_json_path, "r", encoding="utf-8") as f:
+            state = json.load(f)
+
+        group_name = state.get("template_group", "")
+
+        # Stop and archive
+        try:
+            result = job_state.stop_and_archive(
+                group_name=group_name,
+                state=state,
+                reason=reason,
+            )
+            # Save updated state
+            with open(job_json_path, "w", encoding="utf-8") as f:
+                json.dump(result, f, indent=2, ensure_ascii=False)
+            print(json.dumps({
+                "status": "ok",
+                "job_id": job_id,
+                "job_status": "STOPPED_ARCHIVED",
+                "stop_reason": reason,
+            }, indent=2))
+            return 0
+        except ValueError as e:
+            print(json.dumps({"error": str(e)}))
+            return 1
+
+    if args.command == "change-requirements":
+        from . import job_state
+        from .runtime_context import get_jobs_root
+
+        job_id = args.job_id
+        new_requirements_file = args.new_requirements_file
+        reason = args.reason
+
+        # Find the job directory — use substring glob for discovery, then verify exact ID
+        jobs_root = Path(get_jobs_root())
+        job_dir = None
+        for candidate in jobs_root.rglob(f"*{job_id}*"):
+            if candidate.is_dir() and (candidate / "job.json").exists():
+                with open(candidate / "job.json", "r", encoding="utf-8") as f:
+                    candidate_state = json.load(f)
+                if candidate_state.get("job_id") == job_id:
+                    job_dir = candidate
+                    break
+
+        if job_dir is None:
+            print(json.dumps({"error": f"Job {job_id!r} not found"}))
+            return 1
+
+        # Load job state
+        job_json_path = job_dir / "job.json"
+        with open(job_json_path, "r", encoding="utf-8") as f:
+            state = json.load(f)
+
+        group_name = state.get("template_group", "")
+        if group_name != "plan_first_review_v1":
+            print(json.dumps({"error": f"change_requirements only valid for plan_first_review_v1, not {group_name!r}"}))
+            return 1
+
+        # Guard: STOPPED_ARCHIVED is terminal — cannot reactivate
+        if state.get("job_status") == "STOPPED_ARCHIVED" or state.get("_status") == "STOPPED_ARCHIVED":
+            print(json.dumps({"error": f"Job {job_id!r} is STOPPED_ARCHIVED (terminal). Cannot change requirements."}))
+            return 1
+
+        # Change requirements
+        try:
+            result = job_state.change_requirements(
+                group_name=group_name,
+                state=state,
+                new_requirements_file=new_requirements_file,
+                reason=reason,
+            )
+            # Save updated state
+            with open(job_json_path, "w", encoding="utf-8") as f:
+                json.dump(result, f, indent=2, ensure_ascii=False)
+            print(json.dumps({
+                "status": "ok",
+                "job_id": job_id,
+                "new_baseline": result.get("requirements_baseline"),
+                "current_step": result.get("current_step"),
+            }, indent=2))
+            return 0
+        except ValueError as e:
+            print(json.dumps({"error": str(e)}))
+            return 1
 
     if args.command == "cleanup":
         from .cleanup_commands import main as _cleanup_main

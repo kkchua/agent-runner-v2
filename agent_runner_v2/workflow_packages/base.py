@@ -156,6 +156,9 @@ class WorkflowBundle:
     # Input/output contract for discovery and chaining
     contract: WorkflowContract | None = None
 
+    # Opt-in: detect unauthorized writes after prompt-driven steps
+    enable_unauthorized_write_detection: bool = False
+
     def get_step(self, name: str) -> StepConfig:
         """Look up a step by name. Raises KeyError if missing."""
         return self.steps[name]

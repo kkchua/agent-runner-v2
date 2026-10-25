@@ -1,0 +1,592 @@
+from __future__ import annotations
+
+import re
+import shutil
+import yaml  # Required for loading impl.yaml
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import TYPE_CHECKING, Any
+
+from .artifact_keys import ARTIFACT_KEY_REVIEW
+from .constants import known_artifact_paths
+from .documentation_guardrails import (
+    EXECUTION_SCAFFOLD_WORKFLOWS,
+    MASTER_BOOTSTRAP_WORKFLOWS,
+    generated_doc_manifest,
+    managed_banner,
+)
+from .coder_registry import resolve_effective_coder, resolve_role_policy
+from .runner_logger import log_resolver
+from .step_runner import StepResult
+from .workflow_path_contracts import resolve_workflow_output_paths
+
+if TYPE_CHECKING:
+    from .hooks_protocols import StepExecutionHooks
+
+
+@dataclass
+class PreparedStepExecution:
+    step_dir: Path
+    action_name: str = ""
+    post_action: str = ""
+    coder_used: str = "action"
+    coder_alias: str | None = None
+    coder_role: str | None = None
+    coder_config: dict[str, Any] | None = None
+    context: dict[str, str] = field(default_factory=dict)
+    prompt_path: Path | None = None
+    prompt_text: str = ""
+    checksum: str = ""
+
+
+def _load_merged_step_slots(bundle: Any, impl_name: str) -> dict[str, Any]:
+    """Load step_slots with inheritance from standard implementation.
+
+    Loads standard/impl.yaml step_slots as base, then merges the current
+    impl's step_slots on top (impl overrides standard per-key).
+
+    This allows non-standard implementations (e.g. Generator) to inherit
+    step_slots from standard without duplicating them in their own impl.yaml.
+    """
+    if bundle is None:
+        return {}
+
+    merged_slots: dict[str, Any] = {}
+
+    # Load standard impl as base (if current impl is not standard)
+    if impl_name != "standard":
+        standard_yaml_path = bundle.bundle_root / "impls" / "standard" / "impl.yaml"
+        if standard_yaml_path.exists():
+            try:
+                with open(standard_yaml_path, "r", encoding="utf-8") as f:
+                    standard_data = yaml.safe_load(f)
+                if isinstance(standard_data, dict):
+                    merged_slots = standard_data.get("step_slots") or standard_data.get("prompt_slots", {})
+            except Exception:
+                pass
+
+    # Load current impl's step_slots and merge (overrides standard)
+    impl_yaml_path = bundle.bundle_root / "impls" / impl_name / "impl.yaml"
+    if impl_yaml_path.exists():
+        try:
+            with open(impl_yaml_path, "r", encoding="utf-8") as f:
+                impl_data = yaml.safe_load(f)
+            if isinstance(impl_data, dict):
+                impl_slots = impl_data.get("step_slots") or impl_data.get("prompt_slots", {})
+                merged_slots.update(impl_slots)
+        except Exception:
+            pass
+
+    return merged_slots
+
+
+def resolve_prompt_slot(
+    step_cfg: dict[str, Any],
+    state: dict[str, Any],
+    group_cfg: dict[str, Any],
+    bundle: Any | None,
+) -> str | None:
+    """Resolve a BCS prompt slot reference to a concrete file path."""
+    print("[BCS] resolve_prompt_slot START", flush=True)
+    prompt_file_val = step_cfg.get("prompt_file")
+    print(f"[BCS] Prompt File: {prompt_file_val}", flush=True)
+    
+    # Check if prompt_file contains a slot reference like {{ slot.ID }} anywhere
+    slot_pattern = re.search(r"\{\{\s*slot\.([\w-]+)\s*\}\}", str(prompt_file_val))
+    if slot_pattern:
+        slot_id = slot_pattern.group(1)
+        print(f"[BCS] Slot detected: {slot_id}", flush=True)
+        
+        # Look for implementation_name in group_cfg (runtime context)
+        impl_name = group_cfg.get("implementation_name") or "standard"
+        print(f"[BCS] Impl Name: {impl_name}", flush=True)
+        
+        if bundle and impl_name:
+            # Load merged step_slots (inherits from standard impl)
+            prompt_slots = _load_merged_step_slots(bundle, impl_name)
+            print(f"[BCS] Loaded {len(prompt_slots)} merged step_slots for impl '{impl_name}'", flush=True)
+            slot_config = prompt_slots.get(slot_id)
+
+            if slot_config:
+                prompt_sels = state.get("prompt_selections", {})
+                selected_name = prompt_sels.get(slot_id)
+                default_name = slot_config.get("default")
+                options = slot_config.get("options", [])
+                valid_names = {opt.get("name") for opt in options}
+
+                if selected_name not in valid_names:
+                    selected_name = default_name
+
+                for opt in options:
+                    if opt.get("name") == selected_name:
+                        file_path = opt.get("file")
+                        if file_path:
+                            # Two-tier resolution: impl-specific first, then shared
+                            impl_specific = bundle.bundle_root / "impls" / impl_name / file_path
+                            if impl_specific.exists():
+                                res = impl_specific
+                                print(f"[BCS] RESOLVED (impl-specific): {res}", flush=True)
+                            else:
+                                res = bundle.bundle_root / file_path
+                                print(f"[BCS] RESOLVED (shared fallback): {res}", flush=True)
+                            return str(res)
+
+        # Convention-based fallback: prompts/{slot_id}/standard.txt
+        if bundle:
+            convention_path = bundle.bundle_root / "prompts" / slot_id / "standard.txt"
+            if convention_path.exists():
+                print(f"[BCS] RESOLVED (convention fallback): {convention_path}", flush=True)
+                return str(convention_path)
+            print(f"[BCS] Convention fallback not found: {convention_path}", flush=True)
+
+    return None
+
+
+def _resolve_action_step_slots(
+    context: dict[str, str],
+    state: dict[str, Any],
+    step: str,
+    group_cfg: dict[str, Any],
+    bundle: Any | None,
+) -> None:
+    """Resolve action-type step_slots and inject selected provider into context.
+
+    For each step_slot with ``type: "action"``, reads the user's selection
+    from ``state["prompt_selections"]`` (or falls back to the slot default),
+    then injects it into *context* as ``STEP_SLOT_{STEP_NAME}`` (uppercased).
+
+    This allows action-driven steps to read the selected provider directly
+    from context without needing to parse config.json or preset.json.
+    """
+    if bundle is None:
+        return
+
+    impl_name = group_cfg.get("implementation_name") or "standard"
+
+    # Load merged step_slots (inherits from standard impl)
+    step_slots = _load_merged_step_slots(bundle, impl_name)
+    slot_config = step_slots.get(step)
+    if not slot_config or not isinstance(slot_config, dict):
+        return
+
+    slot_type = slot_config.get("type", "llm")
+    if slot_type != "action":
+        return
+
+    # Determine selected provider
+    selections = state.get("prompt_selections", {})
+    selected = selections.get(step, "")
+    default = slot_config.get("default", "")
+    options = slot_config.get("options", [])
+    valid_names = {opt.get("name") for opt in options}
+
+    if selected not in valid_names:
+        selected = default
+
+    # Inject into context
+    context_key = f"STEP_SLOT_{step.upper()}"
+    context[context_key] = selected
+    print(f"[step_slots] {step} -> {selected} (injected as {context_key})", flush=True)
+
+
+def prepare_step_execution(
+    *,
+    template_group: str,
+    group_cfg: dict[str, Any],
+    state: dict[str, Any],
+    step: str,
+    step_cfg: dict[str, Any],
+    project_root: Path,
+    workflow_key_override: str = "",
+    cli_coder: str | None = None,
+    hooks: "StepExecutionHooks",
+) -> PreparedStepExecution:
+    # Note: missing_artifacts check moved to AFTER build_context so that
+    # context_extensions.py can resolve input paths first (e.g., INPUT_FILE
+    # from bare filename to full path in input/ subdirectory).
+
+    hooks.check_preflight_artifact_status(step_cfg=step_cfg, state=state)
+    hooks.ensure_planning_task_queue_integrity(state, step=step)
+    hooks.ensure_execution_task_binding_integrity(state, step=step)
+
+    step_dir = hooks.make_step_dir(group_cfg, state, step)
+    state["backend_step_dir_rel"] = str(step_dir)
+
+    context = hooks.build_context(state, step=step, step_cfg=step_cfg, project_root=project_root)
+    context["WORKFLOW_KEY_OVERRIDE"] = workflow_key_override or ""
+
+    # Inject implementation name and bundle root so actions can load
+    # implementation-specific presets (e.g. provider selection).
+    impl_name = group_cfg.get("implementation_name") or ""
+    if impl_name:
+        context["IMPLEMENTATION_NAME"] = impl_name
+    bundle = group_cfg.get("_workflow_bundle")
+    if bundle is not None:
+        context["WORKFLOW_BUNDLE_ROOT"] = str(bundle.bundle_root)
+
+    # Resolve action-type step_slots: inject selected provider into context.
+    # For each step_slot with type="action", the selected provider name is
+    # injected as STEP_SLOT_{STEP_NAME} (uppercased) so the action can read it.
+    _resolve_action_step_slots(context, state, step, group_cfg, bundle)
+
+    # Skip artifact validation for noop actions (they don't use inputs)
+    action_name = str(step_cfg.get("action") or "")
+    is_noop = action_name == "noop"
+
+    # Now check for missing required inputs AFTER context_extensions has resolved paths
+    # (skip for noop actions since they don't actually use the inputs)
+    if not is_noop:
+        missing_required = hooks._missing_artifacts(step_cfg.get("required_inputs", []), state)
+        if missing_required:
+            raise FileNotFoundError(
+                f"Cannot run step {step!r}. Missing required input artifact(s): {', '.join(missing_required)}"
+            )
+
+    meta_from_ctx = step_cfg.get("result_meta_key_from_context")
+    if not meta_from_ctx:
+        result_key = step_cfg.get("result_meta_key", "")
+        if result_key:
+            meta_ctx_key = result_key if result_key.endswith("_METAJSON") else f"{result_key}_METAJSON"
+            context[meta_ctx_key] = str(step_dir / "meta.json")
+
+    loop_ctx = state.get("loop_context", {})
+    is_refine = any(
+        (sc.get("on_reject_refine") or {}).get("step") == step
+        for sc in group_cfg.get("step_configs", {}).values()
+    )
+    if is_refine and loop_ctx.get("active") and loop_ctx.get("loop_source_review"):
+        context[ARTIFACT_KEY_REVIEW] = loop_ctx["loop_source_review"]
+
+    if action_name:
+        return PreparedStepExecution(
+            step_dir=step_dir,
+            action_name=action_name,
+            coder_used="action",
+            context=context,
+        )
+
+    resolved = hooks._resolve_step_coder(
+        group_cfg=group_cfg,
+        state=state,
+        step=step,
+        step_cfg=step_cfg,
+        cli_coder=cli_coder,
+    )
+    coder_used, coder_alias, coder_role, coder_config = _normalize_resolved_coder(resolved)
+
+    model_id = (coder_config or {}).get("model_id") or (coder_config or {}).get("model") or None
+    
+    # --- BCS: Dynamic Prompt Slot Resolution ---
+    bundle = group_cfg.get("_workflow_bundle")
+    resolved_path = resolve_prompt_slot(step_cfg, state, group_cfg, bundle)
+    if resolved_path:
+        step_cfg = dict(step_cfg) # Copy to avoid mutating original
+        step_cfg["prompt_file"] = resolved_path
+        print(f"[BCS] Resolved prompt slot: {step_cfg.get('prompt_file')}", flush=True)
+
+    prompt_path = hooks.resolve_prompt_path(step_cfg=step_cfg, coder=coder_used, model_id=model_id)
+    if not prompt_path.exists():
+        raise FileNotFoundError(f"Prompt file not found: {prompt_path}")
+
+    template_text = prompt_path.read_text(encoding="utf-8")
+    template_text = augment_generated_doc_prompt(
+        template_text,
+        template_group=template_group,
+        step=step,
+        step_cfg=step_cfg,
+        state=state,
+    )
+    prompt_text = hooks.render_prompt(template_text, context, step_cfg=step_cfg)
+    checksum = hooks.prompt_checksum(prompt_text)
+    hooks._save_text(step_dir / "prompt.txt", prompt_text)
+
+    return PreparedStepExecution(
+        step_dir=step_dir,
+        coder_used=coder_used,
+        coder_alias=coder_alias,
+        coder_role=coder_role,
+        coder_config=coder_config,
+        context=context,
+        prompt_path=prompt_path,
+        prompt_text=prompt_text,
+        checksum=checksum,
+        post_action=str(step_cfg.get("post_action") or ""),
+    )
+
+
+def _normalize_resolved_coder(resolved: Any) -> tuple[str, str | None, str | None, dict[str, Any] | None]:
+    if not isinstance(resolved, tuple):
+        raise TypeError("Resolved coder payload must be a tuple.")
+    if len(resolved) == 4:
+        coder_used, coder_alias, coder_role, coder_config = resolved
+        return str(coder_used), coder_alias, coder_role, coder_config
+    if len(resolved) == 2:
+        coder_used, coder_config = resolved
+        return str(coder_used), None, None, coder_config
+    raise ValueError(f"Unexpected resolved coder tuple shape: {len(resolved)}")
+
+
+def augment_generated_doc_prompt(
+    template_text: str,
+    *,
+    template_group: str,
+    step: str,
+    step_cfg: dict[str, Any],
+    state: dict[str, Any],
+) -> str:
+    if template_group not in MASTER_BOOTSTRAP_WORKFLOWS and template_group not in EXECUTION_SCAFFOLD_WORKFLOWS:
+        return template_text
+
+    banner = managed_banner(workflow=template_group, step=step)
+    manifest = generated_doc_manifest(template_group=template_group, state=state)
+    frontmatter_contract = generated_doc_frontmatter_contract(
+        template_group=template_group,
+        step=step,
+        step_cfg=step_cfg,
+        state=state,
+    )
+    return (
+        template_text
+        + "\n\n## Workflow-Generated Document Rule\n\n"
+        + "- Every markdown document written by this step is workflow-generated and protected.\n"
+        + f"- Add this exact banner immediately after the frontmatter of each generated markdown file:\n\n{banner}"
+        + "- If the file uses frontmatter, include `managed_by: workflow-generated` in that frontmatter.\n"
+        + "- Do not rename the target files.\n"
+        + frontmatter_contract
+        + "- Use the generated-doc inventory below as the authoritative protected set for this workflow.\n\n"
+        + manifest
+    )
+
+
+def generated_doc_frontmatter_contract(
+    *,
+    template_group: str,
+    step: str,
+    step_cfg: dict[str, Any],
+    state: dict[str, Any],
+) -> str:
+    if template_group not in MASTER_BOOTSTRAP_WORKFLOWS:
+        return ""
+
+    contract_rows = master_bootstrap_frontmatter_rows(
+        template_group=template_group,
+        step_cfg=step_cfg,
+        state=state,
+    )
+    if not contract_rows:
+        return ""
+
+    lines = [
+        "",
+        "- Every generated markdown file for this step MUST include YAML frontmatter with these exact fields:",
+        "  - `template_id`",
+        "  - `version: \"1.0.0\"`",
+        "  - `doc_type`",
+        "  - `managed_by: \"workflow-generated\"`",
+        "  - `generated_at: <ISO timestamp>`",
+        f"  - `workflow: \"{template_group}\"`",
+        f"  - `step: \"{step}\"`",
+        "  - `change_id: <job id from context>`",
+        "- Do not use `created`, `generated`, or `status` as substitutes for `version`, `doc_type`, or `generated_at`.",
+        "- Use this exact YAML shape at the top of every generated markdown file:",
+        "",
+        "```yaml",
+        "---",
+        "template_id: \"TEMPLATE-ID\"",
+        "version: \"1.0.0\"",
+        "doc_type: \"system-or-codebase\"",
+        "managed_by: \"workflow-generated\"",
+        "generated_at: \"<ISO timestamp>\"",
+        f"workflow: \"{template_group}\"",
+        f"step: \"{step}\"",
+        "change_id: \"<job id>\"",
+        "---",
+        "```",
+        "",
+        "- For this step, use these exact frontmatter identifiers:",
+    ]
+    for rel_path, template_id, doc_type in contract_rows:
+        lines.append(f"  - `{rel_path}` -> `template_id: \"{template_id}\"`, `doc_type: \"{doc_type}\"`")
+    lines.append("")
+    return "\n".join(lines)
+
+
+def master_bootstrap_frontmatter_rows(
+    *,
+    template_group: str,
+    step_cfg: dict[str, Any],
+    state: dict[str, Any],
+) -> list[tuple[str, str, str]]:
+    metadata_by_artifact = {
+        "PROJECT_ANALYSIS": ("SYS-00-PA", "system"),
+        "SYSTEM_DOCS_INDEX": ("SYS-00-IDX", "system"),
+        "SYSTEM_DOC_STANDARD": ("SYS-00-DS", "system"),
+        "BUNDLE_TAXONOMY": ("SYS-00-BT", "system"),
+        "RUNTIME_GOVERNANCE": ("SYS-00-RG", "system"),
+        "BUNDLE_MIGRATION_PLAN": ("SYS-00-BMP", "system"),
+        "SYSTEM_OVERVIEW": ("SYS-00-SO", "system"),
+        "BUSINESS_CAPABILITIES": ("SYS-00-BC", "system"),
+        "FUNCTIONAL_SPEC": ("SYS-00-FS", "system"),
+        "NON_FUNCTIONAL_REQUIREMENTS": ("SYS-00-NFR", "system"),
+        "SYSTEM_CONTEXT": ("SYS-03-CTX", "system"),
+        "COMPONENT_ARCHITECTURE": ("SYS-03-CA", "system"),
+        "DECISION_LOG": ("SYS-03-DL", "system"),
+        "SYSTEM_FILE_STRUCTURE": ("SYS-03-SF", "system"),
+        "DEVELOPER_GUIDE": ("ENG-01-DG", "system"),
+        "RUNBOOK": ("OPS-01-RB", "system"),
+        "EXISTING_REPO_WORKFLOW_SOP": ("SYS-00-ERWS", "system"),
+        "SYSTEM_DOCS_CHANGE_LOG": ("SYS-00-CL", "system"),
+        "INTEGRATION_MAP": ("CB-04-IM", "codebase"),
+        "FAILURE_MODES": ("CB-04-FM", "codebase"),
+        "ARCHITECTURE_FLOW": ("CB-04-AF", "codebase"),
+    }
+    job_id = str(state.get("job_id") or "{job_id}")
+    mode = str((step_cfg.get("mode") or state.get("current_mode") or "bootstrap"))
+    output_paths = _workflow_frontmatter_output_paths(
+        template_group=template_group,
+        job_id=job_id,
+        mode=mode,
+    )
+    default_paths = known_artifact_paths()
+    rows: list[tuple[str, str, str]] = []
+    for artifact_key in list(step_cfg.get("produces") or []):
+        metadata = metadata_by_artifact.get(str(artifact_key))
+        rel_path = output_paths.get(str(artifact_key)) or default_paths.get(str(artifact_key))
+        if metadata is None or not rel_path or not str(rel_path).endswith(".md"):
+            continue
+        rows.append((str(rel_path), metadata[0], metadata[1]))
+    return rows
+
+
+def _workflow_frontmatter_output_paths(*, template_group: str, job_id: str, mode: str) -> dict[str, str]:
+    return resolve_workflow_output_paths(
+        template_group=template_group,
+        job_id=job_id,
+        mode=mode,
+    )
+
+
+def execute_prepared_step(
+    *,
+    prepared: PreparedStepExecution,
+    template_group: str,
+    group_cfg: dict[str, Any],
+    state: dict[str, Any],
+    step: str,
+    step_cfg: dict[str, Any],
+    effective_root: Path,
+    hooks: "StepExecutionHooks",
+) -> StepResult:
+    if prepared.action_name:
+        return hooks.run_action(
+            action_name=prepared.action_name,
+            state=state,
+            step=step,
+            step_cfg=step_cfg,
+            step_dir=prepared.step_dir,
+            project_root=effective_root,
+            context=prepared.context,
+        )
+
+    result = hooks.run_step(
+        group_name=template_group,
+        group_cfg=group_cfg,
+        state=state,
+        step=step,
+        step_cfg=step_cfg,
+        coder=prepared.coder_used,
+        coder_config=prepared.coder_config,
+        prompt_text=prepared.prompt_text,
+        checksum=prepared.checksum,
+        step_dir=prepared.step_dir,
+        project_root=effective_root,
+        context=prepared.context,
+    )
+
+    if prepared.post_action and result.status == "APPROVED":
+        print(f"[step_runner] Running post_action={prepared.post_action} after LLM step", flush=True)
+        post_result = hooks.run_action(
+            action_name=prepared.post_action,
+            state=state,
+            step=step,
+            step_cfg=step_cfg,
+            step_dir=prepared.step_dir,
+            project_root=effective_root,
+            context=prepared.context,
+        )
+        if post_result.artifacts:
+            result.artifacts.update(post_result.artifacts)
+        if post_result.status != "APPROVED":
+            result.status = post_result.status
+            result.remark = f"{result.remark}; post_action: {post_result.remark}"
+            if post_result.reject_code:
+                result.reject_code = post_result.reject_code
+
+    return result
+
+
+def resolve_step_coder(
+    *,
+    group_cfg: dict[str, Any],
+    state: dict[str, Any],
+    step: str,
+    step_cfg: dict[str, Any],
+    cli_coder: str | None,
+) -> tuple[str, str | None, str | None, dict[str, Any] | None]:
+    coder_cfg = step_cfg.get("coder", {})
+    bundle = step_cfg.get("_workflow_bundle")
+    bundle_root = getattr(bundle, "bundle_root", None)
+    role_policy_name = str(coder_cfg.get("role_policy") or "").strip()
+    policy = resolve_role_policy(role_policy_name, bundle_root=bundle_root) if role_policy_name else None
+    if role_policy_name and policy is None:
+        raise ValueError(f"Unknown role policy {role_policy_name!r} configured for step {step!r}")
+    default_role = (policy or {}).get("default_role") or coder_cfg.get("default_role")
+    allowed_roles = list((policy or {}).get("allowed_roles") or coder_cfg.get("allowed_roles") or [])
+    default_coder = coder_cfg.get("default")
+    allowed_coders = list(coder_cfg.get("allowed") or [])
+    chosen = cli_coder.strip() if cli_coder else (default_role or default_coder)
+    if not chosen:
+        raise ValueError(f"No coder specified and no default coder configured for step {step!r}")
+
+    original = chosen
+    resolved_role: str | None = original
+    resolved_config = resolve_effective_coder(role_name=original, bundle_root=bundle_root)
+    agent_value = str(policy.get("agent") or "").strip() if policy else ""
+    if agent_value:
+        resolved_config["agent"] = agent_value
+    chosen = str(resolved_config.get("coder") or "").strip() or original
+
+    if resolved_config is not None:
+        actual_coder = resolved_config.get("coder", chosen)
+        resolved_bits = [str(actual_coder)]
+        connection_name = str(resolved_config.get("connection") or "").strip()
+        if connection_name:
+            resolved_bits.append(f"connection={connection_name}")
+        model_name = str(resolved_config.get("model") or "").strip()
+        if model_name:
+            resolved_bits.append(f"model={model_name}")
+        log_resolver(original, f"{' '.join(resolved_bits)}", is_alias=True)
+        if shutil.which(actual_coder) is None:
+            raise FileNotFoundError(f"Coder executable not found: {actual_coder!r} (alias {original!r})")
+        chosen = actual_coder
+    else:
+        log_resolver(original, original, is_alias=False)
+        if shutil.which(chosen) is None:
+            raise FileNotFoundError(f"Coder executable not found in PATH: {chosen!r}")
+
+    if allowed_roles:
+        role_name = resolved_role or chosen
+        if role_name not in allowed_roles:
+            raise ValueError(f"Coder role {role_name!r} is not allowed for step {step!r}. Allowed roles: {allowed_roles}")
+    elif allowed_coders and chosen not in allowed_coders:
+        raise ValueError(f"Coder {chosen!r} is not allowed for step {step!r}. Allowed: {allowed_coders}")
+    if coder_cfg.get("must_differ_from_previous_step"):
+        idx = group_cfg["steps"].index(step)
+        if idx > 0:
+            prev_step = group_cfg["steps"][idx - 1]
+            prev_coder = state.get("step_coders", {}).get(prev_step)
+            if prev_coder and chosen == prev_coder:
+                raise ValueError(
+                    f"Coder {chosen!r} is not allowed for step {step!r} because it matches previous step {prev_step!r}"
+                )
+    return chosen, original if original != chosen else None, resolved_role, resolved_config
