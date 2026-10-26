@@ -1,10 +1,10 @@
 {
   "role_policies": {
 	"agnes_standard": {
-      "default_role": "agnes-2.0-flash",
+      "default_role": "agnes-2.5-flash",
 	  "agent": "arv_architect",
       "allowed_roles": [
-        "agnes-2.0-flash"
+        "agnes-2.5-flash"
       ]
     },
 	"architect_vision": {
@@ -14,7 +14,7 @@
         "bailian_qwen3.7-plus",
 		"bailian_kimi-k2.5",
 		"zen_go_mimo-v2.5",
-        "agnes-2.0-flash"
+        "agnes-2.5-flash"
       ]
     },
 	"gatekeeper_standard": {
@@ -24,7 +24,7 @@
         "bailian_qwen3.7-plus",
 		"bailian_kimi-k2.5",
 		"zen_go_mimo-v2.5",
-        "agnes-2.0-flash"
+        "agnes-2.5-flash"
       ]
     },
 	"image_video": {
@@ -55,10 +55,11 @@
       ]
     },
     "architect_standard": {
-      "default_role": "bailian_qwen3.7-plus",
+      "default_role": "openai-gpt-6.1-sol",
 	  "agent": "arv_architect",
       "allowed_roles": [
         "bailian_qwen3.7-plus",
+		"openai-gpt-6.1-sol",
 		"bailian_kimi-k2.5",
         "bailian_glm-5",
         "agnes-2.0-flash",
@@ -69,10 +70,11 @@
       ]
     },
     "reviewer_standard": {
-      "default_role": "bailian_kimi-k2.5",
+      "default_role": "openai-gpt-6.1-sol",
       "agent": "arv_reviewer",
 	  "allowed_roles": [
 	    "bailian_qwen3.7-plus",
+		"openai-gpt-6.1-sol",
 		"bailian_kimi-k2.5",
         "zen_go_mimo-v2.5-pro",
 		"zen_go_deepseek-v4-pro",
@@ -83,7 +85,7 @@
       ]
     },
     "refine_standard": {
-      "default_role": "bailian_kimi-k2.5",
+      "default_role": "bailian_qwen3.7-plus",
       "agent": "arv_reviewer",
 	  "allowed_roles": [
 	    "bailian_kimi-k2.5",
@@ -99,6 +101,7 @@
 	  "agent": "arv_architect",
       "allowed_roles": [
         "bailian_qwen3.7-plus",
+		"openai-gpt-6.1-sol",
         "zen_go_deepseek-v4-pro",
 		"zen_go_deepseek-v4-flash",
 		"zen_deepseek-v4-flash-free",
@@ -127,7 +130,7 @@
       ]
     },
     "implement_standard": {
-      "default_role": "bailian_qwen3-coder-next",
+      "default_role": "bailian_qwen3.7-plus",
 	  "agent": "arv_architect",
       "allowed_roles": [
         "zen_go_deepseek-v4-pro",

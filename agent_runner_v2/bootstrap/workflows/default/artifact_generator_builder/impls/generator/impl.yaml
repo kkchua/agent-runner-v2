@@ -1,0 +1,112 @@
+# AGB Generator Implementation
+# ============================
+# This implementation produces normal workflows (not meta-workflows) by
+# running the full AGB pipeline but promoting only domain files.
+#
+# Use Case:
+# ---------
+# Use this when you want to build a workflow that runs tasks (like gen_media_content_v1),
+# NOT a workflow that builds other workflows.
+#
+# How Generator Differs from Standard:
+# ------------------------------------
+# | Phase        | Standard (Builder)     | Generator              |
+# |--------------|------------------------|------------------------|
+# | Domain       | Runs normally          | Runs normally          |
+# | Infrastructure | Runs normally        | Runs normally          |
+# | Validation   | Full validation        | SKIPPED (noop)         |
+# | Output       | Meta-workflow package  | Normal workflow package|
+#
+# The infrastructure steps (copy_infrastructure, assemble_package) run to
+# produce TARGET_MANIFEST_FILE and TARGET_EXTENSIONS_FILE, but the promote
+# step only copies domain files to the output.
+#
+# Step Slots and Overrides:
+# -----------------------
+# Generator inherits the STANDARD step_slots from impls/standard/impl.yaml.
+# You only need to define step_slots here if you want DIFFERENT options.
+#
+# The "overrides" section below redirects infrastructure steps to "noop"
+# action and uses "promote_generator_package" for promotion.
+#
+# How to Add Generator-Specific Options:
+# -------------------------------------
+# If you want Generator to have different options for a step that's already
+# defined in standard/impl.yaml, add it here:
+#
+#   step_slots:
+#     analyze_requirement:
+#       type: "llm"
+#       default: "generator_focused"
+#       options:
+#         - name: "generator_focused"
+#           file: "impls/generator/prompts/analyze_requirement/generator_focused.txt"
+#
+# The runner will MERGE these with standard slots, with Generator taking precedence.
+
+name: generator
+label: "Generator Pipeline"
+description: "Generates normal workflows without AGB builder infrastructure. Domain steps only, no infrastructure phase."
+
+# Step Slot Overrides (Optional)
+# ------------------------------
+# Only define steps here if Generator needs DIFFERENT options than standard.
+# All other steps inherit from standard/impl.yaml automatically.
+#
+# Example: If Generator needs a different analysis approach:
+#
+# step_slots:
+#   analyze_requirement:
+#     type: "llm"
+#     label: "Generator-Focused Analysis"
+#     description: "Analysis that focuses on normal workflows, not meta-workflows"
+#     default: "generator"
+#     options:
+#       - name: "generator"
+#         file: "impls/generator/prompts/analyze_requirement/generator.txt"
+#         description: "Analysis for normal workflow generation"
+
+# Infrastructure Step Overrides
+# -----------------------------
+# Generator runs infrastructure steps normally to produce TARGET_MANIFEST_FILE
+# and TARGET_EXTENSIONS_FILE, but skips validation/review steps and uses a
+# custom promote action that only copies domain files.
+#
+# How overrides work:
+#   - Keys MUST match step names in workflow.toml exactly
+#   - "action: noop" means skip this step (returns APPROVED immediately)
+#   - Other steps can be redirected to custom actions
+#
+# Why not remove steps from workflow.toml?
+#   - workflow.toml is shared across implementations
+#   - Overrides allow per-impl behavior without changing workflow.toml
+#   - Keeps the workflow definition DRY (single source of truth)
+#
+overrides:
+  # Validation/review steps become noop (not needed for Generator output)
+  validate_structure:
+    action: "noop"
+  review_package:
+    action: "noop"
+  gatekeep_package:
+    action: "noop"
+
+  # Promotion uses Generator-specific action
+  # promote_generator_package copies only domain files, skipping infrastructure
+  promote_package:
+    action: "promote_generator_package"
+
+# Future Extensions
+# -----------------
+# If Generator needs custom step_slots in the future, add them above the
+# overrides section. For example:
+#
+# step_slots:
+#   analyze_requirement:
+#     type: "llm"
+#     default: "generator"
+#     options:
+#       - name: "generator"
+#         file: "prompts/analyze_requirement/generator.txt"
+#
+# These will be merged with standard slots at runtime.

@@ -39,6 +39,11 @@ name = "standard"
 description = "Produces executable agent-runner-v2 workflow packages as output. Builder-type workflows are meta-workflows that generate other workflows."
 label = "Workflow Builder"
 
+[[workflow.implementation]]
+name = "generator"
+description = "Generates normal workflows without AGB builder infrastructure. Skips infrastructure steps, produces domain-only workflow packages."
+label = "Generator"
+
 # =============================================================================
 # DOMAIN PHASE
 # =============================================================================
@@ -202,7 +207,7 @@ onsuccess = "validate_structure"
 
 [step.artifacts]
 required_inputs = ["AGB_ANALYSIS_JSON", "DOMAIN_ACTIONS_FILE", "DOMAIN_PROMPTS_DIR"]
-produces = ["TARGET_MANIFEST_FILE"]
+produces = ["TARGET_MANIFEST_FILE", "DOMAIN_IMPL_FILE"]
 result_meta_key = "TARGET_MANIFEST_FILE"
 
 # -----------------------------------------------------------------------------
@@ -240,13 +245,6 @@ required_inputs = ["TARGET_MANIFEST_FILE", "DOMAIN_ACTIONS_FILE", "DOMAIN_IMPL_F
 produces = ["AGB_PACKAGE_REVIEW"]
 result_meta_key = "AGB_PACKAGE_REVIEW"
 
-[step.on_reject_refine]
-step = "assemble_package"
-artifact = "AGB_PACKAGE_REVIEW"
-max_iterations = 2
-exhausted_failure_code = "PACKAGE_REVIEW_EXHAUSTED"
-exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
-
 # -----------------------------------------------------------------------------
 # Step 11: Gatekeep Package (LLM)
 # -----------------------------------------------------------------------------
@@ -265,13 +263,6 @@ role_policy = "gatekeeper_standard"
 required_inputs = ["TARGET_MANIFEST_FILE", "DOMAIN_ACTIONS_FILE", "DOMAIN_IMPL_FILE", "TARGET_EXTENSIONS_FILE", "DOMAIN_PROMPTS_DIR", "AGB_VALIDATION_FINDINGS", "AGB_PACKAGE_REVIEW", "AGB_ANALYSIS_JSON"]
 produces = ["AGB_GATEKEEP_REPORT"]
 result_meta_key = "AGB_GATEKEEP_REPORT"
-
-[step.on_reject_refine]
-step = "assemble_package"
-artifact = "AGB_GATEKEEP_REPORT"
-max_iterations = 2
-exhausted_failure_code = "GATEKEEP_EXHAUSTED"
-exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
 
 # -----------------------------------------------------------------------------
 # Step 12: Promote Package (ACTION)

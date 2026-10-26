@@ -1,0 +1,144 @@
+# Objective
+
+Review the Analysis JSON and produce a detailed **Domain Plan** — the blueprint
+that implement_domain (step 5) will follow to write actions.py and prompt files.
+
+You are planning the **domain logic only**: what each action function does,
+what each prompt instructs, how data flows between steps, and what validations
+each action performs.
+
+# Reference Inputs
+
+- AGB_ANALYSIS_JSON: {AGB_ANALYSIS_JSON}
+  The Analysis JSON produced by step 1. This is the SINGLE SOURCE OF TRUTH.
+  Contains identity, domain_steps, and artifact_keys. Trust it completely —
+  do not second-guess or re-validate against other documents.
+
+- AGB_DOMAIN_MAP: {AGB_DOMAIN_MAP}
+  The domain artifact key mapping produced by step 2. Shows all artifact keys
+  and their data flow between steps. Use this as the definitive reference for
+  which keys exist and how they connect.
+
+- BASE_COMPOSITION_STANDARD: {BASE_COMPOSITION_STANDARD}
+  Reference for action interface contract (Section 5).
+
+# Planning Protocol
+
+### Domain Step Design:
+
+The domain_steps in the Analysis JSON define the TARGET workflow's pipeline.
+They describe what the target workflow DOES — not how it's built or deployed.
+Infrastructure (workflow.toml, context_extensions.py, assembly, promotion) is
+handled by the platform after domain logic is generated.
+
+Typical domain step pattern:
+1. **Parse/extract input** → action step to parse the input format
+2. **Analyze structure** → prompt step to analyze the input
+3. **Design target** → prompt step to plan the target output
+4. **Generate domain logic** → prompt step to produce actions.py + prompts
+
+## Step 1: Plan Each Action Step
+
+For every domain_step with type="action", specify:
+
+### Function Design
+- **Function name**: Must match action_name from Analysis JSON.
+- **Purpose**: One sentence describing what this function does.
+- **Input artifacts**: Which artifact keys it reads from state["artifacts"].
+- **Output artifacts**: Which artifact keys it writes.
+- **Core logic**: Describe the algorithm in pseudocode or detailed steps.
+- **Format handling**: If the action processes files, specify which formats
+  are supported and how each is parsed. Do NOT claim format support without
+  real parsing logic. If a format requires an external library, declare it
+  in requirements.txt.
+
+### Validation Rules
+- What input validations does this action perform at its boundary?
+- What conditions cause REJECTED vs APPROVED?
+- What reject_codes are defined?
+
+### Error Handling
+- What can go wrong in this action?
+- How does the action signal failure (ActionResult status, reject_code)?
+
+## Step 2: Plan Each Prompt Step
+
+For every domain_step with type="prompt", specify:
+
+### Prompt Design
+- **Prompt filename**: Must match prompt_file from Analysis JSON.
+- **Purpose**: What the LLM should accomplish when executing this prompt.
+- **Input sections**: What context the prompt receives (artifact placeholders).
+- **Output instructions**: What the LLM must produce and where to write it.
+- **Validation checklist**: Self-check items the LLM must verify before
+  completing.
+
+### Data Flow
+- What artifact placeholders does the prompt reference? (e.g., {PARSED_DOCUMENT})
+- What does the LLM write, and which artifact key captures the output?
+
+### Role Policy Justification
+- Why is this role_policy appropriate for this step?
+
+## Step 3: Map the Complete Data Flow
+
+Produce a data flow diagram (text-based) showing:
+
+```
+INPUT ARTIFACTS
+    |
+    v
+[Step 1: action_name] -- produces --> INTERMEDIATE_A
+    |
+    v
+[Step 2: prompt_file] -- consumes INTERMEDIATE_A -- produces --> INTERMEDIATE_B
+    |
+    v
+...
+    |
+    v
+[Step N: ...] -- produces --> OUTPUT ARTIFACTS
+```
+
+# Output Instructions
+
+Write to: {AGB_DOMAIN_PLAN}
+
+Markdown with YAML frontmatter:
+
+```yaml
+---
+doc_type: "domain_plan"
+identity_locked: true
+---
+```
+
+Structure the plan as:
+
+```
+# Domain Plan: {workflow_name}
+
+## 1. Action Step Plans
+(One subsection per action step)
+
+## 2. Prompt Step Plans
+(One subsection per prompt step)
+
+## 3. Data Flow Map
+(Complete artifact flow diagram)
+```
+
+# Self-Validation
+
+Before writing the output, verify:
+
+- [ ] Every domain_step from the Analysis JSON has a corresponding plan section
+- [ ] Every action function has defined input/output artifacts, core logic, and validation rules
+- [ ] Every prompt has defined input placeholders, output instructions, and validation checklist
+- [ ] Data flow is complete — no step consumes an artifact that no prior step produces
+- [ ] All artifact key references match the Domain Artifact Map
+
+# Forbidden Content
+
+- Do NOT include non-ASCII characters.
+- Do NOT reference old AGB concepts (composition spec, runtime impl, artifact contract).

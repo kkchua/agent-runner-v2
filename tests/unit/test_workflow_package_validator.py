@@ -35,6 +35,9 @@ onsuccess = "step_two"
 produces = ["OUTPUT_A"]
 result_meta_key = "OUTPUT_A"
 
+[step.coder]
+role_policy = "architect_standard"
+
 [[step]]
 name = "step_two"
 action = "do_something"
@@ -291,3 +294,100 @@ def test_render_report_with_errors() -> None:
     assert "NO" in report
     assert "TEST_ERROR" in report
     assert "Something broke" in report
+
+
+# --- LLM step coder validation ---
+
+def test_missing_coder_role_policy_detected(tmp_path: Path) -> None:
+    """LLM steps without [step.coder] role_policy should fail validation."""
+    toml_no_coder = """\
+[workflow]
+name = "test_pkg"
+job_prefix = "TST"
+init_step = "step_one"
+
+[[step]]
+name = "step_one"
+prompt = "prompts/step_one.txt"
+onsuccess = "stepCompletion"
+
+[step.artifacts]
+produces = ["OUTPUT_A"]
+result_meta_key = "OUTPUT_A"
+
+[[step]]
+name = "stepCompletion"
+action = "step_completion"
+"""
+    _write(tmp_path / "workflow.toml", toml_no_coder)
+    _write(tmp_path / "prompts/step_one.txt", "hello\n")
+    manifest = tmp_path / "workflow.toml"
+    result = validate_package(manifest_path=manifest)
+    assert any(f.code == "MISSING_CODER_ROLE_POLICY" for f in result.errors)
+
+
+def test_unknown_role_policy_detected(tmp_path: Path) -> None:
+    """LLM steps with unknown role_policy should fail validation."""
+    toml_unknown_policy = """\
+[workflow]
+name = "test_pkg"
+job_prefix = "TST"
+init_step = "step_one"
+
+[[step]]
+name = "step_one"
+prompt = "prompts/step_one.txt"
+onsuccess = "stepCompletion"
+
+[step.artifacts]
+produces = ["OUTPUT_A"]
+result_meta_key = "OUTPUT_A"
+
+[step.coder]
+role_policy = "nonexistent_policy"
+
+[[step]]
+name = "stepCompletion"
+action = "step_completion"
+"""
+    _write(tmp_path / "workflow.toml", toml_unknown_policy)
+    _write(tmp_path / "prompts/step_one.txt", "hello\n")
+    # Create registry with known policies
+    _write(tmp_path.parent / "_registry" / "role_policies.json", '{"role_policies": {"architect_standard": {}}}')
+    manifest = tmp_path / "workflow.toml"
+    result = validate_package(manifest_path=manifest)
+    assert any(f.code == "UNKNOWN_ROLE_POLICY" for f in result.errors)
+
+
+def test_valid_coder_role_policy_passes(tmp_path: Path) -> None:
+    """LLM steps with valid role_policy should pass validation."""
+    toml_valid = """\
+[workflow]
+name = "test_pkg"
+job_prefix = "TST"
+init_step = "step_one"
+
+[[step]]
+name = "step_one"
+prompt = "prompts/step_one.txt"
+onsuccess = "stepCompletion"
+
+[step.artifacts]
+produces = ["OUTPUT_A"]
+result_meta_key = "OUTPUT_A"
+
+[step.coder]
+role_policy = "architect_standard"
+
+[[step]]
+name = "stepCompletion"
+action = "step_completion"
+"""
+    _write(tmp_path / "workflow.toml", toml_valid)
+    _write(tmp_path / "prompts/step_one.txt", "hello\n")
+    # Create registry with the policy
+    _write(tmp_path.parent / "_registry" / "role_policies.json", '{"role_policies": {"architect_standard": {}}}')
+    manifest = tmp_path / "workflow.toml"
+    result = validate_package(manifest_path=manifest)
+    assert not any(f.code == "MISSING_CODER_ROLE_POLICY" for f in result.errors)
+    assert not any(f.code == "UNKNOWN_ROLE_POLICY" for f in result.errors)

@@ -1,3 +1,136 @@
+# AGB Standard Implementation
+# ===========================
+# This is the default implementation that produces full AGB builder workflows
+# with complete infrastructure (domain + infrastructure phases).
+#
+# Step Slots Explanation:
+# -----------------------
+# Step slots allow per-step provider selection at job submission time.
+# Each step can have multiple options (e.g., different prompts for LLM steps,
+# or different strategies for action steps).
+#
+# How it works:
+# 1. LLM steps (type: "llm"): Runner resolves slot to a prompt file path
+#    - Options must include "file" pointing to the prompt file
+#    - The selected file path is injected into workflow context
+#    - workflow.toml uses: prompt = "{{ slot.step_name }}"
+#
+# 2. Action steps (type: "action"): Runner injects selection into context
+#    - Options include "description" only (no file)
+#    - The selected option name is injected as STEP_SLOT_{STEP_NAME}
+#    - Action reads: context.get("STEP_SLOT_STEP_NAME", "default")
+#    - Action varies behavior based on the selection
+#
+# 3. Convention fallback: If impl.yaml doesn't define a slot, runner falls back
+#    to: prompts/{step_name}/standard.txt (for LLM steps)
+#
+# UI Display:
+# - All step slots are synced to backend and displayed in operator console
+# - Users can select different options when submitting jobs
+# - Default option is pre-selected
+
 name: standard
-description: "Produces executable agent-runner-v2 workflow packages as output. Builder-type workflows are meta-workflows that generate other workflows."
 label: "Workflow Builder"
+description: "Produces executable agent-runner-v2 workflow packages as output. Builder-type workflows are meta-workflows that generate other workflows."
+
+# Step Slots Configuration
+# ----------------------
+# Each key MUST match a step name in workflow.toml exactly.
+# Type indicates how the runner handles resolution:
+#   - "llm": Resolves to prompt file path
+#   - "action": Injects selection name into context
+#
+step_slots:
+  # -------------------------------------------------------------------------
+  # DOMAIN PHASE - LLM Steps
+  # -------------------------------------------------------------------------
+  analyze_requirement:
+    type: "llm"
+    label: "Requirement Analysis"
+    description: "How to analyze the requirement document"
+    default: "standard"
+    options:
+      - name: "standard"
+        file: "prompts/analyze_requirement/standard.txt"
+        description: "Standard structured analysis"
+
+  plan_domain_logic:
+    type: "llm"
+    label: "Domain Logic Planning"
+    description: "How to plan the domain logic implementation"
+    default: "standard"
+    options:
+      - name: "standard"
+        file: "prompts/plan_domain_logic/standard.txt"
+        description: "Standard domain planning approach"
+
+  challenge_plan:
+    type: "llm"
+    label: "Plan Challenge"
+    description: "How to challenge and critique the domain plan"
+    default: "standard"
+    options:
+      - name: "standard"
+        file: "prompts/challenge_plan/standard.txt"
+        description: "Standard adversarial review"
+
+  implement_domain:
+    type: "llm"
+    label: "Domain Implementation"
+    description: "How to implement domain actions, prompts, and impl.yaml"
+    default: "standard"
+    options:
+      - name: "standard"
+        file: "prompts/implement_domain/standard.txt"
+        description: "Standard implementation approach"
+
+  critic_impl:
+    type: "llm"
+    label: "Implementation Review"
+    description: "How to review the domain implementation"
+    default: "standard"
+    options:
+      - name: "standard"
+        file: "prompts/critic_impl/standard.txt"
+        description: "Standard critique approach"
+
+  # -------------------------------------------------------------------------
+  # INFRASTRUCTURE PHASE - Action Steps
+  # -------------------------------------------------------------------------
+  # Note: Action steps use context injection. The action reads:
+  #   provider = context.get("STEP_SLOT_GENERATE_DOMAIN_MAP", "standard")
+  # and varies behavior accordingly.
+
+  generate_domain_map:
+    type: "action"
+    label: "Domain Artifact Mapping"
+    description: "Strategy for mapping Analysis JSON to artifact keys"
+    default: "standard"
+    options:
+      - name: "standard"
+        description: "Standard artifact key mapping"
+      - name: "minimal"
+        description: "Minimal mapping (core artifacts only)"
+
+  # -------------------------------------------------------------------------
+  # QUALITY GATES - LLM Steps
+  # -------------------------------------------------------------------------
+  review_package:
+    type: "llm"
+    label: "Package Review"
+    description: "How to review the assembled package"
+    default: "standard"
+    options:
+      - name: "standard"
+        file: "prompts/review_package/standard.txt"
+        description: "Standard quality review"
+
+  gatekeep_package:
+    type: "llm"
+    label: "Package Gatekeep"
+    description: "Final quality gate before promotion"
+    default: "standard"
+    options:
+      - name: "standard"
+        file: "prompts/gatekeep_package/standard.txt"
+        description: "Standard gatekeeping criteria"

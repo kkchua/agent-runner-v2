@@ -29,3 +29,7 @@ progress.jsonl
 
 # Workflow run outputs
 docs/repo/*/runs/
+
+# Runtime artifacts
+%DEST%/
+Planning/

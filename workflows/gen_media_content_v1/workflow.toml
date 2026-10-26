@@ -20,6 +20,16 @@ name = "standard"
 description = "Unified media pipeline with pluggable LLM-driven providers for all steps."
 label = "Standard Pipeline"
 
+[[workflow.implementation]]
+name = "agnes"
+description = "Agnes Pipeline — Python action providers for image and video generation."
+label = "Agnes Pipeline"
+
+[[workflow.implementation]]
+name = "llm"
+description = "LLM Providers — curl-based image and video generation via LLM-driven API calls."
+label = "LLM Providers"
+
 [workflow.governance]
 include_in_prompts = true
 prompt_targets = ["all"]
@@ -119,6 +129,9 @@ onsuccess = "archive_step_02"
 produces = ["IMAGE_INDEX"]
 result_meta_key = "IMAGE_INDEX"
 
+[step.coder]
+role_policy = "image_video"
+
 # ============================================================================
 # Step 3b: Archive step_02_promptvariant inputs (runs after generate_images approval)
 # Only archives files listed in step_03_generatedimage/index.json (processed by current job).
@@ -148,6 +161,9 @@ onsuccess = "archive_step_03"
 [step.artifacts]
 produces = ["VIDEO_INDEX"]
 result_meta_key = "VIDEO_INDEX"
+
+[step.coder]
+role_policy = "image_video"
 
 # ============================================================================
 # Step 4b: Archive step_03_generatedimage inputs (runs after generate_videos approval)

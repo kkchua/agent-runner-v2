@@ -1,6 +1,11 @@
 {
   "roles": {
-    "zen_deepseek-v4-flash-free": {
+    "openai-gpt-6.1-sol": {
+      "coder": "opencode",
+      "connection": "00-openai",
+      "model_id": "gpt-6.1-sol"
+    },
+	"zen_deepseek-v4-flash-free": {
       "coder": "opencode",
       "connection": "opencode-zen",
       "model_id": "deepseek-v4-flash-free"
@@ -15,11 +20,7 @@
       "connection": "00-Agnes-Coder",
       "model_id": "agnes-2.5-flash"
     },
-    "agnes-2.0-flash": {
-      "coder": "opencode",
-      "connection": "00-Agnes-Coder",
-      "model_id": "agnes-2.0-flash"
-    },	"zen_go_deepseek-v4-pro": {
+    "zen_go_deepseek-v4-pro": {
       "coder": "opencode",
       "connection": "opencode-go",
       "model_id": "deepseek-v4-pro"

@@ -2,6 +2,15 @@ name: agnes
 label: "Agnes Pipeline (Python Actions)"
 
 # ============================================================================
+# Step Overrides — switch from prompt-driven to action-driven
+# ============================================================================
+overrides:
+  generate_images:
+    action: "generate_images_default"
+  generate_videos:
+    action: "generate_videos_default"
+
+# ============================================================================
 # Step Slots Configuration
 # ============================================================================
 step_slots:

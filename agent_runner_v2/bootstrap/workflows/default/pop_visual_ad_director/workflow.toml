@@ -1,0 +1,89 @@
+# Workflow: Pop Visual Ad Director
+# Auto-assembled by AGB from Analysis JSON.
+
+[workflow]
+name = "pop_visual_ad_director"
+version = "1.0.0"
+label = "Pop Visual Ad Director"
+job_prefix = "PVAD"
+init_step = "collect_requirements"
+description = "Generates 12-second high-frequency flash-cut FMCG short video storyboards in Z-gen/Y2K pop visual style, with per-shot video generation and final composite output."
+default_max_rejects = 3
+visibility = "canonical"
+layer = "layer3"
+platform = "agent-runner-v2"
+
+[[workflow.implementation]]
+name = "standard"
+description = "Default implementation for Pop Visual Ad Director"
+label = "Standard"
+
+[[step]]
+name = "collect_requirements"
+action = "collect_requirements"
+enable_notifications = false
+requires_human_approval_after = false
+onsuccess = "generate_storyboard"
+
+[step.artifacts]
+required_inputs = ["REQUIREMENT_INPUT_FILE"]
+produces = ["COLLECTED_REQUIREMENTS_FILE"]
+result_meta_key = "COLLECTED_REQUIREMENTS_FILE"
+
+[[step]]
+name = "generate_storyboard"
+prompt = "{{ slot.generate_storyboard }}"
+enable_notifications = false
+requires_human_approval_after = false
+onsuccess = "generate_video_prompts"
+
+[step.coder]
+role_policy = "architect_standard"
+
+[step.artifacts]
+required_inputs = ["COLLECTED_REQUIREMENTS_FILE"]
+produces = ["STORYBOARD_FILE"]
+result_meta_key = "STORYBOARD_FILE"
+
+[[step]]
+name = "generate_video_prompts"
+prompt = "{{ slot.generate_video_prompts }}"
+enable_notifications = false
+requires_human_approval_after = false
+onsuccess = "produce_video_clips"
+
+[step.coder]
+role_policy = "architect_standard"
+
+[step.artifacts]
+required_inputs = ["STORYBOARD_FILE"]
+produces = ["VIDEO_PROMPTS_FILE"]
+result_meta_key = "VIDEO_PROMPTS_FILE"
+
+[[step]]
+name = "produce_video_clips"
+action = "produce_video_clips"
+enable_notifications = false
+requires_human_approval_after = false
+onsuccess = "composite_final_video"
+
+[step.artifacts]
+required_inputs = ["VIDEO_PROMPTS_FILE"]
+produces = ["VIDEO_CLIPS_FILE"]
+result_meta_key = "VIDEO_CLIPS_FILE"
+
+[[step]]
+name = "composite_final_video"
+action = "composite_final_video"
+enable_notifications = false
+requires_human_approval_after = false
+onsuccess = "step_completion"
+
+[step.artifacts]
+required_inputs = ["VIDEO_CLIPS_FILE"]
+produces = ["FINAL_VIDEO_FILE"]
+result_meta_key = "FINAL_VIDEO_FILE"
+
+[[step]]
+name = "step_completion"
+action = "step_completion"

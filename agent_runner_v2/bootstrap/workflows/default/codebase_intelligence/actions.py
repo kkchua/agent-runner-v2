@@ -13,7 +13,6 @@ from pathlib import Path
 from typing import Any
 
 from agent_runner_v2.action_result import ActionResult
-from agent_runner_v2.codebase_docs import EXCLUDED_DIRS, _load_scan_exclusions, _matches_exclusion
 from agent_runner_v2.workflow_packages.actions import action
 
 
@@ -270,19 +269,6 @@ def scan_codebase_files(*, context: dict, state: dict, step_cfg: dict, project_r
         )
     output_path = Path(output_path_str)
 
-    # Load exclusion patterns from project root
-    exclusion_patterns = _load_scan_exclusions(project_root)
-
-    def _should_exclude(rel_path: Path) -> bool:
-        """Check if a path should be excluded from scanning."""
-        # Check hardcoded excluded dirs
-        if any(part in EXCLUDED_DIRS for part in rel_path.parts):
-            return True
-        # Check user-defined patterns
-        if _matches_exclusion(str(rel_path), exclusion_patterns):
-            return True
-        return False
-
     try:
         # Scan documentation files
         docs_files: list[dict[str, Any]] = []
@@ -290,16 +276,12 @@ def scan_codebase_files(*, context: dict, state: dict, step_cfg: dict, project_r
             for file_path in sorted(docs_dir.rglob("*")):
                 if not file_path.is_file():
                     continue
-                rel_path_obj = file_path.relative_to(docs_dir)
-                # Skip excluded paths
-                if _should_exclude(rel_path_obj):
-                    continue
-                rel_path = str(rel_path_obj)
+                rel_path = str(file_path.relative_to(docs_dir))
                 ext = file_path.suffix.lower()
                 size = file_path.stat().st_size
 
                 # Determine file category from parent directory
-                parts = rel_path_obj.parts
+                parts = file_path.relative_to(docs_dir).parts
                 file_category = parts[0] if len(parts) > 1 else "root"
 
                 # Read preview for text files
@@ -336,11 +318,7 @@ def scan_codebase_files(*, context: dict, state: dict, step_cfg: dict, project_r
             for file_path in sorted(source_dir.rglob("*")):
                 if not file_path.is_file():
                     continue
-                rel_path_obj = file_path.relative_to(source_dir)
-                # Skip excluded paths
-                if _should_exclude(rel_path_obj):
-                    continue
-                rel_path = str(rel_path_obj)
+                rel_path = str(file_path.relative_to(source_dir))
                 ext = file_path.suffix.lower()
                 size = file_path.stat().st_size
 

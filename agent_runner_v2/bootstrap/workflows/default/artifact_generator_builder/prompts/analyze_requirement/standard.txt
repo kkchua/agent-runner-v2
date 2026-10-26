@@ -22,12 +22,17 @@ what the target workflow DOES, not how it's built or deployed.
 
 Read the requirement document's YAML frontmatter and body. Extract:
 
-- **codename**: MUST be read from the requirement doc's YAML frontmatter
-  `codename:` field. This is the single source of truth.
+- **codename**: If the frontmatter has a `codename:` field, use it directly.
+  If the frontmatter only has `name:` (which may contain non-ASCII characters
+  like Chinese), you MUST generate an ASCII-safe `codename` from it:
+  - ASCII only: lowercase letters, digits, underscores
+  - Max 50 characters
+  - Derive by transliterating or translating to English snake_case
 - **name**: MUST equal codename.
 - **job_prefix**: 2-10 uppercase characters for job ID generation.
 - **version**: Semantic version from the requirement doc, default "1.0.0".
-- **label**: Human-readable display name.
+- **label**: Human-readable display name. If frontmatter has `label:`, use it.
+  Otherwise use the original `name:` value (may be non-ASCII).
 - **description**: One-line description of what this workflow does.
 - **type**: Read from the `type:` field in frontmatter. Valid values:
   - `"builder"` — This workflow produces workflow packages (self-replicating).
@@ -121,8 +126,10 @@ The output MUST be valid JSON with this structure:
 
 Before writing the output, verify:
 
-- [ ] identity.codename matches the requirement doc's YAML frontmatter
+- [ ] identity.codename is ASCII-safe (lowercase, digits, underscores only)
+- [ ] identity.codename derived from frontmatter `codename:` or generated from `name:`
 - [ ] identity.name equals identity.codename
+- [ ] identity.label preserves the original display name from frontmatter
 - [ ] identity.job_prefix is 2-10 uppercase characters
 - [ ] identity.type is "builder" or "generator" (default to "generator" if not specified)
 - [ ] identity.subtype is included if present in frontmatter

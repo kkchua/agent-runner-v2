@@ -1,0 +1,120 @@
+[workflow]
+name = "plan_first_review_v1"
+version = "1.0.0"
+label = "Plan-First Review"
+job_prefix = "PLAN"
+description = "Automated plan-first review process with Codex reviewer and Qwen planner"
+init_step = "prepare_request"
+init_inputs = ["RAW_REQUEST_FILE"]
+default_max_rejects = 3
+visibility = "canonical"
+layer = "layer3"
+platform = "agent-runner-v2"
+enable_unauthorized_write_detection = true
+
+[[workflow.implementation]]
+name = "standard"
+description = "Default implementation"
+label = "Standard"
+
+# ── Step 1: Action — allocate Planning folder, copy request ──
+[[step]]
+name = "prepare_request"
+action = "prepare_request"
+requires_human_approval_after = false
+onsuccess = "formalize_requirements"
+
+[step.artifacts]
+produces = ["RAW_REQUEST_FILE", "PLANNING_FOLDER"]
+result_meta_key = "RAW_REQUEST_FILE"
+
+# ── Step 2: Prompt (Codex role) — formalize requirements ──
+# Invokes OpenCode with Kimi K2.5 via reviewer_standard policy
+[[step]]
+name = "formalize_requirements"
+prompt = "{{ slot.formalize_requirements }}"
+requires_human_approval_after = false
+onsuccess = "generate_plan"
+
+[step.coder]
+role_policy = "reviewer_standard"
+
+[step.artifacts]
+required_inputs = ["RAW_REQUEST_FILE"]
+produces = ["REQUIREMENTS_FILE"]
+result_meta_key = "REQUIREMENTS_FILE"
+
+# ── Step 3: Prompt (Qwen role) — generate plan ──
+# Invokes OpenCode with Qwen 3.7-plus via plan_standard policy
+[[step]]
+name = "generate_plan"
+prompt = "{{ slot.generate_plan }}"
+requires_human_approval_after = false
+onsuccess = "codex_review"
+
+[step.coder]
+role_policy = "plan_standard"
+
+[step.artifacts]
+required_inputs = ["REQUIREMENTS_FILE"]
+produces = ["QWEN_PLAN_FILE"]
+result_meta_key = "QWEN_PLAN_FILE"
+
+# ── Step 4: Prompt (Codex role) — review plan ──
+# Invokes OpenCode with Kimi K2.5 via reviewer_standard policy
+[[step]]
+name = "codex_review"
+prompt = "{{ slot.codex_review }}"
+requires_human_approval_after = true
+onsuccess = "promote_plan"
+
+[step.coder]
+role_policy = "reviewer_standard"
+
+[step.artifacts]
+required_inputs = ["QWEN_PLAN_FILE", "REQUIREMENTS_FILE"]
+produces = ["CODEX_REVIEW_FILE"]
+result_meta_key = "CODEX_REVIEW_FILE"
+
+[step.on_reject_refine]
+step = "refine_plan"
+artifact = "QWEN_PLAN_FILE"
+max_iterations = 10
+max_refinements = 10
+max_human_rejections = 3
+max_ceiling = 20
+exhausted_failure_code = "PLAN_REFINEMENT_EXHAUSTED"
+human_exhausted_failure_code = "PLAN_HUMAN_REJECTION_EXHAUSTED"
+exhausted_failure_class = "HUMAN_RETRY_REQUIRED"
+
+# ── Step 5: Prompt (Qwen role) — refine plan ──
+# Invokes OpenCode with Qwen 3.7-plus via plan_standard policy
+[[step]]
+name = "refine_plan"
+prompt = "{{ slot.refine_plan }}"
+requires_human_approval_after = false
+onsuccess = "codex_review"
+
+[step.coder]
+role_policy = "plan_standard"
+
+[step.artifacts]
+required_inputs = ["CODEX_REVIEW_FILE"]
+produces = ["QWEN_PLAN_FILE"]
+result_meta_key = "QWEN_PLAN_FILE"
+
+# ── Step 6: Action — promote approved plan ──
+[[step]]
+name = "promote_plan"
+action = "promote_plan"
+requires_human_approval_after = false
+onsuccess = "step_completion"
+
+[step.artifacts]
+required_inputs = ["QWEN_PLAN_FILE"]
+result_meta_key = "QWEN_PLAN_FILE"
+
+# ── Terminal step ──
+[[step]]
+name = "step_completion"
+action = "step_completion"

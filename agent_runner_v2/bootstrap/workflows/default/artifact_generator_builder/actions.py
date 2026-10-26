@@ -230,6 +230,14 @@ def assemble_package(*, context, state, step_cfg, project_root):
     domain_steps = analysis.get("domain_steps", [])
     artifact_keys = analysis.get("artifact_keys", {})
 
+    # Build set of directory input keys (hardcoded at runtime, not user-provided)
+    dir_input_key_set: set[str] = set()
+    for entry in artifact_keys.get("inputs", []):
+        key = entry.get("key", "")
+        pattern = entry.get("pattern", "")
+        if key.endswith("_DIR") or pattern.endswith("/"):
+            dir_input_key_set.add(key)
+
     if not identity or not domain_steps:
         return ActionResult(
             status="REJECTED",
@@ -319,7 +327,7 @@ def assemble_package(*, context, state, step_cfg, project_root):
         if step["type"] == "action":
             toml_lines.append(f'action = "{_toml_str(step["action_name"])}"')
         else:
-            toml_lines.append(f'prompt = "impls/standard/prompts/{_toml_str(step["prompt_file"])}"')
+            toml_lines.append(f'prompt = "{{{{ slot.{step["name"]} }}}}"')
 
         toml_lines.append("enable_notifications = false")
         toml_lines.append("requires_human_approval_after = false")
@@ -328,7 +336,13 @@ def assemble_package(*, context, state, step_cfg, project_root):
         if i < len(domain_steps) - 1:
             toml_lines.append(f'onsuccess = "{domain_steps[i + 1]["name"]}"')
         else:
-            toml_lines.append('onsuccess = "copy_infrastructure"')
+            # Builder type: chain to infrastructure; Generator type: chain to terminal
+            workflow_type = identity.get("type", "")
+            is_agb_builder = identity.get("is_agb_builder", False) or workflow_type == "builder"
+            if is_agb_builder:
+                toml_lines.append('onsuccess = "copy_infrastructure"')
+            else:
+                toml_lines.append('onsuccess = "step_completion"')
 
         # Coder config for prompt steps
         if step["type"] == "prompt" and step.get("role_policy"):
@@ -339,6 +353,8 @@ def assemble_package(*, context, state, step_cfg, project_root):
         # Artifact bindings
         req_inputs = step.get("required_inputs", [])
         produces = step.get("produces", [])
+        # Filter out directory inputs — they are hardcoded, not user-provided
+        req_inputs = [k for k in req_inputs if k not in dir_input_key_set]
         if req_inputs or produces:
             toml_lines.append("")
             toml_lines.append("[step.artifacts]")
@@ -422,13 +438,6 @@ def assemble_package(*, context, state, step_cfg, project_root):
         toml_lines.append('produces = ["AGB_PACKAGE_REVIEW"]')
         toml_lines.append('result_meta_key = "AGB_PACKAGE_REVIEW"')
         toml_lines.append("")
-        toml_lines.append("[step.on_reject_refine]")
-        toml_lines.append('step = "assemble_package"')
-        toml_lines.append('artifact = "AGB_PACKAGE_REVIEW"')
-        toml_lines.append("max_iterations = 2")
-        toml_lines.append('exhausted_failure_code = "PACKAGE_REVIEW_EXHAUSTED"')
-        toml_lines.append('exhausted_failure_class = "HUMAN_RETRY_REQUIRED"')
-        toml_lines.append("")
 
         # Step: gatekeep_package (LLM)
         toml_lines.append("[[step]]")
@@ -445,13 +454,6 @@ def assemble_package(*, context, state, step_cfg, project_root):
         toml_lines.append('required_inputs = ["TARGET_MANIFEST_FILE", "DOMAIN_ACTIONS_FILE", "AGB_VALIDATION_FINDINGS", "AGB_PACKAGE_REVIEW", "AGB_ANALYSIS_JSON"]')
         toml_lines.append('produces = ["AGB_GATEKEEP_REPORT"]')
         toml_lines.append('result_meta_key = "AGB_GATEKEEP_REPORT"')
-        toml_lines.append("")
-        toml_lines.append("[step.on_reject_refine]")
-        toml_lines.append('step = "assemble_package"')
-        toml_lines.append('artifact = "AGB_GATEKEEP_REPORT"')
-        toml_lines.append("max_iterations = 2")
-        toml_lines.append('exhausted_failure_code = "GATEKEEP_EXHAUSTED"')
-        toml_lines.append('exhausted_failure_class = "HUMAN_RETRY_REQUIRED"')
         toml_lines.append("")
 
         # Step: promote_package
@@ -484,6 +486,14 @@ def assemble_package(*, context, state, step_cfg, project_root):
     manifest_path = target_workflow_dir / "workflow.toml"
     manifest_path.write_text("\n".join(toml_lines), encoding="utf-8")
     produced["TARGET_MANIFEST_FILE"] = str(manifest_path)
+
+    # Generate impls/standard/impl.yaml with step_slots for all domain steps
+    impl_yaml_content = _generate_domain_impl_yaml(domain_steps, identity)
+    impl_dir = target_workflow_dir / "impls" / "standard"
+    impl_dir.mkdir(parents=True, exist_ok=True)
+    impl_yaml_path = impl_dir / "impl.yaml"
+    impl_yaml_path.write_text(impl_yaml_content, encoding="utf-8")
+    produced["DOMAIN_IMPL_FILE"] = str(impl_yaml_path)
 
     infra_count = 6 if is_agb_builder else 0
     remark = (
@@ -550,6 +560,47 @@ def _toml_str(value: str) -> str:
         .replace("\r", "\\r")
         .replace("\t", "\\t")
     )
+
+
+def _generate_domain_impl_yaml(domain_steps: list[dict], identity: dict) -> str:
+    """Generate impls/standard/impl.yaml with step_slots for all domain steps.
+
+    Each prompt step gets a type:llm step_slot so the runtime resolves
+    ``{{ slot.step_name }}`` via the standard convention fallback:
+    ``impls/standard/prompts/{step_name}/standard.txt``.
+    """
+    lines: list[str] = []
+    lines.append("# Auto-generated by AGB assemble_package")
+    lines.append(f"name: standard")
+    lines.append(f'label: "{identity.get("label", identity.get("name", "Standard"))}"')
+    lines.append('description: "Standard implementation"')
+    lines.append("")
+    lines.append("step_slots:")
+
+    for step in domain_steps:
+        step_name = step["name"]
+        step_type = step["type"]
+        if step_type == "prompt":
+            lines.append(f"  {step_name}:")
+            lines.append(f'    type: "llm"')
+            lines.append(f'    label: "{step_name}"')
+            lines.append(f'    default: "standard"')
+            lines.append(f"    options:")
+            lines.append(f'      - name: "standard"')
+            lines.append(f'        file: "prompts/{step_name}.md"')
+            lines.append(f'        description: "Default prompt for {step_name}"')
+        else:
+            # Action steps get a type:action slot with a single default option
+            lines.append(f"  {step_name}:")
+            lines.append(f'    type: "action"')
+            lines.append(f'    label: "{step_name}"')
+            lines.append(f'    default: "standard"')
+            lines.append(f"    options:")
+            lines.append(f'      - name: "standard"')
+            lines.append(f'        description: "Default action for {step_name}"')
+
+    lines.append("")
+    return "\n".join(lines)
 
 
 def _generate_readme(manifest: dict, source_dir: Path) -> str:
@@ -744,6 +795,11 @@ def validate_structure(*, context, state, step_cfg, project_root):
 def generate_domain_map(*, context, state, step_cfg, project_root):
     """Generate a domain artifact map from the Analysis JSON.
 
+    Step Slot Support:
+        Reads STEP_SLOT_GENERATE_DOMAIN_MAP from context to vary behavior:
+        - "standard" (default): Full artifact mapping with all sections
+        - "minimal": Minimal mapping (core artifacts only)
+
     Reads the Analysis JSON and produces a focused reference document showing:
     - All domain artifact keys (inputs, intermediate, outputs)
     - Which step produces each key
@@ -753,6 +809,9 @@ def generate_domain_map(*, context, state, step_cfg, project_root):
     This gives the implement_domain step a clear, readable reference for
     artifact key bindings — without exposing infrastructure files.
     """
+    # Read step slot selection
+    provider = context.get("STEP_SLOT_GENERATE_DOMAIN_MAP", "standard")
+
     artifacts = state.get("artifacts", {})
     project_root = Path(project_root)
 
@@ -819,9 +878,9 @@ def generate_domain_map(*, context, state, step_cfg, project_root):
             lines.append(f"| `{key}` | `{pattern}` | {consumed} |")
         lines.append("")
 
-    # Intermediate artifacts
+    # Intermediate artifacts (skipped for minimal provider)
     intermediates = artifact_keys.get("intermediate", [])
-    if intermediates:
+    if intermediates and provider != "minimal":
         lines.append("## Intermediate Artifacts")
         lines.append("")
         lines.append("| Key | Pattern | Produced By | Consumed By |")
@@ -848,21 +907,22 @@ def generate_domain_map(*, context, state, step_cfg, project_root):
             lines.append(f"| `{key}` | `{pattern}` | {produced} |")
         lines.append("")
 
-    # Data flow chain
-    lines.append("## Data Flow")
-    lines.append("")
-    lines.append("```")
-    for step in domain_steps:
-        step_name = step.get("name", "?")
-        step_type = step.get("type", "?")
-        inputs_list = step.get("required_inputs", [])
-        outputs_list = step.get("produces", [])
-        inputs_str = ", ".join(inputs_list) if inputs_list else "(none)"
-        outputs_str = ", ".join(outputs_list) if outputs_list else "(none)"
-        lines.append(f"[{step_name}] ({step_type})")
-        lines.append(f"  inputs:  {inputs_str}")
-        lines.append(f"  outputs: {outputs_str}")
+    # Data flow chain (skipped for minimal provider)
+    if provider != "minimal":
+        lines.append("## Data Flow")
         lines.append("")
+        lines.append("```")
+        for step in domain_steps:
+            step_name = step.get("name", "?")
+            step_type = step.get("type", "?")
+            inputs_list = step.get("required_inputs", [])
+            outputs_list = step.get("produces", [])
+            inputs_str = ", ".join(inputs_list) if inputs_list else "(none)"
+            outputs_str = ", ".join(outputs_list) if outputs_list else "(none)"
+            lines.append(f"[{step_name}] ({step_type})")
+            lines.append(f"  inputs:  {inputs_str}")
+            lines.append(f"  outputs: {outputs_str}")
+            lines.append("")
     lines.append("```")
 
     # Write output
@@ -928,12 +988,19 @@ def _generate_context_extensions(
     class_name = _to_pascal_case(identity["name"]) + "Extensions"
 
     # --- Domain keys from Analysis JSON ---
-    input_keys = {}
+    # Separate directory inputs (hardcoded) from file inputs (resolved via artifact system)
+    file_input_keys = {}
+    dir_input_keys = {}
     for entry in artifact_keys.get("inputs", []):
         key = entry["key"]
         pattern = entry["pattern"]
-        filename = _extract_filename(pattern, key)
-        input_keys[key] = filename
+        # Directory detection: key ends with _DIR or pattern ends with /
+        if key.endswith("_DIR") or pattern.endswith("/"):
+            # Strip trailing slash for path construction
+            dir_input_keys[key] = pattern.rstrip("/")
+        else:
+            filename = _extract_filename(pattern, key)
+            file_input_keys[key] = filename
 
     output_keys = {}
     for cat in ("intermediate", "outputs"):
@@ -976,13 +1043,22 @@ def _generate_context_extensions(
     ext_lines.append(f'    workflow_name = "{identity["name"]}"')
     ext_lines.append("")
 
-    # INPUT_ARTIFACTS dict (domain only — infrastructure has no input artifacts)
+    # INPUT_ARTIFACTS dict (file inputs only — directory inputs are hardcoded)
     ext_lines.append("    # -- Input artifacts: resolved to {workspace_root}/input/ --")
     ext_lines.append("    INPUT_ARTIFACTS: dict[str, str] = {")
-    for key, filename in input_keys.items():
+    for key, filename in file_input_keys.items():
         ext_lines.append(f'        "{key}": "{filename}",')
     ext_lines.append("    }")
     ext_lines.append("")
+
+    # Hardcoded directory inputs (not user-provided — resolved from workspace)
+    if dir_input_keys:
+        ext_lines.append("    # -- Directory inputs: hardcoded paths relative to workspace_root --")
+        ext_lines.append("    DIR_INPUTS: dict[str, str] = {")
+        for key, path_pattern in dir_input_keys.items():
+            ext_lines.append(f'        "{key}": "{path_pattern}",')
+        ext_lines.append("    }")
+        ext_lines.append("")
 
     # OUTPUT_ARTIFACTS dict (domain + infrastructure)
     ext_lines.append("    # -- Output artifacts: resolved to {workspace_root}/output/{job_id}/ --")
@@ -1003,6 +1079,10 @@ def _generate_context_extensions(
     ext_lines.append("        combined: dict[str, str] = {}")
     ext_lines.append("        for key in self.INPUT_ARTIFACTS:")
     ext_lines.append('            combined[key] = "input/"')
+    # Register directory inputs with their relative path
+    if dir_input_keys:
+        ext_lines.append("        for key, rel_path in getattr(self, 'DIR_INPUTS', {}).items():")
+        ext_lines.append('            combined[key] = rel_path')
     ext_lines.append("        for key, pattern in self.OUTPUT_ARTIFACTS.items():")
     ext_lines.append('            combined[key] = f"output/{job_id}/{pattern}"')
     ext_lines.append("        return combined")
@@ -1019,6 +1099,11 @@ def _generate_context_extensions(
     ext_lines.append("        result[\"BASE_COMPOSITION_STANDARD\"] = str(")
     ext_lines.append("            get_governance_runtime_root() / \"BCS_v2.0.md\"")
     ext_lines.append("        )")
+    # Hardcode directory inputs (resolved from workspace_root, not user-provided)
+    if dir_input_keys:
+        ext_lines.append("        # Directory inputs: hardcoded relative to workspace_root")
+        ext_lines.append("        for key, rel_path in getattr(self, 'DIR_INPUTS', {}).items():")
+        ext_lines.append("            result[key] = str(workspace_root / rel_path)")
     ext_lines.append("        resolve_input_artifacts(result, state, workspace_root, self.INPUT_ARTIFACTS)")
     ext_lines.append("        resolve_output_artifacts(result, state, workspace_root, self.OUTPUT_ARTIFACTS)")
     ext_lines.append("        return result")
