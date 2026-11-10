@@ -4,7 +4,6 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from .v2.backend_client_v1 import BackendClient
 from .bundle_loader import load_project_config, load_workflow_module, resolve_workflow_root
 from .constants import known_artifact_paths as _known_artifact_paths
 from .exceptions import PreflightBlockedError

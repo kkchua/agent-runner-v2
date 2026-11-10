@@ -208,16 +208,3 @@ def generated_doc_manifest(*, template_group: str, state: dict) -> str:
     return "\n".join(lines) + "\n"
 
 
-def snapshot_paths(*, project_root: Path, rel_paths: Iterable[str]) -> dict[str, str]:
-    out: dict[str, str] = {}
-    for rel_path in rel_paths:
-        path = project_root / rel_path
-        if path.exists() and path.is_file():
-            out[rel_path] = _hash_file(path)
-    return out
-
-
-def _hash_file(path: Path) -> str:
-    import hashlib
-
-    return hashlib.sha256(path.read_bytes()).hexdigest()

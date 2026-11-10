@@ -35,7 +35,6 @@ if sys.platform == "win32":
 from pathlib import Path
 from typing import Any
 
-from .v2.backend_client_v1 import BackendClient
 from .bundle_loader import (
     core_bundles_root,
     init_workspace,

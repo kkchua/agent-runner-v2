@@ -1,7 +1,7 @@
-"""Unit tests for backend_client module.
+"""Unit tests for backend_client_v1 module.
 
 Tests URL construction, payload building, HTTP error handling,
-and all 14 API methods. Mocks urllib to avoid real HTTP calls.
+and all active API methods. Mocks urllib to avoid real HTTP calls.
 """
 from __future__ import annotations
 
@@ -185,37 +185,6 @@ class TestSubmitRun:
 
 
 # ---------------------------------------------------------------------------
-# approve_run
-# ---------------------------------------------------------------------------
-
-class TestApproveRun:
-    def test_default_action_is_approve(self):
-        c = _make_client()
-        with patch("agent_runner_v2.v2.backend_client_v1.request.urlopen") as mock_open:
-            mock_open.return_value = _mock_response({})
-            c.approve_run(run_id="r1")
-            body = json.loads(mock_open.call_args[0][0].data)
-        assert body["action"] == "approve"
-
-    def test_reject_action(self):
-        c = _make_client()
-        with patch("agent_runner_v2.v2.backend_client_v1.request.urlopen") as mock_open:
-            mock_open.return_value = _mock_response({})
-            c.approve_run(run_id="r1", action="reject", feedback="needs work")
-            body = json.loads(mock_open.call_args[0][0].data)
-        assert body["action"] == "reject"
-        assert body["feedback"] == "needs work"
-
-    def test_correct_endpoint(self):
-        c = _make_client()
-        with patch("agent_runner_v2.v2.backend_client_v1.request.urlopen") as mock_open:
-            mock_open.return_value = _mock_response({})
-            c.approve_run(run_id="run-uuid-123")
-            req = mock_open.call_args[0][0]
-        assert "/api/runs/run-uuid-123/approve" in req.full_url
-
-
-# ---------------------------------------------------------------------------
 # get_run
 # ---------------------------------------------------------------------------
 
@@ -321,23 +290,6 @@ class TestResetRunStep:
 
 
 # ---------------------------------------------------------------------------
-# register_worker
-# ---------------------------------------------------------------------------
-
-class TestRegisterWorker:
-    def test_payload(self):
-        c = _make_client()
-        with patch("agent_runner_v2.v2.backend_client_v1.request.urlopen") as mock_open:
-            mock_open.return_value = _mock_response({})
-            c.register_worker(worker_id="w1", host_name="myhost", worker_label="dev")
-            body = json.loads(mock_open.call_args[0][0].data)
-        assert body["worker_id"] == "w1"
-        assert body["host_name"] == "myhost"
-        assert body["worker_label"] == "dev"
-        assert body["capabilities"] == {}
-
-
-# ---------------------------------------------------------------------------
 # heartbeat
 # ---------------------------------------------------------------------------
 
@@ -375,33 +327,10 @@ class TestHeartbeat:
 
 
 # ---------------------------------------------------------------------------
-# claim_step
-# ---------------------------------------------------------------------------
-
-class TestClaimStep:
-    def test_uses_query_param(self):
-        c = _make_client()
-        with patch("agent_runner_v2.v2.backend_client_v1.request.urlopen") as mock_open:
-            mock_open.return_value = _mock_response({})
-            c.claim_step(worker_id="w1")
-            req = mock_open.call_args[0][0]
-        assert "worker_id=w1" in req.full_url
-        assert "/api/workers/claim" in req.full_url
-
-
-# ---------------------------------------------------------------------------
-# complete_step_run / sync_job_state
+# sync_job_state
 # ---------------------------------------------------------------------------
 
 class TestStepRunEndpoints:
-    def test_complete_step_run_endpoint(self):
-        c = _make_client()
-        with patch("agent_runner_v2.v2.backend_client_v1.request.urlopen") as mock_open:
-            mock_open.return_value = _mock_response({})
-            c.complete_step_run(step_run_id="sr1", payload={"status": "completed"})
-            req = mock_open.call_args[0][0]
-        assert "/api/step-runs/sr1/complete" in req.full_url
-
     def test_sync_job_state_endpoint(self):
         c = _make_client()
         with patch("agent_runner_v2.v2.backend_client_v1.request.urlopen") as mock_open:
@@ -411,55 +340,3 @@ class TestStepRunEndpoints:
         assert "/api/step-runs/sr1/job-sync" in req.full_url
 
 
-# ---------------------------------------------------------------------------
-# create_artifact / create_event
-# ---------------------------------------------------------------------------
-
-class TestRunSubResources:
-    def test_create_artifact_endpoint(self):
-        c = _make_client()
-        with patch("agent_runner_v2.v2.backend_client_v1.request.urlopen") as mock_open:
-            mock_open.return_value = _mock_response({})
-            c.create_artifact(run_id="r1", payload={"key": "OUTPUT", "path": "/out.md"})
-            req = mock_open.call_args[0][0]
-        assert "/api/runs/r1/artifacts" in req.full_url
-
-    def test_create_event_endpoint(self):
-        c = _make_client()
-        with patch("agent_runner_v2.v2.backend_client_v1.request.urlopen") as mock_open:
-            mock_open.return_value = _mock_response({})
-            c.create_event(run_id="r1", payload={"event_type": "STEP_STARTED"})
-            req = mock_open.call_args[0][0]
-        assert "/api/runs/r1/events" in req.full_url
-
-
-# ---------------------------------------------------------------------------
-# cleanup_execution
-# ---------------------------------------------------------------------------
-
-class TestCleanupExecution:
-    def test_payload_structure(self):
-        c = _make_client()
-        with patch("agent_runner_v2.v2.backend_client_v1.request.urlopen") as mock_open:
-            mock_open.return_value = _mock_response({"deleted": True})
-            c.cleanup_execution(workflow_name="wf1", dry_run=False)
-            body = json.loads(mock_open.call_args[0][0].data)
-        assert body["dry_run"] is False
-        assert body["include_workers"] is False
-        assert body["scope"]["workflow_name"] == "wf1"
-
-    def test_dry_run_default(self):
-        c = _make_client()
-        with patch("agent_runner_v2.v2.backend_client_v1.request.urlopen") as mock_open:
-            mock_open.return_value = _mock_response({})
-            c.cleanup_execution(workflow_name="wf1")
-            body = json.loads(mock_open.call_args[0][0].data)
-        assert body["dry_run"] is False
-
-    def test_correct_endpoint(self):
-        c = _make_client()
-        with patch("agent_runner_v2.v2.backend_client_v1.request.urlopen") as mock_open:
-            mock_open.return_value = _mock_response({})
-            c.cleanup_execution(workflow_name="wf1")
-            req = mock_open.call_args[0][0]
-        assert "/api/admin/execution/cleanup" in req.full_url

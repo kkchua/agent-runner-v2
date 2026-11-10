@@ -89,14 +89,6 @@ class BackendClient:
             payload['context_payload'] = context_payload
         return self._request('POST', '/api/runs', payload)
 
-    def approve_run(self, *, run_id: str, action: str = "approve", feedback: str | None = None, outcome: str | None = None) -> dict[str, Any]:
-        payload: dict[str, Any] = {'action': action}
-        if feedback is not None:
-            payload['feedback'] = feedback
-        if outcome is not None:
-            payload['outcome'] = outcome
-        return self._request('POST', f'/api/runs/{run_id}/approve', payload)
-
     def get_run(self, *, run_id: str) -> dict[str, Any]:
         return self._request('GET', f'/api/runs/{run_id}')
 
@@ -127,14 +119,6 @@ class BackendClient:
 
     def reset_run_step(self, *, run_id: str, step_name: str) -> dict[str, Any]:
         return self._request('POST', f'/api/runs/{run_id}/reset-step', {"step_name": step_name})
-
-    def register_worker(self, *, worker_id: str, host_name: str | None = None, capabilities: dict[str, Any] | None = None, worker_label: str = "live") -> dict[str, Any]:
-        return self._request('POST', '/api/workers/register', {
-            'worker_id': worker_id,
-            'host_name': host_name,
-            'capabilities': capabilities or {},
-            'worker_label': worker_label,
-        })
 
     def heartbeat(
         self,
@@ -174,24 +158,5 @@ class BackendClient:
             payload['exit_code'] = exit_code
         return self._request('POST', '/api/workers/heartbeat', payload)
 
-    def claim_step(self, *, worker_id: str) -> dict[str, Any]:
-        return self._request('POST', '/api/workers/claim', query={'worker_id': worker_id})
-
-    def complete_step_run(self, *, step_run_id: str, payload: dict[str, Any]) -> dict[str, Any]:
-        return self._request('POST', f'/api/step-runs/{step_run_id}/complete', payload)
-
     def sync_job_state(self, *, step_run_id: str, payload: dict[str, Any]) -> dict[str, Any]:
         return self._request('POST', f'/api/step-runs/{step_run_id}/job-sync', payload)
-
-    def create_artifact(self, *, run_id: str, payload: dict[str, Any]) -> dict[str, Any]:
-        return self._request('POST', f'/api/runs/{run_id}/artifacts', payload)
-
-    def create_event(self, *, run_id: str, payload: dict[str, Any]) -> dict[str, Any]:
-        return self._request('POST', f'/api/runs/{run_id}/events', payload)
-
-    def cleanup_execution(self, *, workflow_name: str, dry_run: bool = False) -> dict[str, Any]:
-        return self._request('POST', '/api/admin/execution/cleanup', {
-            "dry_run": dry_run,
-            "include_workers": False,
-            "scope": {"workflow_name": workflow_name},
-        })
