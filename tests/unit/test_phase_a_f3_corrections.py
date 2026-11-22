@@ -96,7 +96,7 @@ class TestF3_AppliedEvidenceVerification:
 
         # Should fail with TERMINAL_EVIDENCE_MISSING
         assert exit_code == 1
-        assert state.get("last_failure_code") == "TERMINAL_EVIDENCE_MISSING"
+        assert returned_state.get("last_failure_code") == "TERMINAL_EVIDENCE_MISSING"
 
     def test_applied_replay_fails_missing_file(self, tmp_path, monkeypatch):
         """Applied replay fails if output file doesn't exist."""
@@ -181,7 +181,7 @@ class TestF3_AppliedEvidenceVerification:
 
         # Should fail with TERMINAL_EVIDENCE_MISSING
         assert exit_code == 1
-        assert state.get("last_failure_code") == "TERMINAL_EVIDENCE_MISSING"
+        assert returned_state.get("last_failure_code") == "TERMINAL_EVIDENCE_MISSING"
 
     def test_applied_replay_fails_digest_mismatch(self, tmp_path, monkeypatch):
         """Applied replay fails if file digest changed."""
@@ -271,7 +271,7 @@ class TestF3_AppliedEvidenceVerification:
 
         # Should fail with TERMINAL_EVIDENCE_CONFLICT
         assert exit_code == 1
-        assert state.get("last_failure_code") == "TERMINAL_EVIDENCE_CONFLICT"
+        assert returned_state.get("last_failure_code") == "TERMINAL_EVIDENCE_CONFLICT"
 
 
 class TestF3_RejectedTerminalIdentity:
@@ -432,4 +432,4 @@ class TestF3_RejectedTerminalIdentity:
 
         # Should conflict
         assert exit_code == 1
-        assert state.get("last_failure_code") == "TERMINAL_RESULT_CONFLICT"
+        assert returned_state.get("last_failure_code") == "TERMINAL_RESULT_CONFLICT"

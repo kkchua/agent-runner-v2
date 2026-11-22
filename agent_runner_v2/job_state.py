@@ -2998,6 +2998,23 @@ def prepare_plan_attempt(
     baseline = state.get("requirements_baseline", 1)
     current_revision = state.get("plan_revision", 1)
 
+    # R20: A16-03 - Validate exact integer types BEFORE any processing
+    if isinstance(baseline, bool):
+        raise ValueError(f"requirements_baseline must be exact int, got bool True")
+    if not isinstance(baseline, int):
+        raise ValueError(f"requirements_baseline must be exact int, got {type(baseline).__name__}")
+
+    if isinstance(current_revision, bool):
+        raise ValueError(f"plan_revision must be exact int, got bool True")
+    if not isinstance(current_revision, int):
+        raise ValueError(f"plan_revision must be exact int, got {type(current_revision).__name__}")
+
+    # R24: A16-03 - Validate positive ranges
+    if baseline <= 0:
+        raise ValueError(f"requirements_baseline must be positive int, got {baseline}")
+    if current_revision <= 0:
+        raise ValueError(f"plan_revision must be positive int, got {current_revision}")
+
     # Determine target revision
     if step == "generate_plan" and current_revision == 1:
         input_revision = None

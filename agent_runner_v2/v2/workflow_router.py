@@ -36,6 +36,34 @@ from ..step_runner import StepResult
 
 
 # ---------------------------------------------------------------------------
+# Path helpers (R20: A16-02)
+# ---------------------------------------------------------------------------
+
+def _resolve_path_against_root(path_str: str) -> Path:
+    """Resolve a path against PROJECT_ROOT.
+
+    R20: Handles both relative and absolute paths consistently.
+    """
+    from .. import runtime_context
+    project_root = Path(str(runtime_context.PROJECT_ROOT)).resolve()
+    path = Path(str(path_str))
+    if path.is_absolute():
+        return path.resolve()
+    return (project_root / path).resolve()
+
+
+def _normalize_optional_path(path_str: str | None) -> str | None:
+    """Normalize optional path to canonical representation.
+
+    R20: Returns None for absent, resolved string for present.
+    Used for unconditional comparison.
+    """
+    if path_str is None:
+        return None
+    return str(_resolve_path_against_root(path_str))
+
+
+# ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
 
@@ -477,20 +505,88 @@ def _route_loop_or_replan(
     artifacts: dict,
 ) -> tuple[dict, int]:
     """Handle REJECTED for steps that have on_reject_refine config."""
-    # Merge artifacts from result first
-    for key, value in step_result.artifacts.items():
-        if value:
-            artifacts[key] = value
-    # Alias VALIDATION_FILE → REVIEW_FILE_SUGGESTED for validator step
-    _sync_review_feedback_artifact(step=step, artifacts=artifacts)
-    _cleanup_rejected_feedback_docs(
-        group_name=group_name,
-        state=state,
-        step=step,
-        artifacts=artifacts,
-    )
+    # R20: A16-01 - For plan_first_review_v1 codex_review, require declared review
+    if group_name == "plan_first_review_v1" and step == "codex_review":
+        from ..constants import ARTIFACT_PATH_CODEX_REVIEW
 
-    review_file = artifacts.get(ARTIFACT_KEY_REVIEW)
+        planning_folder = state.get("artifacts", {}).get("PLANNING_FOLDER")
+        current_revision = state.get("plan_revision", 1)
+        baseline = state.get("requirements_baseline", 1)
+
+        # R20: REQUIRE nonempty CODEX_REVIEW_FILE in current outcome
+        reported_review = step_result.artifacts.get("CODEX_REVIEW_FILE")
+        if not reported_review:
+            return _gate_failure(
+                group_name=group_name,
+                state=state,
+                step=step,
+                failure_code="MISSING_REVIEW_ARTIFACT_DECLARATION",
+                failure_reason="Current codex_review outcome did not declare CODEX_REVIEW_FILE",
+            )
+
+        # R20: Compute canonical declared review path
+        canonical_review_path = ARTIFACT_PATH_CODEX_REVIEW(planning_folder, current_revision, baseline)
+        canonical_resolved = _resolve_path_against_root(canonical_review_path)
+
+        # R20: Validate reported matches canonical
+        reported_resolved = _resolve_path_against_root(reported_review)
+        if reported_resolved != canonical_resolved:
+            return _gate_failure(
+                group_name=group_name,
+                state=state,
+                step=step,
+                failure_code="INVALID_REVIEW_ARTIFACT",
+                failure_reason=f"Reported review {reported_review} != canonical {canonical_review_path}",
+            )
+
+        # R20: Verify canonical file exists and is a readable regular file
+        if not canonical_resolved.exists():
+            return _gate_failure(
+                group_name=group_name,
+                state=state,
+                step=step,
+                failure_code="REVIEW_ARTIFACT_MISSING",
+                failure_reason=f"Declared review artifact missing: {canonical_review_path}",
+            )
+        if not canonical_resolved.is_file():
+            return _gate_failure(
+                group_name=group_name,
+                state=state,
+                step=step,
+                failure_code="REVIEW_ARTIFACT_NOT_FILE",
+                failure_reason=f"Declared review artifact is not a file: {canonical_review_path}",
+            )
+
+        # R20: Verify file is readable
+        try:
+            canonical_resolved.read_bytes()
+        except Exception as e:
+            return _gate_failure(
+                group_name=group_name,
+                state=state,
+                step=step,
+                failure_code="REVIEW_ARTIFACT_UNREADABLE",
+                failure_reason=f"Cannot read declared review artifact: {e}",
+            )
+
+        # R20: Bind declared review (override stale generic alias)
+        artifacts["CODEX_REVIEW_FILE"] = canonical_review_path
+        artifacts[ARTIFACT_KEY_REVIEW] = canonical_review_path
+        review_file = canonical_review_path
+    else:
+        # Existing logic: merge artifacts and alias
+        for key, value in step_result.artifacts.items():
+            if value:
+                artifacts[key] = value
+        # Alias VALIDATION_FILE → REVIEW_FILE_SUGGESTED for validator step
+        _sync_review_feedback_artifact(step=step, artifacts=artifacts)
+        _cleanup_rejected_feedback_docs(
+            group_name=group_name,
+            state=state,
+            step=step,
+            artifacts=artifacts,
+        )
+        review_file = artifacts.get(ARTIFACT_KEY_REVIEW)
     current_count = int(reject_counts.get(step, 0)) + 1
     reject_counts[step] = current_count
     iteration = current_count
@@ -581,6 +677,55 @@ def _trigger_loop(
     reject_counts: dict,
 ) -> tuple[dict, int]:
     """Activate the refine loop for this iteration."""
+    # R20: A16-01 - Compute MD5 checksum from target artifact before loop activation
+    # (plan_first_review_v1 only, to avoid changing unrelated workflows)
+    pre_refine_checksum = None
+    if group_name == "plan_first_review_v1":
+        target_artifact = on_reject_refine.get("artifact")  # "QWEN_PLAN_FILE"
+        target_path_value = state.get("artifacts", {}).get(target_artifact)
+
+        if target_path_value:
+            target_resolved = _resolve_path_against_root(target_path_value)
+
+            # R20: Validate target exists and is readable BEFORE loop publication
+            if not target_resolved.exists():
+                return _gate_failure(
+                    group_name=group_name,
+                    state=state,
+                    step=step,
+                    failure_code="REFINE_TARGET_MISSING",
+                    failure_reason=f"Refinement target missing: {target_path_value}",
+                )
+            if not target_resolved.is_file():
+                return _gate_failure(
+                    group_name=group_name,
+                    state=state,
+                    step=step,
+                    failure_code="REFINE_TARGET_NOT_FILE",
+                    failure_reason=f"Refinement target is not a file: {target_path_value}",
+                )
+            try:
+                # R20: MD5 for recovery no-op comparison (not SHA256)
+                from ..job_state import _md5_file
+                pre_refine_checksum = _md5_file(target_resolved)
+            except Exception as e:
+                return _gate_failure(
+                    group_name=group_name,
+                    state=state,
+                    step=step,
+                    failure_code="REFINE_TARGET_UNREADABLE",
+                    failure_reason=f"Cannot read refinement target: {e}",
+                )
+        else:
+            # R20: Missing target artifact - fail before publishing
+            return _gate_failure(
+                group_name=group_name,
+                state=state,
+                step=step,
+                failure_code="REFINE_TARGET_NOT_FOUND",
+                failure_reason="No target artifact found for refinement checksum",
+            )
+
     # Budget check
     allowed, _ = _consume_planning_attempt_budget(state=state, group_cfg=group_cfg)
     if not allowed:
@@ -602,6 +747,7 @@ def _trigger_loop(
         target_artifact=on_reject_refine["artifact"],
         review_file=review_file,
         iteration=iteration,
+        pre_refine_checksum=pre_refine_checksum,  # R20: MD5 checksum
         now_iso=_now_iso,
         clear_last_failure=clear_last_failure,
         set_job_status=set_job_status,
@@ -869,21 +1015,32 @@ def _gate_failure(
     failure_code: str,
     failure_reason: str,
 ) -> tuple[dict, int]:
-    """Record a plan-first gate failure and return terminal tuple."""
+    """Record a plan-first gate failure and return terminal tuple.
+
+    R20: A16-04 - Creates isolated copy to avoid mutating original caller on save failure.
+    Returns the isolated failure state for caller inspection.
+    """
+    # R20: Create isolated copy BEFORE any mutations
+    isolated = copy.deepcopy(state)
+
+    # Apply failure envelope to isolated copy
     set_last_failure(
-        state=state,
+        state=isolated,
         failure_class="HUMAN_RETRY_REQUIRED",
         failure_code=failure_code,
         failure_reason=failure_reason,
         failure_source="runner",
         step=step,
     )
-    set_job_status(state, "WAITING_FOR_HUMAN_INTERVENTION")
-    state["current_step"] = step
-    state["pending_intervention_for"] = step
-    save_job(group_name, state["job_id"], state)
-    send_workflow_notification("WAITING_FOR_HUMAN_INTERVENTION", dict(state))
-    return state, 1
+    set_job_status(isolated, "WAITING_FOR_HUMAN_INTERVENTION")
+    isolated["current_step"] = step
+    isolated["pending_intervention_for"] = step
+
+    # Save isolated state (may raise on failure)
+    save_job(group_name, isolated["job_id"], isolated)
+    send_workflow_notification("WAITING_FOR_HUMAN_INTERVENTION", dict(isolated))
+
+    return isolated, 1
 
 
 def _plan_first_result_gate(
@@ -1118,23 +1275,21 @@ def _plan_first_result_gate(
             baseline=baseline or 1,
         )
 
-        # Normalize both paths for comparison
-        output_normalized = str(output_artifact).replace("\\", "/")
-        canonical_normalized = canonical_relative.replace("\\", "/")
+        # R20: A16-02 - Resolve both paths against PROJECT_ROOT and compare full identity
+        output_resolved = _resolve_path_against_root(str(output_artifact))
+        canonical_resolved = _resolve_path_against_root(canonical_relative)
 
-        if output_normalized != canonical_normalized:
+        if output_resolved != canonical_resolved:
             return _gate_failure(
                 group_name=group_name,
                 state=state,
                 step=step,
                 failure_code="NON_CANONICAL_OUTPUT_PATH",
-                failure_reason=f"Output path {output_normalized!r} != canonical {canonical_normalized!r}",
+                failure_reason=f"Output path {output_resolved} != canonical {canonical_resolved}",
             )
 
-        # Resolve paths - use runtime_context.PROJECT_ROOT at runtime for test mocking
-        from .. import runtime_context
-        project_root = Path(str(runtime_context.PROJECT_ROOT)).resolve()
-        full_output_path = project_root / output_artifact
+        # Use resolved path for file operations
+        full_output_path = output_resolved
 
         # Verify file exists and is readable
         if not full_output_path.exists():
@@ -1261,23 +1416,25 @@ def _handle_terminal_replay(
                 failure_reason="Applied result missing required evidence (path or digest)",
             )
 
-        # R16-R6: Verify incoming path identity including omission
+        # R20: A16-02 - Unconditional path identity comparison using resolved paths
         incoming_path = step_result.artifacts.get("QWEN_PLAN_FILE") if step_result.artifacts else None
         # Get relative path from evidence for comparison (output_path may be absolute)
         output_evidence = stored_result.get("output_evidence", {})
         relative_path = output_evidence.get("relative_path") if output_evidence else None
         # Use relative_path for comparison if available, otherwise use output_path
         comparison_path = relative_path or stored_path
-        # Compare normalized paths - if stored has path, incoming omission is conflict
-        incoming_normalized = str(incoming_path).replace("\\", "/") if incoming_path else None
-        stored_normalized = str(comparison_path).replace("\\", "/")
+
+        # R20: Normalize both UNCONDITIONALLY - None != path is conflict, None == None is match
+        stored_normalized = _normalize_optional_path(comparison_path)
+        incoming_normalized = _normalize_optional_path(incoming_path)
+
         if incoming_normalized != stored_normalized:
             return _gate_failure(
                 group_name=group_name,
                 state=state,
                 step=step,
                 failure_code="TERMINAL_EVIDENCE_CONFLICT",
-                failure_reason=f"Incoming path {incoming_normalized!r} != stored path {stored_normalized!r}",
+                failure_reason=f"Path identity conflict: incoming {incoming_normalized!r} != stored {stored_normalized!r}",
             )
 
         # Verify file exists and is readable
@@ -1348,9 +1505,9 @@ def _handle_terminal_replay(
         relative_path = output_evidence.get("relative_path") if output_evidence else None
         # Use relative_path for comparison if available, otherwise use stored_path
         comparison_path = relative_path or stored_path
-        # Normalize both paths using None for absence
-        incoming_normalized = str(incoming_path).replace("\\", "/") if incoming_path else None
-        stored_normalized = str(comparison_path).replace("\\", "/") if comparison_path else None
+        # R24: A16-02 - Use same unconditional path resolution as applied branch
+        stored_normalized = _normalize_optional_path(comparison_path)
+        incoming_normalized = _normalize_optional_path(incoming_path)
         if incoming_normalized != stored_normalized:
             return _gate_failure(
                 group_name=group_name,
@@ -1521,32 +1678,36 @@ def _commit_application_failure_from_baseline(
     # Record failure
     attempt_record = failure_state.get("attempt_records", {}).get(attempt_id, {})
 
-    # Get output path from step_result
-    output_path = None
+    # R20: A16-02/A16-05 - Resolve and classify output path FIRST
+    output_path_raw = None
     if step_result.artifacts and step_result.artifacts.get("QWEN_PLAN_FILE"):
-        output_path = str(step_result.artifacts.get("QWEN_PLAN_FILE"))
+        output_path_raw = str(step_result.artifacts.get("QWEN_PLAN_FILE"))
 
-    # Compute output_digest if output exists and not provided
     computed_digest = output_digest
     output_missing = False
     output_unreadable = False
 
-    if output_path and not computed_digest:
-        from .. import runtime_context
-        from ..job_state import compute_output_digest
-        project_root = Path(str(runtime_context.PROJECT_ROOT)).resolve()
-        full_output_path = project_root / output_path
-        if not full_output_path.exists():
-            # R16-01 follow-up: Record that output was missing at failure time
+    if output_path_raw:
+        output_resolved = _resolve_path_against_root(output_path_raw)
+
+        # R20: A16-05 - Check file type BEFORE deciding on digest reuse
+        if not output_resolved.exists():
             output_missing = True
-        elif not full_output_path.is_file():
-            output_missing = True
+        elif not output_resolved.is_file():
+            # R20: Explicitly reject non-file observations unconditionally
+            raise ValueError(
+                f"Output path is not a regular file: {output_path_raw}. "
+                f"Only missing, unreadable, or readable regular files are supported observations."
+            )
         else:
-            try:
-                computed_digest = compute_output_digest(full_output_path)
-            except Exception:
-                # R16-01 follow-up: Record that output was unreadable at failure time
-                output_unreadable = True
+            # R20: File exists and is regular - compute or reuse digest
+            if not computed_digest:
+                try:
+                    from ..job_state import compute_output_digest
+                    computed_digest = compute_output_digest(output_resolved)
+                except Exception:
+                    output_unreadable = True
+            # If computed_digest supplied externally, use it
 
     # Build failed result with ORIGINAL status for identity matching
     # (not derived "failed" status)
@@ -1555,7 +1716,7 @@ def _commit_application_failure_from_baseline(
     failed_result = {
         "original_status": step_result.status,  # APPROVED - for identity matching
         "remark": step_result.remark,
-        "output_path": output_path,
+        "output_path": output_path_raw,  # R20: Use raw path string
         "output_digest": computed_digest,  # R16-01: For replay evidence validation
         "output_missing": output_missing,  # R16-01 follow-up: For identical missing-state replay
         "output_unreadable": output_unreadable,  # R16-01 follow-up: For identical unreadable-state replay
@@ -1805,14 +1966,47 @@ def _validate_prepared_eligibility(
     if not attempt_record:
         return False, f"Attempt not found: {attempt_id}", None
 
-    # F2: Validate baseline matches current state
-    current_baseline = state.get("requirements_baseline")
+    # R20: A16-03 - Validate current_revision is exact int (not bool/float)
+    current_revision = state.get("plan_revision", 1)
+    if isinstance(current_revision, bool):
+        return False, f"plan_revision must be exact int, got bool True", None
+    if not isinstance(current_revision, int):
+        return False, f"plan_revision must be exact int, got {type(current_revision).__name__}", None
+
+    # R24: A16-03 - Validate current_revision is positive
+    if current_revision <= 0:
+        return False, f"plan_revision must be positive int, got {current_revision}", None
+
+    # R20: A16-03 - Validate requirements_baseline is exact int (not bool/float)
+    current_baseline = state.get("requirements_baseline", 1)
+    if isinstance(current_baseline, bool):
+        return False, f"requirements_baseline must be exact int, got bool True", None
+    if not isinstance(current_baseline, int):
+        return False, f"requirements_baseline must be exact int, got {type(current_baseline).__name__}", None
+
+    # R24: A16-03 - Validate requirements_baseline is positive
+    if current_baseline <= 0:
+        return False, f"requirements_baseline must be positive int, got {current_baseline}", None
+
+    # R24: A16-03 - Record baseline MUST be exact positive int (unconditional)
+    record_baseline = attempt_record.get("baseline")
+    if record_baseline is None:
+        return False, "record baseline is required", None
+    if isinstance(record_baseline, bool):
+        return False, f"record baseline must be exact int, got bool True", None
+    if not isinstance(record_baseline, int):
+        return False, f"record baseline must be exact int, got {type(record_baseline).__name__}", None
+    if record_baseline <= 0:
+        return False, f"record baseline must be positive int, got {record_baseline}", None
+    if record_baseline != current_baseline:
+        return False, f"record baseline {record_baseline} != current baseline {current_baseline}", None
+
+    # F2: Validate baseline matches current state (caller argument)
     if baseline is not None and current_baseline is not None and baseline != current_baseline:
         return False, f"Attempt baseline {baseline} != current baseline {current_baseline}", None
 
     # Validate revision formula
     from ..job_state import validate_revision_formula
-    current_revision = state.get("plan_revision", 1)
 
     valid, error = validate_revision_formula(
         step=step,

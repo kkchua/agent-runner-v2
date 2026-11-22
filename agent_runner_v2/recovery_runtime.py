@@ -56,6 +56,7 @@ def activate_refine_loop(
     target_artifact: str,
     review_file: str | None,
     iteration: int,
+    pre_refine_checksum: str | None = None,  # R20: A16-01
     now_iso: Callable[[], str],
     clear_last_failure: Callable[[dict[str, Any]], None],
     set_job_status: Callable[[dict[str, Any], str], None],
@@ -67,6 +68,7 @@ def activate_refine_loop(
         target_artifact=target_artifact,
         review_file=review_file,
         iteration=iteration,
+        pre_refine_checksum=pre_refine_checksum,  # R20: Pass through
     )
     timestamp = now_iso()
     reject_kind = _classify_reject_kind(step)

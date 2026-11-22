@@ -491,7 +491,7 @@ class TestA03_OwnershipRevisionConflict:
 
         # Should fail with ATTEMPT_JOB_MISMATCH
         assert exit_code == 1
-        assert state.get("last_failure_code") == "ATTEMPT_JOB_MISMATCH"
+        assert returned_state.get("last_failure_code") == "ATTEMPT_JOB_MISMATCH"
 
     def test_revision_mismatch_conflict_enforced(self, tmp_path, monkeypatch):
         """R12: Gate enforces revision formula - target_revision mismatch is caught."""
@@ -564,7 +564,7 @@ class TestA03_OwnershipRevisionConflict:
         # R12: Should fail with eligibility failure (revision mismatch caught by validation)
         assert exit_code == 1
         # The revision mismatch is caught by _validate_prepared_eligibility
-        assert state.get("last_failure_code") in ("ELIGIBILITY_FAILURE", "REVISION_MISMATCH")
+        assert returned_state.get("last_failure_code") in ("ELIGIBILITY_FAILURE", "REVISION_MISMATCH")
 
     def test_completion_ownership_mismatch_conflict(self, tmp_path, monkeypatch):
         """R12: Gate enforces completion ownership - existing completion by different attempt."""
@@ -643,7 +643,7 @@ class TestA03_OwnershipRevisionConflict:
 
         # R12: Should fail with completion ownership conflict
         assert exit_code == 1
-        assert state.get("last_failure_code") == "COMPLETION_OWNERSHIP_CONFLICT"
+        assert returned_state.get("last_failure_code") == "COMPLETION_OWNERSHIP_CONFLICT"
 
 
 class TestA04_GenerationAndRefinement:
@@ -988,7 +988,7 @@ class TestA06_CanonicalPaths:
 
         # Should fail with NON_CANONICAL_OUTPUT_PATH
         assert exit_code == 1
-        assert state.get("last_failure_code") == "NON_CANONICAL_OUTPUT_PATH"
+        assert returned_state.get("last_failure_code") == "NON_CANONICAL_OUTPUT_PATH"
 
     def test_baseline_mismatch_rejected(self, tmp_path, monkeypatch):
         """R12: Gate rejects output when baseline mismatch."""
@@ -1061,7 +1061,7 @@ class TestA06_CanonicalPaths:
         # R12: Should fail with eligibility failure (baseline mismatch caught by validation)
         assert exit_code == 1
         # The baseline mismatch is caught by _validate_prepared_eligibility
-        assert state.get("last_failure_code") in ("ELIGIBILITY_FAILURE", "BASELINE_MISMATCH")
+        assert returned_state.get("last_failure_code") in ("ELIGIBILITY_FAILURE", "BASELINE_MISMATCH")
 
     def test_missing_output_file_evidence(self, tmp_path, monkeypatch):
         """R12: Gate handles missing output file with evidence flags."""
@@ -1131,7 +1131,7 @@ class TestA06_CanonicalPaths:
 
         # R12: Should fail with output missing
         assert exit_code == 1
-        assert state.get("last_failure_code") == "OUTPUT_FILE_MISSING"
+        assert returned_state.get("last_failure_code") == "OUTPUT_FILE_MISSING"
 
     def test_baseline2_routing_from_different_cwd(self, tmp_path, monkeypatch, production_persistence):
         """R13: Successful baseline-2 routing from a different working directory.
@@ -1522,7 +1522,7 @@ class TestA09_ChangedEvidenceConflicts:
 
         # Should fail with TERMINAL_EVIDENCE_CONFLICT
         assert exit_code == 1
-        assert state.get("last_failure_code") == "TERMINAL_EVIDENCE_CONFLICT"
+        assert returned_state.get("last_failure_code") == "TERMINAL_EVIDENCE_CONFLICT"
 
 
 class TestA10_OldBaselineReplay:

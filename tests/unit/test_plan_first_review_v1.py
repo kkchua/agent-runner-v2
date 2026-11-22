@@ -1161,6 +1161,14 @@ def test_model_rejection_route_checks_cumulative_limit(monkeypatch) -> None:
     monkeypatch.setattr(workflow_router, "send_workflow_notification", lambda *a: None)
     monkeypatch.setattr(workflow_router, "send_step_notification", lambda *a, **kw: None)
 
+    # R20: Mock path resolution to return a fake existing file
+    from pathlib import Path
+    fake_path = Path("/fake/existing/Codex_Review_v01.md")
+    monkeypatch.setattr(workflow_router, "_resolve_path_against_root", lambda p: fake_path)
+    monkeypatch.setattr(Path, "exists", lambda self: True)
+    monkeypatch.setattr(Path, "is_file", lambda self: True)
+    monkeypatch.setattr(Path, "read_bytes", lambda self: b"review content")
+
     on_reject_refine = {
         "step": "refine_plan",
         "artifact": "QWEN_PLAN_FILE",
@@ -1175,6 +1183,8 @@ def test_model_rejection_route_checks_cumulative_limit(monkeypatch) -> None:
         "job_id": "PLAN-MODEL-CUMULATIVE",
         "template_group": "plan_first_review_v1",
         "plan_revision": 11,  # Exceeds max_refinements=10
+        "requirements_baseline": 1,  # R20: Required for review artifact validation
+        "artifacts": {"PLANNING_FOLDER": "Planning/test"},  # R20: Required for review artifact validation
         "reject_counts": {"codex_review": 2},  # Well under max_iterations=10
         "refinement_extensions": [],
         "_status": "IN_PROGRESS",
@@ -1183,7 +1193,7 @@ def test_model_rejection_route_checks_cumulative_limit(monkeypatch) -> None:
     step_result = StepResult(
         status="REJECTED",
         remark="Model found issues",
-        artifacts={},
+        artifacts={"CODEX_REVIEW_FILE": "Planning/test/Codex_Review_v01.md"},  # R20: A16-01 requires review declaration
         reject_code=None,
         meta_json_path="test/meta.json",
         usage_data={},
