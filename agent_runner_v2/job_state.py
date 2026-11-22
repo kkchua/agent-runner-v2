@@ -17,6 +17,7 @@ import os
 import re
 import tempfile
 import time
+import uuid
 from pathlib import Path
 from typing import Any
 
@@ -40,7 +41,13 @@ from .v2.transition_runtime import (
     mark_review_waiting_for_human,
     mark_task_exec_success,
 )
-from .exceptions import ArtifactMissingError, MetaJsonInvalidError, MetaJsonMissingError, PreflightBlockedError
+from .exceptions import (
+    ArtifactMissingError,
+    MetaJsonInvalidError,
+    MetaJsonMissingError,
+    PreflightBlockedError,
+    TransactionConflictError,
+)
 from .documentation_guardrails import MASTER_BOOTSTRAP_WORKFLOWS, master_bootstrap_artifact_candidates
 from .runtime_context import JOBS_ROOT, PROJECT_ROOT, get_workflow_module
 from .notifications import send_notification
@@ -1532,8 +1539,13 @@ def advance_step(
     step_cfg: dict[str, Any],
     result_status: str,
     coder_used: str,
+    defer_notifications: bool = False,
 ) -> tuple[dict[str, Any], int]:
-    """Unified step advancement. Returns (state, exit_code): 0=continue, 1=waiting, 2=failed."""
+    """Unified step advancement. Returns (state, exit_code): 0=continue, 1=waiting, 2=failed.
+    
+    If defer_notifications=True, suppress STEP_COMPLETED notification.
+    Caller dispatches notifications after authoritative save.
+    """
     artifacts = state.setdefault("artifacts", {})
     reject_counts = state.setdefault("reject_counts", {})
     completed_steps = state.setdefault("completed_steps", [])
@@ -1550,7 +1562,9 @@ def advance_step(
     clear_last_failure(state)
 
     # Check for step-level notification configuration
-    send_step_notification("STEP_COMPLETED", state, step, step_cfg)
+    # Suppress if defer_notifications=True (caller will dispatch after save)
+    if not defer_notifications:
+        send_step_notification("STEP_COMPLETED", state, step, step_cfg)
 
     review_state = state.setdefault("review_state", default_review_state())
     if review_state.get("reviewer_step") == step and not step_cfg.get("requires_human_approval_after"):
@@ -2575,5 +2589,525 @@ def enforce_retry_limit_before_run(*, state: dict[str, Any], step: str, max_reje
             f"Step {step!r} for job {state['job_id']} has reached max rejects "
             f"({current_count}/{max_rejects}). Use --new-job or reset the job explicitly."
         )
+
+
+# ---------------------------------------------------------------------------
+# Baseline Transaction Management (plan_first_review_v1)
+# ---------------------------------------------------------------------------
+
+def validate_immutable_operation(
+    existing_op: dict,
+    operation_id: str,
+    request_id: str,
+    request_bytes: bytes,
+    incoming_request_hash: str,
+    ending_baseline: int,
+    actual_dir: Path,
+    state: dict,
+    group_name: str,
+    job_id: str,
+    project_root: Path,
+    phase: str,  # "staging" | "final" | "committed_replay"
+    commit_ledger: dict | None = None,
+) -> dict:
+    """Validate immutable operation object with phase awareness.
+
+    Phase-specific directory handling:
+    - "staging": actual_dir is .staging_<operation_id>, stored paths name final
+    - "final": actual_dir is baseline_XX, stored paths name final
+    - "committed_replay": actual_dir is baseline_XX, validated against commit ledger
+
+    Returns validated operation object if all checks pass.
+    Raises TransactionConflictError if any check fails.
+    """
+    from .artifact_keys import ARTIFACT_KEY_PLANNING_FOLDER
+    from .constants import (
+        ARTIFACT_PATH_BASELINE_DIR,
+        ARTIFACT_PATH_BASELINE_REQUEST,
+    )
+
+    # 1. Valid schema/types and exact identity binding
+    if not isinstance(existing_op, dict):
+        raise TransactionConflictError("Operation is not a dict")
+
+    stored_operation_id = existing_op.get("operation_id")
+    stored_request_id = existing_op.get("request_id")
+    stored_group_name = existing_op.get("group_name")
+    stored_job_id = existing_op.get("job_id")
+    stored_ending_baseline = existing_op.get("ending_baseline")
+    stored_new_baseline = existing_op.get("new_baseline")
+
+    # Validate ownership
+    if stored_operation_id != operation_id:
+        raise TransactionConflictError(f"Operation ID mismatch: {stored_operation_id} != {operation_id}")
+    if stored_request_id != request_id:
+        raise TransactionConflictError(f"Request ID mismatch: {stored_request_id} != {request_id}")
+    if stored_group_name != group_name:
+        raise TransactionConflictError(f"Group name mismatch: {stored_group_name} != {group_name}")
+    if stored_job_id != job_id:
+        raise TransactionConflictError(f"Job ID mismatch: {stored_job_id} != {job_id}")
+
+    # Validate exact-integer baselines
+    if not isinstance(stored_ending_baseline, int) or isinstance(stored_ending_baseline, bool):
+        raise TransactionConflictError(f"ending_baseline is not an integer: {stored_ending_baseline}")
+    if not isinstance(stored_new_baseline, int) or isinstance(stored_new_baseline, bool):
+        raise TransactionConflictError(f"new_baseline is not an integer: {stored_new_baseline}")
+    if stored_ending_baseline != ending_baseline:
+        raise TransactionConflictError(f"Ending baseline mismatch: {stored_ending_baseline} != {ending_baseline}")
+    if stored_new_baseline != ending_baseline + 1:
+        raise TransactionConflictError(f"new_baseline != ending_baseline+1: {stored_new_baseline} != {ending_baseline + 1}")
+
+    # 2. Phase-specific directory validation
+    planning_folder = state.get("artifacts", {}).get(ARTIFACT_KEY_PLANNING_FOLDER, "")
+    if not planning_folder:
+        raise TransactionConflictError("Missing PLANNING_FOLDER in artifacts")
+
+    if phase == "staging":
+        # Staging directory is .staging_<operation_id>
+        expected_staging_dir = project_root / planning_folder / f".staging_{operation_id}"
+        if actual_dir.resolve() != expected_staging_dir.resolve():
+            raise TransactionConflictError(f"Actual staging dir {actual_dir} != expected {expected_staging_dir}")
+        # Stored canonical paths name the final location
+        expected_request_path = ARTIFACT_PATH_BASELINE_REQUEST(planning_folder, stored_new_baseline)
+        expected_operation_path = f"{ARTIFACT_PATH_BASELINE_DIR(planning_folder, stored_new_baseline)}/operation.json"
+    elif phase == "final":
+        # Final directory is baseline_XX
+        expected_final_dir = project_root / planning_folder / f"baseline_{stored_new_baseline:02d}"
+        if actual_dir.resolve() != expected_final_dir.resolve():
+            raise TransactionConflictError(f"Actual final dir {actual_dir} != expected {expected_final_dir}")
+        expected_request_path = ARTIFACT_PATH_BASELINE_REQUEST(planning_folder, stored_new_baseline)
+        expected_operation_path = f"{ARTIFACT_PATH_BASELINE_DIR(planning_folder, stored_new_baseline)}/operation.json"
+    elif phase == "committed_replay":
+        # Committed replay — validate against commit ledger
+        if not commit_ledger:
+            raise TransactionConflictError("Committed replay requires commit ledger")
+        commit_record = commit_ledger.get(request_id)
+        if not commit_record:
+            raise TransactionConflictError(f"No commit record for request_id {request_id}")
+        # Validate immutable operation matches commit record
+        committed_op = commit_record.get("operation")
+        if not committed_op:
+            raise TransactionConflictError("Commit record missing operation payload")
+        # Compare stored operation with committed operation
+        if existing_op != committed_op:
+            raise TransactionConflictError("Operation differs from committed record")
+        # Validate final directory
+        expected_final_dir = project_root / planning_folder / f"baseline_{stored_new_baseline:02d}"
+        if actual_dir.resolve() != expected_final_dir.resolve():
+            raise TransactionConflictError(f"Actual final dir != expected for committed replay")
+        expected_request_path = ARTIFACT_PATH_BASELINE_REQUEST(planning_folder, stored_new_baseline)
+        expected_operation_path = f"{ARTIFACT_PATH_BASELINE_DIR(planning_folder, stored_new_baseline)}/operation.json"
+    else:
+        raise TransactionConflictError(f"Unknown phase: {phase}")
+
+    # Validate stored canonical paths match expected
+    stored_paths = existing_op.get("canonical_paths", {})
+    if stored_paths.get("request") != expected_request_path:
+        raise TransactionConflictError(f"Canonical request path mismatch: {stored_paths.get('request')} != {expected_request_path}")
+    if stored_paths.get("operation") != expected_operation_path:
+        raise TransactionConflictError(f"Canonical operation path mismatch: {stored_paths.get('operation')} != {expected_operation_path}")
+
+    # 3. Incoming and stored request hashes match
+    stored_request_hash = existing_op.get("request_hash")
+    if not stored_request_hash:
+        raise TransactionConflictError("Missing request_hash")
+    if incoming_request_hash != stored_request_hash:
+        raise TransactionConflictError(f"Incoming request hash mismatch: {incoming_request_hash} != {stored_request_hash}")
+
+    # 4. Compute manifest_hash excluding self-reference
+    # Create a copy without manifest_hash field for digest computation
+    op_for_digest = {k: v for k, v in existing_op.items() if k != "manifest_hash"}
+    computed_manifest_hash = hashlib.sha256(json.dumps(op_for_digest, sort_keys=True).encode()).hexdigest()
+
+    # Add manifest_hash to returned operation
+    validated_op = dict(existing_op)
+    validated_op["manifest_hash"] = computed_manifest_hash
+
+    return validated_op
+
+
+def get_planning_folder(state: dict) -> str:
+    """Extract planning_folder from state artifacts.
+
+    Returns the planning folder string.
+    Raises ValueError if missing.
+    """
+    from .artifact_keys import ARTIFACT_KEY_PLANNING_FOLDER
+
+    planning_folder = state.get("artifacts", {}).get(ARTIFACT_KEY_PLANNING_FOLDER, "")
+    if not planning_folder:
+        raise ValueError("Missing PLANNING_FOLDER in state artifacts")
+    return planning_folder
+
+
+def complete_baseline_transaction(
+    *,
+    state: dict,
+    group_name: str,
+    job_id: str,
+    request_id: str,
+    operation_id: str,
+    request_bytes: bytes,
+    request_hash: str,
+    ending_baseline: int,
+    new_baseline: int,
+    planning_folder: str,
+    project_root: Path,
+    commit_ledger: dict,
+) -> dict:
+    """Complete a baseline transaction atomically.
+
+    Writes operation.json to the final baseline directory, updates state,
+    writes receipt, and records in commit ledger.
+
+    Idempotent: if commit_ledger already has this request_id with matching
+    operation, returns the existing result without re-writing.
+
+    Returns the commit record dict.
+    Raises TransactionConflictError on validation failure.
+    """
+    from .constants import (
+        ARTIFACT_PATH_BASELINE_DIR,
+        ARTIFACT_PATH_BASELINE_REQUEST,
+    )
+
+    # Check for idempotent replay
+    existing_commit = commit_ledger.get(request_id)
+    if existing_commit:
+        # Verify it matches
+        existing_op = existing_commit.get("operation", {})
+        if existing_op.get("operation_id") != operation_id:
+            raise TransactionConflictError(
+                f"Commit ledger has different operation_id for request_id {request_id}"
+            )
+        # Already committed — return existing result
+        return existing_commit.get("result", {})
+
+    # Validate new_baseline == ending_baseline + 1
+    if new_baseline != ending_baseline + 1:
+        raise TransactionConflictError(
+            f"new_baseline {new_baseline} != ending_baseline {ending_baseline} + 1"
+        )
+
+    # Create final directory
+    final_dir = project_root / planning_folder / f"baseline_{new_baseline:02d}"
+    final_dir.mkdir(parents=True, exist_ok=True)
+
+    # Write request.md
+    request_path = final_dir / "request.md"
+    request_path.write_bytes(request_bytes)
+
+    # Build operation object
+    operation = {
+        "operation_id": operation_id,
+        "request_id": request_id,
+        "group_name": group_name,
+        "job_id": job_id,
+        "ending_baseline": ending_baseline,
+        "new_baseline": new_baseline,
+        "request_hash": request_hash,
+        "canonical_paths": {
+            "request": ARTIFACT_PATH_BASELINE_REQUEST(planning_folder, new_baseline),
+            "operation": f"{ARTIFACT_PATH_BASELINE_DIR(planning_folder, new_baseline)}/operation.json",
+        },
+    }
+
+    # Compute manifest_hash excluding self-reference
+    op_for_digest = {k: v for k, v in operation.items() if k != "manifest_hash"}
+    manifest_hash = hashlib.sha256(json.dumps(op_for_digest, sort_keys=True).encode()).hexdigest()
+    operation["manifest_hash"] = manifest_hash
+
+    # Write operation.json
+    operation_path = final_dir / "operation.json"
+    operation_path.write_text(json.dumps(operation, indent=2), encoding="utf-8")
+
+    # Update state
+    state["requirements_baseline"] = new_baseline
+
+    # Build commit record
+    commit_record = {
+        "request_id": request_id,
+        "operation_id": operation_id,
+        "manifest_hash": manifest_hash,
+        "operation": operation,
+        "result": {
+            "status": "committed",
+            "baseline": new_baseline,
+            "operation_id": operation_id,
+        },
+        "committed_at": now_iso(),
+    }
+
+    # Record in commit ledger (request-ID keyed)
+    commit_ledger[request_id] = commit_record
+
+    # Save state atomically
+    save_job(group_name, job_id, state)
+
+    return commit_record["result"]
+
+
+# ---------------------------------------------------------------------------
+# Attempt Tracking and Recovery (plan_first_review_v1)
+# ---------------------------------------------------------------------------
+
+def _create_recovery_snapshot_for_preparation(
+    attempt_record: dict,
+    state: dict,
+    group_cfg: dict,
+    group_name: str,
+    planning_folder: str,
+) -> dict:
+    """Create complete recovery snapshot with actual loop field validation.
+
+    Reads and validates all four actual loop fields before snapshot construction.
+    Copies validated actual values into snapshot (no synthesis).
+
+    For refine_plan: validates active, loop_step, refine_step, loop_target_artifact,
+    loop_source_review, loop_iteration, pre_refine_checksum.
+
+    For generate_plan: minimal inactive context (active=False).
+    """
+    from .constants import ARTIFACT_PATH_CODEX_REVIEW
+
+    step = attempt_record.get("step")
+    loop_context = state.get("loop_context", {})
+
+    if step == "refine_plan":
+        # Get codex_review step config
+        step_configs = group_cfg.get("step_configs", {})
+        codex_review_cfg = step_configs.get("codex_review", {})
+        on_reject_refine = codex_review_cfg.get("on_reject_refine", {})
+
+        # Validate required config fields
+        configured_refine_step = on_reject_refine.get("step")
+        if not configured_refine_step:
+            raise ValueError("Missing on_reject_refine.step in codex_review config")
+        if configured_refine_step != "refine_plan":
+            raise ValueError(f"on_reject_refine.step {configured_refine_step} != refine_plan")
+
+        configured_target_artifact = on_reject_refine.get("artifact")
+        if not configured_target_artifact:
+            raise ValueError("Missing on_reject_refine.artifact in codex_review config")
+
+        # Compute canonical review path UNCONDITIONALLY
+        baseline = attempt_record["baseline"]
+        input_revision = attempt_record["input_revision"]
+        canonical_review_path = ARTIFACT_PATH_CODEX_REVIEW(planning_folder, input_revision, baseline)
+
+        # READ all four actual loop fields
+        actual_active = loop_context.get("active")
+        actual_loop_step = loop_context.get("loop_step")
+        actual_refine_step = loop_context.get("refine_step")
+        actual_target_artifact = loop_context.get("loop_target_artifact")
+        actual_source_review = loop_context.get("loop_source_review")
+        actual_iteration = loop_context.get("loop_iteration", 0)
+        actual_pre_checksum = loop_context.get("pre_refine_checksum")
+
+        # VALIDATE all four actual fields before snapshot construction
+        # 1. actual active is exactly True
+        if not isinstance(actual_active, bool) or actual_active is not True:
+            raise ValueError(f"Actual loop_context.active is not exactly True: {actual_active}")
+
+        # 2. actual loop_step equals codex_review
+        if actual_loop_step != "codex_review":
+            raise ValueError(f"Actual loop_step {actual_loop_step} != codex_review")
+
+        # 3. actual refine_step equals current attempt step AND configured refine step
+        if actual_refine_step != step:
+            raise ValueError(f"Actual refine_step {actual_refine_step} != attempt step {step}")
+        if actual_refine_step != configured_refine_step:
+            raise ValueError(f"Actual refine_step {actual_refine_step} != configured {configured_refine_step}")
+
+        # 4. actual loop_target_artifact equals configured artifact
+        if actual_target_artifact != configured_target_artifact:
+            raise ValueError(f"Actual loop_target_artifact {actual_target_artifact} != configured {configured_target_artifact}")
+
+        # Validate source/checksum/iteration
+        if not actual_source_review or not isinstance(actual_source_review, str):
+            raise ValueError("Missing or invalid loop_source_review in actual context")
+        if actual_source_review != canonical_review_path:
+            raise ValueError(
+                f"Actual loop_source_review {actual_source_review} != canonical {canonical_review_path}"
+            )
+        if not actual_pre_checksum or not isinstance(actual_pre_checksum, str):
+            raise ValueError("Missing or invalid pre_refine_checksum in actual context")
+        if not isinstance(actual_iteration, int) or isinstance(actual_iteration, bool):
+            raise ValueError(f"loop_iteration is not int: {type(actual_iteration)}")
+        if actual_iteration < 0:
+            raise ValueError(f"loop_iteration is negative: {actual_iteration}")
+
+        # COPY validated actual values into snapshot (no synthesis)
+        return {
+            # Identity with trusted group_name
+            "job_id": state["job_id"],
+            "group_name": group_name,
+            "baseline": baseline,
+            "step": step,
+            "input_revision": input_revision,
+            "target_revision": attempt_record["target_revision"],
+            # Complete loop context with VALIDATED ACTUAL values
+            "active": actual_active,  # Validated exactly True
+            "loop_step": actual_loop_step,  # Validated == codex_review
+            "refine_step": actual_refine_step,  # Validated == step == configured
+            "loop_target_artifact": actual_target_artifact,  # Validated == configured
+            "loop_source_review": actual_source_review,  # Validated == canonical
+            "loop_iteration": actual_iteration,  # Validated exact int >= 0
+            "pre_refine_checksum": actual_pre_checksum,  # Validated nonempty string
+            "planning_folder": planning_folder,
+        }
+    elif step == "generate_plan":
+        # Generation retains separate minimal inactive context
+        return {
+            "job_id": state["job_id"],
+            "group_name": group_name,
+            "baseline": attempt_record["baseline"],
+            "step": step,
+            "input_revision": None,
+            "target_revision": 1,
+            "active": False,
+        }
+    else:
+        raise ValueError(f"Unknown step for recovery: {step}")
+
+
+def prepare_plan_attempt(
+    group_name: str,
+    job_id: str,
+    state: dict,
+    step: str,
+    step_cfg: dict,
+    group_cfg: dict,
+    prepared_context: dict,
+    project_root: Path,
+) -> dict:
+    """Prepare attempt record with complete pre-save validation.
+
+    Validates actual resolved context using same contract as recovery.
+    Rejects invalid context before saving/invoking.
+
+    Input/output rules:
+    - generate_plan: input_revision=None, target_revision=1
+    - refine_plan: input_revision=current_revision, target_revision=current_revision+1
+
+    Saves attempt record AND active link atomically.
+    """
+    from .constants import ARTIFACT_PATH_QWEN_PLAN
+
+    planning_folder = get_planning_folder(state)
+    baseline = state.get("requirements_baseline", 1)
+    current_revision = state.get("plan_revision", 1)
+
+    # Determine target revision
+    if step == "generate_plan" and current_revision == 1:
+        input_revision = None
+        target_revision = 1
+    elif step == "refine_plan":
+        input_revision = current_revision
+        target_revision = current_revision + 1
+    else:
+        raise ValueError(f"Unexpected step/revision: {step}/{current_revision}")
+
+    # Resolve canonical output path
+    output_path = ARTIFACT_PATH_QWEN_PLAN(planning_folder, target_revision, baseline)
+
+    # Generate attempt ID
+    attempt_id = f"att_{uuid.uuid4().hex[:12]}"
+
+    # Create attempt record
+    attempt_record = {
+        "attempt_id": attempt_id,
+        "workflow": group_name,
+        "job_id": job_id,
+        "baseline": baseline,
+        "step": step,
+        "input_revision": input_revision,
+        "target_revision": target_revision,
+        "output_path": output_path,
+        "output_hash": None,
+        "status": "prepared",
+        "started_at": now_iso(),
+        "applied_result": None,
+        "recovered_context": None,
+    }
+
+    # Capture and validate complete recovery snapshot BEFORE saving
+    # This uses the same validation contract as recovery
+    recovery_snapshot = _create_recovery_snapshot_for_preparation(
+        attempt_record=attempt_record,
+        state=state,
+        group_cfg=group_cfg,
+        group_name=group_name,
+        planning_folder=planning_folder,
+    )
+
+    # Snapshot creation already validated actual context
+    # If we reach here, validation passed
+    attempt_record["recovered_context"] = recovery_snapshot
+
+    # Save attempt record AND active link AND recovery snapshot atomically
+    state.setdefault("attempt_records", {})[attempt_id] = attempt_record
+    state.setdefault("loop_context", {})["active_attempt_id"] = attempt_id
+    save_job(group_name, job_id, state)
+
+    return attempt_record
+
+
+def compute_output_digest(file_path: Path) -> str:
+    """Compute SHA256 digest of a file for output evidence.
+
+    Returns hex digest string.
+    Raises ValueError if file cannot be read.
+    """
+    try:
+        content = file_path.read_bytes()
+        return hashlib.sha256(content).hexdigest()
+    except (OSError, IOError) as e:
+        raise ValueError(f"Cannot read output file for digest: {file_path}: {e}")
+
+
+def validate_revision_formula(
+    step: str,
+    input_revision: int | None,
+    target_revision: int,
+    current_revision: int,
+) -> tuple[bool, str | None]:
+    """Validate attempt input/target against revision formulas.
+
+    Generation: input=None, target=1 (exact int, not bool), current_revision=1
+    Refinement: input=current_revision (exact int >= 1), target=input+1 (exact int)
+
+    Returns (valid, error_message).
+    """
+    if step == "generate_plan":
+        if input_revision is not None:
+            return False, f"Generation input must be None, got {input_revision}"
+        # Reject bool before int check (bool is subclass of int)
+        if isinstance(target_revision, bool) or not isinstance(target_revision, int):
+            return False, f"Generation target must be exact int, got {type(target_revision)}"
+        if target_revision != 1:
+            return False, f"Generation target must be 1, got {target_revision}"
+        if current_revision != 1:
+            return False, f"Generation requires current_revision=1, got {current_revision}"
+    elif step == "refine_plan":
+        if input_revision is None:
+            return False, "Refinement input cannot be None"
+        # Reject bool before int check
+        if isinstance(input_revision, bool) or not isinstance(input_revision, int):
+            return False, f"Refinement input must be exact int, got {type(input_revision)}"
+        if input_revision < 1:
+            return False, f"Refinement input must be positive, got {input_revision}"
+        if input_revision != current_revision:
+            return False, f"Refinement input {input_revision} != current_revision {current_revision}"
+        # Reject bool before int check for target
+        if isinstance(target_revision, bool) or not isinstance(target_revision, int):
+            return False, f"Refinement target must be exact int, got {type(target_revision)}"
+        if target_revision != input_revision + 1:
+            return False, f"Refinement target {target_revision} != input+1 {input_revision + 1}"
+        # NOTE: No current_revision >= 2 check — first refinement is v1→v2 when current=1
+    else:
+        return False, f"Unknown step for revision formula: {step}"
+
+    return True, None
 
 

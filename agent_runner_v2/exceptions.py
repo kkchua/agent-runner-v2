@@ -62,3 +62,11 @@ class UnauthorizedWriteError(Exception):
     def __init__(self, message: str, unauthorized_paths: list[str]) -> None:
         super().__init__(message)
         self.unauthorized_paths = unauthorized_paths
+
+
+class TransactionConflictError(Exception):
+    """Raised when baseline transaction validation fails.
+
+    Used for immutable operation validation failures, request ID conflicts,
+    ownership mismatches, and phase-aware directory validation errors.
+    """

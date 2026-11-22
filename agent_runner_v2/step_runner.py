@@ -127,6 +127,7 @@ class StepResult:
     reject_code: str | None
     meta_json_path: str   # repo-relative path of the meta.json that was read
     usage_data: dict      # from InvocationResult.usage
+    attempt_id: str | None = None  # Optional plan-first attempt ID
 
 
 # ---------------------------------------------------------------------------

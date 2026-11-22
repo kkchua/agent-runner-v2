@@ -1213,8 +1213,16 @@ def main(argv: list[str] | None = None) -> int:
             # Log guardrail error but continue execution (don't block on guardrail bugs)
             logging.warning(f"Guardrail pre_check failed for {step}: {exc}", exc_info=True)
 
+    # Select executor based on workflow type — plan-first generate/refine uses attempt wrapper
+    if (args.template_group == "plan_first_review_v1"
+            and step in ("generate_plan", "refine_plan")
+            and not prepared.action_name):
+        executor_fn = _execute_prepared_step_with_plan_first_attempt
+    else:
+        executor_fn = _execute_prepared_step
+
     routed = execute_routed_step(
-        executor=_execute_prepared_step,
+        executor=executor_fn,
         failure_router=route_after_failure,
         step_router=route_after_step,
         prepared=prepared,
@@ -1627,6 +1635,76 @@ def _execute_prepared_step(
         effective_root=effective_root,
         hooks=_shared_runtime_deps,
     )
+
+
+def _execute_prepared_step_with_plan_first_attempt(
+    *,
+    prepared: PreparedStepExecution,
+    template_group: str,
+    group_cfg: dict[str, Any],
+    state: dict[str, Any],
+    step: str,
+    step_cfg: dict[str, Any],
+    effective_root: Path,
+) -> StepResult:
+    """Execute prepared step with plan-first attempt preparation and ID propagation.
+
+    For scoped plan-first generate/refine prompt steps:
+    1. Prepare/save attempt once before delegation
+    2. Retain attempt_id locally
+    3. Delegate using existing prepared object
+    4. Attach same attempt_id to returned StepResult
+
+    For other workflows/steps: delegate directly without attempt handling.
+    """
+    from .job_state import prepare_plan_attempt
+
+    # Check if this is a plan-first generate/refine prompt step
+    is_plan_first_attempt = (
+        template_group == "plan_first_review_v1"
+        and step in ("generate_plan", "refine_plan")
+        and not prepared.action_name  # Prompt-driven, not action
+    )
+
+    if is_plan_first_attempt:
+        # Prepare and save attempt BEFORE delegation
+        attempt_record = prepare_plan_attempt(
+            group_name=template_group,
+            job_id=state["job_id"],
+            state=state,
+            step=step,
+            step_cfg=step_cfg,
+            group_cfg=group_cfg,
+            prepared_context=prepared.context,
+            project_root=effective_root,
+        )
+        attempt_id = attempt_record["attempt_id"]
+
+        # Delegate to actual execution
+        result = _execute_prepared_step(
+            prepared=prepared,
+            template_group=template_group,
+            group_cfg=group_cfg,
+            state=state,
+            step=step,
+            step_cfg=step_cfg,
+            effective_root=effective_root,
+        )
+
+        # Attach attempt_id to result before routing
+        result.attempt_id = attempt_id
+        return result
+    else:
+        # Other workflows/steps: delegate directly
+        return _execute_prepared_step(
+            prepared=prepared,
+            template_group=template_group,
+            group_cfg=group_cfg,
+            state=state,
+            step=step,
+            step_cfg=step_cfg,
+            effective_root=effective_root,
+        )
 
 
 def _resolve_step_coder(

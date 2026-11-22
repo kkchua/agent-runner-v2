@@ -29,7 +29,7 @@ This is the master index for agent-runner-v2 documentation. Use this page to fin
 
 | Document | Purpose | When to Read |
 |----------|---------|--------------|
-| [SOP.md](SOP.md) | **Architecture, implementation, and validation SOP** — Codex/Qwen/User roles, plan-first approval gate, deployment handoff package | When participating in a plan-first review cycle |
+| [SOP.md](../SOP.md) | **Architecture, implementation, and validation SOP** — Codex/Qwen/User roles, plan-first approval gate, deployment handoff package | When participating in a plan-first review cycle |
 | [docs/developer/CODER_IMPLEMENTATION_SOP.md](docs/developer/CODER_IMPLEMENTATION_SOP.md) | **Execution discipline for coding tasks** — 8 mandatory rules | **Before writing/editing code** — mandatory reading |
 | [AGENTS.md](AGENTS.md) | **Comprehensive project reference** — architecture, modules, conventions, commands | When you need to understand the codebase structure |
 | [docs/developer/AGENT_RUNNER_V2_SPECIALIST.md](docs/developer/AGENT_RUNNER_V2_SPECIALIST.md) | **Agent navigation instructions** — how to find things without repo-wide scans | When you're lost or need to locate specific components |
@@ -280,7 +280,7 @@ raw_request.md  →  [plan_first_review_v1]  →  Planning/<date>-<seq>_<slug>/
 | Document | Purpose |
 |----------|---------|
 | [workflows/plan_first_review_v1/README.md](workflows/plan_first_review_v1/README.md) | Workflow overview, steps, roles, artifacts, operator commands |
-| [SOP.md](SOP.md) | Architecture, implementation, and validation SOP |
+| [SOP.md](../SOP.md) | Architecture, implementation, and validation SOP |
 
 ---
 
