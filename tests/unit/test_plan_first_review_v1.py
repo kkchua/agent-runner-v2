@@ -1359,6 +1359,7 @@ def test_change_requirements_creates_baseline_subdirectory(tmp_path, monkeypatch
         state=state,
         new_requirements_file=str(new_req_file),
         reason="Requirements changed",
+        _use_in_memory_state=True,  # Testing: skip disk reload
     )
 
     assert result["requirements_baseline"] == 2
@@ -1402,6 +1403,7 @@ def test_change_requirements_preserves_old_baseline_files(tmp_path, monkeypatch)
         state=state,
         new_requirements_file=str(new_req_file),
         reason="Requirements changed",
+        _use_in_memory_state=True,  # Testing: skip disk reload
     )
 
     # Old baseline 1 files still exist
@@ -1439,6 +1441,7 @@ def test_change_requirements_uses_baseline_aware_paths(tmp_path, monkeypatch) ->
         state=state,
         new_requirements_file=str(new_req_file),
         reason="Requirements changed",
+        _use_in_memory_state=True,  # Testing: skip disk reload
     )
 
     assert "baseline_02" in result["artifacts"]["RAW_REQUEST_FILE"]
@@ -1476,6 +1479,7 @@ def test_change_requirements_clears_pending_approval(tmp_path, monkeypatch) -> N
         state=state,
         new_requirements_file=str(new_req_file),
         reason="Requirements changed",
+        _use_in_memory_state=True,  # Testing: skip disk reload
     )
 
     assert result["pending_human_approval_for"] is None
@@ -1509,6 +1513,7 @@ def test_change_requirements_preserves_prepare_request(tmp_path, monkeypatch) ->
         state=state,
         new_requirements_file=str(new_req_file),
         reason="Requirements changed",
+        _use_in_memory_state=True,  # Testing: skip disk reload
     )
 
     assert result["completed_steps"] == ["prepare_request"]
@@ -1542,6 +1547,7 @@ def test_change_requirements_clears_model_approved_steps(tmp_path, monkeypatch) 
         state=state,
         new_requirements_file=str(new_req_file),
         reason="Requirements changed",
+        _use_in_memory_state=True,  # Testing: skip disk reload
     )
 
     assert result["model_approved_steps"] == []
@@ -1596,6 +1602,7 @@ def test_stale_pending_approval_cleared_after_rebaseline(tmp_path, monkeypatch) 
         state=state,
         new_requirements_file=str(new_req_file),
         reason="Requirements changed",
+        _use_in_memory_state=True,  # Testing: skip disk reload
     )
 
     assert result["pending_human_approval_for"] is None
@@ -1722,6 +1729,7 @@ def test_new_baseline_full_cycle_proceeds_to_promote_plan(tmp_path, monkeypatch)
         state=state,
         new_requirements_file=str(new_req_file),
         reason="Requirements changed",
+        _use_in_memory_state=True,  # Testing: skip disk reload
     )
 
     # Verify request.md written, prepare_request preserved, stale approvals cleared
@@ -1857,6 +1865,7 @@ def test_change_requirements_rejects_stopped_archived(tmp_path, monkeypatch) -> 
             state=state,
             new_requirements_file=str(new_req_file),
             reason="Requirements changed",
+            _use_in_memory_state=True,
         )
 
 
@@ -1923,6 +1932,7 @@ def test_change_requirements_cli_rejects_stopped_archived(tmp_path, monkeypatch)
     new_req_file.write_text("New requirements")
 
     monkeypatch.setattr(runtime_context, "get_jobs_root", lambda: str(jobs_root))
+    monkeypatch.setattr(job_state, "JOBS_ROOT", jobs_root)
 
     rc = run_agent.main([
         "change-requirements",

@@ -527,10 +527,28 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         return ns
 
     if command == "change-requirements":
-        p = argparse.ArgumentParser(description="Change requirements and create a new baseline.")
+        p = argparse.ArgumentParser(
+            description=(
+                "Change requirements and create a new baseline. The transaction is "
+                "atomic: immutable evidence (request, operation, ending snapshot) is "
+                "published before a single state commit, then a derived receipt is "
+                "written. Retrying with the same --request-id validates committed "
+                "replay or recovers a published-but-uncommitted final; a changed "
+                "request or changed ending state conflicts."
+            )
+        )
         p.add_argument("--job-id", required=True, help="Job ID to update.")
         p.add_argument("--new-requirements-file", required=True, help="Path to new requirements file.")
         p.add_argument("--reason", required=True, help="Reason for the change.")
+        p.add_argument(
+            "--request-id",
+            default=None,
+            help=(
+                "Optional stable request identity for safe retries. Supply the same "
+                "value when retrying so committed replay is validated instead of "
+                "creating another baseline."
+            ),
+        )
         ns = p.parse_args(raw[1:])
         ns.command = "change-requirements"
         return ns
@@ -872,10 +890,9 @@ def main(argv: list[str] | None = None) -> int:
             print(json.dumps({"error": f"change_requirements only valid for plan_first_review_v1, not {group_name!r}"}))
             return 1
 
-        # Guard: STOPPED_ARCHIVED is terminal — cannot reactivate
-        if state.get("job_status") == "STOPPED_ARCHIVED" or state.get("_status") == "STOPPED_ARCHIVED":
-            print(json.dumps({"error": f"Job {job_id!r} is STOPPED_ARCHIVED (terminal). Cannot change requirements."}))
-            return 1
+        # NOTE: Do NOT pre-reject STOPPED_ARCHIVED here. The shared transaction entry
+        # point checks committed replay before the archived guard, so an identical
+        # historical retry is allowed while genuinely new archived work rejects.
 
         # Change requirements
         try:
@@ -884,19 +901,25 @@ def main(argv: list[str] | None = None) -> int:
                 state=state,
                 new_requirements_file=new_requirements_file,
                 reason=reason,
+                request_id=getattr(args, "request_id", None),
             )
-            # Save updated state
-            with open(job_json_path, "w", encoding="utf-8") as f:
-                json.dump(result, f, indent=2, ensure_ascii=False)
+            # NO second save - execute_baseline_transaction already saved atomically
             print(json.dumps({
                 "status": "ok",
                 "job_id": job_id,
-                "new_baseline": result.get("requirements_baseline"),
-                "current_step": result.get("current_step"),
+                "new_baseline": result.get("baseline"),
+                "request_id": result.get("request_id"),
+                "operation_id": result.get("operation_id"),
+                "transaction_status": result.get("status"),
             }, indent=2))
             return 0
-        except ValueError as e:
-            print(json.dumps({"error": str(e)}))
+        except (ValueError, job_state.TransactionConflictError) as e:
+            payload = {"error": str(e)}
+            for attr in ("request_id", "operation_id", "phase"):
+                value = getattr(e, attr, None)
+                if value is not None:
+                    payload[attr] = value
+            print(json.dumps(payload, indent=2))
             return 1
 
     if args.command == "cleanup":

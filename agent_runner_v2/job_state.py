@@ -15,6 +15,7 @@ import hashlib
 import json
 import os
 import re
+import sys
 import tempfile
 import time
 import uuid
@@ -1542,7 +1543,7 @@ def advance_step(
     defer_notifications: bool = False,
 ) -> tuple[dict[str, Any], int]:
     """Unified step advancement. Returns (state, exit_code): 0=continue, 1=waiting, 2=failed.
-    
+
     If defer_notifications=True, suppress STEP_COMPLETED notification.
     Caller dispatches notifications after authoritative save.
     """
@@ -1824,13 +1825,13 @@ def approve_step(
 
 def _get_effective_limit(state: dict[str, Any], on_reject_refine: dict[str, Any]) -> int:
     """Get the effective cumulative refinement limit.
-    
+
     Combines base max_refinements with any extensions from refinement_extensions.
-    
+
     Args:
         state: Job state dict.
         on_reject_refine: The on_reject_refine configuration dict.
-    
+
     Returns:
         The effective limit (base + extensions).
     """
@@ -2349,90 +2350,789 @@ def stop_and_archive(
     return state
 
 
-def change_requirements(
+def execute_baseline_transaction(
     *,
     group_name: str,
-    state: dict[str, Any],
-    new_requirements_file: str,
-    reason: str,
-) -> dict[str, Any]:
-    """Change requirements and create a new baseline.
+    job_id: str,
+    request_bytes: bytes,
+    request_id: str | None = None,
+    project_root: Path | None = None,
+    reason: str | None = None,  # Change reason for history
+    _authoritative_state: dict | None = None,  # For testing only - skips disk load
+    _preferred_operation_id: str | None = None,  # Compatibility callers may supply one
+    _committed_state_out: dict | None = None,  # For testing only - receives committed state
+    _expected_ending_baseline: int | None = None,  # Legacy authority check
+    _expected_new_baseline: int | None = None,  # Legacy authority check
+) -> dict:
+    """Execute a baseline transaction with full Phase B safety guarantees.
 
-    Copies the new input to the baseline's request.md (RAW_REQUEST_FILE),
-    updates artifact pointers, preserves prepare_request in completed_steps,
-    clears model_approved_steps, human_approvals, review_state, and failure state.
-    Transitions to formalize_requirements which will produce the new requirements.md.
+    This is the shared locked entry point for all baseline transactions.
+    It provides:
+    - Stable request identity (auto-generated if not provided)
+    - Job-level locking
+    - Authoritative raw state reload (unless _authoritative_state provided for testing)
+    - Staging → publication → state commit flow
+    - Complete immutable validation
+    - Receipt writing and repair
+    - Caller state isolation
 
-    Baseline 1 stays at root (backward compatible). Baseline 2+ use subdirectories.
+    Returns the transaction result dict with status, baseline, request_id, operation_id.
+    Raises TransactionConflictError on validation failure.
+    """
+    import copy
+    from .constants import (
+        ARTIFACT_PATH_BASELINE_DIR,
+        ARTIFACT_PATH_BASELINE_REQUEST,
+    )
 
-    Args:
-        group_name: Workflow template group name.
-        state: Mutable job state dict.
-        new_requirements_file: Path to new requirements file.
-        reason: Reason for the change (for audit trail).
+    if project_root is None:
+        project_root = PROJECT_ROOT
 
-    Returns:
-        The updated job state dict.
+    # Generate stable request identity if not provided
+    if request_id is None:
+        request_id = f"req_{uuid.uuid4().hex[:16]}"
+
+    # Compute request hash from actual bytes
+    request_hash = hashlib.sha256(request_bytes).hexdigest()
+
+    # Track stable identity + phase so failures can expose a reusable retry id.
+    operation_id = _preferred_operation_id
+    phase = "init"
+
+    # Acquire job lock inside the identity/error boundary so a lock failure still
+    # exposes the generated retry identity/phase.
+    lock_path = _get_job_lock_path(group_name, job_id)
+    lock_acquired = False
+
+    try:
+        _acquire_lock(lock_path)
+        lock_acquired = True
+
+        # Authoritative raw reload - ALWAYS from disk in production
+        # _authoritative_state is ONLY for testing with mocked persistence
+        if _authoritative_state is not None:
+            # Testing path: use provided state
+            authoritative_state = copy.deepcopy(_authoritative_state)
+        else:
+            # Production path: always reload from disk under lock
+            authoritative_state = load_job(group_name, job_id)
+
+        # Isolate working state from caller IMMEDIATELY
+        working_state = copy.deepcopy(authoritative_state)
+        phase = "reloaded"
+
+        # Freeze the untouched authoritative raw ending state BEFORE any default,
+        # ledger, reset or transition initialization is applied to working_state.
+        raw_ending_snapshot = copy.deepcopy(authoritative_state)
+
+        # Get commit ledger from WORKING state (not authoritative)
+        commit_ledger = working_state.setdefault("baseline_commits", {})
+        if not isinstance(commit_ledger, dict):
+            raise TransactionConflictError("baseline_commits ledger is not an object")
+
+        # Check for committed replay FIRST (before archived check).
+        # Membership, not truthiness: a present empty/null/malformed value is
+        # corruption of the idempotency authority, not an absent request.
+        if request_id in commit_ledger:
+            existing_commit = commit_ledger[request_id]
+            if not isinstance(existing_commit, dict) or not existing_commit:
+                raise TransactionConflictError(
+                    f"Malformed commit ledger entry for request_id {request_id!r}; "
+                    f"refusing to create another operation"
+                )
+            phase = "replay"
+            # Committed replay - validate and return
+            return _handle_committed_replay(
+                request_id=request_id,
+                request_bytes=request_bytes,
+                request_hash=request_hash,
+                existing_commit=existing_commit,
+                authoritative_state=working_state,  # Use working state
+                group_name=group_name,
+                job_id=job_id,
+                project_root=project_root,
+            )
+
+        # Guard: STOPPED_ARCHIVED is terminal for NEW transactions
+        if get_job_status(working_state) == "STOPPED_ARCHIVED":
+            raise TransactionConflictError(
+                f"Job {job_id!r} is STOPPED_ARCHIVED (terminal). Cannot start new transaction."
+            )
+
+        # Discover existing evidence in trusted namespace
+        planning_folder = get_planning_folder(working_state)
+        ending_baseline = int(working_state.get("requirements_baseline", 1))
+        new_baseline = ending_baseline + 1
+
+        # Legacy authority check: reject a stale caller transition against the
+        # authoritative (reloaded) baseline before any mutation.
+        if _expected_ending_baseline is not None and ending_baseline != _expected_ending_baseline:
+            raise TransactionConflictError(
+                f"Authoritative ending baseline {ending_baseline} != caller-expected "
+                f"{_expected_ending_baseline}; caller state is stale"
+            )
+        if _expected_new_baseline is not None and new_baseline != _expected_new_baseline:
+            raise TransactionConflictError(
+                f"Authoritative new baseline {new_baseline} != caller-expected "
+                f"{_expected_new_baseline}; caller state is stale"
+            )
+        phase = "discovered"
+
+        # Derive paths
+        planning_path = project_root / planning_folder
+        final_dir = planning_path / f"baseline_{new_baseline:02d}"
+
+        # Complete trusted-namespace discovery BEFORE selecting any branch.
+        # Inspect ALL staging candidates (ownership + completeness) even when a
+        # matching final exists, so ambiguity cannot be hidden.
+        staging_candidates: list[tuple[Path, dict]] = []
+        for candidate in sorted(planning_path.glob(".staging_*")):
+            if not candidate.is_dir():
+                continue
+            candidate_op_path = candidate / "operation.json"
+            if not candidate_op_path.exists():
+                raise TransactionConflictError(
+                    f"Incomplete staging evidence: {candidate} has no operation.json - user intervention required"
+                )
+            try:
+                candidate_op = json.loads(candidate_op_path.read_text(encoding="utf-8"))
+            except json.JSONDecodeError:
+                raise TransactionConflictError(
+                    f"Staging has corrupt operation.json: {candidate} - user intervention required"
+                )
+            if candidate_op.get("group_name") != group_name:
+                raise TransactionConflictError(
+                    f"Staging in current namespace has different group_name: {candidate_op.get('group_name')} != {group_name}"
+                )
+            if candidate_op.get("job_id") != job_id:
+                raise TransactionConflictError(
+                    f"Staging in current namespace has different job_id: {candidate_op.get('job_id')} != {job_id}"
+                )
+            staging_candidates.append((candidate, candidate_op))
+
+        if len(staging_candidates) > 1:
+            raise TransactionConflictError(
+                f"Multiple staging directories for job {job_id!r}: "
+                f"{[str(d) for d, _ in staging_candidates]} - user intervention required"
+            )
+
+        # Inspect the final set. Simultaneous final + staging evidence is
+        # ambiguous and must be rejected before any mutation.
+        if final_dir.exists():
+            if staging_candidates:
+                raise TransactionConflictError(
+                    f"Ambiguous evidence: final {final_dir} coexists with staging "
+                    f"{[str(d) for d, _ in staging_candidates]} - user intervention required"
+                )
+            final_op_path = final_dir / "operation.json"
+            if not final_op_path.exists():
+                raise TransactionConflictError(
+                    f"Final evidence incomplete: {final_dir} has no operation.json"
+                )
+            final_op = json.loads(final_op_path.read_text(encoding="utf-8"))
+            if final_op.get("request_id") == request_id:
+                if request_id in commit_ledger:
+                    return commit_ledger[request_id].get("result", {})
+                return _adopt_published_final(
+                    final_dir=final_dir,
+                    final_op=final_op,
+                    working_state=working_state,
+                    raw_ending_state=raw_ending_snapshot,
+                    commit_ledger=commit_ledger,
+                    group_name=group_name,
+                    job_id=job_id,
+                    request_bytes=request_bytes,
+                    request_hash=request_hash,
+                    reason=reason,
+                    project_root=project_root,
+                )
+            raise TransactionConflictError(
+                f"Final directory has conflicting request_id: {final_op.get('request_id')} != {request_id}"
+            )
+
+        # Select the single staging candidate (resume) or none (create new).
+        staging_dir = None
+        operation_id = None
+        for candidate, candidate_op in staging_candidates:
+            if candidate_op.get("request_id") != request_id:
+                raise TransactionConflictError(
+                    f"Staging request_id {candidate_op.get('request_id')} != incoming request_id {request_id}"
+                )
+            staging_request_path = candidate / "request.md"
+            if not staging_request_path.exists():
+                raise TransactionConflictError(
+                    f"Incomplete staging evidence: {candidate} has no request.md - user intervention required"
+                )
+            persisted_staging_bytes = staging_request_path.read_bytes()
+            if persisted_staging_bytes != request_bytes:
+                raise TransactionConflictError(
+                    "Staging request bytes differ from incoming request bytes"
+                )
+            persisted_staging_hash = hashlib.sha256(persisted_staging_bytes).hexdigest()
+            if persisted_staging_hash != candidate_op.get("request_hash"):
+                raise TransactionConflictError(
+                    "Staging request hash != operation request_hash"
+                )
+            staging_dir = candidate
+            operation_id = candidate_op["operation_id"]
+
+        # Capture the untouched raw ending snapshot BEFORE any defaults/transition.
+        ending_snapshot = raw_ending_snapshot
+        is_new_staging = staging_dir is None
+
+        if is_new_staging:
+            # Build NEW immutable operation evidence only on this path.
+            operation_id = _preferred_operation_id or f"op_{uuid.uuid4().hex[:12]}"
+            staging_dir = planning_path / f".staging_{operation_id}"
+            staging_dir.mkdir(parents=True, exist_ok=True)
+
+            (staging_dir / "request.md").write_bytes(request_bytes)
+
+            baseline_dir_rel = ARTIFACT_PATH_BASELINE_DIR(planning_folder, new_baseline)
+            canonical_paths = {
+                "request": ARTIFACT_PATH_BASELINE_REQUEST(planning_folder, new_baseline),
+                "operation": f"{baseline_dir_rel}/operation.json",
+                "ending_snapshot": f"{baseline_dir_rel}/ending_snapshot.json",
+                "receipt": f"{baseline_dir_rel}/receipt.json",
+            }
+
+            staging_op = {
+                "operation_id": operation_id,
+                "request_id": request_id,
+                "group_name": group_name,
+                "job_id": job_id,
+                "ending_baseline": ending_baseline,
+                "new_baseline": new_baseline,
+                "request_hash": request_hash,
+                "canonical_paths": canonical_paths,
+            }
+
+            # Freeze the untouched ending snapshot into staging before publication.
+            staging_snapshot_path = staging_dir / "ending_snapshot.json"
+            staging_snapshot_path.write_text(
+                json.dumps(ending_snapshot, indent=2), encoding="utf-8"
+            )
+            snapshot_bytes = staging_snapshot_path.read_bytes()
+            snapshot_hash = hashlib.sha256(snapshot_bytes).hexdigest()
+            ending_state_identity = _semantic_ending_identity(
+                json.loads(snapshot_bytes.decode("utf-8"))
+            )
+            staging_op["ending_snapshot_hash"] = snapshot_hash
+            staging_op["ending_state_identity"] = ending_state_identity
+
+            op_for_digest = {k: v for k, v in staging_op.items() if k != "manifest_hash"}
+            manifest_hash = hashlib.sha256(json.dumps(op_for_digest, sort_keys=True).encode()).hexdigest()
+            staging_op["manifest_hash"] = manifest_hash
+
+            staging_op_path = staging_dir / "operation.json"
+            staging_op_path.write_text(json.dumps(staging_op, indent=2), encoding="utf-8")
+        else:
+            # RESUME: immutable evidence is already frozen. Validate it exactly as
+            # replay/adoption would and never normalize or rewrite its digests.
+            staging_op = json.loads(
+                (staging_dir / "operation.json").read_text(encoding="utf-8")
+            )
+            staging_op = validate_immutable_operation(
+                existing_op=staging_op,
+                operation_id=operation_id,
+                request_id=request_id,
+                request_bytes=request_bytes,
+                incoming_request_hash=request_hash,
+                ending_baseline=ending_baseline,
+                actual_dir=staging_dir,
+                state=working_state,
+                group_name=group_name,
+                job_id=job_id,
+                project_root=project_root,
+                phase="staging",
+            )
+            snapshot_hash = staging_op["ending_snapshot_hash"]
+            ending_state_identity = staging_op["ending_state_identity"]
+            manifest_hash = staging_op["manifest_hash"]
+
+            frozen = json.loads(
+                (staging_dir / "ending_snapshot.json").read_text(encoding="utf-8")
+            )
+            if _semantic_ending_identity(frozen) != _semantic_ending_identity(ending_snapshot):
+                raise TransactionConflictError(
+                    "Staging ending state differs from frozen ending snapshot"
+                )
+
+        phase = "staging"
+
+        # NOW publish: rename staging to final (complete immutable evidence)
+        staging_dir.rename(final_dir)
+        phase = "published"
+
+        # Generate committed_at timestamp ONCE
+        committed_at = now_iso()
+
+        # Use the staging_op (now in final_dir) as the operation
+        operation = staging_op
+
+        # Build result with required timestamp
+        result = {
+            "status": "committed",
+            "baseline": new_baseline,
+            "operation_id": operation_id,
+            "request_id": request_id,
+            "committed_at": committed_at,
+        }
+
+        # Build commit record (envelope) with same timestamp
+        commit_record = {
+            "request_id": request_id,
+            "operation_id": operation_id,
+            "manifest_hash": manifest_hash,
+            "operation": operation,
+            "result": result,
+            "committed_at": committed_at,
+        }
+
+        # Update working state (isolated from caller)
+        working_state["requirements_baseline"] = new_baseline
+
+        # Update artifact pointers to new baseline (part of durable commit)
+        from .constants import (
+            ARTIFACT_PATH_BASELINE_REQUEST,
+            ARTIFACT_PATH_REQUIREMENTS,
+            ARTIFACT_PATH_QWEN_PLAN,
+            ARTIFACT_PATH_CODEX_REVIEW,
+        )
+        working_state.setdefault("artifacts", {})
+        working_state["artifacts"]["RAW_REQUEST_FILE"] = str(
+            project_root / ARTIFACT_PATH_BASELINE_REQUEST(planning_folder, new_baseline)
+        )
+        working_state["artifacts"]["REQUIREMENTS_FILE"] = str(
+            project_root / ARTIFACT_PATH_REQUIREMENTS(planning_folder, new_baseline)
+        )
+        working_state["artifacts"]["QWEN_PLAN_FILE"] = str(
+            project_root / ARTIFACT_PATH_QWEN_PLAN(planning_folder, revision=1, baseline=new_baseline)
+        )
+        working_state["artifacts"]["CODEX_REVIEW_FILE"] = str(
+            project_root / ARTIFACT_PATH_CODEX_REVIEW(planning_folder, revision=1, baseline=new_baseline)
+        )
+
+        # Record change history (part of durable commit)
+        if reason:
+            working_state.setdefault("change_history", []).append({
+                "baseline": new_baseline,
+                "reason": reason,
+                "changed_at": committed_at,
+            })
+
+        # Record in commit ledger
+        commit_ledger[request_id] = commit_record
+
+        # Apply state reset for new baseline
+        _apply_baseline_reset(working_state)
+
+        # Single authoritative state commit
+        save_job(group_name, job_id, working_state)
+        phase = "committed"
+
+        # Write receipt AFTER state commit
+        receipt_path = final_dir / "receipt.json"
+        receipt = _derive_receipt(operation, commit_record)
+        receipt_path.write_text(json.dumps(receipt, indent=2), encoding="utf-8")
+
+        # Test/compat hook: expose the committed working state to the caller
+        # without mutating the authoritative source on failure.
+        if _committed_state_out is not None:
+            _committed_state_out.clear()
+            _committed_state_out.update(copy.deepcopy(working_state))
+
+        return result
+
+    finally:
+        # Expose stable retry identity + phase on failures (including persistence
+        # errors raised after an auto-generated ID was created), while leaving
+        # the original exception type/message intact.
+        _exc = sys.exc_info()[1]
+        if _exc is not None:
+            try:
+                if not getattr(_exc, "request_id", None):
+                    _exc.request_id = request_id
+                if getattr(_exc, "operation_id", None) is None:
+                    _exc.operation_id = operation_id
+                if not getattr(_exc, "phase", None):
+                    _exc.phase = phase
+            except Exception:
+                pass
+        # Release ONLY a lock this invocation actually acquired.
+        if lock_acquired:
+            _release_lock(lock_path)
+
+
+def _handle_committed_replay(
+    *,
+    request_id: str,
+    request_bytes: bytes,
+    request_hash: str,
+    existing_commit: dict,
+    authoritative_state: dict,
+    group_name: str,
+    job_id: str,
+    project_root: Path,
+) -> dict:
+    """Handle committed replay through the shared immutable validator.
+
+    This is the single historical replay contract:
+    1. Validate the complete phase-aware immutable validator (manifest, snapshot
+       bytes/hash, semantic identity, canonical paths, ownership, baselines).
+    2. Enforce required ledger/envelope/result schema and binding.
+    3. Repair only the derived receipt, then return the original result.
+
+    Current eligibility and current semantic ending state are NOT applied to a
+    valid historical operation.
+    """
+    # 1. Required envelope schema (fail closed on malformed ledger values).
+    if not isinstance(existing_commit, dict) or not existing_commit:
+        raise TransactionConflictError(
+            f"Malformed commit ledger entry for request_id {request_id!r}"
+        )
+    existing_op = existing_commit.get("operation")
+    result = existing_commit.get("result")
+    if not isinstance(existing_op, dict) or not existing_op:
+        raise TransactionConflictError("Commit envelope missing operation object")
+    if not isinstance(result, dict) or not result:
+        raise TransactionConflictError("Commit envelope missing result object")
+
+    # 2. Three-way identity binding: ledger key == envelope == operation.
+    envelope_request_id = existing_commit.get("request_id")
+    envelope_operation_id = existing_commit.get("operation_id")
+    envelope_manifest_hash = existing_commit.get("manifest_hash")
+    for _name, _value in (
+        ("envelope request_id", envelope_request_id),
+        ("envelope operation_id", envelope_operation_id),
+        ("envelope manifest_hash", envelope_manifest_hash),
+    ):
+        if not isinstance(_value, str) or not _value:
+            raise TransactionConflictError(
+                f"{_name} must be a nonempty string: {_value!r}"
+            )
+    op_request_id = existing_op.get("request_id")
+    if envelope_request_id != request_id:
+        raise TransactionConflictError(
+            f"Ledger key {request_id} != envelope request_id {envelope_request_id}"
+        )
+    if op_request_id != request_id:
+        raise TransactionConflictError(
+            f"Operation request_id {op_request_id} != ledger key {request_id}"
+        )
+
+    # 3. Envelope must be bound to the embedded operation.
+    if envelope_operation_id != existing_op.get("operation_id"):
+        raise TransactionConflictError(
+            "Envelope operation_id != operation operation_id"
+        )
+    if envelope_manifest_hash != existing_op.get("manifest_hash"):
+        raise TransactionConflictError(
+            "Envelope manifest_hash != operation manifest_hash"
+        )
+
+    # 4. Resolve the historical final directory.
+    planning_folder = get_planning_folder(authoritative_state)
+    new_baseline = existing_op.get("new_baseline")
+    if not isinstance(new_baseline, int) or isinstance(new_baseline, bool):
+        raise TransactionConflictError(
+            f"Operation new_baseline is not an integer: {new_baseline}"
+        )
+    final_dir = project_root / planning_folder / f"baseline_{new_baseline:02d}"
+    if not final_dir.exists():
+        raise TransactionConflictError(f"Final directory missing: {final_dir}")
+
+    operation_path = final_dir / "operation.json"
+    if not operation_path.exists():
+        raise TransactionConflictError(f"Operation file missing: {operation_path}")
+    disk_operation = json.loads(operation_path.read_text(encoding="utf-8"))
+
+    # 5. Full embedded/disk operation equality (not selected fields).
+    if disk_operation != existing_op:
+        raise TransactionConflictError("Disk operation != committed operation")
+
+    # 6. Complete phase-aware immutable validation (same contract as resume/adoption).
+    validate_immutable_operation(
+        existing_op=disk_operation,
+        operation_id=disk_operation.get("operation_id"),
+        request_id=request_id,
+        request_bytes=request_bytes,
+        incoming_request_hash=request_hash,
+        ending_baseline=disk_operation.get("ending_baseline"),
+        actual_dir=final_dir,
+        state=authoritative_state,
+        group_name=group_name,
+        job_id=job_id,
+        project_root=project_root,
+        phase="committed_replay",
+        commit_ledger={request_id: existing_commit},
+    )
+
+    # 7. Result schema + binding.
+    if result.get("status") != "committed":
+        raise TransactionConflictError(f"Result status != committed: {result.get('status')}")
+    result_request_id = result.get("request_id")
+    result_operation_id = result.get("operation_id")
+    if not isinstance(result_request_id, str) or not result_request_id:
+        raise TransactionConflictError(
+            f"Result request_id must be a nonempty string: {result_request_id!r}"
+        )
+    if not isinstance(result_operation_id, str) or not result_operation_id:
+        raise TransactionConflictError(
+            f"Result operation_id must be a nonempty string: {result_operation_id!r}"
+        )
+    if result_request_id != request_id:
+        raise TransactionConflictError("Result request_id != ledger key")
+    if result_operation_id != disk_operation.get("operation_id"):
+        raise TransactionConflictError("Result operation_id != committed operation_id")
+    result_baseline = result.get("baseline")
+    if not isinstance(result_baseline, int) or isinstance(result_baseline, bool):
+        raise TransactionConflictError(
+            f"Result baseline must be an exact integer: {result_baseline!r}"
+        )
+    if result_baseline <= 0:
+        raise TransactionConflictError(
+            f"Result baseline must be positive: {result_baseline}"
+        )
+    if result_baseline != new_baseline:
+        raise TransactionConflictError("Result baseline != committed new_baseline")
+
+    # 8. Timestamp schema + required agreement.
+    committed_at = existing_commit.get("committed_at")
+    result_committed_at = result.get("committed_at")
+    _require_iso_timestamp(committed_at, "envelope committed_at")
+    _require_iso_timestamp(result_committed_at, "result committed_at")
+    if committed_at != result_committed_at:
+        raise TransactionConflictError("Envelope committed_at != result committed_at")
+
+    # 9. Repair only the derived receipt, then return the original result.
+    receipt_path = final_dir / "receipt.json"
+    repair_derived_receipt(disk_operation, existing_commit, receipt_path)
+
+    return result
+
+
+def _adopt_published_final(
+    *,
+    final_dir: Path,
+    final_op: dict,
+    working_state: dict,
+    commit_ledger: dict,
+    group_name: str,
+    job_id: str,
+    request_bytes: bytes,  # Incoming request bytes for validation
+    request_hash: str,  # Incoming request hash for validation
+    raw_ending_state: dict | None = None,  # Untouched authoritative raw ending state
+    reason: str | None = None,  # Change reason for history
+    project_root: Path | None = None,  # For artifact path resolution
+) -> dict:
+    """Adopt published final evidence that exists but is not in the commit ledger.
+
+    This is the B06 recovery path after publication succeeded but state commit failed.
+    Validates:
+    - Incoming request bytes match the published final
+    - Final evidence is complete and valid
+    - Owner/job_id match
+
+    Returns the transaction result.
     """
     from .constants import (
         ARTIFACT_PATH_BASELINE_DIR,
+        ARTIFACT_PATH_BASELINE_REQUEST,
+    )
+
+    operation_id = final_op.get("operation_id")
+    request_id = final_op.get("request_id")
+    new_baseline = final_op.get("new_baseline")
+
+    # Apply the SAME complete required validator as replay/resume BEFORE any
+    # adoption mutation. This rejects corrupt manifest/identity/digest, changed
+    # canonical authority, and schema/owner/baseline mismatches.
+    if project_root is None:
+        project_root = PROJECT_ROOT
+    final_op = validate_immutable_operation(
+        existing_op=final_op,
+        operation_id=operation_id,
+        request_id=request_id,
+        request_bytes=request_bytes,
+        incoming_request_hash=request_hash,
+        ending_baseline=int(
+            working_state.get("requirements_baseline", final_op.get("ending_baseline", 1))
+        ),
+        actual_dir=final_dir,
+        state=working_state,
+        group_name=group_name,
+        job_id=job_id,
+        project_root=project_root,
+        phase="final",
+    )
+
+    # CRITICAL: Validate incoming request bytes match the published final
+    # This prevents adopting a different request's published final
+    if request_hash != final_op.get("request_hash"):
+        raise TransactionConflictError(
+            f"Incoming request hash {request_hash} != published final hash {final_op.get('request_hash')}"
+        )
+
+    # Also verify the actual bytes match (not just hash)
+    persisted_request_bytes = (final_dir / "request.md").read_bytes()
+    if request_bytes != persisted_request_bytes:
+        raise TransactionConflictError(
+            "Incoming request bytes differ from published final bytes"
+        )
+
+    # Validate owner/job_id match
+    if final_op.get("group_name") != group_name:
+        raise TransactionConflictError(
+            f"Published final group_name {final_op.get('group_name')} != {group_name}"
+        )
+    if final_op.get("job_id") != job_id:
+        raise TransactionConflictError(
+            f"Published final job_id {final_op.get('job_id')} != {job_id}"
+        )
+
+    # Validate operation.json
+    operation_path = final_dir / "operation.json"
+    if not operation_path.exists():
+        raise TransactionConflictError(f"Operation file missing: {operation_path}")
+
+    # Validate request.md exists
+    request_path = final_dir / "request.md"
+    if not request_path.exists():
+        raise TransactionConflictError(f"Request file missing: {request_path}")
+
+    # Validate persisted request hash matches operation
+    persisted_request_hash = hashlib.sha256(persisted_request_bytes).hexdigest()
+    if persisted_request_hash != final_op.get("request_hash"):
+        raise TransactionConflictError("Persisted request hash != operation hash")
+
+    # Validate ending_snapshot.json exists and hash matches (REQUIRED)
+    snapshot_path = final_dir / "ending_snapshot.json"
+    if not snapshot_path.exists():
+        raise TransactionConflictError(f"Snapshot file missing: {snapshot_path}")
+
+    ending_snapshot_hash = final_op.get("ending_snapshot_hash")
+    if not ending_snapshot_hash:
+        raise TransactionConflictError("Published final operation missing ending_snapshot_hash")
+
+    snapshot_hash = hashlib.sha256(snapshot_path.read_bytes()).hexdigest()
+    if snapshot_hash != ending_snapshot_hash:
+        raise TransactionConflictError("Snapshot hash != operation ending_snapshot_hash")
+
+    # Validate semantic ending state: the current authoritative ending state must
+    # match the frozen ending snapshot. A changed ending state (for example a
+    # changed pending_intervention_for) must conflict, not adopt.
+    try:
+        frozen_snapshot = json.loads(snapshot_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        raise TransactionConflictError("Frozen ending snapshot is corrupt")
+
+    frozen_identity = _semantic_ending_identity(frozen_snapshot)
+    recorded_identity = final_op.get("ending_state_identity")
+    if recorded_identity and recorded_identity != frozen_identity:
+        raise TransactionConflictError(
+            "Operation ending_state_identity != frozen ending snapshot identity"
+        )
+
+    identity_source = raw_ending_state if raw_ending_state is not None else working_state
+    current_identity = _semantic_ending_identity(identity_source)
+    if current_identity != frozen_identity:
+        raise TransactionConflictError(
+            "Current ending state differs from published final ending snapshot"
+        )
+
+    # Validate manifest hash (REQUIRED)
+    manifest_hash = final_op.get("manifest_hash")
+    if not manifest_hash:
+        raise TransactionConflictError("Published final operation missing manifest_hash")
+
+    # Recompute and verify manifest
+    op_for_digest = {k: v for k, v in final_op.items() if k != "manifest_hash"}
+    computed_manifest = hashlib.sha256(json.dumps(op_for_digest, sort_keys=True).encode()).hexdigest()
+    if computed_manifest != manifest_hash:
+        raise TransactionConflictError("Computed manifest != published final manifest")
+
+    # Generate committed_at timestamp
+    committed_at = now_iso()
+
+    # Build result
+    result = {
+        "status": "committed",
+        "baseline": new_baseline,
+        "operation_id": operation_id,
+        "request_id": request_id,
+        "committed_at": committed_at,
+    }
+
+    # Build commit record
+    commit_record = {
+        "request_id": request_id,
+        "operation_id": operation_id,
+        "manifest_hash": final_op.get("manifest_hash"),
+        "operation": final_op,
+        "result": result,
+        "committed_at": committed_at,
+    }
+
+    # Update working state with routing/history (same as fresh publication)
+    working_state["requirements_baseline"] = new_baseline
+
+    # Update artifact pointers to new baseline (part of durable commit)
+    if project_root is None:
+        project_root = PROJECT_ROOT
+
+    planning_folder = get_planning_folder(working_state)
+    from .constants import (
         ARTIFACT_PATH_BASELINE_REQUEST,
         ARTIFACT_PATH_REQUIREMENTS,
         ARTIFACT_PATH_QWEN_PLAN,
         ARTIFACT_PATH_CODEX_REVIEW,
     )
-
-    # Guard: STOPPED_ARCHIVED is terminal — cannot reactivate
-    if get_job_status(state) == "STOPPED_ARCHIVED":
-        raise ValueError(
-            f"Cannot change requirements: job {state['job_id']!r} is STOPPED_ARCHIVED (terminal)."
-        )
-
-    # Increment baseline counter
-    current_baseline = int(state.get("requirements_baseline", 1))
-    new_baseline = current_baseline + 1
-
-    # Get planning folder from artifacts
-    planning_folder = state.get("artifacts", {}).get("PLANNING_FOLDER", "")
-    if not planning_folder:
-        raise ValueError("Cannot change requirements: PLANNING_FOLDER artifact is missing")
-
-    # Create new baseline directory
-    baseline_dir = ARTIFACT_PATH_BASELINE_DIR(planning_folder, new_baseline)
-    baseline_path = PROJECT_ROOT / baseline_dir
-    baseline_path.mkdir(parents=True, exist_ok=True)
-
-    # Copy new requirements file to baseline's request.md (RAW_REQUEST_FILE)
-    # formalize_requirements will read this and produce the new requirements.md
-    new_req_src = Path(new_requirements_file)
-    if not new_req_src.exists():
-        raise ValueError(f"New requirements file does not exist: {new_requirements_file}")
-
-    dest_request = ARTIFACT_PATH_BASELINE_REQUEST(planning_folder, new_baseline)
-    dest_path = PROJECT_ROOT / dest_request
-    dest_path.write_text(new_req_src.read_text(encoding="utf-8"), encoding="utf-8")
-
-    # Update artifacts to point to new baseline
-    state.setdefault("artifacts", {})
-    state["artifacts"]["RAW_REQUEST_FILE"] = str(dest_path)
-    state["artifacts"]["REQUIREMENTS_FILE"] = str(
-        PROJECT_ROOT / ARTIFACT_PATH_REQUIREMENTS(planning_folder, new_baseline)
+    working_state.setdefault("artifacts", {})
+    working_state["artifacts"]["RAW_REQUEST_FILE"] = str(
+        project_root / ARTIFACT_PATH_BASELINE_REQUEST(planning_folder, new_baseline)
     )
-    state["artifacts"]["QWEN_PLAN_FILE"] = str(
-        PROJECT_ROOT / ARTIFACT_PATH_QWEN_PLAN(planning_folder, revision=1, baseline=new_baseline)
+    working_state["artifacts"]["REQUIREMENTS_FILE"] = str(
+        project_root / ARTIFACT_PATH_REQUIREMENTS(planning_folder, new_baseline)
     )
-    state["artifacts"]["CODEX_REVIEW_FILE"] = str(
-        PROJECT_ROOT / ARTIFACT_PATH_CODEX_REVIEW(planning_folder, revision=1, baseline=new_baseline)
+    working_state["artifacts"]["QWEN_PLAN_FILE"] = str(
+        project_root / ARTIFACT_PATH_QWEN_PLAN(planning_folder, revision=1, baseline=new_baseline)
+    )
+    working_state["artifacts"]["CODEX_REVIEW_FILE"] = str(
+        project_root / ARTIFACT_PATH_CODEX_REVIEW(planning_folder, revision=1, baseline=new_baseline)
     )
 
-    # Update baseline counter
-    state["requirements_baseline"] = new_baseline
+    # Record change history (part of durable commit)
+    if reason:
+        working_state.setdefault("change_history", []).append({
+            "baseline": new_baseline,
+            "reason": reason,
+            "changed_at": committed_at,
+        })
 
+    # Record in commit ledger
+    commit_ledger[request_id] = commit_record
+
+    # Apply state reset
+    _apply_baseline_reset(working_state)
+
+    # Save state
+    save_job(group_name, job_id, working_state)
+
+    # Repair receipt if needed
+    receipt_path = final_dir / "receipt.json"
+    repair_derived_receipt(final_op, commit_record, receipt_path)
+
+    return result
+
+
+def _apply_baseline_reset(state: dict) -> None:
+    """Apply full state reset for new baseline."""
     # Preserve prepare_request in completed_steps, clear all other steps
     completed = state.get("completed_steps", [])
     state["completed_steps"] = ["prepare_request"] if "prepare_request" in completed else []
 
-    # Clear model approvals (stale approvals removed)
+    # Clear model approvals
     state["model_approved_steps"] = []
 
     # Clear pending approvals
@@ -2441,7 +3141,7 @@ def change_requirements(
     # Clear stale human approvals
     state["human_approvals"] = {}
 
-    # Reset review state to default
+    # Reset review state
     state["review_state"] = default_review_state()
 
     # Clear failure state
@@ -2451,14 +3151,21 @@ def change_requirements(
     state["last_failure_source"] = None
     state["last_failure_step"] = None
 
-    # Reset counters for new baseline
+    # Reset counters
     state["reject_counts"] = {}
     state["human_reject_counts"] = {}
     state["auto_retry_count_by_step"] = {}
     state["human_retry_count_by_step"] = {}
     state["refinement_extensions"] = []
 
-    # Reset plan_revision for new baseline
+    # Reset usage/coder/revision bookkeeping together (retain declared histories:
+    # change_history, baseline_commits and published baseline directories).
+    state["step_usage"] = {}
+    state["usage_summary"] = default_usage_summary()
+    state["step_coders"] = {}
+    state["revision_completions"] = {}
+
+    # Reset plan revision
     state["plan_revision"] = 1
 
     # Deactivate loop and replan contexts
@@ -2472,15 +3179,259 @@ def change_requirements(
     state["current_step"] = "formalize_requirements"
     set_job_status(state, "IN_PROGRESS")
 
-    # Record the change in metadata
-    state.setdefault("change_history", []).append({
-        "baseline": new_baseline,
-        "reason": reason,
-        "changed_at": now_iso(),
-    })
 
-    save_job(group_name, state["job_id"], state)
-    return state
+def _get_job_lock_path(group_name: str, job_id: str) -> Path:
+    """Get the lock file path for a job."""
+    return JOBS_ROOT / group_name / job_id / ".lock"
+
+
+# Module-level dictionary to track lock file descriptors
+_lock_fds: dict[str, Any] = {}
+
+# Bounded contention window for the no-fcntl fallback lock. A stale lock that
+# cannot be proven dead fails loudly after this instead of blocking forever.
+_LOCK_TIMEOUT_SECONDS = 30.0
+_LOCK_RETRY_INTERVAL_SECONDS = 0.1
+
+
+def _acquire_lock(lock_path: Path) -> None:
+    """Acquire an exclusive lock on the lock file.
+
+    Unix: ``fcntl.flock`` — released automatically when the process exits, so a
+    crash cannot leave a held lock behind.
+
+    Fallback (no ``fcntl``, e.g. Windows): atomic ``O_CREAT|O_EXCL`` creation.
+    Abandoned lock files are reclaimed when the recorded owner PID is provably
+    dead (POSIX only). Acquisition is bounded by ``_LOCK_TIMEOUT_SECONDS`` so an
+    unremovable stale lock fails loudly instead of blocking forever.
+    """
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+
+    try:
+        # Unix: use fcntl for proper file locking
+        import fcntl
+        lock_fd = open(lock_path, "w")
+        fcntl.flock(lock_fd.fileno(), fcntl.LOCK_EX)
+        _lock_fds[str(lock_path)] = lock_fd
+    except ImportError:
+        # No fcntl: atomic file creation with bounded contention handling.
+        lock_file = lock_path.with_suffix(".lockfile")
+        import time
+        deadline = time.monotonic() + _LOCK_TIMEOUT_SECONDS
+        while True:
+            try:
+                # Atomic create - fails if file exists
+                fd = os.open(str(lock_file), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+                os.write(fd, str(os.getpid()).encode())
+                os.close(fd)
+                _lock_fds[str(lock_path)] = lock_file
+                return
+            except FileExistsError:
+                # Reclaim an abandoned lock left by a dead process, if provable.
+                if _reclaim_stale_lock(lock_file):
+                    continue
+                if time.monotonic() >= deadline:
+                    raise TransactionConflictError(
+                        f"Timed out acquiring lock {lock_file} after "
+                        f"{_LOCK_TIMEOUT_SECONDS:.0f}s; another process appears to "
+                        f"hold it. If no transaction is running, remove the stale "
+                        f"lock file manually and retry."
+                    )
+                time.sleep(_LOCK_RETRY_INTERVAL_SECONDS)
+            except OSError as e:
+                raise TransactionConflictError(f"Failed to acquire lock: {e}") from e
+
+
+def _reclaim_stale_lock(lock_file: Path) -> bool:
+    """Remove a fallback lock file whose recorded owner process is dead.
+
+    Returns True if a stale file was removed and acquisition should retry.
+    Only reliable on POSIX where ``os.kill(pid, 0)`` probes liveness safely; on
+    Windows this conservatively returns False and the bounded timeout governs.
+    """
+    try:
+        contents = lock_file.read_text(encoding="utf-8").strip()
+    except OSError:
+        return False
+    try:
+        owner_pid = int(contents)
+    except ValueError:
+        return False
+
+    if owner_pid == os.getpid():
+        # Same process: only reclaim if there is no active in-memory owner for
+        # this lock file. A live contender must not be mistaken for a dead owner.
+        for owner in _lock_fds.values():
+            if isinstance(owner, Path) and owner == lock_file:
+                return False
+        try:
+            lock_file.unlink()
+            return True
+        except OSError:
+            return False
+
+    if os.name == "nt":
+        # No portable liveness probe without extra dependencies.
+        return False
+
+    try:
+        os.kill(owner_pid, 0)
+    except ProcessLookupError:
+        try:
+            lock_file.unlink()
+            return True
+        except OSError:
+            return False
+    except (PermissionError, OSError):
+        return False
+    return False
+
+
+def _release_lock(lock_path: Path) -> None:
+    """Release the exclusive lock."""
+    lock_data = _lock_fds.pop(str(lock_path), None)
+    if lock_data is None:
+        return
+
+    try:
+        import fcntl
+        # Unix: release fcntl lock
+        if hasattr(lock_data, "fileno"):
+            fcntl.flock(lock_data.fileno(), fcntl.LOCK_UN)
+            lock_data.close()
+    except ImportError:
+        # Fallback: remove lock file (best effort)
+        if isinstance(lock_data, Path) and lock_data.exists():
+            try:
+                lock_data.unlink()
+            except OSError:
+                pass
+
+
+def change_requirements(
+    *,
+    group_name: str,
+    state: dict[str, Any],
+    new_requirements_file: str,
+    reason: str,
+    request_id: str | None = None,  # Stable retry identity (auto-generated if None)
+    _use_in_memory_state: bool = False,  # For testing only - skips disk reload
+) -> dict[str, Any]:
+    """Change requirements and create a new baseline.
+
+    DELEGATES to execute_baseline_transaction for full Phase B safety.
+
+    Reads the new requirements file, delegates to the shared transaction
+    entry point which handles locking, staging, publication, and state commit.
+
+    Args:
+        group_name: Workflow template group name.
+        state: Job state dict (used for job_id extraction).
+        new_requirements_file: Path to new requirements file.
+        reason: Reason for the change (for audit trail).
+        request_id: Optional stable request identity. Supplying the same value on
+            retry lets the shared flow validate committed replay or recover a
+            published-but-uncommitted final instead of creating a new baseline.
+        _use_in_memory_state: For testing only - skips disk reload.
+            Production should always reload from disk for safety.
+
+    Returns:
+        Combined result dict with state fields and result fields.
+    """
+    job_id = state.get("job_id")
+    if not job_id:
+        raise ValueError("State must have job_id")
+
+    # NOTE: Do NOT pre-reject STOPPED_ARCHIVED here. The shared locked entry point
+    # checks committed replay before the archived guard, so an identical historical
+    # retry returns unchanged while genuinely new archived work still rejects.
+
+    # Read request bytes
+    new_req_src = Path(new_requirements_file)
+    if not new_req_src.exists():
+        raise ValueError(f"New requirements file does not exist: {new_requirements_file}")
+
+    request_bytes = new_req_src.read_bytes()
+
+    # Delegate to shared transaction entry point
+    # Production: reload from disk for safety (_use_in_memory_state=False)
+    # Testing: use in-memory state (_use_in_memory_state=True)
+    try:
+        result = execute_baseline_transaction(
+            group_name=group_name,
+            job_id=job_id,
+            request_bytes=request_bytes,
+            request_id=request_id,
+            reason=reason,  # Pass reason for history
+            _authoritative_state=state if _use_in_memory_state else None,
+        )
+    except TransactionConflictError as e:
+        # Convert to ValueError for backward compatibility, but preserve the
+        # stable retry identity/phase attached by the shared entry point.
+        err = ValueError(str(e))
+        for _attr in ("request_id", "operation_id", "phase"):
+            if hasattr(e, _attr):
+                setattr(err, _attr, getattr(e, _attr))
+        raise err from e
+
+    # For in-memory testing mode: update caller's state to match what was saved
+    # For production: the authoritative state was reloaded from disk and saved
+    # The caller's state is stale; reload it for consistency
+    if _use_in_memory_state:
+        # Testing mode: update caller's state to reflect the transaction
+        new_baseline = result.get("baseline")
+        planning_folder = state.get("artifacts", {}).get("PLANNING_FOLDER", "")
+
+        if planning_folder and new_baseline:
+            from .constants import (
+                ARTIFACT_PATH_BASELINE_REQUEST,
+                ARTIFACT_PATH_REQUIREMENTS,
+                ARTIFACT_PATH_QWEN_PLAN,
+                ARTIFACT_PATH_CODEX_REVIEW,
+            )
+            state.setdefault("artifacts", {})
+            state["artifacts"]["RAW_REQUEST_FILE"] = str(
+                PROJECT_ROOT / ARTIFACT_PATH_BASELINE_REQUEST(planning_folder, new_baseline)
+            )
+            state["artifacts"]["REQUIREMENTS_FILE"] = str(
+                PROJECT_ROOT / ARTIFACT_PATH_REQUIREMENTS(planning_folder, new_baseline)
+            )
+            state["artifacts"]["QWEN_PLAN_FILE"] = str(
+                PROJECT_ROOT / ARTIFACT_PATH_QWEN_PLAN(planning_folder, revision=1, baseline=new_baseline)
+            )
+            state["artifacts"]["CODEX_REVIEW_FILE"] = str(
+                PROJECT_ROOT / ARTIFACT_PATH_CODEX_REVIEW(planning_folder, revision=1, baseline=new_baseline)
+            )
+
+        # Record change history for testing mode
+        if reason:
+            state.setdefault("change_history", []).append({
+                "baseline": new_baseline,
+                "reason": reason,
+                "changed_at": result.get("committed_at"),
+            })
+
+        state["requirements_baseline"] = new_baseline
+        state["current_step"] = "formalize_requirements"
+        _apply_baseline_reset(state)
+    else:
+        # Production mode: reload state from disk to get the saved state
+        state = load_job(group_name, job_id)
+
+    # Return combined result: state fields for backward compatibility + result fields for CLI
+    new_baseline = result.get("baseline")
+    return {
+        # State fields (for backward compatibility with existing tests/callers)
+        **state,
+        # Result fields (for CLI and new callers)
+        "baseline": new_baseline,
+        "request_id": result.get("request_id"),
+        "operation_id": result.get("operation_id"),
+        "status": result.get("status"),
+        "committed_at": result.get("committed_at"),
+        # Also provide requirements_baseline for backward compatibility
+        "requirements_baseline": new_baseline,
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -2637,6 +3588,18 @@ def validate_immutable_operation(
     stored_ending_baseline = existing_op.get("ending_baseline")
     stored_new_baseline = existing_op.get("new_baseline")
 
+    # Required identity schema: nonempty strings, never ints/bools/None.
+    for _field_name, _field_value in (
+        ("operation_id", stored_operation_id),
+        ("request_id", stored_request_id),
+        ("group_name", stored_group_name),
+        ("job_id", stored_job_id),
+    ):
+        if not isinstance(_field_value, str) or not _field_value:
+            raise TransactionConflictError(
+                f"{_field_name} must be a nonempty string: {_field_value!r}"
+            )
+
     # Validate ownership
     if stored_operation_id != operation_id:
         raise TransactionConflictError(f"Operation ID mismatch: {stored_operation_id} != {operation_id}")
@@ -2648,10 +3611,16 @@ def validate_immutable_operation(
         raise TransactionConflictError(f"Job ID mismatch: {stored_job_id} != {job_id}")
 
     # Validate exact-integer baselines
+    if not isinstance(ending_baseline, int) or isinstance(ending_baseline, bool):
+        raise TransactionConflictError(f"ending_baseline is not an integer: {ending_baseline}")
     if not isinstance(stored_ending_baseline, int) or isinstance(stored_ending_baseline, bool):
         raise TransactionConflictError(f"ending_baseline is not an integer: {stored_ending_baseline}")
     if not isinstance(stored_new_baseline, int) or isinstance(stored_new_baseline, bool):
         raise TransactionConflictError(f"new_baseline is not an integer: {stored_new_baseline}")
+    if stored_ending_baseline <= 0:
+        raise TransactionConflictError(f"ending_baseline must be positive: {stored_ending_baseline}")
+    if stored_new_baseline <= 0:
+        raise TransactionConflictError(f"new_baseline must be positive: {stored_new_baseline}")
     if stored_ending_baseline != ending_baseline:
         raise TransactionConflictError(f"Ending baseline mismatch: {stored_ending_baseline} != {ending_baseline}")
     if stored_new_baseline != ending_baseline + 1:
@@ -2667,16 +3636,12 @@ def validate_immutable_operation(
         expected_staging_dir = project_root / planning_folder / f".staging_{operation_id}"
         if actual_dir.resolve() != expected_staging_dir.resolve():
             raise TransactionConflictError(f"Actual staging dir {actual_dir} != expected {expected_staging_dir}")
-        # Stored canonical paths name the final location
-        expected_request_path = ARTIFACT_PATH_BASELINE_REQUEST(planning_folder, stored_new_baseline)
-        expected_operation_path = f"{ARTIFACT_PATH_BASELINE_DIR(planning_folder, stored_new_baseline)}/operation.json"
+        # Stored canonical paths name the final location (validated below)
     elif phase == "final":
         # Final directory is baseline_XX
         expected_final_dir = project_root / planning_folder / f"baseline_{stored_new_baseline:02d}"
         if actual_dir.resolve() != expected_final_dir.resolve():
             raise TransactionConflictError(f"Actual final dir {actual_dir} != expected {expected_final_dir}")
-        expected_request_path = ARTIFACT_PATH_BASELINE_REQUEST(planning_folder, stored_new_baseline)
-        expected_operation_path = f"{ARTIFACT_PATH_BASELINE_DIR(planning_folder, stored_new_baseline)}/operation.json"
     elif phase == "committed_replay":
         # Committed replay — validate against commit ledger
         if not commit_ledger:
@@ -2695,17 +3660,35 @@ def validate_immutable_operation(
         expected_final_dir = project_root / planning_folder / f"baseline_{stored_new_baseline:02d}"
         if actual_dir.resolve() != expected_final_dir.resolve():
             raise TransactionConflictError(f"Actual final dir != expected for committed replay")
-        expected_request_path = ARTIFACT_PATH_BASELINE_REQUEST(planning_folder, stored_new_baseline)
-        expected_operation_path = f"{ARTIFACT_PATH_BASELINE_DIR(planning_folder, stored_new_baseline)}/operation.json"
     else:
         raise TransactionConflictError(f"Unknown phase: {phase}")
 
-    # Validate stored canonical paths match expected
+    # Validate stored canonical paths match expected (R8: 4 required keys)
     stored_paths = existing_op.get("canonical_paths", {})
-    if stored_paths.get("request") != expected_request_path:
-        raise TransactionConflictError(f"Canonical request path mismatch: {stored_paths.get('request')} != {expected_request_path}")
-    if stored_paths.get("operation") != expected_operation_path:
-        raise TransactionConflictError(f"Canonical operation path mismatch: {stored_paths.get('operation')} != {expected_operation_path}")
+
+    # All 4 canonical keys are required
+    required_canonical_keys = ["request", "operation", "ending_snapshot", "receipt"]
+    for key in required_canonical_keys:
+        if key not in stored_paths:
+            raise TransactionConflictError(f"Missing required canonical field: {key}")
+        if not isinstance(stored_paths[key], str):
+            raise TransactionConflictError(f"Canonical {key} is not a string: {type(stored_paths[key])}")
+
+    # Build expected paths for all 4 keys
+    baseline_dir_rel = ARTIFACT_PATH_BASELINE_DIR(planning_folder, stored_new_baseline)
+    expected_paths = {
+        "request": ARTIFACT_PATH_BASELINE_REQUEST(planning_folder, stored_new_baseline),
+        "operation": f"{baseline_dir_rel}/operation.json",
+        "ending_snapshot": f"{baseline_dir_rel}/ending_snapshot.json",
+        "receipt": f"{baseline_dir_rel}/receipt.json",
+    }
+
+    # Validate each required canonical path
+    for key, expected_value in expected_paths.items():
+        if stored_paths[key] != expected_value:
+            raise TransactionConflictError(
+                f"Canonical {key} path mismatch: {stored_paths[key]} != {expected_value}"
+            )
 
     # 3. Incoming and stored request hashes match
     stored_request_hash = existing_op.get("request_hash")
@@ -2714,12 +3697,64 @@ def validate_immutable_operation(
     if incoming_request_hash != stored_request_hash:
         raise TransactionConflictError(f"Incoming request hash mismatch: {incoming_request_hash} != {stored_request_hash}")
 
-    # 4. Compute manifest_hash excluding self-reference
-    # Create a copy without manifest_hash field for digest computation
+    # 4. Require the snapshot digest (immutable evidence must bind the snapshot)
+    stored_snapshot_hash = existing_op.get("ending_snapshot_hash")
+    if not stored_snapshot_hash:
+        raise TransactionConflictError("Missing ending_snapshot_hash")
+    if not isinstance(stored_snapshot_hash, str):
+        raise TransactionConflictError(
+            f"ending_snapshot_hash is not a string: {type(stored_snapshot_hash)}"
+        )
+
+    # 4b. Require the recorded semantic ending identity (never optional)
+    stored_identity = existing_op.get("ending_state_identity")
+    if not stored_identity:
+        raise TransactionConflictError("Missing ending_state_identity")
+    if not isinstance(stored_identity, str):
+        raise TransactionConflictError(
+            f"ending_state_identity is not a string: {type(stored_identity)}"
+        )
+
+    # 5. Validate the stored manifest digest (REQUIRED, never optional)
+    stored_manifest_hash = existing_op.get("manifest_hash")
+    if not stored_manifest_hash:
+        raise TransactionConflictError("Missing manifest_hash")
+
     op_for_digest = {k: v for k, v in existing_op.items() if k != "manifest_hash"}
     computed_manifest_hash = hashlib.sha256(json.dumps(op_for_digest, sort_keys=True).encode()).hexdigest()
+    if computed_manifest_hash != stored_manifest_hash:
+        raise TransactionConflictError(
+            "Computed manifest != stored manifest_hash"
+        )
 
-    # Add manifest_hash to returned operation
+    # 6. Hash the ACTUAL persisted bytes (not only the declared digest fields).
+    request_file = actual_dir / "request.md"
+    if not request_file.exists():
+        raise TransactionConflictError(f"Missing request.md at {request_file}")
+    persisted_request_bytes = request_file.read_bytes()
+    if persisted_request_bytes != request_bytes:
+        raise TransactionConflictError(
+            "Persisted request bytes != incoming request bytes"
+        )
+    if hashlib.sha256(persisted_request_bytes).hexdigest() != stored_request_hash:
+        raise TransactionConflictError("Persisted request hash != stored request_hash")
+
+    snapshot_file = actual_dir / "ending_snapshot.json"
+    if not snapshot_file.exists():
+        raise TransactionConflictError(f"Missing ending_snapshot.json at {snapshot_file}")
+    persisted_snapshot_bytes = snapshot_file.read_bytes()
+    if hashlib.sha256(persisted_snapshot_bytes).hexdigest() != stored_snapshot_hash:
+        raise TransactionConflictError("Persisted snapshot hash != stored ending_snapshot_hash")
+    try:
+        persisted_snapshot = json.loads(persisted_snapshot_bytes.decode("utf-8"))
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        raise TransactionConflictError("Persisted ending_snapshot.json is corrupt")
+    if _semantic_ending_identity(persisted_snapshot) != stored_identity:
+        raise TransactionConflictError(
+            "Persisted snapshot semantic identity != stored ending_state_identity"
+        )
+
+    # Return a validated copy bound to the verified manifest
     validated_op = dict(existing_op)
     validated_op["manifest_hash"] = computed_manifest_hash
 
@@ -2740,6 +3775,112 @@ def get_planning_folder(state: dict) -> str:
     return planning_folder
 
 
+def _semantic_ending_identity(state: dict) -> str:
+    """Compute a stable semantic identity for an ending state.
+
+    Used to compare the current authoritative ending state against the frozen
+    ending snapshot before adoption/resume. Volatile bookkeeping (``updated_at``)
+    is excluded because it can change without changing the semantic ending
+    state; every other field is compared.
+    """
+    projection = {k: v for k, v in state.items() if k != "updated_at"}
+    return hashlib.sha256(
+        json.dumps(projection, sort_keys=True, default=str).encode("utf-8")
+    ).hexdigest()
+
+
+def _require_iso_timestamp(value: Any, field: str) -> None:
+    """Require a non-empty ISO-8601 timestamp string.
+
+    Truthiness/equality alone is insufficient: equal invalid text must reject.
+    """
+    if not isinstance(value, str) or not value:
+        raise TransactionConflictError(f"Missing or invalid {field}: {value!r}")
+    try:
+        dt.datetime.fromisoformat(value)
+    except (ValueError, TypeError):
+        raise TransactionConflictError(f"Invalid {field} format: {value!r}")
+
+
+def _derive_receipt(operation: dict, commit_record: dict) -> dict:
+    """Derive receipt from validated operation and commit record.
+
+    Receipt is DERIVED, not independently authored.
+    Used for both initial creation and repair of truncated/malformed receipts.
+    """
+    return {
+        "request_id": operation["request_id"],
+        "operation_id": operation["operation_id"],
+        "baseline": operation["new_baseline"],
+        "committed_at": commit_record["committed_at"],
+        "manifest_hash": operation["manifest_hash"],
+    }
+
+
+def repair_derived_receipt(
+    operation: dict,
+    commit_record: dict,
+    receipt_path: Path,
+) -> bool:
+    """Repair missing, malformed, or mismatched receipt.
+
+    Called AFTER full immutable authority validation passes.
+    Returns True if repair was needed.
+
+    Handles:
+    - Missing receipt file
+    - Truncated or malformed receipt (JSON decode failure)
+    - Invalid encoding (UnicodeDecodeError)
+    - Mismatched receipt content
+
+    Atomic replacement prevents partial receipt on retry.
+    NO job save, NO new timestamp, NO accounting change.
+    """
+    expected_receipt = _derive_receipt(operation, commit_record)
+    expected_bytes = json.dumps(expected_receipt, indent=2).encode("utf-8")
+
+    need_repair = False
+
+    if not receipt_path.exists():
+        need_repair = True
+    else:
+        try:
+            receipt_text = receipt_path.read_text(encoding="utf-8")
+        except UnicodeDecodeError:
+            # Invalid encoding is derived-content corruption - replace it.
+            need_repair = True
+        except OSError as e:
+            # Real I/O error - propagate to caller
+            raise TransactionConflictError(
+                f"Failed to read receipt at {receipt_path}: {e}"
+            ) from e
+        else:
+            try:
+                existing_receipt = json.loads(receipt_text)
+                if existing_receipt != expected_receipt:
+                    # Content mismatch - need repair
+                    need_repair = True
+            except json.JSONDecodeError:
+                # Truncated or malformed - need repair
+                need_repair = True
+
+    if need_repair:
+        # Atomic replacement using temp file
+        temp_path = receipt_path.with_suffix(".tmp")
+        try:
+            temp_path.write_bytes(expected_bytes)
+            temp_path.replace(receipt_path)  # Atomic on POSIX
+        except OSError as e:
+            raise TransactionConflictError(
+                f"Failed to write receipt at {receipt_path}: {e}"
+            ) from e
+        finally:
+            if temp_path.exists():
+                temp_path.unlink()
+
+    return need_repair
+
+
 def complete_baseline_transaction(
     *,
     state: dict,
@@ -2754,97 +3895,76 @@ def complete_baseline_transaction(
     planning_folder: str,
     project_root: Path,
     commit_ledger: dict,
+    _use_in_memory_state: bool = False,  # Test-only adapter; production reloads
 ) -> dict:
-    """Complete a baseline transaction atomically.
+    """Compatibility entry point — delegates to the shared transaction flow.
 
-    Writes operation.json to the final baseline directory, updates state,
-    writes receipt, and records in commit ledger.
+    This wrapper no longer writes immutable evidence itself. It performs the
+    legacy argument guards, then delegates to ``execute_baseline_transaction``
+    so all callers share one locked transition builder, one validator and one
+    writer (staging → publication → single state commit → derived receipt).
 
-    Idempotent: if commit_ledger already has this request_id with matching
-    operation, returns the existing result without re-writing.
+    Production (``_use_in_memory_state=False``) never trusts the supplied
+    ``state``/``commit_ledger`` as authority: it delegates without an
+    ``_authoritative_state`` override, so the shared flow reloads the raw job
+    under the lock. The legacy baseline constraints are checked against the
+    authoritative state (or a verified committed replay) — a stale caller cannot
+    roll the disk baseline backwards.
 
-    Returns the commit record dict.
+    Idempotent: a matching committed ledger entry is handled by the shared
+    committed-replay path, which validates evidence and repairs only the
+    derived receipt.
+
+    Returns the committed result dict.
     Raises TransactionConflictError on validation failure.
     """
-    from .constants import (
-        ARTIFACT_PATH_BASELINE_DIR,
-        ARTIFACT_PATH_BASELINE_REQUEST,
-    )
-
-    # Check for idempotent replay
-    existing_commit = commit_ledger.get(request_id)
-    if existing_commit:
-        # Verify it matches
-        existing_op = existing_commit.get("operation", {})
-        if existing_op.get("operation_id") != operation_id:
-            raise TransactionConflictError(
-                f"Commit ledger has different operation_id for request_id {request_id}"
-            )
-        # Already committed — return existing result
-        return existing_commit.get("result", {})
-
-    # Validate new_baseline == ending_baseline + 1
+    # Legacy guard: new baseline must be exactly ending + 1 (pure argument check).
     if new_baseline != ending_baseline + 1:
         raise TransactionConflictError(
             f"new_baseline {new_baseline} != ending_baseline {ending_baseline} + 1"
         )
 
-    # Create final directory
-    final_dir = project_root / planning_folder / f"baseline_{new_baseline:02d}"
-    final_dir.mkdir(parents=True, exist_ok=True)
+    if _use_in_memory_state:
+        # Test-only adapter: validate against the supplied caller state/ledger.
+        existing_commit = commit_ledger.get(request_id)
+        if existing_commit is not None:
+            existing_op = existing_commit.get("operation", {})
+            if existing_op.get("operation_id") != operation_id:
+                raise TransactionConflictError(
+                    f"Commit ledger has different operation_id for request_id {request_id}"
+                )
+        else:
+            state_baseline = state.get("requirements_baseline", ending_baseline)
+            if state_baseline != ending_baseline:
+                raise TransactionConflictError(
+                    f"State requirements_baseline {state_baseline} != ending_baseline {ending_baseline}"
+                )
 
-    # Write request.md
-    request_path = final_dir / "request.md"
-    request_path.write_bytes(request_bytes)
+        return execute_baseline_transaction(
+            group_name=group_name,
+            job_id=job_id,
+            request_bytes=request_bytes,
+            request_id=request_id,
+            project_root=project_root,
+            _authoritative_state=state,
+            _preferred_operation_id=operation_id,
+            _committed_state_out=state,
+            _expected_ending_baseline=ending_baseline,
+            _expected_new_baseline=new_baseline,
+        )
 
-    # Build operation object
-    operation = {
-        "operation_id": operation_id,
-        "request_id": request_id,
-        "group_name": group_name,
-        "job_id": job_id,
-        "ending_baseline": ending_baseline,
-        "new_baseline": new_baseline,
-        "request_hash": request_hash,
-        "canonical_paths": {
-            "request": ARTIFACT_PATH_BASELINE_REQUEST(planning_folder, new_baseline),
-            "operation": f"{ARTIFACT_PATH_BASELINE_DIR(planning_folder, new_baseline)}/operation.json",
-        },
-    }
-
-    # Compute manifest_hash excluding self-reference
-    op_for_digest = {k: v for k, v in operation.items() if k != "manifest_hash"}
-    manifest_hash = hashlib.sha256(json.dumps(op_for_digest, sort_keys=True).encode()).hexdigest()
-    operation["manifest_hash"] = manifest_hash
-
-    # Write operation.json
-    operation_path = final_dir / "operation.json"
-    operation_path.write_text(json.dumps(operation, indent=2), encoding="utf-8")
-
-    # Update state
-    state["requirements_baseline"] = new_baseline
-
-    # Build commit record
-    commit_record = {
-        "request_id": request_id,
-        "operation_id": operation_id,
-        "manifest_hash": manifest_hash,
-        "operation": operation,
-        "result": {
-            "status": "committed",
-            "baseline": new_baseline,
-            "operation_id": operation_id,
-        },
-        "committed_at": now_iso(),
-    }
-
-    # Record in commit ledger (request-ID keyed)
-    commit_ledger[request_id] = commit_record
-
-    # Save state atomically
-    save_job(group_name, job_id, state)
-
-    return commit_record["result"]
+    # Production: reload authoritative state under the shared lock. A committed
+    # replay is recognised before the legacy baseline checks (see shared flow).
+    return execute_baseline_transaction(
+        group_name=group_name,
+        job_id=job_id,
+        request_bytes=request_bytes,
+        request_id=request_id,
+        project_root=project_root,
+        _preferred_operation_id=operation_id,
+        _expected_ending_baseline=ending_baseline,
+        _expected_new_baseline=new_baseline,
+    )
 
 
 # ---------------------------------------------------------------------------
